@@ -10,7 +10,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-08
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -112,22 +112,13 @@ private[core] object AxiomBase {
         (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
-       * Rule "C0 one-sided congruence".
-       * Premise p_(??) <-> q_(??)
-       * Conclusion ctxF_(p_(??)) |- ctxF_(q_(??))
-       * End.
-       * @derived EquivifyRight, cut, prop
-       */
-      ("CO one-sided congruence",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
-      /**
        * Rule "[] monotone".
        * Premise p(??) ==> q(??)
        * Conclusion [a;]p(??) ==> [a;]q(??)
        * End.
        * @derived useAt("<> diamond") & by("<> monotone")
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+       * @see "André Platzer. Differential Hybrid Games."
        */
       ("[] monotone",
         (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
@@ -151,7 +142,7 @@ private[core] object AxiomBase {
        *   --------------------- ind
        *     p(x) |- [{a}*]p(x)
        * }}}
-       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 17(1), 2015.  Lemma 4.1"
        */
       ("ind induction",
         (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),

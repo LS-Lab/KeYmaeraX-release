@@ -63,8 +63,16 @@ ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
 http://arxiv.org/abs/1408.1980
 
 ------------------------------------------------------------------
-The date of last cfull ode review is added to the top of the file as  @note Code Review.
+The date of last full ode review is added to the top of the file as  @note Code Review.
 A log of all major code reviews and the findings are reported here:
+
+Code Review: KeYmaera X Core except SetLattice: 2016-03-08
+  TODO Confirm that ODESystem should turn into non-DifferentialProgram while DifferentialProgram should turn into non-Program.
+  TODO Delete Sequent.pref
+  TODO LookupLemmaRule
+  TODO Turn "[:=] assign exists" into DerivedAxiom
+  TODO Delete QETool.qe
+  TODO Add checksum test and core version to string representation of Lemma. And Lemma name sanity.
 
 Extended Code Review: KeYmaera X Core: 2015-08-25
   TODO Rule.LAX_MODE=false, which affects BoundVariableRenaming and URename and RCF trusted tools

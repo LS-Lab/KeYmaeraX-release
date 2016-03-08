@@ -8,7 +8,7 @@
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-08
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -108,13 +108,12 @@ sealed trait ApplicationOf extends Expression {
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names): " + name)
-  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
-    "WARNING: non-empty names without underscores (except at end for internal names): " + name)
   //@note the above requires conditions imply that !name.endsWith("__")
   require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
 //  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
 //    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
-  require(name.charAt(0).isLetter || name.charAt(0)=='_' || name.charAt(0)=='\\', "alphabetical name: " + name)
+  //@note \\ part of the names for Nothing and Anything objects
+  require((name.charAt(0).isLetter || name.charAt(0)=='_') && name.forall(c=> c.isLetterOrDigit || c=='_' || c=='\\'), "alphabetical name: " + name)
   require(index.getOrElse(0)>=0, "nonnegative index if any " + this)
 
   def name: String
@@ -125,6 +124,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
     val cmp = name.compare(other.name)
     if (cmp != 0) cmp else {
       val cmp2 = index.getOrElse(-1) - other.index.getOrElse(-1)
+      //@note .getCanonicalName would cause no collisions if same class name in different packages, but expressions are sealed in core.
       if (cmp2 != 0) cmp2 else getClass.getSimpleName.compareTo(other.getClass.getSimpleName)
     }
   } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
@@ -194,14 +194,14 @@ object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
   def index: Option[Int] = None
 }
 
-/** The empty argument of Unit sort */
+/** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */
 object Nothing extends NamedSymbol with AtomicTerm {
   def sort: Sort = Unit
   def name: String = "\\nothing"
   def index: Option[Int] = None
 }
 
-/** The list of all variables as arguments \bar{x} */
+/** The list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\anything"
   def index: Option[Int] = None
@@ -220,6 +220,12 @@ sealed trait CompositeTerm extends Term with Composite
 
 /** Unary Composite Terms, i.e. terms composed of one real term. */
 sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
+  /** Create a term of this constructor but with the given argument as child instead. (copy)
+    * @example {{{
+    *         Neg(Number(77)).reapply(Number(99)) == Neg(Number(99))
+    *         Neg(Variable("x")).reapply(Plus(Number(42),Number(69))) == Neg(Plus(Number(42),Number(69)))
+    *         }}}
+    */
   def reapply: Term=>Term
   def child: Term
 }
@@ -231,6 +237,11 @@ private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with R
 
 /** Binary Composite Terms, i.e. terms composed of two terms. */
 sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
+  /** Create a term of this constructor but with the give left and right arguments instead. (copy)
+    * @example {{{
+    *         Times(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) == Times(Variable("a"), Number(99))
+    *         }}}
+    */
   def reapply: (Term,Term)=>Term
   def left: Term
   def right: Term
@@ -262,7 +273,7 @@ case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply =
 
 /** Pairs (left,right) for binary Function and FuncOf and PredOf */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
-  def reapply = Pair.apply
+  def reapply = copy
   def sort: Sort = Tuple(left.sort, right.sort)
 }
 
@@ -286,6 +297,11 @@ sealed trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
 sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
+  /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
+    * @example {{{
+    *         GreaterEqual(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) == GreaterEqual(Variable("a"), Number(99))
+    *         }}}
+    */
   def reapply: (Term,Term)=>Formula
   def left: Term
   def right: Term
@@ -345,12 +361,23 @@ sealed trait CompositeFormula extends Formula with Composite
 
 /** Unary Composite Formulas, i.e. formulas composed of one formula. */
 sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
+  /** Create a formula of this constructor but with the given argument as child instead. (copy)
+    * @example {{{
+    *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(UnEqual(Number(7),Number(9))) == Not(UnEqual(Number(7),Number(9)))
+    *         Not(True).reapply(False) == Not(False)
+    *         }}}
+    */
   def reapply: Formula=>Formula
   def child: Formula
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two formulas. */
 sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
+  /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
+    * @example {{{
+    *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, UnEqual(Number(7),Number(9))) == Or(True, UnEqual(Number(7),Number(9)))
+    *         }}}
+    */
   def reapply: (Formula,Formula)=>Formula
   def left: Formula
   def right: Formula
@@ -369,29 +396,38 @@ case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { 
 
 /** Quantified formulas */
 sealed trait Quantified extends /*Unary?*/CompositeFormula {
-  require(vars.nonEmpty, "quantifiers bind at least one variable")
-  insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  insist(vars.length==1, "quantifiers bind exactly one variable at the moment")
+//  require(vars.nonEmpty, "quantifiers bind at least one variable")
+//  insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
+//  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  /** Create a formula of this constructor but with the given variable list and child as argument instead. (copy)
+    * @example {{{
+    *         Forall(immutable.Seq(Variable("x")), PredOf(Func("p",None,Real,Bool),Variable("x")).reapply(
+    *                immutable.Seq(Variable("y")), PredOf(Func("q",None,Real,Bool),Variable("y")))
+    *         == Forall(immutable.Seq(Variable("y")), PredOf(Func("q",None,Real,Bool),Variable("y"))
+    *         }}}
+    */
   def reapply: (immutable.Seq[Variable],Formula)=>Formula
   /** The variables quantified here */
   def vars: immutable.Seq[Variable]
   def child: Formula
 }
 /** \forall vars universally quantified formula */
-case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified { def reapply = copy }
+case class Forall(vars: immutable.Seq[Variable], child: Formula) extends Quantified { def reapply = copy }
 /** \exists vars existentially quantified formula */
-case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified { def reapply = copy }
+case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Quantified { def reapply = copy }
 
 /** Modal formulas */
 sealed trait Modal extends CompositeFormula {
+  /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy) */
   def reapply: (Program,Formula)=>Formula
   def program: Program
   def child: Formula
 }
 /** box modality all runs of program satisfy child [program]child */
-case class Box(program: Program, child: Formula) extends CompositeFormula with Modal { def reapply = copy }
-/** diamond modality some run of program satisfies child <program>child */
-case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal { def reapply = copy }
+case class Box(program: Program, child: Formula) extends Modal { def reapply = copy }
+/** diamond modality some run of program satisfies child ⟨program⟩child */
+case class Diamond(program: Program, child: Formula) extends Modal { def reapply = copy }
 
 /** Differential formula are differentials of formulas in analogy to differential terms (child)' */
 case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { def reapply = copy }
@@ -437,12 +473,22 @@ sealed trait CompositeProgram extends Program with Composite
 
 /** Unary Composite Programs, i.e. programs composed of one program. */
 sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
+  /** Create a program of this constructor but with the given argument as child instead. (copy)
+    * @example {{{
+    *         Loop(ProgramConst("alpha")).reapply(Assign(Variable("x"),Number(42))) == Loop(Assign(Variable("x"),Number(42)))
+    *         }}}
+    */
   def reapply: Program=>Program
   def child: Program
 }
 
 /** Binary Composite Programs, i.e. programs composed of two programs. */
 sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
+  /** Create a program of this constructor but with the give left and right arguments instead. (copy)
+    * @example {{{
+    *         Choice(ProgramConst("alpha"), ProgramConst("beta")).reapply(ProgramConst("gamma"), ProgramConst("delta")) == Choice(ProgramConst("gamma"), ProgramConst("delta"))
+    *         }}}
+    */
   def reapply: (Program,Program)=>Program
   def left: Program
   def right: Program
@@ -456,9 +502,8 @@ case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 /** child* nondeterministic repetition */
 case class Loop(child: Program) extends UnaryCompositeProgram { def reapply = copy }
 /** `child^d` dual program */
-case class Dual(child: Program) extends UnaryCompositeProgram {
+case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = copy
   require(false, "Hybrid games are currently disabled")
-  def reapply = copy
 }
 
 /**
@@ -495,6 +540,7 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
  * This data structure automatically reassociates to list form
  * DifferentialProduct(AtomicDifferentialProgram, DifferentialProduct(AtomicDifferentialProgram, ....))
  * @note This is a case class except for an override of the apply function.
+ * @note Private constructor so only [[DifferentialProduct.apply]] can ever create this, which will re-associate et al.
  */
 final class DifferentialProduct private(val left: DifferentialProgram, val right: DifferentialProgram)
   extends DifferentialProgram with BinaryComposite {
@@ -504,7 +550,7 @@ final class DifferentialProduct private(val left: DifferentialProgram, val right
     case _ => false
   }
 
-  override def hashCode: Int = 3 * left.hashCode() + right.hashCode()
+  override def hashCode: Int = 31 * left.hashCode() + right.hashCode()
 }
 
 object DifferentialProduct {
@@ -529,13 +575,13 @@ object DifferentialProduct {
 
   //@tailrec
   private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = (left match {
+    // properly associated cases
+    case l: AtomicODE => new DifferentialProduct(l, right)
+    case l: DifferentialProgramConst => new DifferentialProduct(l, right)
     // reassociate so that there's no more differential product on the left
     case DifferentialProduct(ll, lr) =>
       assert(ll.isInstanceOf[AtomicDifferentialProgram], "reassociation has succeeded on the left")
       reassociate(ll, reassociate(lr, right))
-    // properly associated cases
-    case l: AtomicODE => new DifferentialProduct(l, right)
-    case l: DifferentialProgramConst => new DifferentialProduct(l, right)
   }) ensuring(r => listify(r) == listify(left) ++ listify(right),
     "reassociating DifferentialProduct does not change the list of atomic ODEs")
 

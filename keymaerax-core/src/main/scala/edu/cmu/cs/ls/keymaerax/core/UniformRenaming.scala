@@ -6,15 +6,13 @@
  * Uniform Renaming for KeYmaera X
  * @author Andre Platzer
  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-08
  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
 import scala.collection.immutable
-
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics
 
 /**
   * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
@@ -25,11 +23,10 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics
   * @param repl The target variable to replace `what` with and vice versa.
   * @author Andre Platzer
   * @author smitsch
+  * @see [[UniformRenaming]]
   */
 final case class URename(what: Variable, repl: Variable) extends Renaming {
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  //@note Andre Platzer: no for uniform renaming this can be true
   private[core] override val semanticRenaming: Boolean = true
 }
 
@@ -42,11 +39,11 @@ final case class URename(what: Variable, repl: Variable) extends Renaming {
   * @param repl The target variable to replace `what` with and vice versa.
   * @author Andre Platzer
   * @author smitsch
+  * @see [[BoundRenaming]]
   */
 final case class SyntacticURename(what: Variable, repl: Variable) extends Renaming {
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  //@note Andre Platzer: yes for bound renaming purposes this absolutely has to be false
+  //@note for bound renaming purposes this absolutely has to be false
   private[core] override val semanticRenaming: Boolean = false
 }
 
@@ -112,9 +109,10 @@ sealed trait Renaming extends (Expression => Expression) {
   // implementation
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
-  private def renameVar(x: Variable, context: Expression): Variable = if (x==what) repl
-  else if (x==repl) if (TRANSPOSITION) what else throw new RenamingClashException("Replacement name " + repl.asString + " already occurs originally", this.toString, x.asString, context.prettyString)
-  else x
+  private def renameVar(x: Variable, context: Expression): Variable =
+    if (x==what) repl
+    else if (x==repl) if (TRANSPOSITION) what else throw new RenamingClashException("Replacement name " + repl.asString + " already occurs originally", this.toString, x.asString, context.prettyString)
+    else x
 
 
   private def rename(term: Term): Term = term match {
@@ -164,7 +162,6 @@ sealed trait Renaming extends (Expression => Expression) {
     // NOTE DifferentialFormula in analogy to Differential
     case DifferentialFormula(g) => DifferentialFormula(rename(g))
 
-    // binding cases add bound variables to u
     case Forall(vars, g) => Forall(vars.map(x => renameVar(x,formula)), rename(g))
     case Exists(vars, g) => Exists(vars.map(x => renameVar(x,formula)), rename(g))
 

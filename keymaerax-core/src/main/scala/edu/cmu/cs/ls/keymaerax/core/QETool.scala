@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-08
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -15,6 +15,7 @@ trait QETool {
    * Returns a quantifier-free formula that is equivalent to the specified formula.
    * @param formula The formula whose quantifier-free equivalent is sought.
    * @return An equivalent quantifier-free formula.
+    * @todo Code Review: remove since superfluous duplication
    */
   def qe(formula: Formula): Formula
 

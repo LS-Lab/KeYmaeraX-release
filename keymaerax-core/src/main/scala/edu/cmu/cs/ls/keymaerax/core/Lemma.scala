@@ -4,7 +4,7 @@
 */
 /**
  * @author Stefan Mitsch
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-08
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -66,6 +66,7 @@ object Lemma {
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {
+  //@todo name is alphabetical and not "\".\n false"
   //@note Now allowing more general forms of lemmas. @todo check for soundness.
 //  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
   //@note could allow more general forms of lemmas.
