@@ -32,7 +32,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
 
   override def shutdown() = jlink.shutdown()
 
-  override def qe(formula: Formula): Formula = jlink.qe(formula)
+  def qe(formula: Formula): Formula = jlink.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
   @deprecated("Use findCounterExample instead")
   def getCounterExample(formula: Formula): String = jlink.getCounterExample(formula)

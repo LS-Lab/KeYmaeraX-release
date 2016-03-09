@@ -18,7 +18,7 @@ class Z3 extends ToolBase("Z3") with QETool {
 
   def init(config : Map[String,String]) = {initialized = true}
 
-  override def qe(formula: Formula): Formula = z3.qe(formula)
+  def qe(formula: Formula): Formula = z3.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = z3.qeEvidence(formula)
 
   override def restart() = {}

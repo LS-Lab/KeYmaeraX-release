@@ -18,7 +18,7 @@ class Polya extends ToolBase("Polya") with QETool {
 
   def init(config : Map[String,String]) = {initialized = true}
 
-  override def qe(formula: Formula): Formula = polya.qe(formula)
+  def qe(formula: Formula): Formula = polya.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = polya.qeEvidence(formula)
 
   override def restart() = {}
