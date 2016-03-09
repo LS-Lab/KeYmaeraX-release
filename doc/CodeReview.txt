@@ -67,11 +67,10 @@ The date of last full ode review is added to the top of the file as  @note Code 
 A log of all major code reviews and the findings are reported here:
 
 Code Review: KeYmaera X Core except SetLattice: 2016-03-08
+  NOTE Rule.LAX_MODE=true has become acceptable but not preferred since not needed in theory.
   TODO Confirm that ODESystem should turn into non-DifferentialProgram while DifferentialProgram should turn into non-Program.
   TODO Delete Sequent.pref
-  TODO LookupLemmaRule
   TODO Turn "[:=] assign exists" into DerivedAxiom
-  TODO Delete QETool.qe
   TODO Add checksum test and core version to string representation of Lemma. And Lemma name sanity.
 
 Extended Code Review: KeYmaera X Core: 2015-08-25
