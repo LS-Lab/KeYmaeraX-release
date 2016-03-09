@@ -76,12 +76,12 @@ object DerivedAxioms {
     }
 
   /** Package a Lemma for a derived axiom up as a rule */
-  private def derivedAxiomR(name: String): LookupLemma = {
-    val lemmaName = axiom2lemmaName(name)
-    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
-    //@todo get rid of this
-    LookupLemma(derivedAxiomDB, lemmaName)
-  }
+//  private def derivedAxiomR(name: String): LookupLemma = {
+//    val lemmaName = axiom2lemmaName(name)
+//    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
+//    //@todo get rid of this
+//    LookupLemma(derivedAxiomDB, lemmaName)
+//  }
 
   /** Package a Lemma for a derived axiom up as a tactic */
   private def derivedAxiomT(lemma: Lemma): BelleExpr = {
@@ -91,7 +91,7 @@ object DerivedAxioms {
 //    val axiomName = lemma2axiomName.get(lemma.name.get).get
     val axiomName = AxiomInfo.ofCodeName(lemma.name.get).canonicalName
     //@todo get rid of this
-    ProofRuleTactics.applyRule(derivedAxiomR(axiomName))
+    TactixLibrary.byUS(lemma.fact) //ProofRuleTactics.applyRule(derivedAxiomR(axiomName))
   }
 
   private val x = Variable("x_", None, Real)

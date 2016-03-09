@@ -127,9 +127,9 @@ object ArithmeticTacticsImpl {
                 lemma.fact.conclusion.succ.head match {
                   case lemmaFml@Equiv(res, True) => {
 
-                    val applyLemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
+                    val applyLemma = ??? /*new ApplyRule(LookupLemma(lemmaDB, id)) {
                       override def applicable(node: ProofNode): Boolean = true
-                    }
+                    }*/
 
                     val closeTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
 

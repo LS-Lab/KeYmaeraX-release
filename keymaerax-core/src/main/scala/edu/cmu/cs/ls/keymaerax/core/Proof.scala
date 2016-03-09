@@ -1264,34 +1264,6 @@ object RCF {
   }
 }
 
-/*********************************************************************************
- * Lemma Mechanism Rules
- *********************************************************************************
- */
-
-/**
- * Lookup a lemma that has been proved previously or by an external arithmetic tool.
- *
- * @author nfulton
- * @author Stefan Mitsch
- * @see [[edu.cmu.cs.ls.keymaerax.core.LemmaDB.get()]]
- * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma.fact]]
- * @TODO Code Review: remove since duplicate functionality compared to Provable.apply(Provable,Subgoal)
- */
-case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
-  val name: String = "Lookup Lemma"
-  /** Get the lemma that this lookup lemma rule will apply */
-  def lemma: Lemma = {
-    insist(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
-    lemmaDB.get(lemmaID).get
-  }
-  def apply(s : Sequent): immutable.List[Sequent] = {
-    val lem = lemma
-    if (s.sameSequentAs(lem.fact.conclusion)) lem.fact.subgoals.toList
-    else throw new IllegalArgumentException("Lemma " + lemmaID + " with conclusion " + lem.fact.conclusion + " not " +
-      "applicable for sequent " + s)
-  }
-}
 
 /*********************************************************************************
   * Hybrid Games

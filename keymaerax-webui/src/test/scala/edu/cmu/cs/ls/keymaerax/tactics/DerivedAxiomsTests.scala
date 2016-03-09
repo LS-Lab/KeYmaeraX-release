@@ -67,21 +67,21 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     rootNode(lemma.fact, 0).isProved shouldBe true
   }
 
-  private def check(lem: ApplyRule[LookupLemma]): Sequent = {
+  private def check(lem: Any /*lem: ApplyRule[LookupLemma]*/): Sequent = ??? /*{
     val lemma = lem.rule.lemma
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
     lemma.fact.isProved shouldBe true
     useToClose(lem)
     lemma.fact.conclusion
-  }
+  }*/
 
-  private def useToClose(lem: ApplyRule[LookupLemma]): Unit = {
+  private def useToClose(lem: Any /*lem: ApplyRule[LookupLemma]*/): Unit = ??? /*{
     val rootNode = new RootNode(lem.rule.lemma.fact.conclusion)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(lem, rootNode))
     rootNode.isClosed() shouldBe true
     rootNode.isProved() shouldBe true
-  }
+  }*/
 
   "The DerivedAxioms prepopulation procedure" should "not crash" /*taggedAs(KeYmaeraXTestTags.CheckinTest)*/ in {
     LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
