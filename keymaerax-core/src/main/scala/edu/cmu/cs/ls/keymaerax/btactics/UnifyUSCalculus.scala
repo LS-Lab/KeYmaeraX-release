@@ -920,7 +920,7 @@ trait UnifyUSCalculus {
             //@todo implement good cases. For example nibble of assign on both sides. Or random. Or ....
             throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
-          case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
+          case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
             require(vars.size == 1, "Universal quantifier must not be block quantifier")
             //@note would also work with all distribute and all generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
@@ -930,7 +930,7 @@ trait UnifyUSCalculus {
               Skolemize(SuccPos(0))
             )
 
-          /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
+          /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
             useFor("vacuous all quantifier")(SuccPosition(0))(
               useFor("vacuous all quantifier")(AntePosition(0))(monStep(Context(c), mon))
             )*/
