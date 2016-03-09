@@ -344,7 +344,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Computing dimension of ODE at indicated position of a sequent */
   private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
     import Augmentors._
-    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).symbols.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
+    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
     sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => odeDim(ode)
       case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
