@@ -12,7 +12,7 @@
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
- * @note Code Review: 2016-03-08
+ * @note Code Review: 2016-03-09
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -1215,15 +1215,16 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
     // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
     //@note Taboos are the free symbols which is the same as the free symbols in the remaining sequent, i.e. after replacing pos with innocent True
-    val taboos = StaticSemantics.freeVars(s).toSymbolSet
+    //@note Literal mentions of free variables (via freeVars(s).symbols) is unsound, because <a;>true in antecedent might be usubsted to free <?x=1>true subsequently.
+    val taboos = StaticSemantics.freeVars(s)
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
       case _ => throw new InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
-    if (taboos.intersect(v.toSet).isEmpty) immutable.List(s.updated(pos, phi))
+    if (taboos.intersect(SetLattice[NamedSymbol](v)).isEmpty) immutable.List(s.updated(pos, phi))
     else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
-        taboos.intersect(v.toSet), v.toString, s.toString)
+        taboos.intersect(SetLattice[NamedSymbol](v)), v.toString, s.toString)
   }
 
 }

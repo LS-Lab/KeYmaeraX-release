@@ -5,7 +5,7 @@
 /**
  * KeYmaera X Exception and Error Hierarchy.
  * @author Andre Platzer
- * @note Code Review: 2016-03-08
+ * @note Code Review: 2016-03-09
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -62,7 +62,7 @@ case class RenamingClashException(msg: String, ren: String/*URename*/, e: String
 }
 
 /** Skolem symbol clash */
-case class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
+case class SkolemClashException(msg: String, clashedNames:SetLattice[_ >: NamedSymbol], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
   extends CoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
 
 /** Rule is not applicable as indicated */

@@ -6,7 +6,7 @@
  * The static semantics of differential dynamic logic.
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @note Code Review: 2016-03-08
+ * @note Code Review: 2016-03-09
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -48,6 +48,7 @@ object StaticSemantics {
   /**
    * Variable Categories for Formulas: Structure recording which names are free or bound
    * in a formula.
+ *
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written)
    */
@@ -60,6 +61,7 @@ object StaticSemantics {
   /**
    * Variable Categories for Programs: Structure recording which names are free, bound, or must-bound
    * in a program.
+ *
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written on some paths)
    * @param mbv Must-bound names (definitely written on all paths).
@@ -114,12 +116,14 @@ object StaticSemantics {
   }
 
   /**
-   * Check whether expression e is a properly differential term/expression, i.e. mentions differentials or differential symbols.
+   * Check whether expression e is literally a properly differential term/expression, i.e. mentions differentials or differential symbols.
+   *
    * @note Only verbatim mentions are counted, so not via Anything.
    * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables.
    * @note AtomicODE uses isDifferential to ensure explicit form of differential equations.
+   * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free DifferentialSymbols.
    */
-  def isDifferential(e: Expression): Boolean = freeVars(e).toSymbolSet.exists(x => x.isInstanceOf[DifferentialSymbol])
+  def isDifferential(e: Expression): Boolean = freeVars(e).symbols.exists(x => x.isInstanceOf[DifferentialSymbol])
 
   /**
    * The set FV(f) of free variables of formula f.
@@ -244,6 +248,7 @@ object StaticSemantics {
 
   /**
    * The signature of expression e.
+ *
    * @note Result will not be order stable, so order could be different on different runs of the prover.
    * @example{{{
    *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
@@ -358,14 +363,14 @@ object StaticSemantics {
   /**
    * Any (non-logical) symbol occurring verbatim in term, whether variable or function.
    */
-  def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).toSymbolSet
+  def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).symbols
 
   /**
    * Any (non-logical) symbol occurring verbatim in formula, whether free or bound variable or function or predicate or program constant.
    */
   def symbols(f: Formula): immutable.Set[NamedSymbol] = {
     val stat = StaticSemantics(f)
-    signature(f) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
+    signature(f) ++ stat.fv.symbols ++ stat.bv.symbols
   }
 
   /**
@@ -374,7 +379,7 @@ object StaticSemantics {
   def symbols(p: Program): immutable.Set[NamedSymbol] = {
     //@note stat.mbv subset of stat.bv so no point in adding them
     val stat = StaticSemantics(p)
-    signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
+    signature(p) ++ stat.fv.symbols ++ stat.bv.symbols
   }
 
   // convenience for sequents are unions over their formulas
