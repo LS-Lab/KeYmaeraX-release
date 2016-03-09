@@ -66,6 +66,10 @@ http://arxiv.org/abs/1408.1980
 The date of last full ode review is added to the top of the file as  @note Code Review.
 A log of all major code reviews and the findings are reported here:
 
+Code Review: KeYmaera X Core: 2016-03-09
+SetLattice reviewed and changed to pair matching style to improve readability. A few name changes.
+  NOTE Fixed Skolemize which was found to be unsound because of checking only with respect to literal mentions of free variables via freeVars(e).symbols instead of freeVars(e).
+
 Code Review: KeYmaera X Core except SetLattice: 2016-03-08
   NOTE Rule.LAX_MODE=true has become acceptable but not preferred since not needed in theory.
   TODO Confirm that ODESystem should turn into non-DifferentialProgram while DifferentialProgram should turn into non-Program.
