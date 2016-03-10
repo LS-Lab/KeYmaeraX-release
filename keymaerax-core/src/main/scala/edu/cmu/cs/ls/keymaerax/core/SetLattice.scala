@@ -53,7 +53,7 @@ sealed trait SetLattice[A] {
   /** Convert to a (finite ordinary) Set if !isInfinite */
   def toSet[B >: A]: Set[B]
   /** Set of verbatim occurring symbols in this (possibly top) SetLattice */
-  def toSymbolSet[B >: A]: Set[B]
+  def symbols[B >: A]: Set[B]
 
   def prettyString: String
 
@@ -157,7 +157,7 @@ private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
   def toSetLattice[B >: A]: SetLattice[B] = FiniteSet(toSet)
   def toSet[B >: A]: Set[B] = set.toSet
 
-  def toSymbolSet[B >: A]: Set[B] = toSet
+  def symbols[B >: A]: Set[B] = toSet
 }
 
 /**
@@ -189,7 +189,7 @@ private case class CoFiniteSet[A](excluded: immutable.Set[A], symbols: immutable
 
   def toSetLattice[B >: A]: SetLattice[B] = new CoFiniteSet(excluded.toSet, symbols.toSet)
   def toSet[B >: A]: Set[B] = throw new IllegalStateException("CoSets are infinite so have no finite Set representation")
-  def toSymbolSet[B >: A]: Set[B] = symbols.toSet
+  def symbols[B >: A]: Set[B] = symbols.toSet
 
   override def toString: String = "all but " + excluded.toString
   def prettyString: String = "all but {" + excluded.mkString(",") + "}"

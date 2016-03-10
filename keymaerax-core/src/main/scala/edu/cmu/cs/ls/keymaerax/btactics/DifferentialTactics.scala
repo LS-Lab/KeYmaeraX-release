@@ -638,7 +638,7 @@ object DifferentialTactics {
 
   /** Computes the dimension of ODE at indicated position of a sequent */
   private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
-    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.count(_.isInstanceOf[DifferentialSymbol])
+    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])
     sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => odeDim(ode)
       case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)

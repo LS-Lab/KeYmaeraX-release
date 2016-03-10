@@ -123,7 +123,7 @@ object StaticSemantics {
    * @note AtomicODE uses isDifferential to ensure explicit form of differential equations.
    * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free DifferentialSymbols.
    */
-  def isDifferential(e: Expression): Boolean = freeVars(e).toSymbolSet.exists(x => x.isInstanceOf[DifferentialSymbol])
+  def isDifferential(e: Expression): Boolean = freeVars(e).symbols.exists(x => x.isInstanceOf[DifferentialSymbol])
 
   /**
    * The set FV(f) of free variables of formula f.
@@ -363,14 +363,14 @@ object StaticSemantics {
   /**
    * Any (non-logical) symbol occurring verbatim in term, whether variable or function.
    */
-  def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).toSymbolSet
+  def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).symbols
 
   /**
    * Any (non-logical) symbol occurring verbatim in formula, whether free or bound variable or function or predicate or program constant.
    */
   def symbols(f: Formula): immutable.Set[NamedSymbol] = {
     val stat = StaticSemantics(f)
-    signature(f) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
+    signature(f) ++ stat.fv.symbols ++ stat.bv.symbols
   }
 
   /**
@@ -379,7 +379,7 @@ object StaticSemantics {
   def symbols(p: Program): immutable.Set[NamedSymbol] = {
     //@note stat.mbv subset of stat.bv so no point in adding them
     val stat = StaticSemantics(p)
-    signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
+    signature(p) ++ stat.fv.symbols ++ stat.bv.symbols
   }
 
   // convenience for sequents are unions over their formulas
