@@ -811,14 +811,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     lazy val differentialSystemP : PackratParser[DifferentialProgram] = {
       val pattern = rep1sep(atomicODEP | contEvolvePVarP, COMMA) ~ (AND ~> theFormulaParser.parser).?
-      log(pattern)("Differential equation system") ^^ {
-        case elements ~ constraint => {
+      log(pattern)("Differential equation system") ^^ {???
+        /*case elements ~ constraint => {
           val diffProgram = computeProduct(elements)
           constraint match {
             case Some(c) => ODESystem(diffProgram, c)
             case None => ODESystem(diffProgram, True)
           }
-        }
+        }*/
       }
     }
 
