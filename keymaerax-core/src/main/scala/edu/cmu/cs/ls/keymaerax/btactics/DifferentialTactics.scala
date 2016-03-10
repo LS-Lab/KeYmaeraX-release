@@ -522,7 +522,7 @@ object DifferentialTactics {
   })
 
   def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(Box(odes: DifferentialProgram, _)) =>
+    case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
       val time: Variable = TacticHelper.freshNamedSymbol(Variable("t_", None, Real), sequent)
@@ -531,9 +531,9 @@ object DifferentialTactics {
             DLBySubst.assignbExists("0".asTerm)(pos) &
             DLBySubst.assignEquational(pos)
 
-      def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
+      def createTactic(ode: ODESystem, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                        diffEqPos: Position): BelleExpr = {
-        val initialGhosts = (primedSymbols(ode) + time).foldLeft(skip)((a, b) =>
+        val initialGhosts = (primedSymbols(ode.ode) + time).foldLeft(skip)((a, b) =>
           a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
 
         // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
@@ -548,11 +548,11 @@ object DifferentialTactics {
 
       // initial values (from only the formula at pos, because allR will increase index of other occurrences elsewhere in the sequent)
       val iv: Map[Variable, Variable] =
-        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
+        primedSymbols(odes.ode).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
 
       val theSolution = solution match {
         case sol@Some(_) => sol
-        case None => tool.diffSol(odes, time, iv)
+        case None => tool.diffSol(odes.ode, time, iv)
       }
 
       val diffEqPos = pos.topLevel
