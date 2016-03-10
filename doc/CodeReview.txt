@@ -26,7 +26,6 @@ R6) AxiomBase.scala for correctness and compliance with Fig 2+3 [1,2,4]
 R7) SetLattice.scala for correctness
     including a glance at Errors.scala and core.PrettyPrinter.scala
 R8) QETool.scala for correctness
-R9) LemmaDB.scala + FileLemmaDB.scala for correctness
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
@@ -37,7 +36,8 @@ If there are any questions about the KeYmaera X Kernel code review or any sugges
 Extended Code Review:
 In addition to the above files, an extended code review also considers
 R9) parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
-R10) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
+R10) lemma package: LemmaDB.scala + FileLemmaDB.scala for correctness
+R11) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
 
 Andre
 
