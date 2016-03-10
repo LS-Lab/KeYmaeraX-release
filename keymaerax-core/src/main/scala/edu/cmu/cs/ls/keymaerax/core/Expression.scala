@@ -519,7 +519,7 @@ sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialPr
 /** Differential equation system ode with given evolution domain constraint */
 //@note could say that ODESystem is no differential program since not to be nested within DifferentialProduct.
 case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
-  extends Program with DifferentialProgram {
+  extends Program {
   override def kind: Kind = ProgramKind
 }
 /** Uninterpreted differential program constant */
