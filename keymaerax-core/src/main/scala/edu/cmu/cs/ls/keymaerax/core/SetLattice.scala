@@ -167,29 +167,29 @@ private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
  * fv/bv variables represents all possible symbols and thus is top, is tracked as c in symbols).
  *
  * @param excluded The elements not included in top.
- * @param symbols The specific symbols contained verbatim in the set, even if all except excluded are present.
+ * @param literally The specific symbols contained verbatim in the set, even if all except excluded are present.
  * @tparam A The type of elements.
  * @author smitsch
  */
-private case class CoFiniteSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A]) extends SetLattice[A] {
+private case class CoFiniteSet[A](excluded: immutable.Set[A], literally: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = true
   def isEmpty = false
   /* Cosets contain everything that's not excluded */
   def contains(e: A): Boolean = !excluded.contains(e)
 
   /* Coset excludes one element less now */
-  def +(e: A): CoFiniteSet[A] = new CoFiniteSet(excluded - e, symbols + e)
-  def ++(other: GenTraversableOnce[A]): CoFiniteSet[A] = new CoFiniteSet(excluded -- other, symbols ++ other)
+  def +(e: A): CoFiniteSet[A] = new CoFiniteSet(excluded - e, literally + e)
+  def ++(other: GenTraversableOnce[A]): CoFiniteSet[A] = new CoFiniteSet(excluded -- other, literally ++ other)
   /* top now excludes one more element */
-  def -(e: A): CoFiniteSet[A] = new CoFiniteSet(excluded + e, symbols - e)
-  def --(other: GenTraversableOnce[A]): CoFiniteSet[A] = new CoFiniteSet(excluded ++ other, symbols -- other)
+  def -(e: A): CoFiniteSet[A] = new CoFiniteSet(excluded + e, literally - e)
+  def --(other: GenTraversableOnce[A]): CoFiniteSet[A] = new CoFiniteSet(excluded ++ other, literally -- other)
   def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteSet(other -- excluded)   /* (all except ts) /\ os == os--ts */
 
-  def map[B](fun: A => B): CoFiniteSet[B] = new CoFiniteSet(excluded.map(fun), symbols.map(fun))
+  def map[B](fun: A => B): CoFiniteSet[B] = new CoFiniteSet(excluded.map(fun), literally.map(fun))
 
-  def toSetLattice[B >: A]: SetLattice[B] = new CoFiniteSet(excluded.toSet, symbols.toSet)
+  def toSetLattice[B >: A]: SetLattice[B] = new CoFiniteSet(excluded.toSet, literally.toSet)
   def toSet[B >: A]: Set[B] = throw new IllegalStateException("CoSets are infinite so have no finite Set representation")
-  def symbols[B >: A]: Set[B] = symbols.toSet
+  def symbols[B >: A]: Set[B] = literally.toSet
 
   override def toString: String = "all but " + excluded.toString
   def prettyString: String = "all but {" + excluded.mkString(",") + "}"
