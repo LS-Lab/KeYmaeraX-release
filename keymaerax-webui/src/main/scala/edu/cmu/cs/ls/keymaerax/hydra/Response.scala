@@ -227,18 +227,24 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
   )
 }
 
-class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: ExecutionStepPOJO) extends Response {
-  def getJson = JsObject(
-    "proofId" -> JsString(proofId),
-    "parentId" -> JsString(nodeId),
-    "taskId" -> JsString(taskId),
-    "status" -> JsString(status),
-    "lastStep" -> JsObject(
-      "ruleName" -> JsString(lastStep.ruleName),
-      "stepStatus" -> JsString(lastStep.status.toString)
-    ),
-    "type" -> JsString("taskstatus")
-  )
+class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: Option[ExecutionStepPOJO]) extends Response {
+  def getJson =
+    if (lastStep.isDefined) JsObject(
+      "proofId" -> JsString(proofId),
+      "parentId" -> JsString(nodeId),
+      "taskId" -> JsString(taskId),
+      "status" -> JsString(status),
+      "lastStep" -> JsObject(
+        "ruleName" -> JsString(lastStep.get.ruleName),
+        "stepStatus" -> JsString(lastStep.get.status.toString)
+      ),
+      "type" -> JsString("taskstatus"))
+    else JsObject(
+      "proofId" -> JsString(proofId),
+      "parentId" -> JsString(nodeId),
+      "taskId" -> JsString(taskId),
+      "status" -> JsString(status),
+      "type" -> JsString("taskstatus"))
 }
 
 class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: Boolean = true) extends Response {

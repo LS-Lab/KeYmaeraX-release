@@ -687,7 +687,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
-      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).last)
+      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).lastOption)
     }
     new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }
