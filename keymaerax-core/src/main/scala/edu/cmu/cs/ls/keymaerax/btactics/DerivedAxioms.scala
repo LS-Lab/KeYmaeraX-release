@@ -273,8 +273,11 @@ object DerivedAxioms {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
     DerivedAxiomInfo.allInfo.map(key => {
       try {
-        val proof: Provable = derivedAxiom(key.canonicalName)
-        derivedAxiom(key.canonicalName, proof)
+        //@note: cannot use any of AxiomInfo.provable and AxiomInfo.formula, since
+        // both ask DerivedAxioms.deriveAxiom, which in turn requires the lemma that we want to prepopulate to be
+        // present in the database already; derivedAxiomInfo, as a side effect, stores the lemma to the DB
+        derivedAxiomInfo(key.canonicalName)
+        // nothing else to do, populated in the DB as a side effect of derivedAxiomInfo
       } catch {
         case _:NotImplementedError => println("WARNING: Axiom not implemented:  " + key.canonicalName)
         case _:Throwable => println("WARNING: Unknown error populating axiom: " + key.canonicalName)
