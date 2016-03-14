@@ -107,6 +107,11 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case DiffAssign(d@DifferentialSymbol(x), e) => USR(o+x, u+x, DiffAssign(d, usubst(o, u, e)))
     case AssignAny(x) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
+      //@todo double-check this case
+    case ODESystem(ode, h) => val x = primedVariables(ode);
+      val sode = usubst(o, u, x, ode);
+      val ssys = ODESystem(sode, usubst(o++SetLattice(x), u++SetLattice(x), h))
+      USR(o++SetLattice(x), u++SetLattice(x), ssys)
     case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Compose(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Compose(as, bs))
     case Choice(a, b) =>
@@ -127,14 +132,12 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
       DifferentialProgram = p match {
     case DifferentialProduct(a, b) => DifferentialProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case ODESystem(a, h) => ODESystem(usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
     case AtomicODE(d@DifferentialSymbol(x), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: DifferentialProgramConst => p
   }
 
   private def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
     case DifferentialProduct(a, b) => primedVariables(a) ++ primedVariables(b)
-    case ODESystem(child, _) => primedVariables(child)
     case AtomicODE(DifferentialSymbol(x), _) => Set(x)
     case _: DifferentialProgramConst => Set.empty
   }

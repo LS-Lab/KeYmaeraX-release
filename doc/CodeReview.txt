@@ -26,7 +26,6 @@ R6) AxiomBase.scala for correctness and compliance with Fig 2+3 [1,2,4]
 R7) SetLattice.scala for correctness
     including a glance at Errors.scala and core.PrettyPrinter.scala
 R8) QETool.scala for correctness
-R9) LemmaDB.scala + FileLemmaDB.scala for correctness
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
@@ -37,7 +36,8 @@ If there are any questions about the KeYmaera X Kernel code review or any sugges
 Extended Code Review:
 In addition to the above files, an extended code review also considers
 R9) parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
-R10) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
+R10) lemma package: LemmaDB.scala + FileLemmaDB.scala for correctness
+R11) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
 
 Andre
 
@@ -63,8 +63,19 @@ ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
 http://arxiv.org/abs/1408.1980
 
 ------------------------------------------------------------------
-The date of last cfull ode review is added to the top of the file as  @note Code Review.
+The date of last full ode review is added to the top of the file as  @note Code Review.
 A log of all major code reviews and the findings are reported here:
+
+Code Review: KeYmaera X Core: 2016-03-09
+SetLattice reviewed and changed to pair matching style to improve readability. A few name changes.
+  NOTE Fixed Skolemize which was found to be unsound because of checking only with respect to literal mentions of free variables via freeVars(e).symbols instead of freeVars(e).
+
+Code Review: KeYmaera X Core except SetLattice: 2016-03-08
+  NOTE Rule.LAX_MODE=true has become acceptable but not preferred since not needed in theory.
+  TODO Confirm that ODESystem should turn into non-DifferentialProgram while DifferentialProgram should turn into non-Program.
+  TODO Delete Sequent.pref
+  TODO Turn "[:=] assign exists" into DerivedAxiom
+  TODO Add checksum test and core version to string representation of Lemma. And Lemma name sanity.
 
 Extended Code Review: KeYmaera X Core: 2015-08-25
   TODO Rule.LAX_MODE=false, which affects BoundVariableRenaming and URename and RCF trusted tools

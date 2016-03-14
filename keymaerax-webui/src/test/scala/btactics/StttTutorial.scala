@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DoAll, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Imply, Box}
@@ -16,6 +16,7 @@ import scala.language.postfixOps
 
 /**
  * Tutorial test cases.
+ *
  * @author Stefan Mitsch
  */
 @SlowTest
@@ -69,7 +70,7 @@ class StttTutorial extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*@TheType()) &
       loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
       debug("Use Case") & QE,
-      debug("Base Case") & andR('R) & DoAll(closeId),
+      debug("Base Case") & andR('R) & OnAll(closeId),
       debug("Step") & andL('L) & composeb('R) & assignb('R) & plant & QE
     )
 

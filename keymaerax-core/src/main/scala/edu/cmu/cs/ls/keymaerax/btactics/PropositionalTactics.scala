@@ -20,6 +20,7 @@ object PropositionalTactics {
    * -------------------------
    *   G, a, G' |- D, b, D'
    * }}}
+ *
    * @author Nathan Fulton
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.implyR]]
@@ -34,7 +35,7 @@ object PropositionalTactics {
       val right = sequent.succ(succPos.getIndex)
       val cutUsePos = AntePos(sequent.ante.length)
       cut(Imply(left, right)) <(
-        /* use */ implyL(cutUsePos) & DoAll(TactixLibrary.close),
+        /* use */ implyL(cutUsePos) & OnAll(TactixLibrary.close),
         /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) & hideL(antePos)) partial /* This is the result. */)
     }
   }
@@ -46,6 +47,7 @@ object PropositionalTactics {
    * -------------------------
    *   G |- D, a, D', b, D''
    * }}}
+ *
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.orR]]
    */
@@ -59,7 +61,7 @@ object PropositionalTactics {
       val right = sequent.succ(pos2.getIndex)
       val cutUsePos = AntePos(sequent.ante.length)
       cut(Or(left, right)) <(
-        /* use */ orL(cutUsePos) & DoAll(TactixLibrary.close),
+        /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
         /* show */
           if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2)) partial
           else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1)) partial
@@ -74,6 +76,7 @@ object PropositionalTactics {
    * -------------------------
    *   G, a, G', b, G'' |- D
    * }}}
+ *
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
    */
@@ -90,7 +93,7 @@ object PropositionalTactics {
         /* use */
           if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideL(pos1) & assertE(right, "")(pos2) & hideL(pos2)) partial
           else (assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & hideL(pos1)) partial,
-        /* show */ andR(cutUsePos) & DoAll(TactixLibrary.close)
+        /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
         )
     }
   }
@@ -98,6 +101,7 @@ object PropositionalTactics {
   /**
    * Returns a tactic for propositional CE with purely propositional unpeeling. Useful when unpeeled fact is not
    * an equivalence, as needed by CE. May perform better than CE for small contexts.
+ *
    * @see [[UnifyUSCalculus.CMon(Context)]]
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @example{{{
@@ -131,6 +135,7 @@ object PropositionalTactics {
 
   /**
    * Modus ponens.
+ *
    * @example{{{
    *      p, q, G |- D
    *   ---------------- modusPonens

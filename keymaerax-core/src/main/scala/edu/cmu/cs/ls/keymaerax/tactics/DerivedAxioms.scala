@@ -75,14 +75,14 @@ object DerivedAxioms {
     }
 
   /** Package a Lemma for a derived axiom up as a rule */
-  private[tactics] def derivedAxiomR(name: String): LookupLemma = {
+  private[tactics] def derivedAxiomR(name: String) : Rule = ??? /*LookupLemma = {
     val lemmaName = axiom2lemmaName(name)
     require(derivedAxiomDB.contains(lemmaName), s"Lemma '$lemmaName' not found; lemma must be present in lemma DB for lookup")
     LookupLemma(derivedAxiomDB, lemmaName)
-  }
+  }*/
 
   /** Package a Lemma for a derived axiom up as a tactic */
-  private[tactics] def derivedAxiomT(lemma: Lemma): ApplyRule[LookupLemma] = {
+  private[tactics] def derivedAxiomT(lemma: Lemma) : Tactic = ??? /*: ApplyRule[LookupLemma] = {
     require(derivedAxiomDB.contains(lemma.name.get), "Lemma has already been added")
     val lemma2axiomName = axiom2lemmaName.map(_.swap)
     require(lemma2axiomName.contains(lemma.name.get), s"Lemma with name ${lemma.name.get} must prove an axiom")
@@ -90,7 +90,7 @@ object DerivedAxioms {
     new ApplyRule(derivedAxiomR(axiomName)) {
       override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
     }
-  }
+  }*/
 
   private val x = Variable("x_", None, Real)
   private val px = PredOf(Function("p_", None, Real, Bool), x)
@@ -262,7 +262,7 @@ object DerivedAxioms {
    * @return The axiom formula and tactic, if found. None otherwise.
    * @note Central index for looking up derived axioms by names.
    */
-  private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {(name: @switch) match {
+  private def derivedAxiomInfo(name: String): Option[(Formula, /*ApplyRule[LookupLemma]*/Tactic)] = {(name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
     //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
@@ -373,7 +373,7 @@ object DerivedAxioms {
     case "<=1Div down" => Some(intervalDown1DivideF, intervalDown1DivideT)
     case "<=Div down" => Some(intervalDownDivideF, intervalDownDivideT)
     case _ => None
-  } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == axiom2lemmaName(name), s"Lookup of DerivedAxiom should find the correct lemma (name: $name)")
+  } } //ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == axiom2lemmaName(name), s"Lookup of DerivedAxiom should find the correct lemma (name: $name)")
 
   def derivedAxiomMap = {
     //@note copied from derivedAxiomInfo.

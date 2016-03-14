@@ -4,7 +4,7 @@
 */
 /**
  * @author Stefan Mitsch
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-09
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -55,17 +55,22 @@ object Lemma {
  * val lemmaID = lemmaDB.add(
  *   Lemma(proved, evidence, Some("Lemma <?> test"))
  * )
- * // use a lemma
- * LookupLemma(lemmaDB, lemmaID)
+ *
+ * // retrieve a lemma
+ * val lemmaFact = lemmaDB.get(lemmaID).get.fact
+ * // use a lemma literally
+ * TactixLibrary.by(lemmaFact)
+ * // use a uniform substitution instance of a lemma
+ * TactixLibrary.byUS(lemmaFact)
  * }}}
  * @author Stefan Mitsch
- * @see [[LookupLemma]]
  * @see [[RCF.proveArithmetic]]
- * @see [[LemmaDB]]
+ * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
  * @see [[Lemma.fromString]]
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {
+  //@todo name is alphabetical and not "\".\n false"
   //@note Now allowing more general forms of lemmas. @todo check for soundness.
 //  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
   //@note could allow more general forms of lemmas.

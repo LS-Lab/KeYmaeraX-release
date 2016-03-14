@@ -12,7 +12,7 @@
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-09
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -40,41 +40,41 @@ sealed trait SeqPos {
   def isSucc: Boolean = !isAnte
 
   /**
-   * The '''unsigned''' index into the antecedent or succedent list, respectively, '''base 0'''.
+   * The '''unsigned''' index into the antecedent or succedent list, respectively, '''0-indexed'''.
    */
   private[keymaerax] def getIndex: Int
 
   /**
-   * The '''signed''' position for the antecedent or succedent list, respectively, '''base 1'''.
+   * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
    */
-  final def getPos: Int = if (isAnte) {-(getIndex+1)} else {assert(isSucc); getIndex+1}
+  final def getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
 
-  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + getPos + ")"
+  override def toString: String = getPos.toString
 }
 
 /**
  * Antecedent Positions of formulas in a sequent.
  *
- * @param index the position base 0 in antecedent.
+ * @param index the position 0-indexed in antecedent.
  */
 case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = true
-  /** The position base 0 in antecedent. */
-  def getIndex: Int = index
+  /** The position 0-indexed in antecedent. */
+  private[keymaerax] def getIndex: Int = index
 }
 
 /**
  * Antecedent Positions of formulas in a sequent.
  *
- * @param index the position base 0 in succedent.
+ * @param index the position 0-indexed in succedent.
  */
 case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = false
-  /** The position base 0 in succedent. */
-  def getIndex: Int = index
+  /** The position 0-indexed in succedent. */
+  private[keymaerax] def getIndex: Int = index
 }
 
 object SeqPos {
@@ -88,7 +88,7 @@ object SeqPos {
    * @see SeqPos#pos
    */
   def apply(signedPos: Int): SeqPos =
-    if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
+    if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-(signedPos+1))}
 
 }
 
@@ -215,11 +215,13 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
+   * @note Used for contracts in the core.
    */
   def subsequentOf(r: Sequent): Boolean = pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
    * Check whether this sequent is the same as the given sequent r (considered as sets)
+   * @note Used for contracts in the core.
    */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 
@@ -487,12 +489,14 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
-    * @see "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016."
+    * @see "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 2+1."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
   def apply(subst: USubst): Provable =
     try {
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
+      //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 2."
+      //@note case isProved is covered by "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 1." and Theorem 2 without subgoals having same effect as Theorem 1. There is no difference between locally sound and globally sound if isProved so no subgoals.
       insist(subst.freeVars.isEmpty || isProved || Rule.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
       new Provable(subst(conclusion), subgoals.map(s => subst(s)))
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
@@ -583,7 +587,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
 /** Starting new Provables to begin a proof */
 object Provable {
-  /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
+  /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
   val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
   /** immutable list of Provables of sound axioms, i.e., valid formulas of differential dynamic logic.
@@ -642,7 +646,7 @@ object Provable {
     *
     * @param goal the desired conclusion formula for the succedent.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
-    * @note Not soundness-critical
+    * @note Not soundness-critical (convenience method)
     */
   def startProof(goal : Formula): Provable =
     startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
@@ -784,7 +788,7 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+  } ensuring (_.forall(r => r.sameSequentAs(s)), "structural rule subsequents")
 }
 
 /**
@@ -799,7 +803,7 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRul
   val name: String = "ExchangeLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+  } ensuring (_.forall(r => r.sameSequentAs(s)), "structural rule subsequents")
 }
 
 // Contraction right rule duplicates a formula in the succedent
@@ -1067,7 +1071,6 @@ case class EquivRight(pos: SuccPos) extends RightRule {
   /** <->R Equiv right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p,q) = s(pos)
-    //immutable.List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p), immutable.IndexedSeq(q))),
                    s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq(p))))
   }
@@ -1080,15 +1083,13 @@ case class EquivRight(pos: SuccPos) extends RightRule {
  * ----------------------------- (<-> Equiv left)
  *   p<->q, G |- D
  * }}}
+ * @note Positions remain stable when decomposed this way around.
  */
 case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
   /** <->L Equiv left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(a,b) = s(pos)
-    //immutable.List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
-    // immutable.List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
-    //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
     //@note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
     immutable.List(s.updated(pos, And(a,b)),
                    s.updated(pos, And(Not(a),Not(b))))
@@ -1097,62 +1098,9 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
 
 
 /*********************************************************************************
- * Uniform Substitution Proof Rule
+ * Uniform Renaming Proof Rule
  *********************************************************************************
  */
-
-/**
- * US: Uniform Substitution Rule.
- * Applies a given uniform substitution to the given original premise (origin).
- * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
- * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
- * US uniform substitution.
- * {{{
- *        G |- D
- * -------------------- (US)
- * subst(G) |- subst(D)
- * }}}
- *
- * @param subst the uniform substitution to be applied to origin.
- * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
- *               In the above rule, this would be `G |- D`.
- * @note In sequent calculus, this Hilbert-calculus rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
- * @author Andre Platzer
- * @see [[USubst]]
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see [[Provable.apply(USubst)]]
- */
-//@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
-//final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
-//  //@todo soundness-critical: disallow this globally sound rule when adding the simple implementation of Provable.apply(USubst)
-//  val name: String = "Uniform Substitution"
-//
-//  //private def log(msg: =>Any): Unit = {} //println(msg)
-//
-//  override def toString: String = subst.toString   // name + "(" + subst + ")"
-//
-//  /**
-//   * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
-//   * require explicit rule applications)
-//   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-//   */
-//  def apply(conclusion: Sequent): immutable.List[Sequent] = if (true) throw new IllegalStateException("use Provable(USubst) instead") else
-//    try {
-//      //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
-//      if (subst(origin) == conclusion) immutable.List(origin)
-//      else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, this, conclusion)
-//      /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
-//        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
-//    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
-//}
-//@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
-//object UniformSubstitutionRule {
-//  /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
-//  @deprecated("Use provable.apply(usubst) instead, especially when provable.isProved")
-//  def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
-//    provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
-//}
 
 
 /**
@@ -1175,7 +1123,7 @@ object UniformRenaming {
  * @see [[URename]]
  */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
-  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
   private val renaming: URename = URename(what, repl)
 
@@ -1196,7 +1144,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * @author Stefan Mitsch
  */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
-  insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
+  //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   //@note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
@@ -1226,6 +1174,8 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
    *
    * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
    * @note This implementation currently errors if repl.sort!=Real
+   * @note what==repl identity case is not used in the prover but is sound.
+   * @note URename.TRANSPOSITION is irrelevant here, since repl can't occur when admissible.
    */
   private def admissible(e: Expression): Boolean =
     what == repl || StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
@@ -1264,16 +1214,17 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
   override def apply(s: Sequent): immutable.List[Sequent] = {
     // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
-    //@note Taboos are the free symbols in the remaining sequent, i.e. after replacing pos with innocent True
-    val taboos = StaticSemantics.freeVars(s).toSymbolSet ensuring (r => StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet.subsetOf(r))
+    //@note Taboos are the free symbols which is the same as the free symbols in the remaining sequent, i.e. after replacing pos with innocent True
+    //@note Literal mentions of free variables (via freeVars(s).symbols) is unsound, because <a;>true in antecedent might be usubsted to free <?x=1>true subsequently.
+    val taboos = StaticSemantics.freeVars(s)
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
       case _ => throw new InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
-    if (taboos.intersect(v.toSet).isEmpty) immutable.List(s.updated(pos, phi))
+    if (taboos.intersect(SetLattice[NamedSymbol](v)).isEmpty) immutable.List(s.updated(pos, phi))
     else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
-        taboos.intersect(v.toSet), v.toString, s.toString)
+        taboos.intersect(SetLattice[NamedSymbol](v)), v.toString, s.toString)
   }
 
 }
@@ -1314,33 +1265,6 @@ object RCF {
   }
 }
 
-/*********************************************************************************
- * Lemma Mechanism Rules
- *********************************************************************************
- */
-
-/**
- * Lookup a lemma that has been proved previously or by an external arithmetic tool.
- *
- * @author nfulton
- * @author Stefan Mitsch
- * @see [[edu.cmu.cs.ls.keymaerax.core.LemmaDB.get()]]
- * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma.fact]]
- */
-case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
-  val name: String = "Lookup Lemma"
-  /** Get the lemma that this lookup lemma rule will apply */
-  def lemma: Lemma = {
-    insist(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
-    lemmaDB.get(lemmaID).get
-  }
-  def apply(s : Sequent): immutable.List[Sequent] = {
-    val lem = lemma
-    if (s.sameSequentAs(lem.fact.conclusion)) lem.fact.subgoals.toList
-    else throw new IllegalArgumentException("Lemma " + lemmaID + " with conclusion " + lem.fact.conclusion + " not " +
-      "applicable for sequent " + s)
-  }
-}
 
 /*********************************************************************************
   * Hybrid Games
@@ -1358,7 +1282,7 @@ case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
  * @note When using hybrid games axiomatization
  */
 final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
-  val name: String = "dual-free"
+  val name: String = "dualFree"
   /** Prove [a]true by showing that a is dual-free */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     s(pos) match {
@@ -1490,8 +1414,6 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
     val p = s(pos)
     immutable.List(s.updated(pos, c),
                    s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c)))))
-    /* immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(c), immutable.IndexedSeq())),
-                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c))))) */
   }
 }
 
@@ -1506,7 +1428,7 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
  * @derived
  */
 case class CommuteEquivRight(pos: SuccPos) extends RightRule {
-  val name: String = "c<-> commute equivalence Right"
+  val name: String = "CommuteEquivRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p,q) = s(pos)
     immutable.List(s.updated(pos, Equiv(q, p)))
@@ -1524,7 +1446,7 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   * @derived
   */
 case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
-  val name: String = "c<-> commute equivalence Left"
+  val name: String = "CommuteEquivLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p,q) = s(pos)
     immutable.List(s.updated(pos, Equiv(q, p)))
@@ -1542,7 +1464,7 @@ case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
 case class EquivifyRight(pos: SuccPos) extends RightRule {
-  val name: String = "->2<-> Equivify Right"
+  val name: String = "EquivifyRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(a,b) = s(pos)
     immutable.List(s.updated(pos, Equiv(a, b)))

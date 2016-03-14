@@ -32,7 +32,7 @@ object BindingAssessment {
 
   def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
     case DifferentialProduct(a, b) => primedVariables(a) ++ primedVariables(b)
-    case ODESystem(child, _) => primedVariables(child)
+    //case ODESystem(child, _) => primedVariables(child)
     case AtomicODE(DifferentialSymbol(x), _) => Set(x)
     case _: DifferentialProgramConst => Set.empty
   }

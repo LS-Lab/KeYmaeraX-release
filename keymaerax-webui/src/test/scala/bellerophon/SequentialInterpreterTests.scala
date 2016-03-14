@@ -94,23 +94,23 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     )
   }
 
-  "DoAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
+  "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = andR(SuccPos(0)) & DoAll (implyR(SuccPos(0)) & close)
+    val expr = andR(SuccPos(0)) & OnAll (implyR(SuccPos(0)) & close)
     shouldClose(expr, f)
   }
 
   it should "move inside Eithers correctly" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = andR(SuccPos(0)) & DoAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & close))
+    val expr = andR(SuccPos(0)) & OnAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & close))
     shouldClose(expr, f)
   }
 
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
-      DoAll(andR(SuccPos(0))) |
-      DoAll(implyR(SuccPos(0)) & close)
+      OnAll(andR(SuccPos(0))) |
+      OnAll(implyR(SuccPos(0)) & close)
     )*@TheType()
   }
 

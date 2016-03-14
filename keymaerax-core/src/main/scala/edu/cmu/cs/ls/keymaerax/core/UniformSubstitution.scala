@@ -8,7 +8,7 @@
  * @author smitsch
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @note Code Review: 2015-08-24
+ * @note Code Review: 2016-03-09
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -150,12 +150,12 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *
  * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
  * @note Implements the "global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
- * Main ingredient of [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
- * and [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]]
+ * Main ingredient of prover core.
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.UniformSubstitution)]]
  * @example Uniform substitution can be applied to a formula
  * {{{
  *   val p = Function("p", None, Real, Bool)
@@ -209,7 +209,6 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *   // results in: [x'=5;]x>=2 <-> [x'=5;](x>=2&true)
  *   println(next)
  * }}}
- * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
@@ -311,7 +310,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   def apply(pr: Provable): Provable = pr.apply(this)
 
 
-  /** Union of uniform substitutions, i.e., both replacement lists merged. */
+  /** Union of uniform substitutions, i.e., both replacement lists merged.
+    * @note Convenience method not used in the core, but used for stapling uniform substitutions together during unification etc.
+    */
   def ++(other: USubst): USubst = USubst((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
@@ -319,7 +320,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * Whether this substitution matches to replace the given expression e,
    * because there is a substitution pair that matches e.
    */
-  private def matchHead(e: Expression): Boolean = subsDefs.filter(_.what.isInstanceOf[ApplicationOf]).exists(sp => sp.sameHead(e))
+  private def matchHead(e: Expression): Boolean = subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
 
   // implementation of uniform substitution application
@@ -527,20 +528,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    * @see arXiv:1503.01981 Definition 12.
    */
-  private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): Boolean = {
-      // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
-      // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
-      // occurs in theta (or phi or alpha)
-      def intersectsU(sigma: SubstitutionPair): Boolean =
-        sigma.freeVars.intersect(U) != bottom
-
-    // The substitution pairs whose FV intersect U should not occur
-    //@note This checks more symbols than those that occur
-    subsDefs.filter(intersectsU).flatMap(sigma => StaticSemantics.signature(sigma.what)).forall(fn => !occurrences.contains(fn))
-  } ensuring(r =>
+  private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): Boolean =
     // U-admissible iff FV(restrict this to occurrences) /\ U = empty
-    r == clashSet(U, occurrences).isEmpty,
-    this + " is " + U + "-admissible iff restriction " + projection(occurrences) + " to occurring symbols " + occurrences + " has no free variables " + projection(occurrences).freeVars + " of " + U)
+    clashSet(U, occurrences).isEmpty
+    // this + " is " + U + "-admissible iff restriction " + projection(occurrences) + " to occurring symbols " + occurrences + " has no free variables " + projection(occurrences).freeVars + " of " + U)
 
   /**
    * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.

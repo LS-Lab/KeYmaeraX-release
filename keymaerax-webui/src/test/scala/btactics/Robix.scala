@@ -42,7 +42,7 @@ class Robix extends TacticTestBase {
       debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
 
     val hideIrrelevantAssumptions: BelleExpr =
-      DoAll(
+      OnAll(
         hideL(Find.FindL(0, Some("dx^2+dy^2=1".asFormula))) &
         hideL(Find.FindL(0, Some("r!=0".asFormula))) &
         hideL(Find.FindL(0, Some("dxo^2+dyo^2<=V()^2".asFormula))) partial)
@@ -54,8 +54,8 @@ class Robix extends TacticTestBase {
         hideR(2, "abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula) & QE)
 
     def accArithTactic(fml: Formula): BelleExpr = implyR(1) & andL('_)*@TheType() & cutL(fml)(AntePos(4)) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & DoAll(orL(-15) partial) &
-        DoAll(andL('_)*@TheType() partial) & DoAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
+      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
+        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
         hideL(-11) & hideL(-8) & QE,
         hideR(1) & QE,
         hideR(1) & QE,
@@ -99,8 +99,8 @@ class Robix extends TacticTestBase {
     val accArith = "A>=0 & B>0 & V()>=0 & ep>0 & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & v_0>=0 & -B<=a & a<=A & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
 
     val tactic = implyR(1) & andL('_)*@TheType() & cutL("abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V()))".asFormula)(AntePos(4)) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & DoAll(orL(-15) partial) &
-        DoAll(andL('_)*@TheType() partial) & DoAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
+      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
+        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
         hideL(-11) & hideL(-8) & QE,
         hideR(1) & QE,
         hideR(1) & QE,
@@ -116,8 +116,8 @@ class Robix extends TacticTestBase {
     val accArith = "A>=0 & B>0 & V()>=0 & ep>0 & abs(y_0-yo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & v_0>=0 & -B<=a & a<=A & -t*V()<=yo-yo_0 & yo-yo_0<=t*V() & -t*(v-a/2*t)<=y-y_0 & y-y_0<=t*(v-a/2*t) & v=v_0+a*t & t>=0 & t<=ep & v>=0 -> abs(y-yo)>v^2/(2*B)+V()*(v/B)".asFormula
 
     val tactic = implyR(1) & andL('_)*@TheType() & cutL("abs(y_0-yo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V()))".asFormula)(AntePos(4)) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & DoAll(orL(-15) partial) &
-        DoAll(andL('_)*@TheType() partial) & DoAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
+      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
+        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
         hideL(-11) & hideL(-8) & QE,
         hideR(1) & QE,
         hideR(1) & QE,
