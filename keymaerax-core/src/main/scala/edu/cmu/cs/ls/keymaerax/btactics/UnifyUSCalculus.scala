@@ -320,8 +320,11 @@ trait UnifyUSCalculus {
       K.ctx match {
         case DotFormula if p.isTopLevel => by(subst.toForward(fact))
 
-          //@todo uncomment again
-        case DotFormula if !p.isTopLevel => ??? //equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
+          //@todo may have to fix
+        case DotFormula if !p.isTopLevel => //equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
+          equivStep(True, TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head,True),
+            equivR(1) & <(closeTrue(1) , coHideR(1) & by(fact))
+          ))
 
         case Equiv(DotFormula, other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 

@@ -121,7 +121,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
       DifferentialProgram = p match {
     case DifferentialProduct(a, b) => DifferentialProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case ODESystem(a, h) => ODESystem(usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
+//    case ODESystem(a, h) => ODESystem(usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
     case AtomicODE(d@DifferentialSymbol(x), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: DifferentialProgramConst => p
   }

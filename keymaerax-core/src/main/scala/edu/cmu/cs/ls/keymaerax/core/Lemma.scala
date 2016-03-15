@@ -55,13 +55,17 @@ object Lemma {
  * val lemmaID = lemmaDB.add(
  *   Lemma(proved, evidence, Some("Lemma <?> test"))
  * )
- * // use a lemma
- * LookupLemma(lemmaDB, lemmaID)
+ *
+ * // retrieve a lemma
+ * val lemmaFact = lemmaDB.get(lemmaID).get.fact
+ * // use a lemma literally
+ * TactixLibrary.by(lemmaFact)
+ * // use a uniform substitution instance of a lemma
+ * TactixLibrary.byUS(lemmaFact)
  * }}}
  * @author Stefan Mitsch
- * @see [[LookupLemma]]
  * @see [[RCF.proveArithmetic]]
- * @see [[LemmaDB]]
+ * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
  * @see [[Lemma.fromString]]
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */

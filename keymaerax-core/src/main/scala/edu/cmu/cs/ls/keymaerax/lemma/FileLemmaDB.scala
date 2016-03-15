@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import java.io.{File, PrintWriter}
 
-import edu.cmu.cs.ls.keymaerax.core.{Lemma, LemmaDB}
+import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser._
 
 /**

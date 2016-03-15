@@ -21,8 +21,12 @@ object UIIndex {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
-  def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = allStepsAt(expr, pos).
-    find(DerivationInfo(_).inputs.isEmpty)
+  def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {
+    case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
+    case _ => allStepsAt(expr, pos).find(DerivationInfo(_).inputs.isEmpty)
+  }
+
+
 
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
     find(DerivationInfo(_).inputs.isEmpty)

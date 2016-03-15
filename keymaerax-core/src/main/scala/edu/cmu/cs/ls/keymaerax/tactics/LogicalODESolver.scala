@@ -141,7 +141,7 @@ object LogicalODESolver {
     override def applies(f: Formula): Boolean = f match {
       case Box(pi:DifferentialProgram, f: Formula) => pi match {
         case a:AtomicODE => false
-        case ODESystem(pipi, ff) => timeVar(pi).isDefined && getLastPartialSoln(pi).isDefined
+        //@todo case ODESystem(pipi, ff) => timeVar(pi).isDefined && getLastPartialSoln(pi).isDefined
         case DifferentialProduct(l,r) => timeVar(pi).isDefined
       }
     }
@@ -208,9 +208,9 @@ object LogicalODESolver {
    *         not contain any partial solutions.
    */
   private def getLastPartialSoln(program : DifferentialProgram) : Option[Formula] = program match {
-    case ODESystem(odes, constraint) => {
+    /* @todo case ODESystem(odes, constraint) => {
       extractInitialConditions(Some(program))(constraint).lastOption
-    }
+    }*/
     case _ => throw new Exception("Need to implement all cases. Not sure." + program)
   }
 
@@ -528,7 +528,7 @@ object LogicalODESolver {
   }
   private def getPrimedVariables(ode : DifferentialProgram) : List[Variable] = ode match {
     case AtomicODE(pv, term) => pv.x :: Nil
-    case ODESystem(ode, constraint) => getPrimedVariables(ode)
+    //@todo case ODESystem(ode, constraint) => getPrimedVariables(ode)
     case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)
     case _: AtomicDifferentialProgram => ???
   }
@@ -761,7 +761,7 @@ object LogicalODESolver {
    */
   private def odeConstraints(ode : DifferentialProgram) : List[Formula] = ode match {
     case AtomicODE(x,e)                   => Nil
-    case ODESystem(ode, constraint)       => constraint :: Nil
+    //@todo case ODESystem(ode, constraint)       => constraint :: Nil
     case DifferentialProduct(left, right) => odeConstraints(left) ++ odeConstraints(right)
   }
 
@@ -772,7 +772,7 @@ object LogicalODESolver {
    */
   private def atomicODEs(ode : DifferentialProgram) : List[AtomicODE] = ode match {
     case AtomicODE(x, e)                  => AtomicODE(x,e) :: Nil
-    case ODESystem(ode, constraint)       => atomicODEs(ode)
+    //@todo case ODESystem(ode, constraint)       => atomicODEs(ode)
     case DifferentialProduct(left, right) => atomicODEs(left) ++ atomicODEs(right)
   }
 
@@ -787,7 +787,7 @@ object LogicalODESolver {
 
     ode match {
       case atomic:AtomicODE => if(isTimeVar(atomic)) Some(atomic.xp.x) else None
-      case ODESystem(ode, constraint)       => timeVar(ode)
+      //@todo case ODESystem(ode, constraint)       => timeVar(ode)
       case DifferentialProduct(left, right) => (timeVar(left), timeVar(right)) match {
         case (Some(t), Some(t2)) => if(t.equals(t2)) Some(t) else ???
         case (Some(t), None)     => Some(t)
