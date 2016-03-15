@@ -8,6 +8,8 @@ import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import akka.actor.Actor
+import spray.http.CacheDirectives.{`max-age`, `no-cache`}
+import spray.http.HttpHeaders.`Cache-Control`
 import spray.routing._
 import spray.http._
 import spray.json._
@@ -55,6 +57,15 @@ trait RestApi extends HttpService with SLF4JLogging {
   private def getFileNameFromFormData(item:BodyPart) : String = {
     item.headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
   }
+
+  /**
+    * Turn off all caching.
+    * @note A hosted version of the server should probably turn this off.
+    * */
+  private def complete(response: String) =
+    respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+      super.complete(response)
+    }
 
   private def standardCompletion(r: Request) : String = {
     val responses = r.getResultingResponses()
