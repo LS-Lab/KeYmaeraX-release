@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import testHelper.KeYmaeraXTestTags
@@ -298,6 +299,27 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>=5".asFormula
     result.subgoals.last.ante should contain only "x>7".asFormula
     result.subgoals.last.succ should contain only "[x':=2;]x'>=0".asFormula
+  }
+
+  it should "behave as diffInd from cheat sheet on x >= 0 & y >= 0 & z >= 0 -> [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0" in withMathematica { implicit qeTool =>
+    val input = """ProgramVariables.
+                  |  R x.
+                  |  R y.
+                  |  R z.
+                  |End.
+                  |Problem.
+                  |  x >= 0 & y >= 0 & z >= 0
+                  |  ->
+                  |  [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0
+                  |End.
+                  |""".stripMargin
+
+    val result = proveBy(KeYmaeraXProblemParser(input), implyR(1) & diffInd(qeTool, 'diffInd)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x >= 0 & y >= 0 & z >= 0".asFormula, "y>=0".asFormula)
+    result.subgoals.head.succ should contain only "x>=0".asFormula
+    result.subgoals.last.ante should contain only "y>=0".asFormula
+    result.subgoals.last.succ should contain only "[z':=x^2;][y':=z;][x':=y;]x'>=0".asFormula
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withMathematica { implicit qeTool =>
