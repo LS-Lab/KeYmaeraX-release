@@ -62,7 +62,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     * Turn off all caching.
     * @note A hosted version of the server should probably turn this off.
     * */
-  private def complete(response: String) =
+  private def completeWithoutCache(response: String) =
     respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
       super.complete(response)
     }
@@ -90,8 +90,17 @@ trait RestApi extends HttpService with SLF4JLogging {
   val userPrefix = pathPrefix("user" / Segment)
 
   //The static directory.
-  val staticRoute = pathPrefix("") { get { getFromResourceDirectory("") } }
-  val homePage = path("") { get {getFromResource("index_bootstrap.html")}}
+  val staticRoute =
+    pathPrefix("") { get {
+      respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+        getFromResourceDirectory("")
+      }
+    }}
+  val homePage = path("") { get {
+    respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+      getFromResource("index_bootstrap.html")
+    }
+  }}
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
