@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, NoneGenerate, Der
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool, Tool, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
@@ -26,12 +26,17 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def withMathematica(testcode: Mathematica => Any) {
     val mathematica = new Mathematica()
     mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
-    mathematica shouldBe 'initialized
-    DerivedAxioms.qeTool = mathematica
-    TactixLibrary.tool = mathematica
+    withTool(mathematica)(testcode)
+  }
+
+  /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
+  def withTool[T <: Tool with QETool with DiffSolutionTool with CounterExampleTool](tool: T)(testcode: T => Any): Unit = {
+    tool shouldBe 'initialized
+    DerivedAxioms.qeTool = tool
+    TactixLibrary.tool = tool
     try {
-      testcode(mathematica)
-    } finally mathematica.shutdown()
+      testcode(tool)
+    } finally tool.shutdown()
   }
 
   /** Test setup */
@@ -45,11 +50,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /* Test teardown */
   override def afterEach() = {
     if (DerivedAxioms.qeTool != null) {
-      DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
+      DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
       DerivedAxioms.qeTool = null
     }
     if (TactixLibrary.tool != null) {
-      TactixLibrary.tool match { case m: Mathematica => m.shutdown() }
+      TactixLibrary.tool match { case t: Tool => t.shutdown() }
       TactixLibrary.tool = null
       TactixLibrary.invGenerator = new NoneGenerate()
     }
