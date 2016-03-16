@@ -35,6 +35,7 @@ angular.module('formula')
                              'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-trigger="none"' +
+                             'popover-append-to-body="true"' +
                              'popover-placement="auto bottom">' + content.text + '</span>';
                 } else {
                     return content.text;
