@@ -362,6 +362,23 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).succ should contain only "[x:=2; ++ y:=z;]x*y>5".asFormula
   }
 
+  it should "apply alpha rule to extract subformulas before wiping from the context" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("x>0&y>1&z>7".asFormula),
+      IndexedSeq("x<3".asFormula, "[{x:=2;}*]x>2".asFormula, "x>5|y<4".asFormula)), I("x*y>5".asFormula)(2))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only "x>2".asFormula
+    // init
+    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only ("x<3".asFormula, "x>5".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // step
+    result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
+  }
+
   it should "remove duplicated formulas" in {
     val result = proveBy(Sequent(Nil,
         IndexedSeq("x>0".asFormula, "x>0".asFormula, "y>1".asFormula, "z>7".asFormula),

@@ -439,33 +439,35 @@ object DLBySubst {
    * @param invariant The invariant.
    * @return The tactic.
    */
-  def loop(invariant: Formula): DependentPositionTactic = new DependentPositionTactic("I") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      require(pos.isTopLevel && pos.isSucc, "I only at top-level in succedent, but got " + pos)
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(b@Box(Loop(a), p)) =>
-          val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
-          val q =
-            if (consts.size > 1) And(invariant, consts.reduceRight(And))
-            else if (consts.size == 1) And(invariant, consts.head)
-            else And(invariant, True)
-          cut(Box(Loop(a), q)) <(
-            /* use */
-            implyRi(AntePos(sequent.ante.length), pos.checkSucc.top) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
-              (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase),
-            /* show */
-            hide(pos, b) & useAt("I induction")('Rlast) & andR('Rlast) <(
-              andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
-              cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
-                andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial) partial)
-      }
+  def loop(invariant: Formula): DependentPositionTactic = "loop" by ((pos, sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
+    alphaRule*@TheType() & (new DependentPositionTactic("doLoop") {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+          case Some(b@Box(Loop(a), p)) =>
+            val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+            val q =
+              if (consts.size > 1) And(invariant, consts.reduceRight(And))
+              else if (consts.size == 1) And(invariant, consts.head)
+              else And(invariant, True)
+            cut(Box(Loop(a), q)) <(
+              /* use */
+              implyRi(AntePos(sequent.ante.length), pos.checkSucc.top) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase),
+              /* show */
+              hide(pos, b) & useAt("I induction")('Rlast) & andR('Rlast) <(
+                andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
+                cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
+                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
+                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial) partial)
+        }
 
-      private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
-        sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+        private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
+          sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+        }
       }
-    }
-  }
+    })(pos)
+  })
 
   /**
    * Introduces a ghost.
