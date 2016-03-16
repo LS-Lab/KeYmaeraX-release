@@ -75,4 +75,13 @@ class ArithmeticTests extends TacticTestBase {
         IndexedSeq("y <= r".asFormula)),
       TactixLibrary.QE) shouldBe 'proved
   }
+
+  "counterExample" should "not choke when there are differential symbols around" in withMathematica { tool =>
+    tool.findCounterExample("v'>=0".asFormula) match {
+      //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
+      case Some(m) =>
+        m.size shouldBe 1
+        m.keySet should contain ("v'".asTerm)
+    }
+  }
 }
