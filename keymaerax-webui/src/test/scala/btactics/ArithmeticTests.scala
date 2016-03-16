@@ -76,6 +76,39 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
+  it should "not choke on differential symbols" in withMathematica { tool =>
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq(),
+        IndexedSeq("5=5 | x' = 1'".asFormula)),
+      TactixLibrary.QE) shouldBe 'proved
+  }
+
+  it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
+    the [BelleError] thrownBy proveBy(
+      Sequent(Nil,
+        IndexedSeq(),
+        IndexedSeq("x' = y'".asFormula)),
+      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(  ==>  x'=y'
+                                                                            |  from     ==>  y'=x')""".stripMargin
+  }
+
+  it should "avoid name clashes" in withMathematica { tool =>
+    the [BelleError] thrownBy proveBy(
+      Sequent(Nil,
+        IndexedSeq("a=1".asFormula, "a()=2".asFormula),
+        IndexedSeq("a=a()".asFormula)),
+      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(a=1, a()=2
+                                                                            |  ==>  a=a()
+                                                                            |  from     ==>  false)""".stripMargin
+
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq("a=1".asFormula, "a()=2".asFormula),
+        IndexedSeq("a<a()".asFormula)),
+      TactixLibrary.QE) shouldBe 'proved
+  }
+
   "counterExample" should "not choke on differential symbols" in withMathematica { tool =>
     tool.findCounterExample("v'>=0".asFormula) match {
       //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
@@ -92,5 +125,23 @@ class ArithmeticTests extends TacticTestBase {
         m.size shouldBe 2
         m.keySet should contain only (Variable("v"), Function("A", None, Unit, Real))
     }
+  }
+
+  it should "avoid name clashes between variables and parameterless functions" in withMathematica { tool =>
+    tool.findCounterExample("a>=a()".asFormula) match {
+      //@note less elegant expected test result, because Mathematica may return different counter examples
+      case Some(m) =>
+        m.size shouldBe 2
+        m.keySet should contain only (Variable("a"), Function("a", None, Unit, Real))
+    }
+
+    tool.findCounterExample("a=1&a()=2 -> a=a()".asFormula) match {
+      //@note less elegant expected test result, because Mathematica may return different counter examples
+      case Some(m) =>
+        m.size shouldBe 2
+        m.keySet should contain only (Variable("a"), Function("a", None, Unit, Real))
+    }
+
+    tool.findCounterExample("a=1&a()=2 -> a<a()".asFormula) shouldBe None
   }
 }
