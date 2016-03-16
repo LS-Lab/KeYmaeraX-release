@@ -269,7 +269,11 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
 
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(toMathematica(Not(fml)), new MExpr(listExpr, StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
+      Array(toMathematica(Not(fml)),
+        new MExpr(
+          listExpr,
+          StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray),
+        new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
     run(inputWithTO) match {
       case (_, cex: Formula) => cex match {
@@ -278,7 +282,10 @@ class JLinkMathematicaLink extends MathematicaLink {
           None
         case _ =>
           if (DEBUG) println("Counterexample " + cex.prettyString)
-          Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+          Some(flattenConjunctions(cex).map({
+            case Equal(name: NamedSymbol, value) => name -> value
+            case Equal(FuncOf(fn, _), value) => fn -> value
+          }).toMap)
       }
       case result =>
         if (DEBUG) println("No counterexample, Mathematica returned: " + result)

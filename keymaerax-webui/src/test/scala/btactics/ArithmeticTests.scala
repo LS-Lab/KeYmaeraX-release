@@ -76,12 +76,21 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  "counterExample" should "not choke when there are differential symbols around" in withMathematica { tool =>
+  "counterExample" should "not choke on differential symbols" in withMathematica { tool =>
     tool.findCounterExample("v'>=0".asFormula) match {
       //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
       case Some(m) =>
         m.size shouldBe 1
-        m.keySet should contain ("v'".asTerm)
+        m.keySet should contain only "v'".asTerm
+    }
+  }
+
+  it should "not choke on function symbols" in withMathematica { tool =>
+    tool.findCounterExample("v>=A()".asFormula) match {
+      //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
+      case Some(m) =>
+        m.size shouldBe 2
+        m.keySet should contain only (Variable("v"), Function("A", None, Unit, Real))
     }
   }
 }
