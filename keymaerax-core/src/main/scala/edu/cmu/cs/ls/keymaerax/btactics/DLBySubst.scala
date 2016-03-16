@@ -438,9 +438,8 @@ object DLBySubst {
    * }}}
    * @param invariant The invariant.
    * @return The tactic.
-    *     @todo rename to loop and leave I as the name for just useAt?
-    */
-  def I(invariant: Formula): DependentPositionTactic = new DependentPositionTactic("I") {
+   */
+  def loop(invariant: Formula): DependentPositionTactic = new DependentPositionTactic("I") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       require(pos.isTopLevel && pos.isSucc, "I only at top-level in succedent, but got " + pos)
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
