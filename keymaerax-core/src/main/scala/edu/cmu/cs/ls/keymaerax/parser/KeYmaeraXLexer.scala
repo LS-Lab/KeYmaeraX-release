@@ -315,6 +315,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
+
+  def normalizeNewlines(input: String) = input.replace("\r\n", "\n").replace("\r", "\n")
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
@@ -324,7 +326,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @return A stream of symbols corresponding to input.
    */
   def inMode(input: String, mode: LexerMode) = {
-    val correctedInput = input.replace("\r\n", "\n").replace("\r", "\n")
+    val correctedInput = normalizeNewlines(input)
     if (DEBUG) println("LEX: " + correctedInput)
     val output = lex(correctedInput, SuffixRegion(1,1), mode)
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
