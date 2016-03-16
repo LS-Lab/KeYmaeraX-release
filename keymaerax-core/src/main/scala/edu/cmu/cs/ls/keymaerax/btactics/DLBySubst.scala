@@ -450,16 +450,16 @@ object DLBySubst {
               if (consts.size > 1) And(invariant, consts.reduceRight(And))
               else if (consts.size == 1) And(invariant, consts.head)
               else And(invariant, True)
-            cut(Box(Loop(a), q)) <(
-              /* use */
-              implyRi(AntePos(sequent.ante.length), pos.checkSucc.top) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase),
-              /* show */
-              hide(pos, b) & useAt("I induction")('Rlast) & andR('Rlast) <(
-                andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
-                cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
+            cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
+              /* c */ useAt("I induction")(pos) & andR(pos) <(
+                andR(pos) <(ident /* indInit */, ((andR(pos) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
+                cohide(pos) & G & implyR(1) & splitb(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
-                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial) partial)
+                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial
+              ) partial,
+              /* c -> d */ cohide(pos) & CMon(pos.inExpr+1) & implyR(1) &
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)
+            )
         }
 
         private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
