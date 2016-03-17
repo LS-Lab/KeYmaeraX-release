@@ -63,6 +63,27 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               }
             }
 
+            scope.isFOL = function(formula) {
+              //@todo implement
+              return true;
+            }
+
+            scope.transformFormula = function(formulaId, formula, isAnte) {
+              var modal = $uibModal.open({
+                templateUrl: 'templates/transformFormula.html',
+                controller: 'TransformFormulaCtrl',
+                size: 'md',
+                resolve: {
+                  formula: function() { return formula; },
+                  isAnte: function() { return isAnte; }
+                }
+              });
+
+              modal.result.then(function(input) {
+                scope.onApplyInputTactic({formulaId: formulaId, tacticId: 'transform', input: input});
+              });
+            }
+
             turnstileTooltipOpen = false;
             scope.turnstileDragEnter = function(dragData) { turnstileTooltipOpen = true; }
             scope.turnstileDragLeave = function(dragData) { turnstileTooltipOpen = false; }
