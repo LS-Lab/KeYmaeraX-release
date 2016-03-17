@@ -72,8 +72,8 @@ class Robix extends TacticTestBase {
     accArithYLemma shouldBe 'proved
 
     val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
-      /* use case */ QE & debug("Use case done"),
       /* base case */ QE & debug("Base case done"),
+      /* use case */ QE & debug("Use case done"),
       /* induction step */ chase(1) & allR(1)*2 & implyR(1) & andR(1) <(
         debug("Braking branch") & allR(1) & implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & debug("Braking branch done"),
         andR(1) <(
