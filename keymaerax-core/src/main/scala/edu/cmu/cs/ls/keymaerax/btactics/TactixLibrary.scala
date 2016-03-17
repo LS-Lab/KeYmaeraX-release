@@ -40,7 +40,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val step               : DependentPositionTactic = "step" by (pos =>
+  lazy val step               : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
      else HilbertCalculus.stepAt(pos) partial)
@@ -146,7 +146,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isTopLevel, "with abstraction only at top-level")
-        sequent(pos) match {
+        sequent(pos.checkTop) match {
           case Box(a, p) =>
             t(pos) & abstractionb(pos) & (if (pos.isSucc) allR(pos)*@TheType() partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
@@ -168,7 +168,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = loop(gen(sequent, pos).getOrElse(
-        throw new BelleError("Unable to generate an invariant for " + sequent(pos) + " at position " + pos)))(pos)
+        throw new BelleError("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
     }
   }
 

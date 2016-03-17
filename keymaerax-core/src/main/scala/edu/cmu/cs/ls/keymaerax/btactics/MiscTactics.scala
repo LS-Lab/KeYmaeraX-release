@@ -190,6 +190,11 @@ object TacticFactory {
         }
       }
     }
+
+    /** Creates a dependent tactic, which can inspect the sole sequent */
+    def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
+    }
   }
 
 }
