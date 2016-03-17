@@ -287,6 +287,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
     else EqualityTactics.exhaustiveEqR2L
 
+  /** Transform an FOL formula into the formula 'to' [[ToolTactics.transform]] */
+  def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Contract Tactics and Debugging Tactics

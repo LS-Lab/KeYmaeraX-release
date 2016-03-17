@@ -144,4 +144,44 @@ class ArithmeticTests extends TacticTestBase {
 
     tool.findCounterExample("a=1&a()=2 -> a<a()".asFormula) shouldBe None
   }
+
+  "transform" should "prove a simple example" in withMathematica { tool =>
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq("a<b".asFormula),
+        IndexedSeq("b>a".asFormula)),
+      ToolTactics.transform("a<b".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+  }
+
+  it should "prove a simple example with modalities in other formulas" in withMathematica { tool =>
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq("a<b".asFormula),
+        IndexedSeq("b>a".asFormula, "[x:=2;]x>0".asFormula)),
+      ToolTactics.transform("a<b".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+  }
+
+  it should "keep enough context around to prove the transformation" in withMathematica { tool =>
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq("a+b<c".asFormula, "b>=0&[y:=3;]y=3".asFormula, "y>4".asFormula),
+        IndexedSeq("a<c".asFormula, "[x:=2;]x>0".asFormula)),
+      ToolTactics.transform("a+b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+  }
+
+  it should "work with division by zero" in withMathematica { tool =>
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq("a/b<c".asFormula, "b>0".asFormula),
+        IndexedSeq("c>a/b".asFormula)),
+      ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+  }
+
+  it should "work with division by zero even with modalities somewhere" in withMathematica { tool =>
+    proveBy(
+      Sequent(Nil,
+        IndexedSeq("a/b<c".asFormula, "b>0&[y:=3;]y=3".asFormula),
+        IndexedSeq("c>a/b".asFormula, "[x:=2;]x>0".asFormula)),
+      ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+  }
 }
