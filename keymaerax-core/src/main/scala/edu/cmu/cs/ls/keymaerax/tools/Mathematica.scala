@@ -14,7 +14,7 @@ import scala.collection.immutable.Map
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
   private val jlink = new JLinkMathematicaLink
 
   // TODO replace with constructor and dependency injection
@@ -45,6 +45,9 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
    * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = jlink.findCounterExample(formula)
+
+  override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = jlink.simulate(initial, stateRelation, steps, n)
+  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = jlink.simulateRun(initial, stateRelation, steps)
 
   //@todo Implement Mathematica recovery actions
   override def restart() = ???

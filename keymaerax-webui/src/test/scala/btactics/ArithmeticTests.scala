@@ -184,4 +184,11 @@ class ArithmeticTests extends TacticTestBase {
         IndexedSeq("c>a/b".asFormula, "[x:=2;]x>0".asFormula)),
       ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
+
+  "simulate" should "simulate a simple example" in withMathematica { tool =>
+    val simulation = tool.simulate("x>0".asFormula, "x>xpre".asFormula, 3, 2)
+    simulation should have size 2
+    simulation.forall(_.size == 1+3) // initial state + 3 steps
+    simulation.forall(_.forall(state => state.keySet.size == 1 && state.keySet.contains(Variable("x")))) shouldBe true
+  }
 }
