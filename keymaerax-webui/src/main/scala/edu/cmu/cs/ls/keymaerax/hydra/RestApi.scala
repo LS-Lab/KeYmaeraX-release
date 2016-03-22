@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -413,6 +414,29 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }
 
+  val setupSimulation = path("proofs" / "user" / Segment / Segment / Segment / "setupSimulation") { (userId, proofId, nodeId) => {
+    pathEnd {
+      get {
+        val request = new SetupSimulationRequest(database, userId, proofId, nodeId)
+        complete(standardCompletion(request))
+      }
+    }}
+  }
+
+  val simulate = path("proofs" / "user" / Segment / Segment / Segment / "simulate") { (userId, proofId, nodeId) => {
+    pathEnd {
+      post {
+        entity(as[String]) { params => {
+          val obj = JsonParser(params).asJsObject()
+          val initial = obj.fields("initial").asInstanceOf[JsString].value.asFormula
+          val stateRelation = obj.fields("stateRelation").asInstanceOf[JsString].value.asFormula
+          val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
+          val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1)
+          complete(standardCompletion(request))
+        }}}
+    }}
+  }
+
   val kyxConfig = path("kyxConfig") {
     pathEnd {
       get {
@@ -586,6 +610,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskResult            ::
     stopTask              ::
     counterExample        ::
+    setupSimulation       ::
+    simulate              ::
     pruneBelow            ::
     proofTask             ::
     proofTree             ::

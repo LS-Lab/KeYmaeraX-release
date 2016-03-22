@@ -136,7 +136,15 @@
                                 <!-- TODO -->
                             </ul>
                         </li>
-                    </ul>
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Inspect <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <!--<li><a ng-click="getCounterExample()">Counterexample</a></li>-->
+                                <li><a ng-click="simulate()">Simulate</a></li>
+                            </ul>
+                        </li>
+                    </ul><br/>
                     <form class="nav navbar-nav navbar-form navbar-right" role="search" ng-submit="doCustomTactic()">
                         <div class="form-group">
                             <input type="text" class="form-control" ng-model="customTactic" placeholder="Custom tactic">

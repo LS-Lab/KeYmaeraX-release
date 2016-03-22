@@ -1,0 +1,76 @@
+<div class="modal-header">
+    <div class="row">
+        <div class="col-md-11">
+            <h3>Simulator</h3>
+        </div>
+        <div class="col-md-1">
+            <a class="pull-right" ng-click="cancel()"><span class="fa fa-close"></span>
+            </a>
+        </div>
+    </div>
+</div>
+<div class="modal-body">
+    <div class="well">
+        <form class="form-horizontal" ng-submit="simulate()">
+            <div class="form-group">
+                <label for="initial" class="col-md-2 control-label">Initial state condition</label>
+                <div class="col-md-10">
+                    <input class="form-control" id="initial" type="text" ng-model="initialCondition"/>
+                    <span id="stateRelationHelpBlock" class="help-block">
+                        A formula that describes the starting states of the simulation (e.g., initial condition x<=2).
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="stateRelation" class="col-md-2 control-label">State relation</label>
+                <div class="col-md-10">
+                    <div class="input-group" aria-describedby="stateRelationHelpBlock">
+                        <input class="form-control" id="stateRelation" type="text" ng-model="stateRelation"/>
+                        <!-- ModelPlex it -->
+                        <span class="input-group-btn">
+                            <!--<button class="btn btn-default" type="button"><i class="fa fa-question-circle"></i></button>-->
+                            <button class="btn btn-default" type="button" disabled>ModelPlex it</button>
+                        </span>
+                    </div>
+                    <span id="stateRelationHelpBlock" class="help-block">
+                        A formula that describes the relation between the state prior and posterior to running the
+                        program (e.g., the state relation x=xpre+1 describes the deterministic program x:=x+1).
+                        You are running KeYmaera X without ModelPlex, please provide manually.
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="numSteps" class="col-md-2 control-label">Number of steps</label>
+                <div class="col-md-4">
+                    <input class="form-control" id="numSteps" type="number" ng-model="numSteps"/>
+                </div>
+                <!-- todo: how many alternative starting states in simulation? -->
+                <label for="numStarts" class="col-md-2 control-label">Starting states</label>
+                <div class="col-md-4">
+                    <input class="form-control" id="numStarts" type="number" placeholder="1" readonly/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <button type="submit" class="btn btn-default">Simulate</button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+    <uib-accordion close-others="false">
+        <uib-accordion-group heading="Line plot"
+                             is-open="true" is-disabled="false">
+            <canvas class="chart chart-line" chart-data="lineStates" chart-series="varNames" chart-labels="ticks"
+                    chart-legend="true"></canvas>
+        </uib-accordion-group>
+        <uib-accordion-group heading="Radar plot"
+                             is-open="true" is-disabled="false" ng-if="varNames.length > 2">
+            <canvas class="chart chart-radar" chart-data="radarStates" chart-series="ticks" chart-labels="varNames"
+                    chart-legend="true"></canvas>
+        </uib-accordion-group>
+    </uib-accordion>
+</div>
+<div class="modal-footer">
+    <!-- Status line? -->
+</div>

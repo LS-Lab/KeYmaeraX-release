@@ -20,6 +20,8 @@ import edu.cmu.cs.ls.keymaerax.parser.Location
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
 
+import scala.collection.mutable.ListBuffer
+
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
@@ -566,6 +568,38 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
         case tt => Right(tt)
       }
     }, fml).get
+  }
+}
+
+class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends Response {
+  def getJson = JsObject(
+    "initial" -> JsString(initial.prettyString),
+    "stateRelation" -> JsString(stateRelation.prettyString)
+  )
+}
+
+class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]]) extends Response {
+  def getJson = {
+    val seriesList = simulation.map(convertToDataSeries)
+    JsObject(
+      "varNames" -> JsArray(seriesList.head.keySet.map(name => JsString(name.prettyString)).toVector),
+      "ticks" -> JsArray(seriesList.head.head._2.indices.map(i => JsString(i.toString)).toVector),
+      "lineStates" -> JsArray(seriesList.map(series =>
+        JsArray(series.map({
+          case (n, vs) => JsArray(vs.map(v => JsNumber(v.value)).toVector)
+        }).toVector)).toVector),
+      "radarStates" -> JsArray(simulation.map(run => JsArray(run.map(state =>
+        JsArray(state.map({case (n, v) => JsNumber(v.value)}).toVector)).toVector)).toVector)
+    )
+  }
+
+  def convertToDataSeries(sim: List[Map[NamedSymbol, Number]]): Map[NamedSymbol, List[Number]] = {
+    // convert to data series
+    val dataSeries: Map[NamedSymbol, ListBuffer[Number]] = sim.head.keySet.map(_ -> ListBuffer[Number]()).toMap
+    sim.foreach(state => state.foreach({
+      case (n, v) => dataSeries.getOrElse(n, throw new IllegalStateException("Unexpected data series " + n)) += v
+    }))
+    dataSeries.mapValues(_.toList)
   }
 }
 

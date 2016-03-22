@@ -28,7 +28,7 @@ import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tools.{SimulationTool, MathematicaComputationAbortedException, Mathematica}
 
 import scala.collection.immutable
 import scala.io.Source
@@ -129,6 +129,37 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
       }
     } else {
       new CounterExampleResponse("cex.nonfo") :: Nil
+    }
+  }
+}
+
+class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    val node = tree.findNode(nodeId) match {
+      case None => throw new ProverException("Invalid node " + nodeId)
+      case Some(n) => n
+    }
+
+    //@note not a tactic because we don't want to change the proof tree just by simulating
+    node.sequent.toFormula match {
+      case Imply(initial, _) =>
+        //@todo ModelPlex the program and return state relation
+        new SetupSimulationResponse(initial, True) :: Nil
+      case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
+    }
+  }
+}
+
+class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    //@HACK do not want to change the tool type in TactixLibrary
+    TactixLibrary.tool match {
+      case s: SimulationTool =>
+        val simulation = s.simulate(initial, stateRelation, steps, n)
+        new SimulationResponse(simulation) :: Nil
+      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
     }
   }
 }

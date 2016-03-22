@@ -225,6 +225,19 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       })
     }
 
+    $scope.simulate = function() {
+      $uibModal.open({
+        templateUrl: 'templates/simulator.html',
+        controller: 'SimulatorCtrl',
+        size: 'lg',
+        resolve: {
+          proofId: function() { return $routeParams.proofId; },
+          userId: function() { return $cookies.get('userId'); },
+          nodeId: function() { return sequentProofData.agenda.selectedId(); }
+        }
+      })
+    }
+
     //Save a name edited using the inline editor.
     $scope.saveProofName = function(newName) {
       var proofId = $routeParams.proofId;

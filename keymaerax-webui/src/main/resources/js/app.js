@@ -26,7 +26,8 @@
   'mathjaxbind',
   'sequent',
   'sequentproof',
-  'xeditable'
+  'xeditable',
+  'chart.js'
 ], function($rootScopeProvider) {
   $rootScopeProvider.digestTtl(1000);
 });
