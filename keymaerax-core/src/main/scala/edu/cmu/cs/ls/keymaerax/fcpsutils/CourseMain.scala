@@ -15,6 +15,13 @@ object CourseMain {
   implicit def qeTool = new Mathematica()
   DerivedAxioms.qeTool = qeTool
   TactixLibrary.tool = qeTool
+  try {
+    //@todo initialize MathKernel for ohmu.
+    qeTool.init(Map("linkName" -> "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel", "libDir" -> "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"))
+  }
+  catch {
+    case _ => println("Won't be able to parse tactics or prove proeprties.")
+  }
 
   PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 
@@ -57,9 +64,6 @@ object CourseMain {
   private def isSolutionOrFail(problem: ArgValue, solution: ArgValue) = {
     val f = parseProblemFileOrFail(problem)
     val expr = parseTacticFileOrFail(solution)
-
-    //@todo initialize MathKernel for ohmu.
-    qeTool.init(Map("linkName" -> "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel", "libDir" -> "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/libJLinkNativeLibrary.so"))
 
     val result = SequentialInterpreter(Seq())(expr, BelleProvable(Provable.startProof(f)))
     result match {
