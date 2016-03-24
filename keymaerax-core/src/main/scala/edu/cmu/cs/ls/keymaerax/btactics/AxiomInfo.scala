@@ -555,7 +555,7 @@ object DerivationInfo {
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
     , List(FormulaArg("Q")), {case () => (fml:Formula) => TactixLibrary.generalize(fml)}),
-    new InputPositionTacticInfo("transform", "~>", List(FormulaArg("toFormula")),
+    new InputPositionTacticInfo("transform", "trafo", List(FormulaArg("toFormula")),
       {case () => (fml:Formula) => TactixLibrary.transform(fml)}),
 
   //
