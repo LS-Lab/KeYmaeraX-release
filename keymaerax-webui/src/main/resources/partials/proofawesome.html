@@ -78,8 +78,11 @@
                                 <li><a ng-click="doSearch('equivR', 'R')"><span>&#8596;R</span><code class="pull-right">equivR</code></a></li>
                                 <li><a ng-click="doSearch('equivL', 'L')"><span>&#8596;L</span><code class="pull-right">equivL</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code class="pull-right">commuteEquivR</code></a></li>
-                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code class="pull-right">commuteEquivL</code></a></li>
+                                <!-- do not pull-right longest label: pulling right results in a line break here -->
+                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="openInputTacticDialog('cut')"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">

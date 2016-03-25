@@ -100,7 +100,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService) {
+  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService, derivationInfos) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
@@ -166,7 +166,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
-      $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input)
+      var base = 'proofs/user/' + userId + '/' + proofId + '/' + nodeId;
+      var uri = formulaId !== undefined ? base + '/' + formulaId + '/doInputAt/' + tacticId : base + '/doInput/' + tacticId
+      $http.post(uri, input)
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
@@ -212,6 +214,27 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$emit('proof.message', err.data.textStatus);
         });
+    }
+
+    $scope.openInputTacticDialog = function(tacticName) {
+      var nodeId = sequentProofData.agenda.selectedId();
+      var tactics = derivationInfos.byName($scope.userId, $scope.proofId, nodeId, tacticName)
+        .then(function(response) {
+          return response.data;
+        });
+
+      var modalInstance = $uibModal.open({
+        templateUrl: 'templates/derivationInfoDialog.html',
+        controller: 'DerivationInfoDialogCtrl',
+        size: 'lg',
+        resolve: {
+          tactics: function() { return tactics; }
+        }
+      });
+
+      modalInstance.result.then(function(derivation) {
+        $scope.doInputTactic(undefined, tacticName, derivation);
+      })
     }
 
     $scope.openTacticEditor = function() {

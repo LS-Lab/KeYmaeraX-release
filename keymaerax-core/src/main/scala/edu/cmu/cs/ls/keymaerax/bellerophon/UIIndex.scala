@@ -38,7 +38,8 @@ object UIIndex {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
-    val alwaysApplicable = "cut" :: Nil
+    //@todo cutL and cutR are always applicable on top level
+    val alwaysApplicable = Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
       case Differential(t) =>

@@ -9,7 +9,21 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
               return serviceDef.convertTacticInfo(info);
             })
           };
-      });
+        });
+      return promise;
+    },
+
+    byName: function(userId, proofId, nodeId, name) {
+      //@todo cache
+      var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/derivationInfos/' + name)
+        .then(function(response) {
+          // return value gets picked up by 'then' in the controller using this service
+          return {
+            data: $.map(response.data, function(info, i) {
+              return serviceDef.convertTacticInfo(info);
+            })
+          };
+        });
       return promise;
     },
 
@@ -19,7 +33,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
         info.comfortDerivation = serviceDef.convertTactic(info.comfortDerivation);
       }
       info.selectedDerivation = function() {
-        return this.reduceBranching ? this.comfortDerivation : this.standardDerivation;
+        return info.reduceBranching ? info.comfortDerivation : info.standardDerivation;
       }
       // reduce branching by default
       info.reduceBranching = info.comfortDerivation !== undefined;
