@@ -82,7 +82,7 @@
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
                                 <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="openInputTacticDialog('cut')"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -124,8 +124,12 @@
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('diffSolve', 'R')"><span>Solve</span><code class="pull-right">diffSolve</code></a></li>
                                 <li><a ng-click="doSearch('diffWeaken', 'R')"><span>Weaken</span><code class="pull-right">diffWeaken</code></a></li>
-                                <!-- TODO -->
-                                <!-- TODO figure out how to display input stuff (diffCut) -->
+                                <li><a ng-click="doSearch('DIRule', 'R')"><span>Diff. Induction</span><code class="pull-right">DIRule</code></a></li>
+                                <li><a ng-click="doSearch('autoDIRule', 'R')"><span>Diff. Induction (Auto)</span><code>autoDIRule</code></a></li>
+                                <li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>
+                                <li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('diffCut', 'R')"><span>Diff. Cut ...</span><code class="pull-right">diffCut</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('diffInvariant', 'R')"><span>Diff. Invariant ...</span><code class="pull-right">diffInvariant</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">

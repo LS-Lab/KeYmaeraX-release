@@ -189,13 +189,14 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
-    $scope.doSearch = function(tacticId, where) {
-      var proofId = $routeParams.proofId;
-      var userId = $cookies.get('userId');
+    $scope.doSearch = function(tacticId, where) { doSearchImpl(tacticId, where, undefined); }
+    $scope.doSearchInput = function(tacticId, where, input) { doSearchImpl(tacticId, where, input); }
+    doSearchImpl = function(tacticId, where, input) {
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId)
-        .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
+      var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doSearch/' + where + '/' + tacticId
+      var request = input !== undefined ? $http.post(uri, input) : $http.get(uri)
+      request.then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$emit('proof.message', err.data.textStatus);
@@ -216,7 +217,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
-    $scope.openInputTacticDialog = function(tacticName) {
+    $scope.openInputTacticDialog = function(tacticName, positionLocator) {
       var nodeId = sequentProofData.agenda.selectedId();
       var tactics = derivationInfos.byName($scope.userId, $scope.proofId, nodeId, tacticName)
         .then(function(response) {
@@ -233,7 +234,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
 
       modalInstance.result.then(function(derivation) {
-        $scope.doInputTactic(undefined, tacticName, derivation);
+        if (positionLocator === undefined) $scope.doInputTactic(undefined, tacticName, derivation);
+        else $scope.doSearchInput(tacticName, positionLocator, derivation);
       })
     }
 

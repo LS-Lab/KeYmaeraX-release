@@ -6,7 +6,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
           // return value gets picked up by 'then' in the controller using this service
           return {
             data: $.map(response.data, function(info, i) {
-              return serviceDef.convertTacticInfo(info);
+              return serviceDef.convertTacticInfo(info, true);
             })
           };
         });
@@ -20,14 +20,15 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
           // return value gets picked up by 'then' in the controller using this service
           return {
             data: $.map(response.data, function(info, i) {
-              return serviceDef.convertTacticInfo(info);
+              //@note by name means literally -> so stick to returned info and don't reduce branching by default
+              return serviceDef.convertTacticInfo(info, false);
             })
           };
         });
       return promise;
     },
 
-    convertTacticInfo: function(info) {
+    convertTacticInfo: function(info, reduceBranchingByDefault) {
       info.standardDerivation = serviceDef.convertTactic(info.standardDerivation);
       if (info.comfortDerivation !== undefined) {
         info.comfortDerivation = serviceDef.convertTactic(info.comfortDerivation);
@@ -35,8 +36,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
       info.selectedDerivation = function() {
         return info.reduceBranching ? info.comfortDerivation : info.standardDerivation;
       }
-      // reduce branching by default
-      info.reduceBranching = info.comfortDerivation !== undefined;
+      info.reduceBranching = reduceBranchingByDefault && info.comfortDerivation !== undefined;
       info.isOpen = (info.selectedDerivation().derivation.input !== undefined &&
         info.selectedDerivation().derivation.input !== null &&
         info.selectedDerivation().derivation.input.length > 0);
