@@ -66,7 +66,7 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     * v = Vmin & abs(theta) = Theta
     */
   "fixedwing_simple_loitering" should "prove" in {
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/sbir/fixedwing_simple_loitering.key"))
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_loitering.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
       if (fml.isEmpty) locateSucc(tactic)
@@ -164,7 +164,7 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     * the roll angle has the maximum value: abs(theta) = Theta
     */
   "fixedwing_simple_maxroll" should "prove" in {
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/sbir/fixedwing_simple_maxroll.key"))
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_maxroll.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
       if (fml.isEmpty) locateSucc(tactic)
@@ -289,7 +289,7 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     * initial speed: v >= Vmin, abs(theta)<=Theta
     */
   "fixedwing_simple_nobound" should "prove" in {
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/sbir/fixedwing_simple_nobound.key"))
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_nobound.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
       if (fml.isEmpty) locateSucc(tactic)
