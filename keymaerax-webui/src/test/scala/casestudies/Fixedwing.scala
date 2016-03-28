@@ -64,8 +64,10 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     *
     * The helicopter will follow a loitering circle
     * v = Vmin & abs(theta) = Theta
+    *
+    * Proved in commit 15a1937 of fixedwing branch
     */
-  "fixedwing_simple_loitering" should "prove" in {
+  /* "fixedwing_simple_loitering" */ ignore should "prove" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_loitering.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
@@ -162,8 +164,10 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     * The helicopter will first brake with the maximum power and then follow a loitering circle
     * initial speed: v >= Vmin
     * the roll angle has the maximum value: abs(theta) = Theta
+    *
+    * Proved in commit 15a1937 of fixedwing branch
     */
-  "fixedwing_simple_maxroll" should "prove" in {
+  /* "fixedwing_simple_maxroll" */ ignore should "prove" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_maxroll.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
@@ -287,8 +291,10 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     *
     * The helicopter will first brake with the maximum power and then follow a loitering circle
     * initial speed: v >= Vmin, abs(theta)<=Theta
+    *
+    * Proved in commit 15a1937 of fixedwing branch
     */
-  "fixedwing_simple_nobound" should "prove" in {
+  /* "fixedwing_simple_nobound" */ ignore should "prove" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_nobound.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
