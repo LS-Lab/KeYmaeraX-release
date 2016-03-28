@@ -31,7 +31,11 @@ object Fixed {
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boolean = true) extends PositionLocator {
-  override def prettyString: String = "'_"
+  override def prettyString: String = start match {
+    case _: AntePosition => "'L"
+    case _: SuccPosition => "'R"
+    case _ => "'_"
+  }
 }
 
 object Find {

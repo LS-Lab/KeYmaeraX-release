@@ -238,9 +238,10 @@ object DifferentialTactics {
                 (if (auto == 'full) Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
-                 else { assert(auto == 'diffInd); cohide2(AntePos(sequent.ante.size), pos) &
-                  (if (hasODEDomain(sequent, pos)) cohide(1) & DW(1) else skip) &
-                  abstractionb(1) & (allR(1)*@TheType()) & ?(implyR(1)) }) partial
+                 else {
+                  assert(auto == 'diffInd)
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                  abstractionb(pos) & (allR(pos)*@TheType()) & ?(implyR(pos)) }) partial
               } else skip
               )
           if (auto == 'full) Dconstify(t)(pos)

@@ -268,6 +268,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val derivationInfo = path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment) { (userId, proofId, nodeId, axiomId) => { pathEnd {
+    get {
+      val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
@@ -311,6 +318,27 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }}
 
+  val doInputTactic = path("proofs" / "user" / Segment / Segment / Segment / "doInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+    post {
+      entity(as[String]) { params => {
+        val info = DerivationInfo(tacticId)
+        val expectedInputs = info.inputs
+        // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
+        val paramArray = JsonParser(params).asInstanceOf[JsArray]
+        val inputs =
+          paramArray.elements.map({case elem =>
+            val obj = elem.asJsObject()
+            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+            val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+            val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
+            BelleTermInput(paramValue, paramInfo)
+          })
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList)
+        complete(standardCompletion(request))
+      }
+      }}
+  }}}
+
   val doCustomTactic = path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
     post {
       entity(as[String]) { tactic => {
@@ -320,19 +348,40 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }}
 
-  import Find._
-  val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
+  val doSearch = path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(FindR(0, None)))
+      val pos = where match {
+        case "R" => Find.FindR(0, None)
+        case "L" => Find.FindL(0, None)
+        case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
+      }
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos))
       complete(standardCompletion(request))
-    }}
-  }}
-
-  val doSearchLeft = path("proofs" / "user" / Segment / Segment / Segment / "doSearchL" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
-    get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(FindL(0, None)))
-      complete(standardCompletion(request))
-    }}
+    } ~
+    post {
+      entity(as[String]) { params => {
+        val info = DerivationInfo(tacticId)
+        val expectedInputs = info.inputs
+        // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
+        val paramArray = JsonParser(params).asInstanceOf[JsArray]
+        val inputs =
+          paramArray.elements.map({case elem =>
+            val obj = elem.asJsObject()
+            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+            val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+            val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
+            BelleTermInput(paramValue, paramInfo)
+          })
+        val pos = where match {
+          case "R" => Find.FindR(0, None)
+          case "L" => Find.FindL(0, None)
+          case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
+        }
+        val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList)
+        complete(standardCompletion(request))
+      }
+      }}
+    }
   }}
 
   val taskStatus = path("proofs" / "user" / Segment / Segment / Segment / Segment / "status") { (userId, proofId, nodeId, taskId) => { pathEnd {
@@ -599,13 +648,14 @@ trait RestApi extends HttpService with SLF4JLogging {
     proofTasksBranchRoot  ::
     axiomList             ::
     twoPosList            ::
+    derivationInfo        ::
     doAt                  ::
     doTwoPosAt            ::
     doInputAt             ::
     doTactic              ::
+    doInputTactic         ::
     doCustomTactic        ::
-    doSearchLeft          ::
-    doSearchRight         ::
+    doSearch              ::
     taskStatus            ::
     taskResult            ::
     stopTask              ::

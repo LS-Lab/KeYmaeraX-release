@@ -604,6 +604,13 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   }
 }
 
+class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, axiomId: String) extends Request {
+  def getResultingResponses(): List[Response] = {
+    val info = (DerivationInfo(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo(_))) :: Nil
+    new ApplicableAxiomsResponse(info, None) :: Nil
+  }
+}
+
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse

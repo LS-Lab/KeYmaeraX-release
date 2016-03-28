@@ -4,10 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentTactic, DependentPositionTactic, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Position}
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.HashMap
@@ -504,7 +503,7 @@ object DerivationInfo {
     new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
     new TwoPositionTacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => ProofRuleTactics.trivialCloser}),
+      {case () => (ante: AntePosition, succ: SuccPosition) => TactixLibrary.close(ante, succ)}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
@@ -555,7 +554,7 @@ object DerivationInfo {
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
     , List(FormulaArg("Q")), {case () => (fml:Formula) => TactixLibrary.generalize(fml)}),
-    new InputPositionTacticInfo("transform", "~>", List(FormulaArg("toFormula")),
+    new InputPositionTacticInfo("transform", "trafo", List(FormulaArg("toFormula")),
       {case () => (fml:Formula) => TactixLibrary.transform(fml)}),
 
   //
@@ -567,6 +566,7 @@ object DerivationInfo {
     new PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
     new PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
+    new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new PositionTacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),

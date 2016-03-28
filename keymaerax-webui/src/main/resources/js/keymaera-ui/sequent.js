@@ -1,5 +1,6 @@
 angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
-  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', function($rootScope, $uibModal, $http, spinnerService) {
+  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', 'derivationInfos',
+      function($rootScope, $uibModal, $http, spinnerService, derivationInfos) {
     return {
         restrict: 'AE',
         scope: {
@@ -47,6 +48,26 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
 
             scope.onDragStart = function(event) {
               angular.element(event.target.firstChild.firstChild).removeClass('hlhover'); // remove hover effect on drag
+            }
+
+            scope.openInputTacticDialog = function(tacticName) {
+              var tactics = derivationInfos.byName(scope.userId, scope.proofId, scope.nodeId, tacticName)
+                .then(function(response) {
+                  return response.data;
+                });
+
+              var modalInstance = $uibModal.open({
+                templateUrl: 'templates/derivationInfoDialog.html',
+                controller: 'DerivationInfoDialogCtrl',
+                size: 'lg',
+                resolve: {
+                  tactics: function() { return tactics; }
+                }
+              });
+
+              modalInstance.result.then(function(derivation) {
+                scope.onInputTactic(undefined, tacticName, derivation);
+              })
             }
 
             scope.turnstileDrop = function(dragData) {

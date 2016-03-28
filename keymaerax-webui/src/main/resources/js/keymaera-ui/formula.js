@@ -2,7 +2,7 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', function($compile, $http, $sce, $q) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', function($compile, $http, $sce, $q, derivationInfos) {
     return {
         restrict: 'AE',
         scope: {
@@ -385,13 +385,11 @@ angular.module('formula')
               event.stopPropagation();
               if (scope.formulaAxiomsMap[formulaId] === undefined) {
                 // axioms not fetched yet
-                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/list')
-                  .success(function(data) {
-                    scope.formulaAxiomsMap[formulaId] = $.map(data, function(info, i) {
-                      return convertTacticInfo(info);
-                    });
+                derivationInfos.formulaDerivationInfos(scope.userId, scope.proofId, scope.nodeId, formulaId)
+                  .then(function(response) {
+                    scope.formulaAxiomsMap[formulaId] = response.data;
                     scope.tacticPopover.open(formulaId);
-                });
+                  });
               } else {
                 // tactic already cached
                 scope.tacticPopover.open(formulaId);
@@ -454,7 +452,7 @@ angular.module('formula')
                         .then(function(response) {
                           if (response.data.length > 0) {
                             var tactic = response.data[0];
-                            scope.dndTooltip.data = convertTacticInfo(tactic);
+                            scope.dndTooltip.data = derivationInfos.convertTacticInfo(tactic);
                           } else {
                             scope.dndTooltip.data = undefined;
                           }
@@ -469,89 +467,6 @@ angular.module('formula')
                 }
               }
               return dndSinks[sinkFormulaId];
-            }
-
-            convertTacticInfo = function(info) {
-              info.standardDerivation = convertTactic(info.standardDerivation);
-              if (info.comfortDerivation !== undefined) {
-                info.comfortDerivation = convertTactic(info.comfortDerivation);
-              }
-              info.selectedDerivation = function() {
-                return this.reduceBranching ? this.comfortDerivation : this.standardDerivation;
-              }
-              // reduce branching by default
-              info.reduceBranching = info.comfortDerivation !== undefined;
-              info.isOpen = (info.selectedDerivation().derivation.input !== undefined &&
-                info.selectedDerivation().derivation.input !== null &&
-                info.selectedDerivation().derivation.input.length > 0);
-              return info;
-            }
-
-            convertTactic = function(tactic) {
-              if (tactic.derivation.type === 'sequentrule') {
-                return convertSequentRuleToInput(tactic);
-              } else if (tactic.derivation.type === 'axiom') {
-                return tactic;
-              } else if (tactic.derivation.type === 'tactic') {
-                return tactic;
-              } else {
-                console.log("Unknown deduction type '" + tactic.derivation.type + "'");
-              }
-            }
-
-            convertSequentRuleToInput = function(tactic) {
-              tactic.derivation.premise = $.map(tactic.derivation.premise, function(premise, i) {
-                return {ante: convertToInput(premise.ante, tactic), succ: convertToInput(premise.succ, tactic), isClosed: premise.isClosed};
-              });
-              return tactic;
-            }
-
-            convertToInput = function(formulas, tactic) {
-              //@note double-wrap array so that it doesn't get flattened
-              return $.map(formulas, function(formula, i) { return [convertFormulaToInput(formula, tactic)]; });
-            }
-
-            convertFormulaToInput = function(formula, tactic) {
-              var result = [];
-              if (tactic.derivation.input === undefined || tactic.derivation.input === null) {
-                tactic.derivation.input = [];
-              }
-              var inputs = $.grep(tactic.derivation.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
-              var inputBoundaries = $.map(inputs, function(input, i) {
-                var inputStart = formula.indexOf(input.param);
-                return {start: inputStart, end: inputStart + input.param.length };
-              }).sort(function(a, b) { a.start <= b.start ? -1 : 1; });
-
-              if (inputBoundaries.length > 0) {
-                result[0] = {text: formula.slice(0, inputBoundaries[0].start), isInput: false};
-                result[1] = createInput(formula, tactic, inputBoundaries[0]);
-                for (var i = 1; i < inputBoundaries.length; i++) {
-                  result[i+1] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
-                  result[i+2] = createInput(formula, tactic, inputBoundaries[i]);
-                }
-                result[inputBoundaries.length+1] = {
-                  text: formula.slice(inputBoundaries[inputBoundaries.length-1].end, formula.length),
-                  isInput: false
-                }
-              } else {
-                result[0] = {text: formula, isInput: false};
-              }
-              return result;
-            }
-
-            createInput = function(formula, tactic, inputBoundary) {
-              var inputId = formula.slice(inputBoundary.start, inputBoundary.end);
-              return {
-                text: inputId,
-                isInput: true,
-                placeholder: inputId,
-                value: function(newValue) {
-                  //@note check arguments.length to determine if we're called as getter or as setter
-                  return arguments.length ?
-                    ($.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue) :
-                     $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value;
-                }
-              };
             }
 
             var fmlMarkup = parseFormulaHelper(scope.formula, 0, scope.collapsed);

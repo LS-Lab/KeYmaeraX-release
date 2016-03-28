@@ -309,7 +309,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "x>=5".asFormula
-    result.subgoals.last.ante should contain only "true".asFormula
+    result.subgoals.last.ante should contain only ("x>=5".asFormula, "true".asFormula)
     result.subgoals.last.succ should contain only "[x':=2;]x'>=0".asFormula
   }
 
@@ -343,7 +343,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x*x+y*y>=8".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "x*x+y*y>=8".asFormula
-    result.subgoals.last.ante should contain only "true".asFormula
+    result.subgoals.last.ante should contain only ("x_0*x_0+y_0*y_0>=8".asFormula, "true".asFormula)
     result.subgoals.last.succ should contain only "[y':=-5*x;][x':=5*y;]x'*x+x*x'+(y'*y+y*y')>=0".asFormula
   }
 
@@ -387,8 +387,19 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "x>7".asFormula)
     result.subgoals.head.succ should contain only "x>=5".asFormula
-    result.subgoals.last.ante should contain only "x>7".asFormula
+    result.subgoals.last.ante should contain only ("x_0>=5".asFormula, "x_0>7".asFormula, "x>7".asFormula)
     result.subgoals.last.succ should contain only "[x':=2;]x'>=0".asFormula
+  }
+
+  it should "keep context around" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5&A()>0 -> [{x'=A()}]x>=5".asFormula)),
+      implyR(1) & diffInd(tool, 'diffInd)(1)
+    )
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>=5&A()>0".asFormula, "true".asFormula)
+    result.subgoals.head.succ should contain only "x>=5".asFormula
+    result.subgoals.last.ante should contain only ("x>=5&A()>0".asFormula, "true".asFormula)
+    result.subgoals.last.succ should contain only "[x':=A();]x'>=0".asFormula
   }
 
   it should "prove x >= 0 & y >= 0 & z >= 0 -> [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0" in withMathematica { implicit qeTool =>

@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Seq[Expression], Position]], generator: Option[Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Seq[Expression], PositionLocator]], generator: Option[Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown."))}
     val withGenerator =
       if (info.needsGenerator) {
@@ -33,12 +33,13 @@ object ReflectiveExpressionBuilder {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
       // someone is going to plug in the arguments later
       case (expr:BelleExpr, Nil, _) => expr
-      case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) => AppliedPositionTactic(expr, Fixed(arg))
-      case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, Fixed(arg))
-      case (expr:BuiltInTwoPositionTactic, arg1::arg2::Nil, 2) =>
+      case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) => AppliedPositionTactic(expr, arg)
+      case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, arg)
+      case (expr:BuiltInTwoPositionTactic, Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) =>
         AppliedTwoPositionTactic(expr, arg1, arg2)
-      case (expr: (Position => DependentPositionTactic), arg1::arg2::Nil, 2) =>
-        new AppliedDependentPositionTactic(expr(arg1), Fixed(arg2))
+      case (expr: (Position => DependentPositionTactic), Fixed(arg1: Position, _, _)::arg2::Nil, 2) =>
+        new AppliedDependentPositionTactic(expr(arg1), arg2)
+      case (expr: ((Position, Position) => BelleExpr), Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) => expr(arg1, arg2)
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
           throw new ReflectiveExpressionBuilderExn("Expected either " + num + " or 0 position arguments, got " + pArgs.length)
@@ -48,7 +49,7 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Seq[Expression], Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr = {
+  def apply(name: String, arguments: List[Either[Seq[Expression], PositionLocator]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr = {
     if(!DerivationInfo.hasCodeName(name)) {
       throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
     }
