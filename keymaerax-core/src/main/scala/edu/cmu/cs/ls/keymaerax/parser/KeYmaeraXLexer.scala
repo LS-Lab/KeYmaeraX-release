@@ -270,6 +270,8 @@ sealed trait Location extends Serializable {
       case Region(ol,oc,_,_) => l==ol&&c+1==oc
     }
   }
+
+  def spanTo(other: Location) = Region(this.begin.line, this.begin.column, other.begin.line, other.begin.column)
 }
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
@@ -281,7 +283,7 @@ object UnknownLocation extends Location {
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   require(line <= endLine || (line == endLine && column <= endColumn),
-    "A region cannot start after it ends.")
+    s"A region cannot start after it ends ($line $column $endLine $endColumn).")
   def begin = Region(line, column, line, column)
   def end = Region(endLine, endColumn, endLine, endColumn)
   def --(other: Location): Location = other match {
