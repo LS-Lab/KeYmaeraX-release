@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{TokenStream, ParseState}
  * @author Andre Platzer
  * @see [[ProverException.getContext]]
  */
-case class ParseException private[parser](msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
+case class ParseException (msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
   extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect, cause) {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
   /**
