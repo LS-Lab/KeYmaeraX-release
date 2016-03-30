@@ -51,6 +51,16 @@ sealed trait Stack[+A] {
   def find(p: (A) => Boolean): Option[A] = if (isEmpty) None else if (p(top)) Some(top) else tail.find(p)
 
   override def toString: String = fold("")((s, e) => s + " :+ " + e)
+
+  /** Convert stack A,B,C where top = A to the list A :: B :: C :: Nil */
+  def toList : List[A] = fold[List[A]](Nil)((list, next) => next +: list)
+
+  /** Splits the stack at first occurrence of an element next s.t. p(next) = true; p is placed in the later stack.
+    * @example (A B C D E).split(C) =  ( (A,B), (C, D, E) )*/
+  def split[B >: A](p : B => Boolean) = fold[(Stack[B], Stack[B])]((Bottom, Bottom))((stacks, next) => {
+    if(!stacks._2.isEmpty || p(next)) (stacks._1, stacks._2 :+ next) //if the first item satisfying p has already been found then continue on with the second stack.
+    else (stacks._1 :+ next, stacks._2) //Otherwise continue with the first stack.
+  })
 }
 
 /** A stack tail :+ top with top on the top of tail */
