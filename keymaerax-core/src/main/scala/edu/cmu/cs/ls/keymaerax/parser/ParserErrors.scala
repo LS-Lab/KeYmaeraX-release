@@ -52,6 +52,9 @@ object ParseException {
   def apply(msg: String, state: ParseState /*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, state.la.toString, "", state.topString, state.toString /*, cause*/)
 
+  def apply(msg: String, state: edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.ParserState/*, cause: Throwable = null*/): ParseException =
+    new ParseException(msg, state.location, state.input.headOption.toString, "", state.topString, state.toString /*, cause*/)
+
   def apply(msg: String, state: ParseState, expect: List[Expected] /*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, tokenDescription(state.la), expect.mkString("\n      or: "), state.topString, state.toString /*, cause*/)
 
