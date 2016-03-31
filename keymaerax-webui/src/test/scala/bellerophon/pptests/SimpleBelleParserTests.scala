@@ -89,8 +89,8 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse compositions of things that parse to partials" in {
     val tactic = BelleParser("nil & nil").asInstanceOf[SeqTactic]
-    tactic.left shouldBe PartialTactic(TactixLibrary.nil)
-    tactic.right shouldBe PartialTactic(TactixLibrary.nil)
+    tactic.left shouldBe TactixLibrary.nil
+    tactic.right shouldBe TactixLibrary.nil
   }
 
   //endregion
