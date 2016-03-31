@@ -1,4 +1,4 @@
-package bellerophon.serializer
+package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
