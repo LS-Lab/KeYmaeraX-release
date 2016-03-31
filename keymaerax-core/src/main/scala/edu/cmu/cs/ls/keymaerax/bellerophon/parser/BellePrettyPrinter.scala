@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.TacticInfo
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 /**
   * A pretty-printer for the Bellerophon tactics language.
@@ -29,9 +31,19 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case BranchTactic(ts, _) => op(e).terminal.img + "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(newline(indent) + ",") + newline(indent) + ")"
           case b : BuiltInTactic => b.name
           case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
+          case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
           case _ => e.prettyString
         }
     }
+  }
+
+  private def argListPrinter(args : List[BelleParser.TacticArg]) = {
+    "(" + args.map(argPrinter).reduce(_ + ", " + _) + ")"
+  }
+
+  private def argPrinter(arg : BelleParser.TacticArg) = arg match {
+    case Left(expr) => "{`" + KeYmaeraXPrettyPrinter(expr) + "`}"
+    case Right(loc) => loc.prettyString
   }
 
   private val TAB = "  "
