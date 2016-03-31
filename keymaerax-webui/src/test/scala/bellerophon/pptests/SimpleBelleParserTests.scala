@@ -2,7 +2,7 @@ package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{HilbertCalculus, DerivedAxioms, TactixLibrary, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.UnknownLocation
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
@@ -84,6 +84,13 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.left.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
     result.left.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
     result.right shouldBe TactixLibrary.andR(3)
+  }
+
+
+  it should "parse compositions of things that parse to partials" in {
+    val tactic = BelleParser("nil & nil").asInstanceOf[SeqTactic]
+    tactic.left shouldBe PartialTactic(TactixLibrary.nil)
+    tactic.right shouldBe PartialTactic(TactixLibrary.nil)
   }
 
   //endregion
