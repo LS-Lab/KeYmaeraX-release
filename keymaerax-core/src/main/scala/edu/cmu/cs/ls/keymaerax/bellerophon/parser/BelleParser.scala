@@ -13,7 +13,7 @@ import BelleLexer.TokenStream
   */
 object BelleParser extends (String => BelleExpr) {
   private var invariantGenerator : Option[Generator[Formula]] = None
-  private val DEBUG = false
+  private val DEBUG = true
 
   override def apply(s: String) = parseWithInvGen(s, None)
 
@@ -144,7 +144,7 @@ object BelleParser extends (String => BelleExpr) {
       //region built-in tactics
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
-          if(!isOpenParen(st.input)) ParserState(r :+ ParsedBelleExpr(constructTactic(name, None), identLoc), st.input.tail)
+          if(!isOpenParen(st.input)) ParserState(r :+ ParsedBelleExpr(constructTactic(name, None), identLoc), st.input)
           else {
             val (args, remainder) = parseArgumentList(st.input)
 
@@ -314,7 +314,7 @@ object BelleParser extends (String => BelleExpr) {
 
   //region Ad-hoc Argument List Parser
 
-  private type TacticArg = Either[Expression, PositionLocator]
+  type TacticArg = Either[Expression, PositionLocator]
 
   /**
     * An ad-hoc parser for argument lists.
