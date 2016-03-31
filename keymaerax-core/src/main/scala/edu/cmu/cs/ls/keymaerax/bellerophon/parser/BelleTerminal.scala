@@ -48,6 +48,16 @@ object SATURATE extends BelleTerminal("+") {
   override def regexp = "\\+".r
 }
 
+case class N_TIMES(n:Int) extends BelleTerminal(s"^${n}") {
+  assert(n >= 0)
+  override def toString = s"NTIMES($n)"
+}
+object N_TIMES {
+  def regexp  = """(\^\d*)""".r
+  def startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+}
+
+
 object US_MATCH extends BelleTerminal("US")
 
 object RIGHT_ARROW extends BelleTerminal("=>")
