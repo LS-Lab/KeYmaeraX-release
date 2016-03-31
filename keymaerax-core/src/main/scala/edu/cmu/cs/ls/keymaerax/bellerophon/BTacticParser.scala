@@ -24,6 +24,7 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   *
   * @author Nathan Fulton
   */
+@deprecated("Prefer edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser", "4.2b1")
 object BTacticParser extends (String => Option[BelleExpr]) {
   var stringBeingParsed : Option[String] = None
 
