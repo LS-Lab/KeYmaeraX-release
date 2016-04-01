@@ -65,17 +65,9 @@ To run the regression test case suite, type
 
 FAQ: Build Problems
 ===================
-The build file does not include paths to the Mathematica JLink JAR, so you will need to set an environmental variable
-JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in `~/.bashrc` or `~/.profile`.
-
-Examples: (depending on Mathematica version and OS)
-
-    # Mac OS, Mathematica >=10.0.2
-    export JLINK_JAR_LOCATION=/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/JLink.jar
-    # Mac OS, Mathematica <=10.0.1
-    export JLINK_JAR_LOCATION=/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar
-    # Linux
-    export JLINK_JAR_LOCATION=/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/JLink.jar
+The build file uses default paths to the Mathematica JLink JAR for MacOS and Mathematica 10 (see default.properties).
+If those are not suitable for your setup, create a file 'local.properties' in the same directory as default.properties
+(project root) and provide the location of JLink.jar with a property mathematica.jlink.path=YOUR_LOCAL_PATH_TO_JLINKJAR
 
 If, at any time, you run into problems during the compilation process, use `sbt clean` for a fresh start to remove stale files. If the problems persist, use `sbt clean` followed by `sbt reload`. On a few computers you may have to edit your environment variables, e.g., `~/.bashrc` or  `~/.profile` to include something like
 
