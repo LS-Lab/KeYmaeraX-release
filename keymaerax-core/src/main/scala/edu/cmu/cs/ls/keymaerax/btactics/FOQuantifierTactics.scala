@@ -247,8 +247,8 @@ object FOQuantifierTactics {
         //       reverse-alphabetical ordering of quantifiers
         val sorted: List[Term] = ((varsFns -- order).
           filter({ case Variable(_, _, _) => true case Function(_, _, Unit, _) => true case _ => false }).
-          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable - for now: alphabetically
-          toList.sortBy(_.name) ++ order.reverse).
+          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable
+          toList.sorted ++ order.reverse).
           map({ case v@Variable(_, _, _) => v case fn@Function(_, _, Unit, _) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
 
         if (sorted.isEmpty) skip
