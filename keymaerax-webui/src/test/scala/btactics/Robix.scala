@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, AntePos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 
 import scala.language.postfixOps
 
@@ -337,4 +338,168 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  "Passive orientation safety" should "be provable" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafetyabs.key"))
+    val invariant =
+      """v>=0
+        | & dx^2+dy^2=1
+        | & r!=0
+        | & (v=0 | (abs(beta) + v^2/(2*b*abs(r)) < gamma
+        |          & (isVisible < 0 | abs(x-ox) > v^2/(2*b) + V*(v/b) | abs(y-oy) > v^2/(2*b) + V*(v/b))))
+      """.stripMargin.asFormula
+
+    def di(a: String): DependentPositionTactic = diffInvariant(
+      "t>=0".asFormula,
+      "dx^2 + dy^2 = 1".asFormula,
+      s"v = old(v) + $a*t".asFormula,
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
+      "-t * V <= ox - old(ox) & ox - old(ox) <= t * V".asFormula,
+      "-t * V <= oy - old(oy) & oy - old(oy) <= t * V".asFormula,
+      "w*r = v".asFormula,
+      s"beta = old(beta) + t/r*(v - $a/2*t)".asFormula)
+
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*6 /* 6 old(...) in DI */ & andL('L)*@TheType() &
+      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+
+    val allImplyTactic = ((allR('R)*@TheType() & implyR('R))*@TheType())*@TheType()
+
+    val tactic = implyR('R) & andL('L)*@TheType() & loop(invariant)('R) <(
+      /* base case */ QE & print("Base case done"),
+      /* use case */ QE & print("Use case done"),
+      /* step */ andL('L)*@TheType() & chase('R) & allR('R)*2 & implyR('R) & andR('R) <(
+        print("Braking") & allImplyTactic & di("-b")('R) & dw & alphaRule*@TheType() & print("After alpha braking") &
+          (andR('R) <(closeId, skip))*3 & orR('R) & passiveOrientationBrakingArithTactic & print("Braking branch done"),
+        andR('R) <(
+          print("Stopped") & allImplyTactic & di("0")('R) & dw & alphaRule*@TheType() & print("After alpha stopped") &
+            (andR('R) <(closeId, skip))*3 & orR('R) & passiveOrientationStoppedArithTactic & print("Stopped branch done"),
+          print("Accelerating") & allImplyTactic & di("A")('R) & dw & alphaRule*@TheType() & print("After alpha accelerating") &
+            (andR('R) <(closeId, skip))*3 & orR('R) & passiveOrientationAccArithTactic & print("Acc branch done")
+          )
+        )
+      )
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  def passiveOrientationBrakingArithTactic: BelleExpr =
+    orL(-8, "v_0=0|abs(beta_0)+v_0^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b))".asFormula) <(
+    hideR(2) & QE,
+    andL('L) & andR('R) <(
+      QE,
+      hideL(-24, "abs(beta_0)+v_0^2/(2*b*abs(r)) < gamma".asFormula) &
+        hideL(-9, "beta=beta_0+t/r*(v--b/2*t)".asFormula) &
+        orR('R)*@TheType() &
+        orL('Llast, "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b)".asFormula) <(
+          closeId,
+          hideR(2, "isVisible < 0".asFormula) & hideR(1, "v=0".asFormula) & hideL(-21, "t<=ep".asFormula) &
+            hideL(-19, "dx^2+dy^2=1".asFormula) & hideL(-9, "w*r=v".asFormula) & hideL(-8, "odx^2+ody^2<=V^2".asFormula) &
+            hideL(-7, "r!=0".asFormula) & hideL(-5, "gamma>0".asFormula) & hideL(-4, "ep>0".asFormula) &
+            orL('Llast, "abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b)".asFormula) <(
+              hideR(2, "abs(y-oy)>v^2/(2*b)+V*(v/b)".asFormula) & hideL(-10, "y-y_0<=t*(v--b/2*t)".asFormula) & hideL(-9, "-t*(v--b/2*t)<=y-y_0".asFormula) & hideL(-6, "oy-oy_0<=t*V".asFormula) & hideL(-5, "-t*V<=oy-oy_0".asFormula) & QE,
+              hideR(1, "abs(x-ox)>v^2/(2*b)+V*(v/b)".asFormula) & hideL(-13, "x-x_0<=t*(v--b/2*t)".asFormula) & hideL(-12, "-t*(v--b/2*t)<=x-x_0".asFormula) & hideL(-8, "ox-ox_0<=t*V".asFormula) & hideL(-7, "-t*V<=ox-ox_0".asFormula) & QE
+              )
+          )
+      )
+    )
+  
+  it should "prove just braking arithmetic" in withMathematica { tool =>
+    val fml = """V>=0 & A>=0 & b>0 & ep>0 & gamma>0 & v_0>=0 & r!=0 & (v_0=0|abs(beta_0)+v_0^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b))) & odx^2+ody^2<=V^2 & beta=beta_0+t/r*(v--b/2*t) & w*r=v & -t*V<=oy-oy_0 & oy-oy_0<=t*V & -t*V<=ox-ox_0 & ox-ox_0<=t*V & -t*(v--b/2*t)<=y-y_0 & y-y_0<=t*(v--b/2*t) & v=v_0+-b*t & -t*(v--b/2*t)<=x-x_0 & x-x_0<=t*(v--b/2*t) & dx^2+dy^2=1 & t>=0 & t<=ep & v>=0
+                |  -> v=0|abs(beta)+v^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x-ox)>v^2/(2*b)+V*(v/b)|abs(y-oy)>v^2/(2*b)+V*(v/b))""".stripMargin.asFormula
+
+    val tactic = implyR('R) & andL('L)*@TheType() & orR('R) & passiveOrientationBrakingArithTactic
+
+    proveBy(fml, tactic) shouldBe 'proved
+  }
+
+  def passiveOrientationStoppedArithTactic: BelleExpr =
+    orL(-8, "v_0=0|abs(beta_0)+v_0^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b))".asFormula) <(
+      hideR(2) & QE,
+      andL('L) & andR('R) <(
+        QE,
+        hideL(-25, "abs(beta_0)+v_0^2/(2*b*abs(r)) < gamma".asFormula) &
+          hideL(-10, "beta=beta_0+t/r*(v-0/2*t)".asFormula) &
+          orR('R)*@TheType() &
+          orL('Llast, "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b)".asFormula) <(
+            closeId,
+            hideR(4, "abs(y-oy)>v^2/(2*b)+V*(v/b)".asFormula) & hideR(3, "abs(x-ox)>v^2/(2*b)+V*(v/b)".asFormula) &
+              hideR(2, "isVisible < 0".asFormula) &
+              hideL(-22, "t<=ep".asFormula) & hideL(-10, "w*r=v".asFormula) & hideL(-7, "r!=0".asFormula) &
+              hideL(-5, "gamma>0".asFormula) & hideL(-4, "ep>0".asFormula) & hideL(-15, "x-x_0<=t*(v-0/2*t)".asFormula) &
+              hideL(-14, "-t*(v-0/2*t)<=x-x_0".asFormula) & hideL(-12, "y-y_0<=t*(v-0/2*t)".asFormula) &
+              hideL(-11, "-t*(v-0/2*t)<=y-y_0".asFormula) & hideL(-10, "ox-ox_0<=t*V".asFormula) &
+              hideL(-9, "-t*V<=ox-ox_0".asFormula) & hideL(-8, "oy-oy_0<=t*V".asFormula) &
+              hideL(-7, "-t*V<=oy-oy_0".asFormula) & QE
+            )
+        )
+      )
+
+  it should "prove just stopped arithmetic" in withMathematica { tool =>
+    val fml = """V>=0 & A>=0 & b>0 & ep>0 & gamma>0 & v_0>=0 & r!=0 & (v_0=0|abs(beta_0)+v_0^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b))) & odx^2+ody^2<=V^2 & v_0=0 & beta=beta_0+t/r*(v-0/2*t) & w*r=v & -t*V<=oy-oy_0 & oy-oy_0<=t*V & -t*V<=ox-ox_0 & ox-ox_0<=t*V & -t*(v-0/2*t)<=y-y_0 & y-y_0<=t*(v-0/2*t) & v=v_0+0*t & -t*(v-0/2*t)<=x-x_0 & x-x_0<=t*(v-0/2*t) & dx^2+dy^2=1 & t>=0 & t<=ep & v>=0
+                |  -> v=0|abs(beta)+v^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x-ox)>v^2/(2*b)+V*(v/b)|abs(y-oy)>v^2/(2*b)+V*(v/b))""".stripMargin.asFormula
+
+    val tactic = implyR('R) & andL('L)*@TheType() & orR('R) & passiveOrientationStoppedArithTactic
+
+    proveBy(fml, tactic) shouldBe 'proved
+  }
+
+  def passiveOrientationAccArithTactic: BelleExpr =
+    hideL(-25, "dx^2+dy^2=1".asFormula) & hideL(-15, "w*r=v".asFormula) & hideL(-9, "odx^2+ody^2<=V^2".asFormula) &
+    hideL(-8, "v_0=0|abs(beta_0)+v_0^2/(2*b*abs(r_0)) < gamma&(isVisible_0 < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b))".asFormula) &
+    hideL(-7, "r_0!=0".asFormula) & hideR(1, "v=0".asFormula) & andR('R) <(
+      hideL(-8, "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))|abs(y_0-oy_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))".asFormula) & QE,
+      orR('R)*2 & orL(-8, "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))|abs(y_0-oy_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))".asFormula) <(
+        closeId,
+        hideR(1, "isVisible < 0".asFormula) & hideL(-11, "beta=beta_1+t/r*(v-A/2*t)".asFormula) & hideL(-10, "beta_1=0".asFormula) &
+          hideL(-9, "v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < gamma*abs(r)".asFormula) & hideL(-7, "r!=0".asFormula) & hideL(-5, "gamma>0".asFormula) &
+          orL(-6, "abs(x_0-ox_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))|abs(y_0-oy_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))".asFormula) <(
+            hideR(2, "abs(y-oy)>v^2/(2*b)+V*(v/b)".asFormula) & hideL(-12, "y-y_0<=t*(v-A/2*t)".asFormula) &
+              hideL(-11, "-t*(v-A/2*t)<=y-y_0".asFormula) & hideL(-8, "oy-oy_1<=t*V".asFormula) & hideL(-7, "-t*V<=oy-oy_1".asFormula) &
+              abs(1, 0::Nil) & abs(-6, 0::Nil) &
+              orL(-16, "x_0-ox_1>=0&abs_1=x_0-ox_1|x_0-ox_1 < 0&abs_1=-(x_0-ox_1)".asFormula) <(
+                andL('L) & hideL(-11, "x-x_0<=t*(v-A/2*t)".asFormula) & hideL(-7, "-t*V<=ox-ox_1".asFormula) &
+                orL(-13, "x-ox>=0&abs_0=x-ox|x-ox < 0&abs_0=-(x-ox)".asFormula) <(
+                  print("Foo 1") & QE,
+                  hideR(1) & print("Foo 2") & QE
+                  ),
+                andL('L) & hideL(-10, "-t*(v-A/2*t)<=x-x_0".asFormula) & hideL(-8, "ox-ox_1<=t*V".asFormula) &
+                orL(-13, "x-ox>=0&abs_0=x-ox|x-ox < 0&abs_0=-(x-ox)".asFormula) <(
+                  hideR(1) & print("Foo 3") & QE,
+                  cutL("abs_1>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*t^2+t*(v_0+V))".asFormula)(AntePos(5)) <(
+                    hideL(-11, "t<=ep".asFormula) & hideL(-4, "ep>0".asFormula) & print("Foo 4") & QE,
+                    hideR(1, "abs_0>v^2/(2*b)+V*(v/b)".asFormula) & print("Foo 5") & QE
+                    )
+                  )
+
+              ),
+            hideR(1, "abs(x-ox)>v^2/(2*b)+V*(v/b)".asFormula) & hideL(-15, "x-x_0<=t*(v-A/2*t)".asFormula) &
+              hideL(-14, "-t*(v-A/2*t)<=x-x_0".asFormula) & hideL(-10, "ox-ox_1<=t*V".asFormula) & hideL(-9, "-t*V<=ox-ox_1".asFormula) &
+              abs(1, 0::Nil) & abs(-6, 0::Nil) & cutL("abs_1>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*t^2+t*(v_0+V))".asFormula)(AntePos(5)) <(
+                hideL(-13, "t<=ep".asFormula) & hideL(-4, "ep>0".asFormula) &
+                orL(-14, "y_0-oy_1>=0&abs_1=y_0-oy_1|y_0-oy_1 < 0&abs_1=-(y_0-oy_1)".asFormula) <(
+                  andL('L) & hideL(-9, "y-y_0<=t*(v-A/2*t)".asFormula) & hideL(-6, "-t*V<=oy-oy_1".asFormula) &
+                  orL(-11, "y-oy>=0&abs_0=y-oy|y-oy < 0&abs_0=-(y-oy)".asFormula) <(
+                    print("Bar 1") & QE,
+                    hideR(1) & print("Bar 2") & QE
+                    ),
+                  andL('L) & hideL(-8, "-t*(v-A/2*t)<=y-y_0".asFormula) & hideL(-7, "oy-oy_1<=t*V".asFormula) &
+                  orL(-11, "y-oy>=0&abs_0=y-oy|y-oy < 0&abs_0=-(y-oy)".asFormula) <(
+                    hideR(1) & print("Bar 3") & QE,
+                    print("Bar 4") & QE
+                    )
+                  ),
+                hideR(1, "abs_0>v^2/(2*b)+V*(v/b)".asFormula) & print("Bar 5") & QE
+              )
+            )
+        )
+      )
+
+  it should "prove just acceleration arithmetic" in withMathematica { tool =>
+    val fml = """V>=0 & A>=0 & b>0 & ep>0 & gamma>0 & v_0>=0 & r_0!=0 & (v_0=0|abs(beta_0)+v_0^2/(2*b*abs(r_0)) < gamma&(isVisible_0 < 0|abs(x_0-ox_0)>v_0^2/(2*b)+V*(v_0/b)|abs(y_0-oy_0)>v_0^2/(2*b)+V*(v_0/b))) & odx^2+ody^2<=V^2 & r!=0 & (isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))|abs(y_0-oy_1)>v_0^2/(2*b)+V*(v_0/b)+(A/b+1)*(A/2*ep^2+ep*(v_0+V))) & v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < gamma*abs(r) & beta_1=0 & beta=beta_1+t/r*(v-A/2*t) & w*r=v & -t*V<=oy-oy_1 & oy-oy_1<=t*V & -t*V<=ox-ox_1 & ox-ox_1<=t*V & -t*(v-A/2*t)<=y-y_0 & y-y_0<=t*(v-A/2*t) & v=v_0+A*t & -t*(v-A/2*t)<=x-x_0 & x-x_0<=t*(v-A/2*t) & dx^2+dy^2=1 & t>=0 & t<=ep & v>=0
+                |  ->  v=0|abs(beta)+v^2/(2*b*abs(r)) < gamma&(isVisible < 0|abs(x-ox)>v^2/(2*b)+V*(v/b)|abs(y-oy)>v^2/(2*b)+V*(v/b))""".stripMargin.asFormula
+
+    val tactic = implyR('R) & andL('L)*@TheType() & orR('R) & passiveOrientationAccArithTactic
+
+    proveBy(fml, tactic) shouldBe 'proved
+  }
 }
