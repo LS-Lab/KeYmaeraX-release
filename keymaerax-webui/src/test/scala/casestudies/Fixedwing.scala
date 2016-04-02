@@ -67,7 +67,7 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     *
     * Proved in commit 15a1937 of fixedwing branch
     */
-  /* "fixedwing_simple_loitering" */ ignore should "prove" in {
+  /* "fixedwing_simple_loitering" */ ignore should "prove fixedwing_simple_loitering" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_loitering.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
@@ -167,7 +167,7 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     *
     * Proved in commit 15a1937 of fixedwing branch
     */
-  /* "fixedwing_simple_maxroll" */ ignore should "prove" in {
+  /* "fixedwing_simple_maxroll" */ ignore should "prove fixedwing_simple_maxroll" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_maxroll.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
@@ -294,7 +294,7 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     *
     * Proved in commit 15a1937 of fixedwing branch
     */
-  /* "fixedwing_simple_nobound" */ ignore should "prove" in {
+  /* "fixedwing_simple_nobound" */ ignore should "prove fixedwing_simple_nobound" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_nobound.key"))
 
     def ls(tactic: PositionTactic, fml: String*) =
