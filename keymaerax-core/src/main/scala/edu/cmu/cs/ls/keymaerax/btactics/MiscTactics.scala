@@ -23,13 +23,20 @@ object DebuggingTactics {
     }
   }
 
-  /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
-  def debug(message: => String): BuiltInTactic = new BuiltInTactic("debug") {
+  /** debug is a no-op tactic that prints a message and the current provable, if doPrint (defaults to the system property DEBUG) is true. */
+  def debug(message: => String, doPrint: Boolean = DEBUG, printer: Provable => String = _.toString): BuiltInTactic =
+      new BuiltInTactic("debug") {
     override def result(provable: Provable): Provable = {
-      if (DEBUG) println("===== " + message + " ==== " + provable + " =====")
+      if (doPrint) println("===== " + message + " ==== " + printer(provable) + " =====")
       provable
     }
   }
+
+  /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
+  def print(message: => String): BuiltInTactic = debug(message, doPrint=true)
+  /** printIndexed is a no-op tactic that prints a message and the current provable (verbose sequent with formula indices),
+    * regardless of DEBUG being true or false */
+  def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
