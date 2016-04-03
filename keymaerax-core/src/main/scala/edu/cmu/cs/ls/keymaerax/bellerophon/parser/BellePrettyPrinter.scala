@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon
+import edu.cmu.cs.ls.keymaerax.{core, bellerophon}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.TacticInfo
@@ -26,13 +26,23 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     catch {
       case exn:Throwable =>
         e match {
-          case SeqTactic(l,r,_)     => wrapLeft(e, l, indent) + op(e).terminal.img + wrapRight(e, r, indent)
-          case EitherTactic(l,r,_) => wrapLeft(e, l, indent) + op(e).terminal.img + wrapRight(e, r, indent)
+          case SeqTactic(l,r,_)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
+          case EitherTactic(l,r,_) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
           case BranchTactic(ts, _) => op(e).terminal.img + "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(newline(indent) + ",") + newline(indent) + ")"
+          case SaturateTactic(t, a, _) => "(" + pp(t, indent) + ")" + op(e).terminal.img
           case b : BuiltInTactic => b.name
           case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
+          case e: RepeatTactic => "(" + pp(e.child, indent) + ")^" + e.times
           case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
-          case _ => e.prettyString
+          case it : InputTactic[_] => {
+            val theArg = it.input match {
+              case e : core.Expression => Left(e)
+              case _ => throw PrinterException("Cannot print input tactics that take non-expressions as input.") //@todo that class probably just shouldn't even be generic now that we have DependentPositionTactics etc.
+            }
+
+            it.name + "(" + argPrinter(theArg) + ")"
+          }
+          case _ => throw PrinterException(s"Do not no how to pretty-print ${e}")
         }
     }
   }
@@ -64,3 +74,5 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   private def wrap(e : BelleExpr, indent: Int) = "(" + pp(e, indent) + ")"
 }
 
+
+case class PrinterException(msg: String) extends Exception(msg)
