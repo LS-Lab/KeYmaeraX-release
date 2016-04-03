@@ -13,7 +13,7 @@ import BelleLexer.TokenStream
   */
 object BelleParser extends (String => BelleExpr) {
   private var invariantGenerator : Option[Generator[Formula]] = None
-  private val DEBUG = true
+  private val DEBUG = false
 
   override def apply(s: String) = parseWithInvGen(s, None)
 
