@@ -549,20 +549,6 @@ class Fixedwing extends FlatSpec with Matchers with BeforeAndAfterEach {
     /* tactics of the case when helicopter follows a new safe curve */
     def newcurve = (la(andL)*) & ((ls(composeb) ~ ls(randomb) ~ ls(allR) ~ ls(composeb) ~ ls(testb) ~ ls(implyR))*) & ls(assignb)
 
-    def plantLoiteringPosTheta11(a: Variable, w: Variable) =
-      ls(DC("dxy_0=old(dxy_0) & dz_0=old(dz_0)".asFormula)) & onBranch(
-        (cutShowLbl, debug("Show dxy_0=old(dxy_0) & dz_0=old(dz_0)")
-          & (ls(DI) | debug("DI. xy_0=old(dxy_0) & dz_0=old(dz_0) failed"))),
-        (cutUseLbl, debug("Use dxy_0=old(dxy_0) & dz_0=old(dz_0)")
-          & (la(andL)*) &
-          ls(DC("x-r*dy=old(x)-r*old(dy) & y+r*dx=old(y)+r*old(dx)".asFormula)) & onBranch(
-          (cutShowLbl, debug("Show x-r*dy=...")
-            & ls(Dconstify) & (ls(DI) | debug("DI. x-r*dy=... failed"))),
-          (cutUseLbl, debug("Use x-r*dy=...")
-            & ls(DW) & ls(implyR) & (la(andL)*) & QE
-            ))
-          ))
-
     def plantNC(a: Variable, w: Variable) =
       ls(DC(s"x-old(x)<=t_2*(v_1-${a.prettyString}/2*t_2) & x-old(x)>=-t_2*(v_1-${a.prettyString}/2*t_2) & y-old(y)<=t_2*(v_1-${a.prettyString}/2*t_2) & y-old(y)>=-t_2*(v_1-${a.prettyString}/2*t_2)".asFormula)) & onBranch(
         (cutShowLbl, debug("Show x-old(x)...")
