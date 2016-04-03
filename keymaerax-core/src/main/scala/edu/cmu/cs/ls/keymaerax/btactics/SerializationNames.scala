@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 /**
-  * Created by nfulton on 12/22/15.
+  * Deprecated but still need to refactor. Migration path is moving everything into DerivationInfo.
+  * @author Nathan Fulton
   */
+@deprecated("Special case some something we already need, which is now DerivationInfo", "4.2b1")
 object SerializationNames {
   trait SerializationName {
     override def toString(): String = this match {
