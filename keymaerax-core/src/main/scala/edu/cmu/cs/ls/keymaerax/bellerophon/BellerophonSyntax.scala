@@ -15,6 +15,7 @@ object BelleExpr {
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
+  * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
  * @author Nathan Fulton
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
@@ -387,9 +388,6 @@ abstract case class DependentPositionTactic(name: String) extends BelleExpr with
 abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
-}
-abstract case class InputPositionTactic[T](input: T, pos: Position) extends BelleExpr {
-  def computeExpr(): BelleExpr
 }
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
