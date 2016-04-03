@@ -40,5 +40,18 @@ class BTacticPrettyPrinterTests extends FlatSpec with Matchers {
     BellePrettyPrinter(tactic) shouldBe "partial(NilT)&partial(NilT)"
   }
 
+  it should "print e & e & e" in {
+    val tactic = parser("nil & (nil & nil)")
+    BellePrettyPrinter(tactic) shouldBe "partial(NilT)&partial(NilT)&partial(NilT)"
+  }
 
+  it should "print (e & e) & e" in {
+    val tactic = parser("(nil & nil) & nil")
+    BellePrettyPrinter(tactic) shouldBe "(partial(NilT)&partial(NilT))&partial(NilT)"
+  }
+
+  it should "print e | e" in {
+    val tactic = parser("nil | nil")
+    BellePrettyPrinter(tactic) shouldBe "partial(NilT)|partial(NilT)"
+  }
 }

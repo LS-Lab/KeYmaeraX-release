@@ -131,6 +131,21 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.right shouldBe TactixLibrary.andR(3)
   }
 
+  it should "parse e & b | c" in {
+    val result = BelleParser("andR(1) & andR(2) | andR(3)").asInstanceOf[EitherTactic]
+    result.left.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
+    result.left.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
+    result.right shouldBe TactixLibrary.andR(3)
+  }
+
+  //@todo fix.
+  it should "parse e | b & c" in {
+    val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[SeqTactic]
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(2)
+    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(3)
+  }
+
   //endregion
 
   //region Branching combinator
