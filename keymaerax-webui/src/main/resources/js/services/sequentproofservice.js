@@ -34,7 +34,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         }
         return { sectionIdx: -1, pathStepIdx: -1 };
       },
-      /** Returns the section index of the specified proof tree node's child that is referred to in the agenda item (child is unique). */
+      /** Returns the index of the section where any proofTreeNode's child is last (child is unique). */
       childSectionIndex: function(itemId, proofTreeNode) {
         var agendaItem = this.itemsMap[itemId];
         for (var i = 0; i < agendaItem.deduction.sections.length; i++) {

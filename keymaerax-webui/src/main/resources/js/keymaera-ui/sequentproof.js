@@ -31,7 +31,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
 
       scope.showProofRoot = function() {
         var root = scope.proofTree.nodesMap[scope.proofTree.root];
-        addBranchRoot(root, scope.agenda.itemsMap[scope.nodeId], scope.deductionPath.sections.length-1);
+        if (scope.deductionPath.sections[scope.deductionPath.sections.length - 1].path.indexOf(root.id) < 0) {
+          addBranchRoot(root, scope.agenda.itemsMap[scope.nodeId], scope.deductionPath.sections.length-1);
+        }
       }
 
       scope.fetchPathAll = function(sectionIdx) {
@@ -52,35 +54,38 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
        * @param sectionIdx The section where to add the proof node.
        */
       updateSection = function(proofTreeNode, agendaItem, sectionIdx) {
-        var section = agendaItem.deduction.sections[sectionIdx];
-        var sectionEnd = section.path[section.path.length-1];
-        if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
-          if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== null) {
-            // start new section with parent, parent section is complete if parent is root
-            agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === null});
-          } // else: parent already has its own section, see fetchBranchRoot
-          // in any case: child's section is loaded completely if its ending in one of the children of the proof tree node
-          section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
-        } else {
-          // parent has exactly 1 child, append parent to child's section
-          if (sectionIdx === -1) {
-            showClientErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
-              ' has ' + agendaItem.sections + ' as path sections');
-          } else if (proofTreeNode.parent !== null) {
-            section.path.push(proofTreeNode.id);
-            var parentCandidate =
-              (sectionIdx+1 < agendaItem.deduction.sections.length
-              ? scope.proofTree.nodesMap[agendaItem.deduction.sections[sectionIdx+1].path[0]]
-              : undefined);
-            section.isComplete =
-              parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
+        // only update if node not added previously
+        if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path.indexOf(proofTreeNode.id) < 0) {
+          var section = agendaItem.deduction.sections[sectionIdx];
+          var sectionEnd = section.path[section.path.length-1];
+          if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
+            if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== null) {
+              // start new section with parent, parent section is complete if parent is root
+              agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === null});
+            } // else: parent already has its own section, see fetchBranchRoot
+            // in any case: child's section is loaded completely if it's ending in one of the children of the proof tree node
+            section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
           } else {
-            if (sectionIdx+1 < agendaItem.deduction.sections.length) {
-              showClientErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
-                ' is not last section in ' + agendaItem.deduction.sections);
+            // parent has exactly 1 child, append parent to child's section
+            if (sectionIdx === -1) {
+              showClientErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
+                ' has ' + agendaItem.sections + ' as path sections');
+            } else if (proofTreeNode.parent !== null) {
+              section.path.push(proofTreeNode.id);
+              var parentCandidate =
+                (sectionIdx+1 < agendaItem.deduction.sections.length
+                ? scope.proofTree.nodesMap[agendaItem.deduction.sections[sectionIdx+1].path[0]]
+                : undefined);
+              section.isComplete =
+                parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
             } else {
-              agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
-              section.isComplete = proofTreeNode.children != null && proofTreeNode.children.indexOf(sectionEnd) >= 0;
+              if (sectionIdx+1 < agendaItem.deduction.sections.length) {
+                showClientErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
+                  ' is not last section in ' + agendaItem.deduction.sections);
+              } else {
+                agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
+                section.isComplete = proofTreeNode.children != null && proofTreeNode.children.indexOf(sectionEnd) >= 0;
+              }
             }
           }
         }
@@ -96,7 +101,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
         $.each(items, function(i, v) {
           var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
-          updateSection(proofTreeNode, v, childSectionIdx);
+          if (childSectionIdx >= 0) {
+            updateSection(proofTreeNode, v, childSectionIdx);
+          }
         });
       }
 
