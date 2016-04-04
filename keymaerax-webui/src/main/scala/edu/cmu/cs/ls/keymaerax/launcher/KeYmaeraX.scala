@@ -68,6 +68,9 @@ object KeYmaeraX {
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
+      |Web server options:
+      |  -tool mathematica|z3
+      |
       |Copyright (c) Carnegie Mellon University.
       |Use option -license to show the license conditions.
       |""".stripMargin
