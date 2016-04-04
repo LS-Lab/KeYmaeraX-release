@@ -181,7 +181,7 @@
 <script type="text/ng-template" id="navigateTowardsRootPopover.html">
     <div class="k4-nobreak">
         <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show fork</span></a><br/>
-        <a ng-click="showProofRoot()"><span class="fa fa-angle-down"> Show original conjecture</span></a><br/>
+        <a ng-click="showProofRoot()" ng-show="!isProofRootVisible()"><span class="fa fa-angle-down"> Show original conjecture</span><br/></a>
         <a ng-click="fetchPathAll(outerIdx)"><span class="fa fa-angle-double-down"> Expand all</span></a>
     </div>
 </script>

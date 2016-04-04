@@ -29,6 +29,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         });
       }
 
+      scope.isProofRootVisible = function() {
+        var root = scope.proofTree.nodesMap[scope.proofTree.root];
+        return scope.deductionPath.sections[scope.deductionPath.sections.length - 1].path.indexOf(root.id) >= 0;
+      }
+
       scope.showProofRoot = function() {
         var root = scope.proofTree.nodesMap[scope.proofTree.root];
         if (scope.deductionPath.sections[scope.deductionPath.sections.length - 1].path.indexOf(root.id) < 0) {
