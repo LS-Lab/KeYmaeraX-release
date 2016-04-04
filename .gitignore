@@ -14,6 +14,8 @@ src_managed/
 project/boot/
 project/plugins/project/
 
+local.properties
+
 # Scala-IDE specific
 .scala_dependencies
 .idea/

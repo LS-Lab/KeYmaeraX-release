@@ -19,7 +19,7 @@ import scala.collection.JavaConversions._
  * @todo move functionality directly into KeYmaeraX.scala?
  */
 object Main {
-  def startServer() : Unit = {
+  def startServer(args: Array[String]) : Unit = {
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
     LoadingDialogFactory() //Intialize the loading dialog.
     try {
@@ -36,8 +36,7 @@ object Main {
       }
     }
     //@todo skip -ui -launch
-    //@todo use command line arguments
-    edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
+    edu.cmu.cs.ls.keymaerax.hydra.Boot.main(args)
   }
 
 
@@ -57,7 +56,7 @@ object Main {
     else {
       exitIfDeprecated()
       clearCacheIfDeprecated()
-      startServer()
+      startServer(args)
       //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
       //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
