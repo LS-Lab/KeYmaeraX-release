@@ -319,12 +319,17 @@ object SQLite {
         })
       })
 
+    def deleteExecution(executionId: Int) = synchronizedTransaction({
+      val deletedExecutionSteps = Executionsteps.filter(_.executionid === executionId).delete == 1;
+      val deletedExecution = Tacticexecutions.filter(_._Id === executionId).delete == 1
+      deletedExecutionSteps && deletedExecution
+    })
+
     override def deleteProof(proofId: Int) =
       synchronizedTransaction({
-        Tacticexecutions.filter(_.proofid === proofId).delete
-        Proofs.filter(_._Id === proofId).delete == 1
+        Tacticexecutions.filter(x => x.proofid === proofId).foreach(f => deleteExecution(f._Id.get))
+        Proofs.filter(x => x._Id === proofId).delete == 1
       })
-
 
     //Models
     override def createModel(userId: String, name: String, fileContents: String, date: String,
@@ -405,9 +410,6 @@ object SQLite {
       targetStream.close()
       dbFile.close()
     }
-
-    /** Deletes an execution from the database */
-    override def deleteExecution(executionId: Int): Unit = ???
 
     /** Creates a new execution and returns the new ID in tacticExecutions */
     override def createExecution(proofId: Int): Int =

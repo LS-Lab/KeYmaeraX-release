@@ -124,7 +124,7 @@ object DerivationInfo {
       , /* conclusion */ (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(FormulaArg("formula"))
+    , List(FormulaArg("formula")) //@todo should this be r(x) or formula? Does it matter?
     , {case () => (fml: Seq[Formula]) => TactixLibrary.diffCut(fml:_*)}),
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
@@ -509,6 +509,7 @@ object DerivationInfo {
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
         /*premise*/    List((List("&Gamma;", "x=y", "P(y)"), List("Q(y)", "&Delta;")))),
       {case () => (pos: AntePosition) => TactixLibrary.eqL2R(pos)}),
+//      {case () => ProofRuleTactics.trivialCloser}), //@todo This is a 4.1b3 merge conflict. I'm not sure what the correct behavior is.
 
     // Proof rule input tactics
     new InputTacticInfo("cut"
@@ -602,13 +603,13 @@ object DerivationInfo {
       , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;"), true),
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(FormulaArg("formula"))
+    , List(FormulaArg("formula")) //@todo r(x) or formula? Not sure after 4.1b3 merge.
     , {case () => (fml:Formula) => TactixLibrary.diffInvariant(Seq(fml):_*)}),
     new PositionTacticInfo("diffSolve",
       RuleDisplayInfo("[′]R",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => ???}, needsTool = true),
+      {case () => TactixLibrary.diffSolve(None)}, needsTool = true), //@todo change the tactic back when we get a chance to implement the new one.
     new PositionTacticInfo("autoDiffSolve",
     RuleDisplayInfo("[′]R",
       (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),

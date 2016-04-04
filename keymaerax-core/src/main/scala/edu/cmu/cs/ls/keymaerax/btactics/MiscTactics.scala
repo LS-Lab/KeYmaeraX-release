@@ -118,7 +118,7 @@ object DebuggingTactics {
  * @author Nathan Fulton
  */
 object Idioms {
-  lazy val nil = PartialTactic(new BuiltInTactic("NilT") {
+  lazy val nil = PartialTactic(new BuiltInTactic("nil") {
     override def result(provable: Provable): Provable = provable
   })
   lazy val ident = nil

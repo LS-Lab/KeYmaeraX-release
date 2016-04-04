@@ -60,6 +60,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
 //      usubstCaseAnalysisP ::
       baseTacticWithInputs ::
       baseTacticNoInput ::
+      groupP ::
       Nil
 
     lazy val typeParsers : List[PackratParser[BelleType]] =
@@ -91,6 +92,13 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     // Parsers for each belle expr language construct.
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    lazy val groupP : PackratParser[BelleExpr] = {
+      lazy val pattern = "(" ~> expressionParser <~ ")"
+      log(pattern)("group") ^^ {
+        case e => e
+      }
+    }
+
     lazy val seqP : PackratParser[BelleExpr] = {
       lazy val pattern = expressionParser ~ SEQ ~ expressionParser
       log(pattern)(SEQ) ^^ {
@@ -109,7 +117,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       /** Parses a comma-separated list of tactics containing at least one tactic. */
       lazy val commaSeparatedList = (expressionParser <~ ",").*.? ~ expressionParser
 
-      lazy val pattern = expressionParser ~ BRANCH ~ ("(" ~> commaSeparatedList <~ ")")
+      lazy val pattern = expressionParser ~ (SEQ.? ~> BRANCH) ~ ("(" ~> commaSeparatedList <~ ")")
       log(pattern)(BRANCH) ^^ {
         case left ~ BRANCH ~ right => {
           val lastRight : BelleExpr = right._2
@@ -228,3 +236,5 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     val MATCH = "match"
   }
 }
+
+class BParserException(msg: String) extends Exception(msg)

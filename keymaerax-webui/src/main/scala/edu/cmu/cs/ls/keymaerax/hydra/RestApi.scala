@@ -9,6 +9,8 @@ import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import akka.actor.Actor
+import spray.http.CacheDirectives.{`max-age`, `no-cache`}
+import spray.http.HttpHeaders.`Cache-Control`
 import spray.routing._
 import spray.http._
 import spray.json._
@@ -57,6 +59,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     item.headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
   }
 
+  /**
+    * Turn off all caching.
+    * @note A hosted version of the server should probably turn this off.
+    * */
+  private def completeWithoutCache(response: String) =
+    respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+      super.complete(response)
+    }
+
   private def standardCompletion(r: Request) : String = {
     val responses = r.getResultingResponses()
     //@note log all error responses
@@ -80,8 +91,17 @@ trait RestApi extends HttpService with SLF4JLogging {
   val userPrefix = pathPrefix("user" / Segment)
 
   //The static directory.
-  val staticRoute = pathPrefix("") { get { getFromResourceDirectory("") } }
-  val homePage = path("") { get {getFromResource("index_bootstrap.html")}}
+  val staticRoute =
+    pathPrefix("") { get {
+      respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+        getFromResourceDirectory("")
+      }
+    }}
+  val homePage = path("") { get {
+    respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+      getFromResource("index_bootstrap.html")
+    }
+  }}
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,6 +183,13 @@ trait RestApi extends HttpService with SLF4JLogging {
       complete(standardCompletion(request))
     }
   }}
+
+  val extractTactic = path("proofs" / "user" / Segment / Segment / "extract") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new ExtractTacticRequest(database, proofId)
+      complete(standardCompletion(request))
+    }
+  }}}
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proofs
@@ -659,6 +686,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskStatus            ::
     taskResult            ::
     stopTask              ::
+    extractTactic         ::
     counterExample        ::
     setupSimulation       ::
     simulate              ::

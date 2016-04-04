@@ -153,9 +153,10 @@ object DLBySubst {
               })
 
             val diffRename: DependentPositionTactic = "diffRename" by ((pos, sequent) => {
+              //@note allL may introduce equations of the form x=x_0, but not necessarily for all variables
               if (sequent.ante.size == 1 && sequent.succ.size == 1 && sequent.ante.head == sequent.succ.head) ident
-              else if (sequent.ante.size == 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
-                case Equal(_, _) if sequent(AntePos(sequent.ante.size - 1)) == phi => diffRenameStep(pos)*vars.size
+              else if (sequent.ante.size <= 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
+                case Equal(_, _) if sequent(AntePos(sequent.ante.size - 1)) == phi => diffRenameStep(pos)*(sequent.ante.size - 1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               }
               else throw new ProverException("Expected sequent either of the form p(x) |- p(x)\n or of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)

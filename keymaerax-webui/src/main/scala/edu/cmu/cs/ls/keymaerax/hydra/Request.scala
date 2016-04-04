@@ -353,13 +353,16 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
 class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends Request {
   //@todo check the model belongs to the user.
   override def getResultingResponses(): List[Response] = {
-    val success = db.deleteModel(Integer.parseInt(modelId))
+    val id = Integer.parseInt(modelId)
+    db.getProofsForModel(id).foreach(proof => TaskManagement.forceDeleteTask(proof.proofId.toString))
+    val success = db.deleteModel(id)
     new BooleanResponse(success) :: Nil
   }
 }
 
 class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
   override def getResultingResponses() : List[Response] = {
+    TaskManagement.forceDeleteTask(proofId)
     val success = db.deleteProof(Integer.parseInt(proofId))
     new BooleanResponse(success) :: Nil
   }
@@ -1029,6 +1032,15 @@ class ShutdownReqeuest() extends Request {
     }.start
 
     new BooleanResponse(true) :: Nil
+  }
+}
+
+class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def getResultingResponses(): List[Response] = {
+    val exprText = new ExtractTacticFromTrace(db).apply(proofId).prettyString
+    new ExtractTacticResponse(exprText) :: Nil
   }
 }
 
