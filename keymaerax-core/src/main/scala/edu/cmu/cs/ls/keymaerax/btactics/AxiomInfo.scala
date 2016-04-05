@@ -572,6 +572,7 @@ object DerivationInfo {
     new PositionTacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
+    new TacticInfo("pQE", "pQE",  {case () => ToolTactics.partialQE}, needsTool = true),
 
     // Differential tactics
     new PositionTacticInfo("DIRule",
