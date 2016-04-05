@@ -22,6 +22,8 @@ sealed trait Location extends Serializable {
       case Region(ol,oc,_,_) => l==ol&&c+1==oc
     }
   }
+
+  def spanTo(other: Location) = Region(this.begin.line, this.begin.column, other.begin.line, other.begin.column)
 }
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
