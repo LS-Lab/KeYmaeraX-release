@@ -358,6 +358,13 @@ angular.module('formula')
                             }
                             break;
 
+                        case "pair":
+                          var args = $.map(c, function(arg, i) {
+                            return parseFormulaHelper(arg, depth, collapsed);
+                          }).join(',');
+                          content = {text: "(" + args + ")", type: 'term'}
+                          break;
+
                         default:
                             var seqs = [];
                             for (var i = 0; i < c.length; i++) {
