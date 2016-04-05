@@ -1,0 +1,14 @@
+Functions.
+  R b.
+  R m.
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+End.
