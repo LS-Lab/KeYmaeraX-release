@@ -513,7 +513,7 @@ object DifferentialTactics {
    *        x<0 |- [x'=3,y'=2 & x>=0]y>0
    * }}}
    */
-  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "foo" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
       cut(q) <(
@@ -533,7 +533,7 @@ object DifferentialTactics {
             DLBySubst.assignEquational(pos)
 
       def createTactic(ode: ODESystem, solution: Formula, time: Variable, iv: Map[Variable, Variable],
-                       diffEqPos: Position): BelleExpr = {
+                       diffEqPos: SeqPos): BelleExpr = {
         val initialGhosts = (primedSymbols(ode.ode) + time).foldLeft(skip)((a, b) =>
           a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
 
@@ -541,12 +541,12 @@ object DifferentialTactics {
         val flatSolution = flattenConjunctions(solution).
           sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
 
-        diffUnpackEvolutionDomainInitially(pos) &
+        diffUnpackEvolutionDomainInitially(diffEqPos) &
           initialGhosts &
-          diffInvariant(tool, flatSolution:_*)(pos) &
+          diffInvariant(tool, flatSolution:_*)(diffEqPos) &
           // initial ghosts are at the end of the antecedent
           exhaustiveEqR2L(hide=true)('Llast)*flatSolution.size &
-          diffWeaken(pos)
+          diffWeaken(diffEqPos)
       }
 
       // initial values (from only the formula at pos, because allR will increase index of other occurrences elsewhere in the sequent)
@@ -558,7 +558,7 @@ object DifferentialTactics {
         case None => tool.diffSol(odes.ode, time, iv)
       }
 
-      val diffEqPos = pos.topLevel
+      val diffEqPos = SuccPos(sequent.succ.length-1) //@note introTime moves ODE to the end of the succedent
       theSolution match {
         // add relation to initial time
         case Some(s) =>
@@ -598,7 +598,7 @@ object DifferentialTactics {
   lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
-      cohide(pos.top) & DW(pos) & G
+      cohide(pos.top) & DW(1) & G
   })
 
   /** Helper for diffWeaken: andL the second-to-last formula */

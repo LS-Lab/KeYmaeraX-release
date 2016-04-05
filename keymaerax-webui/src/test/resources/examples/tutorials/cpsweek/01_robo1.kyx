@@ -1,0 +1,25 @@
+Functions.
+  R b.
+  R m.
+  B SB(R,R).
+  B J(R,R).
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+     x!=m
+   & b>0
+-> [
+    {
+     {  ?!SB(x,m);
+     ++ a:=-b;
+     };
+     {x'=v,v'=a}
+    }*@invariant(J(x,v))
+   ]x!=m
+End.
