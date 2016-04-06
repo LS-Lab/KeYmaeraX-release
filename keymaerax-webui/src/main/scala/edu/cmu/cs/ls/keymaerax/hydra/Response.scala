@@ -147,6 +147,20 @@ class GetModelTacticResponse(model : ModelPOJO) extends Response {
   )
 }
 
+class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) extends Response {
+  def getJson = JsObject(
+    "modelid" -> JsString(model.modelId.toString),
+    "mandatoryVars" -> JsArray(vars.map(v => JsString(v.prettyString)).toVector)
+  )
+}
+
+class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
+  def getJson = JsObject(
+    "modelid" -> JsString(model.modelId.toString),
+    "monitor" -> JSONConverter.convertFormula(monitor, "", "")
+  )
+}
+
 class LoginResponse(flag:Boolean, userId:String) extends Response {
   def getJson = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),

@@ -112,6 +112,18 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     });
   }
 
+  $scope.modelplex = function(modelid) {
+    var modalInstance = $uibModal.open({
+      templateUrl: 'templates/modelplex.html',
+      controller: 'ModelPlexCtrl',
+      size: 'lg',
+      resolve: {
+        userid: function() { return $cookies.get('userId'); },
+        modelid: function() { return modelid; }
+      }
+    })
+  }
+
   $scope.$watch('models',
       function (newModels) { if (newModels) Models.setModels(newModels); }
   );

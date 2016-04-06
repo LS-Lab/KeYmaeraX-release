@@ -4,23 +4,23 @@
 */
 /**
  * HyDRA API Requests
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  * @author Ran Ji
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.io._
-import java.nio.file.Path
 import java.text.SimpleDateFormat
-import java.util.{Locale, Calendar}
+import java.util.{Calendar, Locale}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
-import _root_.edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -28,13 +28,15 @@ import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{SimulationTool, MathematicaComputationAbortedException, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, MathematicaComputationAbortedException, SimulationTool}
 
 import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-import java.io.{File,FileInputStream,FileOutputStream}
+import java.io.{File, FileInputStream, FileOutputStream}
+
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -92,7 +94,8 @@ class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : Str
 
 /**
  * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
- * @param db
+  *
+  * @param db
  * @param userId
  */
 class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
@@ -388,6 +391,37 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
   }
 }
 
+class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends Request {
+  def getResultingResponses() = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) :: Nil
+  }
+}
+
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, additionalVars: List[String]) extends Request {
+  def getResultingResponses() = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+      ++ additionalVars.map(_.asVariable)).toList
+    val modelplexInput = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val monitor = monitorKind match {
+      case "controller" =>
+        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+        try {
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1))
+        } catch {
+          case _: Throwable => foResult
+        }
+    }
+
+    if (monitor.subgoals.size == 1) new ModelPlexResponse(model, monitor.subgoals.head.toFormula) :: Nil
+    else new ErrorResponse("ModelPlex failed") :: Nil
+  }
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Proofs of models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -427,7 +461,8 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
 
 /**
  * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
- * @param db Access to the database.
+  *
+  * @param db Access to the database.
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
  */
@@ -463,6 +498,7 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
 
 /**
   * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
+  *
   * @param db Access to the database.
   * @param userId Identifies the user.
   * @param proofId Identifies the proof.
@@ -782,6 +818,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     * maintaining at each step which goals were or were not produced by a pruned step. The branch number of an kept
     * step is the number of kept goals that proceeds its old branch number, with a potential bonus of +1 if the pruned
     * branch was closed in one of the pruned steps.
+    *
     * @param trace The steps to replay (both pruned and kept steps)
     * @param pruned ID's of the pruned steps in trace
     * @return The kept steps of trace with updated branch numbers
@@ -924,7 +961,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
 
 /**
  * like GetProofTreeRequest, but fetches 0 instead of 1000 subnodes.
- * @param db
+  *
+  * @param db
  * @param proofId
  * @param nodeId
  */

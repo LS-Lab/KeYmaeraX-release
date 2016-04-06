@@ -16,6 +16,8 @@ import spray.http._
 import spray.json._
 import spray.util.LoggingContext
 
+import scala.language.postfixOps
+
 class RestApiActor extends Actor with RestApi {
   implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
     case e: Throwable => ctx =>
@@ -164,6 +166,27 @@ trait RestApi extends HttpService with SLF4JLogging {
   val deleteProof = userPrefix {userId => pathPrefix("proof" / Segment / "delete") { proofId => pathEnd {
     post {
       val r = new DeleteProofRequest(database, userId, proofId)
+      complete(standardCompletion(r))
+    }
+  }}}
+
+  val modelplex = userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment) { (modelId, monitorKind) => pathEnd {
+    get {
+      parameters('vars.as[String] ?) { vars => {
+        val theVars: List[String] = vars match {
+          case Some(v) => v.parseJson match {
+            case a: JsArray => a.elements.map({ case JsString(s) => s}).toList
+          }
+          case None => List.empty
+        }
+        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, theVars)
+        complete(standardCompletion(r))
+    }}}
+  }}}
+
+  val modelplexMandatoryVars = userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "mandatoryVars") { modelId => pathEnd {
+    get {
+      val r = new ModelPlexMandatoryVarsRequest(database, userId, modelId)
       complete(standardCompletion(r))
     }
   }}}
@@ -696,6 +719,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     devAction             ::
     sequent               ::
     dashInfo              ::
+    modelplex             ::
+    modelplexMandatoryVars::
     kyxConfig             ::
     keymaeraXVersion      ::
     mathematicaConfig     ::
