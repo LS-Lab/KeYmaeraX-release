@@ -31,7 +31,7 @@ object ModelPlex extends ModelPlexTrait {
   def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       //@todo explicitly address DifferentialSymbol instead of exception
-      val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
+      val vars = StaticSemantics.boundVars(controller).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
       apply(sortedVars, kind, checkProvable)(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
@@ -101,9 +101,9 @@ object ModelPlex extends ModelPlexTrait {
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
     fml match {
       case Imply(assumptions, Box(prg, _)) =>
-        assert(StaticSemantics.boundVars(prg).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || vars.contains(v.asInstanceOf[Variable])),
+        assert(StaticSemantics.boundVars(prg).symbols.forall(v => !v.isInstanceOf[Variable] || vars.contains(v.asInstanceOf[Variable])),
           "all bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
-            "\nMissing: " + (StaticSemantics.boundVars(prg).toSymbolSet.toSet diff vars.toSet).mkString(", "))
+            "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.toSet diff vars.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //@note suppress assumptions since at most those without bound variables are still around.
         //@todo remove implication
@@ -208,16 +208,16 @@ object ModelPlex extends ModelPlexTrait {
    * @return The tactic.
    */
   def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic =
-    "Axiomatic controller monitor" by (pos =>
+    "Axiomatic controller monitor" by ((pos: Position) =>
       locateT(
         useAt("<*> approx", PosInExpr(1::Nil)) ::
         useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
         useAt("<;> compose") ::
         useAt("<++> choice") ::
-        ("<:*> nondet assign opt. 1" by (p => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         useAt("<?> test") ::
         useAt("<:=> assign") ::
-        ("<:=> assign opt. 1" by (p => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
 //          substitutionDiamondAssignT ::
 //          v2vAssignT ::
 //          (diamondAssignEqualT & (if (useOptOne) optimizationOne() else skip)) ::

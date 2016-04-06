@@ -40,7 +40,7 @@ object ModelPlex extends ModelPlexTrait {
   def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       //@todo explicitly address DifferentialSymbol instead of exception
-      val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
+      val vars = StaticSemantics.boundVars(controller).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
       apply(sortedVars, kind, checkProvable)(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
@@ -111,9 +111,9 @@ object ModelPlex extends ModelPlexTrait {
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
     fml match {
       case Imply(assumptions, Box(prg, _)) =>
-        assert(StaticSemantics.boundVars(prg).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || vars.contains(v.asInstanceOf[Variable])),
+        assert(StaticSemantics.boundVars(prg).symbols.forall(v => !v.isInstanceOf[Variable] || vars.contains(v.asInstanceOf[Variable])),
           "all bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
-            "\nMissing: " + (StaticSemantics.boundVars(prg).toSymbolSet.toSet diff vars.toSet).mkString(", "))
+            "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.toSet diff vars.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //@note suppress assumptions since at most those without bound variables are still around.
         //@todo remove implication
