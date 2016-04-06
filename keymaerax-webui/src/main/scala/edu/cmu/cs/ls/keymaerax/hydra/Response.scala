@@ -20,6 +20,8 @@ import edu.cmu.cs.ls.keymaerax.parser.Location
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
 
+import scala.collection.mutable.ListBuffer
+
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
@@ -227,18 +229,24 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
   )
 }
 
-class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: ExecutionStepPOJO) extends Response {
-  def getJson = JsObject(
-    "proofId" -> JsString(proofId),
-    "parentId" -> JsString(nodeId),
-    "taskId" -> JsString(taskId),
-    "status" -> JsString(status),
-    "lastStep" -> JsObject(
-      "ruleName" -> JsString(lastStep.ruleName),
-      "stepStatus" -> JsString(lastStep.status.toString)
-    ),
-    "type" -> JsString("taskstatus")
-  )
+class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: Option[ExecutionStepPOJO]) extends Response {
+  def getJson =
+    if (lastStep.isDefined) JsObject(
+      "proofId" -> JsString(proofId),
+      "parentId" -> JsString(nodeId),
+      "taskId" -> JsString(taskId),
+      "status" -> JsString(status),
+      "lastStep" -> JsObject(
+        "ruleName" -> JsString(lastStep.get.ruleName),
+        "stepStatus" -> JsString(lastStep.get.status.toString)
+      ),
+      "type" -> JsString("taskstatus"))
+    else JsObject(
+      "proofId" -> JsString(proofId),
+      "parentId" -> JsString(nodeId),
+      "taskId" -> JsString(taskId),
+      "status" -> JsString(status),
+      "type" -> JsString("taskstatus"))
 }
 
 class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: Boolean = true) extends Response {
@@ -563,6 +571,38 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
   }
 }
 
+class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends Response {
+  def getJson = JsObject(
+    "initial" -> JsString(initial.prettyString),
+    "stateRelation" -> JsString(stateRelation.prettyString)
+  )
+}
+
+class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]]) extends Response {
+  def getJson = {
+    val seriesList = simulation.map(convertToDataSeries)
+    JsObject(
+      "varNames" -> JsArray(seriesList.head.keySet.map(name => JsString(name.prettyString)).toVector),
+      "ticks" -> JsArray(seriesList.head.head._2.indices.map(i => JsString(i.toString)).toVector),
+      "lineStates" -> JsArray(seriesList.map(series =>
+        JsArray(series.map({
+          case (n, vs) => JsArray(vs.map(v => JsNumber(v.value)).toVector)
+        }).toVector)).toVector),
+      "radarStates" -> JsArray(simulation.map(run => JsArray(run.map(state =>
+        JsArray(state.map({case (n, v) => JsNumber(v.value)}).toVector)).toVector)).toVector)
+    )
+  }
+
+  def convertToDataSeries(sim: List[Map[NamedSymbol, Number]]): Map[NamedSymbol, List[Number]] = {
+    // convert to data series
+    val dataSeries: Map[NamedSymbol, ListBuffer[Number]] = sim.head.keySet.map(_ -> ListBuffer[Number]()).toMap
+    sim.foreach(state => state.foreach({
+      case (n, v) => dataSeries.getOrElse(n, throw new IllegalStateException("Unexpected data series " + n)) += v
+    }))
+    dataSeries.mapValues(_.toList)
+  }
+}
+
 class KyxConfigResponse(kyxConfig: String) extends Response {
   def getJson = JsObject(
     "kyxConfig" -> JsString(kyxConfig)
@@ -687,6 +727,13 @@ class NodeResponse(tree : String) extends Response {
   //todo add schema.
   val node = JsonParser(tree).asJsObject
   def getJson = node
+}
+
+
+class ExtractTacticResponse(tacticText: String) extends Response {
+  def getJson = JsObject(
+    "tacticText" -> JsString(tacticText)
+  )
 }
 
 class MockResponse(resourceName: String) extends Response {

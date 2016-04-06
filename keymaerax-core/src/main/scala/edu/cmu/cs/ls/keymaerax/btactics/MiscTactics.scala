@@ -23,13 +23,20 @@ object DebuggingTactics {
     }
   }
 
-  /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
-  def debug(message: => String): BuiltInTactic = new BuiltInTactic("debug") {
+  /** debug is a no-op tactic that prints a message and the current provable, if doPrint (defaults to the system property DEBUG) is true. */
+  def debug(message: => String, doPrint: Boolean = DEBUG, printer: Provable => String = _.toString): BuiltInTactic =
+      new BuiltInTactic("debug") {
     override def result(provable: Provable): Provable = {
-      if (DEBUG) println("===== " + message + " ==== " + provable + " =====")
+      if (doPrint) println("===== " + message + " ==== " + printer(provable) + " =====")
       provable
     }
   }
+
+  /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
+  def print(message: => String): BuiltInTactic = debug(message, doPrint=true)
+  /** printIndexed is a no-op tactic that prints a message and the current provable (verbose sequent with formula indices),
+    * regardless of DEBUG being true or false */
+  def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
@@ -111,7 +118,7 @@ object DebuggingTactics {
  * @author Nathan Fulton
  */
 object Idioms {
-  lazy val nil = PartialTactic(new BuiltInTactic("NilT") {
+  lazy val nil = PartialTactic(new BuiltInTactic("nil") {
     override def result(provable: Provable): Provable = provable
   })
   lazy val ident = nil
@@ -189,6 +196,11 @@ object TacticFactory {
           t(pos, sequent)
         }
       }
+    }
+
+    /** Creates a dependent tactic, which can inspect the sole sequent */
+    def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
   }
 

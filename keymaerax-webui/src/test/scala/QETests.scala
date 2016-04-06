@@ -52,11 +52,11 @@ class QETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Quantifier Eliminator" should "verify that there exists x > 0" in {
     val f = Exists(Seq(x), Greater(x, zero))
-    qet.qe(f) should be (True)
+    qet.qeEvidence(f)._1 should be (True)
   }
 
   it should "prove" in {
-    qet.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
+    qet.qeEvidence("(x+y-z)^3 = 1 -> true".asFormula)._1 should be("true".asFormula)
   }
 
   it should "be provable" in {
@@ -66,7 +66,7 @@ class QETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "not prove" in {
-    qet.qe("\\forall x_0 (x_0>1->x_0>2)".asFormula) should be("false".asFormula)
+    qet.qeEvidence("\\forall x_0 (x_0>1->x_0>2)".asFormula)._1 should be("false".asFormula)
   }
 
   it should "not be provable with counter example" in {

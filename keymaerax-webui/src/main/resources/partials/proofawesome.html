@@ -78,8 +78,11 @@
                                 <li><a ng-click="doSearch('equivR', 'R')"><span>&#8596;R</span><code class="pull-right">equivR</code></a></li>
                                 <li><a ng-click="doSearch('equivL', 'L')"><span>&#8596;L</span><code class="pull-right">equivL</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code class="pull-right">commuteEquivR</code></a></li>
-                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code class="pull-right">commuteEquivL</code></a></li>
+                                <!-- do not pull-right longest label: pulling right results in a line break here -->
+                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -101,6 +104,8 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
                             <ul class="dropdown-menu">
+                                <li><a ng-click="doSearch('chase', 'R')"><span>Exhaustive</span><code class="pull-right">chase</code></a></li>
+                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('assignb', 'R')"><span>[:=]</span><code class="pull-right">assignb</code></a></li>
                                 <li><a ng-click="doSearch('randomb', 'R')"><span>[:*]</span><code class="pull-right">randomb</code></a></li>
                                 <li><a ng-click="doSearch('testb', 'R')"><span>[?]</span><code class="pull-right">testb</code></a></li>
@@ -109,6 +114,7 @@
                                 <li><a ng-click="doSearch('composeb', 'R')"><span>[;]</span><code class="pull-right">composeb</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxSplit', 'R')"><span>[]&and;</span><code class="pull-right">boxSplit</code></a></li>
+                                <li><a ng-click="doSearch('abstractionb', 'R')"><span>V++</span><code>abstractionb</code></a></li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -121,8 +127,12 @@
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('diffSolve', 'R')"><span>Solve</span><code class="pull-right">diffSolve</code></a></li>
                                 <li><a ng-click="doSearch('diffWeaken', 'R')"><span>Weaken</span><code class="pull-right">diffWeaken</code></a></li>
-                                <!-- TODO -->
-                                <!-- TODO figure out how to display input stuff (diffCut) -->
+                                <li><a ng-click="doSearch('DIRule', 'R')"><span>Diff. Induction</span><code class="pull-right">DIRule</code></a></li>
+                                <li><a ng-click="doSearch('autoDIRule', 'R')"><span>Diff. Induction (Auto)</span><code>autoDIRule</code></a></li>
+                                <li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>
+                                <li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('diffCut', 'R')"><span>Diff. Cut ...</span><code class="pull-right">diffCut</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('diffInvariant', 'R')"><span>Diff. Invariant ...</span><code class="pull-right">diffInvariant</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -136,7 +146,16 @@
                                 <!-- TODO -->
                             </ul>
                         </li>
-                    </ul>
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Inspect <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <!--<li><a ng-click="getCounterExample()">Counterexample</a></li>-->
+                                <li><a ng-click="simulate()">Simulate</a></li>
+                                <li><a ng-click="doTactic(undefined, 'pQE')">Find Assumptions</a></li>
+                            </ul>
+                        </li>
+                    </ul><br/>
                     <form class="nav navbar-nav navbar-form navbar-right" role="search" ng-submit="doCustomTactic()">
                         <div class="form-group">
                             <input type="text" class="form-control" ng-model="customTactic" placeholder="Custom tactic">
@@ -149,6 +168,7 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="openTacticEditor()">Open Tactic Editor</a></li>
+                                <!--<li><a ng-click="extractTactic()">Extract Tactic</a></li>-->
                             </ul>
                         </div>
                     </form>

@@ -25,7 +25,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool {
+trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type MExpr = com.wolfram.jlink.Expr
 
@@ -153,7 +153,9 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
-  def run(cmd: MExpr): (String, KExpr) = {
+  def run(cmd: MExpr): (String, KExpr) = run(cmd, mathematicaExecutor, MathematicaToKeYmaera.fromMathematica)
+
+  private def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     queryIndex += 1
     val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
@@ -161,24 +163,24 @@ class JLinkMathematicaLink extends MathematicaLink {
     val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
     if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
 
-    val taskId = mathematicaExecutor.schedule(_ => {
+    val taskId = executor.schedule(_ => {
       dispatch(checkErrorMsgCmd.toString)
-      getAnswer(indexedCmd, queryIndex)
+      getAnswer(indexedCmd, queryIndex, converter)
     })
 
-    mathematicaExecutor.wait(taskId) match {
+    executor.wait(taskId) match {
       case Some(Left(result)) => result
       case Some(Right(throwable)) => throwable match {
         case ex: MathematicaComputationAbortedException =>
-          mathematicaExecutor.remove(taskId)
+          executor.remove(taskId)
           throw ex
         case ex: Throwable =>
-          mathematicaExecutor.remove(taskId, force = true)
+          executor.remove(taskId, force = true)
           throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
       }
       case None =>
         cancel()
-        mathematicaExecutor.remove(taskId, force = true)
+        executor.remove(taskId, force = true)
         if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
         throw new MathematicaComputationAbortedException(checkErrorMsgCmd)
     }
@@ -192,7 +194,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   /**
    * blocks and returns the answer.
    */
-  private def getAnswer(input: MExpr, cmdIdx: Long): (String, KExpr) = {
+  private def getAnswer[T](input: MExpr, cmdIdx: Long, converter: MExpr=>T): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
@@ -220,7 +222,7 @@ class JLinkMathematicaLink extends MathematicaLink {
         if (theResult == abortedExpr) {
           throw new MathematicaComputationAbortedException(input)
         } else {
-          val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
+          val keymaeraResult = converter(theResult)
           val txtResult = theResult.toString
           // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
           (txtResult, keymaeraResult)
@@ -256,20 +258,24 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
-  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
-    def flattenConjunctions(f: Formula): List[Formula] = {
-      var result: List[Formula] = Nil
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-        override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-          case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
-          case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
-        }
-      }, f)
-      result
-    }
+  private def flattenConjunctions(f: Formula): List[Formula] = {
+    var result: List[Formula] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+      }
+    }, f)
+    result
+  }
 
+  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(toMathematica(Not(fml)), new MExpr(listExpr, StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
+      Array(toMathematica(Not(fml)),
+        new MExpr(
+          listExpr,
+          StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray),
+        new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
     run(inputWithTO) match {
       case (_, cex: Formula) => cex match {
@@ -278,13 +284,83 @@ class JLinkMathematicaLink extends MathematicaLink {
           None
         case _ =>
           if (DEBUG) println("Counterexample " + cex.prettyString)
-          Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+          Some(flattenConjunctions(cex).map({
+            case Equal(name: NamedSymbol, value) => name -> value
+            case Equal(FuncOf(fn, _), value) => fn -> value
+          }).toMap)
       }
       case result =>
         if (DEBUG) println("No counterexample, Mathematica returned: " + result)
         None
     }
   }
+
+  def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = {
+    // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
+    val init = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
+      new MExpr(Expr.SYMBOL, "init"),
+        new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(
+          new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
+            new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(listExpr, Array(new MExpr(Expr.SYMBOL, "#"))))),
+            new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+            Array(toMathematica(initial),
+              new MExpr(
+                listExpr,
+                StaticSemantics.symbols(initial).toList.sorted.map(toMathematica).toArray),
+              new MExpr(Expr.SYMBOL, "Reals"),
+              new MExpr(Expr.SYMBOL, "#")))))))))
+    // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
+    val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.endsWith("pre"))
+    val prepostZip = stepPreVars.toList.sorted.zip(stepPostVars.toList.sorted)
+    require(prepostZip.forall({case (pre, post) => pre.name.startsWith(post.name)}), "Expected matching pre/post variables")
+    val pre2post = prepostZip.toMap
+    val stepModuleInit = stepPreVars.toList.sorted.map(s =>
+      new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(
+        toMathematica(s),
+        new MExpr(new MExpr(Expr.SYMBOL, "ReplaceAll"), Array(
+          toMathematica(pre2post.getOrElse(s, throw new IllegalArgumentException("Non-matching pre and post variables"))),
+          new MExpr(Expr.SYMBOL, "#")))))).toArray
+    val step = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
+      new MExpr(Expr.SYMBOL, "step"),
+        new MExpr(new MExpr(Expr.SYMBOL, "Function"),
+          Array(new MExpr(new MExpr(Expr.SYMBOL, "Module"),
+            Array(new MExpr(listExpr, stepModuleInit),
+              new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+              Array(toMathematica(stateRelation),
+                new MExpr(
+                  listExpr,
+                  stepPostVars.toList.sorted.map(toMathematica).toArray),
+                new MExpr(Expr.SYMBOL, "Reals")))))))))
+    // Map[N[NestList[step,#,steps]]&, init[n]]
+    val exec = new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
+      new MExpr(new MExpr(Expr.SYMBOL, "Function"),
+        Array(new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(new MExpr(new MExpr(Expr.SYMBOL, "NestList"),
+          Array(new MExpr(Expr.SYMBOL, "step"), new MExpr(Expr.SYMBOL, "#"), new MExpr(steps))))))),
+      new MExpr(new MExpr(Expr.SYMBOL, "Apply"), Array(new MExpr(Expr.SYMBOL, "init"),
+        new MExpr(listExpr, Array(new MExpr(n)))))))
+    // initial;step;simulate
+    val simulate = new MExpr(new MExpr(Expr.SYMBOL, "CompoundExpression"), Array(init, step, exec))
+
+    val executor: ToolExecutor[(String, List[List[Map[NamedSymbol, Number]]])] = ToolExecutor.defaultExecutor()
+    def convert(e: MExpr): List[List[Map[NamedSymbol, Number]]] = {
+      if (e.listQ() && e.args.forall(_.listQ())) {
+        val states: Array[Array[KExpr]] = e.args().map(_.args().map(MathematicaToKeYmaera.fromMathematica))
+        states.map(_.map({
+          case fml: Formula => flattenConjunctions(fml).map({
+              case Equal(name: NamedSymbol, value: Number) => name -> value
+              case Equal(FuncOf(fn, _), value: Number) => fn -> value
+              case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
+            }).toMap
+          case s => throw new IllegalArgumentException("Expected state formula, but got " + s)
+        }).toList).toList
+      } else throw new IllegalArgumentException("Expected list of simulation states, but got " + e)
+    }
+
+    val result = run(simulate, executor, convert)
+    result._2
+  }
+
+  def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = ???
 
   @deprecated("Use findCounterExample instead")
   def getCounterExample(f : Formula): String = {

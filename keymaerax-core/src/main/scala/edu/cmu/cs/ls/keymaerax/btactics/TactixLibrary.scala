@@ -40,7 +40,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val step               : DependentPositionTactic = "step" by (pos =>
+  lazy val step               : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
      else HilbertCalculus.stepAt(pos) partial)
@@ -68,10 +68,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   }
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  lazy val normalize               : BelleExpr = DoAll(?(
-    (alphaRule partial)
-      | (closeId
-      | ((allR('R) partial)
+  lazy val normalize               : BelleExpr = OnAll(?(
+      (alphaRule partial)
+        | (closeId
+        | ((allR('R) partial)
       | ((existsL('L) partial)
       | (close
       | ((betaRule partial)
@@ -79,37 +79,39 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       | ((step('R) partial) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType()
 
   /** exhaust propositional logic */
-  lazy val prop                    : BelleExpr = DoAll(?(
+  lazy val prop                    : BelleExpr = OnAll(?(
     (close
       | ((alphaRule partial)
       | ((betaRule partial) partial) partial) partial) partial) partial)*@TheType()
 
   /** master: master tactic that tries hard to prove whatever it could */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr =
-    DoAll(?(
+    OnAll(?(
       (close
         | ((must(normalize) partial)
         | ((loop(gen)('L) partial)
         | ((loop(gen)('R) partial)
         | ((diffSolve(None)('R) partial)
         | ((diffInd partial)
-        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(DoAll(QE))
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(OnAll(QE))
 
   /*******************************************************************
     * unification and matching based auto-tactics
+ *
     * @see [[UnifyUSCalculus]]
     *******************************************************************/
 
-  /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
-    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
-    * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
-    */
-  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
+//  /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
+//    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
+//    * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+//    */
+//  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
 
   // conditional tactics
 
   /**
    * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
+ *
    * @see [[edu.cmu.cs.ls.keymaerax.tactics.BranchLabels]]
    * @note Probably this String should be a BelleLabel, and we should move BranchLabels into BelleLabel.
    * @see [[label()]]
@@ -117,12 +119,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
 
   /** Call/label the current proof branch s
+ *
     * @see [[onBranch()]]
     * @see [sublabel()]]
     */
   def label(s: String): BelleExpr = ??? //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s
+ *
     * @see [[label()]]
     */
   def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
@@ -136,12 +140,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
   /** 'position' tactic t with universal abstraction at the same position afterwards
+ *
     * @see [[abstractionb]] */
   def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic = new DependentPositionTactic("with abstraction") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isTopLevel, "with abstraction only at top-level")
-        sequent(pos) match {
+        sequent(pos.checkTop) match {
           case Box(a, p) =>
             t(pos) & abstractionb(pos) & (if (pos.isSucc) allR(pos)*@TheType() partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
@@ -152,16 +157,18 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /**
    * loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-   * @see [[DLBySubst.I]]
+ *
+   * @see [[DLBySubst.loop]]
    */
-  def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
+  def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
   def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
   /** loop=I: prove a property of a loop by induction, if the given generator finds a loop invariant
+ *
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = loop(gen(sequent, pos).getOrElse(
-        throw new BelleError("Unable to generate an invariant for " + sequent(pos) + " at position " + pos)))(pos)
+        throw new BelleError("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
     }
   }
 
@@ -173,6 +180,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
   lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
   /** DC: Differential Cut a new invariant, use old(.) to refer to initial values of variables.
+ *
     * @see[[DC]]
     * @see[[DifferentialTactics.diffCut]]
     */
@@ -193,6 +201,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y)
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
+ *
     * @see[[DA(Variable, Term, Term, Provable)]]
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
@@ -201,6 +210,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /**
    * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
    * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
+ *
    * @example{{{
    *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
    * }}}
@@ -219,6 +229,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    *   ------------------------
    *          G |- [a]B, D
    * }}}
+ *
    * @see [[DLBySubst.generalize]]
    */
   def generalize(C: Formula)  : DependentPositionTactic = DLBySubst.generalize(C)
@@ -230,6 +241,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
+ *
     * @see [[DLBySubst.postCut]]
     */
   def postCut(cut: Formula)   : DependentPositionTactic = DLBySubst.postCut(cut)
@@ -274,6 +286,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqR2L(pos) & hideL(pos, fml)
     })
     else EqualityTactics.exhaustiveEqR2L
+
+  /** Transform an FOL formula into the formula 'to' [[ToolTactics.transform]] */
+  def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -346,6 +361,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /**
     * Prove the new Provable by the given tactic, returning the resulting Provable
+ *
     * @see [[SequentialInterpreter]]
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
@@ -361,6 +377,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
+ *
    * @see [[SequentialInterpreter]]
    * @see [[TactixLibrary.by(Provable)]]
    * @see [[proveBy()]]
@@ -373,6 +390,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def proveBy(goal: Sequent, tactic: BelleExpr): Provable = proveBy(Provable.startProof(goal), tactic)
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
+ *
    * @see [[TactixLibrary.by(Provable)]]
    * @example {{{
    *   import StringConverter._

@@ -1,0 +1,9 @@
+ProgramVariables.
+  R x.
+  R y.
+  R c.
+End.
+
+Problem.
+  x^2+x^3-y^2-c=0 -> [{x'=-2*y, y'=-2*x-3*x^2}]x^2+x^3-y^2-c=0
+End.

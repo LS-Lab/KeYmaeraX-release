@@ -15,6 +15,7 @@ object BelleExpr {
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
+  * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
  * @author Nathan Fulton
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
@@ -143,7 +144,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
-    * @param position The position where this tactic will be applied at.
+    * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
     * @note Convenience wrapper
@@ -153,7 +154,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   final def apply(seqIdx: Int, expected: Formula): T = apply(Fixed(Position(seqIdx), Some(expected)))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
-    * @param position The position where this tactic will be applied at.
+    * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
     * @note Convenience wrapper
@@ -388,9 +389,6 @@ abstract case class InputTactic[T](name: SerializationName, input: T) extends Be
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
 }
-abstract case class InputPositionTactic[T](input: T, pos: Position) extends BelleExpr {
-  def computeExpr(): BelleExpr
-}
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
@@ -467,13 +465,13 @@ case class BranchTactic(children: Seq[BelleExpr], override val location: Array[S
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
 /**
-  * DoAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
+  * OnAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
   * @todo eisegesis
   */
-case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
+case class OnAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
 /**
-  * DoSome(options, e)(BelleProvable(p)) proves `e(o)(p)` with some option `o` from `options` whose proof suceeds.
+  * ChooseSome(options, e)(BelleProvable(p)) proves `e(o)(p)` afte choosing some option `o` from `options` whose proof with `e` succeeds after supplying argument `o` to `e`.
   * It's usually one of the first options `o` for which `e(o)(p)` does not fail.
   * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
   * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently
@@ -481,7 +479,7 @@ case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] =
   * @author Andre Platzer
   * @see [[EitherTactic]]
   */
-case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
+case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
 
 
 /**

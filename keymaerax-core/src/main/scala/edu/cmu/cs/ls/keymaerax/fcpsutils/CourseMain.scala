@@ -12,10 +12,18 @@ import edu.cmu.cs.ls.keymaerax.tools.Mathematica
   * @author Nathan Fulton
   */
 object CourseMain {
-  implicit def qeTool = new Mathematica()
+  val qeTool = new Mathematica()
+  try {
+    //@todo initialize MathKernel for ohmu.
+    qeTool.init(Map("linkName" -> "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel", "libDir" -> "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"))
+    if(qeTool.isInitialized) println("Initialized!")
+    else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
+  }
+  catch {
+    case _ => println("Won't be able to parse tactics or check proofs.")
+  }
   DerivedAxioms.qeTool = qeTool
   TactixLibrary.tool = qeTool
-  //@todo initialize MathKernel for ohmu.
 
   PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 

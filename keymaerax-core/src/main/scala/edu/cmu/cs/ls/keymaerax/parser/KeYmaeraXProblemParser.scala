@@ -139,7 +139,7 @@ object KeYmaeraXDeclarationsParser {
         else true
       case _ => true
     }) &&
-    StaticSemantics.vars(expr).toSymbolSet.forall(x => x match {
+    StaticSemantics.vars(expr).symbols.forall(x => x match {
       case x: Variable =>
         val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
           case Some((None,d,token)) => (d, token)

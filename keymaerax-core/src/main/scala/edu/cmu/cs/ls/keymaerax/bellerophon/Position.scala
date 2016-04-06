@@ -152,7 +152,10 @@ sealed trait Position {
   //final def index1: Int = top.getIndex + 1
 
   override def toString: String = prettyString
-  def prettyString: String = top.getPos + "." + inExpr.pos.mkString(".")
+  def prettyString: String = inExpr.pos match {
+    case Nil => top.getPos.toString
+    case _ => top.getPos + "." + inExpr.pos.mkString(".")
+  }
 }
 
 object Position {

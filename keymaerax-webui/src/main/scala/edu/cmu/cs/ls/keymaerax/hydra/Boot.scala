@@ -4,13 +4,13 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, TactixLibrary, DerivedAxioms}
-import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, DefaultConfiguration, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, DerivedAxioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
+import edu.cmu.cs.ls.keymaerax.tools._
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Formula, Program}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, QETool}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
@@ -18,6 +18,8 @@ import scala.concurrent.duration.FiniteDuration
 
 
 object Boot extends App {
+  private type OptionMap = Map[Symbol, Any]
+
   def restart(): Unit = {
     this.system.shutdown()
     this.system.awaitTermination()
@@ -29,7 +31,15 @@ object Boot extends App {
     IO(Http) ! Http.Bind(service, interface = host, port = port)
   }
 
+  def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
+    case Nil => map
+    case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
+    case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
+  }
+
   def init(): Unit = {
+    val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
+
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     // connect invariant generator to tactix library
@@ -37,9 +47,11 @@ object Boot extends App {
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
+    val tool: Tool with QETool with DiffSolutionTool with CounterExampleTool = createTool(options)
+
     try {
-      initMathematicaFromDB(mathematica, database)
-      assert(mathematica.isInitialized, "Mathematica should be initialized after init()")
+      initFromDB(tool, database)
+      assert(tool.isInitialized, "Mathematica should be initialized after init()")
     } catch {
       //@todo add e to log here and in other places
       case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
@@ -50,8 +62,8 @@ object Boot extends App {
         e.printStackTrace()
     }
 
-    DerivedAxioms.qeTool = mathematica
-    TactixLibrary.tool = mathematica
+    DerivedAxioms.qeTool = tool
+    TactixLibrary.tool = tool
     try {
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
@@ -74,7 +86,6 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
-  val mathematica = new Mathematica()
 
   init()
 
@@ -109,6 +120,20 @@ object Boot extends App {
     )
     SystemWebBrowser(s"http://$host:$port/")
     LoadingDialogFactory().close()
+  }
+
+  private def createTool(options: OptionMap): Tool with QETool with DiffSolutionTool with CounterExampleTool = {
+    val tool: String = options.getOrElse('tool, "mathematica").toString
+    tool.toLowerCase() match {
+      case "mathematica" => new Mathematica()
+      case "z3" => new Z3()
+      case t => throw new Exception("Unknown tool '" + t + "'")
+    }
+  }
+
+  private def initFromDB(tool: Tool, db: DBAbstraction) = tool match {
+    case t: Mathematica => initMathematicaFromDB(t, db)
+    case t: Z3 => t.init(Map.empty)
   }
 
   private def initMathematicaFromDB(mathematica: Mathematica, db: DBAbstraction) = {

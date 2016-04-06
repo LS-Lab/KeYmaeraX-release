@@ -74,6 +74,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "\\forall x \\forall y \\forall z [x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula
   }
 
+  it should "work with cyclic ODEs" in withMathematica { implicit qeTool =>
+    val result = proveBy("[{x'=y,y'=z,z'=x^2&y>=0}](y>=0->[z':=x^2;][y':=z;][x':=y;]x'>=0)".asFormula, abstractionb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\forall x \\forall y \\forall z (y>=0->[z':=x^2;][y':=z;][x':=y;]x'>=0)".asFormula
+  }
+
   "withAbstraction" should "work on top-level when abstraction produces no quantifiers" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, withAbstraction(DW)(1))
     result.subgoals should have size 1
@@ -299,12 +306,12 @@ class DLTests extends TacticTestBase {
       I("x>1".asFormula)(1))
 
     result.subgoals should have size 3
-    // use case
-    result.subgoals.head.ante should contain only "x>1".asFormula
-    result.subgoals.head.succ should contain only "x>0".asFormula
     // init
-    result.subgoals(1).ante should contain only "x>2".asFormula
-    result.subgoals(1).succ should contain only "x>1".asFormula
+    result.subgoals.head.ante should contain only "x>2".asFormula
+    result.subgoals.head.succ should contain only "x>1".asFormula
+    // use case
+    result.subgoals(1).ante should contain only "x>1".asFormula
+    result.subgoals(1).succ should contain only "x>0".asFormula
     // step
     result.subgoals(2).ante should contain only "x>1".asFormula
     result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula
@@ -317,12 +324,12 @@ class DLTests extends TacticTestBase {
       I("x>1".asFormula)(1))
 
     result.subgoals should have size 3
-    // use case
-    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>0".asFormula)
-    result.subgoals.head.succ should contain only "x>0".asFormula
     // init
-    result.subgoals(1).ante should contain only ("x>2".asFormula, "y>0".asFormula)
-    result.subgoals(1).succ should contain only "x>1".asFormula
+    result.subgoals.head.ante should contain only ("x>2".asFormula, "y>0".asFormula)
+    result.subgoals.head.succ should contain only "x>1".asFormula
+    // use case
+    result.subgoals(1).ante should contain only ("x>1".asFormula, "y>0".asFormula)
+    result.subgoals(1).succ should contain only "x>0".asFormula
     // step
     result.subgoals(2).ante should contain only ("x>1".asFormula, "y>0".asFormula)
     result.subgoals(2).succ should contain only "[x:=x+y;]x>1".asFormula
@@ -334,12 +341,12 @@ class DLTests extends TacticTestBase {
       IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
-    // use case
-    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals.head.succ should contain only "x>2".asFormula
     // init
-    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // use case
+    result.subgoals(1).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only "x>2".asFormula
     // step
     result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
@@ -351,15 +358,32 @@ class DLTests extends TacticTestBase {
         IndexedSeq("[{x:=2; ++ y:=z;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
-    // use case
-    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
-    result.subgoals.head.succ should contain only "x>2".asFormula
     // init
-    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // use case
+    result.subgoals(1).ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only "x>2".asFormula
     // step
     result.subgoals(2).ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
     result.subgoals(2).succ should contain only "[x:=2; ++ y:=z;]x*y>5".asFormula
+  }
+
+  it should "apply alpha rule to extract subformulas before wiping from the context" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("x>0&y>1&z>7".asFormula),
+      IndexedSeq("x<3".asFormula, "[{x:=2;}*]x>2".asFormula, "x>5|y<4".asFormula)), I("x*y>5".asFormula)(2))
+
+    result.subgoals should have size 3
+    // init
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only ("x<3".asFormula, "x>5".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // use case
+    result.subgoals(1).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only "x>2".asFormula
+    // step
+    result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
   }
 
   it should "remove duplicated formulas" in {
@@ -368,12 +392,12 @@ class DLTests extends TacticTestBase {
         IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
-    // use case
-    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals.head.succ should contain only "x>2".asFormula
     // init
-    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // use case
+    result.subgoals(1).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only "x>2".asFormula
     // step
     result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
@@ -385,12 +409,12 @@ class DLTests extends TacticTestBase {
       loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(1))
 
     result.subgoals should have size 3
-    // use case
-    result.subgoals.head.ante should contain only "x>1".asFormula
-    result.subgoals.head.succ should contain only "x>0".asFormula
     // init
-    result.subgoals(1).ante should contain only "x>2".asFormula
-    result.subgoals(1).succ should contain only "x>1".asFormula
+    result.subgoals.head.ante should contain only "x>2".asFormula
+    result.subgoals.head.succ should contain only "x>1".asFormula
+    // use case
+    result.subgoals(1).ante should contain only "x>1".asFormula
+    result.subgoals(1).succ should contain only "x>0".asFormula
     // step
     result.subgoals(2).ante should contain only "x>1".asFormula
     result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula

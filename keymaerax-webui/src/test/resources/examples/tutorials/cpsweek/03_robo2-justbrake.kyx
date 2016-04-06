@@ -1,0 +1,14 @@
+Functions.
+  R b.
+  R m.
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+  b>0 & m>=x+v^2/(2*b) -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+End.

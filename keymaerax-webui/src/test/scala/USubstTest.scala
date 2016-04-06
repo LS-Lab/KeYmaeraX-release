@@ -4,7 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
+import scala.collection.immutable
+
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, Axiom, RandomFormula}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest, SummaryTest}
@@ -19,6 +21,7 @@ import scala.collection.immutable.IndexedSeq
 /**
  * @author Andre Platzer
  * @author smitsch
+  * @todo adapt tests to new uniform substitution framework
  */
 @SummaryTest
 @UsualTest
@@ -29,6 +32,16 @@ class USubstTests extends FlatSpec with Matchers {
   val randomTrials = 40*10 / 20
   val randomComplexity = 20
   val rand = new RandomFormula()
+
+  //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful
+  private def UniformSubstitutionRule(subst: USubst, origin: Sequent) : Sequent => immutable.List[Sequent] = conclusion =>
+      try {
+        //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
+        if (subst(origin) == conclusion) immutable.List(origin)
+        else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, OrRight(SuccPos(99)), conclusion)
+        /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
+          "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
+      } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
 
 
   val x = Variable("x", None, Real)

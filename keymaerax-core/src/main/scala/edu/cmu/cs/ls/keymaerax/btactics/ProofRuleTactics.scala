@@ -71,21 +71,21 @@ object ProofRuleTactics {
     }
   }
 
-  def notL = new BuiltInLeftTactic("NotL") {
+  def notL = new BuiltInLeftTactic("notL") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.NotLeft(pos.top), 0)
     }
   }
 
-  def notR = new BuiltInRightTactic("NotR") {
+  def notR = new BuiltInRightTactic("notR") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.NotRight(pos.top), 0)
     }
   }
 
-  def andR = new BuiltInRightTactic("AndR") {
+  def andR = new BuiltInRightTactic("andR") {
     override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       //@todo how is isTopLevel ensured here and elsewhere? Call pos.checkTop.top?
@@ -93,14 +93,14 @@ object ProofRuleTactics {
     }
   }
 
-  def andL = new BuiltInLeftTactic("AndL") {
+  def andL = new BuiltInLeftTactic("andL") {
     override def computeAnteResult(provable: Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
       provable(core.AndLeft(pos.top), 0)
     }
   }
 
-  def orR = new BuiltInRightTactic("OrR") {
+  def orR = new BuiltInRightTactic("orR") {
     override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       provable(core.OrRight(pos.top), 0)
@@ -125,14 +125,6 @@ object ProofRuleTactics {
     override def computeAnteResult(provable : Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
       provable(core.ImplyLeft(pos.top), 0)
-    }
-  }
-
-  @deprecated("Use ImplyLeft instead.")
-  private[btactics] def implyLOld = new BuiltInLeftTactic("ImplyLOld") {
-    override def computeAnteResult(provable : Provable, pos: AntePosition) = {
-      requireOneSubgoal(provable)
-      provable(core.ImplyLeftOld(pos.top), 0)
     }
   }
 
@@ -245,17 +237,17 @@ object ProofRuleTactics {
     }
   }
 
-  /** US(subst, origin) reduces the proof to a proof of the premise `origin`, whose uniform substitution instance under `subst` the current goal is.
-    * @see [[UniformSubstitutionRule]]
-    * @see [[UnifyUSCalculus.US(USubst, Provable)]]
-    */
-  @deprecated("Use UnifyUSCalculus.US(subst,Provable) or use Provable.apply(USubst) forward instead")
-  def US(subst: USubst, origin: Sequent) = new BuiltInTactic("US") {
-    override def result(provable: Provable): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.UniformSubstitutionRule(subst, origin), 0)
-    }
-  }
+//  /** US(subst, origin) reduces the proof to a proof of the premise `origin`, whose uniform substitution instance under `subst` the current goal is.
+//    * @see [[UniformSubstitutionRule]]
+//    * @see [[UnifyUSCalculus.US(USubst, Provable)]]
+//    */
+//  @deprecated("Use UnifyUSCalculus.US(subst,Provable) or use Provable.apply(USubst) forward instead")
+//  def US(subst: USubst, origin: Sequent) = new BuiltInTactic("US") {
+//    override def result(provable: Provable): Provable = {
+//      requireOneSubgoal(provable)
+//      provable(core.UniformSubstitutionRule(subst, origin), 0)
+//    }
+//  }
 
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =

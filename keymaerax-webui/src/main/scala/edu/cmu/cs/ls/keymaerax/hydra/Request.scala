@@ -28,7 +28,7 @@ import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tools.{SimulationTool, MathematicaComputationAbortedException, Mathematica}
 
 import scala.collection.immutable
 import scala.io.Source
@@ -117,7 +117,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
 
     //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
     val fml = node.sequent.toFormula
-    if (isFO(fml)) {
+    if (fml.isFOL) {
       try {
         TactixLibrary.tool.findCounterExample(fml) match {
           //@todo return actual sequent, use collapsiblesequentview to display counterexample
@@ -131,17 +131,36 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
       new CounterExampleResponse("cex.nonfo") :: Nil
     }
   }
+}
 
-  private def isFO(fml: Formula): Boolean = {
-    var isFO = true
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-        case Box(_, _) => isFO = false; Left(Some(ExpressionTraversal.stop))
-        case Diamond(_, _) => isFO = false; Left(Some(ExpressionTraversal.stop))
-        case _ => Left(None)
-      }
-    }, fml)
-    isFO
+class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    val node = tree.findNode(nodeId) match {
+      case None => throw new ProverException("Invalid node " + nodeId)
+      case Some(n) => n
+    }
+
+    //@note not a tactic because we don't want to change the proof tree just by simulating
+    node.sequent.toFormula match {
+      case Imply(initial, _) =>
+        //@todo ModelPlex the program and return state relation
+        new SetupSimulationResponse(initial, True) :: Nil
+      case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
+    }
+  }
+}
+
+class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    //@HACK do not want to change the tool type in TactixLibrary
+    TactixLibrary.tool match {
+      case s: SimulationTool =>
+        val simulation = s.simulate(initial, stateRelation, steps, n)
+        new SimulationResponse(simulation) :: Nil
+      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
+    }
   }
 }
 
@@ -334,13 +353,16 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
 class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends Request {
   //@todo check the model belongs to the user.
   override def getResultingResponses(): List[Response] = {
-    val success = db.deleteModel(Integer.parseInt(modelId))
+    val id = Integer.parseInt(modelId)
+    db.getProofsForModel(id).foreach(proof => TaskManagement.forceDeleteTask(proof.proofId.toString))
+    val success = db.deleteModel(id)
     new BooleanResponse(success) :: Nil
   }
 }
 
 class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
   override def getResultingResponses() : List[Response] = {
+    TaskManagement.forceDeleteTask(proofId)
     val success = db.deleteProof(Integer.parseInt(proofId))
     new BooleanResponse(success) :: Nil
   }
@@ -585,6 +607,13 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   }
 }
 
+class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, axiomId: String) extends Request {
+  def getResultingResponses(): List[Response] = {
+    val info = (DerivationInfo(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo(_))) :: Nil
+    new ApplicableAxiomsResponse(info, None) :: Nil
+  }
+}
+
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
@@ -687,7 +716,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
-      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).last)
+      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).lastOption)
     }
     new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }
@@ -1003,6 +1032,15 @@ class ShutdownReqeuest() extends Request {
     }.start
 
     new BooleanResponse(true) :: Nil
+  }
+}
+
+class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def getResultingResponses(): List[Response] = {
+    val exprText = new ExtractTacticFromTrace(db).apply(proofId).prettyString
+    new ExtractTacticResponse(exprText) :: Nil
   }
 }
 

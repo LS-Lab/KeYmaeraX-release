@@ -24,6 +24,7 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   *
   * @author Nathan Fulton
   */
+@deprecated("Prefer edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser", "4.2b1")
 object BTacticParser extends (String => Option[BelleExpr]) {
   var stringBeingParsed : Option[String] = None
 
@@ -59,6 +60,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
 //      usubstCaseAnalysisP ::
       baseTacticWithInputs ::
       baseTacticNoInput ::
+      groupP ::
       Nil
 
     lazy val typeParsers : List[PackratParser[BelleType]] =
@@ -77,7 +79,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     protected val ident = """[a-zA-Z][a-zA-Z0-9\_\.]*""".r
     protected val numberPattern = """[0-9]*""".r
 
-    val positionPattern = """[\-?0-9\.?]*""".r
+    val positionPattern = """('R)|('L)|('\_)|([\-?0-9\.?]*)""".r
     val expressionPattern = """\{`[^`}]*`}""".r
     val listPattern = """\[[^\]]*\]""".r
     val notArgumentDelimiter = """[^`}]*""".r
@@ -89,6 +91,13 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Parsers for each belle expr language construct.
     ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    lazy val groupP : PackratParser[BelleExpr] = {
+      lazy val pattern = "(" ~> expressionParser <~ ")"
+      log(pattern)("group") ^^ {
+        case e => e
+      }
+    }
 
     lazy val seqP : PackratParser[BelleExpr] = {
       lazy val pattern = expressionParser ~ SEQ ~ expressionParser
@@ -108,7 +117,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       /** Parses a comma-separated list of tactics containing at least one tactic. */
       lazy val commaSeparatedList = (expressionParser <~ ",").*.? ~ expressionParser
 
-      lazy val pattern = expressionParser ~ BRANCH ~ ("(" ~> commaSeparatedList <~ ")")
+      lazy val pattern = expressionParser ~ (SEQ.? ~> BRANCH) ~ ("(" ~> commaSeparatedList <~ ")")
       log(pattern)(BRANCH) ^^ {
         case left ~ BRANCH ~ right => {
           val lastRight : BelleExpr = right._2
@@ -185,7 +194,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    private def parseExpressionOrPosition(s : String) : Either[Seq[Expression], Position] = {
+    private def parseExpressionOrPosition(s : String) : Either[Seq[Expression], PositionLocator] = {
       if (s.startsWith("{`") && s.endsWith("`}")) {
         Left(s.replace("{`", "").replace("`}", "").asExpr :: Nil)
       } else if (s.startsWith("[") && s.endsWith("]")) {
@@ -195,10 +204,13 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    private def strToPos(pos: String) = {
-      if (!pos.contains('.')) Position(pos.toInt)
-      else Position(pos.substring(0, pos.indexOf('.')).toInt,
-        pos.substring(pos.indexOf('.')+1).split('.').filter(_.nonEmpty).map(_.toInt).toList)
+    private def strToPos(pos: String): PositionLocator = {
+      if (pos == "'R") Find.FindR(0, None)
+      else if (pos == "'L") Find.FindL(0, None)
+      else if (pos =="'_") ???
+      else if (!pos.contains('.')) Fixed(Position(pos.toInt))
+      else Fixed(Position(pos.substring(0, pos.indexOf('.')).toInt,
+        pos.substring(pos.indexOf('.')+1).split('.').filter(_.nonEmpty).map(_.toInt).toList))
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,3 +236,5 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     val MATCH = "match"
   }
 }
+
+class BParserException(msg: String) extends Exception(msg)

@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, Context}
+import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, Augmentors, Context}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,uncoverConditionalAxiomT,axiomLookupBaseT}
@@ -102,12 +102,14 @@ object ODETactics {
           val gxsol = sol.last match { case Equal(_, s) => s }
 
           def gx(t: Term, x: Term): Term = ode match {
-            case ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(origY), _), AtomicODE(DifferentialSymbol(origX), _)), _) =>
-              SubstitutionHelper.replaceFree(SubstitutionHelper.replaceFree(gxsol)(time, t))(origX, x)
+            case _ => ???
+            /*@todo case ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(origY), _), AtomicODE(DifferentialSymbol(origX), _)), _) =>
+              SubstitutionHelper.replaceFree(SubstitutionHelper.replaceFree(gxsol)(time, t))(origX, x)*/
           }
           def gy(t: Term, y: Term): Term = ode match {
-            case ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(origY), _), AtomicODE(DifferentialSymbol(origX), _)), _) =>
-              SubstitutionHelper.replaceFree(SubstitutionHelper.replaceFree(gysol)(time, t))(origY, y)
+            case _ => ???
+            /*@todo case ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(origY), _), AtomicODE(DifferentialSymbol(origX), _)), _) =>
+              SubstitutionHelper.replaceFree(SubstitutionHelper.replaceFree(gysol)(time, t))(origY, y)*/
           }
 
           val t = Variable("t", None, Real)
@@ -1825,8 +1827,8 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Box(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
-        case Diamond(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
+//        case Box(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
+//        case Diamond(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
         case _ => throw new IllegalArgumentException("Checked by applies to never happen")
       }
 

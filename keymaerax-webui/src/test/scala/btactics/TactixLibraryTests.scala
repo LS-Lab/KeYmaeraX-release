@@ -27,10 +27,10 @@ class TactixLibraryTests extends TacticTestBase {
   private val someList: () => Iterator[Formula] = () =>
       ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
 
-  "DoLoneSome not DoSome" should "follow the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
+  "DoLoneSome not ChooseSome" should "follow the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
     proveBy("x>=7 -> x>=5".asFormula,
       implyR(1) &
-        cutR("x>=6".asFormula)(SuccPosition(1).top) & DoAll(QE)
+        cutR("x>=6".asFormula)(SuccPosition(1).top) & OnAll(QE)
     )
   }
 
@@ -49,36 +49,36 @@ class TactixLibraryTests extends TacticTestBase {
           ,
           QE
           ,
-            diffSolve()(1) & DoAll(QE)
+            diffSolve()(1) & OnAll(QE)
       )
     ) shouldBe 'proved
   }
 
-  "DoSome" should "find the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
+  "ChooseSome" should "find the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
     proveBy("x>=7 -> x>=5".asFormula,
       implyR(1) &
-        DoSome(someList, (c:Formula) => cutR(c)(SuccPosition(1).top) & DoAll(QE))
+        ChooseSome(someList, (c:Formula) => cutR(c)(SuccPosition(1).top) & OnAll(QE))
     )
   }
 
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from one invariant" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-        DoSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
+        ChooseSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
     ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-      DoSome(someList, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
+      ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
     ) shouldBe 'proved
   }
 
   it should "generate and master prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-        DoSome(someList, (inv:Formula) => diffInvariant(inv)(1) & master())
+        ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & master())
     ) shouldBe 'proved
   }
 
@@ -86,12 +86,12 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{{x'=2}}*]x>=5 from one loop invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
       implyR(1) &
-        DoSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => loop(inv)(1) <(
+        ChooseSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => loop(inv)(1) <(
           QE
           ,
           QE
           ,
-          diffSolve()(1) & DoAll(QE)
+          diffSolve()(1) & OnAll(QE)
           ))
     ) shouldBe 'proved
   }
@@ -99,12 +99,12 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
       implyR(1) &
-        DoSome(someList, (inv:Formula) => loop(inv)(1) <(
+        ChooseSome(someList, (inv:Formula) => loop(inv)(1) <(
             QE
             ,
             QE
             ,
-            diffSolve()(1) & DoAll(QE)
+            diffSolve()(1) & OnAll(QE)
             ))
     ) shouldBe 'proved
   }
@@ -112,7 +112,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "generate and master prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
       implyR(1) &
-        DoSome(someList, (inv:Formula) => loop(inv)(1) & master())
+        ChooseSome(someList, (inv:Formula) => loop(inv)(1) & master())
     ) shouldBe 'proved
   }
 }

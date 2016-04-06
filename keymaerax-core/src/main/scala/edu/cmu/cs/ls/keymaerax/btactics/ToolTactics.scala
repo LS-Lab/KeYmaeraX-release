@@ -2,11 +2,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.language.postfixOps
 
@@ -20,7 +21,7 @@ object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    Idioms.NamedTactic(qeTool.getClass.getSimpleName + " QE",
+    Idioms.NamedTactic(qeTool.getClass.getSimpleName + "QE",
       alphaRule*@TheType() &
       varExhaustiveEqL2R('L)*@TheType() &
       tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
@@ -39,6 +40,61 @@ object ToolTactics {
     )
   }
 
+  /**
+   * Transforms the FOL formula at position 'pos' into the formula 'to'. Uses QE to prove the transformation correct.
+   * @example {{{
+   *                           *
+   *                           --------------
+   *           a<b |- a<b      |- a<b -> b>a
+   *           ------------------------------ transform("a<b".asFormula)(1)
+   *           a<b |- b>a
+   * }}}
+   * * @example {{{
+   *                                         *
+   *                                    ---------------------
+   *           a+b<c, b>=0 |- a+b<c     b>=0 |- a+b<c -> a<c
+   *           ---------------------------------------------- transform("a+b<c".asFormula)(1)
+   *           a+b<c, b>=0 |- a<c
+   * }}}
+   * @param to The transformed formula.
+   * @param tool The tool to perform QE and obtain counter examples.
+   * @return The tactic
+   */
+  def transform(to: Formula)(implicit tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos, sequent) => {
+    require(pos.isTopLevel, "transform only at top level")
+    require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
+
+    val modalHide = alphaRule*@TheType() & ("modalHide" by ((mhsequent: Sequent) => {
+      mhsequent.ante.indices.map(i => if (mhsequent(AntePos(i)).isFOL) skip else hide(AntePos(i))).reduceLeftOption(_&_).getOrElse(skip) &
+      mhsequent.succ.indices.map(i => if (mhsequent(SuccPos(i)).isFOL) skip else hide(SuccPos(i))).reduceLeftOption(_&_).getOrElse(skip)
+    }))
+
+    //@note if we have a counterexample we can try some smart hiding to make QE easier
+    def cex = {
+      val orig = sequent.sub(pos).getOrElse(throw new IllegalArgumentException(s"Sequent $sequent at position $pos is not a formula")).asInstanceOf[Formula]
+      if (pos.isSucc) tool.findCounterExample(Imply(to, orig))
+      else tool.findCounterExample(Imply(orig, to))
+    }
+
+    //@note assumes that modalHide is called first
+    val smartHide = "smartHide" by ((shsequent: Sequent) => {
+      val theCex = cex
+      shsequent.ante.indices.reverse.map(i =>
+        if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCex.get.keySet).isEmpty) hide(AntePos(i))
+        else skip).reduceLeftOption(_&_).getOrElse(skip) &
+      shsequent.succ.indices.reverse.map(i =>
+        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCex.get.keySet).isEmpty) hide(SuccPos(i))
+        else skip).reduceLeftOption(_&_).getOrElse(skip)
+    })
+
+
+    cutLR(to)(pos) <(
+      /* c */ skip,
+      //@note first try to prove only the transformation, then with smart hiding, if all that fails, full QE on all FOL formulas
+      /* c->d */ (cohide(pos) & QE) | (modalHide & ((smartHide & QE) | QE))
+      )
+  })
+
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is a variable */
   private def varExhaustiveEqL2R: DependentPositionTactic =
     "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
@@ -49,28 +105,6 @@ object ToolTactics {
   private def tryClosePredicate: DependentPositionTactic = "Try close predicate" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(p@PredOf(_, _)) => closeId | (hide(pos) partial)
   })
-
-  /**
-   * Converts a sequent into a single formula.
-   * Example:
-   * {{{
-   *   A, B |- S, T, U
-   * }}}
-   * is converted into:
-   * {{{
-   *   (A ^ B) -> (S \/ T \/ U)
-   * }}}
-   */
-  private lazy val toSingleFormula: DependentTactic  = new SingleGoalDependentTactic("toSingleFormula") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      cut(sequent.toFormula) <(
-        /* use */ implyL('Llast) <(
-          hideR(1)*sequent.succ.size & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close),
-          hideL(-1)*sequent.ante.size & (orL(-1) <(close, (close | skip) partial))*(sequent.succ.size-1) & ?(close)),
-        /* show */ cohide('Rlast) partial
-        )
-    }
-  }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
   private def qeSuccedentHd(qeTool : QETool) = new SingleGoalDependentTactic("QE") {

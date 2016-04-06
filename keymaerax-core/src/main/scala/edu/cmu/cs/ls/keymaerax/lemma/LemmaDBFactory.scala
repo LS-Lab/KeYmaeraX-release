@@ -1,7 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.core.LemmaDB
-
 /**
  * Returns lemma database instances. Prefer using this factory over instantiating lemma databases directly.
  *

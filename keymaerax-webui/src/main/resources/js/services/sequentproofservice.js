@@ -34,7 +34,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         }
         return { sectionIdx: -1, pathStepIdx: -1 };
       },
-      /** Returns the section index of the specified proof tree node's child that is referred to in the agenda item (child is unique). */
+      /** Returns the index of the section where any proofTreeNode's child is last (child is unique). */
       childSectionIndex: function(itemId, proofTreeNode) {
         var agendaItem = this.itemsMap[itemId];
         for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
@@ -135,8 +135,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
             if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
           } else {
             // proof might be finished
-            $rootScope.$emit('agenda.isEmpty');
-            console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+            if(!theAgenda.proofStatusDisplayed) {
+              theAgenda.proofStatusDisplayed == true
+              $rootScope.$emit('agenda.isEmpty');
+              console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+            }
+            else {
+              console.log("Not showing agenda.isEmpty because it was already displayed.")
+            }
           }
         })
         .catch(function(data) {
@@ -169,9 +175,13 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
-        if (theAgenda.itemIds().length == 0) {
+        if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
+          theAgenda.proofStatusDisplayed == true
           console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
           $rootScope.$emit('agenda.isEmpty');
+        }
+        if(theAgenda.proofStatusDisplayed == true) {
+          console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
         $rootScope.$emit('agenda.updateWithoutProgress');

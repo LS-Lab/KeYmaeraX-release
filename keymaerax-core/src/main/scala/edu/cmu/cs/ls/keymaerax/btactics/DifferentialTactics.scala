@@ -168,7 +168,7 @@ object DifferentialTactics {
             cutLR(g)(pos) <(
               /* use */ skip,
               /* show */ cohide('Rlast) & equivifyR(1) & (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) &
-              ProofRuleTactics.uniformRenaming(x, aX) & US(USubst(subst), origin) & byVerbatim("DE differential effect"))
+              ProofRuleTactics.uniformRenaming(x, aX) & ??? /*@todo US(USubst(subst), origin)*/ & byVerbatim("DE differential effect"))
 
         }
       }
@@ -238,9 +238,10 @@ object DifferentialTactics {
                 (if (auto == 'full) Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
-                 else { assert(auto == 'diffInd); cohide2(AntePos(sequent.ante.size), pos) &
-                  (if (hasODEDomain(sequent, pos)) cohide(1) & DW(1) else skip) &
-                  abstractionb(1) & (allR(1)*@TheType()) & ?(implyR(1)) }) partial
+                 else {
+                  assert(auto == 'diffInd)
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                  abstractionb(pos) & (allR(pos)*@TheType()) & ?(implyR(pos)) }) partial
               } else skip
               )
           if (auto == 'full) Dconstify(t)(pos)
@@ -512,7 +513,7 @@ object DifferentialTactics {
    *        x<0 |- [x'=3,y'=2 & x>=0]y>0
    * }}}
    */
-  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "foo" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
       cut(q) <(
@@ -522,7 +523,7 @@ object DifferentialTactics {
   })
 
   def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(Box(odes: DifferentialProgram, _)) =>
+    case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
       val time: Variable = TacticHelper.freshNamedSymbol(Variable("t_", None, Real), sequent)
@@ -531,31 +532,33 @@ object DifferentialTactics {
             DLBySubst.assignbExists("0".asTerm)(pos) &
             DLBySubst.assignEquational(pos)
 
-      def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
-                       diffEqPos: Position): BelleExpr = {
-        val initialGhosts = (primedSymbols(ode) + time).foldLeft(skip)((a, b) =>
+      def createTactic(ode: ODESystem, solution: Formula, time: Variable, iv: Map[Variable, Variable],
+                       diffEqPos: SeqPos): BelleExpr = {
+        val initialGhosts = (primedSymbols(ode.ode) + time).foldLeft(skip)((a, b) =>
           a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
 
         // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
         val flatSolution = flattenConjunctions(solution).
           sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
 
-        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) &
+        diffUnpackEvolutionDomainInitially(diffEqPos) &
+          initialGhosts &
+          diffInvariant(tool, flatSolution:_*)(diffEqPos) &
           // initial ghosts are at the end of the antecedent
           exhaustiveEqR2L(hide=true)('Llast)*flatSolution.size &
-          diffWeaken(pos)
+          diffWeaken(diffEqPos)
       }
 
       // initial values (from only the formula at pos, because allR will increase index of other occurrences elsewhere in the sequent)
       val iv: Map[Variable, Variable] =
-        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
+        primedSymbols(odes.ode).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
 
       val theSolution = solution match {
         case sol@Some(_) => sol
-        case None => tool.diffSol(odes, time, iv)
+        case None => tool.diffSol(odes.ode, time, iv)
       }
 
-      val diffEqPos = pos.topLevel
+      val diffEqPos = SuccPos(sequent.succ.length-1) //@note introTime moves ODE to the end of the succedent
       theSolution match {
         // add relation to initial time
         case Some(s) =>
@@ -595,7 +598,7 @@ object DifferentialTactics {
   lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
-      cohide(pos.top) & DW(pos) & G
+      cohide(pos.top) & DW(1) & G
   })
 
   /** Helper for diffWeaken: andL the second-to-last formula */
@@ -638,7 +641,7 @@ object DifferentialTactics {
 
   /** Computes the dimension of ODE at indicated position of a sequent */
   private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
-    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.count(_.isInstanceOf[DifferentialSymbol])
+    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])
     sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => odeDim(ode)
       case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)

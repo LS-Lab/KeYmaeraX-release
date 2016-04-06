@@ -17,12 +17,12 @@ package edu.cmu.cs.ls.keymaerax
  *     - [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics Static Semantics]]
  *
  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]]:
- *     - [[edu.cmu.cs.ls.keymaerax.core.Axiom Axioms]]
+ *     - [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]]
  *     - [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]]
  *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
  *     - [[edu.cmu.cs.ls.keymaerax.core.Rule Proof rules]]
  *
- *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.LemmaDB lemma data base]],
+ *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.Lemma lemma data storage]],
  * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
  * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
  * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]].
@@ -105,9 +105,9 @@ package edu.cmu.cs.ls.keymaerax
  *
  *
  * ==Theorem Prover==
- * The KeYmaera X Prover Kernel provides [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule uniform substitutions]],
+ * The KeYmaera X Prover Kernel provides [[edu.cmu.cs.ls.keymaerax.core.USubst uniform substitutions]],
  * [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming uniform]] and [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming bound variable renaming]], and
- * [[edu.cmu.cs.ls.keymaerax.core.Axiom axioms]] of differential dynamic logic.
+ * [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]] of differential dynamic logic.
  * For efficiency, it also directly provides propositional sequent proof rules and
  * [[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemization]].
  *
@@ -139,8 +139,8 @@ package edu.cmu.cs.ls.keymaerax
  *
  * ==Additional Capabilities==
  * ===Lemma Mechanism===
- * A lemma database and an interface to real arithmetic decision procedures are defined in
- * [[edu.cmu.cs.ls.keymaerax.core.LemmaDB]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]].
+ * A lemma storage mechanism and an interface to real arithmetic decision procedures are defined in
+ * [[edu.cmu.cs.ls.keymaerax.core.Lemma]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]].
  *
  * ===Error Reporting===
  * Errors from the prover core are reported as exceptions of type [[edu.cmu.cs.ls.keymaerax.core.ProverException]]
@@ -152,6 +152,7 @@ package edu.cmu.cs.ls.keymaerax
  * [[edu.cmu.cs.ls.keymaerax.core.SetLattice]] based on Scala's immutable sets.
  *
  * @author Andre Platzer
+ * @see Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016.
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."

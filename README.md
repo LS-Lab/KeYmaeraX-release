@@ -10,7 +10,7 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 Branches
 ========
 
-- `release` is the stable branch for KeYmaera X releases
+- `release` is the stable branch for KeYmaera X releases.
 - `master` is the branch for active ongoing developments of KeYmaera X.
 
 Dependencies
@@ -65,17 +65,9 @@ To run the regression test case suite, type
 
 FAQ: Build Problems
 ===================
-The build file does not include paths to the Mathematica JLink JAR, so you will need to set an environmental variable
-JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in `~/.bashrc` or `~/.profile`.
-
-Examples: (depending on Mathematica version and OS)
-
-    # Mac OS, Mathematica >=10.0.2
-    export JLINK_JAR_LOCATION=/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/JLink.jar
-    # Mac OS, Mathematica <=10.0.1
-    export JLINK_JAR_LOCATION=/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar
-    # Linux
-    export JLINK_JAR_LOCATION=/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/JLink.jar
+The build file uses default paths to the Mathematica JLink JAR for MacOS and Mathematica 10 (see default.properties).
+If those are not suitable for your setup, create a file 'local.properties' in the same directory as default.properties
+(project root) and provide the location of JLink.jar with a property mathematica.jlink.path=YOUR_LOCAL_PATH_TO_JLINKJAR
 
 If, at any time, you run into problems during the compilation process, use `sbt clean` for a fresh start to remove stale files. If the problems persist, use `sbt clean` followed by `sbt reload`. On a few computers you may have to edit your environment variables, e.g., `~/.bashrc` or  `~/.profile` to include something like
 
@@ -274,51 +266,55 @@ The goal of KeYmaera X is to implement the proof calculus of differential dynami
 Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
 
 1. André Platzer. 
+[A complete uniform substitution calculus for differential dynamic logic](ttp://arxiv.org/abs/1601.06183). 
+[arXiv 1601.06183](http://arxiv.org/abs/1601.06183)
+
+2. André Platzer. 
 [A uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/978-3-319-21401-6_32). 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
 Extended version at [arXiv 1503.01981](http://arxiv.org/abs/1503.01981)
 
-2. André Platzer.
+3. André Platzer.
 [Logics of dynamical systems](http://dx.doi.org/10.1109/LICS.2012.13).
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
 
-3. André Platzer.
+4. André Platzer.
 [Differential dynamic logic for hybrid systems](http://dx.doi.org/10.1007/s10817-008-9103-8).
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
-4. André Platzer.
+5. André Platzer.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](http://dx.doi.org/10.1007/978-3-642-14509-4).
 Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
 
-5. André Platzer.
+6. André Platzer.
 [Differential dynamic logic for verifying parametric hybrid systems](http://dx.doi.org/10.1007/978-3-540-73099-6_17).
 In Nicola Olivetti, editor, Automated Reasoning with Analytic Tableaux and Related Methods, International Conference, TABLEAUX 2007, Aix en Provence, France, July 3-6, 2007, Proceedings, volume 4548 of LNCS, pages 216-232. Springer, 2007. 
 
 The prover KeYmaera X itself is described in
 
-6. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
+7. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
 [KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are described and specified in
 
-7. André Platzer.
+8. André Platzer.
 [The structure of differential invariants and differential cut elimination](http://dx.doi.org/10.2168/LMCS-8(4:16)2012).
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems, which, along with its proof calculus, are described and specified in
 
-8. André Platzer. 
+9. André Platzer. 
 [Differential game logic](http://arxiv.org/abs/1408.1980). 
 ACM Trans. Comput. Log., 17(1), 2015.
 [arXiv:1408.1980](http://arxiv.org/abs/1408.1980)
 
-9. André Platzer.
+10. André Platzer.
 [A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 Special issue for selected papers from CSL'10. 
 
-10. André Platzer.
+11. André Platzer.
 [Dynamic logics of dynamical systems](http://arxiv.org/abs/1205.4788).
 May 2012.
 arXiv:1205.4788

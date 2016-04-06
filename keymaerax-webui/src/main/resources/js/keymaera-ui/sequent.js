@@ -1,5 +1,6 @@
 angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
-  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', function($rootScope, $uibModal, $http, spinnerService) {
+  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', 'derivationInfos',
+      function($rootScope, $uibModal, $http, spinnerService, derivationInfos) {
     return {
         restrict: 'AE',
         scope: {
@@ -49,6 +50,26 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               angular.element(event.target.firstChild.firstChild).removeClass('hlhover'); // remove hover effect on drag
             }
 
+            scope.openInputTacticDialog = function(tacticName) {
+              var tactics = derivationInfos.byName(scope.userId, scope.proofId, scope.nodeId, tacticName)
+                .then(function(response) {
+                  return response.data;
+                });
+
+              var modalInstance = $uibModal.open({
+                templateUrl: 'templates/derivationInfoDialog.html',
+                controller: 'DerivationInfoDialogCtrl',
+                size: 'lg',
+                resolve: {
+                  tactics: function() { return tactics; }
+                }
+              });
+
+              modalInstance.result.then(function(derivation) {
+                scope.onInputTactic(undefined, tacticName, derivation);
+              })
+            }
+
             scope.turnstileDrop = function(dragData) {
               var formulas = $.grep(scope.sequent.ante, function(e, i) { return e.id === dragData; });
               if (formulas.length == 1) {
@@ -61,6 +82,27 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               } else {
                 $rootScope.$emit('proof.message', 'Drop antecedent formulas only')
               }
+            }
+
+            scope.isFOL = function(formula) {
+              //@todo implement
+              return true;
+            }
+
+            scope.transformFormula = function(formulaId, formula, isAnte) {
+              var modal = $uibModal.open({
+                templateUrl: 'templates/transformFormula.html',
+                controller: 'TransformFormulaCtrl',
+                size: 'md',
+                resolve: {
+                  formula: function() { return formula; },
+                  isAnte: function() { return isAnte; }
+                }
+              });
+
+              modal.result.then(function(input) {
+                scope.onApplyInputTactic({formulaId: formulaId, tacticId: 'transform', input: input});
+              });
             }
 
             turnstileTooltipOpen = false;

@@ -112,9 +112,9 @@ object PropositionalTacticsImpl {
       case _ => false
     } else false
 
-    def apply(pos: Position): Tactic = new Tactics.ApplyRule(ImplyLeftOld(pos)) {
+    def apply(pos: Position): Tactic = ??? /*new Tactics.ApplyRule(ImplyLeftOld(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-    }
+    }*/
   }
 
   /**
@@ -380,9 +380,9 @@ object PropositionalTacticsImpl {
         case Some(frm) => frm
         case None => f
       }
-      Some(new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
+      Some(??? /*new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
         override def applicable(node: ProofNode): Boolean = true
-      })
+      }*/)
     }
 
   }

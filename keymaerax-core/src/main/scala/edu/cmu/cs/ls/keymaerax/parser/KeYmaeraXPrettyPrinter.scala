@@ -161,7 +161,6 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case AtomicODE(xp, e)       => pp(q+0, xp) + op(program).opcode + pp(q+1, e)
     case t: DifferentialProduct =>
       pwrapLeft(t, ppODE(q+0, t.left)) + op(t).opcode + pwrapRight(t, ppODE(q+1, t.right))
-    case ODESystem(ode, f)      => assert(false, "ODESystem does not occur recursively"); ??? //{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
   })
 
 

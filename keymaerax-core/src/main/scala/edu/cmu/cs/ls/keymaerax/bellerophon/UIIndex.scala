@@ -21,8 +21,12 @@ object UIIndex {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
-  def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = allStepsAt(expr, pos).
-    find(DerivationInfo(_).inputs.isEmpty)
+  def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {
+    case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
+    case _ => allStepsAt(expr, pos).find(DerivationInfo(_).inputs.isEmpty)
+  }
+
+
 
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
     find(DerivationInfo(_).inputs.isEmpty)
@@ -34,7 +38,8 @@ object UIIndex {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
-    val alwaysApplicable = "cut" :: Nil
+    //@todo cutL and cutR are always applicable on top level
+    val alwaysApplicable = Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
       case Differential(t) =>
@@ -198,7 +203,7 @@ object UIIndex {
     val expr1 = sequent.sub(pos1)
     val expr2 = sequent.sub(pos2)
     (pos1, pos2, expr1, expr2) match {
-      case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "close" :: Nil
+      case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
       case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil

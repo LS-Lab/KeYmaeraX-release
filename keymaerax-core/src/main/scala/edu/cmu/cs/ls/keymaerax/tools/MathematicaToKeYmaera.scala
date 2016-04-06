@@ -82,6 +82,9 @@ object MathematicaToKeYmaera {
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(hasHead(_, MathematicaSymbols.RULE))))
       convertRuleList(e)
 
+    // Derivatives
+    else if (e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
+
     // Functions
     else if (e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertAtomicTerm(e)
 
@@ -114,7 +117,7 @@ object MathematicaToKeYmaera {
     op(asTerms(0), asTerms(1))
   }
 
-  private def convertQuantifier(e : com.wolfram.jlink.Expr, op:(Seq[Variable], Formula)=>Formula) = {
+  private def convertQuantifier(e: MExpr, op:(Seq[Variable], Formula)=>Formula) = {
     require(e.args().size == 2, "Expected args size 2.")
 
     val quantifiedVariables = e.args().headOption.getOrElse(
@@ -132,6 +135,15 @@ object MathematicaToKeYmaera {
 
     // convert quantifier block into chain of single quantifiers
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
+  }
+
+  private def convertDerivative(e: MExpr): KExpr = {
+    require(e.args().size == 1, "Expected args size 1 (single differential symbol or single differential term)")
+    require(e.head.args().size == 1 && e.head.args().head == new MExpr(1), "Expected 1 prime (e.g., v', not v'')")
+    fromMathematica(e.args.head) match {
+      case v: Variable => DifferentialSymbol(v)
+      case t: Term => Differential(t)
+    }
   }
 
 

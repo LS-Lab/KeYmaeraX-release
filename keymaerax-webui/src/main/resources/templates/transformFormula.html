@@ -1,0 +1,30 @@
+<div class="modal-header">
+    <h3 class="modal-title">Transform formula</h3>
+</div>
+<div class="modal-body row" ng-if="isAnte">
+    <form>
+    <div class="col-md-4 k4-formula-content-abbreviate k4-abbreviate">
+        <k4-formula user-id="" proof-id="" node-id="" formula="formula" highlight="false" collapsed="true"
+                    on-tactic="" on-input-tactic=""></k4-formula>
+    </div>
+    <div class="col-md-1">&#8594;</div>
+    <div class="col-md-7 form-group">
+        <input type="text" class="form-control" name="toFormula" ng-model="formData.toFormula" required></input>
+    </div>
+    </form>
+</div>
+<div class="modal-body" ng-if="!isAnte">
+    <div class="col-md-7 form-group">
+        <input type="text" class="form-control" name="toFormula" ng-model="formData.toFormula" required></input>
+    </div>
+    <div class="col-md-1">&#8594;</div>
+    <div class="col-md-4">
+        <k4-formula user-id="" proof-id="" node-id="" formula="formula" highlight="false" collapsed="true"
+                    on-tactic="" on-input-tactic=""></k4-formula>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="ok()">OK</button>
+    <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+</div>

@@ -1,5 +1,6 @@
 package pt
 
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
@@ -11,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticTestSuite
  * "A Logic of Proofs for Differential Dynamic Logic: Twoard Independently Checkable Proof Certificates for Dynamic Logics"
  * Nathan Fulton and Andre Platzer
  * In Submission to CPP'16
+ *
  * @author Nathan Fulton
  */
 class ProofTermCheckerTests extends TacticTestSuite {

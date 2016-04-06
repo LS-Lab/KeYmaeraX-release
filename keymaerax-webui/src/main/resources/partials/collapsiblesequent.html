@@ -63,6 +63,11 @@
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
                     </li>
+                    <li ng-if="isFOL(f.formula)">
+                        <a ng-click="transformFormula(f.id, f.formula, true)"
+                           uib-tooltip="Transform" tooltip-placement="left" tooltip-popup-delay="5000">
+                            <span class="fa fa-pencil"></span></a>
+                    </li>
                     <li ng-if="f.formula.name === 'equals'">
                         <a ng-click="onTactic(f.id,'allL2R')"
                            uib-tooltip="Replace all occurrences of left-hand side with right-hand side"
@@ -114,6 +119,10 @@
                            uib-tooltip="Find counterexample" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-search"></span></a>
                     </li>
+                    <li><a ng-click="openInputTacticDialog('cut')"
+                           uib-tooltip="Cut" tooltip-placement="top" tooltip-popup-delay="500">
+                        <span class="fa fa-scissors"></span></a>
+                    </li>
                     <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
                 <div class="k4-formula-content"
@@ -141,6 +150,11 @@
                     <li><a ng-click="onTactic(f.id,'hideR')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
+                    </li>
+                    <li ng-if="isFOL(f.formula)">
+                        <a ng-click="transformFormula(f.id, f.formula, false)"
+                           uib-tooltip="Transform" tooltip-placement="left" tooltip-popup-delay="5000">
+                            <span class="fa fa-pencil"></span></a>
                     </li>
                 </ul>
                 <div class="k4-formula-content">

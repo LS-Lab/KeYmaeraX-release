@@ -153,21 +153,19 @@ object FOQuantifierTactics {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(fml: Formula) =>
           require(where.nonEmpty, "Need at least one position to generalize")
-          require(where.map(w => sequent.sub(pos.navigate(w))).toSet.size == 1, "Not all positions refer to the same term")
-          val fmlRepl = replaceWheres(fml, x)
+          require(where.map(w => sequent.sub(pos.topLevel + w)).toSet.size == 1, "Not all positions refer to the same term")
+          val fmlRepl = replaceWheres(fml, Variable("x_"))
 
           //@note create own substitution since UnificationMatch doesn't get it right yet
-          val aT = FuncOf(Function("t_", None, Unit, Real), Nothing)
+          val aT = FuncOf(Function("f", None, Unit, Real), Nothing)
           val aP = PredOf(Function("p_", None, Real, Bool), DotTerm)
           val pDot = replaceWheres(fml, DotTerm)
           val subst = USubst(
             SubstitutionPair(aP, pDot) ::
-            SubstitutionPair(aT, sequent.sub(pos.navigate(where.head)).get) :: Nil)
-          val origin = Sequent(Nil, IndexedSeq(),
-            IndexedSeq(Imply("p_(t_())".asFormula, Exists(x::Nil, PredOf(Function("p_", None, Real, Bool), x)))))
+            SubstitutionPair(aT, sequent.sub(pos.topLevel + where.head).get) :: Nil)
 
-          cut(Imply(fml, Exists(x :: Nil, fmlRepl))) <(
-            /* use */ implyLOld('Llast) <(closeId, hide(pos,fml) partial) partial,
+          cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
+            /* use */ implyL('Llast) <(closeId, hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast) partial) partial,
             /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiom("exists generalize")(subst))
             )
         case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
@@ -249,8 +247,8 @@ object FOQuantifierTactics {
         //       reverse-alphabetical ordering of quantifiers
         val sorted: List[Term] = ((varsFns -- order).
           filter({ case Variable(_, _, _) => true case Function(_, _, Unit, _) => true case _ => false }).
-          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable - for now: alphabetically
-          toList.sortBy(_.name) ++ order.reverse).
+          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable
+          toList.sorted ++ order.reverse).
           map({ case v@Variable(_, _, _) => v case fn@Function(_, _, Unit, _) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
 
         if (sorted.isEmpty) skip

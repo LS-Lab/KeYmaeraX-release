@@ -28,11 +28,16 @@ object KeYmaeraToMathematica {
    * Converts KeYmaera expressions into Mathematica expressions.
    */
   //@todo contract: convert back is identity
-  def fromKeYmaera(e : KExpr): MExpr = e match {
-    case t : Term => require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion");
+  def fromKeYmaera(e: KExpr): MExpr = e match {
+    case t: Term =>
+      require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion")
       convertTerm(t)
-    case t : Formula => require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion");
-      convertFormula(t)
+    case f: Formula =>
+      require(disjointNames(StaticSemantics.symbols(f)), "Disjoint names required for Mathematica conversion")
+      convertFormula(f)
+    case fn: Function =>
+      MathematicaNameConversion.toMathematica(
+        new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
   }
 
   private def disjointNames(symbols: Set[NamedSymbol]): Boolean = {

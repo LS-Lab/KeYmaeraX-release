@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleProvable, Sequen
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXExtendedLemmaParser, ProofEvidence, KeYmaeraXProblemParser}
 import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
@@ -319,12 +319,17 @@ object SQLite {
         })
       })
 
+    def deleteExecution(executionId: Int) = synchronizedTransaction({
+      val deletedExecutionSteps = Executionsteps.filter(_.executionid === executionId).delete == 1;
+      val deletedExecution = Tacticexecutions.filter(_._Id === executionId).delete == 1
+      deletedExecutionSteps && deletedExecution
+    })
+
     override def deleteProof(proofId: Int) =
       synchronizedTransaction({
-        Tacticexecutions.filter(_.proofid === proofId).delete
-        Proofs.filter(_._Id === proofId).delete == 1
+        Tacticexecutions.filter(x => x.proofid === proofId).foreach(f => deleteExecution(f._Id.get))
+        Proofs.filter(x => x._Id === proofId).delete == 1
       })
-
 
     //Models
     override def createModel(userId: String, name: String, fileContents: String, date: String,
@@ -405,9 +410,6 @@ object SQLite {
       targetStream.close()
       dbFile.close()
     }
-
-    /** Deletes an execution from the database */
-    override def deleteExecution(executionId: Int): Unit = ???
 
     /** Creates a new execution and returns the new ID in tacticExecutions */
     override def createExecution(proofId: Int): Int =
@@ -617,9 +619,10 @@ object SQLite {
       * As of this writing, callers only use the length of the list and not the
       * individual strings, thus the exact representation is currently unspecified. */
     private def describeProofSteps(proofId: Int): List[String] = {
-      val execution = getTacticExecution(proofId)
-      val stepPOJOs = proofSteps(execution)
-      stepPOJOs.map({case step => step.toString})
+      getTacticExecution(proofId) match {
+        case Some(execution) => proofSteps(execution).map(_.toString)
+        case None => List.empty
+      }
     }
 
     override def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int = {
@@ -748,14 +751,14 @@ object SQLite {
       }
     }
 
-    private def getTacticExecution(proofId: Int): Int =
+    private def getTacticExecution(proofId: Int): Option[Int] =
       synchronizedTransaction({
           val executionIds =
             Tacticexecutions.filter(_.proofid === proofId)
               .list
               .map({ case row => row._Id.get })
-          if (executionIds.length < 1) throw new Exception("getTacticExecution type should be an Option")
-          else if (executionIds.length == 1) executionIds.head
+          if (executionIds.length < 1) None
+          else if (executionIds.length == 1) Some(executionIds.head)
           else throw new Exception("Primary keys aren't unique in executions table.")
         })
 
@@ -775,20 +778,26 @@ object SQLite {
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
          DB calls. */
-      val executionId = getTacticExecution(proofId)
-      val steps = proofSteps(executionId)
-      if (steps.isEmpty) {
-        val conclusion = getProofConclusion(proofId)
-        ExecutionTrace(proofId.toString, executionId.toString, conclusion, Nil)
-      } else {
-        val provableIds = steps.map { case step => step.localProvableId.get }
-        val executableIds = steps.map { case step => step.executableId }
-        val provables = loadProvables(provableIds)
-        val conclusion = provables.head.conclusion
-        val initProvable = Provable.startProof(conclusion)
-        val executables = getExecutables(executableIds)
-        val traceSteps = zipTrace(steps, executables, initProvable, provables)
-        ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
+      getTacticExecution(proofId) match {
+        case Some(executionId) =>
+          val steps = proofSteps(executionId)
+          if (steps.isEmpty) {
+            val conclusion = getProofConclusion(proofId)
+            ExecutionTrace(proofId.toString, executionId.toString, conclusion, Nil)
+          } else {
+            val provableIds = steps.map { case step => step.localProvableId.get }
+            val executableIds = steps.map { case step => step.executableId }
+            val provables = loadProvables(provableIds)
+            val conclusion = provables.head.conclusion
+            val initProvable = Provable.startProof(conclusion)
+            val executables = getExecutables(executableIds)
+            val traceSteps = zipTrace(steps, executables, initProvable, provables)
+            ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
+          }
+        case None =>
+          val conclusion = getProofConclusion(proofId)
+          //@todo is execution ID really unused so far?
+          ExecutionTrace(proofId.toString, null, conclusion, Nil)
       }
     }
 
