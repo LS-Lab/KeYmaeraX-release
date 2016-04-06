@@ -1,0 +1,18 @@
+Functions.
+  R A.
+  R b.
+  R m.
+  R ep.
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+  R t.
+End.
+
+Problem.
+  A>=0 & b>0 & ep>0 & v^2 <= 2*b*(m-x) ->
+    [?2*b*(m-x) >= v^2+(A+b)*(A*ep^2+2*ep*v); a:=A; t:=0; {x'=v,v'=a,t'=1 & v>=0 & t<=ep}]v^2 <= 2*b*(m-x)
+End.
