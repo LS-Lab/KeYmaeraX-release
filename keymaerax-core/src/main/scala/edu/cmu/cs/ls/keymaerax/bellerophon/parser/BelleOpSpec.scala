@@ -46,7 +46,11 @@ object BelleOpSpec {
     case e:SaturateTactic => star
     case e:RepeatTactic   => repeat
     case e:PartialTactic  => partial
+    case e:BranchTactic => branch
     case e:USubstPatternTactic => usubst
     case e:BuiltInTactic       => base
+    case e:AppliedPositionTactic => base
+    case e:AppliedDependentPositionTactic => base
+    case _ => base
   }
 }

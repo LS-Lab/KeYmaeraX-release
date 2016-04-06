@@ -390,7 +390,9 @@ abstract case class InputTactic[T](name: SerializationName, input: T) extends Be
   override def prettyString: String = "input(" + input + ")"
 }
 
-class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
+abstract class DependentPositionInputTactic(private val n: String, val input: Expression) extends DependentPositionTactic(n)
+
+class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
   override def prettyString: String = pt.name + "(" + locator.prettyString + ")"
   final override def computeExpr(v: BelleValue): BelleExpr = locator match {
