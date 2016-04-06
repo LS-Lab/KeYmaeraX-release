@@ -246,7 +246,6 @@ object TOOL_VALUE_PAT {
 //  def regexp = "\"([^\"]*)\"".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
-///////////
 
 /**
  * Created by aplatzer on 6/8/15.
