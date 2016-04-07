@@ -58,4 +58,24 @@ object TacticHelper {
       case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
     } else t
 
+  /** Returns a list of formulas that invariants should treat as invariants. */
+  def propertiesOfConstants(s: Sequent, pos: SeqPos) : List[Formula] = {
+    val constants : Set[NamedSymbol] = constantsForInvariants(s, pos)
+    s.ante.filter(f => (StaticSemantics.freeVars(f) -- constants).isEmpty).toList
+  }
+
+  /** Returns the set of variables we should consider as constant in invariant proofs for the modality located at pos. */
+  private def constantsForInvariants(s: Sequent, pos: SeqPos) : Set[NamedSymbol] = {
+    val (program: Program, formula: Formula) = s(pos) match {
+      case Box(p,f) => (p,f)
+      case Diamond(p,f) => (p,f)
+      case _ => assert(false, "s(pos) should hve form [a]p or <a>p.")
+    }
+
+    val freeInGamma = s.ante.map(StaticSemantics.freeVars).reduce(_ ++ _)
+    val freeInModality = StaticSemantics.freeVars(s(pos))
+    val boundInProgram = StaticSemantics.boundVars(program)
+
+    freeInModality.intersect(freeInGamma).intersect(SetLattice.topVarsDiffVars() -- boundInProgram).symbols
+  }
 }
