@@ -1,0 +1,18 @@
+Functions.
+  R A.
+  R b.
+  R m.
+  R ep.
+  B Q(R,R).
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+  R t.
+End.
+
+Problem.
+  A>=0 & b>0 & v^2 <= 2*b*(m-x) & ep>0 -> [?Q(x,v); a:=A; t:=0; {x'=v,v'=a,t'=1 & v>=0 & t<=ep}]v^2 <= 2*b*(m-x)
+End.
