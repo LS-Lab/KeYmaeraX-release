@@ -189,6 +189,29 @@ class CpsWeekTutorial extends TacticTestBase {
     proveBy(harder, tactic("v^2<=2*b*(m-x)".asFormula)) shouldBe 'proved
   }
 
+  "2D Car" should "be provable" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyx"))
+
+    def di(a: String) = diffInvariant("dx^2+dy^2=1".asFormula, "t>=0".asFormula, s"v=old(v)+$a*t".asFormula,
+      s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t)".asFormula,
+      s"-t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R)
+
+    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & andL('L)*@TheType() &
+      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+
+    val tactic = implyR('R) & andL('L)*@TheType() & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 | 2*b*abs(my-y)>v^2)".asFormula)('R) <(
+      print("Base case") & QE,
+      print("Use case") & QE,
+      print("Step") & chase('R) & andR('R) <(
+        allR('R) & implyR('R) & di("-b") & dw & QE,
+        // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
+        allR('R)*2 & implyR('R) & allR('R)*2 & implyR('R) & allR('R) & implyR('R) & di("A") & dw & printIndexed("Bar") partial
+        ) partial
+      )
+    val result = proveBy(s, tactic)
+    result.subgoals should have size 1
+  }
+
   "Motzkin" should "be provable with DI+DW" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx"))
     val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & diffWeaken('R) & prop
