@@ -1,0 +1,24 @@
+Functions.
+  R b.
+  R m.
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+     x<=m
+   & b>0
+   & v^2 <= 2*b*(m-x)
+-> [
+    {
+     {  ?v=0; a:=0; /* without time bound we never can do anything else but braking, except when we're stopped */
+     ++ a:=-b;
+     };
+     {x'=v,v'=a & v>=0}
+    }*@invariant(v^2 <= 2*b*(m-x))
+   ]x<=m
+End.
