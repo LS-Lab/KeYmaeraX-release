@@ -49,6 +49,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
 
     /** A precedence list of bell expression language parsers. */
     lazy val expressionParsers: List[PackratParser[BelleExpr]] =
+      onAllP  ::
       branchP ::
       seqP    ::
       eitherP ::
@@ -110,6 +111,13 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       lazy val pattern = expressionParser ~ EITHER ~ expressionParser
       log(pattern)(EITHER) ^^ {
         case left ~ EITHER ~ right => EitherTactic(left, right)
+      }
+    }
+
+    lazy val onAllP: PackratParser[BelleExpr] = {
+      lazy val pattern = ON_ALL ~> "(" ~> expressionParser <~ ")"
+      log(pattern)(ON_ALL) ^^ {
+        case expr => OnAll(expr)
       }
     }
 
@@ -232,6 +240,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     val ANNOTATED_STAR = "*@"
     val STAR = "*"
     val EITHER = "|"
+    val ON_ALL = "OnAll"
     val PARTIAL = "partial"
     val MATCH = "match"
   }

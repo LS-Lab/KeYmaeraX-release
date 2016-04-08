@@ -113,6 +113,12 @@ object BelleParser extends (String => BelleExpr) {
         reduceExpressionList(st)
       //endregion
 
+      //region OnAll combinator
+      case r :+ BelleToken(ON_ALL, loc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
+        ParserState(r :+ ParsedBelleExpr(OnAll(expr), loc.spanTo(cParenLoc)), st.input)
+      }
+      //endregion
+
       //region Stars and Repitition
       case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(KLEENE_STAR, starLoc) =>
         ParserState(r :+ ParsedBelleExpr(SaturateTactic(expr, TheType()), loc.spanTo(starLoc)), st.input)
