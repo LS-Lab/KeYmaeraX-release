@@ -22,6 +22,12 @@ a {
     border-bottom: dashed 1px black;
 }
 
+body {
+    font-size: 18px;
+    color: black;
+    background-color: white;
+}
+
 /*
 End Color
 */
@@ -65,7 +71,8 @@ table .btn{
 
 .hl {background: transparent; }
 .hlhover {
-    background-color:#7297A6;
+    background-color:black;
+    color: white;
 }
 
 .list-group-item.active,
