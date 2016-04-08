@@ -1,5 +1,5 @@
 /*
-High-contrast color
+High-contrast color and bigger fonts
 */
 a {
   color: black;
@@ -23,9 +23,17 @@ a {
 }
 
 body {
-    font-size: 18px;
-    color: black;
-    background-color: white;
+  font-size: 18px;
+  color: black;
+  background-color: white;
+}
+
+.dropdown-menu {
+  font-size: 16px;
+}
+
+pre {
+  font-size: 16px;
 }
 
 /*
