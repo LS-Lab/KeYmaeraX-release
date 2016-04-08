@@ -5,10 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, OnAll, TheType}
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print,printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, SubstitutionPair, USubst}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -23,9 +23,21 @@ import scala.language.postfixOps
 @SlowTest
 class CpsWeekTutorial extends TacticTestBase {
 
+  "Example 0" should "prove with abstract invariant J(x)" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))
+    val tactic = implyR('R) & andL('L)*@TheType() & loop("J(v)".asFormula)('R) <(
+      skip,
+      skip,
+      print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
+      ) & US(USubst(SubstitutionPair(
+            "J(v)".asFormula.replaceFree("v".asTerm, DotTerm), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm))::Nil)) & OnAll(QE)
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   "Example 1" should "have 4 open goals for abstract invariant J(x,v)" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val tactic = implyR('R) & andL('R)*@TheType() & loop("J(x,v)".asFormula)('R) <(
+    val tactic = implyR('R) & andL('L)*@TheType() & loop("J(x,v)".asFormula)('R) <(
       print("Base case") partial,
       print("Use case") partial,
       print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
