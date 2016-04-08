@@ -507,7 +507,8 @@ trait RestApi extends HttpService with SLF4JLogging {
           val initial = obj.fields("initial").asInstanceOf[JsString].value.asFormula
           val stateRelation = obj.fields("stateRelation").asInstanceOf[JsString].value.asFormula
           val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
-          val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1)
+          val stepDuration = obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm
+          val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, stepDuration)
           complete(standardCompletion(request))
         }}}
     }}
