@@ -5,10 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, OnAll, TheType}
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print,printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, SubstitutionPair, USubst}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -23,9 +23,21 @@ import scala.language.postfixOps
 @SlowTest
 class CpsWeekTutorial extends TacticTestBase {
 
+  "Example 0" should "prove with abstract invariant J(x)" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))
+    val tactic = implyR('R) & andL('L)*@TheType() & loop("J(v)".asFormula)('R) <(
+      skip,
+      skip,
+      print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
+      ) & US(USubst(SubstitutionPair(
+            "J(v)".asFormula.replaceFree("v".asTerm, DotTerm), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm))::Nil)) & OnAll(QE)
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   "Example 1" should "have 4 open goals for abstract invariant J(x,v)" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val tactic = implyR('R) & andL('R)*@TheType() & loop("J(x,v)".asFormula)('R) <(
+    val tactic = implyR('R) & andL('L)*@TheType() & loop("J(x,v)".asFormula)('R) <(
       print("Base case") partial,
       print("Use case") partial,
       print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
@@ -175,6 +187,29 @@ class CpsWeekTutorial extends TacticTestBase {
 
     val harder = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx"))
     proveBy(harder, tactic("v^2<=2*b*(m-x)".asFormula)) shouldBe 'proved
+  }
+
+  "2D Car" should "be provable" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyx"))
+
+    def di(a: String) = diffInvariant("dx^2+dy^2=1".asFormula, "t>=0".asFormula, s"v=old(v)+$a*t".asFormula,
+      s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t)".asFormula,
+      s"-t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R)
+
+    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & andL('L)*@TheType() &
+      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+
+    val tactic = implyR('R) & andL('L)*@TheType() & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 | 2*b*abs(my-y)>v^2)".asFormula)('R) <(
+      print("Base case") & QE,
+      print("Use case") & QE,
+      print("Step") & chase('R) & andR('R) <(
+        allR('R) & implyR('R) & di("-b") & dw & QE,
+        // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
+        allR('R)*2 & implyR('R) & allR('R)*2 & implyR('R) & allR('R) & implyR('R) & di("A") & dw & printIndexed("Bar") partial
+        ) partial
+      )
+    val result = proveBy(s, tactic)
+    result.subgoals should have size 1
   }
 
   "Motzkin" should "be provable with DI+DW" in withMathematica { implicit tool =>

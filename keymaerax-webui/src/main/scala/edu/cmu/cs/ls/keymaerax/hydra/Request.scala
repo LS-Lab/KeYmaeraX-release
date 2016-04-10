@@ -12,15 +12,15 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.io._
 import java.nio.file.Path
 import java.text.SimpleDateFormat
-import java.util.{Locale, Calendar}
+import java.util.{Calendar, Locale}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
-import _root_.edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -28,13 +28,15 @@ import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{SimulationTool, MathematicaComputationAbortedException, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, MathematicaComputationAbortedException, SimulationTool}
 
 import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-import java.io.{File,FileInputStream,FileOutputStream}
+import java.io.{File, FileInputStream, FileOutputStream}
+
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -143,22 +145,98 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
     }
 
     //@note not a tactic because we don't want to change the proof tree just by simulating
-    node.sequent.toFormula match {
-      case Imply(initial, _) =>
-        //@todo ModelPlex the program and return state relation
-        new SetupSimulationResponse(initial, True) :: Nil
+    val fml = if (node.sequent.ante.nonEmpty) node.sequent.toFormula else { val Imply(True, succ) = node.sequent.toFormula; succ }
+    fml match {
+      case Imply(initial, b@Box(prg, _)) =>
+        // all symbols because we need frame constraints for constants
+        val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
+        val Box(prgPre, _) = vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
+        val stateRelEqs = vars.map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort))).reduceRightOption(And).getOrElse(True)
+        val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
+        new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
       case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
     }
   }
+
+  private def addNonDetInitials(initial: Formula, vars: Set[NamedSymbol]): Formula = {
+    val nonDetInitials = vars -- StaticSemantics.freeVars(initial).symbols
+    nonDetInitials.foldLeft(initial)((f, v) => And(f, Equal(v.asInstanceOf[Term], v.asInstanceOf[Term])))
+  }
+
+  private def transform(simSpec: Diamond): Formula = {
+    val stateRelation = TactixLibrary.proveBy(simSpec, TactixLibrary.chase(3, 3, (e: Expression) => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      //@note: do nothing, should be gone already
+      case Diamond(ODESystem(_, _), _) => Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    })('R))
+    assert(stateRelation.subgoals.size == 1 &&
+      stateRelation.subgoals.head.ante.isEmpty &&
+      stateRelation.subgoals.head.succ.size == 1, "Simulation expected to result in a single formula")
+    stateRelation.subgoals.head.succ.head
+  }
+
+  private def solveODEs(prg: Program): Program = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+    override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+      case ODESystem(ode, evoldomain) =>
+        Right(Compose(Test(evoldomain), solve(ode, evoldomain)))
+      case _ => Left(None)
+    }
+  }, prg).get
+
+  private def solve(ode: DifferentialProgram, evoldomain: Formula): Program = {
+    val iv: Map[Variable, Variable] =
+      primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
+    val time: Variable = Variable("t_", None, Real)
+    //@note replace initial values with original variable, since we turn them into assignments
+    val solution = replaceFree(TactixLibrary.tool.diffSol(ode, time, iv).get, iv.map(_.swap))
+    val flatSolution = flattenConjunctions(solution).
+      sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
+    Compose(
+      flatSolution.map({ case Equal(v: Variable, r) => Assign(v, r) }).reduceRightOption(Compose).getOrElse(Test(True)),
+      Test(evoldomain))
+  }
+
+  private def replaceFree(f: Formula, vars: Map[Variable, Variable]) = {
+    vars.keySet.foldLeft[Formula](f)((b, v) => b.replaceFree(v, vars.get(v).get))
+  }
+
+  private def primedSymbols(ode: DifferentialProgram) = {
+    var primedSymbols = Set[Variable]()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
+        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
+        case _ => Left(None)
+      }
+    }, ode)
+    primedSymbols
+  }
+
+  private def flattenConjunctions(f: Formula): List[Formula] = {
+    var result: List[Formula] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+      }
+    }, f)
+    result
+  }
 }
 
-class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int) extends Request {
+class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends Request {
   override def getResultingResponses(): List[Response] = {
     //@HACK do not want to change the tool type in TactixLibrary
     TactixLibrary.tool match {
       case s: SimulationTool =>
-        val simulation = s.simulate(initial, stateRelation, steps, n)
-        new SimulationResponse(simulation) :: Nil
+        val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
+        val simulation = s.simulate(initial, timedStateRelation, steps, n)
+        new SimulationResponse(simulation, stepDuration) :: Nil
       case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
     }
   }

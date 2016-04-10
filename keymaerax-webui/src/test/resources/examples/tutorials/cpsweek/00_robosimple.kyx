@@ -1,0 +1,23 @@
+Functions.
+  R m.
+  R b.
+  B J(R).
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+     x!=m & b>0 & v<10
+-> [
+    {
+     {  ?false;
+     ++ a:=-b;
+     };
+     {x'=v,v'=a}
+    }*@invariant(J(v))
+   ]v<11
+End.

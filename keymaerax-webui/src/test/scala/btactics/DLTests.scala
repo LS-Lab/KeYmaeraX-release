@@ -1,14 +1,15 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
-import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
-import edu.cmu.cs.ls.keymaerax.core.{Box, Formula, Sequent}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable.IndexedSeq
+import scala.language.postfixOps
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst]]
@@ -418,6 +419,71 @@ class DLTests extends TacticTestBase {
     // step
     result.subgoals(2).ante should contain only "x>1".asFormula
     result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula
+  }
+
+  "Loop" should "work with abstract invariant" in {
+    val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
+    val tactic = implyR('R) & loop("J(x)".asFormula)('R) <(skip, skip, assignb('R) partial)
+    val result = proveBy(fml, tactic)
+
+    result.subgoals should have size 3
+    // init
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "J(x)".asFormula
+    // use case
+    result.subgoals(1).ante should contain only "J(x)".asFormula
+    result.subgoals(1).succ should contain only "x>0".asFormula
+    // step
+    result.subgoals(2).ante should contain only "J(x)".asFormula
+    result.subgoals(2).succ should contain only "J(x+1)".asFormula
+
+    val subst = USubst(SubstitutionPair(
+      "J(x)".asFormula.replaceFree("x".asTerm, DotTerm),
+      "x>=1".asFormula.replaceFree("x".asTerm, DotTerm))::Nil)
+    val substResult = result(subst)
+
+    // init
+    substResult.subgoals.head.ante should contain only "x>0".asFormula
+    substResult.subgoals.head.succ should contain only "x>=1".asFormula
+    // use case
+    substResult.subgoals(1).ante should contain only "x>=1".asFormula
+    substResult.subgoals(1).succ should contain only "x>0".asFormula
+    // step
+    substResult.subgoals(2).ante should contain only "x>=1".asFormula
+    substResult.subgoals(2).succ should contain only "x+1>=1".asFormula
+  }
+
+  it should "work with multi-variate abstract invariant" in {
+    val fml = "x>0 & y<0 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
+    val tactic = implyR('R) & loop("J(x,y)".asFormula)('R) <(skip, skip, normalize partial)
+    val result = proveBy(fml, tactic)
+
+    result.subgoals should have size 3
+    // init
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "y<0".asFormula)
+    result.subgoals.head.succ should contain only "J(x,y)".asFormula
+    // use case
+    result.subgoals(1).ante should contain only "J(x,y)".asFormula
+    result.subgoals(1).succ should contain only "x>0&y<0".asFormula
+    // step
+    result.subgoals(2).ante should contain only "J(x,y)".asFormula
+    result.subgoals(2).succ should contain only "J(x+1,y-1)".asFormula
+
+    //@todo need distinguishable Dots
+//    val subst = USubst(SubstitutionPair(
+//      "J(x,y)".asFormula.replaceFree("x".asTerm, DotTerm),
+//      "x>=1&y<=-1".asFormula.replaceFree("x".asTerm, DotTerm))::Nil)
+//    val substResult = result(subst)
+//
+//    // init
+//    substResult.subgoals.head.ante should contain only ("x>0".asFormula, "y<0".asFormula)
+//    substResult.subgoals.head.succ should contain only "x>=1&y<=-1".asFormula
+//    // use case
+//    substResult.subgoals(1).ante should contain only "x>=1&y<=-1".asFormula
+//    substResult.subgoals(1).succ should contain only "x>0&y<0".asFormula
+//    // step
+//    substResult.subgoals(2).ante should contain only "x>=1&y<=-1".asFormula
+//    substResult.subgoals(2).succ should contain only "x+1>=1&y-1<=-1".asFormula
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {

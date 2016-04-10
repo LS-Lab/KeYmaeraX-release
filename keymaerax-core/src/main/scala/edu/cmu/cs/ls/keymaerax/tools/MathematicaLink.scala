@@ -310,15 +310,13 @@ class JLinkMathematicaLink extends MathematicaLink {
               new MExpr(Expr.SYMBOL, "Reals"),
               new MExpr(Expr.SYMBOL, "#")))))))))
     // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
-    val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.endsWith("pre"))
-    val prepostZip = stepPreVars.toList.sorted.zip(stepPostVars.toList.sorted)
-    require(prepostZip.forall({case (pre, post) => pre.name.startsWith(post.name)}), "Expected matching pre/post variables")
-    val pre2post = prepostZip.toMap
+    val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.startsWith("pre"))
+    val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
     val stepModuleInit = stepPreVars.toList.sorted.map(s =>
       new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(
         toMathematica(s),
         new MExpr(new MExpr(Expr.SYMBOL, "ReplaceAll"), Array(
-          toMathematica(pre2post.getOrElse(s, throw new IllegalArgumentException("Non-matching pre and post variables"))),
+          toMathematica(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
           new MExpr(Expr.SYMBOL, "#")))))).toArray
     val step = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
       new MExpr(Expr.SYMBOL, "step"),
@@ -345,14 +343,16 @@ class JLinkMathematicaLink extends MathematicaLink {
     def convert(e: MExpr): List[List[Map[NamedSymbol, Number]]] = {
       if (e.listQ() && e.args.forall(_.listQ())) {
         val states: Array[Array[KExpr]] = e.args().map(_.args().map(MathematicaToKeYmaera.fromMathematica))
-        states.map(_.map({
+        states.map(state => {
+          val endOfWorld = if (state.contains(False)) state.indexOf(False) else state.length
+          state.slice(0, endOfWorld).map({
           case fml: Formula => flattenConjunctions(fml).map({
               case Equal(name: NamedSymbol, value: Number) => name -> value
               case Equal(FuncOf(fn, _), value: Number) => fn -> value
               case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
             }).toMap
           case s => throw new IllegalArgumentException("Expected state formula, but got " + s)
-        }).toList).toList
+        }).toList}).toList
       } else throw new IllegalArgumentException("Expected list of simulation states, but got " + e)
     }
 

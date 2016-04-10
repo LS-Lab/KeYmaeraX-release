@@ -8,10 +8,12 @@ angular.module('keymaerax.controllers').controller('SimulatorCtrl',
     })
 
   $scope.numSteps = 10;
+  $scope.stepDuration = "1";
 
   $scope.simulate = function() {
     $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/simulate',
-        {initial: $scope.initialCondition, stateRelation: $scope.stateRelation, numSteps: $scope.numSteps})
+        {initial: $scope.initialCondition, stateRelation: $scope.stateRelation, numSteps: $scope.numSteps,
+         stepDuration: $scope.stepDuration})
       .then(function(response) {
         //@todo display alternative simulations
         $scope.lineStates = response.data.lineStates[0];
