@@ -124,8 +124,8 @@ object DerivationInfo {
       , /* conclusion */ (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(FormulaArg("formula")) //@todo should this be r(x) or formula? Does it matter?
-    , {case () => (fml: Seq[Formula]) => TactixLibrary.diffCut(fml:_*)}),
+    , List(FormulaArg("r(x)")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
+    , {case () => (fml: Formula) => TactixLibrary.diffCut(fml)}),
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
@@ -604,8 +604,8 @@ object DerivationInfo {
       , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;"), true),
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(FormulaArg("formula")) //@todo r(x) or formula? Not sure after 4.1b3 merge.
-    , {case () => (fml:Formula) => TactixLibrary.diffInvariant(Seq(fml):_*)}),
+    , List(FormulaArg("r(x)")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
+    , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
     new PositionTacticInfo("diffSolve",
       RuleDisplayInfo("[′]R",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),

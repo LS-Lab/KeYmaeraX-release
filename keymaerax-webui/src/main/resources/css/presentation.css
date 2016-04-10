@@ -3,7 +3,7 @@ High-contrast color and bigger fonts
 */
 a {
   color: black;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .navbar-default .navbar-nav > li > a {
