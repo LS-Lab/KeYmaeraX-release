@@ -16,8 +16,8 @@ Problem.
   A>=0 & b>0 & ep>0 & v>=0 & x<=m -> [
     {
       {  a := -b;
-      ++ ?v=0; a:=0;
       ++ ?x+ep*v<=m; a:=A;
+      ++ ?v=0; a:=0;
       }
       t:=0; {x'=v,v'=a,t'=1 & v>=0 & t<=ep}
     }*@invariant(x<=m)

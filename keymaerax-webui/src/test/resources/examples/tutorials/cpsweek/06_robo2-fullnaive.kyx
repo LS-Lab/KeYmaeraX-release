@@ -16,10 +16,8 @@ End.
 Problem.
   A>=0 & b>0 & ep>0 & x<=m -> [
     {
-      {  a := -b;
-      ++ ?!SB(x,v); a:=A;
-      }
-      t:=0; {x'=v,v'=a,t'=1 & v>=0 & t<=ep}
+         a := -b;{x'=v,v'=a,t'=1 & v>=0 & t<=ep}
+      ++ ?!SB(x,v); a:=A;{x'=v,v'=a,t'=1 & v>=0 & t<=ep}
     }*@invariant(x<=m)
   ]x<=m
 End.
