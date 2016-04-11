@@ -487,7 +487,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
       case "controller" =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1))
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*@TheType())
         } catch {
           case _: Throwable => foResult
         }
