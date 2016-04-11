@@ -1,0 +1,23 @@
+Functions.
+  R b.
+  R m.
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+     x<=m
+   & b>0
+-> [
+    {
+     {  ?v<=10; /* speed bound */
+     ++ a:=-b;
+     };
+     {x'=v,v'=a}
+    }*@invariant(x<=m)
+   ]x<=m
+End.

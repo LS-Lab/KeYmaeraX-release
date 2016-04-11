@@ -592,11 +592,11 @@ class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends 
   )
 }
 
-class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]]) extends Response {
+class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]], stepDuration: Term) extends Response {
   def getJson = {
     val seriesList = simulation.map(convertToDataSeries)
     JsObject(
-      "varNames" -> JsArray(seriesList.head.keySet.map(name => JsString(name.prettyString)).toVector),
+      "varNames" -> JsArray(seriesList.head.map(_._1).map(name => JsString(name.prettyString)).toVector),
       "ticks" -> JsArray(seriesList.head.head._2.indices.map(i => JsString(i.toString)).toVector),
       "lineStates" -> JsArray(seriesList.map(series =>
         JsArray(series.map({
@@ -607,13 +607,13 @@ class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]]) exten
     )
   }
 
-  def convertToDataSeries(sim: List[Map[NamedSymbol, Number]]): Map[NamedSymbol, List[Number]] = {
+  def convertToDataSeries(sim: List[Map[NamedSymbol, Number]]): List[(NamedSymbol, List[Number])] = {
     // convert to data series
     val dataSeries: Map[NamedSymbol, ListBuffer[Number]] = sim.head.keySet.map(_ -> ListBuffer[Number]()).toMap
     sim.foreach(state => state.foreach({
       case (n, v) => dataSeries.getOrElse(n, throw new IllegalStateException("Unexpected data series " + n)) += v
     }))
-    dataSeries.mapValues(_.toList)
+    dataSeries.mapValues(_.toList).toList
   }
 }
 

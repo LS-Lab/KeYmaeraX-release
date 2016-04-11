@@ -40,6 +40,8 @@ object EITHER_COMBINATOR extends BelleTerminal("|") {
 
 object BRANCH_COMBINATOR extends BelleTerminal("<")
 
+object ON_ALL extends BelleTerminal("OnAll")
+
 object KLEENE_STAR extends BelleTerminal("*") {
   override def regexp = "\\*".r
 }

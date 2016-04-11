@@ -146,6 +146,9 @@ trait UnifyUSCalculus {
     */
   def US(subst: USubst, fact: Provable): BuiltInTactic = TactixLibrary.by(fact(subst))
   def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, AxiomInfo(axiom).provable)
+  def US(subst: USubst): BuiltInTactic = new BuiltInTactic("US") {
+    override def result(provable : Provable): Provable = provable(subst)
+  }
 
   /**
     * US(fact) uses a suitable uniform substitution to reduce the proof to the proof of `fact`.

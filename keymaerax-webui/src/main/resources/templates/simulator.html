@@ -15,8 +15,8 @@
             <div class="form-group">
                 <label for="initial" class="col-md-2 control-label">Initial state condition</label>
                 <div class="col-md-10">
-                    <input class="form-control" id="initial" type="text" ng-model="initialCondition"/>
-                    <span id="stateRelationHelpBlock" class="help-block">
+                    <input class="form-control" id="initial" type="text" ng-model="initialCondition" aria-describedby="initialCondHelpBlock"/>
+                    <span id="initialCondHelpBlock" class="help-block">
                         A formula that describes the starting states of the simulation (e.g., initial condition x<=2).
                     </span>
                 </div>
@@ -24,14 +24,7 @@
             <div class="form-group">
                 <label for="stateRelation" class="col-md-2 control-label">State relation</label>
                 <div class="col-md-10">
-                    <div class="input-group" aria-describedby="stateRelationHelpBlock">
-                        <input class="form-control" id="stateRelation" type="text" ng-model="stateRelation"/>
-                        <!-- ModelPlex it -->
-                        <span class="input-group-btn">
-                            <!--<button class="btn btn-default" type="button"><i class="fa fa-question-circle"></i></button>-->
-                            <button class="btn btn-default" type="button" disabled>ModelPlex it</button>
-                        </span>
-                    </div>
+                    <input class="form-control" id="stateRelation" type="text" ng-model="stateRelation" aria-describedby="stateRelationHelpBlock"/>
                     <span id="stateRelationHelpBlock" class="help-block">
                         A formula that describes the relation between the state prior and posterior to running the
                         program (e.g., the state relation x=xpre+1 describes the deterministic program x:=x+1).
@@ -41,13 +34,17 @@
             </div>
             <div class="form-group">
                 <label for="numSteps" class="col-md-2 control-label">Number of steps</label>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <input class="form-control" id="numSteps" type="number" ng-model="numSteps"/>
                 </div>
                 <!-- todo: how many alternative starting states in simulation? -->
                 <label for="numStarts" class="col-md-2 control-label">Starting states</label>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <input class="form-control" id="numStarts" type="number" placeholder="1" readonly/>
+                </div>
+                <label for="time" class="col-md-2 control-label">Step duration</label>
+                <div class="col-md-2">
+                    <input class="form-control" id="time" type="text" placeholder="1/10" ng-model="stepDuration"/>
                 </div>
             </div>
             <div class="form-group">
@@ -58,6 +55,14 @@
 
         </form>
     </div>
+
+    <div class="alert alert-warning" role="alert" id="endOfWorld" ng-if="ticks.length>0 && ticks.length <= numSteps">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Your program does not support evolution for
+        {{numSteps}} steps with current step duration {{stepDuration}}. Points to a possible condition where the model
+        ends up in a state without further possible evolution.
+    </div>
+
     <uib-accordion close-others="false">
         <uib-accordion-group heading="Line plot"
                              is-open="true" is-disabled="false">

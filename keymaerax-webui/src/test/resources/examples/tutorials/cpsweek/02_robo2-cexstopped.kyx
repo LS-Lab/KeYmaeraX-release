@@ -13,12 +13,13 @@ ProgramVariables.
 End.
 
 Problem.
-  A>=0 & b>0 & v^2<=2*b*(m-x) & ep>0 -> [
+  A>=0 & b>0 & ep>0 & v>=0 & x<=m -> [
     {
       {  a := -b;
-      ++ ?2*b*(m-x) >= v^2+(A+b)*(A*ep^2+2*ep*v); a:=A;
+      ++ ?x+ep*v<=m; a:=A;
+      ++ ?v=0; a:=0;
       }
       t:=0; {x'=v,v'=a,t'=1 & v>=0 & t<=ep}
-    }*@invariant(v^2 <= 2*b*(m-x))
+    }*@invariant(x<=m)
   ]x<=m
 End.

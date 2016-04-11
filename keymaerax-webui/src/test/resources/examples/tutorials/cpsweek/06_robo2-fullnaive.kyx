@@ -1,0 +1,23 @@
+Functions.
+  R A.
+  R b.
+  R m.
+  R ep.
+  B SB(R,R).
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+  R t.
+End.
+
+Problem.
+  A>=0 & b>0 & ep>0 & x<=m -> [
+    {
+         a := -b;{x'=v,v'=a,t'=1 & v>=0 & t<=ep}
+      ++ ?!SB(x,v); a:=A;{x'=v,v'=a,t'=1 & v>=0 & t<=ep}
+    }*@invariant(x<=m)
+  ]x<=m
+End.
