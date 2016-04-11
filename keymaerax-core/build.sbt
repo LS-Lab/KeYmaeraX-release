@@ -3,7 +3,7 @@ import java.util.Properties
 
 name := "KeYmaeraX-Core"
 
-version := "4.1b3"
+version := "4.2b1"
 
 assemblyJarName in assembly := "keymaerax-core-" + version.value + ".jar" 
 

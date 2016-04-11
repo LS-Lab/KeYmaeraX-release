@@ -1,6 +1,6 @@
 name := "KeYmaeraX-Web"
 
-version := "4.1b3"
+version := "4.2b1"
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 
