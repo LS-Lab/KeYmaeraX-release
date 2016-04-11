@@ -23,17 +23,17 @@ a {
 }
 
 body {
-  font-size: 18px;
+  font-size: 20px;
   color: black;
   background-color: white;
 }
 
 .dropdown-menu {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 pre {
-  font-size: 20px;
+  font-size: 22px;
 }
 
 /*
@@ -103,7 +103,7 @@ table .btn{
 
 .popover {
   max-width: none;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .tooltip-inner {
@@ -354,7 +354,7 @@ table .btn{
   overflow-x: hidden;
   text-overflow: clip;
   text-align: right;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .k4-proofrow .k4-prooficon {
@@ -530,7 +530,7 @@ table .btn{
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
   display: table-cell;
-  font-size: 24px;
+  font-size: 26px;
 }
 .k4-formula .k4-formula-content-abbreviate {
   padding: 4px 4px 4px 4px;
