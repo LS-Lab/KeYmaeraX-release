@@ -105,6 +105,35 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  it should "be provable with abs when tactic is loaded from a file" in withMathematica { implicit qeTool =>
+    val tacticSource = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyAbsTacticGenerator.scala").mkString
+
+    val cm = universe.runtimeMirror(getClass.getClassLoader)
+    val tb = cm.mkToolBox()
+    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => BelleExpr]
+    val tactic = tacticGenerator()
+
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "be provable with KeYmaeraX command line interface" in {
+    // command line main has to initialize the prover itself, so dispose all test setup first
+    afterEach()
+
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
+    val tacticFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyAbsTacticGenerator.scala"
+    val outputFileName = File.createTempFile("passivesafetyabs", ".proof").getAbsolutePath
+
+    KeYmaeraX.main(Array("-prove", inputFileName, "-tactic", tacticFileName, "-verify", "-out", outputFileName))
+
+    val expectedProof = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.proof").mkString
+    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
+
+    actualFileContent should include (expectedProof)
+  }
+
   it should "prove just the acceleration x arithmetic" in withMathematica { implicit qeTool =>
     val accArith = "A>=0 & B>0 & V>=0 & ep>0 & abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=xo-xo_0 & xo-xo_0<=t*V & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
 
