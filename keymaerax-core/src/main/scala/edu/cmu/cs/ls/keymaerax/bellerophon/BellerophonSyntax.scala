@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
+import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 
 object BelleExpr {
   private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
@@ -20,7 +21,7 @@ object BelleExpr {
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
  */
-abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
+abstract class BelleExpr(private var location: Location = UnknownLocation) {
   private[keymaerax] val DEBUG = BelleExpr.DEBUG
   // tactic combinators
 
@@ -47,6 +48,10 @@ abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.current
   override def toString: String = prettyString
   /** pretty-printed form of this Bellerophon tactic expression */
   def prettyString: String
+
+  /** @note location is private so that it's not something that effects case class quality, and mutable so that it can be ignored when building up custom tactics. */
+  def setLocation(newLocation: Location) = location = newLocation
+  def getLocation = location
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
@@ -459,18 +464,18 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
   }
 }
 
-case class SeqTactic(left: BelleExpr, right: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
-case class EitherTactic(left: BelleExpr, right: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
-case class SaturateTactic(child: BelleExpr, annotation: BelleType, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
-case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
-case class BranchTactic(children: Seq[BelleExpr], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
-case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
+case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
+case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
+case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
+case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
+case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
+case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
 /**
   * OnAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
   * @todo eisegesis
   */
-case class OnAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
+case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
 /**
   * ChooseSome(options, e)(BelleProvable(p)) proves `e(o)(p)` afte choosing some option `o` from `options` whose proof with `e` succeeds after supplying argument `o` to `e`.
@@ -481,7 +486,7 @@ case class OnAll(e: BelleExpr, override val location: Array[StackTraceElement] =
   * @author Andre Platzer
   * @see [[EitherTactic]]
   */
-case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
+case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
 
 
 /**
@@ -492,7 +497,7 @@ case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr, override
   * @todo generalize inner to also AtPosition[E]
   * @todo generalize to also allow value: Provable => Expression for `let j(x,y) = TBD in t` and have TBD computed from the Provable resulting after t.
   */
-case class Let(abbr: Expression, value: Expression, inner: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr {
+case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends BelleExpr {
   require(abbr.kind == value.kind, "Abbreviation and value must be of same kind, but got abbr.kind=" + abbr.kind + " and value.kind=" + value.kind)
   override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
 }

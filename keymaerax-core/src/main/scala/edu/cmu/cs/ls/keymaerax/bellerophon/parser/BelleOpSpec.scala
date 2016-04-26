@@ -18,10 +18,10 @@ sealed trait BelleOpSpec {
 }
 case class BelleUnaryOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean) extends BelleOpSpec
 case class BelleBinaryOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean) extends BelleOpSpec
-case class BelleBranchingOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Seq[BelleExpr], Array[StackTraceElement]) => BelleExpr) extends BelleOpSpec
-case class BelleSaturatingOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, BelleType, Array[StackTraceElement]) => BelleExpr) extends BelleOpSpec
-case class BelleRepeatOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, Int, BelleType, Array[StackTraceElement]) => BelleExpr) extends BelleOpSpec
-case class BelleUSubstOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Seq[(BelleType, RenUSubst => BelleExpr)], Array[StackTraceElement]) => BelleExpr) extends BelleOpSpec
+case class BelleBranchingOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Seq[BelleExpr]) => BelleExpr) extends BelleOpSpec
+case class BelleSaturatingOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, BelleType) => BelleExpr) extends BelleOpSpec
+case class BelleRepeatOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, Int, BelleType) => BelleExpr) extends BelleOpSpec
+case class BelleUSubstOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Seq[(BelleType, RenUSubst => BelleExpr)]) => BelleExpr) extends BelleOpSpec
 
 case class BelleUnitOpSpec[T,S](terminal: BelleTerminal, precedence:Int, leftAssoc: Boolean, constructor: T => S) extends BelleOpSpec
 

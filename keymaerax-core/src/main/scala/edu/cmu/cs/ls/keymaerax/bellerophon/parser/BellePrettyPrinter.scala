@@ -26,11 +26,11 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     catch {
       case exn:Throwable =>
         e match {
-          case SeqTactic(l,r,_)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
-          case EitherTactic(l,r,_) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
-          case BranchTactic(ts, _) => op(e).terminal.img +
+          case SeqTactic(l,r)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
+          case EitherTactic(l,r) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
+          case BranchTactic(ts) => op(e).terminal.img +
             "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
-          case SaturateTactic(t, a, _) => "(" + pp(t, indent) + ")" + op(e).terminal.img
+          case SaturateTactic(t, a) => "(" + pp(t, indent) + ")" + op(e).terminal.img
           case b : BuiltInTactic => b.name
           case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
           case e: RepeatTactic => "(" + pp(e.child, indent) + ")^" + e.times
