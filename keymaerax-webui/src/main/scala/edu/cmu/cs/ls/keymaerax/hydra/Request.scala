@@ -15,7 +15,6 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -36,6 +35,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import java.io.{File, FileInputStream, FileOutputStream}
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 /**
@@ -757,32 +757,31 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       }
 
     try {
-      BTacticParser(fullExpr(node), loggingOn=false, Some(generator)) match {
-        case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
-        case Some(expr) =>
-          val appliedExpr:BelleExpr =
-            (pos, pos2, expr) match {
-              case (None, None, _:AtPosition[BelleExpr]) =>
-                throw new ProverException("Can't run a positional tactic without specifying a position")
-              case (None, None, _) => expr
-              case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-              case (Some(position), None, expr: BelleExpr) => expr
-              case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
-              case (Some(_), Some(_), expr: BelleExpr) => expr
-              case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
-            }
-          val branch = tree.goalIndex(nodeId)
-          val ruleName =
-            if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
-            else "custom"
-          val localProvable = Provable.startProof(node.sequent)
-          val globalProvable = trace.lastProvable
-          assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
-          val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
-          val executor = BellerophonTacticExecutor.defaultExecutor
-          val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
-          new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+      val expr = BelleParser.parseWithInvGen(fullExpr(node), Some(generator))
+
+      val appliedExpr:BelleExpr = (pos, pos2, expr) match {
+        case (None, None, _:AtPosition[BelleExpr]) =>
+          throw new ProverException("Can't run a positional tactic without specifying a position")
+        case (None, None, _) => expr
+        case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
+        case (Some(position), None, expr: BelleExpr) => expr
+        case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
+        case (Some(_), Some(_), expr: BelleExpr) => expr
+        case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
       }
+
+      val branch = tree.goalIndex(nodeId)
+      val ruleName =
+        if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
+        else "custom"
+      val localProvable = Provable.startProof(node.sequent)
+      val globalProvable = trace.lastProvable
+      assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
+      val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+      val executor = BellerophonTacticExecutor.defaultExecutor
+      val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
+      new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+
     } catch {
       case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
     }
