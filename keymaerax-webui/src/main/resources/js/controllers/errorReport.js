@@ -19,7 +19,8 @@ function showCaughtTacticErrorMessage(modal, data, message) {
     size: 'lg',
     resolve: {
       action: function () { return message; },
-      error: function () { return data; }
+      error: function () { return data; },
+      tacticMsg: function() { return data.tacticMsg; }, //don't think this is necessary, kind of grasping at straws here.
     }
   });
 }
@@ -112,7 +113,7 @@ angular.module('keymaerax.controllers').controller('TacticErrorAlertCtrl', funct
   $scope.url = url;
   $scope.errorTrace = error.errorThrown;
   $scope.stacktraceCollapsed = true;
-  $scope.tacticMsg = tacticMsg
+  $scope.tacticMsg = tacticMsg;
   $scope.report = function() {
     $uibModalInstance.dismiss('cancel');
     var modalInstance = $uibModal.open({

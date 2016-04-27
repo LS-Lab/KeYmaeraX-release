@@ -212,11 +212,16 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doCustomTactic', tacticText)
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
-            console.error("Error while executing customn tactic: " + err.data.textStatus);
-          spinnerService.hide('tacticExecutionSpinner');
-            //For custom tactics, directly show the tactic message...
-          // $rootScope.$emit('proof.message', err.data.textStatus);
-            showCaughtErrorMessage($uibModal, err.data, "Tactic execution failed");
+            if(err.data.errorThrown) {
+                console.error("Error while executing custom tactic: " + err.data.textStatus);
+                spinnerService.hide('tacticExecutionSpinner');
+                //For custom tactics, directly show the tactic message instead of showing the little yellow thing.
+                // $rootScope.$emit('proof.message', err.data.textStatus);
+                showCaughtTacticErrorMessage($uibModal, err.data, err.data.textStatus)
+            }
+            else {
+                console.error("Expected errorThrown field on error object but found something else: " + JSON.stringify(err))
+            }
         });
     }
 
