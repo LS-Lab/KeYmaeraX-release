@@ -11,6 +11,19 @@ function showCaughtErrorMessage(modal, data, message) {
   });
 }
 
+function showCaughtTacticErrorMessage(modal, data, message) {
+  console.error("Tactic error was caught: " + message);
+  modal.open({
+    templateUrl: 'templates/tacticError.html',
+    controller: 'TacticErrorAlertCtrl',
+    size: 'lg',
+    resolve: {
+      action: function () { return message; },
+      error: function () { return data; }
+    }
+  });
+}
+
 function showClientErrorMessage(modal, message) {
   console.error("Client-side error: " + message);
   modal.open({
@@ -91,6 +104,28 @@ angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($s
   }
   $scope.cancel = function() {
       $uibModalInstance.dismiss('cancel');
+  }
+});
+
+angular.module('keymaerax.controllers').controller('TacticErrorAlertCtrl', function($scope, $uibModalInstance, $uibModal, url, message, tacticMsg, error) {
+  $scope.errorText = message !== undefined && message !== '' ? message : 'Sorry, no message available. Please look at the stack trace.';
+  $scope.url = url;
+  $scope.errorTrace = error.errorThrown;
+  $scope.stacktraceCollapsed = true;
+  $scope.tacticMsg = tacticMsg
+  $scope.report = function() {
+    $uibModalInstance.dismiss('cancel');
+    var modalInstance = $uibModal.open({
+      templateUrl: 'partials/error_report.html',
+      controller: 'ErrorReportCtrl',
+      size: 'md',
+      resolve: {
+        error: function () { return error; }
+      }
+    });
+  }
+  $scope.cancel = function() {
+    $uibModalInstance.dismiss('cancel');
   }
 });
 

@@ -6,6 +6,7 @@
     <div class="well well-sm">
         <p>{{errorText}}</p>
     </div>
+    <pre style="overflow: scroll; height: 200px;" ng-if="modelWithError">{{modelWithError}}</pre>
     <div>
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>

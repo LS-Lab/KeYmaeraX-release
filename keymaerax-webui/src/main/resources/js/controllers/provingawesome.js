@@ -212,8 +212,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doCustomTactic', tacticText)
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
+            console.error("Error while executing customn tactic: " + err.data.textStatus);
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit('proof.message', err.data.textStatus);
+            //For custom tactics, directly show the tactic message...
+          // $rootScope.$emit('proof.message', err.data.textStatus);
+            showCaughtErrorMessage($uibModal, err.data, "Tactic execution failed");
         });
     }
 
