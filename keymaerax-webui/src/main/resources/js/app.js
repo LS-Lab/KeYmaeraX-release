@@ -41,6 +41,7 @@ keymaeraProofApp.run(function($templateCache, $http) {
   $http.get('templates/axiomPopoverTemplate.html', { cache: $templateCache });
   $http.get('templates/sequentRuleTemplate.html', { cache: $templateCache });
   $http.get('templates/formulaDndTooltipTemplate.html', { cache: $templateCache });
+  $http.get('templates/tacticError.html', { cache: $templateCache });
 });
 
 keymaeraProofApp.config(['$routeProvider',
