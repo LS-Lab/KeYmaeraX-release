@@ -184,6 +184,12 @@ class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg
   ))
 }
 
+class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null) extends ErrorResponse(msg, exn) {
+  override def getJson = JsObject(super.getJson.fields ++ Map(
+    "tacticMsg" -> JsString(tacticMsg)
+  ))
+}
+
 class GenericOKResponse() extends Response {
   def getJson = JsObject(
     "success" -> JsTrue

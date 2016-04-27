@@ -4,7 +4,8 @@
 */
 /**
  * HyDRA API Requests
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  * @author Ran Ji
  */
 package edu.cmu.cs.ls.keymaerax.hydra
@@ -35,7 +36,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import java.io.{File, FileInputStream, FileOutputStream}
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 /**
@@ -94,7 +95,8 @@ class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : Str
 
 /**
  * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
- * @param db
+  *
+  * @param db
  * @param userId
  */
 class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
@@ -505,7 +507,8 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
 
 /**
  * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
- * @param db Access to the database.
+  *
+  * @param db Access to the database.
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
  */
@@ -541,6 +544,7 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
 
 /**
   * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
+  *
   * @param db Access to the database.
   * @param userId Identifies the user.
   * @param proofId Identifies the proof.
@@ -740,6 +744,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
   }
 
+  private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
+
   def getResultingResponses(): List[Response] = {
     val closed = db.getProofInfo(proofId).closed
     if (closed) {
@@ -761,7 +767,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
       val appliedExpr:BelleExpr = (pos, pos2, expr) match {
         case (None, None, _:AtPosition[BelleExpr]) =>
-          throw new ProverException("Can't run a positional tactic without specifying a position")
+          throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
         case (None, None, _) => expr
         case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
         case (Some(position), None, expr: BelleExpr) => expr
@@ -784,6 +790,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
     } catch {
       case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
+      case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
     }
   }
 }
@@ -859,6 +866,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     * maintaining at each step which goals were or were not produced by a pruned step. The branch number of an kept
     * step is the number of kept goals that proceeds its old branch number, with a potential bonus of +1 if the pruned
     * branch was closed in one of the pruned steps.
+    *
     * @param trace The steps to replay (both pruned and kept steps)
     * @param pruned ID's of the pruned steps in trace
     * @return The kept steps of trace with updated branch numbers
@@ -1001,7 +1009,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
 
 /**
  * like GetProofTreeRequest, but fetches 0 instead of 1000 subnodes.
- * @param db
+  *
+  * @param db
  * @param proofId
  * @param nodeId
  */
