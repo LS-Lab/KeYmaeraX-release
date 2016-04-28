@@ -215,9 +215,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             if(err.data.errorThrown) {
                 console.error("Error while executing custom tactic: " + err.data.textStatus);
                 spinnerService.hide('tacticExecutionSpinner');
-                //For custom tactics, directly show the tactic message instead of showing the little yellow thing.
-                // $rootScope.$emit('proof.message', err.data.textStatus);
-                showCaughtTacticErrorMessage($uibModal, err.data, err.data.textStatus)
+                //For custom tactics, show the tactic message and also the little yellow status bar.
+                $rootScope.$emit('proof.message', err.data.textStatus);
+                showCaughtTacticErrorMessage($uibModal, err.data.errorThrown, err.data.textStatus, err.data.tacticMsg)
             }
             else {
                 console.error("Expected errorThrown field on error object but found something else: " + JSON.stringify(err))

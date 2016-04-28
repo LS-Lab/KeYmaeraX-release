@@ -12,10 +12,12 @@
             <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace
         </a>
         <div uib-collapse="stacktraceCollapsed">
-            <div class="well well-lg">{{errorThrown}}</div>
+            <div class="well well-lg">{{errorTrace}}</div>
         </div>
     </div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-click="dismiss()">OK</button>
+    <!-- Note: We can probably remove the report error message at some point. Also, it would be good to incorporate a "check but don't run" button into the tactic editor. -->
+    <button class="btn btn-primary" ng-click="report()">Report Error</button>
+    <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>
