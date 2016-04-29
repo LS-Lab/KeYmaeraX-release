@@ -213,7 +213,7 @@ object KeYmaeraX {
     option match {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.key\n\n" + usage); exit(1)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.key\n\n" + usage); exit(1)
-      case "codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
+      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
       case "-format" => println(noValueMessage + "Please use: -format C | Spiral\n\n" + usage); exit(1)
