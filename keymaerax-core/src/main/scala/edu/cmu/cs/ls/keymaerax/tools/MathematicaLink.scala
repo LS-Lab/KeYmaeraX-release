@@ -123,9 +123,13 @@ class JLinkMathematicaLink extends MathematicaLink {
     if (ml == null) println("No need to shut down MathKernel if no link has been initialized")
     //if (ml == null) throw new IllegalStateException("Cannot shut down if no MathKernel has been initialized")
     else {
-      ml.terminateKernel()
-      ml.close()
+      println("Shutting down Mathematica...")
+      val l: KernelLink = ml
       ml = null
+      l.terminateKernel()
+      l.close()
+      mathematicaExecutor.shutdown()
+      println("...Done")
     }
   }
 
@@ -357,6 +361,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
 
     val result = run(simulate, executor, convert)
+    executor.shutdown()
     result._2
   }
 
