@@ -8,8 +8,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
   * Created by nfulton on 12/23/15.
+  * @note all these are broken because the Bellerophon data structures carry around stacks... Need to fix those equality tests.
   */
 class BTacticParserTests extends FlatSpec with Matchers {
+
   "The Bellerophon Tactics Parser" should "parse nil & nil" in {
     val result = BTacticParser("nil & nil").get.asInstanceOf[SeqTactic]
     val expected = SeqTactic(Idioms.nil, Idioms.nil)
@@ -24,6 +26,10 @@ class BTacticParserTests extends FlatSpec with Matchers {
     result.right.asInstanceOf[BranchTactic].children
       .zip(expected.right.asInstanceOf[BranchTactic].children)
       .map(x => x._1 shouldBe x._2)
+  }
+
+  it should "parse expression arguments with {} in them" in {
+    BTacticParser("loop({`[{x' = v, v' = -b}]x <= m`}, 1)") shouldBe defined
   }
 
   it should "parse partials and built-ins" in {

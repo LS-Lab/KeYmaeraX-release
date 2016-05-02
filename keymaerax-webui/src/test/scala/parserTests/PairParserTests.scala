@@ -24,7 +24,7 @@ class PairParserTests extends FlatSpec with Matchers {
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
   KeYmaera.init(Map.empty)
-  val uipp = new UIKeYmaeraXPrettyPrinter("-7")
+  val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7"))
 
   def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser(input)
@@ -50,7 +50,7 @@ class PairParserTests extends FlatSpec with Matchers {
         p1 shouldBe p2
         parser(pp(p1)) shouldBe parser(pp(p2))
         pp(p1) shouldBe pp(p2)
-        println(uipp(p1))
+        if (uipp.isDefined) println(uipp.get(p1))
       }
     }
   }
@@ -524,6 +524,14 @@ class PairParserTests extends FlatSpec with Matchers {
     ("2 + 3*x >= 2   ->   [{x:=x+1; x:=2*x;   ++  x:=0;}*] 3*x >= 0", "((2+(3*x))>=2)->([{{x:=(x+1);x:=(2*x);}++{x:=0;}}*]((3*x)>=0))"),
 
     ("true", "true"),
-    ("false", "false")
+    ("false", "false"),
+
+    ("a+2*b", "a+(2*b)"),
+    ("a+2b+1", unparseable),
+    ("a+f(b+1)", "a+(f((b+1)))"),
+    ("a+2(b+1)", unparseable),
+    ("a+2b+1", unparseable),
+
+    ("00", "0")
   )
 }

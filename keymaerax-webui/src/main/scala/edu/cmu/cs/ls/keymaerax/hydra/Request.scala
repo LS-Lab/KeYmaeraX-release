@@ -4,7 +4,8 @@
 */
 /**
  * HyDRA API Requests
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  * @author Ran Ji
  */
 package edu.cmu.cs.ls.keymaerax.hydra
@@ -15,7 +16,6 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -36,6 +36,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import java.io.{File, FileInputStream, FileOutputStream}
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 /**
@@ -94,7 +95,8 @@ class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : Str
 
 /**
  * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
- * @param db
+  *
+  * @param db
  * @param userId
  */
 class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
@@ -505,7 +507,8 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
 
 /**
  * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
- * @param db Access to the database.
+  *
+  * @param db Access to the database.
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
  */
@@ -541,6 +544,7 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
 
 /**
   * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
+  *
   * @param db Access to the database.
   * @param userId Identifies the user.
   * @param proofId Identifies the proof.
@@ -740,6 +744,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
   }
 
+  private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
+
   def getResultingResponses(): List[Response] = {
     val closed = db.getProofInfo(proofId).closed
     if (closed) {
@@ -757,34 +763,34 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       }
 
     try {
-      BTacticParser(fullExpr(node), loggingOn=false, Some(generator)) match {
-        case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
-        case Some(expr) =>
-          val appliedExpr:BelleExpr =
-            (pos, pos2, expr) match {
-              case (None, None, _:AtPosition[BelleExpr]) =>
-                throw new ProverException("Can't run a positional tactic without specifying a position")
-              case (None, None, _) => expr
-              case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-              case (Some(position), None, expr: BelleExpr) => expr
-              case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
-              case (Some(_), Some(_), expr: BelleExpr) => expr
-              case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
-            }
-          val branch = tree.goalIndex(nodeId)
-          val ruleName =
-            if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
-            else "custom"
-          val localProvable = Provable.startProof(node.sequent)
-          val globalProvable = trace.lastProvable
-          assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
-          val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
-          val executor = BellerophonTacticExecutor.defaultExecutor
-          val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
-          new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+      val expr = BelleParser.parseWithInvGen(fullExpr(node), Some(generator))
+
+      val appliedExpr:BelleExpr = (pos, pos2, expr) match {
+        case (None, None, _:AtPosition[BelleExpr]) =>
+          throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
+        case (None, None, _) => expr
+        case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
+        case (Some(position), None, expr: BelleExpr) => expr
+        case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
+        case (Some(_), Some(_), expr: BelleExpr) => expr
+        case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
       }
+
+      val branch = tree.goalIndex(nodeId)
+      val ruleName =
+        if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
+        else "custom"
+      val localProvable = Provable.startProof(node.sequent)
+      val globalProvable = trace.lastProvable
+      assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
+      val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+      val executor = BellerophonTacticExecutor.defaultExecutor
+      val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
+      new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+
     } catch {
       case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
+      case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
     }
   }
 }
@@ -860,6 +866,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     * maintaining at each step which goals were or were not produced by a pruned step. The branch number of an kept
     * step is the number of kept goals that proceeds its old branch number, with a potential bonus of +1 if the pruned
     * branch was closed in one of the pruned steps.
+    *
     * @param trace The steps to replay (both pruned and kept steps)
     * @param pruned ID's of the pruned steps in trace
     * @return The kept steps of trace with updated branch numbers
@@ -1002,7 +1009,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
 
 /**
  * like GetProofTreeRequest, but fetches 0 instead of 1000 subnodes.
- * @param db
+  *
+  * @param db
  * @param proofId
  * @param nodeId
  */

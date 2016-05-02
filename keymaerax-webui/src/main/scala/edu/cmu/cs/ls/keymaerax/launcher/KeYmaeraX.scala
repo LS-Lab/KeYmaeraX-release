@@ -75,6 +75,12 @@ object KeYmaeraX {
       |Use option -license to show the license conditions.
       |""".stripMargin
 
+  private def launched() {
+    LAUNCH = true;
+    println("Launch flag was set.");
+  }
+  var LAUNCH : Boolean = false;
+
   def main (args: Array[String]): Unit = {
     println("KeYmaera X Prover " + VERSION + "\n" +
       "Use option -help for usage and license information")
@@ -143,9 +149,11 @@ object KeYmaeraX {
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
           case "-security" :: tail => activateSecurity(); nextOption(map, tail)
+          case "-launch" :: tail => launched(); nextOption(map, tail)
           case option :: tail => optionErrorReporter(option)
         }
       }
+
 
       //@note 'commandLine is only passed in to preserve evidence of what generated the output.
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
@@ -536,7 +544,8 @@ object KeYmaeraX {
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
-    Main.main(args)
+    if(this.LAUNCH) Main.main("-launch" +: args)
+    else Main.main(args)
   }
 
   def launchUIWithTactic(kyxPath: String, tacticPath: String, uiArgs: Array[String]) : Unit = {

@@ -26,13 +26,18 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     catch {
       case exn:Throwable =>
         e match {
-          case SeqTactic(l,r,_)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
-          case EitherTactic(l,r,_) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
-          case BranchTactic(ts, _) => op(e).terminal.img + "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(newline(indent) + ",") + newline(indent) + ")"
-          case SaturateTactic(t, a, _) => "(" + pp(t, indent) + ")" + op(e).terminal.img
+          case SeqTactic(l,r)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
+          case EitherTactic(l,r) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
+          case BranchTactic(ts) => op(e).terminal.img +
+            "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
+          case SaturateTactic(t, a) => "(" + pp(t, indent) + ")" + op(e).terminal.img
           case b : BuiltInTactic => b.name
           case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
           case e: RepeatTactic => "(" + pp(e.child, indent) + ")^" + e.times
+          case adp: AppliedDependentPositionTactic => adp.pt match {
+            case e: DependentPositionInputTactic => e.name + "(" + argPrinter(Left(e.input)) + ", " + argPrinter(Right(adp.locator)) + ")"
+            case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
+          }
           case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
           case it : InputTactic[_] => {
             val theArg = it.input match {
@@ -57,7 +62,13 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   }
 
   private val TAB = "  "
-  private def newline(indent: Int) = Range(0, indent).foldLeft("")((s,n) => s + TAB)
+  private def newline(indent: Int) = {
+    var s : String = "\n"
+    for(i <- 1 until indent) {
+      s = s + TAB
+    }
+    s
+  }
 
   private def wrapLeft(parent: BelleExpr, current: BelleExpr, indent: Int) : String =
     if(op(parent) < op(current) || (op(parent) == op(current) && !op(current).leftAssoc))

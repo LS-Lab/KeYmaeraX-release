@@ -440,7 +440,7 @@ object DLBySubst {
    * @param invariant The invariant.
    * @return The tactic.
    */
-  def loop(invariant: Formula): DependentPositionTactic = "loop" by ((pos, sequent) => {
+  def loop(invariant: Formula): DependentPositionTactic = "loop" byWithInput (invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
     alphaRule*@TheType() & (new DependentPositionTactic("doLoop") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {

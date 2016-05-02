@@ -382,10 +382,12 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(MINUS,loc1) :+ Token(NUMBER(n),loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
         loc1.adjacentTo(loc) =>
         assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
-        reduce(st, 2, Number(BigDecimal("-" + n)), r)
+        if (la==LPAREN || la==LBRACE) error(st, List(FOLLOWSTERM))
+        else reduce(st, 2, Number(BigDecimal("-" + n)), r)
 
       case r :+ Token(NUMBER(value),_) =>
-        reduce(st, 1, Number(BigDecimal(value)), r)
+        if (la==LPAREN || la==LBRACE) error(st, List(FOLLOWSTERM))
+        else reduce(st, 1, Number(BigDecimal(value)), r)
 
 
         // PERIOD to DOT conversion for convenience
@@ -512,7 +514,8 @@ object KeYmaeraXParser extends Parser {
       // binary operators with precedence
       //@todo review
       //@todo should really tok!=COMMA and handle that one separately to enforce (x,y) notation but only allow p(x,y) without p((x,y)) sillyness
-      case r :+ Expr(t1) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) && tok!=TEST =>
+      case r :+ Expr(t1) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) &&
+        tok!=TEST =>
         // pass t1,t2 kinds so that op/2 can disambiguate based on kinds
         val optok = op(st, tok, List(t1.kind,t2.kind))
         if (optok==OpSpec.sNoneUnfinished && la!=EOF) shift(st)

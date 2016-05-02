@@ -52,7 +52,10 @@
         <tr ng-repeat="model in models | orderBy:'name'">
             <td>{{ model.id }}</td>
             <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
-            <td><a href="{{model.pubLink}}">{{model.title}}</a></td>
+            <td>
+              <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.title}}</a>
+              <span ng-if="!model.pubLink">{{model.title}}</span>
+            </td>
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td ng-model="model">
                 <div class="btn-group" uib-dropdown>

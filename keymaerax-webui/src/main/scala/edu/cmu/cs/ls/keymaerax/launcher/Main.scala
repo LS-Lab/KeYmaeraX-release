@@ -51,12 +51,13 @@ object Main {
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil) ++ args.toList)
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-launch"  :: "-ui" :: Nil) ++ args.toList)
     }
     else {
       exitIfDeprecated()
       clearCacheIfDeprecated()
-      startServer(args)
+      assert(args.head.equals("-launch"))
+      startServer(args.tail)
       //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
       //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
