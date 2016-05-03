@@ -6,7 +6,8 @@
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import java.io.File
@@ -19,8 +20,8 @@ class CoreTests extends FlatSpec with Matchers {
   val p = PredOf(Function("p", None, Unit, Bool), Nothing)
   val q = PredOf(Function("q", None, Unit, Bool), Nothing)
 
-  val sPos = SuccPosition(0)
-  val aPos = AntePosition(0)
+  val sPos = SeqPos(1).asInstanceOf[SuccPos]
+  val aPos = SeqPos(-1).asInstanceOf[AntePos]
 
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
@@ -70,20 +71,20 @@ class CoreTests extends FlatSpec with Matchers {
     Power(Variable("x", None, Real), Number(2)) should be (Power(Variable("x", None, Real), Number(2)))
   }
 
-  def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
-  def rootAnte(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(f), IndexedSeq()))
+  def rootSucc(f: Formula) = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
+  def rootAnte(f: Formula) = Provable.startProof(Sequent(Nil, IndexedSeq(f), IndexedSeq()))
 
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
     println("\tCheck " + rule) //@TODO turn into "should" output?
-    val pn = new RootNode(in)
-    val resList = pn.apply(rule).subgoals
-    println("\tResult\t" + resList.map(_.sequent))
+    val pn = Provable.startProof(in)
+    val resList = pn.apply(rule, 0).subgoals
+    println("\tResult\t" + resList)
     println("\tExpected\t" + out)
-    if (resList.map(_.sequent) != out) println("Unexpected")
+    if (resList != out) println("Unexpected")
     resList.length should be (out.length)
-    val res = resList.map(_.sequent)
+    val res = resList
     for((s,t) <- res zip out) {
       s.ante.length should be (t.ante.length)
       for((f,g) <- s.ante zip t.ante)
@@ -95,11 +96,7 @@ class CoreTests extends FlatSpec with Matchers {
     }
   }
 
-  def testRule(rule: Rule, in: Sequent) {
-    val pn = new RootNode(in)
-    val resList = pn.apply(rule).subgoals
-    resList.map(_.sequent)
-  }
+  def testRule(rule: Rule, in: Sequent) = Provable.startProof(in).apply(rule, 0).subgoals
 
   implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
 
@@ -121,51 +118,10 @@ class CoreTests extends FlatSpec with Matchers {
     testRule(EquivRight(sPos), seq(Nil, Equiv(p, q)), seq(p, q) ++ seq(q, p))
     testRule(EquivLeft(aPos), seq(Equiv(p, q), Nil), seq(And(p, q), Nil) ++ seq(And(Not(p), Not(q)), Nil))
   }
-  
-  it should "complain about being applied to the wrong sequent side" in {
-    //@todo adapt to SeqPos
-    val sPos = SuccPosition(0)
-    val aPos = AntePosition(0)
-    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q)), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q)))
-    an [ClassCastException] should be thrownBy testRule(NotRight(aPos), s)
-    an [ClassCastException] should be thrownBy testRule(NotLeft(sPos), s)
-    an [ClassCastException] should be thrownBy testRule(AndRight(aPos), s)
-    an [ClassCastException] should be thrownBy testRule(AndLeft(sPos), s)
-    an [ClassCastException] should be thrownBy testRule(OrRight(aPos), s)
-    an [ClassCastException] should be thrownBy testRule(OrLeft(sPos), s)
-    an [ClassCastException] should be thrownBy testRule(ImplyRight(aPos), s)
-    an [ClassCastException] should be thrownBy testRule(ImplyLeft(sPos), s)
-    an [ClassCastException] should be thrownBy testRule(EquivRight(aPos), s)
-    an [ClassCastException] should be thrownBy testRule(EquivLeft(sPos), s)
-    an [ClassCastException] should be thrownBy testRule(CloseTrue(aPos), s)
-    an [ClassCastException] should be thrownBy testRule(CloseFalse(sPos), s)
-  }
 
-  // TODO re-introduce assertion into Proof.scala
-  ignore should "complain about being applied to non-top-level positions" in {
-    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q)), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q)))
-    val aDeep = AntePosition(0, PosInExpr(List(0,1)))
-    aDeep.isIndexDefined(s) should be (true)
-    an [IllegalArgumentException] should be thrownBy testRule(NotLeft(aDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(AndLeft(aDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(OrLeft(aDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(aDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(aDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(CloseFalse(aDeep), s)
-
-    val sDeep = SuccPosition(0, PosInExpr(List(0,1)))
-    sDeep.isIndexDefined(s) should be (true)
-    an [IllegalArgumentException] should be thrownBy testRule(NotRight(sDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(AndRight(sDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(OrRight(sDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(ImplyRight(sDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(EquivRight(sDeep), s)
-    an [IllegalArgumentException] should be thrownBy testRule(CloseTrue(sDeep), s)
-  }
-  
   it should "complain about being applied to formulas of the wrong shape" in {
-    var sPos = SuccPosition(0)
-    var aPos = AntePosition(0)
+    var sPos = SeqPos(1).asInstanceOf[SuccPos]
+    var aPos = SeqPos(-1).asInstanceOf[AntePos]
     val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
 
     an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
@@ -181,8 +137,8 @@ class CoreTests extends FlatSpec with Matchers {
     an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
     an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
 
-    sPos = SuccPosition(1)
-    aPos = AntePosition(1)
+    sPos = SeqPos(2).asInstanceOf[SuccPos]
+    aPos = SeqPos(-2).asInstanceOf[AntePos]
     //an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
     an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
@@ -196,8 +152,8 @@ class CoreTests extends FlatSpec with Matchers {
     an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
     an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
 
-    sPos = SuccPosition(2)
-    aPos = AntePosition(2)
+    sPos = SeqPos(3).asInstanceOf[SuccPos]
+    aPos = SeqPos(-3).asInstanceOf[AntePos]
     an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
     an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
@@ -215,8 +171,8 @@ class CoreTests extends FlatSpec with Matchers {
   it should "complain about being applied to non-existent positions" in {
     val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
 
-    var sPos = SuccPosition(4)
-    var aPos = AntePosition(4)
+    val sPos = SeqPos(5).asInstanceOf[SuccPos]
+    val aPos = SeqPos(-5).asInstanceOf[AntePos]
     an [IndexOutOfBoundsException] should be thrownBy testRule(NotRight(sPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(NotLeft(aPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(OrRight(sPos), s)

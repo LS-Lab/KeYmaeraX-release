@@ -5,7 +5,6 @@
 
 import edu.cmu.cs.ls.keymaerax.core.True
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -18,19 +17,11 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   var polya: PolyaSolver = null
 
   override def beforeEach() = {
-    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-    Tactics.Z3Scheduler = Some(new Interpreter(new Z3))
-    Tactics.PolyaScheduler = Some(new Interpreter(new Polya))
     z3 = new Z3Solver
     polya = new PolyaSolver
   }
 
   override def afterEach() = {
-    Tactics.PolyaScheduler.get.shutdown()
-    Tactics.Z3Scheduler.get.shutdown()
-    Tactics.KeYmaeraScheduler.shutdown()
-    Tactics.Z3Scheduler = null
-    Tactics.KeYmaeraScheduler = null
     z3 = null
     polya = null
   }

@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.pt
 
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, Axiom}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import scala.collection.immutable
 
@@ -24,7 +24,7 @@ object ProofChecker {
   private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
 
   private def goalSequent(phi : Formula) = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(phi))
-  private def proofNode(phi : Formula) = new RootNode(goalSequent(phi))
+  private def proofNode(phi : Formula) = Provable.startProof(goalSequent(phi))
 
   /**
    * Converts proof term e for goal phi into a Provable iff e indeed justifies phi.
@@ -40,8 +40,7 @@ object ProofChecker {
 
       case FOLRConstant(f) => {
         val node = proofNode(phi)
-        ArithmeticTacticsImpl.quantifierEliminationT("Mathematica").apply(tool, node)
-        Some(node.provableWitness)
+        Some(proveBy(node, QE))
       }
 
       case AndTerm(e, d) => phi match {
@@ -110,12 +109,8 @@ object ProofChecker {
           //@todo is there a better way of combining scheduled tactics with direct manipulation proofs?
           //@todo and/or is there a better way of doing equivalence rewriting with direct manipulation proofs?
           val rewritingWitness = {
-            val node = new RootNode(readyForRewrite.subgoals.last)
-            val tactic =
-              EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPos(0)) ~
-              TacticLibrary.AxiomCloseT(AntePos(0), SuccPos(0))
-            tactic.apply(tool, node)
-            node.provableWitness
+            val node = readyForRewrite.subgoals.last
+            proveBy(node, eqL2R(-1)(1) & closeId)
           } ensuring(r => r.isProved)
 
           Some(readyForRewrite(rewritingWitness, 0))
@@ -148,12 +143,8 @@ object ProofChecker {
           //@todo is there a better way of combining scheduled tactics with direct manipulation proofs?
           //@todo and/or is there a better way of doing equivalence rewriting with direct manipulation proofs?
           val rewritingWitness = {
-            val node = new RootNode(readyForRewrite.subgoals.last)
-            val tactic =
-              EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPos(0)) ~
-              TacticLibrary.AxiomCloseT(AntePos(0), SuccPos(0))
-            tactic.apply(tool, node)
-            node.provableWitness
+            val node = readyForRewrite.subgoals.last
+            proveBy(node, eqL2R(-1)(1) & closeId)
           } ensuring(r => r.isProved)
 
           Some(readyForRewrite(rewritingWitness, 0))

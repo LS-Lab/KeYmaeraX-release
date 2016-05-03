@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.Provable
-import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
 
 /**
   * Interpreter for Bellerophon tactic expressions that transforms [[BelleValue Bellerophon values]] using

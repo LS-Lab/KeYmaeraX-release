@@ -24,11 +24,9 @@ import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import scala.collection.immutable.Nil
 
 //import Tables.TacticonproofRow
-import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import scala.slick.jdbc.StaticQuery.interpolation
 import scala.slick.driver.SQLiteDriver.simple._
 import scala.slick.lifted.{ProvenShape, ForeignKeyQuery}
-import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 /**
  * Created by nfulton on 4/10/15.

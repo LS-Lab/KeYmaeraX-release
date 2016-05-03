@@ -8,10 +8,10 @@ import java.util.{GregorianCalendar, Date}
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
 import scala.collection.immutable
 

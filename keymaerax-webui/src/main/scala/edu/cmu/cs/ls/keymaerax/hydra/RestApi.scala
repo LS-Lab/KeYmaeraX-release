@@ -235,14 +235,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}
 
-
-  val proofTasks = path("proofs" / "user" / Segment / Segment / "agenda") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new GetProofAgendaRequest(database, userId, proofId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
   val proofTasksNew = path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetAgendaAwesomeRequest(database, userId, proofId)
@@ -439,13 +431,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val proofTask = path("proofs" / "user" / Segment / Segment / "agendaDetails" / Segment.?) { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new GetProofNodeInfoRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
   val getAgendaItem = path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetAgendaItemRequest(database, userId, proofId, nodeId)
@@ -458,14 +443,6 @@ trait RestApi extends HttpService with SLF4JLogging {
         val request = new SetAgendaItemNameRequest(database, userId, proofId, nodeId, newName)
         complete(standardCompletion(request))
     }}}}}}
-
-
-  val proofLoadStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new GetProofLoadStatusRequest(database, userId, proofId)
-      complete(standardCompletion(request))
-    }
-  }}}
 
   val proofProgressStatus = path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
     get {
@@ -585,25 +562,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  /**
-   * exactly like getting a proof tree except we get only the node instead of everything under it as well.
-   */
-  val sequent = path("proofs" / Segment / "sequent" / Segment.?) { (proofId, sequentId) => {
-    get {
-      val request = new GetNodeRequest(database, proofId, sequentId)
-      complete(standardCompletion(request))
-    }
-  }}
-
-  // proofs/user/< userid >/< proofid >/tree/< proofnodeid >
-  val proofTree = path("proofs" / "user" / Segment / Segment / "tree" / Segment.?) { (userId, proofId, nodeId) => {
-    get {
-      val request = new GetProofTreeRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request))
-    }
-  }}
-
-
   val devAction = path("dev" / Segment) { (action) => {
     get {
       if(action.equals("deletedb")) {
@@ -666,7 +624,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     openProof             ::
     getAgendaItem         ::
     setAgendaItemName     ::
-    proofLoadStatus       ::
     changeProofName       ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
@@ -692,10 +649,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
-    proofTask             ::
-    proofTree             ::
     devAction             ::
-    sequent               ::
     dashInfo              ::
     kyxConfig             ::
     keymaeraXVersion      ::

@@ -3,9 +3,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io.{FileOutputStream, File}
 import java.nio.channels.Channels
 import java.nio.file.{Paths, Files}
-import java.util.zip.{ZipFile}
-
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+import java.util.zip.ZipFile
 
 /**
  * @todo enforce requirement that this code is only ever used from a .JAR.

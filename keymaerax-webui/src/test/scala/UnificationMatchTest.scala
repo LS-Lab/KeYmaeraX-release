@@ -7,9 +7,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 import scala.collection.immutable._
 import org.scalatest.{Matchers, FlatSpec}
@@ -92,7 +91,6 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   ignore/*"Old unification match"*/ should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (fails)" in {
     val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
-    import edu.cmu.cs.ls.keymaerax.tactics._
     //@todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
       SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::

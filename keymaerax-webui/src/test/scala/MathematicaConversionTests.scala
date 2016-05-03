@@ -4,19 +4,20 @@
 */
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
+
+import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
+
 import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   type MExpr = com.wolfram.jlink.Expr
-  val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
+  val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
   var ml : JLinkMathematicaLink = null //var so that we can instantiate within a test case.
 
   val x = Variable("x", None, Real)

@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.nio.channels.Channels
 
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Provable, Formula, Sequent}
-import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
 import java.io.FileOutputStream

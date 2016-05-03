@@ -1,11 +1,10 @@
 package pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.Axiom
+import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticTestSuite
 
 /**
  * Tests of the proof term checker from
@@ -15,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticTestSuite
  *
  * @author Nathan Fulton
  */
-class ProofTermCheckerTests extends TacticTestSuite {
+class ProofTermCheckerTests extends TacticTestBase {
   private def proves(cert : Provable, f : Formula) = {
     val s = cert.conclusion
     s.succ.length == 1 && s.ante.length == 0 && s.succ.last.equals(f) && cert.isProved
