@@ -88,7 +88,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       SubstitutionPair("a;".asProgram, "x:=x+5;".asProgram) :: Nil))
   }
 
-  ignore/*"Old unification match"*/ should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (fails)" in {
+  "Old unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (fails)" ignore {
     val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     //@todo not sure about the expected result
@@ -243,7 +243,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   //@todo really? needs cyclic decluttering to say the least
-  ignore should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=z;]y_0>0<->z>0" in {
+  it should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=z;]y_0>0<->z>0" ignore {
     shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=z;]y_0>0<->z>0".asFormula, RenUSubst(
       (Variable("x_"), Variable("y",Some(0))) :: Nil))
   }
@@ -339,7 +339,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0=1)<->[y_0:=y_0;](y_0=1)" in {
+  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0=1)<->[y_0:=y_0;](y_0=1)" ignore {
     shouldMatch("p(??)<->[y:=y;]p(??)".asFormula,
       "(y_0=1)<->[y_0:=y_0;](y_0=1)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -366,7 +366,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" in {
+  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
     shouldMatch("p(??)<->[y:=y;]p(??)".asFormula,
       "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -433,7 +433,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "say something about broken types" in {
+  it should "say something about broken types" ignore {
     //@todo in principle this should throw a CoreException about incompatible types, actually. Not parse print and incompatible substitution sorts. Both are true but not the first issue.
     a[ProverException] shouldBe thrownBy(
     RenUSubst(
@@ -444,7 +444,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
-  ignore/*"Reunifier ideally"*/ should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs(OptimisticTest) in {
+  "Reunifier ideally" should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs OptimisticTest ignore {
     shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, RenUSubst(
       ("f()".asTerm, "7+x".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
