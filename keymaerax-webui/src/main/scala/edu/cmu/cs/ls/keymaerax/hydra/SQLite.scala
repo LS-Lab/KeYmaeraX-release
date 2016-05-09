@@ -496,7 +496,7 @@ object SQLite {
         val executableId =
           (Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
             returning Executables.map(_._Id.get))
-          .insert((None, Some(expr.toString)))
+          .insert((None, Some(expr.prettyString)))
         nInserts = nInserts + 1
         executableId
       })
