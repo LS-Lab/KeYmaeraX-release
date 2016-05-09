@@ -1010,7 +1010,7 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   private val proofId = Integer.parseInt(proofIdStr)
 
   override def getResultingResponses(): List[Response] = {
-    val exprText = new ExtractTacticFromTrace(db).apply(proofId).prettyString
+    val exprText = new ExtractTacticFromTrace(db).extractTextWithoutParsing(proofId)
     new ExtractTacticResponse(exprText) :: Nil
   }
 }
