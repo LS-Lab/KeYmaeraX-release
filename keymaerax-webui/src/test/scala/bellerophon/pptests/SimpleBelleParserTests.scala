@@ -1,7 +1,7 @@
 package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.UnknownLocation
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -46,6 +46,11 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
     BelleParser("diffInvariant({`1=1`}, 1)") shouldBe TactixLibrary.diffInvariant(Seq("1=1".asFormula) : _*)(1)
+  }
+
+  it should "Parse a loop tactic and print it back out" in {
+    BelleParser("loop({`1=1`}, 1)") shouldBe TactixLibrary.loop("1=1".asFormula)(1)
+    BellePrettyPrinter(TactixLibrary.loop("1=1".asFormula)(1)) shouldBe "loop({`1=1`}, 1)"
   }
 
   //endregion
