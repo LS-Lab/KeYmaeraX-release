@@ -37,7 +37,7 @@ class LabTests extends TacticTestBase {
       var map = Map.empty[Expression, Formula]
       KeYmaeraXParser.setAnnotationListener({case (prog,fml) => map = map.+((prog,fml))})
       val fml = KeYmaeraXProblemParser(model)
-      proveBy(fml, TactixLibrary.master(new ConfigurableGenerate[Formula](map)))
+      proveBy(fml, TactixLibrary.master(new ConfigurableGenerate[Formula](map))) shouldBe 'proved
     }
 
   "Lab 1a" should "prove with master if file is present" in {
