@@ -16,7 +16,8 @@ object BelleExpr {
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
-  * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
+ *
+ * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
  * @author Nathan Fulton
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
@@ -127,6 +128,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
 
   /**
     * Returns the tactic that can be applied at the position identified by `locator`.
+    *
     * @param locator The locator: Fixed, Find, LastAnte, or LastSucc
     * @return The tactic of type `T` that can be readily applied at the position identified by `locator` to any given BelleExpr.
     * @see [[PositionLocator]]
@@ -144,6 +146,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   /*private[keymaerax]*/ final def apply(position: Position): T = apply(Fixed(position))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
+    *
     * @param position The position where this tactic will be applied at.
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
@@ -154,6 +157,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
+    *
     * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
@@ -164,6 +168,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   final def apply(seqIdx: Int, expected: Formula): T = apply(Fixed(Position(seqIdx), Some(expected)))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
+    *
     * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
@@ -176,7 +181,8 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
 
   /**
    * Applied at a fixed position in (signed) sequent position `seqIdx` at subexpression `inExpr`.
-   * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
+    *
+    * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
    * @param inExpr Where to apply inside the formula at index seqIdx interpreted as a [[PosInExpr]].
    * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
    * @note Convenience wrapper
@@ -187,6 +193,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
   /**
     * Returns the tactic at the position identified by `locator`.
+    *
     * @param locator The locator symbol at which to apply this AtPosition:
     *                'L (find left),
     *                'R (find right),
@@ -210,6 +217,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   }
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
+    *
     * @param locator The locator symbol at which to apply this AtPosition:
     *                'L (find left),
     *                'R (find right),
@@ -237,6 +245,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
 }
 
 /** PositionTactics are tactics that can be [[AtPosition applied at positions]] giving ordinary tactics.
+  *
   * @see [[AtPosition]] */
 trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] {
   /** @note this should be called from within interpreters, but not by end-users */
@@ -338,6 +347,7 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   /** Returns an explicit representation of the application of this tactic to the provided positions. */
   final def apply(posOne: Position, posTwo: Position): AppliedTwoPositionTactic = AppliedTwoPositionTactic(this, posOne, posTwo)
   /** Returns an explicit representation of the application of this tactic to the provided positions.
+    *
     * @note Convenience wrapper
     */
   final def apply(posOne: Int, posTwo: Int): AppliedTwoPositionTactic = apply(Position(posOne), Position(posTwo))
@@ -361,7 +371,8 @@ case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, po
  * Dependent tactics compute a tactic to apply based on their input.
  * These tactics are probably not necessary very often, but are useful for idiomatic shortcuts.
  * See e.g., AtSubgoal.
- * @note similar to the ConstructionTactics in the old framework, except they should not be necessary
+  *
+  * @note similar to the ConstructionTactics in the old framework, except they should not be necessary
  *       nearly as often because BuiltIns have direct access to a Provable.
  * @param name The name of the tactic.
  * @todo is there a short lambda abstraction notation as syntactic sugar?
@@ -388,9 +399,10 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
   }
 }
 /** DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
+  *
   * @see [[AtPosition]] */
 abstract case class DependentPositionTactic(name: String) extends BelleExpr with AtPosition[DependentTactic] {
-  final override def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
+  override def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
@@ -400,8 +412,12 @@ abstract case class InputTactic[T](name: SerializationName, input: T) extends Be
   override def prettyString: String = "input(" + input + ")"
 }
 
-abstract class DependentPositionInputTactic(private val n: String, val input: Expression) extends DependentPositionTactic(n)
-
+abstract class DependentPositionWithAppliedInputTactic(private val n: String, val input: Expression) extends DependentPositionTactic(n) {
+  override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
+}
+class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
+  override def prettyString: String = s"${pt.name}({`${pt.input.prettyString}`}, ${locator.prettyString})"
+}
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
   override def prettyString: String = pt.name + "(" + locator.prettyString + ")"
@@ -478,6 +494,7 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
 
 /**
   * OnAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
+  *
   * @todo eisegesis
   */
 case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
@@ -485,6 +502,7 @@ case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "
 /**
   * ChooseSome(options, e)(BelleProvable(p)) proves `e(o)(p)` afte choosing some option `o` from `options` whose proof with `e` succeeds after supplying argument `o` to `e`.
   * It's usually one of the first options `o` for which `e(o)(p)` does not fail.
+  *
   * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
   * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently
   *          for each of the options `o` in `options` until one is found for which `e(o)` does not fail.
@@ -498,6 +516,7 @@ case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends 
   * Let(abbr, value, inner) alias `let abbr=value in inner` abbreviates `value` by `abbr` in the
   * provable and proceeds with an internal proof by tactic `inner`, resuming to the outer proof by a
   * uniform substitution of `value` for `abbr` of the resulting provable.
+  *
   * @see [[Provable.apply(USubst)]]
   * @todo generalize inner to also AtPosition[E]
   * @todo generalize to also allow value: Provable => Expression for `let j(x,y) = TBD in t` and have TBD computed from the Provable resulting after t.
