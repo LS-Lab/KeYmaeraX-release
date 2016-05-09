@@ -1011,7 +1011,6 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
 
   override def getResultingResponses(): List[Response] = {
     val exprText = new ExtractTacticFromTrace(db).extractTextWithoutParsing(proofId)
-    println("EXTRACTED: " + exprText)
     new ExtractTacticResponse(exprText) :: Nil
   }
 }
