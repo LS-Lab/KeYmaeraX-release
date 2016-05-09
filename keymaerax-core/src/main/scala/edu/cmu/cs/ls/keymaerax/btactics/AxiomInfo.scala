@@ -562,6 +562,9 @@ object DerivationInfo {
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
+    new TacticInfo("monb", "Box Monotonicity", {case () => DLBySubst.monb}),
+    new TacticInfo("mond", "Diamond Monotonicity", {case () => DLBySubst.mond}),
+
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
     new PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
