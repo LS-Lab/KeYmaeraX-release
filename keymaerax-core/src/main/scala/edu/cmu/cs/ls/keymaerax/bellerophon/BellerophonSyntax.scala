@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
+import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
@@ -64,7 +64,12 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
   private[bellerophon] def result(provable : Provable): Provable
   override def prettyString = name
 }
-case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr { override def prettyString = name }
+case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr {
+  override def prettyString = name
+
+  //@todo make this an assert.
+  if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
+}
 
 /** ⎵: Placeholder for tactics. Reserved tactic expression */
 object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
