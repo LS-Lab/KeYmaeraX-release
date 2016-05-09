@@ -61,7 +61,7 @@ trait UnifyUSCalculus {
     * @see [[AxiomIndex]]
     */
   def stepAt(axiomIndex: Expression => Option[String]): DependentPositionTactic = new DependentPositionTactic("stepAt") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic("stepAt") {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
