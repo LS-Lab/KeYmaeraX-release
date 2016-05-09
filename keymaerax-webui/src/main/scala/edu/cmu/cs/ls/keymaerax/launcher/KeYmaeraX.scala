@@ -35,8 +35,8 @@ object KeYmaeraX {
       |
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
-      |  -modelplex filename [-vars var1,var2,..,varn] [-out filename] |
-      |  -codegen filename -format C|Spiral [-vars var1,var2,..,varn] [-out file] |
+      |  -modelplex filename [-out filename] |
+      |  -codegen filename -format C [-vars var1,var2,..,varn] [-out file] |
       |  -ui [filename] [web server options] |
       |  -parse [filename] |
       |  -bparse [filename]
@@ -508,36 +508,7 @@ object KeYmaeraX {
       pw.write("/* @evidence: print of CGenerator of input */\n\n")
       pw.write(output)
       pw.close()
-    } else if(options.get('format).get.toString == "Spiral") {
-      var outputFileName = inputFileName
-      if(options.contains('out)) {
-        val outputFileNameDotG = options.get('out).get.toString
-        assert(outputFileNameDotG.endsWith(".g"),
-          "\n[Error] Wrong file name " + outputFileNameDotG + " used for -out! Spiral generator only generates .g file and the .h file when necessary. Please use： -out FILENAME.g")
-        outputFileName = outputFileNameDotG.dropRight(2)
-      }
-      val dnfMode = options.contains('dnf)
-      var outputG = ""
-      if (options.contains('vars)) {
-        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName, dnfMode)
-        outputG = output._1
-        val outputH = output._2
-        val pwG = new PrintWriter(outputFileName + ".g")
-        pwG.write(stampHead(options))
-        pwG.write(outputG)
-        pwG.close()
-        val pwH = new PrintWriter(outputFileName + ".h")
-        pwH.write(stampHead(options))
-        pwH.write(outputH)
-        pwH.close()
-      } else {
-        outputG = SpiralGenerator(inputFormula, outputFileName)
-        val pwG = new PrintWriter(outputFileName + ".g")
-        pwG.write(stampHead(options))
-        pwG.write(outputG)
-        pwG.close()
-      }
-    } else throw new IllegalArgumentException("-format C or -format Spiral should be specified as a command line argument")
+    } else throw new IllegalArgumentException("-format C should be specified as a command line argument")
   }
 
 
