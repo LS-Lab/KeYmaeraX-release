@@ -114,7 +114,7 @@ object ProofRuleTactics {
     }
   }
 
-  def implyR = new BuiltInRightTactic("ImplyR") {
+  def implyR = new BuiltInRightTactic("implyR") {
     override def computeSuccResult(provable : Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       provable(core.ImplyRight(pos.top), 0)
