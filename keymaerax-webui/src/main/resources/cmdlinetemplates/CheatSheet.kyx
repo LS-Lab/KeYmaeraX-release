@@ -1,0 +1,29 @@
+Functions.          /* function symbols cannot change their value */
+  R A.              /* maximum acceleration constant */
+  R B.              /* maximum braking constant */
+
+  /* More examples, unused in the remainder of the file */
+  R c.          /* real-valued constant */
+  R f().        /* real-valued function */
+  B p().        /* boolean predicate */
+  R abs(R).     /* special interpreted function symbol abs R => R */
+  R min(R,R).   /* special interpreted function symbol min (R,R) => R */
+  R max(R,R).   /* special interpreted function symbol max (R,R) => R */
+End.
+
+ProgramVariables.   /* program variables may change their value over time */
+  R x.              /* real-valued position */
+  R v.              /* real-valued velocity */
+  R a.              /* current acceleration chosen by controller */
+End.
+
+Problem.                                  /* conjecture in differential dynamic logic */
+      v>=0 & A>0 & B>0                    /* initial condition */
+  ->                                      /* implies */
+  [                                       /* all runs of hybrid system dynamics */
+    {
+      {?v<=5;a:=A; ++ a:=0; ++ a:=-B;}    /* nondeterministic choice of acceleration */
+      {x'=v, v'=a & v>=0}                 /* differential equation system */
+    }* @invariant(v>=0)                   /* loop repeats, with invariant contract */
+  ] v>=0                                  /* safety/postcondition */
+End.

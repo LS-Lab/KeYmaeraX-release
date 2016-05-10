@@ -1,26 +1,25 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{FilePermission, File, PrintWriter}
+import java.io.{File, FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BTacticParser}
+import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica}
-import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
-
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CseCGenerator, SpiralGenerator}
 
 import scala.collection.immutable
 import scala.compat.Platform
-import scala.reflect.runtime._
-import scala.tools.reflect.{ToolBoxError, ToolBox}
 import scala.util.Random
 
 /**
  * Command-line interface for KeYmaera X.
- * @author Stefan Mitsch
+  *
+  * @author Stefan Mitsch
  * @author Andre Platzer
  * @author Ran Ji
  */
@@ -216,8 +215,8 @@ object KeYmaeraX {
   private def optionErrorReporter(option: String) = {
     val noValueMessage = "[Error] No value specified for " + option + " option. "
     option match {
-      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.key\n\n" + usage); exit(1)
-      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.key\n\n" + usage); exit(1)
+      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
+      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
@@ -308,7 +307,8 @@ object KeYmaeraX {
   /**
    * Prove given input file (with given tactic) to produce a lemma.
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
-   * @param options
+    *
+    * @param options
    * @todo tactic should default to master and builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
    */
   def prove(options: OptionMap) = {
@@ -320,17 +320,15 @@ object KeYmaeraX {
     //  "\n[Error] Wrong file name " + tacticFileNameDotScala + " used for -tactic! KeYmaera X only reads .scala tactic file. Please use: -tactic FILENAME.scala")
     val tacticSource = scala.io.Source.fromFile(tacticFileNameDotScala).mkString
 
-    val cm = universe.runtimeMirror(getClass.getClassLoader)
-    val tb = cm.mkToolBox()
-    val foo = tb.parse(tacticSource)
-    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => BelleExpr]
-
+    val tacticGenClasses = new ScalaTacticCompiler().compile(tacticSource)
+    assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
+    val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[(()=> BelleExpr)]
     val tactic = tacticGenerator()
 
     // KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))
     val inputFileNameDotKey = options.get('in).get.toString
-    assert(inputFileNameDotKey.endsWith(".key"),
-      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key file. Please use: -prove FILENAME.key")
+    assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
+      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key or .kyx files. Please use: -prove FILENAME.[key/kyx]")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
@@ -415,15 +413,16 @@ object KeYmaeraX {
   /**
    * ModelPlex monitor synthesis for the given input files
    * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
-   * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
+    *
+    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
   def modelplex(options: OptionMap) = {
     require(options.contains('in), usage)
 
     // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
     val inputFileNameDotKey = options.get('in).get.toString
-    assert(inputFileNameDotKey.endsWith(".key"),
-      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key file. Please use: -modelplex FILENAME.key")
+    assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
+      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key or .kyx files. Please use: -modelplex FILENAME.[key/kyx]")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
@@ -679,8 +678,6 @@ object KeYmaeraX {
   /** KeYmaera C: A simple interactive command-line prover */
   private def interactiveProver(root: Provable): Provable = {
     val commands = io.Source.stdin.getLines()
-    val cm = universe.runtimeMirror(getClass.getClassLoader)
-    val tb = cm.mkToolBox()
     println("KeYmaera X Interactive Command-line Prover\n" +
       "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n")
     println(interactiveUsage)
@@ -726,21 +723,16 @@ object KeYmaeraX {
               println("No other open goals to skip to")
             }
           case command: String =>
-            try {
-              //@note security issue since executing arbitrary input unsanitized
-              val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => BelleExpr]
-              val tactic = tacticGenerator()
-              tacticLog += "& " + command + "\n"
-              current = TactixLibrary.proveBy(node, tactic)
-              // walk to the next open subgoal
-              // continue walking if it has leaves
-              while (!current.isProved && current.subgoals.nonEmpty)
-                node = current.subgoals.head
-              //@todo make sure to walk to siblings ultimately
-            }
-            catch {
-              case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
-            }
+            //@note security issue since executing arbitrary input unsanitized
+            val tacticGenerator = new ScalaTacticCompiler().compile(tacticParsePrefix + command + tacticParseSuffix).head.newInstance().asInstanceOf[() => BelleExpr]
+            val tactic = tacticGenerator()
+            tacticLog += "& " + command + "\n"
+            current = TactixLibrary.proveBy(node, tactic)
+            // walk to the next open subgoal
+            // continue walking if it has leaves
+            while (!current.isProved && current.subgoals.nonEmpty)
+              node = current.subgoals.head
+            //@todo make sure to walk to siblings ultimately
         }
       }
       assert(current.isProved)
@@ -753,13 +745,13 @@ object KeYmaeraX {
   //@todo import namespace of the user tactic *object* passed in -tactic
   private val tacticParsePrefix =
     """
-      |import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-      |import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
+      |import edu.cmu.cs.ls.keymaerax.bellerophon._
+      |import edu.cmu.cs.ls.keymaerax.btactics._
+      |import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+      |import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
       |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      |import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-      |import edu.cmu.cs.ls.keymaerax.tactics._
-      |class InteractiveLocalTactic extends (() => Tactic) {
-      |  def apply(): Tactic = {
+      |class InteractiveLocalTactic extends (() => BelleExpr) {
+      |  def apply(): BelleExpr = {
       |
     """.stripMargin
 
@@ -767,7 +759,6 @@ object KeYmaeraX {
     """
       |  }
       |}
-      |new InteractiveLocalTactic()
     """.stripMargin
 
 

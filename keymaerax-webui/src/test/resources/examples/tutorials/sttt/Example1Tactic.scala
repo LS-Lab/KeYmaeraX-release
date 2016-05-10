@@ -7,5 +7,3 @@ class Example1Tactic extends (() => Tactic) {
     ls(implyR) & la(andL) & ls(diffSolve) & ls(implyR) & QE
   }
 }
-
-new Example1Tactic

@@ -17,5 +17,3 @@ class BouncingBallTacticGenerator extends (() => BelleExpr) {
   }
 
 }
-
-new BouncingBallTacticGenerator()

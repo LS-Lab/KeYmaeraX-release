@@ -83,5 +83,3 @@ class SimpleQuadrotorTacticGenerator extends (() => Tactic) {
     tactic
   }
 }
-
-new SimpleQuadrotorTacticGenerator()
