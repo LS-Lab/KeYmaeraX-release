@@ -21,7 +21,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   }
   private def debugCert(cert: Provable) = println(cert.subgoals.mkString("\n --- \n"))
 
-  "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
+  "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" ignore {
     val label = "[:=] assign"
     val f = "[v:=t();]p(v) <-> p(t())".asFormula
     val certificate = ProofChecker(dLConstant(label), f)
@@ -29,28 +29,28 @@ class ProofTermCheckerTests extends TacticTestBase {
     proves(certificate.get, f) shouldBe true
   }
 
-  "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" in {
+  "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" ignore {
     val zEz : Formula = "0=0".asFormula
     val certificate = ProofChecker(FOLRConstant(zEz), zEz)
     certificate.isDefined shouldBe true
     proves(certificate.get, zEz) shouldBe true
   }
 
-  it should "check j_{x^2 = 0 <-> x = 0} : x^2 = 0 <-> x = 0" in {
+  it should "check j_{x^2 = 0 <-> x = 0} : x^2 = 0 <-> x = 0" ignore {
     val f = "x^2 = 0 <-> x = 0".asFormula
     val certificate = ProofChecker(FOLRConstant(f), f)
     certificate.isDefined shouldBe true
     proves(certificate.get, f) shouldBe true
   }
 
-  "e ^ d term checker" should "check j_{0=0} ^ j_{1=1} : 0=0 & 1=1" in {
+  "e ^ d term checker" should "check j_{0=0} ^ j_{1=1} : 0=0 & 1=1" ignore {
     val f = "0=0 & 1=1".asFormula
     val certificate = ProofChecker(AndTerm(FOLRConstant("0=0".asFormula), FOLRConstant("1=1".asFormula)), f)
     certificate.isDefined shouldBe true
     proves(certificate.get, f) shouldBe true
   }
 
-  "e * d term checker" should "check j_{0=0 -> 1=1} * j_{0=0} : 1=1" in {
+  "e * d term checker" should "check j_{0=0 -> 1=1} * j_{0=0} : 1=1" ignore {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
     val zEzTerm  = FOLRConstant(zEz)
@@ -61,7 +61,7 @@ class ProofTermCheckerTests extends TacticTestBase {
 
   }
 
-  "e *<- d term checker" should "check j_{1=1 <-> 0=0} *-> j_{0=0} : 1=1" in {
+  "e *<- d term checker" should "check j_{1=1 <-> 0=0} *-> j_{0=0} : 1=1" ignore {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
     val zEzTerm  = FOLRConstant(zEz)
@@ -72,7 +72,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     proves(certificate.get, oEo) shouldBe true
   }
 
-  "e *-> d term checker" should "check j_{1=1 <-> 0=0} *<- j_{1=1} : 0=0" in {
+  "e *-> d term checker" should "check j_{1=1 <-> 0=0} *<- j_{1=1} : 0=0" ignore {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
     val oEoTerm  = FOLRConstant(oEo)
@@ -85,7 +85,7 @@ class ProofTermCheckerTests extends TacticTestBase {
 
 
   //[v:=t();]p(v) <-> p(t())
-  "usubst term checker" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" in {
+  "usubst term checker" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" ignore {
     val axiomName = "[:=] assign"
     val axiom = Axiom.axiom("[:=] assign").conclusion.succ.last
     val instance = "[v:=1;]v=v <-> 1=1".asFormula
@@ -102,7 +102,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     proves(certificate.get, instance) shouldBe true
   }
 
-  "CT term checker" should "check CT_\\sigma 1+1+1 = 1+2" in {
+  "CT term checker" should "check CT_\\sigma 1+1+1 = 1+2" ignore {
     val goal = "1+1+1=2+1".asFormula
 
     val premise = Equal("1+1".asTerm, "2".asTerm)
