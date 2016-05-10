@@ -29,15 +29,15 @@ import scala.language.postfixOps
   */
 @SlowTest
 class LabTests extends TacticTestBase {
-  val testDir = "keymaerax-webui/src/test/scala/btactics/labs/"
+  val testDir = "/examples/course/labs/"
 
   def testLab(name:String):Unit =
     withMathematica {case mathematica =>
-      val model = Source.fromFile(testDir + name).mkString
+      val input = io.Source.fromInputStream(getClass.getResourceAsStream(testDir + name)).mkString
       var map = Map.empty[Expression, Formula]
       KeYmaeraXParser.setAnnotationListener({case (prog,fml) => map = map.+((prog,fml))})
-      val fml = KeYmaeraXProblemParser(model)
-      proveBy(fml, TactixLibrary.master(new ConfigurableGenerate[Formula](map))) shouldBe 'proved
+      val model = KeYmaeraXProblemParser(input)
+      proveBy(model, TactixLibrary.master(new ConfigurableGenerate[Formula](map))) shouldBe 'proved
     }
 
   "Lab 1a" should "prove with master if file is present" in {
