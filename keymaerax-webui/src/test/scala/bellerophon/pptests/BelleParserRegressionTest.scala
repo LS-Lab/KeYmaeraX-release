@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   */
 class BelleParserRegressionTest extends TacticTestBase {
 
-  "BelleParser" should "pass regression tests" in {
+  "BelleParser" should "pass regression tests" in (withMathematica { implicit qeTool => {
     val t = """implyR(1) &
               |loop({`x<=m`}, 1) <(
               |  MathematicaQE,
@@ -19,8 +19,8 @@ class BelleParserRegressionTest extends TacticTestBase {
               |    assignb(1) & diffSolve(1) & nil,
               |    testb(1) & implyR(1) & diffSolve(1) & nil
               |  ))
-              |)"""
+              |)""".stripMargin
     BelleParser(t) //should not cause an exception.
-  }
+  }})
 
 }
