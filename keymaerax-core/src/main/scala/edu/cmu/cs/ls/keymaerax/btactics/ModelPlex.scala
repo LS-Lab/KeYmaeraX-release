@@ -51,7 +51,7 @@ object ModelPlex extends ModelPlexTrait {
     val mxInputFml = createMonitorSpecificationConjecture(formula, vars:_*)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = kind match {
-      case 'ctrl => modelplexAxiomaticStyle(useOptOne=true)(controllerMonitorT)('R)
+      case 'ctrl => implyR(1) & controllerMonitorByChase(1) & optimizationOneWithSearch(1)*@TheType()
       case 'model => modelplexAxiomaticStyle(useOptOne=true)(modelMonitorT)('R)
       case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
     }
