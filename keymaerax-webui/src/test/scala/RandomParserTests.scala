@@ -40,7 +40,7 @@ class RandomParserTests extends FlatSpec with Matchers {
   "The parser" should "reparse pretty-prints of random formulas (checkin)" taggedAs(CheckinTest) in {test(10)}
   it should "reparse pretty-prints of random formulas (summary)" taggedAs(SummaryTest) in {test(50)}
   it should "reparse pretty-prints of random formulas (usual)" taggedAs(UsualTest) in {test(1000,10)}
-  it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
+  //it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
