@@ -13,13 +13,20 @@ import BelleLexer.TokenStream
   */
 object BelleParser extends (String => BelleExpr) {
   private var invariantGenerator : Option[Generator[Formula]] = None
-  private val DEBUG = false
+  private var DEBUG = false
 
   override def apply(s: String) = parseWithInvGen(s, None)
 
   def parseWithInvGen(s: String, g:Option[Generator[Formula]] = None) = {
     invariantGenerator = g;
     parseTokenStream(BelleLexer(s))
+  }
+
+  /** Runs the parser with debug mode turned on. */
+  def debug(s: String) = {
+    DEBUG = true
+    apply(s)
+    DEBUG = false
   }
 
   //region The LL Parser
@@ -119,8 +126,29 @@ object BelleParser extends (String => BelleExpr) {
           else throw ParseException("Comma-separated lists of expressions need to be surrounded by parentheses.", commaLoc)
         case None => throw ParseException("Tactics cannot end with a comma.", commaLoc)
       }
-      case r :+ BelleToken(COMMA, commaLoc) :+ ParsedBelleExpr(e, eLoc) :+ BelleToken(CLOSE_PAREN, closeParenLoc) =>
-        reduceExpressionList(st)
+
+      /*
+       * The following three cases go something like this:
+       * <(e1,...,ek,em,en) =>          by case 1
+       * <(e1,...,ek,es     =>          by case 2
+       * <(e1,...,es        => ... =>   by case 2
+       * <(e1,es            =>          by case 2
+       * <(es               =>          by case 3
+       * <es                            Which is handled by the BRNACH_COMBINATOR cases.
+       * @todo still not sure about this. What about <((e1,e2,e3)) => <((e1,es) => <((es) => error: paren mismatch! I think this is OK because branches should always have exactly one paren.
+       */
+      case r :+ ParsedBelleExpr(em, emLoc) :+ BelleToken(COMMA, commaLoc) :+ ParsedBelleExpr(en, enLoc) :+ BelleToken(CLOSE_PAREN, closeParenLoc) => {
+        val es = ParsedBelleExprList(Seq(ParsedBelleExpr(em, emLoc), ParsedBelleExpr(en, enLoc)))
+        ParserState(r :+ es, st.input)
+      }
+      case r :+ ParsedBelleExpr(ek, ekLoc) :+ BelleToken(COMMA, commaLoc) :+ ParsedBelleExprList(es) => {
+        val newList = ParsedBelleExprList(ParsedBelleExpr(ek, ekLoc) +: es)
+        ParserState(r :+ newList, st.input)
+      }
+      case r :+ BelleToken(OPEN_PAREN, oParenLoc) :+ ParsedBelleExprList(es) => {
+        ParserState(r :+ ParsedBelleExprList(es), st.input)
+      }
+
       //endregion
 
       //region OnAll combinator
@@ -154,6 +182,8 @@ object BelleParser extends (String => BelleExpr) {
       //endregion
 
       //region partial
+
+      //Suffix case.
       case r :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(PARTIAL, partialLoc) => {
         val parsedExpr = expr.partial
         parsedExpr.setLocation(partialLoc)
@@ -161,7 +191,7 @@ object BelleParser extends (String => BelleExpr) {
       }
 
       case r :+ BelleToken(PARTIAL, partialLoc) => st.input.headOption match {
-        case None => throw ParseException("Found bare use of paral keyword", st)
+        case None => throw ParseException("Found bare use of partial keyword", st)
         case Some(BelleToken(OPEN_PAREN, opnParenLoc)) =>  ParserState(st.stack :+ st.input.head, st.input.tail)
         case _ => throw ParseException("Unrecognized token stream", st)
       }
@@ -178,7 +208,6 @@ object BelleParser extends (String => BelleExpr) {
         try {
           if(!isOpenParen(st.input)) {
             val parsedExpr = constructTactic(name, None)
-            parsedExpr.setLocation(identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc), st.input)
           }
           else {
@@ -318,6 +347,8 @@ object BelleParser extends (String => BelleExpr) {
       })
     }
 
+  @deprecated("Replaced with a stack traversal.", "4.2b1")
+  /** @todo Delete this code after testing that the common tactics did not break with new approach. */
   private def reduceExpressionList(st: ParserState) = {
     val list = st.stack.toList.reverse.span(_ match {
       case BelleToken(OPEN_PAREN, _) => false
