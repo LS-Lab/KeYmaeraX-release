@@ -18,7 +18,8 @@ import scala.util.Random
 
 /**
  * Command-line interface for KeYmaera X.
- * @author Stefan Mitsch
+  *
+  * @author Stefan Mitsch
  * @author Andre Platzer
  * @author Ran Ji
  */
@@ -214,8 +215,8 @@ object KeYmaeraX {
   private def optionErrorReporter(option: String) = {
     val noValueMessage = "[Error] No value specified for " + option + " option. "
     option match {
-      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.key\n\n" + usage); exit(1)
-      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.key\n\n" + usage); exit(1)
+      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
+      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
@@ -306,7 +307,8 @@ object KeYmaeraX {
   /**
    * Prove given input file (with given tactic) to produce a lemma.
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
-   * @param options
+    *
+    * @param options
    * @todo tactic should default to master and builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
    */
   def prove(options: OptionMap) = {
@@ -325,8 +327,8 @@ object KeYmaeraX {
 
     // KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))
     val inputFileNameDotKey = options.get('in).get.toString
-    assert(inputFileNameDotKey.endsWith(".key"),
-      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key file. Please use: -prove FILENAME.key")
+    assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
+      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key or .kyx files. Please use: -prove FILENAME.[key/kyx]")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
@@ -411,15 +413,16 @@ object KeYmaeraX {
   /**
    * ModelPlex monitor synthesis for the given input files
    * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
-   * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
+    *
+    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
   def modelplex(options: OptionMap) = {
     require(options.contains('in), usage)
 
     // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
     val inputFileNameDotKey = options.get('in).get.toString
-    assert(inputFileNameDotKey.endsWith(".key"),
-      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key file. Please use: -modelplex FILENAME.key")
+    assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
+      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key or .kyx files. Please use: -modelplex FILENAME.[key/kyx]")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
@@ -742,13 +745,13 @@ object KeYmaeraX {
   //@todo import namespace of the user tactic *object* passed in -tactic
   private val tacticParsePrefix =
     """
-      |import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-      |import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
+      |import edu.cmu.cs.ls.keymaerax.bellerophon._
+      |import edu.cmu.cs.ls.keymaerax.btactics._
+      |import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+      |import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
       |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      |import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-      |import edu.cmu.cs.ls.keymaerax.tactics._
-      |class InteractiveLocalTactic extends (() => Tactic) {
-      |  def apply(): Tactic = {
+      |class InteractiveLocalTactic extends (() => BelleExpr) {
+      |  def apply(): BelleExpr = {
       |
     """.stripMargin
 
@@ -756,7 +759,6 @@ object KeYmaeraX {
     """
       |  }
       |}
-      |new InteractiveLocalTactic()
     """.stripMargin
 
 
