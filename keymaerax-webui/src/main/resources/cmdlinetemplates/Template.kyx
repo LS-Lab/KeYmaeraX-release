@@ -1,0 +1,14 @@
+Functions.
+  /* Syntax: Sort name(Domain); or Sort name; */
+  /* R: real-valued */
+  /* B: boolean */
+End.
+
+ProgramVariables.
+  /* Syntax: Sort name; */
+End.
+
+Problem.
+  /* conjecture in dL, usually of the form "initial -> [program]safety" */
+  true
+End.
