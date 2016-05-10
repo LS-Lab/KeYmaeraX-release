@@ -29,9 +29,8 @@ object ModelPlex extends ModelPlexTrait {
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
   def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula = formula match {
-    case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
-      //@todo explicitly address DifferentialSymbol instead of exception
-      val vars = StaticSemantics.boundVars(controller).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
+    case Imply(assumptions, Box(prg, _)) =>
+      val vars = StaticSemantics.boundVars(prg).symbols.filter(_.isInstanceOf[Variable]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
       apply(sortedVars, kind, checkProvable)(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
