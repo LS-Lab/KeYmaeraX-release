@@ -94,5 +94,3 @@ class HybridQuadrotorTacticGenerator extends (() => Tactic) {
     tactic
   }
 }
-
-new HybridQuadrotorTacticGenerator()

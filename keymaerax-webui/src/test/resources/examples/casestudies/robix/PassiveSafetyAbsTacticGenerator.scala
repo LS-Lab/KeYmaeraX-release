@@ -229,5 +229,3 @@ class PassiveSafetyAbsTacticGenerator extends (() => Tactic) {
     )
   }
 }
-
-new PassiveSafetyAbsTacticGenerator()

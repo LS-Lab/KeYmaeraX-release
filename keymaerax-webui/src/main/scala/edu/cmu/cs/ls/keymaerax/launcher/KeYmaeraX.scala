@@ -1,21 +1,19 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{FilePermission, File, PrintWriter}
+import java.io.{File, FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BTacticParser}
+import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica}
-import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
-
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CseCGenerator, SpiralGenerator}
 
 import scala.collection.immutable
 import scala.compat.Platform
-import scala.reflect.runtime._
-import scala.tools.reflect.{ToolBoxError, ToolBox}
 import scala.util.Random
 
 /**
@@ -320,11 +318,9 @@ object KeYmaeraX {
     //  "\n[Error] Wrong file name " + tacticFileNameDotScala + " used for -tactic! KeYmaera X only reads .scala tactic file. Please use: -tactic FILENAME.scala")
     val tacticSource = scala.io.Source.fromFile(tacticFileNameDotScala).mkString
 
-    val cm = universe.runtimeMirror(getClass.getClassLoader)
-    val tb = cm.mkToolBox()
-    val foo = tb.parse(tacticSource)
-    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => BelleExpr]
-
+    val tacticGenClasses = new ScalaTacticCompiler().compile(tacticSource)
+    assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
+    val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[(()=> BelleExpr)]
     val tactic = tacticGenerator()
 
     // KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))
@@ -679,8 +675,6 @@ object KeYmaeraX {
   /** KeYmaera C: A simple interactive command-line prover */
   private def interactiveProver(root: Provable): Provable = {
     val commands = io.Source.stdin.getLines()
-    val cm = universe.runtimeMirror(getClass.getClassLoader)
-    val tb = cm.mkToolBox()
     println("KeYmaera X Interactive Command-line Prover\n" +
       "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n")
     println(interactiveUsage)
@@ -726,21 +720,16 @@ object KeYmaeraX {
               println("No other open goals to skip to")
             }
           case command: String =>
-            try {
-              //@note security issue since executing arbitrary input unsanitized
-              val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => BelleExpr]
-              val tactic = tacticGenerator()
-              tacticLog += "& " + command + "\n"
-              current = TactixLibrary.proveBy(node, tactic)
-              // walk to the next open subgoal
-              // continue walking if it has leaves
-              while (!current.isProved && current.subgoals.nonEmpty)
-                node = current.subgoals.head
-              //@todo make sure to walk to siblings ultimately
-            }
-            catch {
-              case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
-            }
+            //@note security issue since executing arbitrary input unsanitized
+            val tacticGenerator = new ScalaTacticCompiler().compile(tacticParsePrefix + command + tacticParseSuffix).head.newInstance().asInstanceOf[() => BelleExpr]
+            val tactic = tacticGenerator()
+            tacticLog += "& " + command + "\n"
+            current = TactixLibrary.proveBy(node, tactic)
+            // walk to the next open subgoal
+            // continue walking if it has leaves
+            while (!current.isProved && current.subgoals.nonEmpty)
+              node = current.subgoals.head
+            //@todo make sure to walk to siblings ultimately
         }
       }
       assert(current.isProved)
