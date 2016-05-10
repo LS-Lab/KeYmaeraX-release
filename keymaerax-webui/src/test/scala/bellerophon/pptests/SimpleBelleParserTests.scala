@@ -208,6 +208,47 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   //endregion
 
+  //region Comma lists
+
+  "comma separatred list folding" should "work" in (withMathematica { implicit qeTool => {
+    val t =
+      """
+        |nil<(nil, nil)
+      """.stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  it should "work for a tactic (e)" in (withMathematica { implicit qeTool => {
+    val t =
+      """
+        |nil<((nil), nil)
+      """.stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  it should "work for a tactic (e) in the final position" in (withMathematica { implicit qeTool => {
+    val t =
+      """
+        |nil<(nil, (nil))
+      """.stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  it should "work on tactic that caused original bug" in (withMathematica { implicit qeTool => {
+    val t = """implyR(1) &
+              |loop({`x<=m`}, 1) <(
+              |  MathematicaQE,
+              |  MathematicaQE,
+              |  partial(composeb(1) & choiceb(1) & andR(1) <(
+              |    assignb(1) & diffSolve(1) & nil,
+              |    testb(1) & implyR(1) & diffSolve(1) & nil
+              |  ))
+              |)""".stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  //endregion
+
   //region Partial tactics
 
   "partial tactic parser" should "parse partial(e)" in {

@@ -4,33 +4,15 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
 /**
-  * Tests cases derived from known bugs and fixed bugs in the Bellerophon parser.
-  *
+  * Parser test cases that arise from known bugs.
+  * @note When a bug is well-understood it might make sense to move tests out of this suite and into a suite that
+  *       associated with the original cause of the bug. For that reason this suite might end up temporarily empty.
+  *       None-the-less, please leave this file around as the default place to reproduce of parser bugs until the
+  *       BelleParser stabilizes.
   * @author Nathan Fulton
   */
 class BelleParserRegressionTest extends TacticTestBase {
-  "BelleParser" should "pass regression tests" in (withMathematica { implicit qeTool => {
-    val t = """implyR(1) &
-              |loop({`x<=m`}, 1) <(
-              |  MathematicaQE,
-              |  MathematicaQE,
-              |  partial(composeb(1) & choiceb(1) & andR(1) <(
-              |    assignb(1) & diffSolve(1) & nil,
-              |    testb(1) & implyR(1) & diffSolve(1) & nil
-              |  ))
-              |)""".stripMargin
-    BelleParser(t) //should not cause an exception.
-  }})
+  //ok.
 
 
-  it should "pass problematic subset of regression test" in (withMathematica { implicit qeTool => {
-    val t =
-      """
-        |partial(composeb(1) & choiceb(1) & andR(1) <(
-        |assignb(1) & diffSolve(1) & nil,
-        |testb(1) & implyR(1) & diffSolve(1) & nil
-        |))
-      """.stripMargin
-    BelleParser(t) //should not cause an exception.
-  }})
 }

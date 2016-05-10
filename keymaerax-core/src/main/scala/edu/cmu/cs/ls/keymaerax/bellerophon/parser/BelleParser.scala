@@ -128,14 +128,24 @@ object BelleParser extends (String => BelleExpr) {
       }
 
       /*
-       * The following three cases go something like this:
+       * The next three cases fold a paren-delimited, comma-separated list of ParsedBelleExpr's into one ParsedBelleExprList:
+       *
        * <(e1,...,ek,em,en) =>          by case 1
        * <(e1,...,ek,es     =>          by case 2
        * <(e1,...,es        => ... =>   by case 2
        * <(e1,es            =>          by case 2
        * <(es               =>          by case 3
-       * <es                            Which is handled by the BRNACH_COMBINATOR cases.
-       * @todo still not sure about this. What about <((e1,e2,e3)) => <((e1,es) => <((es) => error: paren mismatch! I think this is OK because branches should always have exactly one paren.
+       * <es                            Which is then handled by the BRANCH_COMBINATOR case.
+       *
+       * @todo still not sure about this. What about
+       *    <((e1,e2,e3)) =>
+       *    <((e1,es)     =>
+       *    <((es)        =>
+       *    error: paren mismatch!
+       * But I think this is OK because branches should always have exactly one paren. I.e.
+       *    (e)           well-formed
+       *    <((e,e))      NOT well-formed.
+       *    <((e))        NOT well-formed because a branch tactic should always contain more than one child...
        */
       case r :+ ParsedBelleExpr(em, emLoc) :+ BelleToken(COMMA, commaLoc) :+ ParsedBelleExpr(en, enLoc) :+ BelleToken(CLOSE_PAREN, closeParenLoc) => {
         val es = ParsedBelleExprList(Seq(ParsedBelleExpr(em, emLoc), ParsedBelleExpr(en, enLoc)))
