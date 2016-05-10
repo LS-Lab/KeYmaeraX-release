@@ -32,7 +32,6 @@ import scala.language.postfixOps
  * @see [[SequentCalculus]]
  * @see [[UnifyUSCalculus]]
  * @see [[DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
@@ -116,18 +115,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /**
    * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
- *
-   * @see [[edu.cmu.cs.ls.keymaerax.tactics.BranchLabels]]
+   *
    * @note Probably this String should be a BelleLabel, and we should move BranchLabels into BelleLabel.
    * @see [[label()]]
    */
   def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
 
   /** Call/label the current proof branch s
- *
-    * @see [[onBranch()]]
-    * @see [sublabel()]]
-    * */
+   *
+   * @see [[onBranch()]]
+   * @see [[sublabel()]]
+   */
   def label(s: String): BelleExpr = ??? //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s
