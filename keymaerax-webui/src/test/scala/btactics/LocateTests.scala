@@ -57,8 +57,8 @@ class LocateTests extends TacticTestBase {
       Sequent(Nil, immutable.IndexedSeq("a=2".asFormula, "x>0 | y>0".asFormula), immutable.IndexedSeq()),
       TactixLibrary.andL('L)
     )}
-    e.getMessage should include ("Position tactic AndL is not applicable at -1")
-    e.getMessage should include ("Position tactic AndL is not applicable at -2")
+    e.getMessage should include ("Position tactic andL is not applicable at -1")
+    e.getMessage should include ("Position tactic andL is not applicable at -2")
   }
 
   it should "work with dependent position tactics" in {
@@ -96,8 +96,8 @@ class LocateTests extends TacticTestBase {
       Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
       TactixLibrary.orR('R)
     )}
-    e.getMessage should include ("Position tactic OrR is not applicable at 1")
-    e.getMessage should include ("Position tactic OrR is not applicable at 2")
+    e.getMessage should include ("Position tactic orR is not applicable at 1")
+    e.getMessage should include ("Position tactic orR is not applicable at 2")
   }
 
   it should "work with dependent position tactics" in {
@@ -135,8 +135,8 @@ class LocateTests extends TacticTestBase {
       Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
       TactixLibrary.orR('_)
     )}
-    e.getMessage should include ("Position tactic OrR is not applicable at 1")
-    e.getMessage should include ("Position tactic OrR is not applicable at 2")
+    e.getMessage should include ("Position tactic orR is not applicable at 1")
+    e.getMessage should include ("Position tactic orR is not applicable at 2")
   }
 
   "'Llast" should "apply on last formula in antecedent" in {

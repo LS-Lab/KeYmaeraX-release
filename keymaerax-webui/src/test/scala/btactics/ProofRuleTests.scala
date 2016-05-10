@@ -35,17 +35,17 @@ class ProofRuleTests extends TacticTestBase {
 
   it should "support axioms" in {
     val result = proveBy(
-      Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x x>0 -> z>0".asFormula)),
+      Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ x_>0 -> z>0".asFormula)),
       ProofRuleTactics.axiomatic("all instantiate",
         USubst(
-          SubstitutionPair(PredOf(Function("p_", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
+          SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
     result shouldBe 'proved
   }
 
   it should "support derived axioms" in {
     val result = proveBy(
-      Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x x>0) <-> (\\exists x !x>0)".asFormula)),
+      Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asFormula)),
       ProofRuleTactics.axiomatic("!all",
         USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::Nil)))
     result shouldBe 'proved

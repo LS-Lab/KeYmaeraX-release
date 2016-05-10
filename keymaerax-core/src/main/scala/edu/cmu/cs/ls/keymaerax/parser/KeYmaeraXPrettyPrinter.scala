@@ -11,7 +11,8 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
-import edu.cmu.cs.ls.keymaerax.tactics.{HereP, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
 
 import scala.collection.immutable._
 

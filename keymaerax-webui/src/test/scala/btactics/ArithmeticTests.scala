@@ -189,6 +189,6 @@ class ArithmeticTests extends TacticTestBase {
     val simulation = tool.simulate("x>0".asFormula, "x>xpre".asFormula, 3, 2)
     simulation should have size 2
     simulation.forall(_.size == 1+3) // initial state + 3 steps
-    simulation.forall(_.forall(state => state.keySet.size == 1 && state.keySet.contains(Variable("x")))) shouldBe true
+    simulation.forall(_.forall(state => state.keySet.contains(Variable("x")))) shouldBe true
   }
 }

@@ -3,7 +3,6 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -13,20 +12,6 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  */
 class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-
-  override def beforeEach() = {
-    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-    Tactics.KeYmaeraScheduler.init(Map())
-    Tactics.Z3Scheduler = Some(new Interpreter(new Z3))
-    Tactics.Z3Scheduler.get.init(Map())
-  }
-
-  override def afterEach() = {
-    Tactics.Z3Scheduler.get.shutdown()
-    Tactics.Z3Scheduler = null
-    Tactics.KeYmaeraScheduler.shutdown()
-    Tactics.KeYmaeraScheduler = null
-  }
 
   "Numbers" should "convert numbers" in {
     SMTConverter("1 > 2".asFormula, "Z3") should be("(assert (not (> 1 2)))")

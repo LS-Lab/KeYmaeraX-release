@@ -226,7 +226,7 @@ object KeYmaeraXDeclarationsParser {
       (( (nameTerminal.name, nameTerminal.index) , (None, sort, nameToken) ), afterName.tail)
     }
     else {
-      throw new ParseException("Expected complete declaration but could not find terminating period", afterName.head.loc, "", "", "", "declaration parse")
+      throw new ParseException("Variable declarations should end with a period.", afterName.head.loc, afterName.head.tok.img, ".", "", "declaration parse")
     }
   }
 

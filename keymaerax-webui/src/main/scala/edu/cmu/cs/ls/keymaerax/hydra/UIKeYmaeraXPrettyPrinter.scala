@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
 object UIKeYmaeraXPrettyPrinter {
   /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */

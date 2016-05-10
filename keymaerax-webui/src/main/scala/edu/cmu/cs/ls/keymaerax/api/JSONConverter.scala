@@ -5,22 +5,19 @@
 package edu.cmu.cs.ls.keymaerax.api
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{ExpressionTraversal, ProofStepInfo, ProofNode}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraPrettyPrinter, ParseSymbols}
-import edu.cmu.cs.ls.keymaerax.tactics.{ProofStepInfo, ProofNode}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import spray.json._
 import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaerax.core.Sequent
-import edu.cmu.cs.ls.keymaerax.tactics.Position
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
-import ProofNode.ProofStep
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Position, PosInExpr}
 
 import scala.collection.mutable
 
 // TODO fetch sequents only on demand
 object JSONConverter {
-  val prettyPrinter = new KeYmaeraPrettyPrinter(ParseSymbols) //todo use appropriate symbol table.
+  val prettyPrinter = KeYmaeraXPrettyPrinter.pp //todo use appropriate symbol table.
 
   def convertPos(formulaId:String, p: PosInExpr) = JsString(formulaId + ","+ p .pos.mkString(","))
 
@@ -135,7 +132,7 @@ object JSONConverter {
 
   def convertPosition(pos : Position) = JsObject(
     "kind" -> JsString(if (pos.isAnte) "ante" else "succ"),
-    "index" -> JsNumber(pos.getIndex),
+    "index" -> JsNumber(pos.index0),
     "inExpr" -> convertPos("", pos.inExpr)
   )
 
@@ -168,56 +165,5 @@ object JSONConverter {
       "ante"    -> convert(s.ante, "ante", nodeId),
       "succ"    -> convert(s.succ, "succ", nodeId)
     )
-  def convert(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit), printSequent: Boolean)(p: ProofNode): JsObject = {
-    store(p, id)
-    var fields =
-      "id"        -> JsString(id) ::
-      "infos"     -> infos(p) ::
-      "children"  -> (limit match {
-        case Some(l) if l > 0 => JsArray(p.children.zipWithIndex.map(ps => convert(id, limit.map(i => i - 1), ps._1, ps._2, store, printSequent)))
-        case _ => JsArray()
-      }) :: Nil
-    if (printSequent) fields = "sequent"   -> sequent(p, id) :: fields
-    JsObject(fields)
-  }
-  def convert(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit), printSequent: Boolean): JsObject =
-    JsObject(
-      "rule"      -> convertRule(ps.rule),
-      "id"        -> JsNumber(i),
-      "children"  -> subgoals(id, limit, store, printSequent)(ps)
-    )
-
-  def convert(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit, printSequent: Boolean)(p: ProofNode): JsObject = {
-    store(p, id)
-    var fields =
-      "id"       -> JsString(id) ::
-      "infos"    -> infos(p) ::
-      "children" -> JsArray(p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => convert(id, filter, ps._1, ps._2, store, printSequent))) :: Nil
-    if (printSequent) fields = "sequent"  -> sequent(p, id) :: fields
-    JsObject(fields)
-  }
-
-  def convert(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit, printSequent: Boolean): JsObject =
-    JsObject(
-      "rule"      -> (if (ps.isRule) convertRule(ps.rule) else convertSubderivation(ps.subderivation)),
-      "id"        -> JsNumber(i),
-      "children"  -> subgoals(id, filter, store, printSequent)(ps)
-    )
-
-  private def infos(p: ProofNode): JsArray = JsArray(p.tacticInfo.infos.map(s =>
-    JsObject(
-      "key"   -> JsString(s._1),
-      "value" -> JsString(s._2)
-    )).toList
-  )
-  private def sequent(p: ProofNode, nodeId: String) = convert(p.sequent, nodeId)
-  private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit, printSequent: Boolean)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, limit, store, printSequent)(in._1)
-  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit, printSequent: Boolean)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, filter, store, printSequent)(in._1)
-  private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit, printSequent: Boolean)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store, printSequent)))
-  private def subgoals(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit, printSequent: Boolean)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, filter, store, printSequent)))
-
-  //def apply(p: ProofNode): String = print("", None, (_, _) => ())(p)
-  def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit, printSequent: Boolean): JsObject = convert(id, Some(limit), store, printSequent)(p)
-  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit), printSequent: Boolean): JsObject = convert(id, filter, store, printSequent)(p)
 
 }

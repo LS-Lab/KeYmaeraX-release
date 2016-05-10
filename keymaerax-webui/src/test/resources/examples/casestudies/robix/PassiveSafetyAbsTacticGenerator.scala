@@ -80,5 +80,3 @@ class PassiveSafetyAbsTacticGenerator extends (() => BelleExpr) {
       ) & debug("Proof done")
   }
 }
-
-new PassiveSafetyAbsTacticGenerator()

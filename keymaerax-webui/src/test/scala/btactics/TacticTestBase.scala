@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.tools._
+import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
@@ -110,4 +111,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
 
+  /** Removes all whitespace for string comparisons in tests.
+    * @example{{{
+    *     "My string with     whitespace" should equal ("Mystring   with whitespace") (after being whiteSpaceRemoved)
+    * }}}
+    */
+  val whiteSpaceRemoved: Uniformity[String] =
+    new AbstractStringUniformity {
+      def normalized(s: String): String = s.replaceAll("\\s+", "")
+      override def toString: String = "whiteSpaceRemoved"
+    }
 }

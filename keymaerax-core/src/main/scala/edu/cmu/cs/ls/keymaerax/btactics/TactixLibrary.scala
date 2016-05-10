@@ -32,7 +32,6 @@ import scala.language.postfixOps
  * @see [[SequentCalculus]]
  * @see [[UnifyUSCalculus]]
  * @see [[DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
@@ -68,24 +67,28 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   }
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  lazy val normalize               : BelleExpr = OnAll(?(
-      (alphaRule partial)
-        | (closeId
-        | ((allR('R) partial)
-      | ((existsL('L) partial)
-      | (close
-      | ((betaRule partial)
-      | ((step('L) partial)
-      | ((step('R) partial) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType()
+  lazy val normalize               : BelleExpr = NamedTactic("normalize", {
+      OnAll(?(
+        (alphaRule partial)
+          | (closeId
+          | ((allR('R) partial)
+          | ((existsL('L) partial)
+          | (close
+          | ((betaRule partial)
+          | ((step('L) partial)
+          | ((step('R) partial) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType()
+    })
 
   /** exhaust propositional logic */
-  lazy val prop                    : BelleExpr = OnAll(?(
-    (close
-      | ((alphaRule partial)
-      | ((betaRule partial) partial) partial) partial) partial) partial)*@TheType()
+  lazy val prop                    : BelleExpr = NamedTactic("prop", {
+    OnAll(?(
+      (close
+        | ((alphaRule partial)
+        | ((betaRule partial) partial) partial) partial) partial) partial) *@ TheType()
+  })
 
   /** master: master tactic that tries hard to prove whatever it could */
-  def master(gen: Generator[Formula] = invGenerator): BelleExpr =
+  def master(gen: Generator[Formula] = invGenerator): BelleExpr = NamedTactic("master", {
     OnAll(?(
       (close
         | ((must(normalize) partial)
@@ -93,7 +96,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         | ((loop(gen)('R) partial)
         | ((diffSolve(None)('R) partial)
         | ((diffInd partial)
-        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(OnAll(QE))
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType() & ?(OnAll(QE))
+  })
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -111,18 +115,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /**
    * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
- *
-   * @see [[edu.cmu.cs.ls.keymaerax.tactics.BranchLabels]]
+   *
    * @note Probably this String should be a BelleLabel, and we should move BranchLabels into BelleLabel.
    * @see [[label()]]
    */
   def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
 
   /** Call/label the current proof branch s
- *
-    * @see [[onBranch()]]
-    * @see [sublabel()]]
-    */
+   *
+   * @see [[onBranch()]]
+   * @see [[sublabel()]]
+   */
   def label(s: String): BelleExpr = ??? //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s

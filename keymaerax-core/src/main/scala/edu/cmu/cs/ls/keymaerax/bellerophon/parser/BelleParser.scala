@@ -79,27 +79,37 @@ object BelleParser extends (String => BelleExpr) {
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(EITHER_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
         st.input.headOption match {
           case Some(BelleToken(EITHER_COMBINATOR, nextEitherCombinatorLoc)) => ParserState(st.stack :+ st.input.head, st.input.tail)
-          case _ => ParserState(r :+ ParsedBelleExpr(left | right, leftLoc.spanTo(rightLoc)), st.input)
+          case _ => {
+            val parsedExpr = left | right
+            parsedExpr.setLocation(combatinorLoc)
+            ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(rightLoc)), st.input)
+          }
         }
       //endregion
 
       //region Branch combinator
-      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combatinorLoc) => st.input.headOption match {
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) => st.input.headOption match {
         case Some(BelleToken(OPEN_PAREN, oParenLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(_) => throw ParseException("A branching combinator should be followed by an open paren", st)
-        case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
+        case None => throw ParseException("Tactic script cannot end with a combinator", combinatorLoc)
       }
-      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combatinorLoc) :+ ParsedBelleExprList(branchTactics) => {
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+ ParsedBelleExprList(branchTactics) => {
         assert(branchTactics.length > 0)
-        ParserState(r :+ ParsedBelleExpr(left <(branchTactics.map(_.expr):_*), leftLoc.spanTo(branchTactics.last.loc)), st.input)
+        val parsedExpr = left <(branchTactics.map(_.expr):_*)
+        parsedExpr.setLocation(combinatorLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(branchTactics.last.loc)), st.input)
       }
       //Allow doStuff<() for partial tacics that just leave all branches open. Useful for interactive tactic development.
-      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combatinorLoc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
-        ParserState(r :+ ParsedBelleExpr(left <(Seq():_*), leftLoc.spanTo(cParenLoc)), st.input)
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
+        val parsedExpr = left <(Seq():_*)
+        parsedExpr.setLocation(combinatorLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(cParenLoc)), st.input)
       }
       //Also allow branching tactic that mention only a single branch. Although I'm not even quite sure we should allow this?
-      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combatinorLoc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
-        ParserState(r :+ ParsedBelleExpr(left <(Seq(expr):_*), leftLoc.spanTo(cParenLoc)), st.input)
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
+        val parsedExpr = left <(Seq(expr):_*)
+        parsedExpr.setLocation(combinatorLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(cParenLoc)), st.input)
       }
 
       //Lists passed into the branch combinator
@@ -115,26 +125,40 @@ object BelleParser extends (String => BelleExpr) {
 
       //region OnAll combinator
       case r :+ BelleToken(ON_ALL, loc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
-        ParserState(r :+ ParsedBelleExpr(OnAll(expr), loc.spanTo(cParenLoc)), st.input)
+        val onAllExpr = OnAll(expr)
+        onAllExpr.setLocation(loc)
+        ParserState(r :+ ParsedBelleExpr(onAllExpr, loc.spanTo(cParenLoc)), st.input)
       }
       //endregion
 
       //region Stars and Repitition
-      case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(KLEENE_STAR, starLoc) =>
-        ParserState(r :+ ParsedBelleExpr(SaturateTactic(expr, TheType()), loc.spanTo(starLoc)), st.input)
+      case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(KLEENE_STAR, starLoc) => {
+        val parsedExpr = SaturateTactic(expr, TheType())
+        parsedExpr.setLocation(starLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(starLoc)), st.input)
+      }
 
 
-      case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(N_TIMES(n), ntimesloc) =>
-        ParserState(r :+ ParsedBelleExpr(RepeatTactic(expr, n, TheType()), loc.spanTo(ntimesloc)), st.input)
+      case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(N_TIMES(n), ntimesloc) => {
+        val parsedExpr = RepeatTactic(expr, n, TheType())
+        parsedExpr.setLocation(ntimesloc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(ntimesloc)), st.input)
+      }
 
-      case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(SATURATE, satloc) =>
-        ParserState(r :+ ParsedBelleExpr(SeqTactic(expr, SaturateTactic(expr, TheType())), loc.spanTo(satloc)), st.input)
+      case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(SATURATE, satloc) => {
+        val paredExpr = SeqTactic(expr, SaturateTactic(expr, TheType()))
+        paredExpr.setLocation(satloc)
+        ParserState(r :+ ParsedBelleExpr(paredExpr, loc.spanTo(satloc)), st.input)
+      }
 
       //endregion
 
       //region partial
-      case r :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(PARTIAL, partialLoc) =>
-        ParserState(r :+ ParsedBelleExpr(expr.partial, exprLoc.spanTo(partialLoc)), st.input)
+      case r :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(PARTIAL, partialLoc) => {
+        val parsedExpr = expr.partial
+        parsedExpr.setLocation(partialLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, exprLoc.spanTo(partialLoc)), st.input)
+      }
 
       case r :+ BelleToken(PARTIAL, partialLoc) => st.input.headOption match {
         case None => throw ParseException("Found bare use of paral keyword", st)
@@ -143,14 +167,20 @@ object BelleParser extends (String => BelleExpr) {
       }
 
       case r :+ BelleToken(PARTIAL, partialLoc) :+ ParsedBelleExpr(expr, exprLoc) => {
-        ParserState(r :+ ParsedBelleExpr(expr.partial, partialLoc.spanTo(exprLoc)), st.input)
+        val parsedExpr = expr.partial
+        parsedExpr.setLocation(partialLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, partialLoc.spanTo(exprLoc)), st.input)
       }
       //endregion
 
       //region built-in tactics
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
-          if(!isOpenParen(st.input)) ParserState(r :+ ParsedBelleExpr(constructTactic(name, None), identLoc), st.input)
+          if(!isOpenParen(st.input)) {
+            val parsedExpr = constructTactic(name, None)
+            parsedExpr.setLocation(identLoc)
+            ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc), st.input)
+          }
           else {
             val (args, remainder) = parseArgumentList(st.input)
 
@@ -161,7 +191,9 @@ object BelleParser extends (String => BelleExpr) {
             }
             val spanLoc = if(endLoc.end.column != -1) identLoc.spanTo(endLoc) else identLoc
 
-            ParserState(r :+ ParsedBelleExpr(constructTactic(name, Some(args)), spanLoc), remainder)
+            val parsedExpr = constructTactic(name, Some(args))
+            parsedExpr.setLocation(identLoc)
+            ParserState(r :+ ParsedBelleExpr(parsedExpr, spanLoc), remainder)
           }
         }
         catch {

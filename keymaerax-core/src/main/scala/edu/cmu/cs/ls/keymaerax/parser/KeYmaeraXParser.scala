@@ -4,7 +4,8 @@
 */
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -16,7 +17,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * KeYmaera X parser items on the parser stack.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  */
 private[parser] sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
@@ -82,7 +84,8 @@ object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
 
 /**
  * KeYmaera X parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
- * @example
+  *
+  * @example
  * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
  * {{{
  * val parser = KeYmaeraXParser
@@ -90,8 +93,7 @@ object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
  * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
  * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
  * }}}
-
- * @author Andre Platzer
+  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.parser]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
@@ -267,7 +269,8 @@ object KeYmaeraXParser extends Parser {
   {(p,inv) => println("Annotation: " + p + " @invariant(" + inv + ")")}
   /**
    * Register a listener for @annotations during the parse.
-   * @todo this design is suboptimal.
+    *
+    * @todo this design is suboptimal.
    */
   def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
     this.annotationListener = listener
@@ -277,7 +280,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Whether p is compatible with @annotation */
   private def isAnnotable(p: Program): Boolean =
-    p.isInstanceOf[Loop] || p.isInstanceOf[DifferentialProgram]
+  //@note DifferentialProgramKind will ultimately be elaborated to ODESystem
+    p.isInstanceOf[Loop] || p.isInstanceOf[ODESystem] || p.kind==DifferentialProgramKind
 
 
   // parsing
@@ -291,14 +295,16 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
 
       // nonproductive: special notation for annotations
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
-        reportAnnotation(p, f1)
+      case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
+        //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
+        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program], f1)
         reduce(st, 4, Bottom, r :+ Expr(p))
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) if isAnnotable(p) =>
         if (la==RPAREN || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, BINARYFORMULAOP))
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
-        if (la==LPAREN && isAnnotable(p)) shift(st) else
-        if (isAnnotable(p)) error(st, List(LPAREN)) else errormsg(st, "requires operator supporting annotation")
+        if (isAnnotable(p)) {
+          if (la == LPAREN) shift(st) else error(st, List(LPAREN))
+        } else errormsg(st, "requires an operator that supports annotation")
 
 
       // special quantifier notation
@@ -382,10 +388,12 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(MINUS,loc1) :+ Token(NUMBER(n),loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
         loc1.adjacentTo(loc) =>
         assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
-        reduce(st, 2, Number(BigDecimal("-" + n)), r)
+        if (la==LPAREN || la==LBRACE) error(st, List(FOLLOWSTERM))
+        else reduce(st, 2, Number(BigDecimal("-" + n)), r)
 
       case r :+ Token(NUMBER(value),_) =>
-        reduce(st, 1, Number(BigDecimal(value)), r)
+        if (la==LPAREN || la==LBRACE) error(st, List(FOLLOWSTERM))
+        else reduce(st, 1, Number(BigDecimal(value)), r)
 
 
         // PERIOD to DOT conversion for convenience
@@ -512,7 +520,8 @@ object KeYmaeraXParser extends Parser {
       // binary operators with precedence
       //@todo review
       //@todo should really tok!=COMMA and handle that one separately to enforce (x,y) notation but only allow p(x,y) without p((x,y)) sillyness
-      case r :+ Expr(t1) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) && tok!=TEST =>
+      case r :+ Expr(t1) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) &&
+        tok!=TEST =>
         // pass t1,t2 kinds so that op/2 can disambiguate based on kinds
         val optok = op(st, tok, List(t1.kind,t2.kind))
         if (optok==OpSpec.sNoneUnfinished && la!=EOF) shift(st)
@@ -684,7 +693,8 @@ object KeYmaeraXParser extends Parser {
      * Reduce consuming items in the parse state st to function/predicate name applied to argument arg,
      * while automatically disambiguating between function and predicate symbols based on lookahead
      * and parser state of stack items.
-     * @NOTE Needs to be able to disambiguate early in [x:=q()]f()->r()+c(x)>0
+      *
+      * @NOTE Needs to be able to disambiguate early in [x:=q()]f()->r()+c(x)>0
      */
   private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input@(Token(la, _) :: rest)) = st
@@ -790,7 +800,8 @@ object KeYmaeraXParser extends Parser {
 
   /**
    * Reduce the parser stack by reducing the consuming many items from the stack to the reduced item.
-   * @param remainder Redundant parameter, merely for correctness checking.
+    *
+    * @param remainder Redundant parameter, merely for correctness checking.
    */
   private def reduce(st: ParseState, consuming: Int, reduced: Item, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st
@@ -801,7 +812,8 @@ object KeYmaeraXParser extends Parser {
 
   /**
    * Reduce the parser stack by reducing the consuming many items from the stack to the reduced item.
-   * @param remainder Redundant parameter, merely for correctness checking.
+    *
+    * @param remainder Redundant parameter, merely for correctness checking.
    */
   private def reduce(st: ParseState, consuming: Int, reduced: Stack[Item], remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st

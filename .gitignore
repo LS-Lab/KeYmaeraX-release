@@ -94,6 +94,6 @@ export/
 KeYmaeraX.jar
 
 .DS_Store
+keymaerax-webui/src/test/resources/examples/course/labs/*
 keymaerax-webui/src/test/scala/casestudies/acasxhsatp
-keymaerax-webui/src/test/scala/btactics/labs/*
 release_scaladoc.pl

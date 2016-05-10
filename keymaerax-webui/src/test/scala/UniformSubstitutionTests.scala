@@ -6,7 +6,7 @@
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, RandomFormula}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest}
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable.{List, Set, Seq}

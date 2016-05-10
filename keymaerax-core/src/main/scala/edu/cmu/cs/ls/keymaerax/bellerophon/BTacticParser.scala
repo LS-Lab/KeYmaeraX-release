@@ -81,7 +81,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     protected val numberPattern = """[0-9]*""".r
 
     val positionPattern = """('R)|('L)|('\_)|([\-?0-9\.?]*)""".r
-    val expressionPattern = """\{`[^`}]*`}""".r
+    val expressionPattern = """\{`(?!`}).*`}""".r
     val listPattern = """\[[^\]]*\]""".r
     val notArgumentDelimiter = """[^`}]*""".r
 //    val notDoubleQoute = """[^\"]*""".r

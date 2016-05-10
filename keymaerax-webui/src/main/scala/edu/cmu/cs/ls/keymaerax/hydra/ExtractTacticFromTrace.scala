@@ -13,6 +13,26 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     apply(tree)(tree.root)
   }
 
+  //@todo deprecate this approach and prefer [[apply(tree)(node).prettyString]]
+  def extractTextWithoutParsing(proofId: Int): String = {
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
+    extractTextWithoutParsing(tree)(tree.root)
+  }
+  //@todo deprecate this approach and prefer [[apply(tree)(node).prettyString]]
+  def extractTextWithoutParsing(tree : ProofTree)(node: TreeNode) : String = {
+    val thisTactic = node.endStep match {
+      case Some(step) => db.getExecutable(step.executableId).belleExpr.getOrElse(throw TacticExtractionError("Tactic extraction does not currently support non-Bellerophon tactic extraction"))
+      case None =>  "nil" //why is this correct behavior? //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
+    }
+
+    val children = node.children
+    assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
+
+    if(children.length == 0) thisTactic
+    else if(children.length == 1) thisTactic + " & " + extractTextWithoutParsing(tree)(children.head)
+    else thisTactic + " <(\n  " + children.map(child => extractTextWithoutParsing(tree)(child)).mkString(",\n  ") + "\n)" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
+  }
+
   /**
     * @note this could be tailrec.
     * @param tree A proof tree
@@ -28,7 +48,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 
     if(children.length == 0) thisTactic
     else if(children.length == 1) thisTactic & apply(tree)(children.head)
-    else thisTactic & BranchTactic(children.map(child => apply(tree)(child)))
+    else thisTactic & BranchTactic(children.map(child => apply(tree)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
   private def tacticAt(node: TreeNode) : BelleExpr = node.endStep match {
@@ -45,7 +65,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
       case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing", e)
       case t : Throwable => throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database", t)
     }
-    case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
+    case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
   }
 }
 

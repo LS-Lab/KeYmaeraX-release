@@ -38,7 +38,7 @@ class USubstTests extends FlatSpec with Matchers {
       try {
         //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
         if (subst(origin) == conclusion) immutable.List(origin)
-        else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, OrRight(SuccPos(99)), conclusion)
+        else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, null, conclusion)
         /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
           "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
       } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
@@ -82,8 +82,7 @@ class USubstTests extends FlatSpec with Matchers {
     val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
     UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be
-    (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))
   }
 
   it should "substitute simple formula [a]p(x) <-> [a](p(x)&true)" in {
@@ -108,8 +107,7 @@ class USubstTests extends FlatSpec with Matchers {
     val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
     UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be
-    (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))
   }
 
 
@@ -139,13 +137,12 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
 
-  /* TODO programs where not all branches write the same variables are not yet supported */
-  ignore should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
       PredOf(p1, fn)) // axioms.axiom("[:=])
-    val conc = "[x:=x^2;][{y:=y+1++{z:=x+z;}*}; z:=x+y*z;]y>x <-> [{y:=y+1++{z:=x^2+z;}*}; z:=x^2+y*z;]y>x^2".asFormula
+    val conc = "[x:=x^2;][{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]y>x <-> [{y:=y+1;++{z:=x^2+z;}*}; z:=x^2+y*z;]y>x^2".asFormula
 
     val y = Variable("y", None, Real)
     val z = Variable("z", None, Real)
@@ -163,7 +160,7 @@ class USubstTests extends FlatSpec with Matchers {
     UniformSubstitutionRule(s, Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
-  it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
+  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)

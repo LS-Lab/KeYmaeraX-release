@@ -3,11 +3,11 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable.Map
 
@@ -17,8 +17,7 @@ import scala.collection.immutable.Map
  */
 class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
+  val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
   private var link: JLinkMathematicaLink = null
 
   private val x = Variable("x")
