@@ -585,6 +585,7 @@ object DifferentialTactics {
           // original evolution domain is in second-to-last ante position
           implyRi(AntePos(consts.size-1), SuccPos(0)) partial
 
+        //@todo single diffCut only so single V use but take care to build correct positioning order
         //@note assumes that first subgoal is desired result, see diffCut
         val vAllButFirst = dw +: Seq.tabulate(consts.length)(_ => V('Rlast) & close)
         //@note cut in reverse so that andL after diffWeakenG turns them into the previous order
