@@ -97,6 +97,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "true -> [{x'=2}]x>0".asFormula
   }
 
+  it should "retain single context formula" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("A>0".asFormula, "x=4".asFormula), IndexedSeq("[{x'=1&x>0}]x>0".asFormula)), diffWeaken(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("A>0".asFormula)
+    result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
+  }
+
   it should "retain context" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("A>0&A>1".asFormula, "B=1".asFormula, "C=2&D=3".asFormula, "x=4".asFormula), IndexedSeq("[{x'=1&x>0}]x>0".asFormula)), diffWeaken(1))
     result.subgoals should have size 1
