@@ -427,6 +427,11 @@ class DifferentialTests extends TacticTestBase {
     proveBy(KeYmaeraXProblemParser(input), implyR(1) & diffInd(qeTool, 'full)(1)) shouldBe 'proved
   }
 
+  it should "prove with and without frame constraint y'=0" in withMathematica { tool =>
+    proveBy(Sequent(Nil, IndexedSeq("x=y".asFormula), IndexedSeq("[{x'=2 & x>=0}]x>=y".asFormula)), diffInd(tool, 'full)('R)) shouldBe 'proved
+    proveBy(Sequent(Nil, IndexedSeq("x=y".asFormula), IndexedSeq("[{x'=2, y'=0 & x>=0}]x>=y".asFormula)), diffInd(tool, 'full)('R)) shouldBe 'proved
+  }
+
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withMathematica { implicit qeTool =>
     // Equal(Differential(Variable("x")), "1".asTerm)
     val result = proveBy("(x)'=1".asFormula, Dvar(1, 0::Nil))
