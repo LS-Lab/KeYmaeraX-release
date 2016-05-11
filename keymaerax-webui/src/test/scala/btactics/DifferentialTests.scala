@@ -100,7 +100,7 @@ class DifferentialTests extends TacticTestBase {
   it should "retain single context formula" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("A>0".asFormula, "x=4".asFormula), IndexedSeq("[{x'=1&x>0}]x>0".asFormula)), diffWeaken(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("A>0".asFormula)
+    result.subgoals.head.ante should contain only "A>0".asFormula
     result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
   }
 
@@ -134,18 +134,18 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=5, y'=x}][y':=x;][x':=5;]x>0".asFormula
   }
 
-  ignore should "introduce differential assignments exhaustively whatever the names (manual useAt)" in {
+  it should "introduce differential assignments whatever the names (manual useAt)" in {
     val result = proveBy("[{z'=5, y'=z}]z>0".asFormula, useAt("DE differential effect (system)")(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[{z'=5, y'=z}][z':=5;]z>0".asFormula
+    result.subgoals.head.succ should contain only "[{y'=z,z'=5}][z':=5;]z>0".asFormula
   }
 
-  ignore should "introduce differential assignments in long cases exhaustively whatever the names (manual useAt)" in {
+  it should "introduce differential assignments in long cases whatever the names (manual useAt)" in {
     val result = proveBy("[{z'=5, y'=z, u'=v}]z>0".asFormula, useAt("DE differential effect (system)")(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[{z'=5, y'=z,u'=v}][z':=5;]z>0".asFormula
+    result.subgoals.head.succ should contain only "[{y'=z,u'=v,z'=5}][z':=5;]z>0".asFormula
   }
 
   it should "introduce differential assignments exhaustively whatever the names" in {
