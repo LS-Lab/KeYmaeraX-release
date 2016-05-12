@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 /**
  * Tactic Examples with different proof styles.
  * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 @SummaryTest
 class BTacticExamples extends TacticTestBase  {

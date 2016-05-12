@@ -297,9 +297,9 @@ trait UnifyUSCalculus {
             assert(expect, "useAt show implication")(SuccPos(0)) &
             equivifyR(SuccPos(0)) & debug("    equivified") &
             assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) &
-            debug("    CE coming up") & (
-            if (other.kind==FormulaKind) CE(p.inExpr)
-            else if (other.kind==TermKind) CQ(p.inExpr)
+            debug("    CE/CQ coming up") & (
+            if (other.kind==FormulaKind) CE(p.inExpr) & debug("    ...CE done")
+            else if (other.kind==TermKind) CQ(p.inExpr) & debug("     ...CQ done")
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
             by(subst.toForward(fact))
           ) & debug("end   useAt " + p) partial
@@ -323,11 +323,10 @@ trait UnifyUSCalculus {
       K.ctx match {
         case DotFormula if p.isTopLevel => by(subst.toForward(fact))
 
-        //@todo may have to fix
-        case DotFormula if !p.isTopLevel => //equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
-          equivStep(True, TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head,True),
-            equivR(1) & <(closeTrue(1) , coHideR(1) & by(fact))
-          ))
+        case DotFormula if !p.isTopLevel =>
+          val provedFact = TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head,True),
+            equivR(1) <(closeTrue(1) , coHideR(1) & by(fact)))
+          equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
 
         case Equiv(DotFormula, other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 
