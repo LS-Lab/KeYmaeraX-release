@@ -1543,6 +1543,29 @@ object DerivedAxioms {
   lazy val DWeakeningT = derivedAxiomT(DWeakening)
 
   /**
+    * {{{Axiom "DI differential invariance".
+    *  ([{c&H(??)}]p(??) <-> [?H(??);]p(??)) <- (H(??) -> [{c&H(??)}]((p(??))'))
+    *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val DIinvarianceF = "([{c&H(??)}]p(??) <-> [?H(??);]p(??)) <- (H(??) -> [{c&H(??)}]((p(??))'))".asFormula
+  lazy val DIinvariance = derivedAxiom("DI differential invariance",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DIinvarianceF)),
+    implyR(1) & equivR(1) <(
+      testb(1) &
+        useAt("DX differential skip")(-2) &
+        close
+      ,
+      testb(-2) &
+        useAt("DI differential invariant")(1) &
+        prop & onAll(close)
+    )
+  )
+  lazy val DIinvarianceT = derivedAxiomT(DIinvariance)
+
+  /**
     * {{{Axiom "DX diamond differential skip".
     *    <{c&H(??)}>p(??) <- H(??)&p(??)
     * End.

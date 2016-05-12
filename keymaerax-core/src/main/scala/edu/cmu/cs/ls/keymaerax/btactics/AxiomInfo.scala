@@ -132,6 +132,9 @@ object DerivationInfo {
     new CoreAxiomInfo("DE differential effect (system)"
       , AxiomDisplayInfo("DE", "[{x′=F,c&H}]P↔[{c,x′=F&H}][x′:=f(x)]P")
       , "DEs", {case () => HilbertCalculus.DE}),
+    new DerivedAxiomInfo("DI differential invariance"
+      , AxiomDisplayInfo("DI", "([{x′=f(x)&q(x)}]p(x)↔[?q(x)]p(x))←(q(x)→[{x′=f(x)&q(x)}](p(x))′)")
+      , "DIequiv", {case () => ???}),
     new CoreAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "[{x′=f(x)&q(x)}]p(x)←(q(x)→p(x)∧[{x′=f(x)&q(x)}](p(x))′)")
       , "DI", {case () => HilbertCalculus.DI}),
@@ -747,7 +750,7 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   override val formula:Formula = {
     Axiom.axioms.get(canonicalName) match {
       case Some(fml) => fml
-      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
+      case None => throw new AxiomNotFoundException("No formula for core axiom " + canonicalName)
     }
   }
   override lazy val provable:Provable = Axiom.axiom(canonicalName)

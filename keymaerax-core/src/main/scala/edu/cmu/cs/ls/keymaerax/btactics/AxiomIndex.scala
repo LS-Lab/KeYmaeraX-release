@@ -53,6 +53,7 @@ object AxiomIndex {
     case "DW"              => (PosInExpr(Nil), Nil)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DE differential effect" | "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
+    case "DI differential invariance" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
     case "DG differential ghost" => directReduction
     case "DG differential Lipschitz ghost system" => directReduction
