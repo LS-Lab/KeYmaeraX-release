@@ -13,9 +13,8 @@ The code review will only proceed successfully if everybody present clearly and 
 
 Please don't hesitate at all if some part of the code is unclear to you! It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Confusion about the code are likely sources of trouble. And simpler code is much easier to get sound than complex contraptions. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities.
 
-
 KeYmaera X Kernel Code Review Steps
------------------------------------
+===================================
 
 R1) Expression.scala for correctness and compliance with section 2.1 [1,2]
 R2) StaticSemantics.scala for correctness and compliance with section 2.3 [1,2]
@@ -23,13 +22,12 @@ R3) UniformSubstitution.scala for correctness and compliance with section 3.0 [1
 R4) UniformRenaming.scala for correctness
 R5) Proof.scala for correctness and compliance with [1,2,3]
 R6) AxiomBase.scala for correctness and compliance with Fig 2+3 [1,2,4]
-R7) SetLattice.scala for correctness
-    including a glance at Errors.scala and core.PrettyPrinter.scala
+R7) SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala
 R8) QETool.scala for correctness
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
-Changes to the KeYmaera X Kernel will have to be reviewed periodically in similar ways.
+Changes to the KeYmaera X Kernel need to be reviewed periodically in similar ways.
 
 If there are any questions about the KeYmaera X Kernel code review or any suggestions on how it could be improved, please ask! Questions and clarifications are good!
 
@@ -37,9 +35,7 @@ Extended Code Review:
 In addition to the above files, an extended code review also considers
 R9) parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
 R10) lemma package: LemmaDB.scala + FileLemmaDB.scala for correctness
-R11) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
-
-Andre
+R11) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala
 
 References
 ----------
@@ -49,8 +45,7 @@ arXiv 1601.06183 http://arxiv.org/abs/1601.06183
 
 [2] André Platzer. 
 A uniform substitution calculus for differential dynamic logic.
-In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.
-Extended version arXiv http://arxiv.org/abs/1503.01981
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.  Extended version arXiv http://arxiv.org/abs/1503.01981
 
 [3] André Platzer. 
 Differential dynamic logic for hybrid systems. 
@@ -63,7 +58,7 @@ ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
 http://arxiv.org/abs/1408.1980
 
 ------------------------------------------------------------------
-The date of last full ode review is added to the top of the file as  @note Code Review.
+The date of last full code review is added to the top of the file as @note Code Review: 2016-03-09.
 A log of all major code reviews and the findings are reported here:
 
 Code Review: KeYmaera X Core: 2016-03-09
