@@ -104,10 +104,10 @@ object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeId)) partial,
+              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeIdWith('Llast))) partial,
               /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
-              topAbstraction(1) & closeId
+              topAbstraction(1) & ProofRuleTactics.trivialCloser
               )
         }
       }
@@ -177,9 +177,9 @@ object DLBySubst {
                       case _ => false
                     }
                     case _ => true
-                  }, "abstractionb: foralls must match") & closeId
+                  }, "abstractionb: foralls must match") & ProofRuleTactics.trivialCloser
                 )) partial,
-              /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeId
+              /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
             )
         }
       }
@@ -410,7 +410,7 @@ object DLBySubst {
               assertE(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(pos.top) &
               debug("K reduction") & useAt("K modal modus ponens", PosInExpr(1::Nil))(pos.top) &
               assertE(Box(a, Imply(C,post)), "[a](cut->post)")(pos.top) & debug("closing by K assumption") &
-              closeId
+              closeIdWith(pos.top)
             ) partial
           )
       }
@@ -453,10 +453,10 @@ object DLBySubst {
               else And(invariant, True)
             cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
               /* c */ useAt("I induction")(pos) & andR(pos) <(
-                andR(pos) <(ident /* indInit */, ((andR(pos) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
+                andR(pos) <(ident /* indInit */, ((andR(pos) <(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) partial(initCase),
                 cohide(pos) & G & implyR(1) & splitb(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
-                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial
+                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & ProofRuleTactics.trivialCloser) partial
               ) partial,
               /* c -> d */ cohide(pos) & CMon(pos.inExpr+1) & implyR(1) &
                 (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)

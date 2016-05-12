@@ -486,6 +486,23 @@ class DLTests extends TacticTestBase {
 //    substResult.subgoals(2).succ should contain only "x+1>=1&y-1<=-1".asFormula
   }
 
+  it should "keep constant context" in {
+    val succ@Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula
+    val result = proveBy(Sequent(Nil, IndexedSeq("A>0".asFormula, "x>2".asFormula, "B>0".asFormula), IndexedSeq("C<1".asFormula, succ, "D<1".asFormula)),
+      loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(2))
+
+    result.subgoals should have size 3
+    // init
+    result.subgoals.head.ante should contain only ("A>0".asFormula, "x>2".asFormula, "B>0".asFormula)
+    result.subgoals.head.succ should contain only ("C<1".asFormula, "x>1".asFormula, "D<1".asFormula)
+    // use case
+    result.subgoals(1).ante should contain only ("A>0".asFormula, "x>1".asFormula, "B>0".asFormula)
+    result.subgoals(1).succ should contain only "x>0".asFormula
+    // step
+    result.subgoals(2).ante should contain only ("A>0".asFormula, "x>1".asFormula, "B>0".asFormula)
+    result.subgoals(2).succ should contain only "[x:=A+B+1;]x>1".asFormula
+  }
+
   "Discrete ghost" should "introduce assignment to fresh variable" in {
     val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable)(1))
     result.subgoals should have size 1
