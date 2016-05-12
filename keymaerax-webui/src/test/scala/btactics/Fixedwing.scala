@@ -8,7 +8,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.AntePos
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{CaseStudyTest, SlowTest}
+import testHelper.KeYmaeraXTestTags
 import testHelper.ParserFactory._
 
 /**
@@ -18,9 +19,10 @@ import testHelper.ParserFactory._
   * @author Ran Ji
   */
 @SlowTest
+@CaseStudyTest
 class Fixedwing extends TacticTestBase {
 
-  "Fixed wing simple nobound" should "be provable" in withZ3 { implicit qeTool =>
+  "Fixed wing simple nobound" should "be provable" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withZ3 { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/fixedwing/fixedwing_simple_nobound.key"))
 
     val invariant = """       dx^2+dy^2 = 1

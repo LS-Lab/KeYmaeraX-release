@@ -2,11 +2,14 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.File
 
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags
 
+@SlowTest
 class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  "Launcher" should "prove the bouncing ball from command line" in {
+  "Launcher" should "prove the bouncing ball from command line" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.key"
     val tacticFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/BouncingBallTacticGenerator.scala"
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyx.proof").getAbsolutePath
