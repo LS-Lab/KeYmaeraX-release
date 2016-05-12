@@ -17,48 +17,6 @@ import scala.language.postfixOps
 object EqualityTactics {
 
   /**
-   * Rewrites a formula according to an equivalence appearing in the antecedent.
-   * @note Uses propositional tactics instead of builtin rules.
-   * @example{{{
-   *   x>0 <-> y>0 |- y>0 | y<=0, x>0->z=1
-   *   ------------------------------------equivRewriting(-1)(1)
-   *   x>0 <-> y>0 |- x>0 | y<=0, x>0->z=1
-   * }}}
-   * @param eqPos The position where the equivalence appears in the antecedent.
-   * @return The tactic.
-   */
-  def equivRewriting(eqPos: Int): DependentPositionTactic = equivRewriting(Position(eqPos).asInstanceOf[AntePosition])
-  def equivRewriting(eqPos: AntePosition): DependentPositionTactic = "Equivalence Rewriting" by ((pos, sequent) => {
-    require(eqPos.isTopLevel, "Equivalence to rewrite must occur in top-level position in antecedent")
-    sequent.sub(eqPos) match {
-      case Some(Equiv(a, b)) if a == sequent(pos.top) && !pos.isAnte =>
-        equivL(eqPos) <(
-          andL(eqPos) & closeId,
-          (andL(eqPos) & ProofRuleTactics.hide(pos) & notL('Llast) & ProofRuleTactics.hide('Llast)) partial
-          )
-      case Some(Equiv(a, b)) if a == sequent(pos.top) && pos.isAnte =>
-        equivL(eqPos) <(
-          (andL(eqPos) &
-            (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos)
-            else ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
-          andL(eqPos) & notL('Llast) & notL('Llast) & closeId
-          )
-      case Some(Equiv(a, b)) if b == sequent(pos.top) && !pos.isAnte =>
-        equivL(eqPos) <(
-          andL(eqPos) & closeId,
-          (andL(eqPos) & ProofRuleTactics.hide(pos) & notL(eqPos) & ProofRuleTactics.hide(eqPos)) partial
-          )
-      case Some(Equiv(a, b)) if b == sequent(pos.top) && pos.isAnte =>
-        equivL(eqPos) <(
-          (andL(eqPos) &
-            (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos)
-            else ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
-          andL(eqPos) & notL('Llast) & notL('Llast) & closeId
-          )
-    }
-  })
-
-  /**
    * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).
    * @note Base tactic for eqL2R and eqR2L.
    * @param name The name of the tactic.

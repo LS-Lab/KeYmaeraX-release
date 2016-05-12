@@ -169,48 +169,6 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
-  "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>=0 <-> y>=0".asFormula), IndexedSeq("x>=0".asFormula)), equivRewriting(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "y>=0".asFormula
-  }
-
-  it should "rewrite if rhs occurs in succedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>=0 <-> y>=0".asFormula), IndexedSeq("y>=0".asFormula)), equivRewriting(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x>=0".asFormula
-  }
-
-  it should "rewrite if lhs occurs in antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>=0 <-> y>=0".asFormula, "x>=0".asFormula), IndexedSeq()), equivRewriting(-1)(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "y>=0".asFormula
-    result.subgoals.head.succ shouldBe empty
-  }
-
-  it should "rewrite if lhs occurs in antecedent before assumption" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>=0".asFormula, "x>=0 <-> y>=0".asFormula), IndexedSeq()), equivRewriting(-2)(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "y>=0".asFormula
-    result.subgoals.head.succ shouldBe empty
-  }
-
-  it should "rewrite if rhs occurs in antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>=0 <-> y>=0".asFormula, "y>=0".asFormula), IndexedSeq()), equivRewriting(-1)(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=0".asFormula
-    result.subgoals.head.succ shouldBe empty
-  }
-
-  it should "rewrite if rhs occurs in antecedent before assumption" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("y>=0".asFormula, "x>=0 <-> y>=0".asFormula), IndexedSeq()), equivRewriting(-2)(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=0".asFormula
-    result.subgoals.head.succ shouldBe empty
-  }
-
   "Abbrv tactic" should "abbreviate a+b to z" in withMathematica { implicit qeTool =>
     val result = proveBy("a+b < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
     result.subgoals should have size 1
