@@ -1566,6 +1566,27 @@ object DerivedAxioms {
   lazy val DIinvarianceT = derivedAxiomT(DIinvariance)
 
   /**
+    * {{{Axiom "DI differential invariant".
+    *    [{c&H(??)}]p(??) <- (H(??)-> (p(??) & [{c&H(??)}]((p(??))')))
+    *    // [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val DIinvariantF = "[{c&H(??)}]p(??) <- (H(??)-> (p(??) & [{c&H(??)}]((p(??))')))".asFormula
+  lazy val DIinvariant = derivedAxiom("DI differential invariant",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DIinvariantF)),
+    implyR(1) & useAt(implyDistAndAxiom, PosInExpr(0::Nil))(-1) & andL(-1) &
+      useAt("[?] test", PosInExpr(1::Nil))(-1) &
+      cut(DIinvarianceF) <(
+        prop & onAll(close)
+        ,
+        cohide(2) & by(DIinvariance)
+        )
+  )
+  lazy val DIinvariantT = derivedAxiomT(DIinvariant)
+
+  /**
     * {{{Axiom "DX diamond differential skip".
     *    <{c&H(??)}>p(??) <- H(??)&p(??)
     * End.
