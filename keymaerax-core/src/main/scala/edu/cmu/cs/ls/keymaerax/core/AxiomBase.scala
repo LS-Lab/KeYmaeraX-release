@@ -346,11 +346,6 @@ Axiom "DI differential invariant".
 /* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY */
 End.
 
-Axiom "DI differential invariance".
-  ([{c&H(??)}]p(??) <-> [?H(??);]p(??)) <- (H(??) -> [{c&H(??)}]((p(??))'))
-/* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY */
-End.
-
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DG differential ghost".
   [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
