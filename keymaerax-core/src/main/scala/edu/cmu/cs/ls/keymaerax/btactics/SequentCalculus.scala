@@ -120,9 +120,24 @@ trait SequentCalculus {
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  def close(a: AntePosition, s: SuccPosition) : BelleExpr = cohide2(a, s) & ProofRuleTactics.trivialCloser
-  def close(a: Int, s: Int)  : BelleExpr = close(Position(a).asInstanceOf[AntePosition], Position(s).asInstanceOf[SuccPosition])
+  def close(a: AntePos, s: SuccPos) : BelleExpr = cohide2(a, s) & ProofRuleTactics.trivialCloser
+  def close(a: Int, s: Int)  : BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  lazy val closeIdWith: DependentPositionTactic = new DependentPositionTactic("close id") {
+    /** Create the actual tactic to be applied at position pos */
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v : BelleValue): BelleExpr = v match {
+        case BelleProvable(provable, _) =>
+          require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+          val s = provable.subgoals.head
+          pos.top match {
+            case p@AntePos(_) => close(p, SuccPos(s.succ.indexOf(s(p))))
+            case p@SuccPos(_) => close(AntePos(s.ante.indexOf(s(p))), p)
+          }
+      }
+    }
+  }
+  //@note do not forward to closeIdWith (performance)
   lazy val closeId           : DependentTactic = new DependentTactic("close id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
@@ -131,7 +146,7 @@ trait SequentCalculus {
         val fmls = s.ante.intersect(s.succ)
         require(fmls.nonEmpty, "Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
         val fml = fmls.head
-        close(AntePosition.base0(s.ante.indexOf(fml)), SuccPosition.base0(s.succ.indexOf(fml)))
+        close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */

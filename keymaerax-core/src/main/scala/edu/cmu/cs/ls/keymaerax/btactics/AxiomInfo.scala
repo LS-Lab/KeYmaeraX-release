@@ -503,7 +503,7 @@ object DerivationInfo {
     new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
     new TwoPositionTacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => (ante: AntePosition, succ: SuccPosition) => TactixLibrary.close(ante, succ)}),
+      {case () => (ante: AntePosition, succ: SuccPosition) => TactixLibrary.close(ante.top, succ.top)}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
