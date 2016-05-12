@@ -103,6 +103,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DI differential invariance from DI" in {check(DIinvariance)}
+  it should "prove DI differential invariant from DI" in {check(DIinvariant)}
   it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
@@ -182,6 +183,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom, vacuousDiamondAssignNondetT)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
   it should "prove DI differential invariance" in {check(DIinvariance, DIinvarianceT)}
+  it should "prove DI differential invariant" in {check(DIinvariant, DIinvariantT)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
   it should "prove DW differential weakening" in {check(DWeakening, DWeakeningT)}
   it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
