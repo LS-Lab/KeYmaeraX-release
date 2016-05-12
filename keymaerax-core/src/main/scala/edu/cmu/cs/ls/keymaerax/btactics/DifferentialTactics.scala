@@ -518,7 +518,7 @@ object DifferentialTactics {
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
       cut(q) <(
         /* use */ skip,
-        /* show */ DI(pos) & implyR(pos) & closeId
+        /* show */ DI(pos) & implyR(pos) & closeIdWith('Llast)
         )
   })
 
@@ -582,7 +582,7 @@ object DifferentialTactics {
       if (consts.nonEmpty) {
         val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0)) partial
         val constFml = consts.reduceRight(And)
-        diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeId, skip))*(consts.size-1) & closeId) partial
+        diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast), skip))*(consts.size-1) & closeIdWith('Rlast)) partial
       } else {
         diffWeakenG(pos)
       }
