@@ -65,4 +65,7 @@ object KeYmaeraXTestTags {
 
   /** Tests that are obsolete, e.g. from old tactic framework. */
   object ObsoleteTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest")
+
+  /** Tests that should be ignored in an automated build. */
+  object IgnoreInBuildTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest")
 }
