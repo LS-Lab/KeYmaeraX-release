@@ -216,15 +216,7 @@ object EqualityTactics {
 
         cut(Exists(v :: Nil, Equal(v, t))) <(
           /* use */ (existsL('Llast) & exhaustiveEqR2L('Llast)) partial,
-//          @note cannot use existsR because Unification match doesn't get it right yet
-//          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
-          /* show */ cohide('Rlast) & cut(Equiv(Exists(v :: Nil, Equal(v, t)), Equal(t, t))) <(
-            /* use */ equivRewriting(-1)(1) & byUS("= reflexive"),
-            /* show */ equivR('Rlast) <(
-              closeId,
-              FOQuantifierTactics.existsGeneralize(v, PosInExpr(0::Nil)::Nil)(-1) & closeId
-            )
-          )
+          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
         )
     }
   }
