@@ -485,7 +485,6 @@ class JLinkMathematicaLink extends MathematicaLink {
   /** Checks if Mathematica is activated by querying the license expiration date */
   private def isActivated: Option[Boolean] = {
     type MExpr = com.wolfram.jlink.Expr
-    //@todo this is how Mathematica 10 represents infinity, test if 9 is the same
     val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
 
     ml.evaluate("$LicenseExpirationDate")
