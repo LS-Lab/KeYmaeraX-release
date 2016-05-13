@@ -383,27 +383,6 @@ class JLinkMathematicaLink extends MathematicaLink {
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
 
   /**
-   * Converts an expression into a differential equation system (list of x'=theta).
-   * Expected to be in NFContEvolve form.
-   * @param diffSys The expression form of the differential equation system.
-   * @param diffArg The name of the differential argument (dx/d diffArg = theta).
-   * @return The differential equation system.
-   */
-  // TODO convert more general forms
-  private def toDiffSys(diffSys: KExpr, diffArg: Variable): List[(Variable, Term)] = {
-    diffSys match {
-      // do not solve time for now (assumed to be there but should not be solved for)
-      // TODO remove restriction on t once ghost time is introduced
-      case Equal(Differential(x: Variable), theta) if x != diffArg =>  (x, theta) :: Nil
-      case Equal(DifferentialSymbol(x), theta) if x != diffArg =>  (x, theta) :: Nil
-      case Equal(Differential(x: Variable), theta) if x == diffArg =>  Nil
-      case Equal(DifferentialSymbol(x), theta) if x == diffArg =>  Nil
-      case And(lhs, rhs) => toDiffSys(lhs, diffArg) ::: toDiffSys(rhs, diffArg)
-      case _ => ???
-    }
-  }
-
-  /**
    * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
    * @param diffSys The system of differential equations
    * @param diffArg The name of the differential argument (dx/d diffArg = theta).
