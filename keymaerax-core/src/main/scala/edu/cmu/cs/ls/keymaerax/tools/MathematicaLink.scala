@@ -78,12 +78,11 @@ class JLinkMathematicaLink extends MathematicaLink {
     new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
   private val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
 
-  // HACK assumed to be called before first use of ml
-  // TODO replace with constructor and use dependency injection to provide JLinkMathematicaLink whereever needed
   /**
    * Initializes the connection to Mathematica.
    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
    * @return true if initialization was successful
+   * @note Must be called before first use of ml
    */
   def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
     this.linkName = linkName
@@ -108,7 +107,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     } catch {
       case e:UnsatisfiedLinkError =>
         val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
-          "\nOr this path did not contain the native library compatible with " + System.getProperties().getProperty("sun.arch.data.model") + "-bit " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
+          "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
           diagnostic
         println(message)
         throw e.initCause(new Error(message))
@@ -242,10 +241,6 @@ class JLinkMathematicaLink extends MathematicaLink {
     true
   }
 
-  def qe(f : Formula) : Formula = {
-    qeEvidence(f)._1
-  }
-
   def qeEvidence(f : Formula) : (Formula, Evidence) = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "Reduce"),
       Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
@@ -361,23 +356,6 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = ???
-
-  @deprecated("Use findCounterExample instead")
-  def getCounterExample(f : Formula): String = {
-    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
-    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
-    try {
-      val (output, result) = run(inputWithTO)
-      result match {
-        case ff: Formula => KeYmaeraXPrettyPrinter(ff)
-        case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
-      }
-    } catch {
-      case e: MathematicaComputationAbortedException => throw new NoCountExException("Within " + TIMEOUT + " seconds, Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
-    }
-
-  }
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
