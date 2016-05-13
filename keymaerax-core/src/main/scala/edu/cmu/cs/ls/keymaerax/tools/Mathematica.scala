@@ -17,7 +17,6 @@ import scala.collection.immutable.Map
 class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
   private val jlink = new JLinkMathematicaLink
 
-  // TODO replace with constructor and dependency injection
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
       case Some(l) => l
@@ -30,12 +29,18 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     initialized = jlink.init(linkName, libDir)
   }
 
+  /** Closes the connection to Mathematica */
   override def shutdown() = jlink.shutdown()
 
-  def qe(formula: Formula): Formula = jlink.qe(formula)
+  /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
-  @deprecated("Use findCounterExample instead")
-  def getCounterExample(formula: Formula): String = jlink.getCounterExample(formula)
+
+  /** Returns a formula describing the symbolic solution of the specified differential equation system.
+   * @param diffSys The differential equation system
+   * @param diffArg The independent variable of the ODE, usually time
+   * @param iv Names of initial values per variable, e.g., x -> x_0
+   * @return The solution, if found. None otherwise.
+   */
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
                        iv: Predef.Map[Variable, Variable]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
 
@@ -46,9 +51,30 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = jlink.findCounterExample(formula)
 
+  /**
+    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
+    * relation is a modality-free first-order formula. The simulation starts in a state where initial holds (first-order
+    * formula).
+    * @param initial A first-order formula describing the initial state.
+    * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship
+    *                      is by name convention: postfix 'pre': prior state; no postfix: posterior state.
+    * @param steps The length of the simulation run (i.e., number of states).
+    * @param n The number of simulations (different initial states) to create.
+    * @return 'n' lists (length 'steps') of simulated states.
+    */
   override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = jlink.simulate(initial, stateRelation, steps, n)
+
+  /**
+    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
+    * relation is a modality-free first-order formula. The simulation starts in the specified initial state.
+    * @param initial The initial state: concrete values .
+    * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship
+    *                      is by name convention: postfix 'pre': prior state; no postfix: posterior state.
+    * @param steps The length of the simulation run (i.e., number of states).
+    * @return A list (length 'steps') of simulated states.
+    */
   override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = jlink.simulateRun(initial, stateRelation, steps)
 
-  //@todo Implement Mathematica recovery actions
-  override def restart() = ???
+  /** Restarts the MathKernel with the current configuration */
+  override def restart() = jlink.restart()
 }

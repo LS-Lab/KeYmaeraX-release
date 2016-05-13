@@ -48,15 +48,15 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
   }
 
   "abs(-5) > 4" should "be provable with QE" in withMathematica { link =>
-    link.qe("abs(-5) > 4".asFormula) shouldBe True
+    link.qeEvidence("abs(-5) > 4".asFormula)._1 shouldBe True
   }
 
   "min(1,3) = 1" should "be provable with QE" in withMathematica { link =>
-    link.qe("min(1,3) = 1".asFormula) shouldBe True
+    link.qeEvidence("min(1,3) = 1".asFormula)._1 shouldBe True
   }
 
   "max(1,3) = 3" should "be provable with QE" in withMathematica { link =>
-    link.qe("max(1,3) = 3".asFormula) shouldBe True
+    link.qeEvidence("max(1,3) = 3".asFormula)._1 shouldBe True
   }
 
   "Mathematica 9" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in withTool({
