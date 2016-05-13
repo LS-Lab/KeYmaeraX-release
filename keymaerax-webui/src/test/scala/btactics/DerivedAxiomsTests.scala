@@ -9,6 +9,9 @@ import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
+import scala.collection.immutable
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
@@ -189,4 +192,12 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
   it should "prove min" in withMathematica { implicit qeTool => check(minDef, minT)}
   it should "prove max" in withMathematica { implicit qeTool => check(maxDef, maxT)}
+
+  "Derived Rule" should "prove CT" in withMathematica { implicit qeTool => CTtermCongruence.fact.subgoals shouldBe List(
+    Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq("f_(??) = g_(??)".asFormula))
+  ) }
+
+  it should "prove [] monotone" in withMathematica { implicit qeTool => boxMonotone.fact.subgoals shouldBe List(
+    Sequent(immutable.Seq(), immutable.IndexedSeq("p(??)".asFormula), immutable.IndexedSeq("q(??)".asFormula))
+  ) }
 }

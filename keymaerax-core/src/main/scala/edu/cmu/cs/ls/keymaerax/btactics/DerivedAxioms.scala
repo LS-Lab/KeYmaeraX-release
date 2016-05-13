@@ -4,12 +4,11 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, BelleExpr, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, ToolEvidence}
 
 import scala.annotation.switch
@@ -64,6 +63,37 @@ object DerivedAxioms {
       derivedAxiomDB.get(lemmaID).get
     }
   }
+
+  private[btactics] def derivedRule(name: String, fact: Provable): Lemma = {
+    // create evidence (traces input into tool and output from tool)
+    val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
+    val lemmaName = "TODO" + name
+    val lemma = Lemma(fact, evidence, Some(lemmaName))
+    //@todo
+    lemma
+//    if (!AUTO_INSERT) {
+//      lemma
+//    } else {
+//      // first check whether the lemma DB already contains identical lemma name
+//      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
+//        // identical lemma contents with identical name, so reuse ID
+//        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
+//        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
+//      } else {
+//        derivedAxiomDB.add(lemma)
+//      }
+//      derivedAxiomDB.get(lemmaID).get
+//    }
+  }
+
+  private[btactics] def derivedRule(name: String, derived: Sequent, tactic: BelleExpr): Lemma =
+  //@todo figure out appropriate database
+  /*derivedAxiomDB.get(axiom2lemmaName(name)) match {
+      case Some(lemma) => lemma
+      case None =>*/{
+        val witness = TactixLibrary.proveBy(derived, tactic)
+        derivedRule(name, witness)
+    }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, derived: Sequent, tactic: BelleExpr): Lemma =
@@ -201,6 +231,7 @@ object DerivedAxioms {
     case "!<-> deMorgan" => Some(notEquivF, notEquivT)
     case "-> expand" => Some(implyExpandF, implyExpandT)
     case "-> self" => Some(implySelfF, implySelfT)
+    case "<-> true" => Some(equivTrueF, equivTrueT)
     case "PC1" => Some(PC1F, PC1T)
     case "PC2" => Some(PC2F, PC2T)
     case "PC3" => Some(PC3F, PC3T)
@@ -284,6 +315,47 @@ object DerivedAxioms {
       }
     })
   }
+
+  // derived rules
+
+  /**
+    * Rule "CT term congruence".
+    * Premise f_(??) = g_(??)
+    * Conclusion ctxT_(f_(??)) = ctxT_(g_(??))
+    * End.
+    *
+    * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
+    */
+  lazy val CTtermCongruence = derivedRule("CT term congruence",
+    Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(??)) = ctx_(g_(??))".asFormula)),
+    cutR("ctx_(g_(??)) = ctx_(g_(??))".asFormula)(SuccPos(0)) <(
+      byUS(equalReflex)
+      ,
+      equivifyR(1) &
+        CQ(PosInExpr(0::0::Nil)) &
+        commuteEqual(1)
+        partial
+      )
+  )
+
+  /**
+    * Rule "[] monotone".
+    * Premise p(??) ==> q(??)
+    * Conclusion [a;]p(??) ==> [a;]q(??)
+    * End.
+    * @derived useAt("<> diamond") & by("<> monotone")
+    * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+    * @see "André Platzer. Differential Hybrid Games."
+    * @note Notation changed to p instead of p_ just for the sake of the derivation.
+    */
+  lazy val boxMonotone = derivedRule("[] montone",
+    Sequent(immutable.Seq(), immutable.IndexedSeq("[a;]p(??)".asFormula), immutable.IndexedSeq("[a;]q(??)".asFormula)),
+    useAt("[] box", PosInExpr(1::Nil))(-1) & useAt("[] box", PosInExpr(1::Nil))(1) &
+      notL(-1) & notR(1) &
+      mond &
+      notL(-1) & notR(1)
+      partial
+  )
 
   // derived axioms and their proofs
 
@@ -1231,6 +1303,16 @@ object DerivedAxioms {
   lazy val andReflexiveT = derivedAxiomT(andReflexive)
 
   /**
+    * {{{Axiom "<-> true".
+    *    (p() <-> true) <-> p()
+    * End.
+    * }}}
+    */
+  lazy val equivTrueF = "(p() <-> true) <-> p()".asFormula
+  lazy val equivTrue = derivedAxiom("<-> true", Sequent(Nil, IndexedSeq(), IndexedSeq(equivTrueF)), prop)
+  lazy val equivTrueT = derivedAxiomT(equivTrue)
+
+  /**
     * {{{Axiom "-> self".
     *    (p() -> p()) <-> true
     * End.
@@ -1548,6 +1630,7 @@ object DerivedAxioms {
     *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY
     * End.
     * }}}
+    *
     * @Derived
     */
   lazy val DIinvarianceF = "([{c&H(??)}]p(??) <-> [?H(??);]p(??)) <- (H(??) -> [{c&H(??)}]((p(??))'))".asFormula
@@ -1571,6 +1654,7 @@ object DerivedAxioms {
     *    // [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY
     * End.
     * }}}
+    *
     * @Derived
     */
   lazy val DIinvariantF = "[{c&H(??)}]p(??) <- (H(??)-> (p(??) & [{c&H(??)}]((p(??))')))".asFormula

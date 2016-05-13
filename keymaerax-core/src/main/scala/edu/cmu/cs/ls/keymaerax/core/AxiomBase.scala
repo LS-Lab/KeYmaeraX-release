@@ -73,16 +73,16 @@ private[core] object AxiomBase {
       ("all generalization",
         (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
-      /**
-       * Rule "CT term congruence".
-       * Premise f_(??) = g_(??)
-       * Conclusion ctxT_(f_(??)) = ctxT_(g_(??))
-       * End.
-       * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
-       */
-      ("CT term congruence",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
+//      /**
+//       * Rule "CT term congruence".
+//       * Premise f_(??) = g_(??)
+//       * Conclusion ctxT_(f_(??)) = ctxT_(g_(??))
+//       * End.
+//       * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
+//       */
+//      ("CT term congruence",
+//        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
+//          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       /**
        * Rule "CQ equation congruence".
        * Premise f_(??) = g_(??)
@@ -111,18 +111,18 @@ private[core] object AxiomBase {
       ("CE congruence",
         (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
-      /**
-       * Rule "[] monotone".
-       * Premise p(??) ==> q(??)
-       * Conclusion [a;]p(??) ==> [a;]q(??)
-       * End.
-       * @derived useAt("<> diamond") & by("<> monotone")
-       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
-       * @see "André Platzer. Differential Hybrid Games."
-       */
-      ("[] monotone",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
+//      /**
+//       * Rule "[] monotone".
+//       * Premise p(??) ==> q(??)
+//       * Conclusion [a;]p(??) ==> [a;]q(??)
+//       * End.
+//       * @derived useAt("<> diamond") & by("<> monotone")
+//       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+//       * @see "André Platzer. Differential Hybrid Games."
+//       */
+//      ("[] monotone",
+//        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
+//          Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
       /**
        * Rule "<> monotone".
        * Premise p(??) ==> q(??)
