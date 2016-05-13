@@ -32,12 +32,11 @@ object DerivedAxioms {
   implicit var qeTool: QETool with DiffSolutionTool = null
   type LemmaID = String
 
-  /** A Provable proving the derived axiom named id (convenience) */
-  def derivedAxiom(name: String): Provable = {
-    val lemmaName = axiom2lemmaName(name)
+  /** A Provable proving the derived axiom/rule named id (convenience) */
+  def derivedAxiomOrRule(name: String): Provable = {
+    val lemmaName = DerivationInfo(name).codeName
     require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
-    derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom " + name + " should have been added already")).fact
-    //Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(derivedAxiomFormula(name).get)))(derivedAxiomR(name), 0)
+    derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
   }
 
   private val AUTO_INSERT = true
@@ -47,7 +46,7 @@ object DerivedAxioms {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
-    val lemmaName = axiom2lemmaName(name)
+    val lemmaName = AxiomInfo(name).codeName
     val lemma = Lemma(fact, evidence, Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
@@ -67,37 +66,35 @@ object DerivedAxioms {
   private[btactics] def derivedRule(name: String, fact: Provable): Lemma = {
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
-    val lemmaName = "TODO" + name
+    val lemmaName = DerivedRuleInfo(name).codeName
     val lemma = Lemma(fact, evidence, Some(lemmaName))
-    //@todo
-    lemma
-//    if (!AUTO_INSERT) {
-//      lemma
-//    } else {
-//      // first check whether the lemma DB already contains identical lemma name
-//      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
-//        // identical lemma contents with identical name, so reuse ID
-//        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
-//        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
-//      } else {
-//        derivedAxiomDB.add(lemma)
-//      }
-//      derivedAxiomDB.get(lemmaID).get
-//    }
+    if (!AUTO_INSERT) {
+      lemma
+    } else {
+      // first check whether the lemma DB already contains identical lemma name
+      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
+        // identical lemma contents with identical name, so reuse ID
+        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
+        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
+      } else {
+        derivedAxiomDB.add(lemma)
+      }
+      derivedAxiomDB.get(lemmaID).get
+    }
   }
 
   private[btactics] def derivedRule(name: String, derived: Sequent, tactic: BelleExpr): Lemma =
-  //@todo figure out appropriate database
-  /*derivedAxiomDB.get(axiom2lemmaName(name)) match {
+    derivedAxiomDB.get(DerivedRuleInfo(name).codeName) match {
       case Some(lemma) => lemma
-      case None =>*/{
+      case None => {
         val witness = TactixLibrary.proveBy(derived, tactic)
         derivedRule(name, witness)
+      }
     }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, derived: Sequent, tactic: BelleExpr): Lemma =
-    derivedAxiomDB.get(axiom2lemmaName(name)) match {
+    derivedAxiomDB.get(AxiomInfo(name).codeName) match {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
@@ -146,20 +143,6 @@ object DerivedAxioms {
 //    case None => None
 //  }
 //
-  /**
-   * Looks up a derived axiom formula by name.
-    *
-    * @param name The name of the derived axiom.
-   * @return The axiom formula, if found. None otherwise.
-   */
-  @deprecated("Use AxiomInfo(name).formula instead")
-  private def derivedAxiomFormula(name: String): Option[Formula] = derivedAxiomInfo(name) match {
-    case Some((fml, _)) => Some(fml)
-    case None => None
-  }
-
-  //@note enables consistent axiom names as well as valid file names on all platforms
-  private def axiom2lemmaName(axiomName: String): String = AxiomInfo(axiomName).codeName
 
   /**
    * Looks up information about a derived axiom by name.
@@ -314,6 +297,9 @@ object DerivedAxioms {
         case _:Throwable => println("WARNING: Unknown error populating axiom: " + key.canonicalName)
       }
     })
+    // populate derived rules
+    derivedRule("[] monotone", boxMonotone.fact)
+    derivedRule("CT term congruence", CTtermCongruence.fact)
   }
 
   // derived rules
@@ -343,16 +329,19 @@ object DerivedAxioms {
     * Premise p(??) ==> q(??)
     * Conclusion [a;]p(??) ==> [a;]q(??)
     * End.
+    *
     * @derived useAt("<> diamond") & by("<> monotone")
     * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
     * @see "André Platzer. Differential Hybrid Games."
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
-  lazy val boxMonotone = derivedRule("[] montone",
-    Sequent(immutable.Seq(), immutable.IndexedSeq("[a;]p(??)".asFormula), immutable.IndexedSeq("[a;]q(??)".asFormula)),
+  lazy val boxMonotone = derivedRule("[] monotone",
+    Sequent(immutable.Seq(), immutable.IndexedSeq("[a_;]p_(??)".asFormula), immutable.IndexedSeq("[a_;]q_(??)".asFormula)),
     useAt("[] box", PosInExpr(1::Nil))(-1) & useAt("[] box", PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
-      mond &
+      ProofRuleTactics.axiomatic("<> monotone", USubst(
+        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
+        SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
       notL(-1) & notR(1)
       partial
   )
@@ -1204,7 +1193,7 @@ object DerivedAxioms {
     * End.
     * @todo reorient
     * @Derived
-   */
+    * */
   lazy val vacuousBoxAssignNondetF = "([x_:=*;]p_()) <-> p_()".asFormula
   lazy val vacuousBoxAssignNondetAxiom = derivedAxiom("V[:*] vacuous assign nondet",
     Sequent(Nil, IndexedSeq(), IndexedSeq(vacuousBoxAssignNondetF)),
@@ -1990,7 +1979,7 @@ object DerivedAxioms {
     * {{{Axiom "> flip".
     *   (f() > g()) <-> (g() < f())
     * End.
-  */
+    * */
   lazy val flipGreaterF = "(f_() > g_()) <-> (g_() < f_())".asFormula
   lazy val flipGreater = derivedAxiom("> flip", Sequent(Nil, IndexedSeq(), IndexedSeq(flipGreaterF)), QE)
   lazy val flipGreaterT = derivedAxiomT(flipGreater)

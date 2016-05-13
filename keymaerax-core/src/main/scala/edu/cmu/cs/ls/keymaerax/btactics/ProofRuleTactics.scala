@@ -10,7 +10,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus
  * and other proof rules that are implemented by KeYmaera X.
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  * @see [[SequentCalculi]]
  */
 object ProofRuleTactics {
@@ -252,16 +253,19 @@ object ProofRuleTactics {
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
       if (Provable.rules.contains(axiomName)) {
-        TactixLibrary.by(AxiomaticRule(axiomName)(subst))
-      } else if (Axiom.axioms.contains(axiomName)) {
-        TactixLibrary.by(Axiom.axiom(axiomName)(subst))
+        TactixLibrary.by(Provable.rules(axiomName)(subst))
+      } else if (Provable.axioms.contains(axiomName)) {
+        TactixLibrary.by(Provable.axioms(axiomName)(subst))
       } else if (DerivedAxiomInfo.locate(axiomName).isDefined) {
-        TactixLibrary.by(DerivedAxioms.derivedAxiom(axiomName)(subst))
+        TactixLibrary.by(DerivedAxiomInfo(axiomName).provable(subst))
+      } else if (DerivedRuleInfo.locate(axiomName).isDefined) {
+        TactixLibrary.by(DerivedRuleInfo(axiomName).provable(subst))
       } else throw new BelleError(s"Unknown axiom/rule $axiomName")
   }
 
   /**
     * Uniform renaming `what~>repl` and vice versa.
+    *
     * @param what
     * @param repl
     * @return
@@ -277,6 +281,7 @@ object ProofRuleTactics {
   import TacticFactory._
   /**
     * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
+    *
     * @param what the variable bound at the position where this tactic will be used.
     * @param repl the new, fresh variable to be used for this bound variable instead.
     * @author Andre Platzer
@@ -321,6 +326,7 @@ object ProofRuleTactics {
   }
 
   /** contextualize(t) lifts (standard) top-level tactic `t` to also work on subpositions in any formula context C{_}.
+    *
     * @param tactic the tactic to be lifted, which is required to
     *               work on top-level left and right
     *               and only leave a single goal with one single formula changed.

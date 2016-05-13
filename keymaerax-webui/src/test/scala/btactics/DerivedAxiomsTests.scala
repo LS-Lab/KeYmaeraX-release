@@ -198,6 +198,6 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   ) }
 
   it should "prove [] monotone" in withMathematica { implicit qeTool => boxMonotone.fact.subgoals shouldBe List(
-    Sequent(immutable.Seq(), immutable.IndexedSeq("p(??)".asFormula), immutable.IndexedSeq("q(??)".asFormula))
+      Sequent(immutable.Seq(), immutable.IndexedSeq("p_(??)".asFormula), immutable.IndexedSeq("q_(??)".asFormula))
   ) }
 }

@@ -626,7 +626,15 @@ object DerivationInfo {
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
     // DLBySubst
-    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)})
+    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+
+    // Derived axiomatic rules
+    new DerivedRuleInfo("[] monotone"
+      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(??)"::Nil, "[a;]q_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
+      , "boxMonotone", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
+    new DerivedRuleInfo("CT term congruence"
+      , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(??)) = ctx_(g_(??))"::Nil), SequentDisplay(Nil, "f_(??) = g_(??)"::Nil)::Nil)
+      , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
@@ -763,14 +771,14 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   override lazy val formula: Formula =
-    DerivedAxioms.derivedAxiom(canonicalName).conclusion.succ.head
+    DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
 //  {
 //    DerivedAxioms.derivedAxiomMap.get(canonicalName) match {
 //      case Some(fml) => fml._1
 //      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
 //    }
 //  }
-  override lazy val provable:Provable = DerivedAxioms.derivedAxiom(canonicalName)
+  override lazy val provable:Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -821,4 +829,29 @@ case class InputPositionTacticInfo(override val codeName: String, override val d
 case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 2
+}
+
+/** Information for a derived rule proved from the core */
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends DerivationInfo {
+  DerivationInfo.assertValidIdentifier(codeName)
+  def belleExpr = expr()
+  lazy val provable: Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)
+  override val numPositionArgs = 0
+}
+
+object DerivedRuleInfo {
+  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
+  def locate(ruleName: String): Option[DerivedRuleInfo] =
+    DerivationInfo(ruleName) match {
+      case info: DerivedRuleInfo => Some(info)
+      case _ => None
+    }
+  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
+  def apply(ruleName: String): DerivedRuleInfo =
+    DerivationInfo(ruleName) match {
+      case info: DerivedRuleInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
+    }
+
+  val allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
 }
