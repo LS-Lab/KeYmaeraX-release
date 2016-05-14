@@ -719,7 +719,7 @@ trait UnifyUSCalculus {
       case Equiv(left,right) =>
         require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
         equiv(
-          AxiomaticRule("CE congruence",
+          Provable.rules("CE congruence")(
             USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
               SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), left) ::
               SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), right) ::
@@ -728,7 +728,7 @@ trait UnifyUSCalculus {
       case Equal(left,right) =>
         require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
         equiv(
-          AxiomaticRule("CQ equation congruence",
+          Provable.rules("CQ equation congruence")(
             USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
               SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), left) ::
               SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), right) ::
@@ -912,7 +912,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (Provable.startProof(Sequent(Nil, ante, succ))
-            (AxiomaticRule("<> monotone", USubst(
+            (Provable.rules("<> monotone")(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(dleft))
                 :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(dright))

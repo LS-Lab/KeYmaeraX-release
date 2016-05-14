@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper
@@ -1255,16 +1255,14 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
   
   // uniform substitution of rules
-
-  // TODO Goedel not in AxiomaticRule yet
-  ignore /*"Uniform substitution of rules"*/ should "instantiate Goedel from (-x)^2>=0" in {
-    val p = Function("p", None, Real, Bool)
-    val a = ProgramConst("a")
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
+    val p = Function("p_", None, Real, Bool)
+    val a = ProgramConst("a_")
     val conc = Sequent(Seq(), IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
       SubstitutionPair(PredOf(p, Anything), "(-x)^2>=0".asFormula) ::
       SubstitutionPair(a, "x:=x-1;".asProgram) :: Nil)
-    val pr = AxiomaticRule("Goedel", s)
+    val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe conc
     pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }

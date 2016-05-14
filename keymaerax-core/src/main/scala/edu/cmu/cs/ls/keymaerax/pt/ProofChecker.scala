@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, Axiom}
+import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
@@ -179,7 +179,7 @@ object ProofChecker {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
-          (AxiomaticRule("CT term congruence", usubst), 0)
+          (DerivedRuleInfo("CT term congruence").provable(usubst), 0)
           (equalityCert.get, 0)
         )
         else None
@@ -189,7 +189,7 @@ object ProofChecker {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
-          (AxiomaticRule("CQ term congruence", usubst), 0)
+          (Provable.rules("CQ term congruence")(usubst), 0)
           (equalityCert.get, 0)
         )
         else None
@@ -199,7 +199,7 @@ object ProofChecker {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
-          (AxiomaticRule("CE congruence", usubst), 0)
+          (Provable.rules("CE congruence")(usubst), 0)
           (equalityCert.get, 0)
         )
         else None
