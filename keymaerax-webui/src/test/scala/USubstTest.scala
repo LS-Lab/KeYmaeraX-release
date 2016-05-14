@@ -5,16 +5,15 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
-
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, Axiom, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, AxiomaticRule, DerivedRuleInfo, RandomFormula}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags
-import scala.collection.immutable.List
 
+import scala.collection.immutable.List
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -262,8 +261,8 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1),
         SubstitutionPair(PredOf(q_, Anything), prem2)
          ))
-      val pr = AxiomaticRule("[] monotone", s)
-      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs)))
+      val pr = DerivedRuleInfo("[] monotone").provable(s)
+      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
       pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
     }
   }
@@ -351,19 +350,18 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   "Congruence rules" should "instantiate CT from y+z=z+y" taggedAs KeYmaeraXTestTags.USubstTest in {
-        val term1 = "y+z".asTerm
-        val term2 = "z+y".asTerm
-        val fml = Equal(term1, term2)
-        val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-          SubstitutionPair(FuncOf(ctxt, DotTerm), Minus(DotTerm, Number(5))) :: Nil)
-        val pr = AxiomaticRule("CT term congruence", s)
-    pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Minus(term1, Number(5)),
-          Minus(term2, Number(5)))))
-          )
-    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-      }
+      val term1 = "y+z".asTerm
+      val term2 = "z+y".asTerm
+      val fml = Equal(term1, term2)
+      val s = USubst(
+        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+        SubstitutionPair(FuncOf(ctxt, DotTerm), Minus(DotTerm, Number(5))) :: Nil)
+      val pr = DerivedRuleInfo("CT term congruence").provable(s)
+      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Minus(term1, Number(5)),
+        Minus(term2, Number(5)))))
+      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    }
     
     ignore should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest in {
         val term1 = "y+z".asTerm
