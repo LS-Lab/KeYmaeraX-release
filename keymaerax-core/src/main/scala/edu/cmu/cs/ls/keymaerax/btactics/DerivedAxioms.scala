@@ -298,11 +298,31 @@ object DerivedAxioms {
       }
     })
     // populate derived rules
+    derivedRule("all generalization", allGeneralize.fact)
     derivedRule("[] monotone", boxMonotone.fact)
     derivedRule("CT term congruence", CTtermCongruence.fact)
   }
 
   // derived rules
+
+  /**
+    * Rule "all generalization".
+    * Premise p(??)
+    * Conclusion \forall x p(??)
+    * End.
+    * @Derived from G or from [] monotone with program x:=*
+    * @Note generalization of p(x) to p(??) as in Theorem 14
+    */
+  lazy val allGeneralize = derivedRule("all generalization",
+    //(immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
+    Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(??)".asFormula)),
+    useAt("[:*] assign nondet", PosInExpr(1::Nil))(1) &
+    cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
+      monb & hide(-1) partial
+      ,
+      dualFree(2) //closeT
+      )
+  )
 
   /**
     * Rule "CT term congruence".

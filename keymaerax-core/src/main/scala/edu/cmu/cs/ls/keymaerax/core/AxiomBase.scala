@@ -54,25 +54,25 @@ private[core] object AxiomBase {
     val a = ProgramConst("a_")
 
     Map(
-      /**
-       * Rule "all generalization".
-       * Premise p(x)
-       * Conclusion \forall x p(x)
-       * End.
-       */
-      /*("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
-      /**
-       * Rule "all generalization".
-       * Premise p(??)
-       * Conclusion \forall x p(??)
-       * End.
-       * @Note generalization of p(x) to p(??) as in Theorem 14
-       */
-      ("all generalization",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
+//      /**
+//       * Rule "all generalization".
+//       * Premise p(x)
+//       * Conclusion \forall x p(x)
+//       * End.
+//       */
+//      /*("all generalization",
+//        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
+//          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
+//      /**
+//       * Rule "all generalization".
+//       * Premise p(??)
+//       * Conclusion \forall x p(??)
+//       * End.
+//       * @Note generalization of p(x) to p(??) as in Theorem 14
+//       */
+//      ("all generalization",
+//        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
+//          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
 //      /**
 //       * Rule "CT term congruence".
 //       * Premise f_(??) = g_(??)

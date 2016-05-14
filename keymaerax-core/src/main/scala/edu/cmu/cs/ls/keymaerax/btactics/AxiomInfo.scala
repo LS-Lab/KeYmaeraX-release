@@ -629,6 +629,9 @@ object DerivationInfo {
     new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
 
     // Derived axiomatic rules
+    new DerivedRuleInfo("all generalization"
+      , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall p_(??)"::Nil), SequentDisplay(Nil, "p_(??)"::Nil)::Nil)
+      , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
     new DerivedRuleInfo("[] monotone"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(??)"::Nil, "[a;]q_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
       , "boxMonotone", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),

@@ -193,7 +193,11 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove min" in withMathematica { implicit qeTool => check(minDef, minT)}
   it should "prove max" in withMathematica { implicit qeTool => check(maxDef, maxT)}
 
-  "Derived Rule" should "prove CT" in withMathematica { implicit qeTool => CTtermCongruence.fact.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withMathematica { implicit qeTool => allGeneralize.fact.subgoals shouldBe List(
+    Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq("p_(??)".asFormula))
+  ) }
+
+  it should "prove CT" in withMathematica { implicit qeTool => CTtermCongruence.fact.subgoals shouldBe List(
     Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq("f_(??) = g_(??)".asFormula))
   ) }
 
