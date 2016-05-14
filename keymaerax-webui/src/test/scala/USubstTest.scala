@@ -5,8 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
-import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, AxiomaticRule, DerivedRuleInfo, RandomFormula}
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
@@ -161,7 +160,7 @@ class USubstTests extends FlatSpec with Matchers {
 
   it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
-    val prem = Axiom.axioms("vacuous all quantifier")
+    val prem = Provable.axiom("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
     //a [SubstitutionClashException] should be thrownBy
@@ -175,7 +174,7 @@ class USubstTests extends FlatSpec with Matchers {
   
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
-    val prem = Axiom.axioms("V vacuous")
+    val prem = Provable.axiom("V vacuous")
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
@@ -213,7 +212,7 @@ class USubstTests extends FlatSpec with Matchers {
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(PredOf(p1_, Anything), fml),
       SubstitutionPair(ap_, prog)))
-    val pr = AxiomaticRule("Goedel", s)
+    val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -224,7 +223,7 @@ class USubstTests extends FlatSpec with Matchers {
     val s = USubst(
       SubstitutionPair(PredOf(p1_, Anything), fml) ::
       SubstitutionPair(ap_, prog) :: Nil)
-    val pr = AxiomaticRule("Goedel", s)
+    val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(prog, fml)))
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -241,7 +240,7 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), "(-x)^2>=y".asFormula) ::
       SubstitutionPair(PredOf(q_, Anything), "x^2>=y".asFormula) ::
       SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box("{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram, DotFormula)) :: Nil)
-    val pr = AxiomaticRule("CE congruence", s)
+    val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
@@ -283,8 +282,8 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1) ::
         SubstitutionPair(PredOf(q_, Anything), prem2) ::
         SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
-      val pr = AxiomaticRule("CE congruence", s)
-      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+      val pr = Provable.rules("CE congruence")(s)
+      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
       pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
@@ -305,8 +304,8 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1) ::
         SubstitutionPair(PredOf(q_, Anything), prem2) ::
         SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
-      val pr = AxiomaticRule("CE congruence", s)
-      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+      val pr = Provable.rules("CE congruence")(s)
+      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
       pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
@@ -326,8 +325,8 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1),
         SubstitutionPair(PredOf(q_, Anything), prem2)
          ))
-        val pr = AxiomaticRule("<> monotone", s)
-      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs)))
+      val pr = Provable.rules("<> monotone")(s)
+      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
       pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
     }
   }
@@ -343,8 +342,8 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(ap_, prog),
         SubstitutionPair(PredOf(pn_, Anything), prem)
          ))
-      val pr = AxiomaticRule("Goedel", s)
-      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+      val pr = Provable.rules("Goedel")(s)
+      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
       pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
@@ -363,213 +362,209 @@ class USubstTests extends FlatSpec with Matchers {
       pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
     }
     
-    ignore should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest in {
-        val term1 = "y+z".asTerm
-        val term2 = "z+y".asTerm
-        val fml = Equal(term1, term2)
-        val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-          SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
-        val pr = AxiomaticRule("CT term congruence", s)
-      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
-          Times(Power(x, Number(3)), term2))
-          )))
-      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-      }
+  ignore should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val term1 = "y+z".asTerm
+    val term2 = "z+y".asTerm
+    val fml = Equal(term1, term2)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
+    val pr = Provable.rules("CT term congruence")(s)
+    pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
+        Times(Power(x, Number(3)), term2))
+        ))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
     
-      ignore should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
-        for (i <- 1 to randomTrials) {
-          val term1 = "y+z".asTerm
-          val term2 = "z+y".asTerm
-          val fml = Equal(term1, term2)
-          val context = rand.nextDotTerm(randomComplexity)
-          println("Random context " + context.prettyString)
-          val s = USubst(
-            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-          val pr = AxiomaticRule("CT term congruence", s)
-          pr.conclusion shouldBe (
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-            )
-          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-        }
-      }
-
-      ignore should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
-        for (i <- 1 to randomTrials) {
-          val term1 = "z1+z3*z2".asTerm
-          val term2 = "z2*z3+z1".asTerm
-          val fml = Equal(term1, term2)
-          val context = rand.nextDotTerm(randomComplexity)
-          println("Random context " + context.prettyString)
-          val s = USubst(
-            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-          val pr = AxiomaticRule("CT term congruence", s)
-          pr.conclusion shouldBe (
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-            )
-          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-        }
-      }
-
-    ignore should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
-        for (i <- 1 to randomTrials) {
-          val term1 = "z1*z3-z2".asTerm
-          val term2 = "z2-z4/z1".asTerm
-          val fml = Equal(term1, term2)
-          val context = rand.nextDotTerm(randomComplexity)
-          println("Random context " + context.prettyString)
-          val s = USubst(
-            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-          val pr = AxiomaticRule("CT term congruence", s)
-          pr.conclusion shouldBe (
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-            )
-          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-        }
-      }
-
-    it should "instantiate CQ from y+z=z+y in context y>1&.<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
-          val term1 = "y+z".asTerm
-          val term2 = "z+y".asTerm
-          val fml = Equal(term1, term2)
-          val y = Variable("y", None, Real)
-          val s = USubst(
-            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-            SubstitutionPair(PredOf(ctxf, DotTerm), And(Greater(y, Number(1)), LessEqual(DotTerm, Number(5)))) :: Nil)
-          val pr = AxiomaticRule("CQ equation congruence", s)
-      pr.conclusion shouldBe (
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( And(Greater(y, Number(1)), LessEqual(term1, Number(5))),
-            And(Greater(y, Number(1)), LessEqual(term2, Number(5)))
-            ))))
+  ignore should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
+    for (i <- 1 to randomTrials) {
+      val term1 = "y+z".asTerm
+      val term2 = "z+y".asTerm
+      val fml = Equal(term1, term2)
+      val context = rand.nextDotTerm(randomComplexity)
+      println("Random context " + context.prettyString)
+      val s = USubst(
+        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+        SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
+      val pr = Provable.rules("CT term congruence")(s)
+      pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
       pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-        }
+    }
+  }
+
+  ignore should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
+    for (i <- 1 to randomTrials) {
+      val term1 = "z1+z3*z2".asTerm
+      val term2 = "z2*z3+z1".asTerm
+      val fml = Equal(term1, term2)
+      val context = rand.nextDotTerm(randomComplexity)
+      println("Random context " + context.prettyString)
+      val s = USubst(
+        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+        SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
+      val pr = Provable.rules("CT term congruence")(s)
+      pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
+      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    }
+  }
+
+  ignore should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
+    for (i <- 1 to randomTrials) {
+      val term1 = "z1*z3-z2".asTerm
+      val term2 = "z2-z4/z1".asTerm
+      val fml = Equal(term1, term2)
+      val context = rand.nextDotTerm(randomComplexity)
+      println("Random context " + context.prettyString)
+      val s = USubst(
+        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+        SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
+      val pr = Provable.rules("CT term congruence")(s)
+      pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
+      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    }
+  }
+
+  it should "instantiate CQ from y+z=z+y in context y>1&.<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val term1 = "y+z".asTerm
+    val term2 = "z+y".asTerm
+    val fml = Equal(term1, term2)
+    val y = Variable("y", None, Real)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), And(Greater(y, Number(1)), LessEqual(DotTerm, Number(5)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( And(Greater(y, Number(1)), LessEqual(term1, Number(5))),
+          And(Greater(y, Number(1)), LessEqual(term2, Number(5)))
+          )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
         
-        it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
-              val term1 = "y+z".asTerm
-              val term2 = "z+y".asTerm
-              val fml = Equal(term1, term2)
-              val y = Variable("x", None, Real)
-              val s = USubst(
-                SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-                SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-                SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
-              val pr = AxiomaticRule("CQ equation congruence", s)
-          pr.conclusion shouldBe (
-                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
-                Forall(Seq(y),  LessEqual(term2, Number(5)))
-                ))))
-          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-            }
+  it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val term1 = "y+z".asTerm
+    val term2 = "z+y".asTerm
+    val fml = Equal(term1, term2)
+    val y = Variable("x", None, Real)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
+          Forall(Seq(y),  LessEqual(term2, Number(5)))
+          )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
 
-        ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs KeYmaeraXTestTags.OptimisticTest in {
-              val term1 = "y+z".asTerm
-              val term2 = "z+y".asTerm
-              val fml = Equal(term1, term2)
-              val y = Variable("y", None, Real)
-              val s = USubst(
-                SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-                SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-                SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
-              val pr = AxiomaticRule("CQ equation congruence", s)
-          pr.conclusion shouldBe (
-                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
-                Forall(Seq(y),  LessEqual(term2, Number(5)))
-                ))))
-          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-            }
+  ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+    val term1 = "y+z".asTerm
+    val term2 = "z+y".asTerm
+    val fml = Equal(term1, term2)
+    val y = Variable("y", None, Real)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
+          Forall(Seq(y),  LessEqual(term2, Number(5)))
+          )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
 
-            it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs KeYmaeraXTestTags.USubstTest in {
-              val term1 = "y+z".asTerm
-              val term2 = "z+y".asTerm
-                val fml = Equal(term1, term2)
-                val prog = "x:=x-1;".asProgram
-                val s = USubst(
-                  SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-                  SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-                  SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
-                val pr = AxiomaticRule("CQ equation congruence", s)
-              pr.conclusion shouldBe (
-                  Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Box(prog, GreaterEqual(term1, Number(0))),
-                  Box(prog, GreaterEqual(term2, Number(0)))
-                  ))))
-              pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-              }
+  it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val term1 = "y+z".asTerm
+    val term2 = "z+y".asTerm
+    val fml = Equal(term1, term2)
+    val prog = "x:=x-1;".asProgram
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Box(prog, GreaterEqual(term1, Number(0))),
+        Box(prog, GreaterEqual(term2, Number(0)))
+        )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
 
   ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
-      val fml = Equal(term1, term2)
-      val prog = "y:=y-1;".asProgram
-      val s = USubst(
-        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
-      val pr = AxiomaticRule("CQ equation congruence", s)
-    pr.conclusion shouldBe (
+    val fml = Equal(term1, term2)
+    val prog = "y:=y-1;".asProgram
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
         Box(prog, GreaterEqual(term2, Number(0)))
-        ))))
+        )))
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-    }
-
+  }
 
   ignore should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs KeYmaeraXTestTags.USubstTest in {
-        val term1 = "z^2*y".asTerm
-        val term2 = "-(-z)^2*-y+0".asTerm
-        val fml = Equal(term1, term2)
-        val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-          SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
-        val pr = AxiomaticRule("CT term congruence", s)
-    pr.conclusion shouldBe (
+    val term1 = "z^2*y".asTerm
+    val term2 = "-(-z)^2*-y+0".asTerm
+    val fml = Equal(term1, term2)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
+    val pr = Provable.rules("CT term congruence")(s)
+    pr.conclusion shouldBe
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
           Times(Power(x, Number(3)), term2))
-          )))
+          ))
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-      }
+  }
     
-      ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs KeYmaeraXTestTags.OptimisticTest in {
-          val term1 = "z^2*y".asTerm
-          val term2 = "-(-z)^2*-y+0".asTerm
-          val fml = Equal(term1, term2)
-          val y = Variable("y", None, Real)
-          val s = USubst(
-            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-            SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y), GreaterEqual(DotTerm, Number(0)))) :: Nil)
-          val pr = AxiomaticRule("CQ equation congruence", s)
-        pr.conclusion shouldBe (
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(term1, Number(0))),
-            Forall(Seq(y), GreaterEqual(term2, Number(0)))
-            ))))
-        pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-        }
+  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+    val term1 = "z^2*y".asTerm
+    val term2 = "-(-z)^2*-y+0".asTerm
+    val fml = Equal(term1, term2)
+    val y = Variable("y", None, Real)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y), GreaterEqual(DotTerm, Number(0)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(term1, Number(0))),
+        Forall(Seq(y), GreaterEqual(term2, Number(0)))
+        )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
   
-    ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
-        val term1 = "z^2*y".asTerm
-        val term2 = "-(-z)^2*-y+0".asTerm
-        val fml = Equal(term1, term2)
-        val prog = "y:=y-1;".asProgram
-        val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-          SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
-        val pr = AxiomaticRule("CQ equation congruence", s)
-      pr.conclusion shouldBe (
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
-          Box(prog, GreaterEqual(term2, Number(0)))
-          ))))
-      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-      }
+  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+    val term1 = "z^2*y".asTerm
+    val term2 = "-(-z)^2*-y+0".asTerm
+    val fml = Equal(term1, term2)
+    val prog = "y:=y-1;".asProgram
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
+        Box(prog, GreaterEqual(term2, Number(0)))
+        )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
   
   it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (manual test)" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml1 = "x=0".asFormula
@@ -580,10 +575,9 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = AxiomaticRule("CE congruence", s)
-    pr.conclusion shouldBe (
+    val pr = Provable.rules("CE congruence")(s)
+    pr.conclusion shouldBe
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
-      )
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -596,10 +590,9 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = AxiomaticRule("CE congruence", s)
-    pr.conclusion shouldBe (
+    val pr = Provable.rules("CE congruence")(s)
+    pr.conclusion shouldBe
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
-      )
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
@@ -613,10 +606,9 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = AxiomaticRule("CE congruence", s)
-    pr.conclusion shouldBe (
+    val pr = Provable.rules("CE congruence")(s)
+    pr.conclusion shouldBe
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
-      )
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -630,10 +622,9 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = AxiomaticRule("CE congruence", s)
-    pr.conclusion shouldBe (
+    val pr = Provable.rules("CE congruence")(s)
+    pr.conclusion shouldBe
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
-      )
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -648,49 +639,47 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(FuncOf(f1_, Anything), term1) ::
       SubstitutionPair(FuncOf(g1_, Anything), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(u), Box(prog, GreaterEqual(DotTerm, u)))) :: Nil)
-    val pr = AxiomaticRule("CQ equation congruence", s)
-    pr.conclusion shouldBe (
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(u), Box(prog, GreaterEqual(term1, u))),
       Forall(Seq(u), Box(prog, GreaterEqual(term2, u)))
-      ))))
+      )))
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
-     }
+  }
   
-   it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
-       val term1 = "z^2*y".asTerm
-       val term2 = "-(-z)^2*-y+0".asTerm
-       val fml = Equal(term1, term2)
-       val context = rand.nextDotFormula(randomComplexity)
-       println("Random context " + context.prettyString)
-       val s = USubst(
-         SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-         SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-         SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
-       val pr = AxiomaticRule("CQ equation congruence", s)
-     pr.conclusion shouldBe (
+  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val term1 = "z^2*y".asTerm
+    val term2 = "-(-z)^2*-y+0".asTerm
+    val fml = Equal(term1, term2)
+    val context = rand.nextDotFormula(randomComplexity)
+    println("Random context " + context.prettyString)
+    val s = USubst(
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
+    val pr = Provable.rules("CQ equation congruence")(s)
+    pr.conclusion shouldBe
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
-         )
-     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
   it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
-      val fml1 = "z^2*y>=5".asFormula
-      val fml2 = "(-z)^2*-y+0<=-5".asFormula
-      val fml = Equiv(fml1, fml2)
-      val context = rand.nextDotFormula(randomComplexity)
-      println("Random context " + context.prettyString)
-      val s = USubst(
-        SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-        SubstitutionPair(PredOf(qn_, Anything), fml2) ::
-        SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-      val pr = AxiomaticRule("CE congruence", s)
-    pr.conclusion shouldBe (
+    val fml1 = "z^2*y>=5".asFormula
+    val fml2 = "(-z)^2*-y+0<=-5".asFormula
+    val fml = Equiv(fml1, fml2)
+    val context = rand.nextDotFormula(randomComplexity)
+    println("Random context " + context.prettyString)
+    val s = USubst(
+      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
+    val pr = Provable.rules("CE congruence")(s)
+    pr.conclusion shouldBe
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
-        )
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
- }
+  }
 
- // apply given context to the given argument
+  // apply given context to the given argument
   def contextapp(context: Term, arg: Term) : Term =
    USubst(SubstitutionPair(DotTerm, arg) :: Nil)(context)
 
