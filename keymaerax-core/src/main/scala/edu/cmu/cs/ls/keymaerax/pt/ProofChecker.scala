@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, DerivedRuleInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedRuleInfo
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
@@ -35,7 +35,7 @@ object ProofChecker {
     e match {
       case dLConstant(label) => Some(
         Provable.startProof(goalSequent(phi))
-        (Axiom(label), 0)
+        (Provable.axioms(label), 0)
       )
 
       case FOLRConstant(f) => {

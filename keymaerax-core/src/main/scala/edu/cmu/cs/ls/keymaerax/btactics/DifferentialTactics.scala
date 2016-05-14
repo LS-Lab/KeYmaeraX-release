@@ -136,7 +136,7 @@ object DifferentialTactics {
             val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, uren(c)) :: SubstitutionPair(aP, uren(p)) ::
               SubstitutionPair(aH, uren(h)) :: Nil)
             //            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${xp.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${xp.prettyString}=f(??)&H(??)}][${xp.prettyString}:=f(??);]p(??)".asFormula))
-            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect (system)")))
+            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Provable.axiom("DE differential effect (system)")))
 
             if (true || DEBUG) println("DE: manual " + subst + " above " + uren + " to prove " + sequent.prettyString)
 
@@ -161,7 +161,7 @@ object DifferentialTactics {
 
             val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aP, uren(p)) ::
               SubstitutionPair(aQ, uren(h)) :: Nil
-            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect")))
+            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Provable.axiom("DE differential effect")))
 
             if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
 

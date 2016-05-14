@@ -1796,7 +1796,7 @@ object DerivedAxioms {
   lazy val Dvariable = derivedAxiom("x' derive variable",
     Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableF)))
     (Skolemize(SuccPos(0)), 0)
-    (Axiom.axiom("x' derive var"), 0)
+    (Provable.axioms("x' derive var"), 0)
   )
   lazy val DvariableT = derivedAxiomT(Dvariable)
   //  /**

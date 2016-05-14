@@ -642,7 +642,7 @@ object DerivationInfo {
     val canonicals = list.map(i => i.canonicalName.toLowerCase())
     val codeNames = list.map(i => i.codeName.toLowerCase()).filter(n => n!=needsCodeName)
     list.forall(i => i match {
-        case ax: CoreAxiomInfo => Axiom.axioms.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
+        case ax: CoreAxiomInfo => Provable.axiom.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
         case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
         case _ => true
       }
@@ -757,12 +757,12 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   override val formula:Formula = {
-    Axiom.axioms.get(canonicalName) match {
+    Provable.axiom.get(canonicalName) match {
       case Some(fml) => fml
       case None => throw new AxiomNotFoundException("No formula for core axiom " + canonicalName)
     }
   }
-  override lazy val provable:Provable = Axiom.axiom(canonicalName)
+  override lazy val provable:Provable = Provable.axioms(canonicalName)
   override val numPositionArgs = 1
 }
 
