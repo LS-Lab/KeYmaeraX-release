@@ -18,11 +18,11 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  */
 class RandomParserTests extends FlatSpec with Matchers {
   val randomTrials = 4000
-  val randomComplexity = 6
+  val randomComplexity = 8
   val rand = new RandomFormula()
 
 
-  val pp = if (false) KeYmaeraXPrettyPrinter
+  val pp = if (true) KeYmaeraXPrettyPrinter
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
 
@@ -37,10 +37,10 @@ class RandomParserTests extends FlatSpec with Matchers {
     }
   }
 
-  "The parser" should "reparse pretty-prints of random formulas (checkin)" taggedAs(CheckinTest) in {test(10)}
-  it should "reparse pretty-prints of random formulas (summary)" taggedAs(SummaryTest) in {test(50)}
+  "The parser" should "reparse pretty-prints of random formulas (checkin)" taggedAs(CheckinTest) in {test(10, 6)}
+  it should "reparse pretty-prints of random formulas (summary)" taggedAs(SummaryTest) in {test(50, 6)}
   it should "reparse pretty-prints of random formulas (usual)" taggedAs(UsualTest) in {test(1000,10)}
-  //it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
+  it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
