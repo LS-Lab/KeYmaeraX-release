@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import scala.collection.immutable
 
 import scala.collection.immutable._
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
@@ -14,12 +15,47 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 /**
  * Tests reapply function of expression data structures for identity after deep copy.
  * Performance test if printing were turned off.
+  * @todo add a test that reapplies with new random formulas/terms as arguments
  * @author Andre Platzer
  */
 class RandomReapplyTests extends FlatSpec with Matchers {
   val randomTrials = 40000
   val randomComplexity = 6
   val rand = new RandomFormula()
+
+  "Crafted expression reapply from ScalaDoc" should "work for UnaryCompositeTerm" in {
+    Neg(Number(77)).reapply(Number(99)) shouldBe Neg(Number(99))
+    Neg(Variable("x")).reapply(Plus(Number(42),Number(69))) shouldBe Neg(Plus(Number(42),Number(69)))
+  }
+  it should "work for BinaryCompositeTerm" in {
+    Times(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) shouldBe Times(Variable("a"), Number(99))
+  }
+  it should "work for ComparisonFormula" in {
+    GreaterEqual(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) shouldBe GreaterEqual(Variable("a"), Number(99))
+  }
+  it should "work for UnaryCompositeFormula" in {
+    Not(GreaterEqual(Variable("x"),Number(0))).reapply(NotEqual(Number(7),Number(9))) shouldBe Not(NotEqual(Number(7),Number(9)))
+    Not(True).reapply(False) shouldBe Not(False)
+  }
+  it should "work for BinaryCompositeFormula" in {
+    Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, NotEqual(Number(7),Number(9))) shouldBe Or(True, NotEqual(Number(7),Number(9)))
+  }
+  it should "work for Quantified" in {
+    Forall(immutable.Seq(Variable("x")), PredOf(Function("p",None,Real,Bool),Variable("x"))).reapply(
+                     immutable.Seq(Variable("y")), PredOf(Function("q",None,Real,Bool),Variable("y"))) shouldBe(
+     Forall(immutable.Seq(Variable("y")), PredOf(Function("q",None,Real,Bool),Variable("y"))))
+  }
+  it should "work for Modality" in {
+    Box(ProgramConst("b"), Less(Variable("z"),Number(0))).reapply(
+      Compose(ProgramConst("a"),AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), GreaterEqual(Variable("x"),Number(2))
+    ) shouldBe Box(Compose(ProgramConst("a"),AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), GreaterEqual(Variable("x"),Number(2)))
+  }
+  it should "work for UnaryCompositeProgram" in {
+    Loop(ProgramConst("alpha")).reapply(Assign(Variable("x"),Number(42))) shouldBe Loop(Assign(Variable("x"),Number(42)))
+  }
+  it should "work for BinaryCompositeProgram" in {
+    Choice(ProgramConst("alpha"), ProgramConst("beta")).reapply(ProgramConst("gamma"), ProgramConst("delta")) shouldBe Choice(ProgramConst("gamma"), ProgramConst("delta"))
+  }
 
 
   "Expression reapply" should "reapply random formulas identically (checkin)" taggedAs(CheckinTest) in {test(10)}
