@@ -298,9 +298,10 @@ object DerivedAxioms {
       }
     })
     // populate derived rules
-    derivedRule("all generalization", allGeneralize.fact)
     derivedRule("[] monotone", boxMonotone.fact)
     derivedRule("CT term congruence", CTtermCongruence.fact)
+    //@todo all generalization must be populated after [] monotone -> need better dependency handling for derived rules
+    derivedRule("all generalization", allGeneralize.fact)
   }
 
   // derived rules
