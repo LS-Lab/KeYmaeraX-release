@@ -23,9 +23,6 @@ object MathematicaToKeYmaera {
   type MExpr = com.wolfram.jlink.Expr
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
-  //@TODO Code Review: turn to false in qe calls
-  private val LAX = System.getProperty("LAX", "true")=="true"
-
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
    */
@@ -77,10 +74,7 @@ object MathematicaToKeYmaera {
     else if (hasHead(e,MathematicaSymbols.FORALL)) convertQuantifier(e, Forall.apply)
     else if (hasHead(e,MathematicaSymbols.EXISTS)) convertQuantifier(e, Exists.apply)
 
-    // Rules and List of rules
-    else if (hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
-    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(hasHead(_, MathematicaSymbols.RULE))))
-      convertRuleList(e)
+    // Rules and List of rules not supported -> override if needed
 
     // Derivatives
     else if (e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
@@ -97,6 +91,13 @@ object MathematicaToKeYmaera {
       throw mathExn(e) //Other things to handle: integrate, rule, minussign, possibly some list.
     }
   }
+
+  /**
+    * Whether e is thing or starts with head thing.
+    * @return true if ``e" and ``thing" are .equals-related.
+    */
+  def hasHead(e:com.wolfram.jlink.Expr, thing:com.wolfram.jlink.Expr) =
+    e.equals(thing) || e.head().equals(thing)
 
   private def convertUnary[T<:Expression](e : MExpr, op: T=>T): T = {
     val subformula = fromMathematica(e.args().head).asInstanceOf[T]
@@ -118,7 +119,7 @@ object MathematicaToKeYmaera {
   }
 
   private def convertQuantifier(e: MExpr, op:(Seq[Variable], Formula)=>Formula) = {
-    require(e.args().size == 2, "Expected args size 2.")
+    require(e.args().length == 2, "Expected args size 2.")
 
     val quantifiedVariables = e.args().headOption.getOrElse(
       throw new ConversionException("Found non-empty list after quantifier."))
@@ -138,27 +139,14 @@ object MathematicaToKeYmaera {
   }
 
   private def convertDerivative(e: MExpr): KExpr = {
-    require(e.args().size == 1, "Expected args size 1 (single differential symbol or single differential term)")
-    require(e.head.args().size == 1 && e.head.args().head == new MExpr(1), "Expected 1 prime (e.g., v', not v'')")
+    require(e.args().length == 1, "Expected args size 1 (single differential symbol or single differential term)")
+    require(e.head.args().length == 1 && e.head.args().head == new MExpr(1), "Expected 1 prime (e.g., v', not v'')")
     fromMathematica(e.args.head) match {
       case v: Variable => DifferentialSymbol(v)
       case t: Term => Differential(t)
     }
   }
 
-
-  private def convertRuleList(e: MExpr): Formula = {
-    val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
-    if (convertedRules.isEmpty) False
-    else convertedRules.reduceLeft((lhs, rhs) => Or(lhs, rhs))
-  }
-
-  private def convertRule(e: MExpr): Formula = {
-    assert(LAX, "Not converting rules yet" + e)
-    // TODO is Equals correct for rules?
-    Equal(fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
-  }
-  
   private def convertAtomicTerm(e: MExpr): KExpr = {
     MathematicaNameConversion.toKeYmaera(e) match {
       case result: Function =>
@@ -189,13 +177,6 @@ object MathematicaToKeYmaera {
       map(fromMathematica(_).asInstanceOf[Formula]).reduce(And)
   }
 
-  /**
-   * Whether e is thing or starts with head thing.
-   * @return true if ``e" and ``thing" are .equals-related. 
-   */
-  private def hasHead(e:com.wolfram.jlink.Expr, thing:com.wolfram.jlink.Expr) =
-    e.equals(thing) || e.head().equals(thing)
-
   // error catching and reporting
 
   private def isAborted(e : com.wolfram.jlink.Expr) = {
@@ -217,7 +198,7 @@ object MathematicaToKeYmaera {
     new ConversionException("conversion not defined for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   
   private def mathInfo(e : com.wolfram.jlink.Expr) : String = {
-    "args:\t" + {if (e.args().size == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
+    "args:\t" + {if (e.args().length == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
     "\n" +
     "toString:\t" + e.toString
   }

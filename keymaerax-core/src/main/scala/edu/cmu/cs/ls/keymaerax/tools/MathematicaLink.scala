@@ -38,7 +38,8 @@ trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTo
   def ready: Boolean
 
   /** Cancels the current request.
-   * @return True if job is successfully cancelled, or False if the new
+    *
+    * @return True if job is successfully cancelled, or False if the new
    * status is unknown.
    */
   def cancel(): Boolean
@@ -80,7 +81,8 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   /**
    * Initializes the connection to Mathematica.
-   * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
+    *
+    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
    * @return true if initialization was successful
    * @note Must be called before first use of ml
    */
@@ -272,7 +274,8 @@ class JLinkMathematicaLink extends MathematicaLink {
           StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
-    run(inputWithTO) match {
+
+    run(inputWithTO, mathematicaExecutor, nonQEConverter) match {
       case (_, cex: Formula) => cex match {
         case False =>
           if (DEBUG) println("No counterexample, Mathematica returned: " + cex.prettyString)
@@ -337,7 +340,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     val executor: ToolExecutor[(String, List[List[Map[NamedSymbol, Number]]])] = ToolExecutor.defaultExecutor()
     def convert(e: MExpr): List[List[Map[NamedSymbol, Number]]] = {
       if (e.listQ() && e.args.forall(_.listQ())) {
-        val states: Array[Array[KExpr]] = e.args().map(_.args().map(MathematicaToKeYmaera.fromMathematica))
+        val states: Array[Array[KExpr]] = e.args().map(_.args().map(nonQEConverter))
         states.map(state => {
           val endOfWorld = if (state.contains(False)) state.indexOf(False) else state.length
           state.slice(0, endOfWorld).map({
@@ -360,9 +363,29 @@ class JLinkMathematicaLink extends MathematicaLink {
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
 
+  /** Extends default converter with rule and rule list handling */
+  private def nonQEConverter(e: MExpr): KExpr = {
+    if (MathematicaToKeYmaera.hasHead(e, MathematicaSymbols.RULE)) convertRule(nonQEConverter)(e)
+    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
+      MathematicaToKeYmaera.hasHead(_, MathematicaSymbols.RULE))))
+      convertRuleList(MathematicaToKeYmaera.fromMathematica)(e)
+    else MathematicaToKeYmaera.fromMathematica(e)
+  }
+
+  /** Converts rules and rule lists, not to be used in QE! */
+  private def convertRule(fromMathematica: MExpr=>KExpr)(e: MExpr): Formula = {
+    Equal(fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
+  }
+  private def convertRuleList(fromMathematica: MExpr=>KExpr)(e: MExpr): Formula = {
+    val convertedRules = e.args().map(_.args().map(r => convertRule(fromMathematica)(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
+    if (convertedRules.isEmpty) False
+    else convertedRules.reduceLeft((lhs, rhs) => Or(lhs, rhs))
+  }
+
   /**
    * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
-   * @param diffSys The system of differential equations
+    *
+    * @param diffSys The system of differential equations
    * @param diffArg The name of the differential argument (dx/d diffArg = theta).
    * @return The differential equation system in list form.
    */
@@ -381,7 +404,8 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   /**
    * Computes the symbolic solution of a system of differential equations.
-   * @param diffArg The differential argument, i.e., d f(diffArg) / d diffArg.
+    *
+    * @param diffArg The differential argument, i.e., d f(diffArg) / d diffArg.
    * @param diffSys The system of differential equations of the form x' = theta.
    * @return The solution if found; None otherwise
    */
@@ -403,7 +427,7 @@ class JLinkMathematicaLink extends MathematicaLink {
         new MExpr(Expr.SYM_LIST, (convertedDiffSys ++ initialValues).toArray),
         new MExpr(Expr.SYM_LIST, functions.toArray),
         toMathematica(diffArg)))
-    val (_, result) = run(input)
+    val (_, result) = run(input, mathematicaExecutor, nonQEConverter)
     result match {
       case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name):_*))
       case _ => None
@@ -412,7 +436,8 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   /**
    * Replaces all occurrences of variables vars in the specified term t with functions of argument arg.
-   * @param t The term.
+    *
+    * @param t The term.
    * @param arg The function argument.
    * @param vars The variables to functionalize.
    * @return The term with variables replaced by functions.
@@ -431,7 +456,8 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   /**
    * Replaces all functions with argument arg in formula f with a variable of the same name.
-   * @param f The formula.
+    *
+    * @param f The formula.
    * @param arg The function argument.
    * @return The term with functions replaced by variables.
    */
