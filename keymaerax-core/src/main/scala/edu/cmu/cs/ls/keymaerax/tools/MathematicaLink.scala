@@ -44,11 +44,9 @@ trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTo
    */
   def cancel(): Boolean
 
-  def toMathematica(expr : KExpr): MExpr =
-    KeYmaeraToMathematica.fromKeYmaera(expr)
+  def toMathematica(expr : KExpr): MExpr = KeYmaeraToMathematica.fromKeYmaera(expr)
 
-  def toKeYmaera(expr : MExpr): KExpr =
-    MathematicaToKeYmaera.fromMathematica(expr)
+  def toKeYmaera(expr : MExpr): KExpr = MathematicaToKeYmaera.fromMathematica(expr)
 }
 
 /**
@@ -413,7 +411,8 @@ class JLinkMathematicaLink extends MathematicaLink {
     val primedVars = diffSys.map(_._1)
     val functionalizedTerms = diffSys.map{ case (x, theta) => ( x, functionalizeVars(theta, diffArg, primedVars:_*)) }
     val mathTerms = functionalizedTerms.map{case (x, theta) =>
-      (new MExpr(toMathematica(DifferentialSymbol(x)), Array[MExpr](toMathematica(diffArg))), toMathematica(theta))}
+      val diffSymbol = new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](toMathematica(x)))
+      (new MExpr(diffSymbol, Array[MExpr](toMathematica(diffArg))), toMathematica(theta))}
     val convertedDiffSys = mathTerms.map{case (x, theta) =>
       new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](x, theta))}
 

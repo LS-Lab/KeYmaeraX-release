@@ -10,7 +10,6 @@ import scala.collection.immutable.IndexedSeq
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
-import scala.math.BigDecimal
 
 /**
  * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
@@ -20,9 +19,6 @@ import scala.math.BigDecimal
 object KeYmaeraToMathematica {
   type MExpr = com.wolfram.jlink.Expr
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-
-  //@TODO Code Review: turn to false in qe calls
-  private val LAX = System.getProperty("LAX", "true")=="true"
 
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
@@ -48,10 +44,10 @@ object KeYmaeraToMathematica {
   /**
    * Converts a KeYmaera terms to a Mathematica expression.
    */
-  private def convertTerm(t : Term) : MExpr = {
+  private def convertTerm(t : Term): MExpr = {
     /** Convert tuples to list of sorts */
     def flattenSort(s: Sort): List[Sort] = s match {
-      case Tuple(ls, rs) => ls :: rs :: Nil
+      case Tuple(ls, rs) => flattenSort(ls) ++ flattenSort(rs)
       case _ => s :: Nil
     }
 
@@ -69,12 +65,9 @@ object KeYmaeraToMathematica {
         new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) =>
         new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Differential(c) if LAX =>
-        new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
-      case DifferentialSymbol(c) if LAX =>
-        new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
       case Number(n) => new MExpr(n.underlying())
-      case Pair(l, r) =>     //@todo handle nested pairs (flatten to a list?)
+      case Pair(l, r) =>
+        //@note converts nested pairs into nested lists
         new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
 
       case t: Variable => MathematicaNameConversion.toMathematica(t)
@@ -84,7 +77,7 @@ object KeYmaeraToMathematica {
   /**
    * Converts KeYmaera formulas into Mathematica objects
    */
-  private def convertFormula(f : Formula) : MExpr = f match {
+  private def convertFormula(f : Formula): MExpr = f match {
     case And(l,r)   => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
@@ -106,18 +99,19 @@ object KeYmaeraToMathematica {
   private def convertFnApply(fn: Function, child: Term): MExpr = child match {
     case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
-      //@todo Code Review: figure out how nested lists affect binary functions
+      //@note single-argument Apply[f, {x}] == f[x] vs. Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
+      //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time
       val args = Array[MExpr](MathematicaNameConversion.toMathematica(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
       new MExpr(MathematicaSymbols.APPLY, args)
   }
 
   /** Convert block of exists quantifiers into a single exists quantifier block */
-  private def convertExists(vs:Seq[NamedSymbol],f:Formula) = {
+  private def convertExists(vs:Seq[NamedSymbol],f:Formula): MExpr = {
     val (vars, formula) = collectVarsExists(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
   }
-  private def collectVarsExists(vsSoFar:Seq[NamedSymbol],candidate:Formula) : (Seq[NamedSymbol], Formula) = {
+  private def collectVarsExists(vsSoFar:Seq[NamedSymbol],candidate:Formula): (Seq[NamedSymbol], Formula) = {
     candidate match {
       case Exists(nextVs, nextf) =>  collectVarsExists(vsSoFar ++ nextVs, nextf)
       case _ => (vsSoFar,candidate)
@@ -125,19 +119,19 @@ object KeYmaeraToMathematica {
   }
 
   /** Convert block of forall quantifiers into a single forall quantifier block */
-  private def convertForall(vs:Seq[NamedSymbol],f:Formula) = {
+  private def convertForall(vs:Seq[NamedSymbol],f:Formula): MExpr = {
     val (vars, formula) = collectVarsForall(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
   }
-  private def collectVarsForall(vsSoFar:Seq[NamedSymbol],candidate:Formula) : (Seq[NamedSymbol], Formula) = {
+  private def collectVarsForall(vsSoFar:Seq[NamedSymbol],candidate:Formula): (Seq[NamedSymbol], Formula) = {
     candidate match {
       case Forall(nextVs, nextf) =>  collectVarsForall(vsSoFar ++ nextVs, nextf)
       case _ => (vsSoFar,candidate)
     }
   }
 
-  private def keyExn(e: KExpr) : Exception =
+  private def keyExn(e: KExpr): Exception =
     new ConversionException("conversion not defined for KeYmaera expr: " + PrettyPrinter.printer(e))
 }
 
