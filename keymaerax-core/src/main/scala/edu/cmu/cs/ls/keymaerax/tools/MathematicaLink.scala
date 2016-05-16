@@ -43,10 +43,6 @@ trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTo
    * status is unknown.
    */
   def cancel(): Boolean
-
-  def toMathematica(expr : KExpr): MExpr = KeYmaeraToMathematica.fromKeYmaera(expr)
-
-  def toKeYmaera(expr : MExpr): KExpr = MathematicaToKeYmaera.fromMathematica(expr)
 }
 
 /**
@@ -76,6 +72,8 @@ class JLinkMathematicaLink extends MathematicaLink {
   private val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
     new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
   private val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
+
+  private val defaultK2MConverter = new KeYmaeraToMathematica
 
   /**
    * Initializes the connection to Mathematica.
@@ -136,6 +134,10 @@ class JLinkMathematicaLink extends MathematicaLink {
     init(linkName, jlinkLibDir)
     l.close()
   }
+
+  def toMathematica(expr : KExpr): MExpr = defaultK2MConverter.fromKeYmaera(expr)
+
+  def toKeYmaera(expr : MExpr): KExpr = MathematicaToKeYmaera.fromMathematica(expr)
 
   /**
    * Runs the command and then halts program execution until answer is returned.
@@ -265,11 +267,21 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
+    val converter = new KeYmaeraToMathematica() {
+      override protected def convertTerm(t: Term): MExpr = t match {
+        case Differential(c) =>
+          new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
+        case DifferentialSymbol(c) =>
+          new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
+        case _ => super.convertTerm(t)
+      }
+    }
+
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(toMathematica(Not(fml)),
+      Array(converter.fromKeYmaera(Not(fml)),
         new MExpr(
           listExpr,
-          StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray),
+          StaticSemantics.symbols(fml).toList.sorted.map(s => converter.fromKeYmaera(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
 

@@ -76,12 +76,12 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "not choke on differential symbols" in withMathematica { tool =>
-    proveBy(
+  it should "not support differential symbols" in withMathematica { tool =>
+    the [BelleError] thrownBy { proveBy(
       Sequent(Nil,
         IndexedSeq(),
         IndexedSeq("5=5 | x' = 1'".asFormula)),
-      TactixLibrary.QE) shouldBe 'proved
+      TactixLibrary.QE) } should have message "[Bellerophon Runtime] x'@DifferentialSymbol (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
@@ -89,8 +89,7 @@ class ArithmeticTests extends TacticTestBase {
       Sequent(Nil,
         IndexedSeq(),
         IndexedSeq("x' = y'".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(  ==>  x'=y'
-                                                                            |  from     ==>  y'=x')""".stripMargin
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] x'@DifferentialSymbol (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>

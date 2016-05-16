@@ -27,6 +27,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   val zero = Number(new BigDecimal("0"))
 
+  private val defaultK2MConverter = new KeYmaeraToMathematica
+
   def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
 
@@ -175,7 +177,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     def trip(e: edu.cmu.cs.ls.keymaerax.core.Expression) = roundTrip(e) should be (e)
 
     def roundTrip(e : edu.cmu.cs.ls.keymaerax.core.Expression) = {
-      val math = KeYmaeraToMathematica.fromKeYmaera(e)
+      val math = defaultK2MConverter.fromKeYmaera(e)
       ml.run(math)._2
     }
   }
@@ -229,13 +231,13 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
       Array[MExpr](
         new MExpr(Expr.SYMBOL, "KeYmaera`y"),
         new MExpr(Expr.SYM_LIST, Array[MExpr](new MExpr(Expr.SYMBOL, "KeYmaera`x")))))
-    KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
+    defaultK2MConverter.fromKeYmaera(in) should be (expected)
   }
 
   it should "convert parameterless Apply()" in {
     val in = FuncOf(Function("y", None, Unit, Real), Nothing)
     val expected = new MExpr(Expr.SYMBOL, "KeYmaera`constfn$y")
-    KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
+    defaultK2MConverter.fromKeYmaera(in) should be (expected)
   }
 
   it should "convert multi-argument Apply to nested lists" in {
@@ -247,6 +249,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
           new MExpr(Expr.SYMBOL, "KeYmaera`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
             new MExpr(Expr.SYMBOL, "KeYmaera`y"), new MExpr(Expr.SYMBOL, "KeYmaera`z")))))))))
     println(expected.toString)
-    KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
+    defaultK2MConverter.fromKeYmaera(in) should be (expected)
   }
 }

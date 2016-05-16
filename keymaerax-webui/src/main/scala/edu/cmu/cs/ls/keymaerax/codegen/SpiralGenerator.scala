@@ -81,6 +81,8 @@ object SpiralGenerator extends CodeGenerator {
   private def define(fileName: String) = "#define _" + {if(fileName.nonEmpty) fileName.toUpperCase else "VECTOR"} + "_H_\n"
   private val endIf = "#endif"
 
+  private val defaultK2MConverter = new KeYmaeraToMathematica
+
   /**
    * Generate Spiral monitor
    *
@@ -157,7 +159,7 @@ object SpiralGenerator extends CodeGenerator {
 
   /** Compute the DNF form of the given formula */
   private def convertToDnf(e: Expression): Expr = {
-    val mathCmd = "BooleanConvert[" +  KeYmaeraToMathematica.fromKeYmaera(e) + ",DNF]"
+    val mathCmd = "BooleanConvert[" +  defaultK2MConverter.fromKeYmaera(e) + ",DNF]"
     link.ml.evaluate(mathCmd)
     link.ml.waitForAnswer()
     link.ml.getExpr
@@ -301,10 +303,10 @@ object SpiralGenerator extends CodeGenerator {
     } else {
       // get sorted variables in Mathematica syntax
       val mathVarsSorted = vars.map(s => s match {
-        case v: Variable => KeYmaeraToMathematica.fromKeYmaera(v)
-        case fn: Function => KeYmaeraToMathematica.fromKeYmaera(FuncOf(fn, Nothing))
+        case v: Variable => defaultK2MConverter.fromKeYmaera(v)
+        case fn: Function => defaultK2MConverter.fromKeYmaera(FuncOf(fn, Nothing))
       })
-      val mathTerm = KeYmaeraToMathematica.fromKeYmaera(t)
+      val mathTerm = defaultK2MConverter.fromKeYmaera(t)
       if(mathVarsSorted.length==1) {   
         // one relevant variable, t is single polynomial
         compileSinglePoly(mathTerm, mathVarsSorted)
