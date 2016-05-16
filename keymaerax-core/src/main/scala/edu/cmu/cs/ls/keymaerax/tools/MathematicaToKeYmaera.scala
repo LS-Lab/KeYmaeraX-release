@@ -75,6 +75,9 @@ object MathematicaToKeYmaera {
     else if (hasHead(e,MathematicaSymbols.EXISTS)) convertQuantifier(e, Exists.apply)
 
     // Rules and List of rules not supported -> override if needed
+    else if (hasHead(e, MathematicaSymbols.RULE)) throw new ConversionException("Unsupported conversion RULE")
+    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
+      hasHead(_, MathematicaSymbols.RULE)))) throw new ConversionException("Unsupported conversion List[RULE]")
 
     // Derivatives
     else if (e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
