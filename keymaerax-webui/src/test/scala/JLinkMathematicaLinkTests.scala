@@ -74,4 +74,22 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
   }) { link =>
     // nothing to do here, initialization is done already and will have failed if Mathematica is not activated
   }
+
+  "Function conversion" should "prove no-argument functions correctly" in withMathematica { link =>
+    link.qeEvidence("f()>0 -> f()>=0".asFormula)._1 shouldBe True
+  }
+
+  it should "prove one-argument functions correctly" in withMathematica { link =>
+    link.qeEvidence("f(x)>0 -> f(x)>=0".asFormula)._1 shouldBe True
+  }
+
+  it should "prove binary functions correctly" in withMathematica { link =>
+    link.qeEvidence("f(x,y)>0 -> f(x,y)>=0".asFormula)._1 shouldBe True
+  }
+
+  it should "prove multi-argument functions correctly" in withMathematica { link =>
+    link.qeEvidence("f(x,y,z)>0 -> f(x,y,z)>=0".asFormula)._1 shouldBe True
+    link.qeEvidence("f(x,(y,z))>0 -> f(x,(y,z))>=0".asFormula)._1 shouldBe True
+    link.qeEvidence("f((x,y),z)>0 -> f((x,y),z)>=0".asFormula)._1 shouldBe True
+  }
 }

@@ -237,4 +237,16 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     val expected = new MExpr(Expr.SYMBOL, "KeYmaera`constfn$y")
     KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
   }
+
+  it should "convert multi-argument Apply to nested lists" in {
+    val in = FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real), Pair(Variable("x"), Pair(Variable("y"), Variable("z"))))
+    val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
+      Array[MExpr](
+        new MExpr(Expr.SYMBOL, "KeYmaera`f"),
+        new MExpr(Expr.SYM_LIST, Array[MExpr](new MExpr(Expr.SYM_LIST, Array[MExpr](
+          new MExpr(Expr.SYMBOL, "KeYmaera`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
+            new MExpr(Expr.SYMBOL, "KeYmaera`y"), new MExpr(Expr.SYMBOL, "KeYmaera`z")))))))))
+    println(expected.toString)
+    KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
+  }
 }

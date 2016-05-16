@@ -47,7 +47,7 @@ object KeYmaeraToMathematica {
   private def convertTerm(t : Term): MExpr = {
     /** Convert tuples to list of sorts */
     def flattenSort(s: Sort): List[Sort] = s match {
-      case Tuple(ls, rs) => ls :: rs :: Nil
+      case Tuple(ls, rs) => flattenSort(ls) ++ flattenSort(rs)
       case _ => s :: Nil
     }
 
@@ -66,7 +66,8 @@ object KeYmaeraToMathematica {
       case Power(l, r) =>
         new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Number(n) => new MExpr(n.underlying())
-      case Pair(l, r) =>     //@todo handle nested pairs (flatten to a list?)
+      case Pair(l, r) =>
+        //@note converts nested pairs into nested lists
         new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
 
       case t: Variable => MathematicaNameConversion.toMathematica(t)
@@ -98,7 +99,8 @@ object KeYmaeraToMathematica {
   private def convertFnApply(fn: Function, child: Term): MExpr = child match {
     case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
-      //@todo Code Review: figure out how nested lists affect binary functions
+      //@note single-argument Apply[f, {x}] == f[x] vs. Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
+      //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time
       val args = Array[MExpr](MathematicaNameConversion.toMathematica(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
       new MExpr(MathematicaSymbols.APPLY, args)
   }
