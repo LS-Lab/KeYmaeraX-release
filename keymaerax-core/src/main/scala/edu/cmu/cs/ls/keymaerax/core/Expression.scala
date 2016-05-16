@@ -363,7 +363,7 @@ sealed trait CompositeFormula extends Formula with Composite
 sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the given argument as child instead. (copy)
     * @example {{{
-    *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(UnEqual(Number(7),Number(9))) == Not(UnEqual(Number(7),Number(9)))
+    *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(NotEqual(Number(7),Number(9))) == Not(NotEqual(Number(7),Number(9)))
     *         Not(True).reapply(False) == Not(False)
     *         }}}
     */
@@ -375,7 +375,7 @@ sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula 
 sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
-    *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, UnEqual(Number(7),Number(9))) == Or(True, UnEqual(Number(7),Number(9)))
+    *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, NotEqual(Number(7),Number(9))) == Or(True, NotEqual(Number(7),Number(9)))
     *         }}}
     */
   def reapply: (Formula,Formula)=>Formula
@@ -402,9 +402,9 @@ sealed trait Quantified extends /*Unary?*/CompositeFormula {
 //  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
   /** Create a formula of this constructor but with the given variable list and child as argument instead. (copy)
     * @example {{{
-    *         Forall(immutable.Seq(Variable("x")), PredOf(Func("p",None,Real,Bool),Variable("x")).reapply(
-    *                immutable.Seq(Variable("y")), PredOf(Func("q",None,Real,Bool),Variable("y")))
-    *         == Forall(immutable.Seq(Variable("y")), PredOf(Func("q",None,Real,Bool),Variable("y"))
+    *         Forall(immutable.Seq(Variable("x")), PredOf(Function("p",None,Real,Bool),Variable("x"))).reapply(
+    *                immutable.Seq(Variable("y")), PredOf(Function("q",None,Real,Bool),Variable("y")))
+    *         == Forall(immutable.Seq(Variable("y")), PredOf(Function("q",None,Real,Bool),Variable("y"))))
     *         }}}
     */
   def reapply: (immutable.Seq[Variable],Formula)=>Formula
@@ -419,7 +419,13 @@ case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Quantif
 
 /** Modal formulas */
 sealed trait Modal extends CompositeFormula {
-  /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy) */
+  /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy)
+    * @example {{{
+    *         Box(ProgramConst("b"), Less(Variable("z"),Number(0))).reapply(
+    *             Compose(ProgramConst("a"),AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), GreaterEqual(Variable("x"),Number(2))
+    *        ) == Box(Compose(ProgramConst("a"),AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), GreaterEqual(Variable("x"),Number(2)))
+    *         }}}
+    */
   def reapply: (Program,Formula)=>Formula
   def program: Program
   def child: Formula
