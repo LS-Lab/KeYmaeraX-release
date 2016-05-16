@@ -3,7 +3,6 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -124,13 +123,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ???
   }
 
-  it should "convert rules correctly" in {
-    ml.runUnchecked("Rule[x,y]")._2 should be (Equal(x, y))
+  it should "convert rules correctly with the nonQEConverter" ignore {
+    //@todo run(MExpr, executor, converter) is private, and so are executor and converter
+    ml.runUnchecked("Rule[x,y]")._2 shouldBe Equal(x, y)
     ml.runUnchecked("Rule[x[y],y]")._2 should be (Equal(FuncOf(xFn, y), y))
     ml.runUnchecked("{{Rule[x,y]}}")._2 should be (Equal(x, y))
     ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
     ml.runUnchecked("{{Rule[x,y], Rule[y,x]}, {Rule[x[y],y]}}")._2 shouldBe
       Or(And(Equal(x, y), Equal(y, x)), Equal(FuncOf(xFn, y), y))
+  }
+
+  it should "not convert rules with the default converter" in {
+    a [ConversionException] should be thrownBy ml.runUnchecked("Rule[x,y]")
+    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[x,y]}}")
+    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")
   }
 
   it should "convert names correctly" in {
