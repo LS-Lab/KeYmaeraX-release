@@ -44,7 +44,10 @@ object ArithmeticSimplification {
   }
 
   /** Simplifies arithmetic by removing all formulas (both antecedent and succedent) that mention any of the
-    * irrelevant names. */
+    * irrelevant names.
+    * @author Stefan Mistch
+    * @note Same as smartHide except does both the succedent and the antecedent, and assumes that a list of irrelevant names is already available.
+    */
   def hideFactsAbout(irrelevant: String*): BelleExpr = "hideIrrelevant" by ((sequent: Sequent) => {
     val irrelevantSet = irrelevant.map(_.asNamedSymbol).toSet
     val hideAnte = sequent.ante.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
@@ -59,6 +62,7 @@ object ArithmeticSimplification {
   })
 
   /** Transforms the formula at position by replacing all free occurrences of what with to.
+    * @author Stefan Mitsch
     */
   def replaceTransform(what: Term, to: Term): DependentPositionTactic = "replaceTransform" by ((pos: Position, sequent: Sequent) => {
     cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
@@ -68,37 +72,37 @@ object ArithmeticSimplification {
       )
   })
 
-  //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
-  //
-  //  }
+//  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
+//
+//  }
 
-  //Unimplemented because this is low priority for the FM paper I think.
-  //  /** Cleans up silly pieces of arithmetic to make things easier to read:
-  //    *     t^1 -> t,
-  //    *     t^0 -> 1,
-  //    *     1*t -> t
-  //    *     t*1 -> t
-  //    *     0*t -> 0
-  //    *     t*0 -> t
-  //    *     ... (additive identities, etc.)
-  //    *     N.M -> Number(N.M) for N,M Numbers and . \in +,-,*,/
-  //    */
-  //  lazy val cleanup = new DependentTactic("cleanupArithmetic") {
-  //    import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-  //    /** Equational axioms that will be re-written left-to-right using the CT proof rule. */
-  //    private val axioms = Set(
-  //      ("oneExponent", "t^1=t".asFormula),
-  //      ("zeroExponent", "t^0=1".asFormula),
-  //      ("multIdRight", "t*1=t".asFormula),
-  //      ("multIdLeft", "1*t=t".asFormula),
-  //      ("multUnitRight", "t*0=0".asFormula),
-  //      ("multUnitLeft", "0*t=0".asFormula)
-  //    )
-  //
-  //    override def computeExpr(p: Provable) = {
-  //      ??? //@todo first prove each of the axioms using suppose/show or similar, then write a tactic that CT's the cirst occurance of an LHS.
-  //    }
-  //  }
+//Unimplemented because this is low priority for the FM paper I think.
+//  /** Cleans up silly pieces of arithmetic to make things easier to read:
+//    *     t^1 -> t,
+//    *     t^0 -> 1,
+//    *     1*t -> t
+//    *     t*1 -> t
+//    *     0*t -> 0
+//    *     t*0 -> t
+//    *     ... (additive identities, etc.)
+//    *     N.M -> Number(N.M) for N,M Numbers and . \in +,-,*,/
+//    */
+//  lazy val cleanup = new DependentTactic("cleanupArithmetic") {
+//    import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+//    /** Equational axioms that will be re-written left-to-right using the CT proof rule. */
+//    private val axioms = Set(
+//      ("oneExponent", "t^1=t".asFormula),
+//      ("zeroExponent", "t^0=1".asFormula),
+//      ("multIdRight", "t*1=t".asFormula),
+//      ("multIdLeft", "1*t=t".asFormula),
+//      ("multUnitRight", "t*0=0".asFormula),
+//      ("multUnitLeft", "0*t=0".asFormula)
+//    )
+//
+//    override def computeExpr(p: Provable) = {
+//      ??? //@todo first prove each of the axioms using suppose/show or similar, then write a tactic that CT's the cirst occurance of an LHS.
+//    }
+//  }
 
   //endregion
 
@@ -106,11 +110,11 @@ object ArithmeticSimplification {
 
   /** Returns only relevant antecedent positions. */
   private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
-    val theFilter : (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
+    val theFilter: (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
     val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))
     val complementOfRelevantFormulas = s.ante.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
     //Sort highest-to-lowest so that we don't end up hiding the wrong stuff.
-    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx+1))
+    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx + 1))
     result
   }
 
