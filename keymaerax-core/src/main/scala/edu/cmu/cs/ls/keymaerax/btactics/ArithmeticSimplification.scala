@@ -37,8 +37,8 @@ object ArithmeticSimplification {
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
         isArithmetic &
-        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
+          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
       )
     }
   }
