@@ -8,6 +8,11 @@ package btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{SequentialInterpreter, TheType}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary, ToolTactics}
+import edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Provable
 
 /**
@@ -36,4 +41,14 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     result.subgoals(0).ante.contains("a>0".asFormula) shouldBe false
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
   })}
+
+  "replaceTransform" should "work in the antecedent" in withMathematica { tool =>
+    proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> x>=x_0+v*t".asFormula,
+      prop & replaceTransform("ep".asTerm, "t".asTerm)(-3) & closeId) shouldBe 'proved
+  }
+
+  it should "work in the succedent" in withMathematica { tool =>
+    proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> a<5 | x>=x_0+v*t | b<7".asFormula,
+      prop & replaceTransform("t".asTerm, "ep".asTerm)(2) & closeId) shouldBe 'proved
+  }
 }

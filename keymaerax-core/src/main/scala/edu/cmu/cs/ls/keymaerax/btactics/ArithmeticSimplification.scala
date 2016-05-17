@@ -6,6 +6,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
@@ -38,6 +42,35 @@ object ArithmeticSimplification {
       )
     }
   }
+
+  /** Simplifies arithmetic by removing all formulas (both antecedent and succedent) that mention any of the
+    * irrelevant names.
+    * @author Stefan Mistch
+    * @note Same as smartHide except does both the succedent and the antecedent, and assumes that a list of irrelevant names is already available.
+    */
+  def hideFactsAbout(irrelevant: String*): BelleExpr = "hideIrrelevant" by ((sequent: Sequent) => {
+    val irrelevantSet = irrelevant.map(_.asNamedSymbol).toSet
+    val hideAnte = sequent.ante.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
+      sortWith((l,r) => l._2 <= r._2).reverse.map {
+      case (fml, idx) => hideL(-(idx+1), fml)
+    }.foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+    val hideSucc = sequent.succ.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
+      sortWith((l,r) => l._2 <= r._2).reverse.map {
+      case (fml, idx) => hideR(idx+1, fml)
+    }.foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+    hideAnte & hideSucc
+  })
+
+  /** Transforms the formula at position by replacing all free occurrences of what with to.
+    * @author Stefan Mitsch
+    */
+  def replaceTransform(what: Term, to: Term): DependentPositionTactic = "replaceTransform" by ((pos: Position, sequent: Sequent) => {
+    cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
+      skip,
+      if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+      else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+      )
+  })
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
 //
@@ -77,11 +110,11 @@ object ArithmeticSimplification {
 
   /** Returns only relevant antecedent positions. */
   private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
-    val theFilter : (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
+    val theFilter: (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
     val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))
     val complementOfRelevantFormulas = s.ante.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
     //Sort highest-to-lowest so that we don't end up hiding the wrong stuff.
-    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx+1))
+    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx + 1))
     result
   }
 
