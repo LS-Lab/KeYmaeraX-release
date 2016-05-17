@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentTactic, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
@@ -27,21 +27,48 @@ object ArithmeticSimplification {
     override def computeExpr(p: Provable) = {
       assert(p.subgoals.length == 1, s"${this.name} is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
+      //Should already be sorted highest-to-lowest, but check just in case.
+      val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(x => x.index0).reverse
+
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
         isArithmetic &
-        irrelevantAntePositions(p.subgoals(0)).foldLeft[BelleExpr](Idioms.nil)((e, nextIndex) => e & SequentCalculus.hideL(nextIndex))
+        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
       )
     }
   }
 
-//  /** Cleans up silly pieces like E^1, 2-1, etc. */
-//  lazy val cleanup = new DependentTactic("cleanup") {
-//    override def computeExpr(p: Provable) = ???
+//  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
+//
 //  }
 
-//  def abbreviate(equality: Formula) = new AppliedDependentTactic("abbreviate") {
+//Unimplemented because this is low priority for the FM paper I think.
+//  /** Cleans up silly pieces of arithmetic to make things easier to read:
+//    *     t^1 -> t,
+//    *     t^0 -> 1,
+//    *     1*t -> t
+//    *     t*1 -> t
+//    *     0*t -> 0
+//    *     t*0 -> t
+//    *     ... (additive identities, etc.)
+//    *     N.M -> Number(N.M) for N,M Numbers and . \in +,-,*,/
+//    */
+//  lazy val cleanup = new DependentTactic("cleanupArithmetic") {
+//    import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+//    /** Equational axioms that will be re-written left-to-right using the CT proof rule. */
+//    private val axioms = Set(
+//      ("oneExponent", "t^1=t".asFormula),
+//      ("zeroExponent", "t^0=1".asFormula),
+//      ("multIdRight", "t*1=t".asFormula),
+//      ("multIdLeft", "1*t=t".asFormula),
+//      ("multUnitRight", "t*0=0".asFormula),
+//      ("multUnitLeft", "0*t=0".asFormula)
+//    )
 //
+//    override def computeExpr(p: Provable) = {
+//      ??? //@todo first prove each of the axioms using suppose/show or similar, then write a tactic that CT's the cirst occurance of an LHS.
+//    }
 //  }
 
   //endregion
@@ -49,13 +76,15 @@ object ArithmeticSimplification {
   //region Relevancy predicate and helper methods
 
   /** Returns only relevant antecedent positions. */
-  private def irrelevantAntePositions(s : Sequent): Seq[AntePos] = {
+  private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
     val theFilter : (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
     val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))
     val complementOfRelevantFormulas = s.ante.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
-    complementOfRelevantFormulas.map(x => AntePos(x._2))
+    //Sort highest-to-lowest so that we don't end up hiding the wrong stuff.
+    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx+1))
+    result
   }
-  
+
   /**
     * Returns all formulas that transitively mention relevantSymbols.
     * For example, if fmls = (
@@ -92,7 +121,6 @@ object ArithmeticSimplification {
       case Box(_, _) => false
       case Diamond(_, _) => false
       case x:AtomicFormula => true
-      case x:ComparisonFormula => true
       case x:UnaryCompositeFormula => isFOLR(x.child)
       case x:BinaryCompositeFormula => isFOLR(x.left) && isFOLR(x.right)
       case x:Quantified => isFOLR(x.child)

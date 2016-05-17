@@ -7,7 +7,7 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{SequentialInterpreter, TheType}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary, ToolTactics}
 import edu.cmu.cs.ls.keymaerax.core.Provable
 
 /**
@@ -30,9 +30,10 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   it should "forget useless stuff" in {withMathematica(implicit qeTool => {
     val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL('L)*@(TheType()) & ArithmeticSimplification.smartHide
-    val goal = "x=y & y=z & a > 0 & z > 0 -> x>0".asFormula
+    val goal = "x>y & y>z & a > 0 & z > 0 -> x>0".asFormula
     val result = proveBy(goal, tactic)
     result.subgoals(0).ante.length shouldBe 3 //forget about a>0
+    result.subgoals(0).ante.contains("a>0".asFormula) shouldBe false
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
   })}
 }
