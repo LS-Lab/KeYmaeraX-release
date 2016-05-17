@@ -108,7 +108,7 @@ object ArithmeticSimplification {
 
   //region Relevancy predicate and helper methods
 
-  /** Returns only relevant antecedent positions. */
+  /** Returns only irrelevant antecedent positions. */
   private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
     val theFilter: (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
     val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))
