@@ -56,6 +56,20 @@ object ArithmeticSimplification {
     complementOfRelevantFormulas.map(x => AntePos(x._2))
   }
 
+
+
+  /**
+    * Returns all formulas that transitively mention relevantSymbols.
+    * For example, if fmls = (
+    *   (x>=y , 0)
+    *   (y>=z , 5)
+    *   (z>=12 , 6)
+    * )
+    * and relevantSymbols = {x}, then transitiveRelevance(fmls) = fmls because:
+    *    AntePos(0) mentions x \in {x}      ==> transitiveRelevance(0::5::6, {x,y})
+    *    AntePos(5) mentions y \in {x,y}    ==> transitiveRelevance(0::5::6, {x,y,z})
+    *    AntePos(6) mentions z \in {x,y,z}  ==> recursion terminates now or after one more step because all variables already occur in relevantSymbols.
+    */
   @tailrec
   private def transitiveRelevance(fmls: Seq[(Formula, Int)], relevantSymbols: Set[NamedSymbol]) : Seq[(Formula, Int)] = {
     val relevantFmls = relevantFormulas(fmls, relevantSymbols)
