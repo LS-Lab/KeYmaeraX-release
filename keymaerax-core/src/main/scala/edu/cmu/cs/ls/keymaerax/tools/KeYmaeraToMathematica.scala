@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * to Mathematica Expr objects.
  * @author Nathan Fulton
  */
-object KeYmaeraToMathematica {
+class KeYmaeraToMathematica {
   type MExpr = com.wolfram.jlink.Expr
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
@@ -44,7 +44,7 @@ object KeYmaeraToMathematica {
   /**
    * Converts a KeYmaera terms to a Mathematica expression.
    */
-  private def convertTerm(t : Term): MExpr = {
+  protected def convertTerm(t : Term): MExpr = {
     /** Convert tuples to list of sorts */
     def flattenSort(s: Sort): List[Sort] = s match {
       case Tuple(ls, rs) => flattenSort(ls) ++ flattenSort(rs)
@@ -77,7 +77,7 @@ object KeYmaeraToMathematica {
   /**
    * Converts KeYmaera formulas into Mathematica objects
    */
-  private def convertFormula(f : Formula): MExpr = f match {
+  protected def convertFormula(f : Formula): MExpr = f match {
     case And(l,r)   => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
@@ -96,7 +96,7 @@ object KeYmaeraToMathematica {
     case _ => throw new ProverException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
-  private def convertFnApply(fn: Function, child: Term): MExpr = child match {
+  protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
     case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
       //@note single-argument Apply[f, {x}] == f[x] vs. Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
@@ -106,7 +106,7 @@ object KeYmaeraToMathematica {
   }
 
   /** Convert block of exists quantifiers into a single exists quantifier block */
-  private def convertExists(vs:Seq[NamedSymbol],f:Formula): MExpr = {
+  protected def convertExists(vs:Seq[NamedSymbol],f:Formula): MExpr = {
     val (vars, formula) = collectVarsExists(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
@@ -119,7 +119,7 @@ object KeYmaeraToMathematica {
   }
 
   /** Convert block of forall quantifiers into a single forall quantifier block */
-  private def convertForall(vs:Seq[NamedSymbol],f:Formula): MExpr = {
+  protected def convertForall(vs:Seq[NamedSymbol],f:Formula): MExpr = {
     val (vars, formula) = collectVarsForall(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
@@ -131,7 +131,7 @@ object KeYmaeraToMathematica {
     }
   }
 
-  private def keyExn(e: KExpr): Exception =
+  protected def keyExn(e: KExpr): Exception =
     new ConversionException("conversion not defined for KeYmaera expr: " + PrettyPrinter.printer(e))
 }
 
