@@ -61,6 +61,8 @@ object ArithmeticSimplification {
     hideAnte & hideSucc
   })
 
+
+  def replaceTransform(left:Term, right:Term) = transformEquality(Equal(left,right))
   /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch
     */
