@@ -61,16 +61,24 @@ object ArithmeticSimplification {
     hideAnte & hideSucc
   })
 
-  /** Transforms the formula at position by replacing all free occurrences of what with to.
+  /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch
     */
-  def replaceTransform(what: Term, to: Term): DependentPositionTactic = "replaceTransform" by ((pos: Position, sequent: Sequent) => {
-    cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
-      skip,
-      if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-      else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-      )
-  })
+  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic("transformEquality", equality) {
+    assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
+    val what = equality.asInstanceOf[Equal].left
+    val to   = equality.asInstanceOf[Equal].right
+
+    override def factory(pos: Position): DependentTactic = {
+      {"replaceTransform" by ((pos: Position, sequent: Sequent) => {
+        cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
+          skip,
+          if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+          else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+          )
+      })
+    }}.apply(pos)
+  }
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
 //
