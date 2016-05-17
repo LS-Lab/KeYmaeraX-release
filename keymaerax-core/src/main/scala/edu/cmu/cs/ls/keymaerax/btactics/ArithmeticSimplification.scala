@@ -5,7 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentTactic, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -37,11 +41,36 @@ object ArithmeticSimplification {
     }
   }
 
+  /** Simplifies arithmetic by removing all formulas (both antecedent and succedent) that mention any of the
+    * irrelevant names. */
+  def hideFactsAbout(irrelevant: String*): BelleExpr = "hideIrrelevant" by ((sequent: Sequent) => {
+    val irrelevantSet = irrelevant.map(_.asNamedSymbol).toSet
+    val hideAnte = sequent.ante.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
+      sortWith((l,r) => l._2 <= r._2).reverse.map {
+      case (fml, idx) => hideL(-(idx+1), fml)
+    }.foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+    val hideSucc = sequent.succ.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
+      sortWith((l,r) => l._2 <= r._2).reverse.map {
+      case (fml, idx) => hideR(idx+1, fml)
+    }.foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+    hideAnte & hideSucc
+  })
+
+  /** Transforms the formula at position by replacing all free occurrences of what with to.
+    */
+  def replaceTransform(what: Term, to: Term): DependentPositionTactic = "replaceTransform" by ((pos: Position, sequent: Sequent) => {
+    cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
+      skip,
+      implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+      )
+  })
+
   //endregion
 
   //region Relevancy predicate and helper methods
 
   /** Returns only relevant antecedent positions.
+    *
     * @note This is factored out of tacitc implementations because relevancy might depend upon the entire antecedent,
     *       not just the point-wise relationships that can be implemented in terms of the type of [[isRelevant]]. */
   private def relevantAntePositions(s : Sequent): IndexedSeq[AntePos] = {
