@@ -25,6 +25,13 @@ object ArithmeticSimplification {
   val isArithmetic = TactixLibrary.assertT((s:Sequent) => isFOLR(s),
     "Expected a sequent corresponding to a formula of first-order real arithemtic, but found non-arithmetic formulas in the sequent.")
 
+  lazy val smartCoHideAt = new DependentPositionTactic("smartCoHideAt") {
+    override def factory(pos: Position): DependentTactic = {
+      //@todo Compute the formula/term at pos, grab its freeVars or symbols, and then do a smartHide bootstrapped with that set of variables.
+      ???
+    }
+  }
+
   /** Simplifies arithmetic by removing formulas that are **probably** irrelevant to the current sub-goal.
     * Does not necessarily retain validity??? */
   lazy val smartHide = new DependentTactic("smartHide") {
