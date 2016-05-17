@@ -5,15 +5,12 @@
 
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{SequentialInterpreter, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.TheType
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary, ToolTactics}
-import edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Provable
 
 /**
   * @author Nathan Fulton
