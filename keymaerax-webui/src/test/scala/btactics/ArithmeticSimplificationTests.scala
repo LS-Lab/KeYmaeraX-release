@@ -5,16 +5,11 @@
 
 package btactics
 
-<<<<<<< HEAD
-import edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
-=======
-import edu.cmu.cs.ls.keymaerax.bellerophon.{SequentialInterpreter, TheType}
->>>>>>> 6ae2475a238d46c385614273085f45589f9f5101
+import edu.cmu.cs.ls.keymaerax.bellerophon.TheType
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
 
 /**
   * @author Nathan Fulton
@@ -36,9 +31,10 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   it should "forget useless stuff" in {withMathematica(implicit qeTool => {
     val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL('L)*@(TheType()) & ArithmeticSimplification.smartHide
-    val goal = "x=y & y=z & a > 0 & z > 0 -> x>0".asFormula
+    val goal = "x>y & y>z & a > 0 & z > 0 -> x>0".asFormula
     val result = proveBy(goal, tactic)
     result.subgoals(0).ante.length shouldBe 3 //forget about a>0
+    result.subgoals(0).ante.contains("a>0".asFormula) shouldBe false
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
   })}
 

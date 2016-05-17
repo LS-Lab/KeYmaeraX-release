@@ -6,12 +6,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.Sign.Sign
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
+
+import scala.annotation.tailrec
 
 /**
   * Tactics for simplifying arithmetic sub-goals.
@@ -24,20 +25,20 @@ object ArithmeticSimplification {
   val isArithmetic = TactixLibrary.assertT((s:Sequent) => isFOLR(s),
     "Expected a sequent corresponding to a formula of first-order real arithemtic, but found non-arithmetic formulas in the sequent.")
 
-  /** Simplifies arithmetic by removing formulas that are **definitely** irrelevant to the current sub-goal.
-    * This tactic should necessarily retain validity. */
-  lazy val conserviatvelySimplifyArith = ???
-
   /** Simplifies arithmetic by removing formulas that are **probably** irrelevant to the current sub-goal.
-    * Does not necessarily retain validity. */
-  lazy val aggressivelySimplifyArith = new DependentTactic("aggressivelySimplifyArith") {
+    * Does not necessarily retain validity??? */
+  lazy val smartHide = new DependentTactic("smartHide") {
     override def computeExpr(p: Provable) = {
       assert(p.subgoals.length == 1, s"${this.name} is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
+
+      //Should already be sorted highest-to-lowest, but check just in case.
+      val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(x => x.index0).reverse
 
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
         isArithmetic &
-        relevantAntePositions(p.subgoals(0)).foldLeft[BelleExpr](Idioms.nil)((e, nextIndex) => e & SequentCalculus.hideL(nextIndex))
+          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
       )
     }
   }
@@ -67,27 +68,81 @@ object ArithmeticSimplification {
       )
   })
 
+  //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
+  //
+  //  }
+
+  //Unimplemented because this is low priority for the FM paper I think.
+  //  /** Cleans up silly pieces of arithmetic to make things easier to read:
+  //    *     t^1 -> t,
+  //    *     t^0 -> 1,
+  //    *     1*t -> t
+  //    *     t*1 -> t
+  //    *     0*t -> 0
+  //    *     t*0 -> t
+  //    *     ... (additive identities, etc.)
+  //    *     N.M -> Number(N.M) for N,M Numbers and . \in +,-,*,/
+  //    */
+  //  lazy val cleanup = new DependentTactic("cleanupArithmetic") {
+  //    import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+  //    /** Equational axioms that will be re-written left-to-right using the CT proof rule. */
+  //    private val axioms = Set(
+  //      ("oneExponent", "t^1=t".asFormula),
+  //      ("zeroExponent", "t^0=1".asFormula),
+  //      ("multIdRight", "t*1=t".asFormula),
+  //      ("multIdLeft", "1*t=t".asFormula),
+  //      ("multUnitRight", "t*0=0".asFormula),
+  //      ("multUnitLeft", "0*t=0".asFormula)
+  //    )
+  //
+  //    override def computeExpr(p: Provable) = {
+  //      ??? //@todo first prove each of the axioms using suppose/show or similar, then write a tactic that CT's the cirst occurance of an LHS.
+  //    }
+  //  }
+
   //endregion
 
   //region Relevancy predicate and helper methods
 
-  /** Returns only relevant antecedent positions.
-    *
-    * @note This is factored out of tacitc implementations because relevancy might depend upon the entire antecedent,
-    *       not just the point-wise relationships that can be implemented in terms of the type of [[isRelevant]]. */
-  private def relevantAntePositions(s : Sequent): IndexedSeq[AntePos] = {
-    val relevant = isRelevant(s.succ)(_)
-    s.ante.zipWithIndex.filter(p => !relevant(p._1)).map(x => AntePos(x._2)) //@todo +1?
+  /** Returns only relevant antecedent positions. */
+  private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
+    val theFilter : (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
+    val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))
+    val complementOfRelevantFormulas = s.ante.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
+    //Sort highest-to-lowest so that we don't end up hiding the wrong stuff.
+    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx+1))
+    result
   }
 
-  /** Returns true if fml is relevant to any of the formulas in goals. */
-  private def isRelevant(goals: Seq[Formula])(fml: Formula) = {
-    assert(isFOLR(fml), s"Antecendent formulas passed to isRelevant should be formulas of first-order real arithmetic; ${fml} is not.")
-    goals.foreach(goal => assert(isFOLR(goal), s"All formulas in the succedent of a goal passed to isRelevant should be formulas of first-order real arithmetic; ${goal} is not."))
+  /**
+    * Returns all formulas that transitively mention relevantSymbols.
+    * For example, if fmls = (
+    *   (x>=y , 0)
+    *   (y>=z , 5)
+    *   (z>=12 , 6)
+    * )
+    * and relevantSymbols = {x}, then transitiveRelevance(fmls) = fmls because:
+    *    AntePos(0) mentions x \in {x}      ==> transitiveRelevance(0::5::6, {x,y})
+    *    AntePos(5) mentions y \in {x,y}    ==> transitiveRelevance(0::5::6, {x,y,z})
+    *    AntePos(6) mentions z \in {x,y,z}  ==> recursion terminates now or after one more step because all variables already occur in relevantSymbols.
+    */
+  @tailrec
+  private def transitiveRelevance(fmls: Seq[(Formula, Int)], relevantSymbols: Set[NamedSymbol]) : Seq[(Formula, Int)] = {
+    val relevantFmls = relevantFormulas(fmls, relevantSymbols)
+    val newlyRelevantSymbols = symbols(relevantFmls.map(_._1)) -- relevantSymbols
 
-    val symbolsInFmls = goals.foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ TacticHelper.symbols(nextFml))
-    TacticHelper.symbols(fml).intersect(symbolsInFmls).nonEmpty
+    if(newlyRelevantSymbols.size == 0) relevantFmls
+    else transitiveRelevance(fmls, relevantSymbols ++ newlyRelevantSymbols) //sic: recurse on [[indexedFmls]], not [[relevantFmls]], because some of the previously irrelevant formulas might now be relevant.
   }
+
+  /** Returns all formulas that mention a relevantSymbol, together with that formula's position in the original sequence. */
+  private def relevantFormulas(indexedFmls: Seq[(Formula, Int)], relevantSymbols: Set[NamedSymbol]) : Seq[(Formula, Int)] = {
+    indexedFmls.filter(p => TacticHelper.symbols(p._1).intersect(relevantSymbols).nonEmpty)
+  }
+
+  /** Returns the union of all symbols mentioned in fmls. */
+  private def symbols(fmls: Seq[Formula]) =
+    fmls.foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ TacticHelper.symbols(nextFml))
 
   /** Returns true if fml is a first-order formula of real arithmetic. */
   private def isFOLR(fml: Formula): Boolean = {
@@ -95,7 +150,6 @@ object ArithmeticSimplification {
       case Box(_, _) => false
       case Diamond(_, _) => false
       case x:AtomicFormula => true
-      case x:ComparisonFormula => true
       case x:UnaryCompositeFormula => isFOLR(x.child)
       case x:BinaryCompositeFormula => isFOLR(x.left) && isFOLR(x.right)
       case x:Quantified => isFOLR(x.child)

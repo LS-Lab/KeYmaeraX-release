@@ -486,6 +486,7 @@ object DerivationInfo {
       , RuleDisplayInfo("WR", (List("&Gamma;"),List("P", "&Delta;"))
         , List((List("&Gamma;"),List("&Delta;")))),
       {case () => ProofRuleTactics.hideR}),
+    new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}),
     new PositionTacticInfo("coHideL", "W", {case () => ProofRuleTactics.coHideL}),
     new PositionTacticInfo("coHideR", "W", {case () => ProofRuleTactics.coHideR}),
     new PositionTacticInfo("closeFalse"
