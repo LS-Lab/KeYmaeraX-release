@@ -55,9 +55,7 @@ object ArithmeticSimplification {
     val complementOfRelevantFormulas = s.ante.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
     complementOfRelevantFormulas.map(x => AntePos(x._2))
   }
-
-
-
+  
   /**
     * Returns all formulas that transitively mention relevantSymbols.
     * For example, if fmls = (
