@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.core.Provable
   */
 class ArithmeticSimplificationTests extends TacticTestBase {
   "Aggresive Simplifier" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in {withMathematica(implicit qeTool => {
-    val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.aggressivelySimplifyArith
+    val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.smartHide
     val result = proveBy("x=1 & y=1 -> x=1".asFormula, tactic)
     result.subgoals(0).ante shouldBe result.subgoals(0).succ
   })}
