@@ -204,6 +204,30 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
 
+  it should "refuse to accept ill-kinded substitutions outright" in {
+    a[CoreException] should be thrownBy SubstitutionPair(FuncOf(Function("a", None, Unit, Real), Nothing), Greater(Variable("x"), Number(5)))
+    a[CoreException] should be thrownBy SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), Greater(Variable("x"), Number(5)))
+    a[CoreException] should be thrownBy SubstitutionPair(FuncOf(Function("a", None, Unit, Real), Nothing), ProgramConst("c"))
+    a[CoreException] should be thrownBy SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), ProgramConst("c"))
+    a[CoreException] should be thrownBy SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), Number(5))
+    a[CoreException] should be thrownBy SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Number(5))
+    a[CoreException] should be thrownBy SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), ProgramConst("c"))
+    a[CoreException] should be thrownBy SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), ProgramConst("c"))
+    a[CoreException] should be thrownBy SubstitutionPair(ProgramConst("c"), FuncOf(Function("a", None, Unit, Real), Nothing))
+    a[CoreException] should be thrownBy SubstitutionPair(ProgramConst("c"), Greater(Variable("x"), Number(5)))
+  }
+
+  it should "refuse to accept ill-shaped substitutions outright" in {
+    a [CoreException] should be thrownBy SubstitutionPair(Number(7), Number(9))
+    a [CoreException] should be thrownBy SubstitutionPair(Variable("x"), Number(9))
+    a [CoreException] should be thrownBy SubstitutionPair(Plus(Variable("x"),Number(7)), Number(9))
+    a [CoreException] should be thrownBy SubstitutionPair(Plus(Number(2),Number(7)), Number(9))
+    a [CoreException] should be thrownBy SubstitutionPair(Plus(FuncOf(Function("a", None, Unit, Real), Nothing),FuncOf(Function("b", None, Unit, Real), Nothing)), Number(9))
+    a [CoreException] should be thrownBy SubstitutionPair(And(Greater(Number(7),Number(2)), Less(Number(2),Number(1))), False)
+    a [CoreException] should be thrownBy SubstitutionPair(AssignAny(Variable("x")), ProgramConst("c"))
+    a [CoreException] should be thrownBy SubstitutionPair(AssignAny(Variable("x")), AssignAny(Variable("y")))
+  }
+
   // uniform substitution of rules
 
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
@@ -651,32 +675,69 @@ class USubstTests extends FlatSpec with Matchers {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
-    val context = rand.nextDotFormula(randomComplexity)
-    println("Random context " + context.prettyString)
-    val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-      SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
-    pr.conclusion shouldBe
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
-    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    for (i <- 1 to randomTrials) {
+      val context = rand.nextDotFormula(randomComplexity)
+      println("Random context " + context.prettyString)
+      val s = USubst(
+        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
+      val pr = Provable.rules("CQ equation congruence")(s)
+      pr.conclusion shouldBe
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
+      pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    }
   }
   
   it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml1 = "z^2*y>=5".asFormula
     val fml2 = "(-z)^2*-y+0<=-5".asFormula
     val fml = Equiv(fml1, fml2)
-    val context = rand.nextDotFormula(randomComplexity)
-    println("Random context " + context.prettyString)
-    val s = USubst(
-      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
-      SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
-    pr.conclusion shouldBe
+    for (i <- 1 to randomTrials) {
+      val context = rand.nextDotFormula(randomComplexity)
+      println("Random context " + context.prettyString)
+      val s = USubst(
+        SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+          SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+          SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
+      val pr = Provable.rules("CE congruence")(s)
+      pr.conclusion shouldBe
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
-    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    }
+  }
+
+  it should "have no effect on random formulas without dots" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val fml1 = "z^2*y>=5".asFormula
+    for (i <- 1 to randomTrials) {
+      val fml = rand.nextFormula(randomComplexity)
+      println("Random dot-free formula " + fml.prettyString)
+      val s = USubst(
+          SubstitutionPair(DotFormula, fml1) :: Nil)
+      s(fml) shouldBe fml
+    }
+  }
+
+  it should "have no effect on random formulas without that predicate" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val fml1 = "z^2*y>=5".asFormula
+    for (i <- 1 to randomTrials) {
+      val fml = rand.nextFormula(randomComplexity)
+      println("Random context-free formula " + fml.prettyString)
+      val s = USubst(
+        SubstitutionPair(PredOf(ctxf, DotTerm), fml1) :: Nil)
+      s(fml) shouldBe fml
+    }
+  }
+
+  it should "have no effect on random formulas without that predicational" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val fml1 = "z^2*y>=5".asFormula
+    for (i <- 1 to randomTrials) {
+      val fml = rand.nextFormula(randomComplexity)
+      println("Random context-free formula " + fml.prettyString)
+      val s = USubst(
+        SubstitutionPair(PredicationalOf(ctx, DotFormula), fml1) :: Nil)
+      s(fml) shouldBe fml
+    }
   }
 
   // apply given context to the given argument

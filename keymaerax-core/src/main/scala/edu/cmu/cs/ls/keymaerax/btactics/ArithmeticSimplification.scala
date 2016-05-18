@@ -25,6 +25,13 @@ object ArithmeticSimplification {
   val isArithmetic = TactixLibrary.assertT((s:Sequent) => isFOLR(s),
     "Expected a sequent corresponding to a formula of first-order real arithemtic, but found non-arithmetic formulas in the sequent.")
 
+  lazy val smartCoHideAt = new DependentPositionTactic("smartCoHideAt") {
+    override def factory(pos: Position): DependentTactic = {
+      //@todo Compute the formula/term at pos, grab its freeVars or symbols, and then do a smartHide bootstrapped with that set of variables.
+      ???
+    }
+  }
+
   /** Simplifies arithmetic by removing formulas that are **probably** irrelevant to the current sub-goal.
     * Does not necessarily retain validity??? */
   lazy val smartHide = new DependentTactic("smartHide") {
@@ -61,16 +68,26 @@ object ArithmeticSimplification {
     hideAnte & hideSucc
   })
 
-  /** Transforms the formula at position by replacing all free occurrences of what with to.
+
+  def replaceTransform(left:Term, right:Term) = transformEquality(Equal(left,right))
+  /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch
     */
-  def replaceTransform(what: Term, to: Term): DependentPositionTactic = "replaceTransform" by ((pos: Position, sequent: Sequent) => {
-    cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
-      skip,
-      if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-      else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-      )
-  })
+  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic("transformEquality", equality) {
+    assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
+    val what = equality.asInstanceOf[Equal].left
+    val to   = equality.asInstanceOf[Equal].right
+
+    override def factory(pos: Position): DependentTactic = {
+      {"replaceTransform" by ((pos: Position, sequent: Sequent) => {
+        cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
+          skip,
+          if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+          else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+          )
+      })
+    }}.apply(pos)
+  }
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
 //
@@ -108,7 +125,7 @@ object ArithmeticSimplification {
 
   //region Relevancy predicate and helper methods
 
-  /** Returns only relevant antecedent positions. */
+  /** Returns only irrelevant antecedent positions. */
   private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
     val theFilter: (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
     val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))

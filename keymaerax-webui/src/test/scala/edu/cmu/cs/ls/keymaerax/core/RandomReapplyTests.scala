@@ -15,6 +15,7 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 /**
  * Tests reapply function of expression data structures for identity after deep copy.
  * Performance test if printing were turned off.
+  *
   * @todo add a test that reapplies with new random formulas/terms as arguments
  * @author Andre Platzer
  */
@@ -62,6 +63,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
   it should "reapply random formulas identically (summary)" taggedAs(SummaryTest) in {test(50)}
   it should "reapply random formulas identically (usual)" taggedAs(UsualTest) in {test(1000,10)}
   it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
+  it should "reparse pretty-prints of random formulas (prints)" in {testPrint(100,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
@@ -71,6 +73,25 @@ class RandomReapplyTests extends FlatSpec with Matchers {
       //println("Reapplied: " + r)
       e shouldBe r
     }
+
+  private def testPrint(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) = {
+    var pp: Expression=>String = PrettyPrinter
+    for (i <- 1 to randomTrials) {
+      val e = rand.nextFormula(randomComplexity)
+      println("Random in: " + pp(e))
+      val r = reapplied(e)
+      println("Reapplied: " + pp(r))
+      e shouldBe r
+    }
+    pp = KeYmaeraXPrettyPrinter
+    for (i <- 1 to randomTrials) {
+      val e = rand.nextFormula(randomComplexity)
+      println("Random in: " + pp(e))
+      val r = reapplied(e)
+      println("Reapplied: " + pp(r))
+      e shouldBe r
+    }
+  }
 
   // recursive reapplied call for deep copy
 

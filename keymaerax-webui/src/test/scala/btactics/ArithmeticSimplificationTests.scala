@@ -40,11 +40,11 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   "replaceTransform" should "work in the antecedent" in withMathematica { tool =>
     proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> x>=x_0+v*t".asFormula,
-      prop & replaceTransform("ep".asTerm, "t".asTerm)(-3) & closeId) shouldBe 'proved
+      prop & transformEquality("ep=t".asFormula)(-3) & closeId) shouldBe 'proved
   }
 
   it should "work in the succedent" in withMathematica { tool =>
     proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> a<5 | x>=x_0+v*t | b<7".asFormula,
-      prop & replaceTransform("t".asTerm, "ep".asTerm)(2) & closeId) shouldBe 'proved
+      prop & transformEquality("t=ep".asFormula)(2) & closeId) shouldBe 'proved
   }
 }
