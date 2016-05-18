@@ -1337,24 +1337,24 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-///**
-//  * CoHide left.
-//  * {{{
-//  *      p |-
-//  * ------------- (CoHide left)
-//  *   p, G |- D
-//  * }}}
-//  *
-//  * @note Rarely useful (except for contradictory `p`)
-//  * @derived
-//  */
-//case class CoHideLeft(pos: AntePos) extends LeftRule {
-//  val name: String = "CoHideLeft"
-//  /** co-weakening left = co-hide left (all but indicated position) */
-//  def apply(s: Sequent): immutable.List[Sequent] = {
-//    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
-//  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-//}
+/**
+  * CoHide left.
+  * {{{
+  *      p |-
+  * ------------- (CoHide left)
+  *   p, G |- D
+  * }}}
+  *
+  * @note Rarely useful (except for contradictory `p`)
+  * @derived
+  */
+case class CoHideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "CoHideLeft"
+  /** co-weakening left = co-hide left (all but indicated position) */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
 
 /**
  * CoHide2 hides all but the two indicated positions.
@@ -1435,24 +1435,23 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   }
 }
 
-///**
-//  * Commute equivalence left
-//  * {{{
-//  * q<->p, G |-  D
-//  * -------------- (<->cL)
-//  * p<->q, G |-  D
-//  * }}}
-//  *
-//  * @note unused
-//  * @derived
-//  */
-//case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
-//  val name: String = "CommuteEquivLeft"
-//  def apply(s: Sequent): immutable.List[Sequent] = {
-//    val Equiv(p,q) = s(pos)
-//    immutable.List(s.updated(pos, Equiv(q, p)))
-//  }
-//}
+/**
+  * Commute equivalence left
+  * {{{
+  * q<->p, G |-  D
+  * -------------- (<->cL)
+  * p<->q, G |-  D
+  * }}}
+  *
+  * @derived
+  */
+case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
+  val name: String = "CommuteEquivLeft"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
+  }
+}
 
 /**
   * Equivify Right: Convert implication to equivalence.
