@@ -720,19 +720,19 @@ trait RightRule extends PositionRule {
   def pos: SuccPos
 }
 
-/** An assumption rule, which is a position rule that has an additional position of an assumption. */
-trait AssumptionRule extends PositionRule {
-  /** The position of the assumption used for this rule when used at the position `pos` */
-  def assume: SeqPos
-  override def toString: String = name + " at " + pos + " assumption at " + assume
-}
+///** An assumption rule, which is a position rule that has an additional position of an assumption. */
+//trait AssumptionRule extends PositionRule {
+//  /** The position of the assumption used for this rule when used at the position `pos` */
+//  def assume: SeqPos
+//  override def toString: String = name + " at " + pos + " assumption at " + assume
+//}
 
-/** A rule applied to two positions. */
-trait TwoPositionRule extends Rule {
-  def pos1: SeqPos
-  def pos2: SeqPos
-  override def toString: String = name + " at " + pos1 + " and " + pos2
-}
+///** A rule applied to two positions. */
+//trait TwoPositionRule extends Rule {
+//  def pos1: SeqPos
+//  def pos2: SeqPos
+//  override def toString: String = name + " at " + pos1 + " and " + pos2
+//}
 
 /*********************************************************************************
  * Proof Rules
@@ -1337,24 +1337,24 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-/**
-  * CoHide left.
-  * {{{
-  *      p |-
-  * ------------- (CoHide left)
-  *   p, G |- D
-  * }}}
-  *
-  * @note Rarely useful (except for contradictory `p`)
-  * @derived
-  */
-case class CoHideLeft(pos: AntePos) extends LeftRule {
-  val name: String = "CoHideLeft"
-  /** co-weakening left = co-hide left (all but indicated position) */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
+///**
+//  * CoHide left.
+//  * {{{
+//  *      p |-
+//  * ------------- (CoHide left)
+//  *   p, G |- D
+//  * }}}
+//  *
+//  * @note Rarely useful (except for contradictory `p`)
+//  * @derived
+//  */
+//case class CoHideLeft(pos: AntePos) extends LeftRule {
+//  val name: String = "CoHideLeft"
+//  /** co-weakening left = co-hide left (all but indicated position) */
+//  def apply(s: Sequent): immutable.List[Sequent] = {
+//    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
+//  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+//}
 
 /**
  * CoHide2 hides all but the two indicated positions.
@@ -1435,23 +1435,24 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   }
 }
 
-/**
-  * Commute equivalence left
-  * {{{
-  * q<->p, G |-  D
-  * -------------- (<->cL)
-  * p<->q, G |-  D
-  * }}}
-  *
-  * @derived
-  */
-case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
-  val name: String = "CommuteEquivLeft"
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(p,q) = s(pos)
-    immutable.List(s.updated(pos, Equiv(q, p)))
-  }
-}
+///**
+//  * Commute equivalence left
+//  * {{{
+//  * q<->p, G |-  D
+//  * -------------- (<->cL)
+//  * p<->q, G |-  D
+//  * }}}
+//  *
+//  * @Note unused
+//  * @derived
+//  */
+//case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
+//  val name: String = "CommuteEquivLeft"
+//  def apply(s: Sequent): immutable.List[Sequent] = {
+//    val Equiv(p,q) = s(pos)
+//    immutable.List(s.updated(pos, Equiv(q, p)))
+//  }
+//}
 
 /**
   * Equivify Right: Convert implication to equivalence.
