@@ -20,7 +20,7 @@ import scala.collection.immutable._
  */
 @SummaryTest
 class PairParserTests extends FlatSpec with Matchers {
-  val pp = if (false) KeYmaeraXPrettyPrinter
+  val pp = if (true) KeYmaeraXPrettyPrinter
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
   KeYmaera.init(Map.empty)
