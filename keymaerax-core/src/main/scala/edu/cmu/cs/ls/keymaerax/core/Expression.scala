@@ -74,7 +74,6 @@ sealed trait Expression {
   override def toString : String = prettyString
   /** Pretty-printed string representing this expression */
   def prettyString : String = PrettyPrinter.printer(this)
-  private[core] def canonicalString : String = super.toString
 }
 
 /** Atomic expressions */
