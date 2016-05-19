@@ -20,14 +20,14 @@ import scala.collection.immutable.Map
  * @author Andre Platzer
  */
 class RandomProvableTest extends FlatSpec with Matchers {
-  val pp = KeYmaeraXPrettyPrinter
-  val randomTrials = 400
-  val randomComplexity = 6
+  PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  val randomTrials = 4000
+  val randomComplexity = 10
   val rand = new RandomFormula()
 
-  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs(SummaryTest) in {test(40,4)}
-  it should "be proved and prolongued trivially (usual)" taggedAs(UsualTest) in {test(1000,6)}
-  it should "be proved and prolongued trivially (slow)" taggedAs(SlowTest) in {test(randomTrials,8)}
+  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs(SummaryTest) in {test(10,4)}
+  it should "be proved and prolongued trivially (usual)" taggedAs(UsualTest) in {test(100,8)}
+  it should "be proved and prolongued trivially (slow)" taggedAs(SlowTest) in {test(randomTrials,randomComplexity)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
