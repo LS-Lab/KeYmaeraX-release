@@ -19,7 +19,8 @@ import scala.collection.immutable._
  *   // The same sequence of pseudo-random formulas can, thus, be regenerated again from
  *   val sameRand = RandomFormula(-4317240407825764493L)
  * }}}
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  * @param seed the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
@@ -52,7 +53,61 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     throw new IllegalStateException("Monte Carlo generation of context failed despite " + randomReps + " rounds for " + fml)
   }
 
+  /** Generate a random proof of a random tautological sequents */
+  def nextProvable(size: Int): Provable = nextPr(nextNames("z", size / 3 + 1), size)
 
+  /** Generate a random (propositionally) provable formula */
+  //def nextProved(size: Int): Sequent = nextProvable(size).conclusion
+
+  /** Generate a random proof of a random tautological sequent, basically via an external forward sequent calculus */
+  def nextPr(vars : IndexedSeq[Variable], n : Int): Provable = {
+    require(n>=0)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
+    val r = rand.nextInt(60)
+    r match {
+      case 0 => Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
+      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(Nil, IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
+      case it if 10 until 20 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
+        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
+      case it if 20 until 30 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
+        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(p1.conclusion.ante.length)))
+      case it if 30 until 40 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 2);
+        val pos1 = AntePos(rand.nextInt(p1.conclusion.ante.length-1))
+        p1(Sequent(Nil, p1.conclusion.updated(pos1, And(p1.conclusion(pos1),p1.conclusion(AntePos(p1.conclusion.ante.length-1)))).
+          ante.patch(p1.conclusion.ante.length-1,Nil,1), p1.conclusion.succ), AndLeft(pos1))
+      case it if 40 until 50 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 2);
+        val pos1 = SuccPos(rand.nextInt(p1.conclusion.succ.length-1))
+        p1(Sequent(Nil, p1.conclusion.ante,
+          p1.conclusion.updated(pos1, Or(p1.conclusion(pos1),p1.conclusion(SuccPos(p1.conclusion.succ.length-1)))).
+            succ.patch(p1.conclusion.succ.length-1,Nil,1)), OrRight(pos1))
+      case it if 50 until 60 contains it => val p1 = padLeft(vars, n, padRight(vars, n, nextPr(vars, n-1), 1), 1);
+        val posi1 = rand.nextInt(p1.conclusion.succ.length)
+        val pos1 = SuccPos(posi1)
+        p1(Sequent(Nil, p1.conclusion.ante.patch(p1.conclusion.ante.length-1,Nil,1),
+          p1.conclusion.succ.patch(p1.conclusion.succ.length-1,Nil,1).patch(posi1,
+            Imply(p1.conclusion.ante.last, p1.conclusion(pos1))::Nil
+            , 0)), ImplyRight(pos1))
+        //@todo more rules such as AndRight
+    }
+  }
+
+  /** padding such that at least lefts many formula in antecedent of pr by weakening */
+  private def padLeft(vars : IndexedSeq[Variable], n : Int, pr: Provable, lefts: Int): Provable =
+    if (pr.conclusion.ante.length>=lefts) pr
+    else {
+      val fml = nextF(vars, n)
+      padLeft(vars, n, pr(pr.conclusion.glue(Sequent(Nil, IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(pr.conclusion.ante.length))), lefts)
+    }
+
+  /** padding such that at least rights many formula in succedent of pr by weakening */
+  private def padRight(vars : IndexedSeq[Variable], n : Int, pr: Provable, rights: Int): Provable =
+    if (pr.conclusion.ante.length>=rights) pr
+    else {
+      val fml = nextF(vars, n)
+      padRight(vars, n, pr(pr.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(pr.conclusion.succ.length))), rights)
+    }
+
+  // closer to implementation-specific
 
   def nextPosition(size : Int): Position = if (rand.nextBoolean())
     AntePosition.base0(rand.nextInt(size), PosInExpr(nextPos(size)))

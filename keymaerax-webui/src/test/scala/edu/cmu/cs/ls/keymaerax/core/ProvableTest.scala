@@ -5,12 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import testHelper.KeYmaeraXTestTags._
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
-import org.scalatest.{Matchers, FlatSpec, TagAnnotation}
+import org.scalatest.{FlatSpec, Matchers, TagAnnotation}
 
 import scala.collection.immutable.Map
 
@@ -301,4 +302,5 @@ class ProvableTest extends FlatSpec with Matchers {
     a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
     a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
   }
+
 }
