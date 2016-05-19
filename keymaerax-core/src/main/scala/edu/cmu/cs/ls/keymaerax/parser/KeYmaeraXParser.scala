@@ -896,8 +896,8 @@ object KeYmaeraXParser extends Parser {
     case _ => false
   }
 
-  private def isDifferentialSymbol(st: ParseState): Boolean = st.stack match {
-    case _ :+ Expr(_:DifferentialSymbol) => true
+  private def isDifferentialAssign(st: ParseState): Boolean = st.stack match {
+    //case _ :+ Expr(_:DifferentialSymbol) => true
     case _ :+ Expr(_:DifferentialSymbol) :+ Token(ASSIGN,_) :+ Expr(_) => true
     case _ => false
   }
@@ -957,7 +957,7 @@ object KeYmaeraXParser extends Parser {
       // programs
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
-      case sAssign.op => if (isDifferentialSymbol(st)) sDiffAssign else sAssign
+      case sAssign.op => if (isDifferentialAssign(st)) sDiffAssign else sAssign
       case sAssignAny.op => sAssignAny
       case sTest.op => sTest
       //      case p: ODESystem => sODESystem

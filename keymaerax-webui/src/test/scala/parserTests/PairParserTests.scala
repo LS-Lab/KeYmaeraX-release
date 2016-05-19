@@ -16,7 +16,8 @@ import scala.collection.immutable._
 
 /**
  * Tests the parser on pairs of strings that are expected to parse the same.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  */
 @SummaryTest
 class PairParserTests extends FlatSpec with Matchers {
@@ -531,6 +532,15 @@ class PairParserTests extends FlatSpec with Matchers {
     ("a+f(b+1)", "a+(f((b+1)))"),
     ("a+2(b+1)", unparseable),
     ("a+2b+1", unparseable),
+
+    ("x:=y';", "x:=(y');"),
+    ("x':=y;", "x':=y;"),
+    ("x':=y';", "x':=(y');"),
+
+    // random
+    ("!([{{z1:=0;}*}*]true)'", "!(([{{z1:=0;}*}*](true))')"),
+    ("<{{?true;{?true;++?true;}++{?true;}*?true;}++{z2:=0;++?true;?true;}?true;}*>[?true;{{?true;?true;}*++z2:=z3';}][z3:=*;]true", "<{{{{?true;}{{?true;}++{?true;}}}++{{{?true;}*}{?true;}}}++{{{z2:=0;}++{{?true;}{?true;}}}{?true;}}}*>([{?true;}{{{{?true;}{?true;}}*}++{z2:=z3';}}]([z3:=*;](true)))"),
+    ("?0=(96*(z7+(z5-22+z2-((0*((((z3+-1+(0/0-(0)'))/(z6+0))'^0)'*69))')')'+(0)'))^4+z2;", "?(0=((96*(z7+(z5-22+z2-((0*((((z3+-1+(0/0-(0)'))/(z6+0))'^0)'*69))')')'+(0)'))^4+z2));"),
 
     ("00", "0")
   )

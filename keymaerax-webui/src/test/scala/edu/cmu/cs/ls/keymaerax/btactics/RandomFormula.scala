@@ -93,13 +93,13 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
             Imply(p1.conclusion.ante.last, p1.conclusion(pos1))::Nil
             , 0)), ImplyRight(pos1))
       case it if 60 until 65 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1);
-        val posi1 = rand.nextInt(p1.conclusion.succ.length-1)
+        val posi1 = rand.nextInt(p1.conclusion.succ.length)
         val pos1 = SuccPos(posi1)
         p1(Sequent(Nil,
           p1.conclusion.ante :+ Not(p1.conclusion(pos1)),
           p1.conclusion.succ.patch(posi1,Nil,1)), NotRight(pos1))
       case it if 65 until 70 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 1);
-        val posi1 = rand.nextInt(p1.conclusion.ante.length-1)
+        val posi1 = rand.nextInt(p1.conclusion.ante.length)
         val pos1 = AntePos(posi1)
         p1(Sequent(Nil,
           p1.conclusion.ante.patch(posi1,Nil,1),
