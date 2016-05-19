@@ -17,6 +17,7 @@ import scala.collection.immutable.Map
 /**
  * Test Provable constructions
  * @author Andre Platzer
+  * @todo more exhaustive tests needed
  */
 @CheckinTest
 @SummaryTest
@@ -251,5 +252,53 @@ class ProvableTest extends FlatSpec with Matchers {
     val proved = finProof(Close(AntePos(0), SuccPos(0)), 0)
     proved.isProved should be (true)
     proved.proved should be (finGoal)
+  }
+
+  it should "not close different formulas by identity" in {
+    import scala.collection.immutable._
+    val fm = Greater(Variable("x"), Number(5))
+    val fm1 = Less(Variable("x"), Number(5))
+    // x>5 |- x>5
+    val finGoal = new Sequent(Seq(), IndexedSeq(fm1), IndexedSeq(fm))
+    val finProof = Provable.startProof(finGoal)(
+      Close(AntePos(0), SuccPos(0)), 0
+    )
+    finProof.isProved should be (true)
+    finProof.proved should be (finGoal)
+    // x<5 |- x>5
+    val noGoal = new Sequent(Seq(), IndexedSeq(fm1), IndexedSeq(fm))
+    a [CoreException] shouldBe thrownBy(Provable.startProof(noGoal)(
+      Close(AntePos(0), SuccPos(0)), 0
+    ))
+  }
+
+  "Forward Provable" should "continue correct consequence but refuse incorrect consequence" in {
+    import scala.collection.immutable._
+    val fm = Greater(Variable("x"), Number(5))
+    // x>5 |- x>5 & true
+    val finGoal = new Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True)))
+    // conjecture
+    val finProvable = Provable.startProof(finGoal)
+    // construct a proof
+    val proof = finProvable(
+      AndRight(SuccPos(0)), 0)(
+      HideLeft(AntePos(0)), 1)(
+      CloseTrue(SuccPos(0)), 1)(
+      Close(AntePos(0), SuccPos(0)), 0)
+    proof.isProved should be (true)
+    proof.proved should be (finGoal)
+
+    // prolong forward
+    // x>5 |- x>5 & true
+    val goal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+    val finProof = finProvable(goal, ImplyRight(SuccPos(0)))
+    finProof.isProved should be (true)
+    finProof.proved should be (goal)
+    // incorrectly prolong forward
+    a [CoreException] shouldBe thrownBy(finProvable(goal, AndRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(finProvable(goal, OrRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(fm, And(fm, True)))), ImplyRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
   }
 }
