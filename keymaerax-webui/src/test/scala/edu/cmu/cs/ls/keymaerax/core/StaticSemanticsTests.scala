@@ -81,18 +81,22 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       val e = rand.nextTerm(randomComplexity)
       val vc = StaticSemantics(e)
       vc shouldBe StaticSemantics.freeVars(e)
+      vc shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
       vc shouldBe StaticSemantics.vars(e)
-      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e)
-      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e)
+      vc shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
+      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
+      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
       val vc = StaticSemantics(e)
       vc.fv shouldBe StaticSemantics.freeVars(e)
       vc.bv shouldBe StaticSemantics.boundVars(e)
+      vc.fv shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
       (vc.fv++vc.bv) shouldBe StaticSemantics.vars(e)
-      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e)
-      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e)
+      StaticSemantics.vars(e) shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
+      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
+      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextProgram(randomComplexity)
@@ -100,9 +104,12 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       vc.fv shouldBe StaticSemantics.freeVars(e)
       vc.bv shouldBe StaticSemantics.boundVars(e)
       vc.mbv shouldBe StaticSemantics(e).mbv
+      vc.fv shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
       (vc.fv++vc.bv) shouldBe StaticSemantics.vars(e)
-      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e)
-      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e)
+      StaticSemantics.vars(e) shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
+      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
+      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
     }
   }
+  //@todo use rand.nextSequent(randomComplexity) to test sequent operations
 }

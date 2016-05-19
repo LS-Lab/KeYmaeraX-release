@@ -226,6 +226,22 @@ class USubstTests extends FlatSpec with Matchers {
     a [CoreException] should be thrownBy SubstitutionPair(And(Greater(Number(7),Number(2)), Less(Number(2),Number(1))), False)
     a [CoreException] should be thrownBy SubstitutionPair(AssignAny(Variable("x")), ProgramConst("c"))
     a [CoreException] should be thrownBy SubstitutionPair(AssignAny(Variable("x")), AssignAny(Variable("y")))
+    a [CoreException] should be thrownBy SubstitutionPair(Assign(Variable("x"), Number(7)), Assign(Variable("y"), Number(7)))
+    a [CoreException] should be thrownBy SubstitutionPair(Assign(Variable("x"), Number(7)), AssignAny(Variable("y")))
+    a [CoreException] should be thrownBy SubstitutionPair(AtomicODE(DifferentialSymbol(Variable("x")), Number(7)), AssignAny(Variable("x")))
+    a [CoreException] should be thrownBy SubstitutionPair(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(7)), True), AssignAny(Variable("x")))
+  }
+
+  it should "refuse duplicate substitutions outright" in {
+    val list1 = SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), Number(5)) ::
+      SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), Number(22)) :: Nil
+    a[CoreException] should be thrownBy USubst(list1)
+    val list2 = SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), Greater(Variable("x"), Number(5))) ::
+      SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), Less(Variable("z"), Number(99))) :: Nil
+    a[CoreException] should be thrownBy USubst(list2)
+    val list3 = SubstitutionPair(ProgramConst("c"), Assign(Variable("y"), Number(7))) ::
+      SubstitutionPair(ProgramConst("c"), AssignAny(Variable("y"))) :: Nil
+    a[CoreException] should be thrownBy USubst(list3)
   }
 
   // uniform substitution of rules
