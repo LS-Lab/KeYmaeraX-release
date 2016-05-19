@@ -260,7 +260,7 @@ class ProvableTest extends FlatSpec with Matchers {
     val fm = Greater(Variable("x"), Number(5))
     val fm1 = Less(Variable("x"), Number(5))
     // x>5 |- x>5
-    val finGoal = new Sequent(Seq(), IndexedSeq(fm1), IndexedSeq(fm))
+    val finGoal = new Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm))
     val finProof = Provable.startProof(finGoal)(
       Close(AntePos(0), SuccPos(0)), 0
     )
@@ -292,15 +292,15 @@ class ProvableTest extends FlatSpec with Matchers {
     // prolong forward
     // x>5 |- x>5 & true
     val goal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
-    val finProof = finProvable(goal, ImplyRight(SuccPos(0)))
+    val finProof = proof(goal, ImplyRight(SuccPos(0)))
     finProof.isProved should be (true)
     finProof.proved should be (goal)
     // incorrectly prolong forward
-    a [CoreException] shouldBe thrownBy(finProvable(goal, AndRight(SuccPos(0))))
-    a [CoreException] shouldBe thrownBy(finProvable(goal, OrRight(SuccPos(0))))
-    a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(fm, And(fm, True)))), ImplyRight(SuccPos(0))))
-    a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
-    a [CoreException] shouldBe thrownBy(finProvable(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
+    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, AndRight(SuccPos(0))))
+    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, OrRight(SuccPos(0))))
+    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(fm, And(fm, True)))), ImplyRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(proof(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(proof(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
   }
 
 }
