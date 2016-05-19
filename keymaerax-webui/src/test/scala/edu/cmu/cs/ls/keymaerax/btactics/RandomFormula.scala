@@ -44,7 +44,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   def nextFormulaContext(size : Int): Context[Formula] = {
     import Augmentors._
-    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, false, false)
+    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, false, false, false)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)
       val pos = nextPosition(size).inExpr
@@ -193,7 +193,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 //case it if 110 until 170 contains it => True
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 290 until 300 contains it => DifferentialFormula(nextF(vars, n-1, dotTs, dotFs, diffs))
+        case it if 290 until 300 contains it => if (diffs) DifferentialFormula(nextF(vars, n-1, dotTs, dotFs, diffs)) else False
 		    case it if 300 until 400 contains it => assert(dotFs); DotFormula
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
