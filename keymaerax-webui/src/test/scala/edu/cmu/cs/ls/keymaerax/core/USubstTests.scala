@@ -723,36 +723,60 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "have no effect on random formulas without dots" taggedAs KeYmaeraXTestTags.USubstTest in {
-    val fml1 = "z^2*y>=5".asFormula
+  "Random uniform substitutions" should "have no effect on random formulas without dots" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val trm1 = "x^2*y^3".asTerm
+    val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
       println("Random dot-free formula " + fml.prettyString)
       val s = USubst(
+        SubstitutionPair(DotTerm, trm1) ::
           SubstitutionPair(DotFormula, fml1) :: Nil)
       s(fml) shouldBe fml
+      val dotfml = rand.nextDotFormula(randomComplexity)
+      s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+      val dottrm = rand.nextDotTerm(randomComplexity)
+      s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+      val dotprg = rand.nextDotProgram(randomComplexity)
+      s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
     }
   }
 
   it should "have no effect on random formulas without that predicate" taggedAs KeYmaeraXTestTags.USubstTest in {
-    val fml1 = "z^2*y>=5".asFormula
+    val trm1 = "x^2*y^3".asTerm
+    val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
       println("Random context-free formula " + fml.prettyString)
       val s = USubst(
+        SubstitutionPair(DotTerm, trm1) ::
         SubstitutionPair(PredOf(ctxf, DotTerm), fml1) :: Nil)
       s(fml) shouldBe fml
+      val dotfml = rand.nextDotFormula(randomComplexity)
+      s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+      val dottrm = rand.nextDotTerm(randomComplexity)
+      s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+      val dotprg = rand.nextDotProgram(randomComplexity)
+      s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
     }
   }
 
   it should "have no effect on random formulas without that predicational" taggedAs KeYmaeraXTestTags.USubstTest in {
-    val fml1 = "z^2*y>=5".asFormula
+    val trm1 = "x^2*y^3".asTerm
+    val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
       println("Random context-free formula " + fml.prettyString)
       val s = USubst(
+        SubstitutionPair(DotTerm, trm1) ::
         SubstitutionPair(PredicationalOf(ctx, DotFormula), fml1) :: Nil)
       s(fml) shouldBe fml
+      val dotfml = rand.nextDotFormula(randomComplexity)
+      s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+      val dottrm = rand.nextDotTerm(randomComplexity)
+      s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+      val dotprg = rand.nextDotProgram(randomComplexity)
+      s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
     }
   }
 
