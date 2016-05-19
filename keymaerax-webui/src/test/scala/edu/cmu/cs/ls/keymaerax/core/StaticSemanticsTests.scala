@@ -110,6 +110,9 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
       StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
     }
+    for (i <- 1 to randomTrials) {
+      val e = rand.nextSequent(randomComplexity)
+      StaticSemantics.freeVars(e) shouldBe (e.ante ++ e.succ).map(f=>StaticSemantics.freeVars(f)).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
+    }
   }
-  //@todo use rand.nextSequent(randomComplexity) to test sequent operations
 }
