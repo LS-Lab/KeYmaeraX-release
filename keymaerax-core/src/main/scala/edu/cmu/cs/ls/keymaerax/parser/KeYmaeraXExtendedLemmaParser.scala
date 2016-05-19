@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Sequent, Evidence}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
+import scala.collection.immutable
+
 /**
   * Created by smitsch on 7/03/15.
   * Modified by nfulton on 12/16/15 -- Lemmas are now more general.
@@ -128,11 +130,11 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     (ToolEvidence(evidence), remainderTokens.tail)
   }
 
-  def parseToolEvidenceLines(input: TokenStream): Map[String, String] = {
+  def parseToolEvidenceLines(input: TokenStream): immutable.Map[String, String] = {
     require(input.head.tok match { case IDENT(_, _) => true case _ => false }, "expected to begin with key.")
     require(input.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false }, "expected actual value.")
 
-    var evidence = Map[String, String]()
+    var evidence = immutable.Map[String, String]()
     var line = input
 
     while (line.nonEmpty &&
