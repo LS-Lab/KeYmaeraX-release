@@ -63,7 +63,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextPr(vars : IndexedSeq[Variable], n : Int): Provable = {
     require(n>=0)
     if (n == 0 || rand.nextFloat()<=shortProbability) return Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
-    val r = rand.nextInt(60)
+    val r = rand.nextInt(70)
     r match {
       case 0 => Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
       case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(Nil, IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
@@ -87,7 +87,24 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
           p1.conclusion.succ.patch(p1.conclusion.succ.length-1,Nil,1).patch(posi1,
             Imply(p1.conclusion.ante.last, p1.conclusion(pos1))::Nil
             , 0)), ImplyRight(pos1))
-        //@todo more rules such as AndRight
+      case it if 60 until 65 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1);
+        val posi1 = rand.nextInt(p1.conclusion.succ.length-1)
+        val pos1 = SuccPos(posi1)
+        p1(Sequent(Nil,
+          p1.conclusion.ante :+ Not(p1.conclusion(pos1)),
+          p1.conclusion.succ.patch(posi1,Nil,1)), NotRight(pos1))
+      case it if 65 until 70 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 1);
+        val posi1 = rand.nextInt(p1.conclusion.ante.length-1)
+        val pos1 = AntePos(posi1)
+        p1(Sequent(Nil,
+          p1.conclusion.ante.patch(posi1,Nil,1),
+          p1.conclusion.succ :+ Not(p1.conclusion(pos1))), NotLeft(pos1))
+//      case it if 70 until 80 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1); val p2 = padRight(vars, n, nextPr(vars, n-1), 1);
+//        val pos1 = SuccPos(rand.nextInt(Math.min(p1.conclusion.succ.length, p2.conclusion.succ.length)))
+        //@todo weaken both sides such that they have the same context and THEN randomly generate the place where the formula ends up at
+//        p1(Sequent(Nil, p1.conclusion.updated(pos1, And(p1.conclusion(pos1),p1.conclusion(AntePos(p1.conclusion.ante.length-1)))).
+//          ante.patch(p1.conclusion.ante.length-1,Nil,1), p1.conclusion.succ), AndRight(pos1))
+//        //@todo more rules such as AndRight
     }
   }
 

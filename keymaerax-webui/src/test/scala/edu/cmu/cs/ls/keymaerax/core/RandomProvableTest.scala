@@ -21,7 +21,7 @@ import scala.collection.immutable.Map
  */
 class RandomProvableTest extends FlatSpec with Matchers {
   val pp = KeYmaeraXPrettyPrinter
-  val randomTrials = 4000
+  val randomTrials = 400
   val randomComplexity = 6
   val rand = new RandomFormula()
 
@@ -37,7 +37,6 @@ class RandomProvableTest extends FlatSpec with Matchers {
       e(Provable.startProof(e.conclusion)) shouldBe e
       // use a fact that isn't proved and then continue above with a sub is a no-op
       Provable.startProof(e.conclusion).sub(0)(Provable.startProof(e.conclusion)) shouldBe Provable.startProof(e.conclusion)
-      Provable.startProof(e.conclusion).sub(0)(e) shouldBe e
 //      val sub = rand.rand.nextInt(e.subgoals.length)
 //      e(e.sub(sub), sub) shouldBe e
     }
