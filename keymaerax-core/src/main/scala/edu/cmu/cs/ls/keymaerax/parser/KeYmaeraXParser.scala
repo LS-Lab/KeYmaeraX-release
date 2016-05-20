@@ -457,6 +457,7 @@ object KeYmaeraXParser extends Parser {
 
       // special case to force elaboration of modalities at the end
       //case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
+        //@todo
       case r :+ (mod:RecognizedModal) :+ Expr(e1)
         if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind
           || (if (statementSemicolon) la==SEMI else programOp(la)) =>
@@ -702,10 +703,17 @@ object KeYmaeraXParser extends Parser {
       reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
     else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
       reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
-    else if (followsFormula(la))
+    else if (followsFormula(la) && !followsTerm(la))
       reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+    else if (followsTerm(la) && !followsFormula(la))
+      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+    //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
+//    else if (followsFormula(la))
+//      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsTerm(la))
       reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+    else if (followsFormula(la))
+      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (la == RPAREN) shift(st)
     else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
   }
