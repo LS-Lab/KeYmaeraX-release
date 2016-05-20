@@ -22,9 +22,9 @@ object Bound extends Enumeration {
     case Upper => Lower
   }
 
-  def pushDown(term: Term, seed: Bound): Map[NamedSymbol, Bound] = term match {
+  def pushDown(term: Term, seed: Bound): Map[Term, Bound] = term match {
     case x: Variable => Map(x -> seed)
-    case FuncOf(f, _) => Map(f -> seed)
+    case f: FuncOf => Map(f -> seed)
     case Number(_) => Map()
     case Neg(t) => pushDown(t, converse(seed))
     case Plus(l, r) => combine(pushDown(l, seed), pushDown(r, seed))
@@ -34,5 +34,5 @@ object Bound extends Enumeration {
     case Power(l, _) => pushDown(l, Unknown)
   }
 
-  private def combine(l: Map[NamedSymbol, Bound], r: Map[NamedSymbol, Bound]): Map[NamedSymbol, Bound] = l ++ r
+  private def combine(l: Map[Term, Bound], r: Map[Term, Bound]): Map[Term, Bound] = l ++ r
 }

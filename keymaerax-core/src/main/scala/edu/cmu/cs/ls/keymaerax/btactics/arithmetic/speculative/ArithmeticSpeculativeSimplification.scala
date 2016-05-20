@@ -13,11 +13,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, ProofRuleTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.SignAnalysis
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.collection.mutable.ListBuffer
-
 import scala.language.postfixOps
 
 /**
@@ -77,6 +77,15 @@ object ArithmeticSpeculativeSimplification {
       case Some(cex) => error("Found counterexample " + cex)
       case None => skip
     }
+  })
+
+  /** Hides formulas with non-matching bounds. */
+  def hideNonmatchingBounds: BelleExpr = "hideNonmatchingBounds" by ((sequent: Sequent) => {
+    SignAnalysis.boundHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduce[BelleExpr](_&_)
+  })
+
+  def hideInconsistentSigns: BelleExpr = "hideInconsistentBounds" by ((sequent: Sequent) => {
+    SignAnalysis.signHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduce[BelleExpr](_&_)
   })
 
 }

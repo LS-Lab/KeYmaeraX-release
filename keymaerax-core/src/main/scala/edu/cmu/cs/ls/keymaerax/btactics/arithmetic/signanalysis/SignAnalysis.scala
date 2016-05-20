@@ -5,6 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.AntePosition
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.Bound
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.Sign
 import edu.cmu.cs.ls.keymaerax.core._
@@ -71,16 +73,45 @@ object SignAnalysis {
   }
 
   /** Compute wanted bounds for variables from the succedent of a sequent */
-  def bounds(s: Sequent): Map[SuccPos, Map[NamedSymbol, Bound.Bound]] = {
-    val bounds = s.succ.zipWithIndex.filter(p => p._1.isInstanceOf[ComparisonFormula]).
+  def bounds[T <: SeqPos](fmls: IndexedSeq[Formula], posFactory: Int=>T): Map[T, Map[Term, Bound.Bound]] = {
+    val bounds = fmls.zipWithIndex.filter(p => p._1.isInstanceOf[ComparisonFormula]).
         map(p => (normalize(p._1.asInstanceOf[ComparisonFormula]), p._2)).map {
-      case (Equal(l, Number(r)), i)              => assert(r==0); SuccPos(i) -> Map(l -> Bound.Exact)
-      case (GreaterEqual(Neg(l), Number(r)), i)  => assert(r==0); SuccPos(i) -> Map(l -> Bound.Upper)
-      case (GreaterEqual(l, Number(r)), i)       => assert(r==0); SuccPos(i) -> Map(l -> Bound.Lower)
-      case (Greater(Neg(l), Number(r)), i)       => assert(r==0); SuccPos(i) -> Map(l -> Bound.Upper)
-      case (Greater(l, Number(r)), i)            => assert(r==0); SuccPos(i) -> Map(l -> Bound.Lower)
+      case (Equal(l, Number(r)), i)              => assert(r==0); posFactory(i) -> Map(l -> Bound.Exact)
+      case (GreaterEqual(Neg(l), Number(r)), i)  => assert(r==0); posFactory(i) -> Map(l -> Bound.Upper)
+      case (GreaterEqual(l, Number(r)), i)       => assert(r==0); posFactory(i) -> Map(l -> Bound.Lower)
+      case (Greater(Neg(l), Number(r)), i)       => assert(r==0); posFactory(i) -> Map(l -> Bound.Upper)
+      case (Greater(l, Number(r)), i)            => assert(r==0); posFactory(i) -> Map(l -> Bound.Lower)
     }.toMap
     bounds.map(p => (p._1, p._2.flatMap(p => Bound.pushDown(p._1, p._2))))
+  }
+
+  /** Computes a list of candidates for hiding, based on inconsistent signs (bounds w.r.t. 0) */
+//  def signInconsistencyHideCandidates(s: Sequent): List[SeqPos] = {
+//    val signs = computeSigns(s)
+//  }
+
+  /** Computes a list of candidates for hiding, based on bounds. */
+  def boundHideCandidates(s: Sequent): List[SeqPos] = {
+    val anteBounds = bounds(s.ante, AntePos)
+    val succBounds = bounds(s.succ, SuccPos)
+    anteBounds.filter{ case (pos, bounds) => !boundsAreConsistent(bounds, succBounds.values.toList) }.keys.toList
+  }
+
+  /** Computes a list of candidates for hiding, based on inconsistent signs
+    * (might be too eager, i.e., filter x<=0 & x>=0 as inconsistent) */
+  def signHideCandidates(s: Sequent): List[SeqPos] = {
+    // hide everything that is consistent, hoping for a contradiction in the remaining inconsistent positions
+    val consistentPos = computeSigns(s).filter(_._2.keySet.size <= 1).flatMap(_._2.values.flatten).toSet.toList
+    s.ante.indices.map(AntePos).filter(consistentPos.contains).toList ++ s.succ.indices.map(SuccPos)
+  }
+
+  /** Computes whether the bounds that we have are consistent with what we want. */
+  private def boundsAreConsistent(have: Map[Term, Bound.Bound], want: List[Map[Term, Bound.Bound]]): Boolean = {
+    have.forall{ case (k,v) =>
+      want.exists(w =>
+        w.get(k) match {
+          case Some(b) => b==v
+          case None => true } ) }
   }
 
   /** Normalizes <, <=, =, >=, > into >, >=, = with right-hand side 0 */
