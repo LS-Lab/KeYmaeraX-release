@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, ToolEvidence, Tool}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CseCGenerator, SpiralGenerator}
 
 import scala.collection.immutable
@@ -18,8 +18,8 @@ import scala.util.Random
 
 /**
  * Command-line interface for KeYmaera X.
-  *
-  * @author Stefan Mitsch
+ *
+ * @author Stefan Mitsch
  * @author Andre Platzer
  * @author Ran Ji
  */
@@ -172,8 +172,7 @@ object KeYmaeraX {
             case Some("codegen") => codegen(options)
             case Some("ui") => assert(false, "already handled above since no prover needed"); ???
           }
-        }
-        finally {
+        } finally {
           shutdownProver()
         }
       }
@@ -186,14 +185,14 @@ object KeYmaeraX {
       val formula = KeYmaeraXProblemParser(fileContents);
       println(KeYmaeraXPrettyPrinter(formula))
       println("Parsed file successfully");
-      System.exit(0)
+      sys.exit(0)
     }
     catch {
       case e : Exception => {
         if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
         println(e);
         println("Failed to parse file");
-        System.exit(-1)
+        sys.exit(-1)
       }
     }
   }
@@ -203,11 +202,11 @@ object KeYmaeraX {
     BTacticParser(fileContents) match {
       case Some(_) => {
         println("Parsed file successfully");
-        System.exit(0)
+        sys.exit(0)
       }
       case None => {
         println("Failed to parse file.");
-        System.exit(-1)
+        sys.exit(-1)
       }
     }
   }
@@ -279,16 +278,21 @@ object KeYmaeraX {
     mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
     DerivedAxioms.qeTool = mathematica
     TactixLibrary.tool = mathematica
+
+    //@note just in case the user shuts down the prover from the command line
+    Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
+
+
   }
 
   //@todo Runtime.getRuntime.addShutdownHook??
   def shutdownProver() = {
     if (DerivedAxioms.qeTool != null) {
-      DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
+      DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
       DerivedAxioms.qeTool = null
     }
     if (TactixLibrary.tool != null) {
-      TactixLibrary.tool match { case m: Mathematica => m.shutdown() }
+      TactixLibrary.tool match { case t: Tool => t.shutdown() }
       TactixLibrary.tool = null
       TactixLibrary.invGenerator = new NoneGenerate()
     }
@@ -307,8 +311,8 @@ object KeYmaeraX {
   /**
    * Prove given input file (with given tactic) to produce a lemma.
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
-    *
-    * @param options
+   *
+   * @param options
    * @todo tactic should default to master and builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
    */
   def prove(options: OptionMap) = {
@@ -413,8 +417,8 @@ object KeYmaeraX {
   /**
    * ModelPlex monitor synthesis for the given input files
    * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
-    *
-    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
+   *
+   * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
   def modelplex(options: OptionMap) = {
     require(options.contains('in), usage)
