@@ -78,6 +78,8 @@ class ToolExecutor[T](poolSize: Int) {
     }
   }
 
+  def shutdown() = pool.shutdown()
+
   /** Creates the future that ultimately executes the task. */
   private def makeFuture(task: Unit => T): FutureTask[Either[T, Throwable]] =
     new FutureTask(new Callable[Either[T, Throwable]]() {
