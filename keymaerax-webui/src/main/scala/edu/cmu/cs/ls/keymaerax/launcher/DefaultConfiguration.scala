@@ -66,8 +66,11 @@ object DefaultConfiguration {
       var mathematicaVersion = ""
 
       if(new File(mathematicaWindowsPrefix).exists()) {
+        // check if Mathematica version is 10.4
+        if(new File(mathematicaWindowsPrefix + File.separator + "10.4").exists())
+          mathematicaVersion = "10.4"
         // check if Mathematica version is 10.3
-        if(new File(mathematicaWindowsPrefix + File.separator + "10.3").exists())
+        else if(new File(mathematicaWindowsPrefix + File.separator + "10.3").exists())
           mathematicaVersion = "10.3"
         // check if Mathematica version is 10.2
         else if(new File(mathematicaWindowsPrefix + File.separator + "10.2").exists())
@@ -102,8 +105,14 @@ object DefaultConfiguration {
       val mathematicaLinuxPrefix = "/usr/local/Wolfram/Mathematica"
       var mathematicaVersion = ""
       if(new File(mathematicaLinuxPrefix).exists()) {
+        // check if Mathematica version is 10.4
+        if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
+          mathematicaVersion = "10.4"
+        // check if Mathematica version is 10.3
+        else if(new File(mathematicaLinuxPrefix + File.separator + "10.3").exists())
+          mathematicaVersion = "10.3"
         // check if Mathematica version is 10.2
-        if(new File(mathematicaLinuxPrefix + File.separator + "10.2").exists())
+        else if(new File(mathematicaLinuxPrefix + File.separator + "10.2").exists())
           mathematicaVersion = "10.2"
         // check if Mathematica version is 10.1
         else if(new File(mathematicaLinuxPrefix + File.separator + "10.1").exists())
