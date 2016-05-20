@@ -122,6 +122,36 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     (if (rand.nextBoolean()) 1 else 0) :: nextPos(n - 1)
   }
 
+  // random generator implementations
+
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = nextT(vars, n, dots, !dots)
+
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean) : Term = {
+    require(n>=0)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(0))
+    // TODO IfThenElseTerm not yet supported
+    val r = rand.nextInt(if (dots) 98 else 88/*+1*/)
+    r match {
+      case 0 => Number(BigDecimal(0))
+      case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
+      case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
+      case it if 20 until 30 contains it => Plus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 30 until 40 contains it => Minus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 50 until 55 contains it => Divide(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs), Number(BigDecimal(rand.nextInt(6))))
+      case it if 60 until 70 contains it => if (diffs) DifferentialSymbol(vars(rand.nextInt(vars.length))) else Number(BigDecimal(rand.nextInt(100)))
+      case it if 70 until 80 contains it => if (diffs) Differential(nextT(vars, n-1, dots, diffs)) else Number(BigDecimal(rand.nextInt(100)))
+      case it if 80 until 84 contains it => FuncOf(Function("qq",None,Unit,Real),Nothing)
+      case it if 84 until 88 contains it => FuncOf(Function("pp",None,Real,Real), nextT(vars, n-1, dots, diffs))
+      case it if 88 until 200 contains it => assert(dots); DotTerm
+      // TODO IfThenElseTerm not yet supported
+      //        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
+      case _ => throw new IllegalStateException("random number generator range for term generation produces the right range " + r)
+    }
+  }
+
+
   def nextF(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, dotTs, dotFs, !(dotTs||dotFs))
   def nextF(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
 	  require(n>=0)
@@ -155,33 +185,6 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
   }
-
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = nextT(vars, n, dots, !dots)
-
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean) : Term = {
-      require(n>=0)
-      if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(0))
-      // TODO IfThenElseTerm not yet supported
-      val r = rand.nextInt(if (dots) 98 else 88/*+1*/)
-	    r match {
-        case 0 => Number(BigDecimal(0))
-		    case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
-        case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
-        case it if 20 until 30 contains it => Plus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 30 until 40 contains it => Minus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 50 until 55 contains it => Divide(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs), Number(BigDecimal(rand.nextInt(6))))
-        case it if 60 until 70 contains it => if (diffs) DifferentialSymbol(vars(rand.nextInt(vars.length))) else Number(BigDecimal(rand.nextInt(100)))
-        case it if 70 until 80 contains it => if (diffs) Differential(nextT(vars, n-1, dots, diffs)) else Number(BigDecimal(rand.nextInt(100)))
-        case it if 80 until 84 contains it => FuncOf(Function("qq",None,Unit,Real),Nothing)
-        case it if 84 until 88 contains it => FuncOf(Function("pp",None,Real,Real), nextT(vars, n-1, dots, diffs))
-        case it if 88 until 200 contains it => assert(dots); DotTerm
-        // TODO IfThenElseTerm not yet supported
-//        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
-		    case _ => throw new IllegalStateException("random number generator range for term generation produces the right range " + r)
-      }
-    }
 
   /** whether games are currently allowed */
   private val game: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
