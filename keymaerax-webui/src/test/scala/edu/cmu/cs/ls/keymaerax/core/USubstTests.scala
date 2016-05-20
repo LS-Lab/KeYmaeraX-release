@@ -27,7 +27,7 @@ import scala.collection.immutable.IndexedSeq
 class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
-  val randomTrials = 40*10 / 20
+  val randomTrials = 50
   val randomComplexity = 20
   val rand = new RandomFormula()
 
