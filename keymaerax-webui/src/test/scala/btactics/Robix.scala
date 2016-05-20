@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
@@ -45,17 +46,10 @@ class Robix extends TacticTestBase {
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
-    val brakeStoppedArith: BelleExpr =
-      OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "r") partial) <(
-        hideFactsAbout("x", "xo", "y", "yo") & QE,
-        hideFactsAbout("y", "yo") & QE,
-        hideFactsAbout("x", "xo") & QE)
-
     def accArithTactic(xy: String): BelleExpr = alphaRule*@TheType() &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(${xy}_0-${xy}o_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
       hideR(1, "v=0".asFormula) & hideL(-15, "t<=ep".asFormula) & hideL(-4, "ep>0".asFormula) &
-      abs(1, 0::Nil) & abs(-7, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
-      OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
+      exhaustiveAbsSplit <(
         hideL(-11, s"$xy-${xy}_0<=t*(v_0+a*t-a/2*t)".asFormula) & hideL(-8, s"-t*V()<=${xy}o-${xy}o_0".asFormula) & QE,
         hideR(2) & hideR(1) & QE,
         hideR(2) & hideR(1) & QE,
@@ -74,8 +68,8 @@ class Robix extends TacticTestBase {
       /* base case */ print("Base case...") & QE & print("Base case done"),
       /* use case */ print("Use case...") & QE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
-        print("Braking branch") & di("-B")(1) & dw & prop & brakeStoppedArith & print("Braking branch done"),
-        print("Stopped branch") & di("0")(1) & dw & prop & brakeStoppedArith & print("Stopped branch done"),
+        print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+        print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
         print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
           di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "r", "r_0") partial) <(
             hideFactsAbout("y", "yo") & PropositionalTactics.toSingleFormula & print("Acc X") & by(accArithXLemma),
