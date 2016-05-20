@@ -183,6 +183,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case it if 30 until 40 contains it => Or(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 40 until 50 contains it => Imply(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 50 until 60 contains it => Equiv(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
+          //@todo Predicate, Predicational
         case it if 60 until 70 contains it => NotEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 70 until 80 contains it => GreaterEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 80 until 90 contains it => LessEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
