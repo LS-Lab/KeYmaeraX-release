@@ -142,8 +142,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs), Number(BigDecimal(rand.nextInt(6))))
       case it if 60 until 70 contains it => if (diffs) DifferentialSymbol(vars(rand.nextInt(vars.length))) else Number(BigDecimal(rand.nextInt(100)))
       case it if 70 until 80 contains it => if (diffs) Differential(nextT(vars, n-1, dots, diffs)) else Number(BigDecimal(rand.nextInt(100)))
-      case it if 80 until 84 contains it => FuncOf(Function("qq",None,Unit,Real),Nothing)
-      case it if 84 until 88 contains it => FuncOf(Function("pp",None,Real,Real), nextT(vars, n-1, dots, diffs))
+      case it if 80 until 84 contains it => FuncOf(Function("gg",None,Unit,Real),Nothing)
+      case it if 84 until 88 contains it => FuncOf(Function("ff",None,Real,Real), nextT(vars, n-1, dots, diffs))
       case it if 88 until 200 contains it => assert(dots); DotTerm
       // TODO IfThenElseTerm not yet supported
       //        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
