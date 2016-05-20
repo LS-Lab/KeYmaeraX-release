@@ -50,4 +50,27 @@ class ProofRuleTests extends TacticTestBase {
         USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::Nil)))
     result shouldBe 'proved
   }
+
+  "hideR" should "hide sole formula in succedent" in {
+    val result = proveBy("a=2".asFormula, ProofRuleTactics.hideR(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "hide first formula in succedent" in {
+    val result = proveBy(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "b=3".asFormula)),
+      ProofRuleTactics.hideR(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "b=3".asFormula
+  }
+
+  it should "hide last formula in succedent" in {
+    val result = proveBy(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "b=3".asFormula)),
+      ProofRuleTactics.hideR(2))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a=2".asFormula
+  }
 }
