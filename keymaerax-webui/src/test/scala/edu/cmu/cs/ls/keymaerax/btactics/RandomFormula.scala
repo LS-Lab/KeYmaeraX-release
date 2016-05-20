@@ -24,7 +24,7 @@ import scala.collection.immutable._
  * @param seed the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
-  println("RandomFormula(" + seed + "L) seed to regenerate\n\n")
+  println("RandomFormula(" + seed + "L) seed will regenerate the same random sequence\n\n")
   val rand: Random = new Random(seed)
   private val shortProbability = 0.10
   private val randomReps = 500
@@ -64,53 +64,6 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random (propositionally) provable formula */
   //def nextProved(size: Int): Sequent = nextProvable(size).conclusion
-
-  /** Generate a random proof of a random tautological sequent, basically via an external forward sequent calculus */
-  def nextPr(vars : IndexedSeq[Variable], n : Int): Provable = {
-    require(n>=0)
-    if (n == 0 || rand.nextFloat()<=shortProbability) return Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
-    val r = rand.nextInt(70)
-    r match {
-      case 0 => Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
-      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(Nil, IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
-      case it if 10 until 20 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
-        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
-      case it if 20 until 30 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
-        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(p1.conclusion.ante.length)))
-      case it if 30 until 40 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 2);
-        val pos1 = if (p1.conclusion.ante.length<=2) AntePos(0) else AntePos(rand.nextInt(p1.conclusion.ante.length-2))
-        p1(Sequent(Nil, p1.conclusion.ante.dropRight(2).patch(pos1.getIndex, And(p1.conclusion.ante.dropRight(1).last, p1.conclusion.ante.last)::Nil, 0),
-          p1.conclusion.succ), AndLeft(pos1))
-      case it if 40 until 50 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 2);
-        val pos1 = if (p1.conclusion.succ.length<=2) SuccPos(0) else SuccPos(rand.nextInt(p1.conclusion.succ.length-2))
-        p1(Sequent(Nil, p1.conclusion.ante,
-          p1.conclusion.succ.dropRight(2).patch(pos1.getIndex, Or(p1.conclusion.succ.dropRight(1).last, p1.conclusion.succ.last)::Nil, 0)),
-          OrRight(pos1))
-      case it if 50 until 60 contains it => val p1 = padLeft(vars, n, padRight(vars, n, nextPr(vars, n-1), 1), 1);
-        val posi1 = rand.nextInt(p1.conclusion.succ.length)
-        val pos1 = SuccPos(posi1)
-        p1(Sequent(Nil, p1.conclusion.ante.patch(p1.conclusion.ante.length-1,Nil,1),
-          p1.conclusion.succ.patch(p1.conclusion.succ.length-1,Nil,1).patch(posi1,
-            Imply(p1.conclusion.ante.last, p1.conclusion.succ.last)::Nil
-            , 0)), ImplyRight(pos1))
-      case it if 60 until 65 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 1);
-        val pos1 = if (p1.conclusion.succ.isEmpty) 0 else rand.nextInt(p1.conclusion.succ.length)
-        p1(Sequent(Nil,
-          p1.conclusion.ante.dropRight(1),
-          p1.conclusion.succ.patch(pos1, Not(p1.conclusion(AntePos(p1.conclusion.ante.length-1)))::Nil, 0)),
-          NotRight(SuccPos(pos1)))
-      case it if 65 until 70 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1);
-        val pos1 = if (p1.conclusion.ante.isEmpty) 0 else rand.nextInt(p1.conclusion.ante.length)
-        p1(Sequent(Nil,
-          p1.conclusion.ante.patch(pos1, Not(p1.conclusion(SuccPos(p1.conclusion.succ.length-1)))::Nil, 0),
-          p1.conclusion.succ.dropRight(1)), NotLeft(AntePos(pos1)))
-      case it if 70 until 75 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1); val p2 = padRight(vars, n, nextPr(vars, n-1), 1);
-        val pos1 = SuccPos(0) //@todo could do other positions if using ExchangeRight: SuccPos(rand.nextInt(Math.min(p1.conclusion.succ.length, p2.conclusion.succ.length)))
-        val (pp1, pp2) = weakenRight(p1, p2, pos1)
-        prolong(pp1, pp2, pp1.conclusion.updated(pos1, And(pp1.conclusion(pos1),pp2.conclusion(pos1))), AndRight(pos1))
-        //@todo more rules such as AndRight
-    }
-  }
 
   /** weaken p1 and p2 such that they have the same context except at position `pos` */
   private def weakenRight(p1: Provable, p2: Provable, pos: SuccPos): (Provable,Provable) = {
@@ -169,11 +122,41 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     (if (rand.nextBoolean()) 1 else 0) :: nextPos(n - 1)
   }
 
+  // random generator implementations
+
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = nextT(vars, n, dots, !dots)
+
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean) : Term = {
+    require(n>=0)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(0))
+    // TODO IfThenElseTerm not yet supported
+    val r = rand.nextInt(if (dots) 98 else 88/*+1*/)
+    r match {
+      case 0 => Number(BigDecimal(0))
+      case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
+      case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
+      case it if 20 until 30 contains it => Plus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 30 until 40 contains it => Minus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 50 until 55 contains it => Divide(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
+      case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs), Number(BigDecimal(rand.nextInt(6))))
+      case it if 60 until 70 contains it => if (diffs) DifferentialSymbol(vars(rand.nextInt(vars.length))) else Number(BigDecimal(rand.nextInt(100)))
+      case it if 70 until 80 contains it => if (diffs) Differential(nextT(vars, n-1, dots, diffs)) else Number(BigDecimal(rand.nextInt(100)))
+      case it if 80 until 84 contains it => FuncOf(Function("gg",None,Unit,Real),Nothing)
+      case it if 84 until 88 contains it => FuncOf(Function("ff",None,Real,Real), nextT(vars, n-1, dots, diffs))
+      case it if 88 until 200 contains it => assert(dots); DotTerm
+      // TODO IfThenElseTerm not yet supported
+      //        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
+      case _ => throw new IllegalStateException("random number generator range for term generation produces the right range " + r)
+    }
+  }
+
+
   def nextF(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, dotTs, dotFs, !(dotTs||dotFs))
   def nextF(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True
-      val r = rand.nextInt(if (dotFs) 310 else 300)
+      val r = rand.nextInt(if (dotFs) 320 else 310)
       r match {
         case 0 => False
         case 1 => True
@@ -183,6 +166,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case it if 30 until 40 contains it => Or(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 40 until 50 contains it => Imply(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 50 until 60 contains it => Equiv(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
+          //@todo Predicate, Predicational
         case it if 60 until 70 contains it => NotEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 70 until 80 contains it => GreaterEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 80 until 90 contains it => LessEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
@@ -194,35 +178,13 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
         case it if 290 until 300 contains it => if (diffs) DifferentialFormula(nextF(vars, n-1, dotTs, dotFs, diffs)) else False
-		    case it if 300 until 400 contains it => assert(dotFs); DotFormula
+        case it if 300 until 304 contains it => PredOf(Function("qq",None,Unit,Bool),Nothing)
+        case it if 304 until 308 contains it => PredOf(Function("pp",None,Real,Bool), nextT(vars, n-1, dotTs, diffs))
+        case it if 308 until 310 contains it => PredicationalOf(Function("PP",None,Bool,Bool), nextF(vars, n-1, false, false, diffs))
+        case it if 310 until 400 contains it => assert(dotFs); DotFormula
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
   }
-
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = nextT(vars, n, dots, !dots)
-
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean) : Term = {
-      require(n>=0)
-      if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(0))
-      // TODO IfThenElseTerm not yet supported
-      val r = rand.nextInt(if (dots) 90 else 80/*+1*/)
-	    r match {
-        case 0 => Number(BigDecimal(0))
-		    case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
-        case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
-        case it if 20 until 30 contains it => Plus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 30 until 40 contains it => Minus(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 50 until 55 contains it => Divide(nextT(vars, n-1, dots, diffs), nextT(vars, n-1, dots, diffs))
-        case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs), Number(BigDecimal(rand.nextInt(6))))
-        case it if 60 until 70 contains it => if (diffs) DifferentialSymbol(vars(rand.nextInt(vars.length))) else Number(BigDecimal(rand.nextInt(100)))
-        case it if 70 until 80 contains it => if (diffs) Differential(nextT(vars, n-1, dots, diffs)) else Number(BigDecimal(rand.nextInt(100)))
-        case it if 80 until 100 contains it => assert(dots); DotTerm
-        // TODO IfThenElseTerm not yet supported
-//        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
-		    case _ => throw new IllegalStateException("random number generator range for term generation produces the right range " + r)
-      }
-    }
 
   /** whether games are currently allowed */
   private val game: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
@@ -270,4 +232,52 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
     }
   }
+
+  /** Generate a random proof of a random tautological sequent, basically via an external forward sequent calculus */
+  def nextPr(vars : IndexedSeq[Variable], n : Int): Provable = {
+    require(n>=0)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
+    val r = rand.nextInt(70)
+    r match {
+      case 0 => Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
+      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(Nil, IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
+      case it if 10 until 20 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
+        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
+      case it if 20 until 30 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
+        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(p1.conclusion.ante.length)))
+      case it if 30 until 40 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 2);
+        val pos1 = if (p1.conclusion.ante.length<=2) AntePos(0) else AntePos(rand.nextInt(p1.conclusion.ante.length-2))
+        p1(Sequent(Nil, p1.conclusion.ante.dropRight(2).patch(pos1.getIndex, And(p1.conclusion.ante.dropRight(1).last, p1.conclusion.ante.last)::Nil, 0),
+          p1.conclusion.succ), AndLeft(pos1))
+      case it if 40 until 50 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 2);
+        val pos1 = if (p1.conclusion.succ.length<=2) SuccPos(0) else SuccPos(rand.nextInt(p1.conclusion.succ.length-2))
+        p1(Sequent(Nil, p1.conclusion.ante,
+          p1.conclusion.succ.dropRight(2).patch(pos1.getIndex, Or(p1.conclusion.succ.dropRight(1).last, p1.conclusion.succ.last)::Nil, 0)),
+          OrRight(pos1))
+      case it if 50 until 60 contains it => val p1 = padLeft(vars, n, padRight(vars, n, nextPr(vars, n-1), 1), 1);
+        val posi1 = rand.nextInt(p1.conclusion.succ.length)
+        val pos1 = SuccPos(posi1)
+        p1(Sequent(Nil, p1.conclusion.ante.patch(p1.conclusion.ante.length-1,Nil,1),
+          p1.conclusion.succ.patch(p1.conclusion.succ.length-1,Nil,1).patch(posi1,
+            Imply(p1.conclusion.ante.last, p1.conclusion.succ.last)::Nil
+            , 0)), ImplyRight(pos1))
+      case it if 60 until 65 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 1);
+        val pos1 = if (p1.conclusion.succ.isEmpty) 0 else rand.nextInt(p1.conclusion.succ.length)
+        p1(Sequent(Nil,
+          p1.conclusion.ante.dropRight(1),
+          p1.conclusion.succ.patch(pos1, Not(p1.conclusion(AntePos(p1.conclusion.ante.length-1)))::Nil, 0)),
+          NotRight(SuccPos(pos1)))
+      case it if 65 until 70 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1);
+        val pos1 = if (p1.conclusion.ante.isEmpty) 0 else rand.nextInt(p1.conclusion.ante.length)
+        p1(Sequent(Nil,
+          p1.conclusion.ante.patch(pos1, Not(p1.conclusion(SuccPos(p1.conclusion.succ.length-1)))::Nil, 0),
+          p1.conclusion.succ.dropRight(1)), NotLeft(AntePos(pos1)))
+      case it if 70 until 75 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1); val p2 = padRight(vars, n, nextPr(vars, n-1), 1);
+        val pos1 = SuccPos(0) //@todo could do other positions if using ExchangeRight: SuccPos(rand.nextInt(Math.min(p1.conclusion.succ.length, p2.conclusion.succ.length)))
+        val (pp1, pp2) = weakenRight(p1, p2, pos1)
+        prolong(pp1, pp2, pp1.conclusion.updated(pos1, And(pp1.conclusion(pos1),pp2.conclusion(pos1))), AndRight(pos1))
+      //@todo more rules such as AndRight
+    }
+  }
+
 }

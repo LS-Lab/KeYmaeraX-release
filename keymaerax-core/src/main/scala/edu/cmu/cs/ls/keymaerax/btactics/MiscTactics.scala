@@ -23,6 +23,13 @@ object DebuggingTactics {
     }
   }
 
+  def recordQECall(): BuiltInTactic = new BuiltInTactic("recordQECall") {
+    override def result(provable: Provable): Provable = {
+      println(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
+      provable
+    }
+  }
+
   /** debug is a no-op tactic that prints a message and the current provable, if doPrint (defaults to the system property DEBUG) is true. */
   def debug(message: => String, doPrint: Boolean = DEBUG, printer: Provable => String = _.toString): BuiltInTactic =
       new BuiltInTactic("debug") {

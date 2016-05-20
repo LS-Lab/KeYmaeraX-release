@@ -27,7 +27,7 @@ class RandomParserTests extends FlatSpec with Matchers {
   val parser = KeYmaeraXParser
 
   def parseShouldBe(input: String, expr: Expression) = {
-    val parse = parser(input)
+    val parse = parser.formulaParser(input)
     if (!(parse == expr)) {
       println("Reparsing" +
         "\nInput:      " + input +
