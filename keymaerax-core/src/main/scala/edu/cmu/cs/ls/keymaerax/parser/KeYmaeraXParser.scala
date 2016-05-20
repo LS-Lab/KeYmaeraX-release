@@ -474,7 +474,9 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
       // differential equation system special notation
-      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
+//      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
+//        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1) :+ (tok3@Token(RBRACE,_)) =>
         reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
 
       // elaboration special pattern case
