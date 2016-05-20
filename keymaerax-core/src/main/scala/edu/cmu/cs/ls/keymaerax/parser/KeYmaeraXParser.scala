@@ -316,7 +316,7 @@ object KeYmaeraXParser extends Parser {
 
       // special case typing to force elaboration of quantifiers at the end
       case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ (tok2@RecognizedQuant(_:Variable)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind =>
+        if (la==EOF || la==RPAREN || la==RBRACE || la==SEMI || formulaBinOp(la)) && e1.kind!=FormulaKind =>
         //@todo assert(!formulaBinOp(la) || quantifier binds stronger than la)
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok2 )
 
