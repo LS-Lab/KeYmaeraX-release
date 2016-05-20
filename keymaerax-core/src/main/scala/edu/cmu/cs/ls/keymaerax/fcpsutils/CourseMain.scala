@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.fcpsutils
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BTacticParser}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{NoneGenerate, TactixLibrary, DerivedAxioms}
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Provable, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
@@ -92,14 +92,14 @@ object CourseMain {
 
   private def parseTacticFileOrFail(v: ArgValue) = {
     val fileName = fileExistsOrFail(v)
-    BTacticParser(scala.io.Source.fromFile(new File(fileName)).mkString, false, Some(new NoneGenerate[Formula]())) match {
+    ??? /*edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser(scala.io.Source.fromFile(new File(fileName)).mkString, false, Some(new NoneGenerate[Formula]())) match {
       case Some(e) => e
       case None => {
         println(s"Tactic in ${fileName} did not parse")
         System.exit(-1)
         ???
       }
-    }
+    }*/
   }
 
   private def parseProblemFileOrFail(v: ArgValue) : Formula = {
