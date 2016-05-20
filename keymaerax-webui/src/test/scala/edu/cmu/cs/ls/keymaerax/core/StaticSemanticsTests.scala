@@ -19,9 +19,11 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @author Andre Platzer
  */
 class StaticSemanticsTests extends FlatSpec with Matchers {
+  PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 40000
   val randomComplexity = 6
-  val rand = new RandomFormula()
+  val rand = if (false) new RandomFormula(-6907410306474577855L) else new RandomFormula()
+
 
   "Static Semantics" should "compute v>=0&v>0 -> [{{a:=-b;++a:=5;} {x'=v,v'=a&v>=0}}*]v>=0 correctly" in {
     val fml = "v>=0&v>0 -> [{{a:=-b;++a:=5;} {x'=v,v'=a&v>=0}}*]v>=0".asFormula
@@ -79,6 +81,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) = {
     for (i <- 1 to randomTrials) {
       val e = rand.nextTerm(randomComplexity)
+      println(e)
       val vc = StaticSemantics(e)
       vc shouldBe StaticSemantics.freeVars(e)
       vc shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
@@ -89,6 +92,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
+      println(e)
       val vc = StaticSemantics(e)
       vc.fv shouldBe StaticSemantics.freeVars(e)
       vc.bv shouldBe StaticSemantics.boundVars(e)
@@ -100,6 +104,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextProgram(randomComplexity)
+      println(e)
       val vc = StaticSemantics(e)
       vc.fv shouldBe StaticSemantics.freeVars(e)
       vc.bv shouldBe StaticSemantics.boundVars(e)
@@ -112,6 +117,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextSequent(randomComplexity)
+      println(e)
       StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
       StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
       StaticSemantics.symbols(e) shouldBe e.ante.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a,b)=>a++b) ++ e.succ.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a,b)=>a++b)
