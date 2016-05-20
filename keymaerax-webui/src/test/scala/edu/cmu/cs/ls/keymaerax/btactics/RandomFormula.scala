@@ -180,7 +180,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case it if 290 until 300 contains it => if (diffs) DifferentialFormula(nextF(vars, n-1, dotTs, dotFs, diffs)) else False
         case it if 300 until 304 contains it => PredOf(Function("qq",None,Unit,Bool),Nothing)
         case it if 304 until 308 contains it => PredOf(Function("pp",None,Real,Bool), nextT(vars, n-1, dotTs, diffs))
-        case it if 308 until 310 contains it => PredicationalOf(Function("PP",None,Bool,Bool), nextF(vars, n-1, dotTs, diffs))
+        case it if 308 until 310 contains it => PredicationalOf(Function("PP",None,Bool,Bool), nextF(vars, n-1, false, false, diffs))
         case it if 310 until 400 contains it => assert(dotFs); DotFormula
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
