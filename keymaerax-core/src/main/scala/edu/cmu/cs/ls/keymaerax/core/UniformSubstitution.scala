@@ -305,6 +305,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /**
     * Apply uniform substitution to a Provable (convenience method).
     * @return `pr(this)`
+    * @note Convenience method not used in the core.
     * @see [[Provable.apply(USubst)]]
     */
   def apply(pr: Provable): Provable = pr.apply(this)
