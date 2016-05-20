@@ -735,6 +735,7 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(Formula): Can la follow after a formula? */
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
+    la==SEMI /* from tests */ ||
     la==RBRACE /* from predicationals */ ||
     la==PRIME || la==EOF
 
