@@ -67,16 +67,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   }
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  lazy val normalize               : BelleExpr = NamedTactic("normalize", {
+  lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
+  def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
       OnAll(?(
         (alphaRule partial)
           | (closeId
           | ((allR('R) partial)
           | ((existsL('L) partial)
           | (close
-          | ((betaRule partial)
-          | ((step('L) partial)
-          | ((step('R) partial) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType()
+          | ((beta partial)
+          | ((stepL partial)
+          | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType()
     })
 
   /** exhaust propositional logic */

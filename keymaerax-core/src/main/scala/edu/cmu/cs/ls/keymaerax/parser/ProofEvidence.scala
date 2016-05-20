@@ -5,4 +5,6 @@ import edu.cmu.cs.ls.keymaerax.core.Evidence
 /**
  * Created by aplatzer on 8/24/15.
  */
-case class ProofEvidence(/*proof : List[LoadedBranch]*/) extends Evidence
+case class ProofEvidence(/*proof : List[LoadedBranch]*/) extends Evidence {
+  override def toString: String = "Proof. End."
+}
