@@ -22,7 +22,7 @@ import scala.collection.immutable.Map
 class RandomProvableTest extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 40000
-  val randomComplexity = 10
+  val randomComplexity = 12
   val rand = new RandomFormula()
 
   "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs(SummaryTest) in {test(10,4)}

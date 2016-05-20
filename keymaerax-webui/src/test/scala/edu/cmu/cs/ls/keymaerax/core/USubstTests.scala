@@ -328,6 +328,27 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
+  ignore should "instantiate {?[{?true;}*]PP{⎵};}* in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val prem1 = "(-z1)^2>=z4".asFormula
+    val prem2 = "z4<=z1^2".asFormula
+    val prem = Equiv(prem1, prem2)
+    //@todo DotFormula is not replaced in substitution so this case will fail
+    val prog = "{?[{?true;}*]PP{⎵};}*".asProgram
+    val conc = Equiv(Diamond(prog, prem1), Diamond(prog, prem2))
+    println("Precontext " + prog.prettyString)
+
+    val q_ = Function("q_", None, Real, Bool)
+    val ctx_ = Function("ctx_", None, Bool, Bool)
+
+    val s = USubst(SubstitutionPair(ap_, prog) ::
+      SubstitutionPair(PredOf(pn_, Anything), prem1) ::
+      SubstitutionPair(PredOf(q_, Anything), prem2) ::
+      SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
+    val pr = Provable.rules("CE congruence")(s)
+    pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+    pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+  }
+
   it should "instantiate random programs in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
