@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -22,7 +23,7 @@ import scala.annotation.tailrec
 object ArithmeticSimplification {
   //region Tactics
 
-  val isArithmetic = TactixLibrary.assertT((s:Sequent) => isFOLR(s),
+  val isArithmetic = TactixLibrary.assertT((s:Sequent) => s.toFormula.isFOL,
     "Expected a sequent corresponding to a formula of first-order real arithemtic, but found non-arithmetic formulas in the sequent.")
 
   lazy val smartCoHideAt = new DependentPositionTactic("smartCoHideAt") {
@@ -125,15 +126,18 @@ object ArithmeticSimplification {
 
   //region Relevancy predicate and helper methods
 
-  /** Returns only irrelevant antecedent positions. */
-  private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = {
+  /** Computes indices that 'seem' irrelevant for proving the formulas in baseline. The result is sorted in descending
+    * order (optimized for subsequent hiding). */
+  def irrelevantIndices(fmls: IndexedSeq[Formula], baseline: IndexedSeq[Formula]): Seq[Int] = {
     val theFilter: (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
-    val relevantIndexedFormulas = theFilter(s.ante.zipWithIndex, symbols(s.succ))
-    val complementOfRelevantFormulas = s.ante.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
+    val relevantIndexedFormulas = theFilter(fmls.zipWithIndex, symbols(baseline))
+    val complementOfRelevantFormulas = fmls.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
     //Sort highest-to-lowest so that we don't end up hiding the wrong stuff.
-    val result = complementOfRelevantFormulas.map(x => x._2).sorted.reverse.map(zeroIdx => AntePosition(zeroIdx + 1))
-    result
+    complementOfRelevantFormulas.map(x => x._2).sorted.reverse
   }
+
+  /** Returns only irrelevant antecedent positions. */
+  private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = irrelevantIndices(s.ante, s.succ).map(i => AntePosition(i+1))
 
   /**
     * Returns all formulas that transitively mention relevantSymbols.
@@ -152,7 +156,7 @@ object ArithmeticSimplification {
     val relevantFmls = relevantFormulas(fmls, relevantSymbols)
     val newlyRelevantSymbols = symbols(relevantFmls.map(_._1)) -- relevantSymbols
 
-    if(newlyRelevantSymbols.size == 0) relevantFmls
+    if(newlyRelevantSymbols.isEmpty) relevantFmls
     else transitiveRelevance(fmls, relevantSymbols ++ newlyRelevantSymbols) //sic: recurse on [[indexedFmls]], not [[relevantFmls]], because some of the previously irrelevant formulas might now be relevant.
   }
 
@@ -164,27 +168,6 @@ object ArithmeticSimplification {
   /** Returns the union of all symbols mentioned in fmls. */
   private def symbols(fmls: Seq[Formula]) =
     fmls.foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ TacticHelper.symbols(nextFml))
-
-  /** Returns true if fml is a first-order formula of real arithmetic. */
-  private def isFOLR(fml: Formula): Boolean = {
-    val noPrograms = fml match {
-      case Box(_, _) => false
-      case Diamond(_, _) => false
-      case x:AtomicFormula => true
-      case x:UnaryCompositeFormula => isFOLR(x.child)
-      case x:BinaryCompositeFormula => isFOLR(x.left) && isFOLR(x.right)
-      case x:Quantified => isFOLR(x.child)
-    }
-
-    val noPrimes = TacticHelper.symbols(fml).find(_ match {
-      case x : DifferentialSymbol => true
-      case _ => false
-    }).isEmpty
-
-    noPrograms && noPrimes
-  }
-
-  private def isFOLR(s: Sequent): Boolean = s.ante.forall(isFOLR) && s.succ.forall(isFOLR)
 
   //endregion
 }
