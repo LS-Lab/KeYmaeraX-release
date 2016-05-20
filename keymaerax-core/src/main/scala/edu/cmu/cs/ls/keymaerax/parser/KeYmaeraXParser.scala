@@ -316,7 +316,7 @@ object KeYmaeraXParser extends Parser {
 
       // special case typing to force elaboration of quantifiers at the end
       case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ (tok2@RecognizedQuant(_:Variable)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind =>
+        if (la==EOF || la==RPAREN || la==RBRACE || la==SEMI || formulaBinOp(la)) && e1.kind!=FormulaKind =>
         //@todo assert(!formulaBinOp(la) || quantifier binds stronger than la)
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok2 )
 
@@ -457,6 +457,7 @@ object KeYmaeraXParser extends Parser {
 
       // special case to force elaboration of modalities at the end
       //case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
+        //@todo
       case r :+ (mod:RecognizedModal) :+ Expr(e1)
         if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind
           || (if (statementSemicolon) la==SEMI else programOp(la)) =>
@@ -473,7 +474,9 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
       // differential equation system special notation
-      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
+//      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
+//        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1) :+ (tok3@Token(RBRACE,_)) =>
         reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
 
       // elaboration special pattern case
@@ -702,10 +705,17 @@ object KeYmaeraXParser extends Parser {
       reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
     else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
       reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
-    else if (followsFormula(la))
+    else if (followsFormula(la) && !followsTerm(la))
       reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+    else if (followsTerm(la) && !followsFormula(la))
+      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+    //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
+//    else if (followsFormula(la))
+//      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsTerm(la))
       reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+    else if (followsFormula(la))
+      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (la == RPAREN) shift(st)
     else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
   }
@@ -735,6 +745,7 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(Formula): Can la follow after a formula? */
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
+    la==SEMI /* from tests */ ||
     la==RBRACE /* from predicationals */ ||
     la==PRIME || la==EOF
 

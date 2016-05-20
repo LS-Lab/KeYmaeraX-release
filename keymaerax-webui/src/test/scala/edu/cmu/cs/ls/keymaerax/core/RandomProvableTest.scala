@@ -21,7 +21,7 @@ import scala.collection.immutable.Map
  */
 class RandomProvableTest extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  val randomTrials = 4000
+  val randomTrials = 40000
   val randomComplexity = 10
   val rand = new RandomFormula()
 
