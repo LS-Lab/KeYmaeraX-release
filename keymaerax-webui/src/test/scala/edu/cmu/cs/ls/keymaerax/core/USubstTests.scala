@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags
+import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Seq
@@ -402,11 +403,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(prog)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
@@ -432,11 +433,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(prog)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
@@ -484,11 +485,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(prog)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
@@ -515,11 +516,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(prog)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
@@ -544,11 +545,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(prog)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
           SubstitutionPair(PredOf(pn_, Anything), prem)
@@ -598,11 +599,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(context)
       }
 
-      withClue("Random context " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random context " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
@@ -625,11 +626,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(context)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
@@ -652,11 +653,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random program\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(context)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
@@ -895,11 +896,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random context\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random context\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(context)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
@@ -922,11 +923,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random context\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random context\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(context)
       }
 
-      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(PredOf(pn_, Anything), fml1) ::
@@ -948,11 +949,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random formula\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random formula\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(fml)
       }
 
-      withClue("Random formula " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random formula " + prgString + "\n\n" + randClue) {
         println("Random dot-free formula " + fml.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm, trm1) ::
@@ -976,11 +977,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random formula\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random formula\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(fml)
       }
 
-      withClue("Random formula " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random formula " + prgString + "\n\n" + randClue) {
         println("Random context-free formula " + fml.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm, trm1) ::
@@ -1004,11 +1005,11 @@ class USubstTests extends FlatSpec with Matchers {
       val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withClue("Error printing random formula\n\n" + randClue) {
+      val prgString = withSafeClue("Error printing random formula\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(fml)
       }
 
-      withClue("Random formula " + prgString + "\n\n" + randClue) {
+      withSafeClue("Random formula " + prgString + "\n\n" + randClue) {
         println("Random context-free formula " + fml.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm, trm1) ::

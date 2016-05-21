@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
+import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -48,10 +49,10 @@ class RandomParserTests extends FlatSpec with Matchers {
       val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val e = withClue("Error generating random formula\n\n" + randClue) { rand.nextFormula(randomComplexity) }
-      val output = withClue("Error printing\n\n" + randClue) { pp.stringify(e) }
+      val e = withSafeClue("Error generating random formula\n\n" + randClue) { rand.nextFormula(randomComplexity) }
+      val output = withSafeClue("Error printing\n\n" + randClue) { pp.stringify(e) }
 
-      withClue("Random formula " + output + "\n\n" + randClue) {
+      withSafeClue("Random formula " + output + "\n\n" + randClue) {
         val printed = pp.stringify(e)
         println("Random in: " + printed)
         val full = pp.fullPrinter(e)

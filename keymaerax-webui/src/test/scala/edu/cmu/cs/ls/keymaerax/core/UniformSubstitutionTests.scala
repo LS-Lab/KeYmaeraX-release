@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest}
+import testHelper.CustomAssertions.withSafeClue
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable.{List, Set, Seq}
 
@@ -973,10 +974,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 //      (sToT("x", "a"), "[{x:=x+1;}*; x:=x+1]1>0".asFormula) ::            // subst(x:=x+1): x (maybe) bound by {x:=x+1}*
         Nil
 
-    cases.foreach(c => withClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+    cases.foreach(c => withSafeClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
 
     cases.map(c => (rndExtensionOf(c._1), c._2)).
-      foreach(c => withClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+      foreach(c => withSafeClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
   }
 
   ignore /*"Uniform substitution of mustbe bound"*/ should "be same as input" in {

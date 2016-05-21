@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCF
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -84,11 +85,11 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       val randClue = "Term produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val outString = withClue("Error printing random term\n\n" + randClue) {
+      val outString = withSafeClue("Error printing random term\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(e)
       }
 
-      withClue("Random term " + outString + "\n\n" + randClue) {
+      withSafeClue("Random term " + outString + "\n\n" + randClue) {
         println(e)
         val vc = StaticSemantics(e)
         vc shouldBe StaticSemantics.freeVars(e)
@@ -104,11 +105,11 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val outString = withClue("Error printing random formula\n\n" + randClue) {
+      val outString = withSafeClue("Error printing random formula\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(e)
       }
 
-      withClue("Random formula " + outString + "\n\n" + randClue) {
+      withSafeClue("Random formula " + outString + "\n\n" + randClue) {
         println(e)
         val vc = StaticSemantics(e)
         vc.fv shouldBe StaticSemantics.freeVars(e)
@@ -125,11 +126,11 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val outString = withClue("Error printing random program\n\n" + randClue) {
+      val outString = withSafeClue("Error printing random program\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(e)
       }
 
-      withClue("Random program " + outString + "\n\n" + randClue) {
+      withSafeClue("Random program " + outString + "\n\n" + randClue) {
         println(e)
         val vc = StaticSemantics(e)
         vc.fv shouldBe StaticSemantics.freeVars(e)
@@ -147,11 +148,11 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       val randClue = "Sequent produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val outString = withClue("Error printing random sequent\n\n" + randClue) {
+      val outString = withSafeClue("Error printing random sequent\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(e)
       }
 
-      withClue("Random sequent " + outString + "\n\n" + randClue) {
+      withSafeClue("Random sequent " + outString + "\n\n" + randClue) {
         println(e)
         StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b)
         StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b)
