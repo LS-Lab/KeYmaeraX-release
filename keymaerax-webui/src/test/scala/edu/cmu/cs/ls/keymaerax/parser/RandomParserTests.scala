@@ -14,7 +14,8 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**
  * Tests the parser on pretty prints of randomly generated formulas
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  */
 class RandomParserTests extends FlatSpec with Matchers {
   val randomTrials = 4000
@@ -44,14 +45,23 @@ class RandomParserTests extends FlatSpec with Matchers {
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
+      val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
       val e = rand.nextFormula(randomComplexity)
-      val printed = pp.stringify(e)
-      println("Random in: " + printed)
-      val full = pp.fullPrinter(e)
-      println("Fullform:  " + full)
-      parseShouldBe(full, e)
-      println("Reparsing: " + printed)
-      parseShouldBe(printed, e)
+      val output = withClue("Error printing\n\n" + randClue) {
+        pp.stringify(e)
+      }
+
+      withClue("Random formula " + output + "\n\n" + randClue) {
+        val printed = pp.stringify(e)
+        println("Random in: " + printed)
+        val full = pp.fullPrinter(e)
+        println("Fullform:  " + full)
+        parseShouldBe(full, e)
+        println("Reparsing: " + printed)
+        parseShouldBe(printed, e)
+      }
     }
 
 }
