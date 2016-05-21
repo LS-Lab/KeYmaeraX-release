@@ -44,7 +44,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   def nextFormulaContext(size : Int): Context[Formula] = {
     import Augmentors._
-    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, false, false, false)
+    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, true, false, false, false)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)
       val pos = nextPosition(size).inExpr
