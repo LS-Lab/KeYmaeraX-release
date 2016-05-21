@@ -2,9 +2,9 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, Position, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.Simplifier
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxioms, Simplifier}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.core.{Box, Imply, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 
 import scala.collection.immutable._
-
 import scala.language.postfixOps
 
 /**
@@ -48,4 +47,9 @@ class SimplifierTests extends TacticTestBase {
       Sequent(Nil, IndexedSeq(), IndexedSeq("x = 10 + x + x + x + x".asFormula))
   }
 
+  "derived axioms" should "work how I think they do" in withMathematica { implicit qeTool =>
+    val fml = "0 * x = 0".asFormula
+    val tactic = useAt(DerivedAxioms.zeroTimes)(Position(1, 0::Nil)) & byUS("= reflexive")
+    proveBy(fml, tactic) shouldBe 'proved
+  }
 }
