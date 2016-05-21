@@ -152,7 +152,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
 
-  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean = false, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, modals, dotTs, dotFs, !(dotTs||dotFs))
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean = true, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, modals, dotTs, dotFs, !(dotTs||dotFs))
   def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True
