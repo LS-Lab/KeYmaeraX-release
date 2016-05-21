@@ -583,7 +583,13 @@ class PairParserTests extends FlatSpec with Matchers {
 
     ("001", "1"),
     ("00", "0")
-
-    //@todo "(x'+y)'" crashes semantic analysis
   )
+
+//  "Parser" should "accept or throw parse errors for primes in primes" in {
+//    a[ParseException] shouldBe thrownBy(parser("(x')'"))
+//    a[ParseException] shouldBe thrownBy(parser("(x'+y)'"))
+//    a[ParseException] shouldBe thrownBy(parser("(x'+y>=0)'"))
+//    a[ParseException] shouldBe thrownBy(parser("([{x'=1}]x>=0)'"))
+//    a[ParseException] shouldBe thrownBy(parser("([x':=1]x>=0)'"))
+//  }
 }
