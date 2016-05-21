@@ -273,7 +273,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     proveBy(s, ArithmeticSpeculativeSimplification.hideInconsistentSigns & QE) shouldBe 'proved
   }
 
-  "Multiple hidings together" should "figure it out" in {
+  "Multiple hidings together" should "figure it out" in withMathematica { implicit tool =>
     val s = Sequent(Nil,
       IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),
       IndexedSeq("x<=m".asFormula))
