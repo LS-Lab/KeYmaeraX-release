@@ -17,6 +17,7 @@ import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
 /**
+  * Uniform substitution clash test dummies.
  * @author Andre Platzer
  * @author smitsch
  */
