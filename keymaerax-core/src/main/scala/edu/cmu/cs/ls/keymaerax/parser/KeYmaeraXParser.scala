@@ -106,14 +106,14 @@ object KeYmaeraXParser extends Parser {
   /** Lax mode where the parser is a little flexible about accepting input. */
   private[parser] val LAX = System.getProperty("LAX", "true")=="true"
 
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private[parser] val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   private val parseErrorsAsExceptions = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
     val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
-    //println("\t" + input)
+    //if (DEBUG) println("\t" + input)
     try { parse(tokenStream) }
     catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}
   }
@@ -296,16 +296,16 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
 
       // nonproductive: special notation for annotations
-      case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
+      case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1) :+ Token(RPAREN,_) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
-        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program], f1)
+        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program],
+          elaborate(st, tok, OpSpec.sNone, FormulaKind, f1).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) if isAnnotable(p) =>
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1:Formula) if isAnnotable(p) =>
         if (la==RPAREN || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, BINARYFORMULAOP))
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
-        if (isAnnotable(p)) {
-          if (la == LPAREN) shift(st) else error(st, List(LPAREN))
-        } else errormsg(st, "requires an operator that supports annotation")
+        if (isAnnotable(p)) if (la == LPAREN) shift(st) else error(st, List(LPAREN))
+        else errormsg(st, "requires an operator that supports annotation")
 
 
       // special quantifier notation

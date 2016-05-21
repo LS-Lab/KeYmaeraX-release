@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{TokenStream, ParseState}
  */
 case class ParseException (msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
   extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect, cause) {
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
   /**
     * Add the input context information to this exception, returning the resulting exception to be thrown.
     * @param input textual description of the input in which this prover exception occurred.
@@ -39,13 +38,13 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
           if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
-    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (DEBUG) "\ntokens: " + tokenStream.getOrElse("<unknown>") else ""))
+    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (KeYmaeraXParser.DEBUG) "\ntokens: " + tokenStream.getOrElse("<unknown>") else ""))
   }
 
   /** Get more details on the error message in addition to [[getContext]]. */
   def getDetails: String = "After:   " + after + "\nin " + state
 
-  override def toString: String = super.getMessage + getContext + (if (DEBUG) "\n" + getDetails else "")
+  override def toString: String = super.getMessage + getContext + (if (KeYmaeraXParser.DEBUG) "\n" + getDetails else "")
 }
 
 object ParseException {

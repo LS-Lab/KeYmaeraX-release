@@ -73,10 +73,10 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   ignore should "@todo test symbols, signature" in {}
 
 
-  "Static Semantics" should "consistently compute (checkin)" taggedAs(CheckinTest) in {test(10)}
-  it should "consistently compute (summary)" taggedAs(SummaryTest) in {test(50)}
-  it should "consistently compute (usual)" taggedAs(UsualTest) in {test(1000,10)}
-  it should "consistently compute (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
+  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CheckinTest) in {test(10)}
+  it should "consistently compute randomly (summary)" taggedAs(SummaryTest) in {test(50)}
+  it should "consistently compute randomly (usual)" taggedAs(UsualTest) in {test(1000,10)}
+  it should "consistently compute randomly (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) = {
     for (i <- 1 to randomTrials) {
