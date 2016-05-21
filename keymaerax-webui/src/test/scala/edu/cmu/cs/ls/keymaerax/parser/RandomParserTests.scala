@@ -48,10 +48,8 @@ class RandomParserTests extends FlatSpec with Matchers {
       val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val e = rand.nextFormula(randomComplexity)
-      val output = withClue("Error printing\n\n" + randClue) {
-        pp.stringify(e)
-      }
+      val e = withClue("Error generating random formula\n\n" + randClue) { rand.nextFormula(randomComplexity) }
+      val output = withClue("Error printing\n\n" + randClue) { pp.stringify(e) }
 
       withClue("Random formula " + output + "\n\n" + randClue) {
         val printed = pp.stringify(e)
