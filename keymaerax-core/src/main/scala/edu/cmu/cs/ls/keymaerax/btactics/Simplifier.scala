@@ -16,7 +16,21 @@ import scala.language.postfixOps
   * Created by bbohrer on 5/21/16.
   */
 object Simplifier {
-  trait Simplification extends (Term => Option[(Term, BelleExpr)]){}
+  type Simplification = (Term => Option[(Term, BelleExpr)])
+
+  val timesZeroLeft:Simplification = {
+    case Times(n: Number, t: Term) =>
+      if (n.value == 0) {
+        Some((n, QE))
+      } else {
+        None
+      }
+    case _ => None
+  }
+
+  val simps: List[Simplification] = List(
+    timesZeroLeft
+    )
 
   def trav(simps:List[Simplification]) = new ExpressionTraversalFunction {
     var result:Option[(PosInExpr, Term, BelleExpr)] = None
@@ -51,18 +65,18 @@ object Simplifier {
     t.result
   }
 
-  def makeCE(fml:Formula, opt:Option[(PosInExpr, Term, BelleExpr)]):BelleExpr = {
+  def makeCE(fml:Formula, opt:Option[(PosInExpr, Term, BelleExpr)], where:Position):BelleExpr = {
     opt match {
       case Some((pos, t2, e)) =>
         val (ctx, t1:Term) = fml.at(pos)
         val eqProof = TactixLibrary.proveBy(Equal(t1, t2), e)
-        HilbertCalculus.useAt(HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0::Nil))
+        HilbertCalculus.useAt(HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0::Nil))(where)
       case None => TactixLibrary.nil
     }
   }
 
-  def simp(simps:List[Simplification]):DependentPositionTactic = "diffWeaken" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(fml : Formula) => makeCE(fml, simp(simps, fml))
+  def simp(simps:List[Simplification]= simps):DependentPositionTactic = "diffWeaken" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(fml : Formula) => makeCE(fml, simp(simps, fml), pos)
     /*case Some(fml : Term)    => makeCE(fml, simp(simps, fml))
     case Some(fml : Program) => makeCE(simp(simps, fml))*/
     case None => TactixLibrary.nil
