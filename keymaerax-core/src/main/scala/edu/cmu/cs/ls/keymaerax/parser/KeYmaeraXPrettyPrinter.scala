@@ -71,6 +71,12 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       "\n  ==>  \n" +
       (1 to seq.succ.length).map(i => +i + ":  " + apply(seq.succ(i-1)) + "\t" + seq.succ(i-1).getClass.getSimpleName).mkString("\n")
 
+  /** Pretty-print sequent to a string but without contract checking! */
+  private[keymaerax] def stringify(seq: Sequent): String =
+    (1 to seq.ante.length).map(i => -i + ":  " + stringify(seq.ante(i-1)) + "\t" + seq.ante(i-1).getClass.getSimpleName).mkString("\n") +
+      "\n  ==>  \n" +
+      (1 to seq.succ.length).map(i => +i + ":  " + stringify(seq.succ(i-1)) + "\t" + seq.succ(i-1).getClass.getSimpleName).mkString("\n")
+
   def parser: KeYmaeraXParser.type = KeYmaeraXParser
   def fullPrinter: (Expression => String) = FullPrettyPrinter
 
@@ -84,8 +90,8 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
-  /** Pretty-print term to a string without contract checking. */
-  private[parser] def stringify(expr: Expression) = expr match {
+  /** Pretty-print term to a string but without contract checking! */
+  private[keymaerax] def stringify(expr: Expression) = expr match {
     case t: Term    => pp(HereP, t)
     case f: Formula => pp(HereP, f)
     case p: Program => pp(HereP, p)
