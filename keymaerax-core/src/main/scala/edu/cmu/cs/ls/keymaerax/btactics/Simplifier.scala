@@ -116,36 +116,36 @@ object Simplifier {
   }
 
   val assocPlus:Simplification = {
-    case Plus(Plus(a:Term, b:Term), c:Term) => print("\n\nputtin assoc in (" + a +"+" + b+") +"+c+"\n\n");Some(Plus(a, Plus(b,c)), QE)
+    case Plus(a:Term, Plus(b:Term, c:Term)) => print("\n\nputtin assoc in (" + a +"+" + b+") +"+c+"\n\n");Some(Plus(Plus(a,b), c), QE)
     case _ => None
   }
 
   val assocTimes:Simplification = {
-    case Times(Times(a:Term, b:Term), c:Term) => Some(Times(a, Times(b,c)), QE)
+    case Times(a:Term, Times(b:Term, c:Term)) => Some(Times(Times(a,b), c), QE)
     case _ => None
   }
 
   val pushConstPlus:Simplification = {
-    case Plus(n: Number, Plus(t1:Term, t2:Term)) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) {print("\n\npushin down " + n + " vs " + t1+"\n\n"); Some(Plus(t1, Plus(n, t2)), QE)} else None
+    case Plus(Plus(t1:Term, t2:Term), n: Number) =>
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) {print("\n\npushin down " + n + " vs " + t2+"\n\n"); Some(Plus(Plus(t1, n), t2), QE)} else None
     case _ => None
   }
 
   val flipConstPlus:Simplification = {
-    case Plus(n: Number, t1:Term) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) {print("\n\nflippin "+ t1 + " wit " + n+"\n\n"); Some(Plus(t1, n), QE)} else None
+    case Plus(t1:Term, n: Number) =>
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) {print("\n\nflippin "+ t1 + " wit " + n+"\n\n"); Some(Plus(n, t1), QE)} else None
     case _ => None
   }
 
   val flipConstTimes:Simplification = {
-    case Times(n: Number, t1:Term) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) {Some(Times(t1, n), QE)} else None
+    case Times(t1:Term, n: Number) =>
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) {Some(Times(n, t1), QE)} else None
     case _ => None
   }
 
   val pushConstTimes:Simplification = {
-    case Times(n: Number, Times(t1:Term, t2:Term)) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) {Some(Times(t1, Times(n, t2)), QE)} else None
+    case Times(Times(t1:Term, t2:Term), n: Number) =>
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Times]) {Some(Times(Times(t1, n), t2), QE)} else None
     case _ => None
   }
 

@@ -45,7 +45,7 @@ class SimplifierTests extends TacticTestBase {
     val fml = "x = (((x + 1) + (2 + x))  +  ((x + 3) + (4 + x)))".asFormula
     val tactic = Simplifier.simp(Simplifier.extendedSimps)(1)
     proveBy(fml, tactic).subgoals should contain only
-      Sequent(Nil, IndexedSeq(), IndexedSeq("x = x + (x + (x + (x + 10)))".asFormula))
+      Sequent(Nil, IndexedSeq(), IndexedSeq("x = 10 + x + x + x + x".asFormula))
   }
 
 }
