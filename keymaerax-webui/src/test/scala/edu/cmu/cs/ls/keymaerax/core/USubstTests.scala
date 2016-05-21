@@ -32,6 +32,7 @@ class USubstTests extends FlatSpec with Matchers {
   val rand = new RandomFormula()
 
   //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful
+  @deprecated("Use Provable(USubst) rule instead")
   private def UniformSubstitutionRule(subst: USubst, origin: Sequent) : Sequent => immutable.List[Sequent] = conclusion =>
       try {
         //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
@@ -71,7 +72,19 @@ class USubstTests extends FlatSpec with Matchers {
     s(prem) should be ("x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula)
   }
 
-  it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
+//  it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
+//    val p = Function("p", None, Real, Bool)
+//    val x = Variable("x", None, Real)
+//    // p(x) <-> ! ! p(- - x)
+//    val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
+//    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
+//    val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
+//    Provable.startProof(UniformSubstitutionRule(s,
+//      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+//      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))
+//  }
+
+  it should "old substitute simple sequent p(x) <-> ! ! p(- - x)" in {
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
     // p(x) <-> ! ! p(- - x)
