@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
@@ -18,7 +19,8 @@ import scala.collection.immutable.IndexedSeq
 
 /**
   * Uniform substitution clash test dummies.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  * @author smitsch
  */
 @SummaryTest
@@ -389,6 +391,7 @@ class USubstTests extends FlatSpec with Matchers {
     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
+
   it should "instantiate random programs in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
@@ -396,17 +399,26 @@ class USubstTests extends FlatSpec with Matchers {
       val prog = rand.nextProgram(randomComplexity)
       val concLhs = Box(prog, prem1)
       val concRhs = Box(prog, prem2)
-      println("Random precontext " + prog.prettyString)
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val q_ = Function("q_", None, Real, Bool)
-      val s = USubst(Seq(
-        SubstitutionPair(ap_, prog),
-        SubstitutionPair(PredOf(pn_, Anything), prem1),
-        SubstitutionPair(PredOf(q_, Anything), prem2)
-         ))
-      val pr = DerivedRuleInfo("[] monotone").provable(s)
-      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
-      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(prog)
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random precontext " + prog.prettyString)
+
+        val q_ = Function("q_", None, Real, Bool)
+        val s = USubst(Seq(
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
+        ))
+        val pr = DerivedRuleInfo("[] monotone").provable(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      }
     }
   }
 
@@ -417,18 +429,27 @@ class USubstTests extends FlatSpec with Matchers {
       val prem = Equiv(prem1, prem2)
       val prog = rand.nextProgram(randomComplexity)
       val conc = Equiv(Box(prog, prem1), Box(prog, prem2))
-      println("Random precontext " + prog.prettyString)
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val q_ = Function("q_", None, Real, Bool)
-      val ctx_ = Function("ctx_", None, Bool, Bool)
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(prog)
+      }
 
-      val s = USubst(SubstitutionPair(ap_, prog) ::
-        SubstitutionPair(PredOf(pn_, Anything), prem1) ::
-        SubstitutionPair(PredOf(q_, Anything), prem2) ::
-        SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
-      val pr = Provable.rules("CE congruence")(s)
-      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
-      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random precontext " + prog.prettyString)
+
+        val q_ = Function("q_", None, Real, Bool)
+        val ctx_ = Function("ctx_", None, Bool, Bool)
+
+        val s = USubst(SubstitutionPair(ap_, prog) ::
+          SubstitutionPair(PredOf(pn_, Anything), prem1) ::
+          SubstitutionPair(PredOf(q_, Anything), prem2) ::
+          SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
+        val pr = Provable.rules("CE congruence")(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      }
     }
   }
 
@@ -460,18 +481,27 @@ class USubstTests extends FlatSpec with Matchers {
       val prem = Equiv(prem1, prem2)
       val prog = rand.nextProgram(randomComplexity)
       val conc = Equiv(Diamond(prog, prem1), Diamond(prog, prem2))
-      println("Random precontext " + prog.prettyString)
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val q_ = Function("q_", None, Real, Bool)
-      val ctx_ = Function("ctx_", None, Bool, Bool)
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(prog)
+      }
 
-      val s = USubst(SubstitutionPair(ap_, prog) ::
-        SubstitutionPair(PredOf(pn_, Anything), prem1) ::
-        SubstitutionPair(PredOf(q_, Anything), prem2) ::
-        SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
-      val pr = Provable.rules("CE congruence")(s)
-      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
-      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random precontext " + prog.prettyString)
+
+        val q_ = Function("q_", None, Real, Bool)
+        val ctx_ = Function("ctx_", None, Bool, Bool)
+
+        val s = USubst(SubstitutionPair(ap_, prog) ::
+          SubstitutionPair(PredOf(pn_, Anything), prem1) ::
+          SubstitutionPair(PredOf(q_, Anything), prem2) ::
+          SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
+        val pr = Provable.rules("CE congruence")(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      }
     }
   }
 
@@ -482,17 +512,26 @@ class USubstTests extends FlatSpec with Matchers {
       val prog = rand.nextProgram(randomComplexity)
       val concLhs = Diamond(prog, prem1)
       val concRhs = Diamond(prog, prem2)
-      println("Random precontext " + prog.prettyString)
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val q_ = Function("q_", None, Real, Bool)
-      val s = USubst(Seq(
-        SubstitutionPair(ap_, prog),
-        SubstitutionPair(PredOf(pn_, Anything), prem1),
-        SubstitutionPair(PredOf(q_, Anything), prem2)
-         ))
-      val pr = Provable.rules("<> monotone")(s)
-      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
-      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(prog)
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random precontext " + prog.prettyString)
+
+        val q_ = Function("q_", None, Real, Bool)
+        val s = USubst(Seq(
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
+        ))
+        val pr = Provable.rules("<> monotone")(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      }
     }
   }
 
@@ -506,7 +545,7 @@ class USubstTests extends FlatSpec with Matchers {
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
       val prgString = withClue("Error printing random program\n\n" + randClue) {
-        prog.prettyString
+        KeYmaeraXPrettyPrinter.stringify(prog)
       }
 
       withClue("Random precontext " + prgString + "\n\n" + randClue) {
@@ -556,15 +595,24 @@ class USubstTests extends FlatSpec with Matchers {
       val term2 = "z+y".asTerm
       val fml = Equal(term1, term2)
       val context = rand.nextDotTerm(randomComplexity)
-      println("Random context " + context.prettyString)
-      val s = USubst(
-        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-        SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-      val pr = Provable.rules("CT term congruence")(s)
-      pr.conclusion shouldBe
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(context)
+      }
+
+      withClue("Random context " + prgString + "\n\n" + randClue) {
+        println("Random context " + context.prettyString)
+        val s = USubst(
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
+        val pr = Provable.rules("CT term congruence")(s)
+        pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
+        pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      }
     }
   }
 
@@ -574,15 +622,24 @@ class USubstTests extends FlatSpec with Matchers {
       val term2 = "z2*z3+z1".asTerm
       val fml = Equal(term1, term2)
       val context = rand.nextDotTerm(randomComplexity)
-      println("Random context " + context.prettyString)
-      val s = USubst(
-        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-        SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-      val pr = Provable.rules("CT term congruence")(s)
-      pr.conclusion shouldBe
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(context)
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random context " + context.prettyString)
+        val s = USubst(
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
+        val pr = Provable.rules("CT term congruence")(s)
+        pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
+        pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      }
     }
   }
 
@@ -592,15 +649,24 @@ class USubstTests extends FlatSpec with Matchers {
       val term2 = "z2-z4/z1".asTerm
       val fml = Equal(term1, term2)
       val context = rand.nextDotTerm(randomComplexity)
-      println("Random context " + context.prettyString)
-      val s = USubst(
-        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-        SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-      val pr = Provable.rules("CT term congruence")(s)
-      pr.conclusion shouldBe
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(context)
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random context " + context.prettyString)
+        val s = USubst(
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
+        val pr = Provable.rules("CT term congruence")(s)
+        pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
+        pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      }
     }
   }
 
@@ -826,15 +892,24 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     for (i <- 1 to randomTrials) {
       val context = rand.nextDotFormula(randomComplexity)
-      println("Random context " + context.prettyString)
-      val s = USubst(
-        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
-          SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
-      val pr = Provable.rules("CQ equation congruence")(s)
-      pr.conclusion shouldBe
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
-      pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random context\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(context)
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random context " + context.prettyString)
+        val s = USubst(
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
+        val pr = Provable.rules("CQ equation congruence")(s)
+        pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
+        pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      }
     }
   }
   
@@ -844,15 +919,24 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     for (i <- 1 to randomTrials) {
       val context = rand.nextDotFormula(randomComplexity)
-      println("Random context " + context.prettyString)
-      val s = USubst(
-        SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-          SubstitutionPair(PredOf(qn_, Anything), fml2) ::
-          SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-      val pr = Provable.rules("CE congruence")(s)
-      pr.conclusion shouldBe
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
-      pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random context\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(context)
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        println("Random context " + context.prettyString)
+        val s = USubst(
+          SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+            SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+            SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
+        val pr = Provable.rules("CE congruence")(s)
+        pr.conclusion shouldBe
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
+        pr.subgoals should be(List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      }
     }
   }
 
@@ -861,17 +945,26 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
-      println("Random dot-free formula " + fml.prettyString)
-      val s = USubst(
-        SubstitutionPair(DotTerm, trm1) ::
-          SubstitutionPair(DotFormula, fml1) :: Nil)
-      s(fml) shouldBe fml
-      val dotfml = rand.nextDotFormula(randomComplexity)
-      s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
-      val dottrm = rand.nextDotTerm(randomComplexity)
-      s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
-      val dotprg = rand.nextDotProgram(randomComplexity)
-      s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
+      val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random formula\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(fml)
+      }
+
+      withClue("Random formula " + prgString + "\n\n" + randClue) {
+        println("Random dot-free formula " + fml.prettyString)
+        val s = USubst(
+          SubstitutionPair(DotTerm, trm1) ::
+            SubstitutionPair(DotFormula, fml1) :: Nil)
+        s(fml) shouldBe fml
+        val dotfml = rand.nextDotFormula(randomComplexity)
+        s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+        val dottrm = rand.nextDotTerm(randomComplexity)
+        s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+        val dotprg = rand.nextDotProgram(randomComplexity)
+        s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
+      }
     }
   }
 
@@ -880,17 +973,26 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
-      println("Random context-free formula " + fml.prettyString)
-      val s = USubst(
-        SubstitutionPair(DotTerm, trm1) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm), fml1) :: Nil)
-      s(fml) shouldBe fml
-      val dotfml = rand.nextDotFormula(randomComplexity)
-      s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
-      val dottrm = rand.nextDotTerm(randomComplexity)
-      s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
-      val dotprg = rand.nextDotProgram(randomComplexity)
-      s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
+      val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random formula\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(fml)
+      }
+
+      withClue("Random formula " + prgString + "\n\n" + randClue) {
+        println("Random context-free formula " + fml.prettyString)
+        val s = USubst(
+          SubstitutionPair(DotTerm, trm1) ::
+            SubstitutionPair(PredOf(ctxf, DotTerm), fml1) :: Nil)
+        s(fml) shouldBe fml
+        val dotfml = rand.nextDotFormula(randomComplexity)
+        s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+        val dottrm = rand.nextDotTerm(randomComplexity)
+        s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+        val dotprg = rand.nextDotProgram(randomComplexity)
+        s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
+      }
     }
   }
 
@@ -899,17 +1001,26 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
-      println("Random context-free formula " + fml.prettyString)
-      val s = USubst(
-        SubstitutionPair(DotTerm, trm1) ::
-        SubstitutionPair(PredicationalOf(ctx, DotFormula), fml1) :: Nil)
-      s(fml) shouldBe fml
-      val dotfml = rand.nextDotFormula(randomComplexity)
-      s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
-      val dottrm = rand.nextDotTerm(randomComplexity)
-      s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
-      val dotprg = rand.nextDotProgram(randomComplexity)
-      s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
+      val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random formula\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(fml)
+      }
+
+      withClue("Random formula " + prgString + "\n\n" + randClue) {
+        println("Random context-free formula " + fml.prettyString)
+        val s = USubst(
+          SubstitutionPair(DotTerm, trm1) ::
+            SubstitutionPair(PredicationalOf(ctx, DotFormula), fml1) :: Nil)
+        s(fml) shouldBe fml
+        val dotfml = rand.nextDotFormula(randomComplexity)
+        s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+        val dottrm = rand.nextDotTerm(randomComplexity)
+        s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+        val dotprg = rand.nextDotProgram(randomComplexity)
+        s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
+      }
     }
   }
 

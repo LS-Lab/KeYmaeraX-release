@@ -81,47 +81,83 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) = {
     for (i <- 1 to randomTrials) {
       val e = rand.nextTerm(randomComplexity)
-      println(e)
-      val vc = StaticSemantics(e)
-      vc shouldBe StaticSemantics.freeVars(e)
-      vc shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
-      vc shouldBe StaticSemantics.vars(e)
-      vc shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
-      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
-      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
+      val randClue = "Term produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val outString = withClue("Error printing random term\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(e)
+      }
+
+      withClue("Random term " + outString + "\n\n" + randClue) {
+        println(e)
+        val vc = StaticSemantics(e)
+        vc shouldBe StaticSemantics.freeVars(e)
+        vc shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
+        vc shouldBe StaticSemantics.vars(e)
+        vc shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
+        StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
+        StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
+      }
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
-      println(e)
-      val vc = StaticSemantics(e)
-      vc.fv shouldBe StaticSemantics.freeVars(e)
-      vc.bv shouldBe StaticSemantics.boundVars(e)
-      vc.fv shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
-      (vc.fv++vc.bv) shouldBe StaticSemantics.vars(e)
-      StaticSemantics.vars(e) shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
-      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
-      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
+      val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val outString = withClue("Error printing random formula\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(e)
+      }
+
+      withClue("Random formula " + outString + "\n\n" + randClue) {
+        println(e)
+        val vc = StaticSemantics(e)
+        vc.fv shouldBe StaticSemantics.freeVars(e)
+        vc.bv shouldBe StaticSemantics.boundVars(e)
+        vc.fv shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
+        (vc.fv ++ vc.bv) shouldBe StaticSemantics.vars(e)
+        StaticSemantics.vars(e) shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
+        StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
+        StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
+      }
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextProgram(randomComplexity)
-      println(e)
-      val vc = StaticSemantics(e)
-      vc.fv shouldBe StaticSemantics.freeVars(e)
-      vc.bv shouldBe StaticSemantics.boundVars(e)
-      vc.mbv shouldBe StaticSemantics(e).mbv
-      vc.fv shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
-      (vc.fv++vc.bv) shouldBe StaticSemantics.vars(e)
-      StaticSemantics.vars(e) shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
-      StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
-      StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val outString = withClue("Error printing random program\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(e)
+      }
+
+      withClue("Random program " + outString + "\n\n" + randClue) {
+        println(e)
+        val vc = StaticSemantics(e)
+        vc.fv shouldBe StaticSemantics.freeVars(e)
+        vc.bv shouldBe StaticSemantics.boundVars(e)
+        vc.mbv shouldBe StaticSemantics(e).mbv
+        vc.fv shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
+        (vc.fv ++ vc.bv) shouldBe StaticSemantics.vars(e)
+        StaticSemantics.vars(e) shouldBe StaticSemantics.vars(e.asInstanceOf[Expression])
+        StaticSemantics.signature(e) shouldBe StaticSemantics.signature(e.asInstanceOf[Expression])
+        StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
+      }
     }
     for (i <- 1 to randomTrials) {
       val e = rand.nextSequent(randomComplexity)
-      println(e)
-      StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
-      StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
-      StaticSemantics.symbols(e) shouldBe e.ante.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a,b)=>a++b) ++ e.succ.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a,b)=>a++b)
-      StaticSemantics.signature(e) shouldBe e.ante.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a,b)=>a++b) ++ e.succ.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a,b)=>a++b)
+      val randClue = "Sequent produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val outString = withClue("Error printing random sequent\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(e)
+      }
+
+      withClue("Random sequent " + outString + "\n\n" + randClue) {
+        println(e)
+        StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b)
+        StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b)
+        StaticSemantics.symbols(e) shouldBe e.ante.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a, b) => a ++ b)
+        StaticSemantics.signature(e) shouldBe e.ante.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a, b) => a ++ b)
+      }
     }
   }
 
