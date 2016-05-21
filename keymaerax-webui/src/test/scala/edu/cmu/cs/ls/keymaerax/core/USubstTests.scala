@@ -28,7 +28,7 @@ class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
   val randomTrials = 50
-  val randomComplexity = 4 //20
+  val randomComplexity = 20
   val rand = new RandomFormula()
 
   //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful

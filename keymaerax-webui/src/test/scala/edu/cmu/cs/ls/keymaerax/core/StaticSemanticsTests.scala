@@ -124,4 +124,17 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       StaticSemantics.signature(e) shouldBe e.ante.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a,b)=>a++b) ++ e.succ.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a,b)=>a++b)
     }
   }
+
+  it should "work for crazy sequent" in {
+    val e = Sequent(Nil, IndexedSeq("z4'>=(ff(ff((0+(0*0-70))^1)/((0-(z1-(0-0)))/(62-0*0)^5*0)))'".asFormula),
+      IndexedSeq("qq()->\\forall z3 [{?true;++{{?true;}*++{?true;++?true;}{z1'=0&true}}z4:=*;}*]([{z1:=z3;}*]true|<z3:=*;>(z2>0*(0*0)<->0*0+(0-0)<=0))".asFormula,
+        "qq()".asFormula,
+        "(<{z1'=0&<{{?\\exists z3 true;}*++{{?true;?true;}*}*}{z2:=*;++{?true;?true;}*}*>((z1+(0-0))/46<=73-93->[z3:=0/0;++{?true;++?true;}++?true;]\\exists z4 [?true;++?true;](true|true))}>PP{true})'".asFormula,
+        "<z3:=*;>[?true;][?true;]\\exists z3 (<{?true;++?true;}*{?true;?true;}?true;?true;>ff(0^2)!=z2'^2|(\\exists z3 (true&true)|(0)'>=0*0)&z2' < -63^2))".asFormula))
+    println(e)
+    StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
+    StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
+    StaticSemantics.symbols(e) shouldBe e.ante.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a,b)=>a++b) ++ e.succ.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a,b)=>a++b)
+    StaticSemantics.signature(e) shouldBe e.ante.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a,b)=>a++b) ++ e.succ.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a,b)=>a++b)
+  }
 }

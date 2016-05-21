@@ -81,7 +81,7 @@ class ArithmeticTests extends TacticTestBase {
       Sequent(Nil,
         IndexedSeq(),
         IndexedSeq("5=5 | x' = 1'".asFormula)),
-      TactixLibrary.QE) } should have message "[Bellerophon Runtime] x'@DifferentialSymbol (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
+      TactixLibrary.QE) } should have message "[Bellerophon Runtime] x' (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
@@ -89,7 +89,7 @@ class ArithmeticTests extends TacticTestBase {
       Sequent(Nil,
         IndexedSeq(),
         IndexedSeq("x' = y'".asFormula)),
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] x'@DifferentialSymbol (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] x' (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
