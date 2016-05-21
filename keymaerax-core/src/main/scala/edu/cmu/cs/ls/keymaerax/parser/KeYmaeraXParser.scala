@@ -106,14 +106,14 @@ object KeYmaeraXParser extends Parser {
   /** Lax mode where the parser is a little flexible about accepting input. */
   private[parser] val LAX = System.getProperty("LAX", "true")=="true"
 
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private[parser] val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   private val parseErrorsAsExceptions = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
     val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
-    //println("\t" + input)
+    //if (DEBUG) println("\t" + input)
     try { parse(tokenStream) }
     catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}
   }
@@ -191,7 +191,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Semantic analysis of expressions after parsing, returning errors if any or None. */
   def semanticAnalysis(e: Expression): Option[String] = {
-    val symbols = StaticSemantics.symbols(e)
+    val symbols = try { StaticSemantics.symbols(e) }
+    catch {case ex: AssertionError => return Some("semantics: symbols computation error\n" + ex)}
     val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
     assert(!DEBUG || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
     //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
@@ -296,16 +297,16 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
 
       // nonproductive: special notation for annotations
-      case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
+      case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1) :+ Token(RPAREN,_) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
-        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program], f1)
+        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program],
+          elaborate(st, tok, OpSpec.sNone, FormulaKind, f1).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) if isAnnotable(p) =>
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1:Formula) if isAnnotable(p) =>
         if (la==RPAREN || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, BINARYFORMULAOP))
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
-        if (isAnnotable(p)) {
-          if (la == LPAREN) shift(st) else error(st, List(LPAREN))
-        } else errormsg(st, "requires an operator that supports annotation")
+        if (isAnnotable(p)) if (la == LPAREN) shift(st) else error(st, List(LPAREN))
+        else errormsg(st, "requires an operator that supports annotation")
 
 
       // special quantifier notation
@@ -371,7 +372,7 @@ object KeYmaeraXParser extends Parser {
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), f1), r)
         else error(st, List(FOLLOWSFORMULA))
 
-      // predicational symbols arity>0: special elaboration case for misclassified t() as formula
+      // predicational symbols arity>0: special elaboration case for misclassified c() as formula in P{c()}
       case r :+ Token(IDENT(name,idx),_) :+ (optok@Token(LBRACE,_)) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), elaborate(st, optok, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
         else error(st, List(FOLLOWSFORMULA))
@@ -471,7 +472,7 @@ object KeYmaeraXParser extends Parser {
 
       // special case to force elaboration to DifferentialProgramConst {c} and {c,...} and {c&...}
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(e1:Variable) if la==AMP || la==COMMA || la==RBRACE =>
-        assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "IDENT stack for predicationals has already been handled")
+        assume((r match {case _ :+ Token(id:IDENT,_) => false case _ => true}), "IDENT stack for predicationals has already been handled")
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
       // differential equation system special notation
@@ -480,12 +481,16 @@ object KeYmaeraXParser extends Parser {
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1) :+ (tok3@Token(RBRACE,_)) =>
         reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
 
-      // elaboration special pattern case
-      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) =>
+      // elaboration special pattern case to DifferentialProgram
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) if (la==AMP || la==COMMA || la==RBRACE) &&
+        (r match {case _ :+ Token(id:IDENT,_) => false case _ => true})  =>
+        //assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Equal stack for predicationals has already been handled")
         reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, tok1, OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
-      // elaboration special pattern case
-      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@And(Equal(_:DifferentialSymbol,_),_)) =>
+      // elaboration special pattern case to DifferentialProgram
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@And(Equal(_:DifferentialSymbol,_),_)) if (la==AMP || la==COMMA || la==RBRACE) &&
+        (r match {case _ :+ Token(id:IDENT,_) => false case _ => true}) =>
+        //assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "And stack for predicationals has already been handled")
         reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, tok1, OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
 

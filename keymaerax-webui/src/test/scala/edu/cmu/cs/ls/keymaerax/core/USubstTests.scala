@@ -32,6 +32,7 @@ class USubstTests extends FlatSpec with Matchers {
   val rand = new RandomFormula()
 
   //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful
+  @deprecated("Use Provable(USubst) rule instead")
   private def UniformSubstitutionRule(subst: USubst, origin: Sequent) : Sequent => immutable.List[Sequent] = conclusion =>
       try {
         //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
@@ -71,7 +72,19 @@ class USubstTests extends FlatSpec with Matchers {
     s(prem) should be ("x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula)
   }
 
-  it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
+//  it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
+//    val p = Function("p", None, Real, Bool)
+//    val x = Variable("x", None, Real)
+//    // p(x) <-> ! ! p(- - x)
+//    val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
+//    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
+//    val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
+//    Provable.startProof(UniformSubstitutionRule(s,
+//      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+//      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))
+//  }
+
+  it should "old substitute simple sequent p(x) <-> ! ! p(- - x)" in {
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
     // p(x) <-> ! ! p(- - x)
@@ -397,15 +410,23 @@ class USubstTests extends FlatSpec with Matchers {
       val prem = "(-z1)^2>=0".asFormula
       val prog = rand.nextProgram(randomComplexity)
       val conc = Box(prog, prem)
-      println("Random precontext " + prog.prettyString)
 
-      val s = USubst(Seq(
-        SubstitutionPair(ap_, prog),
-        SubstitutionPair(PredOf(pn_, Anything), prem)
-         ))
-      val pr = Provable.rules("Goedel")(s)
-      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
-      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        prog.prettyString
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        val s = USubst(Seq(
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(PredOf(pn_, Anything), prem)
+        ))
+        val pr = Provable.rules("Goedel")(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      }
     }
   }
 
