@@ -152,8 +152,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
 
-  def nextF(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, dotTs, dotFs, !(dotTs||dotFs))
-  def nextF(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean = false, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, modals, dotTs, dotFs, !(dotTs||dotFs))
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True
       val r = rand.nextInt(if (dotFs) 320 else 310)
@@ -161,26 +161,26 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case 0 => False
         case 1 => True
         case it if 2 until 10 contains it => Equal(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
-        case it if 10 until 20 contains it => Not(nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 20 until 30 contains it => And(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 30 until 40 contains it => Or(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 40 until 50 contains it => Imply(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 50 until 60 contains it => Equiv(nextF(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
+        case it if 10 until 20 contains it => Not(nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 20 until 30 contains it => And(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 30 until 40 contains it => Or(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 40 until 50 contains it => Imply(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 50 until 60 contains it => Equiv(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
           //@todo Predicate, Predicational
         case it if 60 until 70 contains it => NotEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 70 until 80 contains it => GreaterEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 80 until 90 contains it => LessEqual(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 90 until 100 contains it => Greater(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
         case it if 100 until 110 contains it => Less(nextT(vars, n-1, dotTs, diffs), nextT(vars, n-1, dotTs, diffs))
-        case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dotTs, dotFs, diffs))
+        case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
 //case it if 110 until 170 contains it => True
-        case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, dotTs, dotFs, diffs))
-        case it if 290 until 300 contains it => if (diffs) DifferentialFormula(nextF(vars, n-1, dotTs, dotFs, false)) else False
+        case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
+        case it if 290 until 300 contains it => if (diffs) DifferentialFormula(nextF(vars, n-1, false, false, false, false)) else False
         case it if 300 until 304 contains it => PredOf(Function("qq",None,Unit,Bool),Nothing)
         case it if 304 until 308 contains it => PredOf(Function("pp",None,Real,Bool), nextT(vars, n-1, dotTs, diffs))
-        case it if 308 until 310 contains it => PredicationalOf(Function("PP",None,Bool,Bool), nextF(vars, n-1, false, false, diffs))
+        case it if 308 until 310 contains it => PredicationalOf(Function("PP",None,Bool,Bool), nextF(vars, n-1, modals, false, false, diffs))
         case it if 310 until 400 contains it => assert(dotFs); DotFormula
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
