@@ -173,7 +173,7 @@ sealed case class DifferentialSymbol(x: Variable)
   def name: String = x.name
   def index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
-  override def toString: String =  x.asString + "'" + "@" + getClass.getSimpleName
+  override def toString: String = asString //+ "@" + getClass.getSimpleName
 }
 
 /** Number literal */
