@@ -19,7 +19,6 @@ import scala.collection.immutable.IndexedSeq
 /**
  * @author Andre Platzer
  * @author smitsch
-  * @todo adapt tests to new uniform substitution framework
  */
 @SummaryTest
 @UsualTest
@@ -28,7 +27,7 @@ class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
   val randomTrials = 50
-  val randomComplexity = 20
+  val randomComplexity = 4 //20
   val rand = new RandomFormula()
 
   //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful
@@ -72,6 +71,16 @@ class USubstTests extends FlatSpec with Matchers {
     s(prem) should be ("x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula)
   }
 
+  it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    // p(x) <-> ! ! p(- - x)
+    val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
+    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
+    val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
+    Provable.startProof(prem)(s).conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+  }
+
   it should "old substitute simple sequent p(x) <-> ! ! p(- - x)" in {
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
@@ -104,13 +113,36 @@ class USubstTests extends FlatSpec with Matchers {
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
       SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
     val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
+    Provable.startProof(prem)(s).conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+  }
+  it should "old substitute simple sequent [a]p(x) <-> [a](p(x)&true)" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    val a = ProgramConst("a")
+    // [a]p(x) <-> [a](p(x)&true)
+    val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
+    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
+      SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
+    val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
     UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))
   }
 
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
+    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
+    val prem = Provable.axioms("[:=] assign")/*Equiv(
+      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
+      PredOf(p1, fn)) // axioms.axiom("[:=])
+      */
+    val conc = "[x_:=x_+1;]x_!=x_ <-> x_+1!=x_".asFormula
+    val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm), NotEqual(DotTerm, "x_".asTerm)),
+      SubstitutionPair(fn, "x_+1".asTerm)))
+    a [SubstitutionClashException] should be thrownBy (prem(s))
+
+  }
+  it should "old clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -122,8 +154,19 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
-  
+
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
+    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
+    val prem = Provable.axioms("[:=] assign")/*Equiv(
+      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
+      PredOf(p1, fn)) // axioms.axiom("[:=])
+      */
+    val conc = "[x_:=0;]x_=x_ <-> 0=x_".asFormula
+    val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm), Equal(DotTerm, "x_".asTerm)),
+      SubstitutionPair(fn, "0".asTerm)))
+    a [SubstitutionClashException] should be thrownBy prem(s)
+  }
+  it should "old clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -137,6 +180,29 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   it should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
+    val prem = Provable.axioms("[:=] assign")/*Equiv(
+      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
+      PredOf(p1, fn)) // axioms.axiom("[:=])
+      */
+    val conc = "[x_:=x_^2;][{y:=y+1;++{z:=x_+z;}*}; z:=x_+y*z;]y>x_ <-> [{y:=y+1;++{z:=x_^2+z;}*}; z:=x_^2+y*z;]y>x_^2".asFormula
+
+    val y = Variable("y", None, Real)
+    val z = Variable("z", None, Real)
+    val s = USubst(Seq(
+      // [{y:=y+1++{z:=.+z}*}; z:=.+y*z]y>.
+      SubstitutionPair(PredOf(p1, DotTerm), Box(
+        Compose(
+          Choice(
+            Assign(y, Plus(y, Number(1))),
+            Loop(Assign(z, Plus(DotTerm, z)))
+          ),
+          Assign(z, Plus(DotTerm, Times(y, z)))),
+        Greater(y, DotTerm))),
+      SubstitutionPair(fn, "x_^2".asTerm)))
+    prem(s).conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+  }
+  it should "old handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -160,6 +226,18 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
+    val x = Variable("x_",None,Real)
+    val fml = GreaterEqual(x, Number(0))
+    val prem = Provable.axioms("vacuous all quantifier")
+    val conc = Forall(Seq(x), fml)
+    val s = USubst(Seq(SubstitutionPair(p0, fml)))
+    //a [SubstitutionClashException] should be thrownBy
+    val e = intercept[ProverException] {
+      prem(s)
+    }
+    (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
+  }
+  it should "old clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Provable.axiom("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
@@ -170,10 +248,20 @@ class USubstTests extends FlatSpec with Matchers {
         Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
     }
-    e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException] shouldBe true
+    (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
   }
-  
+
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
+    val x = Variable("x_",None,Real)
+    val fml = GreaterEqual(x, Number(0))
+    val prem = Provable.axioms("V vacuous")
+    val prog = Assign(x, Minus(x, Number(1)))
+    val conc = Box(prog, fml)
+    val s = USubst(Seq(SubstitutionPair(p0, fml),
+      SubstitutionPair(ap, prog)))
+    a [SubstitutionClashException] should be thrownBy prem(s)
+  }
+  it should "old clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Provable.axiom("V vacuous")
     val prog = Assign(x, Minus(x, Number(1)))
@@ -187,6 +275,13 @@ class USubstTests extends FlatSpec with Matchers {
   
   it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val prem = Provable.axioms("c()' derive constant fn") //(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
+    val conc = "(x)'=0".asFormula
+    val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy prem(s)
+  }
+  it should "old clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x)'=0".asFormula
     val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
@@ -194,8 +289,15 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
-  
+
   it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val prem = Provable.axioms("c()' derive constant fn") //"(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
+    val conc = "(x')'=0".asFormula
+    val s = USubst(Seq(SubstitutionPair(aC, "x'".asTerm)))
+    a [SubstitutionClashException] should be thrownBy prem(s)
+  }
+  it should "old clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x')'=0".asFormula
