@@ -397,15 +397,23 @@ class USubstTests extends FlatSpec with Matchers {
       val prem = "(-z1)^2>=0".asFormula
       val prog = rand.nextProgram(randomComplexity)
       val conc = Box(prog, prem)
-      println("Random precontext " + prog.prettyString)
 
-      val s = USubst(Seq(
-        SubstitutionPair(ap_, prog),
-        SubstitutionPair(PredOf(pn_, Anything), prem)
-         ))
-      val pr = Provable.rules("Goedel")(s)
-      pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
-      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val prgString = withClue("Error printing random program\n\n" + randClue) {
+        prog.prettyString
+      }
+
+      withClue("Random precontext " + prgString + "\n\n" + randClue) {
+        val s = USubst(Seq(
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(PredOf(pn_, Anything), prem)
+        ))
+        val pr = Provable.rules("Goedel")(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      }
     }
   }
 
