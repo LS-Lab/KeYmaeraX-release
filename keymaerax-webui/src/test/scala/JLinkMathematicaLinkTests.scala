@@ -12,7 +12,8 @@ import scala.collection.immutable.Map
 
 /**
  * Tests the JLink Mathematica implementation.
- * @author Stefan Mitsch
+  *
+  * @author Stefan Mitsch
  */
 class  JLinkMathematicaLinkTests extends TacticTestBase {
 
@@ -59,12 +60,14 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
     link.qeEvidence("max(1,3) = 3".asFormula)._1 shouldBe True
   }
 
-  "Mathematica 9" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in withTool({
+  if (new java.io.File("/Applications/Mathematica9.app").exists) {
+    "Mathematica 9" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in withTool({
       val mathematica = new Mathematica()
       mathematica.init(Map("linkName" -> "/Applications/Mathematica9.app/Contents/MacOS/MathKernel"))
       mathematica
     }) { link =>
-    // nothing to do here, initialization is done already and will have failed if Mathematica is not activated
+      // nothing to do here, initialization is done already and will have failed if Mathematica is not activated
+    }
   }
 
   "Mathematica 10" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in withTool({
