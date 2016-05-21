@@ -201,7 +201,9 @@ object ExpressionTraversal {
         // Formulas
         case True => matchZero(p, f, e)
         case False => matchZero(p, f, e)
+        case DotFormula => matchZero(p, f, e)
         case PredOf(a, b) => matchOne(p, PredOf.apply(a, _: Term), f, b)
+        case PredicationalOf(a, b) => matchOne(p, PredicationalOf.apply(a, _: Formula), f, b)
         case Equal(a, b) => matchTwo(p, Equal.apply(_: Term, _: Term), f, a, b)
         case NotEqual(a, b) => matchTwo(p, NotEqual.apply(_: Term, _: Term), f, a, b)
         case Less(a, b) => matchTwo(p, Less.apply(_: Term, _: Term), f, a, b)
@@ -222,6 +224,9 @@ object ExpressionTraversal {
         // Terms
         case Number(_) => matchZero(p, f, e)
         case _: Variable => matchZero(p, f, e)
+        case DotTerm => matchZero(p, f, e)
+        case Nothing => matchZero(p, f, e)
+        case Anything => matchZero(p, f, e)
         case FuncOf(a, b) => matchOne(p, FuncOf.apply(a, _: Term), f, b)
         case Differential(a) => matchOne(p, Differential.apply(_: Term), f, a)
         case DifferentialSymbol(a) => matchOne(p, DifferentialSymbol.apply(_: Variable), f, a)
@@ -236,9 +241,6 @@ object ExpressionTraversal {
         // Programs
         case ProgramConst(_) => matchZero(p, f, e)
         case DifferentialProgramConst(_) => matchZero(p, f, e)
-        case DotTerm => matchZero(p, f, e)
-        case Nothing => matchZero(p, f, e)
-        case Anything => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case AssignAny(a) => matchOne(p, AssignAny.apply, f, a)
         case DiffAssign(a, b) => matchTwo(p, DiffAssign.apply, f, a, b)
