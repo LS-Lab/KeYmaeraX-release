@@ -100,6 +100,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     case x:Variable => Variable(x.name, x.index, x.sort)
     case xp:DifferentialSymbol => DifferentialSymbol(reapplied(xp.x).asInstanceOf[Variable])
     case FuncOf(f,t)     => FuncOf(f, reapplied(t))
+    case DotTerm => DotTerm
     case Nothing => Nothing
     // homomorphic cases
     case f:UnaryCompositeTerm  => f.reapply(reapplied(f.child))
@@ -111,6 +112,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     // base cases
     case True => True
     case False => False
+    case DotFormula => DotFormula
     case PredOf(p,t)          => PredOf(p, reapplied(t))
     case PredicationalOf(c,t) => PredicationalOf(c, reapplied(t))
     // pseudo-homomorphic cases
