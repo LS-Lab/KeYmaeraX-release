@@ -313,6 +313,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    *          _2: the portion of the string following the next token,
    *          _3: The location of the beginning of the next string.
    */
+  @tailrec
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
     val whitespace = """^(\s+)[\s\S]*""".r
     val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
