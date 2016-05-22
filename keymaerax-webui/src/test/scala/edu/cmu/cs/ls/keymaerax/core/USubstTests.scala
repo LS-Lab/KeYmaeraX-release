@@ -423,6 +423,36 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
+  /** Program produced in
+    * 12th run of 50 random trials,
+    * generated with 20 random complexity
+    * from seed -3583806640264782477L
+    */
+  ignore should "instantiate crazy program in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
+      val prem1 = "(-z1)^2>=z4".asFormula
+      val prem2 = "z4<=z1^2".asFormula
+      val prog = "{{z6'=0^2,z3'=0+(0+-50)&<?\\forall z6 [{{z4:=*;{{z7'=0,z6'=0&[{z2:=z2;{z2:=*;++?true;}}{{?true;z6:=*;++?true;}++{?true;?true;++{?true;}*}++{?true;}*++{?true;}*}]\\forall z3 (\\forall z4 true)'}z2:=z5';}*}{z5:=0;{{{z1:=z1;++?true;++{?true;?true;}*}{{z7'=0,z2'=0&\\forall z5 true}}*?true;++{{{?true;++?true;}*{{?true;}*++?true;}}{{?true;++z5:=0;}++{{?true;}*}*}}*}++?true;}?true;}*++{z6:=-30+0;++{{z5:=(0+z3)'-0;++z5:=(0+0-0/0)^0+z2+((gg()^4)'+ff(0));}++{{{{?true;?true;}*{z2'=28&true&true}++?true;}++z3:=z2;}++?true;}*}?\\forall z6 \\forall z4 true;}{{{{?true;}*}*++{z7'=0&z2*-97*(0)'>=(z4/(0-(0+0)))'}}*}*{?false;++{{{?true;}*++z7:=z7;}++z6:=*;}{?[{z1'=0&\\exists z1 <?true;>true}]\\exists z2 -97 < 0*0&<{{?true;}*}*++?true;++?true;++?true;>[{?true;++?true;}*]\\forall z2 <?true;>true;}*}}?<{{{{{{z3'=-12&\\exists z2 true}{?true;++?true;}*}*}*++z1:=-35;}?true;}*++?true;}++z6:=*;++?false;{{z2:=z2;++{{?true;?true;++{?true;}*}++?true;?true;++z3:=0;}*}{{{z5:=z5;}*++{?true;++?true;}{?true;}*}{{?true;}*{?true;++?true;}++?true;}}{z3:=*;++{z4:=0;}*{?true;?true;}{?true;++?true;}}++{{{{?true;}*}*++{?true;?true;++?true;}*}++{{?true;?true;}{?true;}*}*{{{?true;}*++{z6'=0&true}}++{?true;}*}}*}>\\forall z1 <{{{{{?true;}*++?true;++?true;}*}*{{?true;++?true;}*}*{{?true;}*}*z1:=*;}*++{{{{?true;?true;}*}*++z4:=*;}++{z6'=39&\\forall z3 <?true;>true|\\forall z4 [?true;]true}}?[{{?true;?true;}*}*][{?true;++?true;}*]\\exists z2 0>=0;}?(false&ff(z4) < (39-0*0)/-54)';>true;]0<=ff(z6);{{{{?[{?true;}*]\\exists z6 0=(55-z5)';++{z5:=z1';++{?true;}*?true;++?true;}{{{{{{?true;++?true;}++?true;}*++{z7'=0&[{?true;}*]\\forall z7 true}}++{?true;?true<->true;}*}{{{?true;?true;++{?true;}*}++{z7'=0,z5'=0,z2'=0&0=0}}?true;{z7'=0,z3'=0&true}{?true;++?true;}}*}*{z6:=z6;++{{z5:=*;++?[?true;]true;}{{?true;?true;}z1:=z1;}{?true;++?true;?true;}}?true;++{z2'=ff((0-0)^1)+25&z6'>z5'}}}z3:=z5';}++{{{{{{z4:=(93)';{?true;++?\\exists z6 true;}*}{{?true;++?true;?true;}++?true;}*{{{z3'=0&true}{z2'=0&true}}*}*}?true;}{{?true;++{?true;++z4:=*;{?true;++?true;?true;}}++z4:=z1/0;}++{{{?true;?true;}*z1:=*;{z7'=0&true}++z6:=0/0+0/0;}?true;}{{z4:=*;++z7:=*;}{z4:=z4;{?true;}*++{?true;?true;}*}}*}}{z7'=0&10-87<=0-z4-z1'}{?true;}*}{z3:=*;++{{{{?true;}*}*}*{{{?true;}*++{?true;}*}{?true;++{?true;}*}++{z2:=0;{?true;}*}*}}{{{{?true;++?true;}++z5:=0;}++?true;?true;++?true;}*++{{{?true;}*?true;?true;}{?true;++?true;}}z4:=0+0-0;}++{z3'=24&true}}{{z6'=0&(78^0)'>z7'}++{{{{?true;++?true;}{?true;}*++?true;}*}*{z6:=ff((0)')*(0*0)^0;++?true;++{?true;++?true;}*{?true;}*?true;?true;}}{{?true;}*++{{{z5:=0;}*{z4:=0;}*}?true;?0!=0;}{{{?true;?true;}?true;++{?true;++?true;}++{?true;}*}++{z3'=0,z1'=0&<?true;++?true;>(true|true)}}}}}*}{z1:=*;++?(gg()*(z4*(z3+z4)))^1/((ff(0-0+(0)'+(0+0)*(0*0))+0)/-17)^4!=(90)'-0;++{{z6'=0,z3'=0&[?true;++{{?true;?true;++?true;?true;}*}*++{?true;++{?true;++?true;}*}{{z2'=0-0&<?true;>true}}*][?true;]<{{?true;?true;}{?true;++?true;}}*++?[{?true;}*]qq();>(0/-13)^3 < z7}}*{{{{z7:=z7;}*++{{{?false;{?true;}*}z5:=0+0;}z1:=z2';}{?true;++{?true;++?true;}*++{?true;?true;}{?true;++?true;}}}{{{{z6'=0,z3'=8&true&true->true->true}}*}*++{{{{?true;}*}*{?true;?true;++{?true;}*}}?true;}*}}*++{{z5'=0,z3'=78&z2'>=0}}*{z7'=0&<?true;{z7'=0&[{?true;}*++{z4'=0,z3'=0&true}]true}>(((0*0=0-0<-><{?true;}*>\\forall z3 true)<->(gg()>=-86)')&(true|!<z4:=0;>0<=0))}}}++z4:=z2;}++z4:=*;++{?true;}*}*>(<{{{?true;?true;{{{{?true;}*}*{?true;}*}*{z4:=0*(0*0)'*(24^1)'+(0-(gg())'-z3');}*++?true;z4:=(93)';++z1:=z1';++{{z6'=0,z4'=0&[{?true;}*]true}{?true;?true;}*{{?true;}*}*}*{z5:=z5;++{?true;?true;++?true;}*++{{?true;}*}*{?true;?true;++{?true;}*}}}}{?true;++{{{{z6'=0-z5&ff(0)*(-10-z6)>=z5-35*z3}}*++?true;}++{{?[?true;]true|0>0;?true;z4:=z4;++{{z7:=z7;{?true;}*}*}*}{?true;{z1'=0&<?true;?true;>0!=0}}{?(true)';++?[?true;]true;}*}{{?true;?<?true;>true|0>0;++{z6:=*;{z4:=0;}*}?<?true;++?true;>0 < 0;}++z4:=0/(0+0)*-56^3;++{{?true;}*}*}}{z7:=ff((42)'+(0+0-0*0)');}*{?true;++z5:=z5;}++{z6:=ff((-74-0-(0*0+0))');{{{z4:=0;?true;}{{?true;}*}*}*++z6:=z6;}z2:=*;++{{{z2:=(z1)';}*}*}*}*}}*{z1:=z7;++{{?true;}*++{{{z7'=0,z1'=0&0-z5'-z2'>(z7)'}++?true;}++z4:=z4;{z7'=0,z2'=0&\\exists z5 z6'--11!=(0^2+(0-0))'/z1}}*}*}}*><{?true;{z3'=0,z2'=0&([{z6'=0,z2'=0&<{z2:=z2;++?true;++{?true;}*}*++{?true;?true;++?true;?true;}*{{?true;++?true;++?true;}++?true;}>(54-(z5+z5))^2=0}]\\exists z7 [?true;][{z1:=z1;}*++{?true;?true;}*++?true;?true;?true;]0+(z7-0*0)>z3*0*(0+0+gg()))'}{z5'=0&<{?ff((0-0)/(0+0))*((95)'+z1*0) < z6';++{{z6'=0,z1'=0&0^1+0>z7'}++z7:=z7;}?true;}*><?true;>(25/ff(0^3))'/((0-0)^4*(0*0+z3')*(9/(0*0)*73))+gg()>ff(0/z7)*(z6/(((0)'+(0+0))/z7+(0-0-0*0)'))}++{z1:=*;++?true;}{z4'=0&pp(((z3-50^1)^3)')}}*>0=z5-((58-50)'+z6)+0<-><{{?true;{{?true;}*++{{{{{{{?true;?true;++?true;?true;}++{?true;++?true;}++?true;++?true;}++{z4:=0;++?true;}{?true;?true;++?true;}}++?true;++{?true;++?true;++?true;}++{?true;}*++{?true;}*}*++?true;{{{?true;++?true;}*}*++z7:=*;}?true;}++?[{?true;{{?true;++?true;}++?true;?true;}}{?true;?true;}*?true;]<{z6:=0;++?true;?true;}{?true;}*{?true;++?true;}>0<=0;{{{{{?true;}*}*}*++{{?true;++?true;}++{?true;}*}*}*++z7:=z4*z5';++{?true;++?true;}*?<?true;>true;{?true;?true;++{?true;}*}}}++z3:=*;}++{z2:=z2';{{z7'=0&<{?true;?true;++z5:=z5;}++{?true;++?true;}++?true;++?true;>\\exists z3 <?true;?true;>0>0}}*++{{{{{?true;++?true;}{?true;++?true;}}*}*{?<{?true;}*>\\exists z5 true;++{z2'=87&true|true}++?true;}}*}*}++{z2'=0&<?true;>(93)'>-51}{{{z1'=0&<?true;>true}}*{{z1'=0&<z7:=0*0;>(\\forall z7 true&!true)}}*}{z4:=*;{{?true;++?true;}?true;?true;}z3:=*;++?true;}?true;z6:=z3*(0-0);{{{z5'=0&true}}*}*}}{{{z7'=0&true}}*++{z5:=z5;++{{z7'=0&ff(0*0)-(-15-z4)+gg()>0-58}++?true;}++z4:=z4;}{{{{{?true;}*{?true;?true;}?true;?true;}*++{?true;}*}z5:=2;{z6:=0;++z3:=9;}++z3:=*;}{{{z4'=(0+0)^0,z2'=0&true}z5:=*;}*++?true;{z1:=z1;++{z7:=0;++z1:=z1;}*{?true;++{?true;++?true;}++?true;?true;}}}}{{{z5:=*;++?true;++{?true;?true;++?true;?true;}++{?true;++?true;}?true;?true;}*}*++{{?true;++{{z5'=0/0&[?true;]true}?0=0;}?true;}{z6:=*;++{{?true;++?true;}z5:=0;++{?true;}*++?true;?true;}{?false;}*}}*}}*}*?true;>\\forall z6 (gg())'!=z4')}}*".asProgram
+      val concLhs = Box(prog, prem1)
+      val concRhs = Box(prog, prem2)
+      val prgString = withSafeClue("Error printing crazy program") {
+        KeYmaeraXPrettyPrinter.stringify(prog)
+      }
+
+      withSafeClue("Random precontext " + prgString + "\n\n") {
+        println("Random precontext " + prog.prettyString)
+
+        val q_ = Function("q_", None, Real, Bool)
+        val s = USubst(Seq(
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
+        ))
+        val pr = DerivedRuleInfo("[] monotone").provable(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      }
+  }
+
   it should "instantiate random programs in [] congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
@@ -504,6 +534,39 @@ class USubstTests extends FlatSpec with Matchers {
         pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
       }
     }
+  }
+
+  /**
+    * Program produced in
+	 38th run of 50 random trials,
+	 generated with 20 random complexity
+	 from seed -3583806640264782477L
+    */
+  ignore should "instantiate crazy program in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+      val prem1 = "(-z1)^2>=z4".asFormula
+      val prem2 = "z4<=z1^2".asFormula
+      val prem = Equiv(prem1, prem2)
+      val prog = "{{{{?true;++{?\\forall z6 ([{z5'=21&[{?true;{?true;++?true;{?true;}*}}*]-40 < 0}]<{{{{z7'=0&true}{?true;++{z5'=0,z3'=0&\\forall z5 true}{?true;?true;}?true;?true;}}{{{z3'=0*0&true}++{?false;}*}++z1:=*;}{{{?true;++?true;}*}*++z1:=*;}}?true;?true;}*{{{z5:=z5;++?true;}++z7:=*;z6:=z6;}{{z6'=6&z5 < 0}}*++?true;}*>PP{qq()})';}*}z3:=z3;}{{?true;z3:=ff((gg()-ff(((0/(z2*z4)-(1-48))/(-28-66))')+(z5+z2')/(0*(gg()+(z4'-gg())-z7)/z1*z2'))/((z5'-z4)*gg())^5);++z2:=z2;?true;}z4:=*;++{{?true;}*++?true;}z5:=*;}}{{?true;{{{{z7'=0&true}}*++{{z1:=z3';++{{{z3:=z6;z2:=z2;}*?qq();}{z6:=*;}*}*}++{?true;z1:=*;}*++z4:=z4;?<{?<?true;>[?true;]true;{z4:=0;{?true;}*}{?true;?true;}{?true;}*}{{z1:=0;}*}*?true;++{{?true;++{{?true;}*}*}++?<z5:=0;><?true;>true;}{{{?true;++?true;}{z5'=0&true}}?true;}*>[{{z3'=0+0+(0+0)&[?true;?true;]\\forall z2 true}++?true;++?true;?true;?true;}{{?true;}*{?true;?true;}?true;}z2:=*;]<?true;><z7:=*;++z5:=z5;++?true;++?true;>z4'+gg()!=z1+(0-0);}{z4:=-50/z1^1;}*?true;}*}*}*++?true;}}z2:=(ff(-13-z5))';".asProgram
+      val conc = Equiv(Diamond(prog, prem1), Diamond(prog, prem2))
+
+      val prgString = withSafeClue("Error printing crazy program\n\n") {
+        KeYmaeraXPrettyPrinter.stringify(prog)
+      }
+
+      withSafeClue("Random precontext " + prgString + "\n\n") {
+        println("Random precontext " + prog.prettyString)
+
+        val q_ = Function("q_", None, Real, Bool)
+        val ctx_ = Function("ctx_", None, Bool, Bool)
+
+        val s = USubst(SubstitutionPair(ap_, prog) ::
+          SubstitutionPair(PredOf(pn_, Anything), prem1) ::
+          SubstitutionPair(PredOf(q_, Anything), prem2) ::
+          SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
+        val pr = Provable.rules("CE congruence")(s)
+        pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+        pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      }
   }
 
   it should "instantiate random programs in <> monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
