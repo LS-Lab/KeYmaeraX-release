@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, Si
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -100,8 +101,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       )
   }
 
-  //@todo re enable
-  ignore should "pushDown signs from seed after aggregation" in {
+  it should "pushDown signs from seed after aggregation" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
     val s = Sequent(Nil,
       IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
       IndexedSeq("x<=m".asFormula))
@@ -125,8 +125,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     )
   }
 
-  //@todo
-  ignore should "pingpong until fixpoint" in {
+  it should "pingpong until fixpoint" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
     val s = Sequent(Nil,
       IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
       IndexedSeq("x<=m".asFormula))

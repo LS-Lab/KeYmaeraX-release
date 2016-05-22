@@ -676,7 +676,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=v_0)}]x>=0".asFormula
   }
 
-  ignore should "cut in single formulas with old multiple variables" in withMathematica { implicit qeTool =>
+  it should "cut in single formulas with old multiple variables" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("dx^2+dy^2=1".asFormula), IndexedSeq("[{dx'=0,dy'=0}]dx^2+dy^2=1".asFormula)),
       diffInvariant("dx=old(dx) & dy=old(dy)".asFormula)(1))
     result.subgoals should have size 1
