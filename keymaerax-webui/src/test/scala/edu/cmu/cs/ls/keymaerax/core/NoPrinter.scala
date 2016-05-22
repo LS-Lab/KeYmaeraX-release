@@ -19,10 +19,12 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
  */
 class NoPrinterScala extends FlatSpec with Matchers {
   val randomTrials = 4000
-  val randomComplexity = 3
+  val randomComplexity = 10
   val rand = new RandomFormula()
 
-  "No Pretty Printer" should "printing should give some output even if boring"  in {test()}
+  "No Pretty Printer" should "use default printer" in {print(PrettyPrinter.printer(Number(9)))}
+
+  it should "printing should give some output even if boring" in {test()}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
