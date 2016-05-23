@@ -25,7 +25,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
+trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type MExpr = com.wolfram.jlink.Expr
 
@@ -488,6 +488,18 @@ class JLinkMathematicaLink extends MathematicaLink {
     case Some(resultF) => resultF
     case None => throw new IllegalArgumentException("Unable to defunctionalize " + f)
   }
+
+  def deriveBy(term: Term, v: Variable): Term = {
+    val mathTerm = toMathematica(term)
+    val mathVar = toMathematica(v)
+    val input = new MExpr(MathematicaSymbols.D, Array[MExpr](mathTerm, mathVar))
+    val (_, result) = run(input, mathematicaExecutor, nonQEConverter)
+    result match {
+      case t: Term => t
+    }
+  }
+
+
 
   /** Returns the version as (Major, Minor, Release) */
   private def getVersion: (String, String, String) = {

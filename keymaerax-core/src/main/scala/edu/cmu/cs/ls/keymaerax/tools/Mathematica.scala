@@ -14,7 +14,7 @@ import scala.collection.immutable.Map
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
   private val jlink = new JLinkMathematicaLink
 
   override def init(config: Map[String,String]) = {
@@ -43,6 +43,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
    */
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
                        iv: Predef.Map[Variable, Variable]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
+
+  override def deriveBy(term: Term, v: Variable): Term = jlink.deriveBy(term, v)
 
   /**
    * Returns a counterexample for the specified formula.

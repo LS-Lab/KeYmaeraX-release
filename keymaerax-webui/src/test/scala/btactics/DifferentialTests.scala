@@ -1,11 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SingleGoalDependentTactic, BelleError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, SingleGoalDependentTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import scala.collection.immutable._
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
+import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable.IndexedSeq
@@ -19,6 +21,10 @@ import scala.collection.immutable.IndexedSeq
 @SummaryTest
 @UsualTest
 class DifferentialTests extends TacticTestBase {
+  val randomTrials = 50
+  val randomComplexity = 6
+  val rand = new RandomFormula()
+
   "DW" should "pull out evolution domain constraint" in {
     val result = proveBy("[{x'=1 & x>2}]x>0".asFormula, DW(1))
     result.subgoals should have size 1
@@ -1052,4 +1058,49 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "x>=0".asFormula
     result.subgoals.head.succ should contain only "[{x'=3&x>=0}]x>=0".asFormula
   }
+
+  "Differential Invariants" should "prove random differential invariant equations" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
+    for (i <- 1 to randomTrials) {
+      val vars = IndexedSeq(Variable("x"),Variable("y"),Variable("z")) //rand.nextNames("z", 4)
+      //@todo avoid divisions by zero
+      val inv = rand.nextT(vars, randomComplexity, false, false, false)
+      val randClue = "Invariant produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+      val invString = withSafeClue("Error printing random invariant\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(inv)
+      }
+
+      withSafeClue("Random invariant " + invString + "\n\n" + randClue) {
+        println("Random invariant " + inv.prettyString)
+        val x = vars(0)
+        val y = vars(1)
+        val diffy = qeTool.deriveBy(Neg(inv), y)
+        val diffx = qeTool.deriveBy(inv, x)
+        val sys = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), diffy),
+          AtomicODE(DifferentialSymbol(y), diffx)), True)
+        val cmp = rand.rand.nextInt(6) match {
+          case 0 => Equal
+          case 1 => GreaterEqual
+          case 2 => Greater
+          case 3 => LessEqual
+          case 4 => Less
+          case 5 => NotEqual
+        }
+        val fml = cmp(inv, Number(rand.rand.nextInt(200)-100))
+        val conjecture = Imply(fml, Box(sys, fml))
+        withSafeClue("Random differential invariant " + conjecture + "\n\n" + randClue) {
+          print(conjecture)
+          val result = proveBy(conjecture,
+            implyR(1) & diffInd(qeTool)(1))
+          result shouldBe 'proved
+        }
+      }
+    }
+  }
+
+  it should "prove boring case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
+    proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+
 }
