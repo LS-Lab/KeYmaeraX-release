@@ -36,9 +36,13 @@ object ArithmeticSpeculativeSimplification {
 
   /** Uses the disjunction introduction proof rule to prove a disjunctions by proving any 1 of the disjuncts. */
   def orIntro(finish: BelleExpr): BelleExpr = "orIntro" by ((sequent: Sequent) => {
+    def toSingleSucc(retain: Int): BelleExpr = {
+      sequent.succ.indices.filter(_ != retain).sorted.reverse.map(i => hideR(i+1)).reduceLeft[BelleExpr](_&_)
+    }
+
     if (sequent.succ.size > 1) {
       //@todo CounterExample might provide insight on which of the formulas are needed
-      sequent.succ.indices.map(i => ProofRuleTactics.coHideR(i+1) & finish).reduceLeft[BelleExpr](_|_) | finish
+      sequent.succ.indices.map(i => toSingleSucc(i+1) & finish).reduceLeft[BelleExpr](_|_) | finish
     } else finish
   })
 
