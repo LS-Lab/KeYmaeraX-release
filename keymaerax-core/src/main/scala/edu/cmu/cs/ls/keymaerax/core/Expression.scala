@@ -105,10 +105,10 @@ sealed trait ApplicationOf extends Expression {
  * @note User-level symbols should not use underscores, which are reserved for the core.
  */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
-  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
+  insist(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names): " + name)
   //@note the above requires conditions imply that !name.endsWith("__")
-  require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
+  insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
 //  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
 //    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
   //@note \\ part of the names for Nothing and Anything objects

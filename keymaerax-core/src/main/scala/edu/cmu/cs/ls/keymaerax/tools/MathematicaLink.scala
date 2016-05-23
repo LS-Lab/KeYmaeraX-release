@@ -25,7 +25,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
+trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type MExpr = com.wolfram.jlink.Expr
 
@@ -181,7 +181,7 @@ class JLinkMathematicaLink extends MathematicaLink {
           throw ex
         case ex: Throwable =>
           executor.remove(taskId, force = true)
-          throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+          throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
       }
       case None =>
         cancel()
@@ -255,7 +255,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       case f : Formula =>
         if (DEBUG) println("Mathematica QE result: " + f.prettyString)
         (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
-      case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+      case _ => throw new ToolException("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
 
@@ -488,6 +488,18 @@ class JLinkMathematicaLink extends MathematicaLink {
     case Some(resultF) => resultF
     case None => throw new IllegalArgumentException("Unable to defunctionalize " + f)
   }
+
+  def deriveBy(term: Term, v: Variable): Term = {
+    val mathTerm = toMathematica(term)
+    val mathVar = toMathematica(v)
+    val input = new MExpr(MathematicaSymbols.D, Array[MExpr](mathTerm, mathVar))
+    val (_, result) = run(input, mathematicaExecutor, nonQEConverter)
+    result match {
+      case t: Term => t
+    }
+  }
+
+
 
   /** Returns the version as (Major, Minor, Release) */
   private def getVersion: (String, String, String) = {

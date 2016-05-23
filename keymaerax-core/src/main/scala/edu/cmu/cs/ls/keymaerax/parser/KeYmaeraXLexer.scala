@@ -4,7 +4,8 @@
 */
 /**
  * Differential Dynamic Logic lexer for concrete KeYmaera X notation.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -26,7 +27,8 @@ case class LemmaFileMode() extends LexerMode
 
 /**
  * Terminal symbols of the differential dynamic logic grammar.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  */
 sealed abstract class Terminal(val img: String) {
   override def toString = getClass.getSimpleName// + "\"" + img + "\""
@@ -249,7 +251,8 @@ object TOOL_VALUE_PAT {
 
 /**
  * Created by aplatzer on 6/8/15.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  * @author nfulton
  */
 object KeYmaeraXLexer extends ((String) => List[Token]) {
@@ -265,7 +268,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
    * This also ensures that reserved symbols are never used as function names.
-   * @param input The string to lex.
+    *
+    * @param input The string to lex.
    * @param mode The lexer mode.
    * @return A stream of symbols corresponding to input.
    */
@@ -281,31 +285,52 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
   /**
    * The lexer.
-   * @todo optimize
+    *
+    * @todo optimize
    * @param input The input to lex.
    * @param inputLocation The position of the input (e.g., wrt a source file).
    * @param mode The mode of the lexer.
    * @return A token stream.
    */
-  //@tailrec
-  private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
-    if(input.trim.length == 0) {
-      List(Token(EOF))
-    }
-    else {
-      findNextToken(input, inputLocation, mode) match {
+//  //@todo //@tailrec
+//  private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
+//    if(input.trim.length == 0) {
+//      List(Token(EOF))
+//    }
+//    else {
+//      findNextToken(input, inputLocation, mode) match {
+//        case Some((nextInput, token, nextLoc)) =>
+//          //if (DEBUG) print(token)
+//          token +: lex(nextInput, nextLoc, mode)
+//        case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
+//      }
+//    }
+
+  private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream = {
+    var remaining: String = input
+    var loc: Location = inputLocation
+    val output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
+    while (!remaining.isEmpty) {
+      findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
           //if (DEBUG) print(token)
-          token +: lex(nextInput, nextLoc, mode)
-        case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
+          output.append(token)
+          remaining = nextInput
+          loc = nextLoc
+        case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
+          output.append(Token(EOF))
+          return output.to
       }
     }
+    output.append(Token(EOF))
+    return output.to
+  }
 
   /**
    * Finds the next token in a string.
-   * @todo Untested correctness condition: If a token's regex pattern contains another's, then the more restrictive token is processed first in the massive if/else.
-   *
-   * @param s The string to process.
+    *
+    * @todo Untested correctness condition: If a token's regex pattern contains another's, then the more restrictive token is processed first in the massive if/else.
+    * @param s The string to process.
    * @param loc The location of s.
    * @param mode The mode of the lexer.
    * @return A triple containing:
@@ -313,6 +338,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    *          _2: the portion of the string following the next token,
    *          _3: The location of the beginning of the next string.
    */
+  @tailrec
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
     val whitespace = """^(\s+)[\s\S]*""".r
     val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
@@ -535,7 +561,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * Returns the region containing everything between the starting position of the current location
    * location and the indicated offset of from the starting positiong of the current location,
    * inclusive.
-   * @param location Current location
+    *
+    * @param location Current location
    * @param endColOffset Column offset of the region
    * @return The region spanning from the start of ``location" to the offset from the start of ``location".
    */

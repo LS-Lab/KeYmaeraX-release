@@ -20,8 +20,8 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
  * @author Andre Platzer
  */
 class RandomReapplyTests extends FlatSpec with Matchers {
-  val randomTrials = 40000
-  val randomComplexity = 6
+  val randomTrials = 4000
+  val randomComplexity = 30
   val rand = new RandomFormula()
 
   "Crafted expression reapply from ScalaDoc" should "work for UnaryCompositeTerm" in {
@@ -94,6 +94,12 @@ class RandomReapplyTests extends FlatSpec with Matchers {
   }
 
   // recursive reapplied call for deep copy
+
+  def reapplied(e: Expression): Expression = e match {
+    case t: Term => reapplied(t)
+    case f: Formula => reapplied(f)
+    case p: Program => reapplied(p)
+  }
 
   def reapplied(term: Term): Term = term match {
     case n:Number => n

@@ -47,6 +47,7 @@ object FormulaTools {
       case Imply(l, _) if pos.head == 0 => -polarityAt(l, pos.child)
       case Imply(_, r) if pos.head == 1 => polarityAt(r, pos.child)
       case Equiv(_, _) => 0
+      case PredicationalOf(_,_) => 0
       case f: UnaryCompositeFormula  => require(pos.head == 0, "Unary operator must have position head 0, but was " + pos); polarityAt(f.child, pos.child)
       case f: BinaryCompositeFormula if pos.head == 0 => polarityAt(f.left, pos.child)
       case f: BinaryCompositeFormula if pos.head == 1 => polarityAt(f.right, pos.child)

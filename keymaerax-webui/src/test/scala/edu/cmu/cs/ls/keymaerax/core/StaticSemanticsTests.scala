@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  */
 class StaticSemanticsTests extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  val randomTrials = 40000
+  val randomTrials = 1000
   val randomComplexity = 6
   val rand = if (false) new RandomFormula(-6907410306474577855L) else new RandomFormula()
 
