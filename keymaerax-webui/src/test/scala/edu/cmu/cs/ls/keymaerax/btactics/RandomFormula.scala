@@ -29,16 +29,25 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   private val shortProbability = 0.10
   private val randomReps = 500
 
-  def nextTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size)
+  def nextExpression(size: Int): Expression = rand.nextInt(4) match {
+    case 0 => nextTerm(size)
+    case 1 => nextFormula(size)
+    case 2 => nextProgram(size)
+    case 3 => nextDifferentialProgram(size)
+  }
 
-  def nextFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size)
+  def nextTerm(size : Int): Term = nextT(nextNames("z", size / 3 + 1), size)
 
-  def nextProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size)
+  def nextFormula(size : Int): Formula = nextF(nextNames("z", size / 3 + 1), size)
+
+  def nextProgram(size : Int): Program = nextP(nextNames("z", size / 3 + 1), size)
+
+  def nextDifferentialProgram(size : Int): DifferentialProgram = nextDP(nextNames("z", size / 3 + 1), size)
 
   // dot generators default to no diffs
   def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, true)
 
-  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, true, true)
+  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, true, true, true)
 
   def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, true, false)
 
@@ -124,7 +133,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   // random generator implementations
 
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = nextT(vars, n, dots, !dots)
+  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = nextT(vars, n, false)
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean) : Term = nextT(vars, n, dots, !dots)
 
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean) : Term = {
     require(n>=0)
@@ -152,7 +162,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
 
-  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean = true, dotTs: Boolean = false, dotFs: Boolean = false) : Formula = nextF(vars, n, modals, dotTs, dotFs, !(dotTs||dotFs))
+  def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = nextF(vars, n, true, false, false)
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean) : Formula = nextF(vars, n, modals, dotTs, dotFs, !(dotTs||dotFs))
   def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True
@@ -189,7 +200,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   /** whether games are currently allowed */
   private val game: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
 
-  def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean = false, dotFs: Boolean = false) : Program = nextP(vars, n, dotTs, dotFs, !(dotTs || dotFs))
+  def nextP(vars : IndexedSeq[Variable], n : Int) : Program = nextP(vars, n, false, false)
+  def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean) : Program = nextP(vars, n, dotTs, dotFs, !(dotTs || dotFs))
   def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Program = {
     require(n>=0)
     if (n == 0 || rand.nextFloat()<=shortProbability) return Test(True)
@@ -202,7 +214,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dotTs, diffs))
       case it if 30 until 35 contains it => if (diffs) DiffAssign(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dotTs, diffs)) else Test(False)
       case it if 35 until 40 contains it => AssignAny(vars(rand.nextInt(vars.length)))
-      case it if 40 until 50 contains it => if (diffs) ODESystem(nextODE(vars, n, 0, vars.length, dotTs), nextF(vars, n-1, true, dotTs, dotFs, diffs)) else Test(False)
+      case it if 40 until 50 contains it => if (diffs) ODESystem(nextDP(vars, n, dotTs), nextF(vars, n-1, true, dotTs, dotFs, diffs)) else Test(False)
       case it if 50 until 100 contains it => Choice(nextP(vars, n-1, dotTs, dotFs, diffs), nextP(vars, n-1, dotTs, dotFs, diffs))
       case it if 100 until 150 contains it => Compose(nextP(vars, n-1, dotTs, dotFs, diffs), nextP(vars, n-1, dotTs, dotFs, diffs))
       case it if (190 until 220 contains it) && game => Dual(nextP(vars, n-1, dotTs, dotFs, diffs))
@@ -211,13 +223,17 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     }
   }
 
+  private def nextDP(vars: IndexedSeq[Variable], n: Int): DifferentialProgram = nextDP(vars, n, false)
+  private def nextDP(vars: IndexedSeq[Variable], n: Int, dotTs: Boolean): DifferentialProgram =
+    nextODE(vars, n, 0, vars.length, dotTs)
+
   /**
    * randomly generate an ODE paying attention to avoid duplicates.
    * This algorithm is merg-sort-esque and only generates ODEs for differential equations of
    * vars[lower..upper)
    * It just watches that both subintervals remain nonempty
    */
-  def nextODE(vars : IndexedSeq[Variable], n : Int, lower: Int, upper: Int, dotTs: Boolean = false) : DifferentialProgram = {
+  private def nextODE(vars : IndexedSeq[Variable], n : Int, lower: Int, upper: Int, dotTs: Boolean) : DifferentialProgram = {
     require(n>=0)
     require(0<=lower && lower<upper && upper<=vars.length)
     if (lower == upper-1) return AtomicODE(DifferentialSymbol(vars(lower)), nextT(vars, 0, dotTs, false))

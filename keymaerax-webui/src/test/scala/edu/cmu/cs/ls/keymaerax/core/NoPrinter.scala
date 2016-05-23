@@ -28,11 +28,7 @@ class NoPrinterScala extends FlatSpec with Matchers {
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
-      val e = i % 3 match {
-        case 0 => rand.nextTerm(randomComplexity)
-        case 1 => rand.nextFormula(randomComplexity)
-        case 2 => rand.nextProgram(randomComplexity)
-      }
+      val e = rand.nextExpression(randomComplexity)
       println("Random: " + e)
       println("Of class: " + e.getClass)
       println("Of kind: " + e.kind)

@@ -1004,24 +1004,24 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  "Random uniform substitutions" should "have no effect on random formulas without dots" taggedAs KeYmaeraXTestTags.USubstTest in {
+  "Random uniform substitutions" should "have no effect on random expressions without dots" taggedAs KeYmaeraXTestTags.USubstTest in {
     val trm1 = "x^2*y^3".asTerm
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
-      val fml = rand.nextFormula(randomComplexity)
-      val randClue = "Formula produced in\n\t " + i + "th run of " + randomTrials +
+      val expr = rand.nextExpression(randomComplexity)
+      val randClue = "Expression produced in\n\t " + i + "th run of " + randomTrials +
         " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-      val prgString = withSafeClue("Error printing random formula\n\n" + randClue) {
-        KeYmaeraXPrettyPrinter.stringify(fml)
+      val exprString = withSafeClue("Error printing random expression\n\n" + randClue) {
+        KeYmaeraXPrettyPrinter.stringify(expr)
       }
 
-      withSafeClue("Random formula " + prgString + "\n\n" + randClue) {
-        println("Random dot-free formula " + fml.prettyString)
+      withSafeClue("Random expression " + exprString + "\n\n" + randClue) {
+        println("Random dot-free " + expr.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm, trm1) ::
             SubstitutionPair(DotFormula, fml1) :: Nil)
-        s(fml) shouldBe fml
+        s(expr) shouldBe expr
         val dotfml = rand.nextDotFormula(randomComplexity)
         s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
         val dottrm = rand.nextDotTerm(randomComplexity)
