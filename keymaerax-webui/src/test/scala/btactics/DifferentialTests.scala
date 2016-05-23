@@ -3,10 +3,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, SingleGoalDependentTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
@@ -21,7 +23,7 @@ import scala.collection.immutable.IndexedSeq
 @SummaryTest
 @UsualTest
 class DifferentialTests extends TacticTestBase {
-  val randomTrials = 50
+  val randomTrials = 500
   val randomComplexity = 6
   val rand = new RandomFormula()
 
@@ -1065,35 +1067,48 @@ class DifferentialTests extends TacticTestBase {
       //@todo avoid divisions by zero
       val inv = rand.nextT(vars, randomComplexity, false, false, false)
       val randClue = "Invariant produced in\n\t " + i + "th run of " + randomTrials +
-        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed + "\n"
 
       val invString = withSafeClue("Error printing random invariant\n\n" + randClue) {
         KeYmaeraXPrettyPrinter.stringify(inv)
       }
 
-      withSafeClue("Random invariant " + invString + "\n\n" + randClue) {
+      withSafeClue("Random invariant " + invString + "\n" + randClue) {
         println("Random invariant " + inv.prettyString)
         val x = vars(0)
         val y = vars(1)
-        val diffy = qeTool.deriveBy(Neg(inv), y)
-        val diffx = qeTool.deriveBy(inv, x)
-        val sys = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), diffy),
-          AtomicODE(DifferentialSymbol(y), diffx)), True)
-        val cmp = rand.rand.nextInt(6) match {
-          case 0 => Equal
-          case 1 => GreaterEqual
-          case 2 => Greater
-          case 3 => LessEqual
-          case 4 => Less
-          case 5 => NotEqual
+        val parts = {
+          try {
+            Some((qeTool.deriveBy(Neg(inv), y),
+              qeTool.deriveBy(inv, x)))
+          }
+          catch {
+            // errors during partial derivative computation to set up the problem are ignored, usually x/0 issues
+            case ex: ToolException => None
+          }
         }
-        val fml = cmp(inv, Number(rand.rand.nextInt(200)-100))
-        val conjecture = Imply(fml, Box(sys, fml))
-        withSafeClue("Random differential invariant " + conjecture + "\n\n" + randClue) {
-          print(conjecture)
-          val result = proveBy(conjecture,
-            implyR(1) & diffInd(qeTool)(1))
-          result shouldBe 'proved
+        parts match {
+          case None => // skip
+          case Some((diffy:Term, diffx:Term)) =>
+            val sys = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), diffy),
+              AtomicODE(DifferentialSymbol(y), diffx)), True)
+            val cmp = rand.rand.nextInt(6) match {
+              case 0 => Equal
+              case 1 => GreaterEqual
+              case 2 => Greater
+              case 3 => LessEqual
+              case 4 => Less
+              case 5 => NotEqual
+            }
+            val opit = if (rand.rand.nextBoolean()) (a:Term,b:Term) => cmp(a,b) else (a:Term,b:Term) => cmp(b,a)
+            val fml = opit(inv, Number(rand.rand.nextInt(200) - 100))
+            val conjecture = Imply(fml, Box(sys, fml))
+            withSafeClue("Random differential invariant " + conjecture + "\n" + randClue) {
+              print(conjecture)
+              val result = proveBy(conjecture,
+                implyR(1) & diffInd(qeTool)(1))
+              result shouldBe 'proved
+            }
         }
       }
     }
@@ -1101,6 +1116,15 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove boring case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
     proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+  it should "prove ^0 case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
+    proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+  it should "prove crazy ^0 case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
+    proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+  it should "prove crazy case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
+    proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
   }
 
 }
