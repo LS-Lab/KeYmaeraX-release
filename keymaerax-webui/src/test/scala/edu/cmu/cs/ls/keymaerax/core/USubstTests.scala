@@ -351,6 +351,26 @@ class USubstTests extends FlatSpec with Matchers {
     a[CoreException] should be thrownBy USubst(list3)
   }
 
+  it should "refuse ++ union that lead to duplicate substitutions" in {
+    val list1 = (USubst(SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), Number(5))::Nil),
+      USubst(SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), Number(22)) :: Nil))
+    a[CoreException] should be thrownBy (list1._1 ++ list1._2)
+    (list1._1 ++ list1._1) shouldBe list1._1
+    (list1._2 ++ list1._2) shouldBe list1._2
+    val list2 = (USubst(SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), Greater(Variable("x"), Number(5))) :: Nil),
+      USubst(SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), Less(Variable("z"), Number(99))) :: Nil))
+    a[CoreException] should be thrownBy (list2._1 ++ list2._2)
+    (list2._1 ++ list2._1) shouldBe list2._1
+    (list2._2 ++ list2._2) shouldBe list2._2
+    val list3 = (USubst(SubstitutionPair(ProgramConst("c"), Assign(Variable("y"), Number(7))) :: Nil),
+      USubst(SubstitutionPair(ProgramConst("c"), AssignAny(Variable("y"))) :: Nil))
+    a[CoreException] should be thrownBy (list3._1 ++ list3._2)
+    (list3._1 ++ list3._1) shouldBe list3._1
+    (list3._2 ++ list3._2) shouldBe list3._2
+  }
+
+
+
   // uniform substitution of rules
 
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
@@ -532,6 +552,9 @@ class USubstTests extends FlatSpec with Matchers {
         val pr = Provable.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+        val pr2 = s(Provable.rules("CE congruence"))
+        pr2.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+        pr2.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
       }
     }
   }
