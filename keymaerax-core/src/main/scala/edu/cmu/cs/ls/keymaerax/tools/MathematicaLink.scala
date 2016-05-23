@@ -181,7 +181,7 @@ class JLinkMathematicaLink extends MathematicaLink {
           throw ex
         case ex: Throwable =>
           executor.remove(taskId, force = true)
-          throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+          throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
       }
       case None =>
         cancel()
@@ -255,7 +255,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       case f : Formula =>
         if (DEBUG) println("Mathematica QE result: " + f.prettyString)
         (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
-      case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+      case _ => throw new ToolException("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
 

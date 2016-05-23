@@ -4,6 +4,10 @@
  */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import edu.cmu.cs.ls.keymaerax.core.ProverException
+
+/** Arithmetic tool exceptions */
+case class ToolException(msg: String, cause: Throwable = null) extends ProverException(msg, cause)
 
 class ConversionException(s:String)
   extends Exception(s)
