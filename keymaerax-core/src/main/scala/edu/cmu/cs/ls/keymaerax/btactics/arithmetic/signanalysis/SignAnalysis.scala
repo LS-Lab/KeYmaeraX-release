@@ -66,14 +66,15 @@ object SignAnalysis {
     val pushedFacts = facts.flatMap(p => {
       val pushed = Sign.pushDown(p._1, p._2.keySet)(facts.map(p => p._1 -> p._2.keySet))
       // compute positions where the sign info was found
-      pushed.map(q => q._1 -> q._2.map(r => r -> (facts.getOrElse(q._1, Map()).getOrElse(r, Set()) ++ p._2.getOrElse(r, unknown.getOrElse(q._1, Map()).getOrElse(r, Set())))).toMap)
+      //pushed.map(q => q._1 -> q._2.map(r => r -> (facts.getOrElse(q._1, Map()).getOrElse(r, Set()) ++ p._2.getOrElse(r, unknown.getOrElse(q._1, Map()).getOrElse(r, Set())))).toMap)
+      pushed.map{ case (t, ss) => t -> ss.map(s => s -> facts.getOrElse(t, Map()).getOrElse(s, unknown.getOrElse(t, Map()).getOrElse(Sign.Unknown, Set())) ).toMap }
     })
     val aggregate = unknown ++ pushedFacts
     if (aggregate != signs) pushDownSigns(aggregate) else aggregate
   }
 
   /** Compute wanted bounds for variables from the succedent of a sequent */
-  def bounds[T <: SeqPos](fmls: IndexedSeq[Formula], posFactory: Int=>T): Map[T, Map[Term, Bound.Bound]] = {
+  def bounds[T <: SeqPos](fmls: IndexedSeq[Formula], signs: Map[Term, Map[Sign.Sign, Set[AntePos]]], posFactory: Int=>T): Map[T, Map[Term, Map[Bound.Bound, Set[AntePos]]]] = {
     val bounds = fmls.zipWithIndex.filter(p => p._1.isInstanceOf[ComparisonFormula]).
         map(p => (normalize(p._1.asInstanceOf[ComparisonFormula]), p._2)).map {
       case (Equal(l, Number(r)), i)              => assert(r==0); posFactory(i) -> Map(l -> Bound.Exact)
@@ -82,7 +83,7 @@ object SignAnalysis {
       case (Greater(Neg(l), Number(r)), i)       => assert(r==0); posFactory(i) -> Map(l -> Bound.Upper)
       case (Greater(l, Number(r)), i)            => assert(r==0); posFactory(i) -> Map(l -> Bound.Lower)
     }.toMap
-    bounds.map(p => (p._1, p._2.flatMap(p => Bound.pushDown(p._1, p._2))))
+    bounds.map(p => (p._1, p._2.flatMap(p => Bound.pushDown(p._1, Map(p._2 -> Set()))(signs))))
   }
 
   /** Computes a list of candidates for hiding, based on inconsistent signs (bounds w.r.t. 0) */
@@ -92,9 +93,11 @@ object SignAnalysis {
 
   /** Computes a list of candidates for hiding, based on bounds. */
   def boundHideCandidates(s: Sequent): List[SeqPos] = {
-    val anteBounds = bounds(s.ante, AntePos)
-    val succBounds = bounds(s.succ, SuccPos)
-    anteBounds.filter{ case (pos, bounds) => !boundsAreConsistent(bounds, succBounds.values.toList) }.keys.toList
+    val signs = computeSigns(s)
+    val anteBounds = bounds(s.ante, Map(), AntePos)
+    val succBounds = bounds(s.succ, signs, SuccPos)
+    val protect = succBounds.values.flatMap(_.values.flatMap(_.values.flatten)).toSet
+    anteBounds.filter{ case (pos, _) => !protect.contains(pos) }.filter{ case (pos, ab) => !boundsAreConsistent(pos, ab, succBounds.values.toList) }.keys.toList
   }
 
   /** Computes a list of candidates for hiding, based on inconsistent signs
@@ -106,12 +109,13 @@ object SignAnalysis {
   }
 
   /** Computes whether the bounds that we have are consistent with what we want. */
-  private def boundsAreConsistent(have: Map[Term, Bound.Bound], want: List[Map[Term, Bound.Bound]]): Boolean = {
-    have.forall{ case (k,v) =>
-      want.exists(w =>
+  private def boundsAreConsistent(pos: AntePos, have: Map[Term, Map[Bound.Bound, Set[AntePos]]], want: List[Map[Term, Map[Bound.Bound, Set[AntePos]]]]): Boolean = {
+    !have.exists{ case (k,v) =>
+      want.forall(w =>
         w.get(k) match {
-          case Some(b) => b==v
-          case None => true } ) }
+          case Some(wb) => v.keySet.exists(hb =>
+            (hb == Bound.Upper || hb == Bound.Lower) && wb.keySet.contains(Bound.converse(hb)))
+          case None => false } ) }
   }
 
   /** Normalizes <, <=, =, >=, > into >, >=, = with right-hand side 0 */

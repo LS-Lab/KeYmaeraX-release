@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, SignAnalysis}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable._
@@ -105,9 +105,10 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
       IndexedSeq("x<=m".asFormula))
     val seed = SignAnalysis.seedSigns(s)
+    println("Seed\n" + seed.mkString("\n"))
     SignAnalysis.pushDownSigns(SignAnalysis.aggregateSigns(seed)) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
-      "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2), SeqPos(-3))),
+      "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2)/*, SeqPos(-3)*/)),
       "2*B*(m-x)-v^2".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
       "v^2".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
       "2*B*(m-x)".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
@@ -130,7 +131,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       IndexedSeq("x<=m".asFormula))
     SignAnalysis.computeSigns(s) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
-      "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2), SeqPos(-3))),
+      "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
       "2*B*(m-x)-v^2".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
       "v^2".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
       "2*B*(m-x)".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
@@ -194,41 +195,41 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val s = Sequent(Nil,
       IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula),
       IndexedSeq("x+5<=m".asFormula, "v^2<=2*B*(m-x)".asFormula))
-    SignAnalysis.bounds(s.succ, SuccPos) shouldBe Map(
+    val signs = SignAnalysis.computeSigns(s)
+    SignAnalysis.bounds(s.succ, signs, SuccPos) shouldBe Map(
       SeqPos(1) -> Map(
-        "x".asVariable -> Bound.Upper,
-        "m".asVariable -> Bound.Lower),
+        "x".asVariable -> Map(Bound.Upper -> Set()),
+        "m".asVariable -> Map(Bound.Lower -> Set()),
+        "5".asTerm -> Map(Bound.Exact -> Set())),
       SeqPos(2) -> Map(
-        "x".asVariable -> Bound.Upper,
-        "m".asVariable -> Bound.Lower,
-        "B".asVariable -> Bound.Lower,
-        "v".asVariable -> Bound.Unknown)
+        "x".asVariable -> Map(Bound.Upper -> Set(SeqPos(-3))),
+        "m".asVariable -> Map(Bound.Lower -> Set(SeqPos(-3))),
+        "B".asVariable -> Map(Bound.Upper -> Set(SeqPos(-3))),
+        "v".asVariable -> Map(Bound.Unknown -> Set()),
+        "2".asTerm -> Map(Bound.Exact -> Set()))
     )
   }
 
   it should "work on a Robix example" in withMathematica { tool =>
-    val fml = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> v=0|abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
+    val fml = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
     val tactic = alphaRule*@TheType() &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
-      abs(2, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17) partial) &
+      abs(1, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17) partial) &
       OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial)
     val s = proveBy(fml, tactic)
-    val bounds = SignAnalysis.bounds(s.subgoals.head.succ, SuccPos)
-    bounds shouldBe Map(
-      SeqPos(1) -> Map(
-        "v_0".asVariable -> Bound.Exact,
-        "a".asVariable -> Bound.Exact,
-        "t".asVariable -> Bound.Exact
-      ),
-      SeqPos(2) -> Map(
-        "x".asVariable -> Bound.Lower,
-        "xo".asVariable -> Bound.Upper,
-        "a".asVariable -> Bound.Upper,
-        "V()".asTerm -> Bound.Upper,
-        "v_0".asVariable -> Bound.Upper,
-        "B".asVariable -> Bound.Lower,
-        "t".asVariable -> Bound.Upper
-      )
+    val signs = SignAnalysis.computeSigns(s.subgoals.head)
+    val bounds = SignAnalysis.bounds(s.subgoals.head.succ, signs, SuccPos)
+    println(bounds.mkString("\n"))
+    bounds.get(SeqPos(1).asInstanceOf[SuccPos]).get should contain theSameElementsAs Map(
+      "x".asVariable -> Map(Bound.Lower -> Set()),
+      "xo".asVariable -> Map(Bound.Upper -> Set()),
+      "a".asVariable -> Map(Bound.Upper -> Set(SeqPos(-13))),
+      "V()".asTerm -> Map(Bound.Upper -> Set(SeqPos(-3))),
+      "v_0".asVariable -> Map(Bound.Upper -> Set(SeqPos(-15))),
+      "B".asVariable -> Map(Bound.Lower -> Set(SeqPos(-15))),
+      "t".asVariable -> Map(Bound.Upper -> Set(SeqPos(-13))),
+      "1".asTerm -> Map(Bound.Exact -> Set()),
+      "2".asTerm -> Map(Bound.Exact -> Set())
     )
   }
 
@@ -240,6 +241,14 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     proveBy(s, QE) shouldBe 'proved
 
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-5)
+  }
+
+  it should "find formulas with non-matching bounds (2)" in withMathematica { tool =>
+    val s = Sequent(Nil,
+      IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula),
+      IndexedSeq("x-xo >= 2*V*t".asFormula))
+
+    SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
   }
 
   it should "hide formulas with non-matching bounds" in withMathematica { tool =>
@@ -255,6 +264,18 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     boundHidden.subgoals.head.succ should contain only "x<=m".asFormula
 
     proveBy(boundHidden.subgoals.head, QE) shouldBe 'proved
+  }
+
+  it should "work on a Robix example" in withMathematica { tool =>
+    val fml = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
+    val tactic = alphaRule*@TheType() &
+      replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
+      abs(1, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17) partial) &
+      OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial)
+
+    //@todo hideNonmatchingBounds does not yet work on the "middle" abs branches
+    val s = proveBy(fml, tactic <(QE, skip, skip, QE))
+    s.subgoals should have size 2
   }
 
   "Sign hiding" should "find inconsistent sign formulas" in {

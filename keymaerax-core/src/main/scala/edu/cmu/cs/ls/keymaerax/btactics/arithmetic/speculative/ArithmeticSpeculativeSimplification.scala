@@ -29,8 +29,8 @@ object ArithmeticSpeculativeSimplification {
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
   def speculativeQE(implicit tool: QETool with CounterExampleTool): BelleExpr = "QE" by ((sequent: Sequent) => {
-    (print("Trying orIntro and smart hiding...") & orIntro(smartHide & QE() & print("... orIntro and smart hiding successful"))) |
-    (print("orIntro failed, trying smart hiding...") & smartHide & QE() & print("...smart hiding successful")) |
+    (print("Trying orIntro and smart hiding...") & (orIntro((ArithmeticSpeculativeSimplification.hideNonmatchingBounds & smartHide & QE()) | (smartHide & QE())) & print("... orIntro and smart hiding successful"))) |
+    (print("orIntro failed, trying smart hiding...") & ((ArithmeticSpeculativeSimplification.hideNonmatchingBounds & smartHide & QE()) | (smartHide & QE())) & print("...smart hiding successful")) |
     (print("All simplifications failed, falling back to ordinary QE") & QE())
   })
 
@@ -81,11 +81,11 @@ object ArithmeticSpeculativeSimplification {
 
   /** Hides formulas with non-matching bounds. */
   def hideNonmatchingBounds: BelleExpr = "hideNonmatchingBounds" by ((sequent: Sequent) => {
-    SignAnalysis.boundHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduce[BelleExpr](_&_)
+    SignAnalysis.boundHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
   })
 
   def hideInconsistentSigns: BelleExpr = "hideInconsistentBounds" by ((sequent: Sequent) => {
-    SignAnalysis.signHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduce[BelleExpr](_&_)
+    SignAnalysis.signHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
   })
 
 }
