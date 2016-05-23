@@ -1100,7 +1100,11 @@ class DifferentialTests extends TacticTestBase {
               case 4 => Less
               case 5 => NotEqual
             }
-            val opit = if (rand.rand.nextBoolean()) (a:Term,b:Term) => cmp(a,b) else (a:Term,b:Term) => cmp(b,a)
+            val swapit = if (rand.rand.nextBoolean()) (a:Term,b:Term) => cmp(a,b) else (a:Term,b:Term) => cmp(b,a)
+            val opit = if (rand.rand.nextBoolean()) (a:Term,b:Term) => cmp(a,b) else {
+              val delta = rand.nextT(vars, randomComplexity, false, false, false)
+              (a:Term,b:Term) => cmp(Plus(a,delta), Plus(b,delta))
+            }
             val fml = opit(inv, Number(rand.rand.nextInt(200) - 100))
             val conjecture = Imply(fml, Box(sys, fml))
             withSafeClue("Random differential invariant " + conjecture + "\n" + randClue) {
