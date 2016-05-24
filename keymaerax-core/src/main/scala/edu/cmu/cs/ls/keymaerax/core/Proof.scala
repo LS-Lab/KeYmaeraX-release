@@ -1125,7 +1125,7 @@ object UniformRenaming {
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
-  private val renaming: URename = URename(what, repl)
+  private[this] val renaming: URename = URename(what, repl)
 
   override def toString: String = renaming.toString
 
@@ -1148,7 +1148,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   val name: String = "Bound Renaming"
 
   //@note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
-  private val renaming = SyntacticURename(what, repl)
+  private[this] val renaming = SyntacticURename(what, repl)
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
@@ -1237,7 +1237,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
 /** Real arithmetic */
 object RCF {
   /** List of the class names of all external tools whose answers KeYmaera X would believe */
-  private val trustedTools: immutable.List[String] =
+  private[this] val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaerax.tools.Mathematica" ::
       (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Z3" :: "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
 

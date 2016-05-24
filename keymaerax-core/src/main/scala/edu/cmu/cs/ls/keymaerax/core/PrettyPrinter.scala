@@ -28,7 +28,7 @@ object PrettyPrinter extends (Expression => String) {
   type PrettyPrinter = (Expression => String)
 
   /* @note mutable state for switching out default pretty printers, which defaults to just printing class names as does super.toString */
-  private var pp: PrettyPrinter = (e => e.getClass.getName)
+  private[this] var pp: PrettyPrinter = (e => e.getClass.getName)
 
   def printer: PrettyPrinter = pp
 
