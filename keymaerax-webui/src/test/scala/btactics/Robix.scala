@@ -47,14 +47,14 @@ class Robix extends TacticTestBase {
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     def accArithTactic(xy: String): BelleExpr = alphaRule*@TheType() &
+      //@todo auto-transform
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(${xy}_0-${xy}o_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
-      hideR(1, "v=0".asFormula) & hideL(-15, "t<=ep".asFormula) & hideL(-4, "ep>0".asFormula) &
-      exhaustiveAbsSplit <(
-        hideL(-11, s"$xy-${xy}_0<=t*(v_0+a*t-a/2*t)".asFormula) & hideL(-8, s"-t*V()<=${xy}o-${xy}o_0".asFormula) & QE,
-        hideR(2) & hideR(1) & QE,
-        hideR(2) & hideR(1) & QE,
-        hideL(-10, s"-t*(v_0+a*t-a/2*t)<=$xy-${xy}_0".asFormula) & hideL(-9, s"${xy}o-${xy}o_0<=t*V()".asFormula) & QE
-      ) & print("Proved acc arithmetic: " + xy)
+      exhaustiveAbsSplit /*& OnAll(QE)*/ <(
+        QE,
+        hideR('R)*@TheType() & QE(),
+        hideR('R)*@TheType() & QE(),
+        QE
+        ) & print("Proved acc arithmetic: " + xy)
 
     val accArithX = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> v=0|abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
     val accArithXLemma = proveBy(accArithX, accArithTactic("x"))
@@ -79,6 +79,9 @@ class Robix extends TacticTestBase {
       ) & print("Proof done")
     proveBy(s, tactic) shouldBe 'proved
   }
+
+  // todo: robix proof with let inv=bla in ...
+  // todo: also try to get distance letified...
 
   it should "prove just the acceleration x arithmetic" in withMathematica { implicit qeTool =>
     val accArith = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> v=0|abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
