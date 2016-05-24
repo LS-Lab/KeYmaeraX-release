@@ -48,15 +48,14 @@ class Robix extends TacticTestBase {
 
     def accArithTactic: BelleExpr = alphaRule*@TheType() &
       //@todo auto-transform
-      replaceTransform("ep".asTerm, "t".asTerm)(-8) &
-      exhaustiveAbsSplit & OnAll((hideR('R)*@TheType() & QE()) | QE) & print("Proved acc arithmetic")
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
 
     val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
-      /* base case */ print("Base case...") & QE & print("Base case done"),
-      /* use case */ print("Use case...") & QE & print("Use case done"),
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
-        print("Braking branch") & di("-B")(1) & dw & prop & OnAll(QE) & print("Braking branch done"),
-        print("Stopped branch") & di("0")(1) & dw & prop & OnAll(QE) & print("Stopped branch done"),
+        print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+        print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
         print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
           di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "r", "r_0") partial) <(
             hideFactsAbout("y", "yo") & accArithTactic,
