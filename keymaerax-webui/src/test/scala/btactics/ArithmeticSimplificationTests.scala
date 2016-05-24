@@ -23,7 +23,7 @@ import scala.language.postfixOps
   * @author Nathan Fulton
   */
 @SlowTest
-@IgnoreInBuildTest
+//@todo @IgnoreInBuildTest
 class ArithmeticSimplificationTests extends TacticTestBase {
   "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in {withMathematica(implicit qeTool => {
     val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.smartHide
