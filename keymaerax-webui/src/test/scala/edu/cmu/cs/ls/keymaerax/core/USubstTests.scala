@@ -1045,6 +1045,12 @@ class USubstTests extends FlatSpec with Matchers {
           SubstitutionPair(DotTerm, trm1) ::
             SubstitutionPair(DotFormula, fml1) :: Nil)
         s(expr) shouldBe expr
+        expr match {
+          case e: Term => s(e) shouldBe expr
+          case e: Formula => s(e) shouldBe expr
+          case e: DifferentialProgram => s(e) shouldBe expr
+          case e: Program => s(e) shouldBe expr
+        }
         val dotfml = rand.nextDotFormula(randomComplexity)
         s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
         val dottrm = rand.nextDotTerm(randomComplexity)
