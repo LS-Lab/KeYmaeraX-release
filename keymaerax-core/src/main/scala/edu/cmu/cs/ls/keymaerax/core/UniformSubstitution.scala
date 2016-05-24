@@ -212,7 +212,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
-  private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
+  private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
   insist(noException(applicable()), "unique left-hand sides in substitutees " + this)
 
@@ -263,6 +263,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   def apply(e: Expression): Expression = e match {
     case t: Term => apply(t)
     case f: Formula => apply(f)
+    //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
+    case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
   }
 
@@ -441,27 +443,27 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case a: AssignAny      => a
       case Test(f)           => Test(usubst(f))
       case ODESystem(ode, h) =>
-        //@note This case is a mixture of AtomicODE and ProgramConst. Only admissibility wrt BV still bound in the result (after substitution of DifferentialProgramConst) but admissible within the whole system simultaneously.
-        //@note Conceptually easiest (albeit suboptimally efficient): pre-substitute without taboos to determine BV, then check admissibility during the proper substitution w.r.t. those BV as in other cases.
-        requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ode, program)
-        // requires within usubst(ode, odeBV) are checking redundantly
-        //@note usubstODE(ode, StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv) would be sound just more permissive
+        //@note requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ...) would be sound just more permissive
         requireAdmissible(StaticSemantics(ode).bv, h, program)
-        // admissibility within ODE a will be checked recursively by usubstODE
-        ODESystem(usubstODE(ode, StaticSemantics(ode).bv), usubst(h))
+        ODESystem(usubst(ode), usubst(h))
       case Choice(a, b)      => Choice(usubst(a), usubst(b))
       case Compose(a, b)     => requireAdmissible(StaticSemantics(usubst(a)).bv, b, program)
         Compose(usubst(a), usubst(b))
       case Loop(a)           => requireAdmissible(StaticSemantics(usubst(a)).bv, a, program)
         Loop(usubst(a))
       case Dual(a)           => Dual(usubst(a))
-      //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
-      case ode: DifferentialProgram =>
-        //@note This case is in analogy to ODESystem
-        requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ode, program)
-        usubstODE(ode, StaticSemantics(ode).bv)
     }
   } ensuring(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
+
+  /** uniform substitution on differential programs */
+  private[core] def usubst(ode: DifferentialProgram): DifferentialProgram = {
+    //@note This case is a mixture of AtomicODE and ProgramConst. Only admissibility wrt BV still bound in the result (after substitution of DifferentialProgramConst) but admissible within the whole system simultaneously.
+    //@note Conceptually easiest (albeit suboptimally efficient): pre-substitute without taboos to determine BV, then check admissibility during the proper substitution w.r.t. those BV as in other cases.
+    requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ode, ode)
+    //@note the requires checking within usubstODE(ode, odeBV) will be redundant but locally the right thing to do.
+    //@note usubstODE(ode, StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv) would be sound just more permissive
+    usubstODE(ode, StaticSemantics(ode).bv)
+  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   /**
    * uniform substitutions on differential programs
