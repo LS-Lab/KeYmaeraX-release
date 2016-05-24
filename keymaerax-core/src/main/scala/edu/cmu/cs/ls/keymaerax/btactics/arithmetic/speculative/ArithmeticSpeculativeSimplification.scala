@@ -50,7 +50,7 @@ object ArithmeticSpeculativeSimplification {
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   def proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((hideR('R)*@TheType() & assertNoCex & QE()) | QE)
+    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((hideR('R)*@TheType() & assertNoCex & QE()) | speculativeQE)
     else error("Sequent does not contain abs")
   })
 
