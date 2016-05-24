@@ -51,6 +51,24 @@ object ArithmeticSimplification {
     }
   }
 
+  /** Simplifies arithmetic by removing formulas that are **probably** unprovable from the current facts.
+    * Does not necessarily retain validity??? */
+  lazy val smartSuccHide = new DependentTactic("smartSuccHide") {
+    override def computeExpr(p: Provable) = {
+      assert(p.subgoals.length == 1, s"${this.name} is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
+
+      //Should already be sorted highest-to-lowest, but check just in case.
+      val toHide = irrelevantSuccPositions(p.subgoals(0)).sortBy(x => x.index0).reverse
+
+      //Build up a tactic that hides all non-relevant antecedent positions.
+      PartialTactic(
+        isArithmetic &
+          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
+      )
+    }
+  }
+
   /** Simplifies arithmetic by removing all formulas (both antecedent and succedent) that mention any of the
     * irrelevant names.
     * @author Stefan Mistch
@@ -138,6 +156,12 @@ object ArithmeticSimplification {
 
   /** Returns only irrelevant antecedent positions. */
   private def irrelevantAntePositions(s : Sequent): Seq[AntePosition] = irrelevantIndices(s.ante, s.succ).map(i => AntePosition(i+1))
+
+  private def irrelevantSuccPositions(s: Sequent): Seq[SuccPosition] = {
+    val anteSymbols = s.ante.flatMap(StaticSemantics.symbols).toSet
+    s.succ.zipWithIndex.filter{ case (fml, _) => (StaticSemantics.symbols(fml) -- anteSymbols).nonEmpty }.
+      map{ case (_, i) => SuccPosition(i+1) }
+  }
 
   /**
     * Returns all formulas that transitively mention relevantSymbols.

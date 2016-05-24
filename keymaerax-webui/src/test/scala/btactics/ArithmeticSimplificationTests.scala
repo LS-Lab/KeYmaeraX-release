@@ -45,6 +45,18 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
   })}
 
+  "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {
+    val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
+    val result = proveBy("x=1 -> x=1 | y=1".asFormula, tactic)
+    result.subgoals(0).succ shouldBe result.subgoals(0).ante
+  }
+
+  it should "simplify x=1 ==> x-1,y=x to x=1 ==> x=1" in {
+    val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
+    val result = proveBy("x=1 -> x=1 | y=x".asFormula, tactic)
+    result.subgoals(0).succ shouldBe result.subgoals(0).ante
+  }
+
   "replaceTransform" should "work in the antecedent" in withMathematica { tool =>
     proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> x>=x_0+v*t".asFormula,
       prop & transformEquality("ep=t".asFormula)(-3) & closeId) shouldBe 'proved
