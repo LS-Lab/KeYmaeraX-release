@@ -29,6 +29,7 @@ object ArithmeticSpeculativeSimplification {
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
   def speculativeQE(implicit tool: QETool with CounterExampleTool): BelleExpr = "QE" by ((sequent: Sequent) => {
+    (print("Trying abs...") & proveOrRefuteAbs & print("...abs done")) |
     (print("Trying orIntro and smart hiding...") & (orIntro((ArithmeticSpeculativeSimplification.hideNonmatchingBounds & smartHide & QE()) | (smartHide & QE())) & print("... orIntro and smart hiding successful"))) |
     (print("orIntro failed, trying smart hiding...") & ((ArithmeticSpeculativeSimplification.hideNonmatchingBounds & smartHide & QE()) | (smartHide & QE())) & print("...smart hiding successful")) |
     (print("All simplifications failed, falling back to ordinary QE") & QE())
@@ -42,8 +43,15 @@ object ArithmeticSpeculativeSimplification {
 
     if (sequent.succ.size > 1) {
       //@todo CounterExample might provide insight on which of the formulas are needed
-      sequent.succ.indices.map(i => toSingleSucc(i+1) & finish).reduceLeft[BelleExpr](_|_) | finish
+      sequent.succ.indices.map(i => toSingleSucc(i) & finish).reduceLeft[BelleExpr](_|_) | finish
     } else finish
+  })
+
+  /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
+  def proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
+    val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
+    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((hideR('R)*@TheType() & assertNoCex & QE()) | QE)
+    else error("Sequent does not contain abs")
   })
 
   /** Splits absolute value functions to create more, but hopefully simpler, goals. */
