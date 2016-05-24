@@ -46,34 +46,21 @@ class Robix extends TacticTestBase {
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
-    def accArithTactic(xy: String): BelleExpr = alphaRule*@TheType() &
+    def accArithTactic: BelleExpr = alphaRule*@TheType() &
       //@todo auto-transform
-      replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(${xy}_0-${xy}o_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
-      exhaustiveAbsSplit /*& OnAll(QE)*/ <(
-        QE,
-        hideR('R)*@TheType() & QE(),
-        hideR('R)*@TheType() & QE(),
-        QE
-        ) & print("Proved acc arithmetic: " + xy)
-
-    val accArithX = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> v=0|abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
-    val accArithXLemma = proveBy(accArithX, accArithTactic("x"))
-    accArithXLemma shouldBe 'proved
-
-    val accArithY = "A>=0&B>0&V()>=0&ep>0&v_0>=0&-B<=a&a<=A&abs(y_0-yo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))&-t*V()<=yo-yo_0&yo-yo_0<=t*V()&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep&v>=0->v=0|abs(y-yo)>v^2/(2*B)+V()*(v/B)".asFormula
-    val accArithYLemma = proveBy(accArithY, accArithTactic("y"))
-    accArithYLemma shouldBe 'proved
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) &
+      exhaustiveAbsSplit & OnAll((hideR('R)*@TheType() & QE()) | QE) & print("Proved acc arithmetic")
 
     val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
       /* base case */ print("Base case...") & QE & print("Base case done"),
       /* use case */ print("Use case...") & QE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
-        print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
-        print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+        print("Braking branch") & di("-B")(1) & dw & prop & OnAll(QE) & print("Braking branch done"),
+        print("Stopped branch") & di("0")(1) & dw & prop & OnAll(QE) & print("Stopped branch done"),
         print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
           di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "r", "r_0") partial) <(
-            hideFactsAbout("y", "yo") & PropositionalTactics.toSingleFormula & print("Acc X") & by(accArithXLemma),
-            hideFactsAbout("x", "xo") & PropositionalTactics.toSingleFormula & print("Acc Y") & by(accArithYLemma)
+            hideFactsAbout("y", "yo") & accArithTactic,
+            hideFactsAbout("x", "xo") & accArithTactic
           ) & print("Acceleration branch done")
         ) & print("Induction step done")
       ) & print("Proof done")
