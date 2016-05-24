@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, Si
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._
@@ -21,6 +22,8 @@ import scala.language.postfixOps
 /**
   * @author Nathan Fulton
   */
+@SlowTest
+@IgnoreInBuildTest
 class ArithmeticSimplificationTests extends TacticTestBase {
   "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in {withMathematica(implicit qeTool => {
     val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.smartHide
