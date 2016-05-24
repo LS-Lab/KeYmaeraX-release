@@ -13,7 +13,7 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import org.scalatest.{FlatSpec, Matchers, TagAnnotation}
 
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
  * Test Provable constructions
@@ -303,4 +303,38 @@ class ProvableTest extends FlatSpec with Matchers {
     a [CoreException] shouldBe thrownBy(proof(new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
   }
 
+  "Individual proof rules" should "refuse Skolemization clashes" in {
+    println("Testing " + Skolemize(SuccPos(0)))
+    val goal = Provable.startProof(Sequent(Nil, IndexedSeq("p(x)".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
+    a [SkolemClashException] shouldBe thrownBy (goal(Skolemize(SuccPos(0)), 0))
+    val goal2 = Provable.startProof(Sequent(Nil, IndexedSeq("x>=0".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
+    a [SkolemClashException] shouldBe thrownBy (goal2(Skolemize(SuccPos(0)), 0))
+    val goal3 = Provable.startProof(Sequent(Nil, IndexedSeq("x>=0".asFormula), IndexedSeq("\\forall x x>=0".asFormula)))
+    a [SkolemClashException] shouldBe thrownBy (goal3(Skolemize(SuccPos(0)), 0))
+    val goal4 = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x x>=0".asFormula, "x<=0".asFormula)))
+    a [SkolemClashException] shouldBe thrownBy (goal4(Skolemize(SuccPos(0)), 0))
+  }
+
+  it should "refuse bound renaming except at bound occurrences" in {
+    val rens = BoundRenaming(Variable("y"),Variable("x"),SuccPos(0))
+    println("Testing " + rens)
+//    val goal = Provable.startProof(Sequent(Nil, IndexedSeq("p(y)".asFormula), IndexedSeq("\\forall y p(y)".asFormula)))
+//    a [CoreException] shouldBe thrownBy (goal(rens, 0))
+    val goal2 = Provable.startProof(Sequent(Nil, IndexedSeq("p(x)".asFormula), IndexedSeq("x>=9".asFormula)))
+    a [RenamingClashException] shouldBe thrownBy (goal2(BoundRenaming(Variable("x"),Variable("y"),SuccPos(0)), 0))
+    val goal3 = Provable.startProof(Sequent(Nil, IndexedSeq("p(x)".asFormula), IndexedSeq("p(x)".asFormula)))
+    a [RenamingClashException] shouldBe thrownBy (goal3(rens, 0))
+    val goal4 = Provable.startProof(Sequent(Nil, IndexedSeq("p(x)".asFormula), IndexedSeq("[y:=9;z:=0;]z>=10".asFormula)))
+    a [RenamingClashException] shouldBe thrownBy (goal4(rens, 0))
+    val goal5 = Provable.startProof(Sequent(Nil, IndexedSeq("p(x)".asFormula), IndexedSeq("[{y'=9}]y>=10".asFormula)))
+    a [RenamingClashException] shouldBe thrownBy (goal5(rens, 0))
+  }
+
+  it should "report bound renaming clashes" in {
+    val rens = BoundRenaming(Variable("y"),Variable("x"),SuccPos(0))
+    val goal = Provable.startProof(Sequent(Nil, IndexedSeq("true".asFormula), IndexedSeq("\\forall y y>=x".asFormula)))
+    a [RenamingClashException] shouldBe thrownBy (goal(rens, 0))
+  }
+
+  //@todo all rules should have different toString
 }
