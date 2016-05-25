@@ -569,7 +569,12 @@ object DerivationInfo {
 
     new TacticInfo("monb", "Box Monotonicity", {case () => DLBySubst.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
+    //@todo unify axiomatic rule and derived rules mond / mondtodo
     new TacticInfo("mond", "Diamond Monotonicity", {case () => DLBySubst.mond}),
+    //@todo AxiomaticRuleInfo not DerivedRuleInfo
+    new DerivedRuleInfo("<> monotone"
+      , RuleDisplayInfo(SimpleDisplayInfo("<> monotone", "<>monotone"), SequentDisplay("<a;>p_(??)"::Nil, "<a;>q_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
+      , "mondtodo", {case () => DLBySubst.mond}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),

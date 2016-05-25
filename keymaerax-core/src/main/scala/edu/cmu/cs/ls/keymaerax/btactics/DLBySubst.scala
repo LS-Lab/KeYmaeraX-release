@@ -29,19 +29,21 @@ object DLBySubst {
     *   [a]p |- [a]q
     * }}}
     */
-  val monb = new NamedTactic("monb", {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
-    )
-  })
+  val monb = use("[] monotone")
+//  new NamedTactic("monb", {
+//    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
+//    USubstPatternTactic(
+//      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
+//    )
+//  })
 
-  private[btactics] val monb2 = new NamedTactic("monb2", {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]q_(??)".asFormula), IndexedSeq("[a_;]p_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
-    )
-  })
+  private[btactics] val monb2 = use("[] monotone 2")
+//  new NamedTactic("monb2", {
+//    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]q_(??)".asFormula), IndexedSeq("[a_;]p_(??)".asFormula)))
+//    USubstPatternTactic(
+//      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
+//    )
+//  })
 
   /**
    * Diamond monotonicity.
@@ -51,12 +53,13 @@ object DLBySubst {
    *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    */
-  def mond = new NamedTactic("mond", {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
-    )
-  })
+  def mond = use("<> monotone")
+//  new NamedTactic("mond", {
+//    val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
+//    USubstPatternTactic(
+//      (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
+//    )
+//  })
 
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }

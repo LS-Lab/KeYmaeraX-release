@@ -312,7 +312,8 @@ object DerivedAxioms {
     * Premise p(??)
     * Conclusion \forall x p(??)
     * End.
-    * @Derived from G or from [] monotone with program x:=*
+    * @derived from G or from [] monotone with program x:=*
+    * @derived from Skolemize
     * @Note generalization of p(x) to p(??) as in Theorem 14
     */
   lazy val allGeneralize = derivedRule("all generalization",

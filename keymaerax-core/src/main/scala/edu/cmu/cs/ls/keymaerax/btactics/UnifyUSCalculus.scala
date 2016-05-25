@@ -429,7 +429,7 @@ trait UnifyUSCalculus {
 
 
   /**
-    * use(fact,inst) uses the given fact to prove the sequent.
+    * use(name,inst) uses the given fact to prove the sequent.
     * Unifies the fact's conclusion with the current sequent and proceed to the instantiated premise of `fact`.
     * {{{
     *    s(a) |- s(b)      a |- b
@@ -438,14 +438,15 @@ trait UnifyUSCalculus {
     * }}}
     *
     * @author Andre Platzer
-    * @param fact the (name of the) fact to use to prove the sequent
+    * @param name the name of the fact to use to prove the sequent
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in the conclusion.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     */
-  def use(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(name, {
+  def use(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(DerivedRuleInfo(name).codeName, {
     val fact = Provable.rules.getOrElse(name, DerivedRuleInfo(name).provable)
+    //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
     USubstPatternTactic(
       (SequentType(fact.conclusion),
         (us: Subst) => {
