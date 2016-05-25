@@ -271,6 +271,52 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  "Passive Safety straight and curve using curvature with additional braking branch" should "be provable" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature_lightbrake.key"))
+
+    val invariant =
+      """v >= 0
+        | & dx^2+dy^2 = 1
+        | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V*(v/B)
+        |          | abs(y-yo) > v^2 / (2*B) + V*(v/B))""".stripMargin.asFormula
+
+    def di(a: String): DependentPositionTactic = diffInvariant(
+      "t>=0".asFormula,
+      "dx^2 + dy^2 = 1".asFormula,
+      s"v = old(v) + $a*t".asFormula,
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
+      "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
+      "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
+
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
+      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+
+    def accArithTactic: BelleExpr = alphaRule*@TheType() &
+      //@todo auto-transform
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
+
+    val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Light braking branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula))) &
+        di("-B/2")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+        hideFactsAbout("y", "yo") & speculativeQE,
+        hideFactsAbout("x", "xo") & speculativeQE
+        ) & print("Light braking branch done"),
+      print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+      print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) &
+        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+        hideFactsAbout("y", "yo") & accArithTactic,
+        hideFactsAbout("x", "xo") & accArithTactic
+        ) & print("Acceleration branch done")
+      ) & print("Induction step done")
+      ) & print("Proof done")
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   "Passive orientation safety" should "be provable" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafetyabs.key"))
     val invariant =
