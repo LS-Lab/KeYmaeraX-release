@@ -36,6 +36,13 @@ object DLBySubst {
     )
   })
 
+  private[btactics] val monb2 = new NamedTactic("monb2", {
+    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]q_(??)".asFormula), IndexedSeq("[a_;]p_(??)".asFormula)))
+    USubstPatternTactic(
+      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
+    )
+  })
+
   /**
    * Diamond monotonicity.
    * {{{
@@ -51,6 +58,9 @@ object DLBySubst {
     )
   })
 
+  /** whether games are currently allowed */
+  private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
+
   /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
     *       p(??)
@@ -58,12 +68,26 @@ object DLBySubst {
     *    [a;]p(??)
     * }}}
     * @see [[monb]] with p(x)=True
-    * @note Unsound for hybrid games
+    * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
     */
   lazy val G: BelleExpr = {
     val pattern = SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("Goedel", ru.substitution.usubst))::Nil
+    //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
+    if (isGame)
+      USubstPatternTactic(
+        (pattern, (ru:RenUSubst) =>
+          cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
+            ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst ++ USubst(
+              SubstitutionPair(PredOf(Function("q_",None,Real,Bool),Anything), True) :: Nil
+            )) &
+              hideL(-1, True)
+              partial
+            ,
+            dualFree(2)
+            ))::Nil)
+    else
+      USubstPatternTactic(
+        (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("Goedel", ru.substitution.usubst))::Nil
     )
   }
 
@@ -385,6 +409,7 @@ object DLBySubst {
    *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
    * }}}
    * @todo same for diamonds by the dual of K
+   * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
   def postCut(C: Formula): DependentPositionTactic = new DependentPositionTactic("postCut") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -408,7 +433,7 @@ object DLBySubst {
               hide(conditional, conditioned) partial /*& label(BranchLabels.cutShowLbl)*/,
               /* show */
               assertE(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(pos.top) &
-              debug("K reduction") & useAt("K modal modus ponens", PosInExpr(1::Nil))(pos.top) &
+              debug("K reduction") & K(pos.top) &
               assertE(Box(a, Imply(C,post)), "[a](cut->post)")(pos.top) & debug("closing by K assumption") &
               closeIdWith(pos.top)
             ) partial
@@ -439,6 +464,7 @@ object DLBySubst {
    * }}}
    * @param invariant The invariant.
    * @return The tactic.
+   * @note Currently uses I induction axiom, which is unsound for hybrid games, instead of "inv ind".
    */
   def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
