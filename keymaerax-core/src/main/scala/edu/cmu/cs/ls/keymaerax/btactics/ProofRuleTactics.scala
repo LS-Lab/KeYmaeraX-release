@@ -256,6 +256,7 @@ object ProofRuleTactics {
     * @param subst uniform substitution instantiating the given axiom or axiomatic proof rule
     * @todo if derived axioms play along: this does not need to be a dependent tactic since if cascade is static from axiomName so can come first.
     */
+  @deprecated("Use UnifyUSCalculus.rule instead if auto-instantiated. Use ")
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
     //@todo this should have a more efficient lookup via AxiomInfo

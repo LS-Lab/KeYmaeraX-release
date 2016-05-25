@@ -120,7 +120,7 @@ trait UnifyUSCalculus {
 
   // prove by providing a fact
 
-  /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
+  /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved) */
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
     override def result(provable: Provable): Provable = {
@@ -129,10 +129,10 @@ trait UnifyUSCalculus {
       else throw new BelleError("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
     }
   }//new ByProvable(provable)
-  /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
+  /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
-  /** byVerbatim(axiom) is a pseudo-tactic that uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
-  def byVerbatim(axiom: String) : BelleExpr = by(AxiomInfo(axiom).provable)
+  /** byVerbatim(axiom)  uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
+  private[btactics] def byVerbatim(axiom: String) : BelleExpr = by(AxiomInfo(axiom).provable)
   /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification.
     *
     * @see [[UnifyUSCalculus.US()]] */
@@ -431,11 +431,11 @@ trait UnifyUSCalculus {
 
 
   /**
-    * use(name,inst) uses the given fact to prove the sequent.
+    * rule(name,inst) uses the given axiomatic rule to prove the sequent.
     * Unifies the fact's conclusion with the current sequent and proceed to the instantiated premise of `fact`.
     * {{{
     *    s(a) |- s(b)      a |- b
-    *   ------------- use(---------) if s(g)=G and s(d)=D
+    *   ------------- rule(---------) if s(g)=G and s(d)=D
     *      G  |-  D        g |- d
     * }}}
     *
@@ -446,7 +446,7 @@ trait UnifyUSCalculus {
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     */
-  def use(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(DerivedRuleInfo(name).codeName, {
+  def rule(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(DerivedRuleInfo(name).codeName, {
     val fact = Provable.rules.getOrElse(name, DerivedRuleInfo(name).provable)
     //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
     USubstPatternTactic(

@@ -157,6 +157,8 @@ object Idioms {
   }
 
   /** Establishes the fact by appealing to an existing tactic. */
+  //@todo why is this not just UnifyUSCalculus.by(Provable)?
+  @deprecated("Use UnifyUSCalculus.by(Provable) instead")
   def by(fact: Provable) = new BuiltInTactic("Established by existing provable") {
     override def result(provable: Provable): Provable = {
       assert(provable.subgoals.length == 1, "Expected one subgoal but found " + provable.subgoals.length)
