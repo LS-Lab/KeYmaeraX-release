@@ -68,4 +68,7 @@ object KeYmaeraXTestTags {
 
   /** Tests that should be ignored in an automated build via Jenkins. */
   object IgnoreInBuildTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest")
+
+  /** Tests that are added for coverage analysis and not critically used. */
+  object CoverageTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.CoverageTest")
 }
