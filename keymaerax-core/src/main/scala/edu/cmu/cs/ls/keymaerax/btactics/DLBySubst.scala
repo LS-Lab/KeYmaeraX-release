@@ -326,6 +326,7 @@ object DLBySubst {
     * @author Stefan Mitsch
     * @author Andre Platzer
     */
+  @deprecated("Use assignEquality instead")
   lazy val assignEquationalOld: DependentPositionTactic = "[:=] assign equality" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(fml@Box(Assign(x, _), _)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)

@@ -115,6 +115,8 @@ trait UnifyUSCalculus {
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key)
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
+  /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
+  def useExpansionAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
   // prove by providing a fact
 
@@ -736,6 +738,9 @@ trait UnifyUSCalculus {
   def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(AxiomInfo(axiom).provable, key)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(AxiomInfo(axiom).provable, key, inst)
+
+  /** useExpansionFor(axiom) uses the given axiom forward for the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
+  def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
   /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
     * Uses CE or CQ as needed.

@@ -254,6 +254,7 @@ object ProofRuleTactics {
     * Use the substitution instance under `subst` of the axiom or axiomatic proof rule `axiomName`.
     * @param axiomName name of the axiom or axiomatic proof rule to use
     * @param subst uniform substitution instantiating the given axiom or axiomatic proof rule
+    * @todo if derived axioms play along: this does not need to be a dependent tactic since if cascade is static from axiomName so can come first.
     */
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
