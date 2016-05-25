@@ -297,7 +297,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     boundHidden.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "2*C-C^2>=0".asFormula)
     boundHidden.subgoals.head.succ should contain only "x<=m".asFormula
 
-    proveBy(boundHidden.subgoals.head, QE) shouldBe 'proved
+    proveBy(boundHidden.subgoals.head, ArithmeticSpeculativeSimplification.speculativeQE(tool)) shouldBe 'proved
   }
 
   it should "work on a Robix example" in withMathematica { tool =>
@@ -308,7 +308,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial)
 
     //@todo hideNonmatchingBounds does not yet work on the "middle" abs branches
-    val s = proveBy(fml, tactic <(QE, skip, skip, QE))
+    val s = proveBy(fml, tactic <(ArithmeticSpeculativeSimplification.speculativeQE(tool), skip, skip, ArithmeticSpeculativeSimplification.speculativeQE(tool)))
     s.subgoals should have size 2
   }
 
