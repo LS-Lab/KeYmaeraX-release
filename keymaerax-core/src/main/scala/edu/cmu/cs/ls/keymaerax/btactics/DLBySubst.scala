@@ -70,6 +70,7 @@ object DLBySubst {
     *   ----------- G
     *    [a;]p(??)
     * }}}
+    *
     * @see [[monb]] with p(x)=True
     * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
     */
@@ -97,7 +98,8 @@ object DLBySubst {
   /**
    * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
    * of that modality.
-   * @example{{{
+    *
+    * @example{{{
    *           |- \forall x x>0
    *         ------------------abstractionb(1)
    *           |- [x:=2;]x>0
@@ -143,7 +145,8 @@ object DLBySubst {
 
   /**
    * Introduces a self assignment [x:=x;]p(??) in front of p(??).
-   * @param x The self-assigned variable.
+    *
+    * @param x The self-assigned variable.
    * @return The tactic.
    */
   def selfAssign(x: Variable): DependentPositionTactic = "[:=] self assign inverse" by ((pos, sequent) => sequent.at(pos) match {
@@ -218,7 +221,8 @@ object DLBySubst {
    * or by equality assignment [x:=f();]p(??) <-> \forall x (x=f() -> p(??)) as a fallback.
    * Universal quantifiers are skolemized if applied at top-level in the succedent; they remain unhandled in the
    * antecedent and in non-top-level context.
-   * @example{{{
+    *
+    * @example{{{
    *    |- 1>0
    *    --------------------assignb(1)
    *    |- [x:=1;]x>0
@@ -254,6 +258,7 @@ object DLBySubst {
     * Equality assignment to a fresh variable.
     * Always introduces universal quantifier, which is already skolemized if applied at top-level in the
     * succedent; quantifier remains unhandled in the antecedent and in non-top-level context.
+    *
     * @example{{{
     *    x_0=x+1 |- [{x_0:=x_0+1;}*]x_0>0
     *    ----------------------------------assignEquality(1)
@@ -307,6 +312,7 @@ object DLBySubst {
   /**
     * Equational assignment: always introduces universal quantifier, which is skolemized if applied at top-level in the
     * succedent; it remains unhandled in the antecedent and in non-top-level context.
+    *
     * @example{{{
     *    x=1 |- [{x:=x+1;}*]x>0
     *    ----------------------------------assignEquational(1)
@@ -365,7 +371,8 @@ object DLBySubst {
    *   -------------------------
    *          G |- [a]B, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   genUseLbl:        genShowLbl:
    *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
    *   ------------------------------------generalize("x>1".asFormula)(1)
@@ -400,7 +407,8 @@ object DLBySubst {
    *   ---------------------------------
    *          G |- [a]B, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   cutUseLbl:                       cutShowLbl:
    *   |- [x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
    *   -----------------------------------------------postCut("x>1".asFormula)(1)
@@ -454,7 +462,8 @@ object DLBySubst {
    *   --------------------------------------------------------------------
    *   G |- [{a}*]p, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   use:          init:         step:
    *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
    *   ------------------------------------------------I("x>1".asFormula)(1)
@@ -468,7 +477,8 @@ object DLBySubst {
    * }}}
    * @param invariant The invariant.
    * @return The tactic.
-   * @note Currently uses I induction axiom, which is unsound for hybrid games, instead of "inv ind".
+   * @see [[loopRule()]]
+   * @note Currently uses I induction axiom, which is unsound for hybrid games.
    */
   def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
@@ -501,8 +511,34 @@ object DLBySubst {
   })
 
   /**
+    * Loop induction. Wipes conditions that contain bound variables of the loop.
+    * {{{
+    *   step:           use:      init:
+    *   I |- [a]I       I |- p    G |- D, I
+    *   ------------------------------------
+    *   G |- [{a}*]p, D
+    * }}}
+    * @param invariant The invariant.
+    */
+  def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
+    require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(??)")
+    val alast = AntePosition(sequent.ante.length)
+    cut(invariant) <(
+      cohide2(alast, pos) & generalize(invariant)(1) <(
+        use("ind induction") partial(BelleLabels.indStep)
+        ,
+        ident partial(BelleLabels.useCase)
+        )
+      ,
+      ident partial(BelleLabels.useCase)
+      )
+  })
+
+  /**
    * Introduces a ghost.
-   * @example{{{
+    *
+    * @example{{{
    *         |- [y_0:=y;]x>0
    *         ----------------discreteGhost("y".asTerm)(1)
    *         |- x>0
@@ -540,7 +576,8 @@ object DLBySubst {
 
   /**
    * Turns an existential quantifier into an assignment.
-   * @example{{{
+    *
+    * @example{{{
    *         |- [t:=0;][x:=t;]x>=0
    *         -------------------------assignbExists("0".asTerm)(1)
    *         |- \exists t [x:=t;]x>=0
