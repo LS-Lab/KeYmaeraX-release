@@ -248,6 +248,7 @@ object ExpressionTraversal {
         case Compose(a, b) => matchTwo(p, Compose.apply, f, a, b)
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
         case Loop(a) => matchOne(p, Loop.apply, f, a)
+        case Dual(a) => matchOne(p, Dual.apply, f, a)
         case AtomicODE(x, t) => matchTwo(p, AtomicODE.apply, f, x, t)
         case DifferentialProduct(a, b) => matchTwo(p, DifferentialProduct.apply, f, a, b)
         case ODESystem(a, h) => matchTwo(p, ODESystem(_: DifferentialProgram, _: Formula), f, a, h)

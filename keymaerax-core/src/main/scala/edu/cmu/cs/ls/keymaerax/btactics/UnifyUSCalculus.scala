@@ -254,7 +254,7 @@ trait UnifyUSCalculus {
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
       }
     }
-    private val RECHECK = true
+    private[this] val RECHECK = true
 
     /**
       * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}

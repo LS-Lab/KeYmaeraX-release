@@ -250,8 +250,14 @@ object ProofRuleTactics {
 //    }
 //  }
 
+  /**
+    * Use the substitution instance under `subst` of the axiom or axiomatic proof rule `axiomName`.
+    * @param axiomName name of the axiom or axiomatic proof rule to use
+    * @param subst uniform substitution instantiating the given axiom or axiomatic proof rule
+    */
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
+    //@todo this should have a more efficient lookup via AxiomInfo
       if (Provable.rules.contains(axiomName)) {
         TactixLibrary.by(Provable.rules(axiomName)(subst))
       } else if (Provable.axioms.contains(axiomName)) {
@@ -266,8 +272,8 @@ object ProofRuleTactics {
   /**
     * Uniform renaming `what~>repl` and vice versa.
     *
-    * @param what
-    * @param repl
+    * @param what What variable to replace (along with its associated DifferentialSymbol).
+    * @param repl The target variable to replace what with.
     * @return
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
