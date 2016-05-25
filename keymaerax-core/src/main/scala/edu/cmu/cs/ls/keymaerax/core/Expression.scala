@@ -220,6 +220,7 @@ sealed trait CompositeTerm extends Term with Composite
 /** Unary Composite Terms, i.e. terms composed of one real term. */
 sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the given argument as child instead. (copy)
+    * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
     *         Neg(Number(77)).reapply(Number(99)) == Neg(Number(99))
     *         Neg(Variable("x")).reapply(Plus(Number(42),Number(69))) == Neg(Plus(Number(42),Number(69)))
@@ -237,6 +238,7 @@ private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with R
 /** Binary Composite Terms, i.e. terms composed of two terms. */
 sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the give left and right arguments instead. (copy)
+    * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
     *         Times(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) == Times(Variable("a"), Number(99))
     *         }}}
