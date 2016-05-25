@@ -6,9 +6,10 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.tags.CoverageTest
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
-import scala.collection.immutable
 
+import scala.collection.immutable
 import scala.collection.immutable._
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
@@ -19,6 +20,7 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
   * @todo add a test that reapplies with new random formulas/terms as arguments
  * @author Andre Platzer
  */
+@CoverageTest
 class RandomReapplyTests extends FlatSpec with Matchers {
   val randomTrials = 4000
   val randomComplexity = 30

@@ -7,13 +7,14 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCF
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import testHelper.KeYmaeraXTestTags._
 import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable
 import scala.collection.immutable._
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags
 /**
  * Tests static semantics.
   *
@@ -74,10 +75,10 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   ignore should "@todo test symbols, signature" in {}
 
 
-  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CheckinTest) in {test(10)}
-  it should "consistently compute randomly (summary)" taggedAs(SummaryTest) in {test(50)}
-  it should "consistently compute randomly (usual)" taggedAs(UsualTest) in {test(1000,10)}
-  it should "consistently compute randomly (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
+  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CheckinTest,CoverageTest) in {test(10)}
+  it should "consistently compute randomly (summary)" taggedAs(SummaryTest,CoverageTest) in {test(50)}
+  it should "consistently compute randomly (usual)" taggedAs(UsualTest,CoverageTest) in {test(1000,10)}
+  it should "consistently compute randomly (slow)" taggedAs(SlowTest,CoverageTest) in {test(randomTrials,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) = {
     for (i <- 1 to randomTrials) {
@@ -143,6 +144,9 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
         StaticSemantics.symbols(e) shouldBe StaticSemantics.symbols(e.asInstanceOf[Expression])
       }
     }
+  }
+
+  it should "sequent" taggedAs (KeYmaeraXTestTags.CoverageTest) in {
     for (i <- 1 to randomTrials) {
       val e = rand.nextSequent(randomComplexity)
       val randClue = "Sequent produced in\n\t " + i + "th run of " + randomTrials +

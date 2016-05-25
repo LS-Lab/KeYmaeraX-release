@@ -23,7 +23,7 @@ import scala.language.postfixOps
   * @author Nathan Fulton
   */
 @SlowTest
-@IgnoreInBuildTest
+//@todo @IgnoreInBuildTest
 class ArithmeticSimplificationTests extends TacticTestBase {
   "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in {withMathematica(implicit qeTool => {
     val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.smartHide
@@ -70,11 +70,11 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       prop & transformEquality("t=ep".asFormula)(2) & closeId) shouldBe 'proved
   }
 
-  "absQE" should "prove" in withMathematica { tool =>
+  "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { tool =>
     proveBy("abs(x-y)>=t -> abs(x-y+0)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
 
-  ignore should "prove" in withMathematica { tool =>
+  ignore should "prove abs(x-y)>=t -> abs(x-y)>=t+0" in withMathematica { tool =>
     //@todo exhaustiveAbsSplit computes all abs positions before calling abs... but abs abbreviates both succ and ante if same
     proveBy("abs(x-y)>=t -> abs(x-y)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }

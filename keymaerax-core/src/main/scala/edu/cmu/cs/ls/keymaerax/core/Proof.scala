@@ -683,6 +683,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   /** Name of this proof rule */
   val name: String
 
+  //@note Convenience method not used in the soundness-critical core nor anywhere else.
   override def toString: String = name
 }
 
@@ -1346,6 +1347,7 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   * }}}
   *
   * @note Rarely useful (except for contradictory `p`)
+  * @note Not used, just contained for symmetry reasons
   * @derived
   */
 case class CoHideLeft(pos: AntePos) extends LeftRule {
@@ -1444,6 +1446,7 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   * }}}
   *
   * @derived
+  * @note Not used, just contained for symmetry reasons
   */
 case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "CommuteEquivLeft"
