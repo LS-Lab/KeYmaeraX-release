@@ -16,7 +16,9 @@ object DLTactics {
    *   [a]p |- [a]q
    * }}}
    * @return The tactic.
+   * @see [[DLBySubst.monb]]
    */
+  @deprecated("Use DLBySubst.monb instead")
   def monb: DependentTactic = new DependentTactic("[] monotone") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
@@ -50,7 +52,9 @@ object DLTactics {
    *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    * @return The tactic.
+    * @see [[DLBySubst.mond]]
    */
+  @deprecated("Use DLBySubst.mond instead")
   def mond: DependentTactic = new DependentTactic("<> monotone") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>

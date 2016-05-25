@@ -1,11 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable}
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Lemma, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
@@ -16,6 +16,7 @@ import scala.collection.immutable
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  */
+@CheckinTest
 @SummaryTest
 @UsualTest
 class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
@@ -203,5 +204,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
   it should "prove [] monotone" in withMathematica { implicit qeTool => boxMonotone.fact.subgoals shouldBe List(
       Sequent(immutable.Seq(), immutable.IndexedSeq("p_(??)".asFormula), immutable.IndexedSeq("q_(??)".asFormula))
+  ) }
+
+  it should "prove [] monotone 2" in withMathematica { implicit qeTool => boxMonotone2.fact.subgoals shouldBe List(
+    Sequent(immutable.Seq(), immutable.IndexedSeq("q_(??)".asFormula), immutable.IndexedSeq("p_(??)".asFormula))
   ) }
 }

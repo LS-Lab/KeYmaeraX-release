@@ -490,6 +490,9 @@ case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { o
 case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
 case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
+/** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
+  * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
+  */
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
 /**

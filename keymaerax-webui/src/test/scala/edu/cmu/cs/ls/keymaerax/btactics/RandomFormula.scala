@@ -202,7 +202,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** whether games are currently allowed */
-  private val game: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
+  private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
 
   def nextP(vars : IndexedSeq[Variable], n : Int) : Program = nextP(vars, n, false, false)
   def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean) : Program = nextP(vars, n, dotTs, dotFs, !(dotTs || dotFs))
@@ -222,7 +222,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if (40 until 50 contains it) && diffs => ODESystem(nextDP(vars, n, dotTs), nextF(vars, n-1, true, dotTs, dotFs, diffs))
       case it if 50 until 100 contains it => Choice(nextP(vars, n-1, dotTs, dotFs, diffs), nextP(vars, n-1, dotTs, dotFs, diffs))
       case it if 100 until 150 contains it => Compose(nextP(vars, n-1, dotTs, dotFs, diffs), nextP(vars, n-1, dotTs, dotFs, diffs))
-      case it if (190 until 220 contains it) && game => Dual(nextP(vars, n-1, dotTs, dotFs, diffs))
+      case it if (190 until 220 contains it) && isGame => Dual(nextP(vars, n-1, dotTs, dotFs, diffs))
       case it if 150 until 200 contains it => Loop(nextP(vars, n-1, dotTs, dotFs, diffs))
       case it if (1 until 200 contains it) && !diffs => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dotTs, diffs, funcs))
       case _ => throw new IllegalStateException("random number generator range for program generation produces the right range " + r)

@@ -299,6 +299,7 @@ object DerivedAxioms {
     })
     // populate derived rules
     derivedRule("[] monotone", boxMonotone.fact)
+    derivedRule("[] monotone 2", boxMonotone2.fact)
     derivedRule("CT term congruence", CTtermCongruence.fact)
     //@todo all generalization must be populated after [] monotone -> need better dependency handling for derived rules
     derivedRule("all generalization", allGeneralize.fact)
@@ -311,7 +312,8 @@ object DerivedAxioms {
     * Premise p(??)
     * Conclusion \forall x p(??)
     * End.
-    * @Derived from G or from [] monotone with program x:=*
+    * @derived from G or from [] monotone with program x:=*
+    * @derived from Skolemize
     * @Note generalization of p(x) to p(??) as in Theorem 14
     */
   lazy val allGeneralize = derivedRule("all generalization",
@@ -364,6 +366,25 @@ object DerivedAxioms {
         SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
         SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
       notL(-1) & notR(1)
+      partial
+  )
+
+  /**
+    * Rule "[] monotone 2".
+    * Premise q(??) ==> p(??)
+    * Conclusion [a;]q(??) ==> [a;]p(??)
+    * End.
+    *
+    * @derived useAt(boxMonotone) with p and q swapped
+    * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+    * @see "André Platzer. Differential Hybrid Games."
+    * @note Renamed form of boxMonotone.
+    */
+  lazy val boxMonotone2 = derivedRule("[] monotone 2",
+    Sequent(immutable.Seq(), immutable.IndexedSeq("[a_;]q_(??)".asFormula), immutable.IndexedSeq("[a_;]p_(??)".asFormula)),
+    ProofRuleTactics.axiomatic("[] monotone", USubst(
+      SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), PredOf(Function("q_", None, Real, Bool), Anything)) ::
+        SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), PredOf(Function("p_", None, Real, Bool), Anything)) :: Nil))
       partial
   )
 
