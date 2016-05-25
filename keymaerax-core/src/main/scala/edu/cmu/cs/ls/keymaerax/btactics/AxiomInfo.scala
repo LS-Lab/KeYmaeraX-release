@@ -568,6 +568,7 @@ object DerivationInfo {
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
     new TacticInfo("monb", "Box Monotonicity", {case () => DLBySubst.monb}),
+    new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
     new TacticInfo("mond", "Diamond Monotonicity", {case () => DLBySubst.mond}),
 
     // TactixLibrary tactics
@@ -636,6 +637,9 @@ object DerivationInfo {
     new DerivedRuleInfo("[] monotone"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(??)"::Nil, "[a;]q_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
       , "boxMonotone", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
+    new DerivedRuleInfo("[] monotone 2"
+      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]q_(??)"::Nil, "[a;]p_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
+      , "boxMonotone2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(??)) = ctx_(g_(??))"::Nil), SequentDisplay(Nil, "f_(??) = g_(??)"::Nil)::Nil)
       , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
