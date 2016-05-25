@@ -259,7 +259,7 @@ object ProofRuleTactics {
   @deprecated("Use UnifyUSCalculus.rule instead if auto-instantiated. Use ")
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
-    //@todo this should have a more efficient lookup via AxiomInfo
+    //@todo this should have a more efficient lookup via ProvableInfo(axiomName).provable(subst)
       if (Provable.rules.contains(axiomName)) {
         TactixLibrary.by(Provable.rules(axiomName)(subst))
       } else if (Provable.axioms.contains(axiomName)) {

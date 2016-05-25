@@ -757,12 +757,34 @@ sealed trait DerivationInfo {
   val needsGenerator: Boolean = false
 }
 
+/** Meta-Information for a (derived) axiom or (derived) axiomatic rule */
+trait ProvableInfo extends DerivationInfo {
+  /** The Provable representing this (derived) axiom or (derived) axiomatic rule */
+  val provable: Provable
+}
+
+object ProvableInfo {
+  /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
+  def locate(name: String): Option[ProvableInfo] =
+    DerivationInfo(name) match {
+      case info: ProvableInfo => Some(info)
+      case _ => None
+    }
+  /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
+  def apply(name: String): ProvableInfo =
+    DerivationInfo(name) match {
+      case info: ProvableInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+    }
+
+  val allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
+}
+
+
 /** Meta-Information for an axiom or derived axiom */
-trait AxiomInfo extends DerivationInfo {
+trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   def formula: Formula
-  /** A Provable concluding this axiom */
-  def provable: Provable
 }
 
 /** Meta-Information for an axiom from the prover core */
@@ -845,7 +867,7 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
 }
 
 /** Information for a derived rule proved from the core */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends DerivationInfo {
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   lazy val provable: Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)

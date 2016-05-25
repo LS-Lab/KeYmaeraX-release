@@ -29,7 +29,7 @@ object DLBySubst {
     *   [a]p |- [a]q
     * }}}
     */
-  lazy val monb = rule("[] monotone")
+  lazy val monb = byUS("[] monotone")
 //  new NamedTactic("monb", {
 //    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
 //    USubstPatternTactic(
@@ -37,7 +37,7 @@ object DLBySubst {
 //    )
 //  })
 
-  private[btactics] lazy val monb2 = rule("[] monotone 2")
+  private[btactics] lazy val monb2 = byUS("[] monotone 2")
 //  new NamedTactic("monb2", {
 //    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]q_(??)".asFormula), IndexedSeq("[a_;]p_(??)".asFormula)))
 //    USubstPatternTactic(
@@ -53,7 +53,7 @@ object DLBySubst {
    *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    */
-  lazy val mond = rule("<> monotone")
+  lazy val mond = byUS("<> monotone")
 //  new NamedTactic("mond", {
 //    val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
 //    USubstPatternTactic(
@@ -527,7 +527,7 @@ object DLBySubst {
     val alast = AntePosition(sequent.ante.length)
     cut(invariant) <(
       cohide2(alast, pos) & generalize(invariant)(1) <(
-        rule("ind induction") partial(BelleLabels.indStep)
+        byUS("ind induction") partial(BelleLabels.indStep)
         ,
         ident partial(BelleLabels.useCase)
         )
