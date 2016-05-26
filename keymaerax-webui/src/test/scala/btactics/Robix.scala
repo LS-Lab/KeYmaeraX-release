@@ -25,6 +25,44 @@ import scala.language.postfixOps
 @SlowTest
 class Robix extends TacticTestBase {
 
+  "Static Safety" should "be provable" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs.key"))
+
+    val invariant = """v >= 0
+                      | & dx^2+dy^2 = 1
+                      | & r != 0
+                      | & (abs(x-xo) > v^2 / (2*B)
+                      |  | abs(y-yo) > v^2 / (2*B))""".stripMargin.asFormula
+
+    def di(a: String): DependentPositionTactic = diffInvariant(
+      "t>=0".asFormula,
+      "dx^2 + dy^2 = 1".asFormula,
+      s"v = old(v) + $a*t".asFormula,
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula)
+
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & andL('_)*@TheType() &
+      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+
+    def accArithTactic: BelleExpr = alphaRule*@TheType() & printIndexed("Before replaceTransform") &
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
+
+    val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+      print("Acceleration branch") & hideL(Find.FindL(0, Some("abs(x-xo_0)>v^2/(2*B)|abs(y-yo_0)>v^2/(2*B)".asFormula))) &
+        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "r", "r_0") partial) <(
+        hideFactsAbout("y", "yo") & accArithTactic,
+        hideFactsAbout("x", "xo") & accArithTactic
+        ) & print("Acceleration branch done")
+      ) & print("Induction step done")
+      ) & print("Proof done")
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   "Passive Safety" should "be provable" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
 
