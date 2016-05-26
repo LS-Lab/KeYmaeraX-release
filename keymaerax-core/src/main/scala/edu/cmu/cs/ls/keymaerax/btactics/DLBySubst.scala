@@ -514,11 +514,11 @@ object DLBySubst {
   })
 
   /**
-    * Loop induction. Wipes conditions that contain bound variables of the loop.
+    * Loop induction wiping all context.
     * {{{
-    *   step:           use:      init:
-    *   I |- [a]I       I |- p    G |- D, I
-    *   ------------------------------------
+    *   init:        step:       use:
+    *   G |- I, D    I |- [a]I   I |- p
+    *   --------------------------------
     *   G |- [{a}*]p, D
     * }}}
  *
@@ -528,15 +528,32 @@ object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(??)")
     val alast = AntePosition(sequent.ante.length)
-    cut(invariant) <(
-      cohide2(alast, pos) & generalize(invariant)(1) <(
+    cutR(invariant)(pos.checkSucc.top) <(
+      ident partial(BelleLabels.initCase)
+      ,
+      cohide(pos) & implyR(1) & generalize(invariant)(1) <(
         byUS("ind induction") partial(BelleLabels.indStep)
         ,
         ident partial(BelleLabels.useCase)
         )
-      ,
-      ident partial(BelleLabels.useCase)
       )
+    /*
+    * {{{
+    *   step:           use:      init:
+    *   I |- [a]I       I |- p    G |- I, D
+    *   ------------------------------------
+    *   G |- [{a}*]p, D
+    * }}}
+    */
+//    cut(invariant) <(
+//      cohide2(alast, pos) & generalize(invariant)(1) <(
+//        byUS("ind induction") partial(BelleLabels.indStep)
+//        ,
+//        ident partial(BelleLabels.useCase)
+//        )
+//      ,
+//      ident partial(BelleLabels.initCase)
+//      )
   })
 
   /**
