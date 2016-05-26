@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -81,7 +80,7 @@ object DLBySubst {
       USubstPatternTactic(
         (pattern, (ru:RenUSubst) =>
           cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
-            ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst ++ USubst(
+            ru.getRenamingTactic & TactixLibrary.by("[] monotone 2", ru.substitution.usubst ++ USubst(
               SubstitutionPair(PredOf(Function("q_",None,Real,Bool),Anything), True) :: Nil
             )) &
               hideL(-1, True)
@@ -91,7 +90,11 @@ object DLBySubst {
             ))::Nil)
     else
       USubstPatternTactic(
-        (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("Goedel", ru.substitution.usubst))::Nil
+        (pattern, (ru:RenUSubst) => {
+          Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel");
+          //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
+          TactixLibrary.by("Goedel", ru.usubst)
+        })::Nil
     )
   }
 

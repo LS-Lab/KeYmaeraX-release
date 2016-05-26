@@ -34,7 +34,7 @@ object DLTactics {
               val s = USubst(SubstitutionPair(aX, a) ::
                 SubstitutionPair(PredOf(pX, Anything), p) ::
                 SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-              axiomatic("[] monotone", s)
+              TactixLibrary.by("[] monotone", s)
             case Box(b, q) if a != b => throw new BelleError("Expected sole box property [a]q in succedent, matching [a]p from antecedent, but " +
               "got program " + a + " in antecedent and non-matching program " + b + " in succedent")
             case _ => throw new BelleError("Expected sole box property [a]q in succedent, matching [a]p from antecedent, but got " + sequent.succ.head)
@@ -70,7 +70,7 @@ object DLTactics {
               val s = USubst(SubstitutionPair(aX, a) ::
                 SubstitutionPair(PredOf(pX, Anything), p) ::
                 SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-              axiomatic("<> monotone", s)
+              TactixLibrary.by("<> monotone", s)
             case Diamond(b, q) if a != b => throw new BelleError("Expected sole diamond property <a>q in succedent, matching <a>p from antecedent, but " +
               "got program " + a + " in antecedent and non-matching program " + b + " in succedent")
             case _ => throw new BelleError("Expected sole diamond property <a>q in succedent, matching <a>p from antecedent, but got " + sequent.succ.head)
