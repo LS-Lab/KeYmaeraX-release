@@ -54,7 +54,7 @@ class Robix extends TacticTestBase {
       print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
       print("Acceleration branch") & hideL(Find.FindL(0, Some("abs(x-xo_0)>v^2/(2*B)|abs(y-yo_0)>v^2/(2*B)".asFormula))) &
-        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "r", "r_0") partial) <(
+        di("a")(1) & dw & prop <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch done")
@@ -84,9 +84,9 @@ class Robix extends TacticTestBase {
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
-    def accArithTactic: BelleExpr = alphaRule*@TheType() &
+    def accArithTactic: BelleExpr = alphaRule*@TheType() & printIndexed("Before replaceTransform") &
       //@todo auto-transform
-      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
+      replaceTransform("ep".asTerm, "t".asTerm)(-10) & speculativeQE & print("Proved acc arithmetic")
 
     val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
@@ -95,7 +95,7 @@ class Robix extends TacticTestBase {
         print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
         print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
         print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
-          di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "r", "r_0") partial) <(
+          di("a")(1) & dw & prop & OnAll(hideFactsAbout("dxo", "dyo") partial) <(
             hideFactsAbout("y", "yo") & accArithTactic,
             hideFactsAbout("x", "xo") & accArithTactic
           ) & print("Acceleration branch done")
@@ -549,10 +549,10 @@ class Robix extends TacticTestBase {
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
-      print("Braking branch") & di("-B")(1) & print("DI done") & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
       print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*Da*B)+V*(v/(Da*B))|abs(y-yo_0)>v^2/(2*Da*B)+V*(v/(Da*B))".asFormula))) &
-        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dxo", "dyo") partial) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch done")
