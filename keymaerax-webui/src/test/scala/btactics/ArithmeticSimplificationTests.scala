@@ -285,6 +285,14 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
   }
 
+  it should "not choke on !=" in withMathematica { tool =>
+    val s = Sequent(Nil,
+      IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula, "r!=0".asFormula),
+      IndexedSeq("x-xo >= 2*V*t".asFormula))
+
+    SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
+  }
+
   it should "hide formulas with non-matching bounds" in withMathematica { tool =>
     val s = Sequent(Nil,
       IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),

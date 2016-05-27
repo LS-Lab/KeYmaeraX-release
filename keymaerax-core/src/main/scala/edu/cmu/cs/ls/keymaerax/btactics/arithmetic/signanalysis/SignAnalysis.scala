@@ -5,10 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.AntePosition
-import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.Bound
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.Sign
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -35,6 +31,7 @@ object SignAnalysis {
   def seedSigns(s: Sequent): Signs = {
     val signs: Map[AntePos, Map[Term, Sign.Sign]] = s.ante.zipWithIndex.filter(p => p._1.isInstanceOf[ComparisonFormula]).
       map(p => (normalize(p._1.asInstanceOf[ComparisonFormula]), p._2)).map {
+      case (NotEqual(l, Number(r)), i)           => assert(r==0); AntePos(i) -> Map(l -> Sign.Unknown)
       case (Equal(l, Number(r)), i)              => assert(r==0); AntePos(i) -> Map(l -> Sign.Pos0)
       case (GreaterEqual(Neg(l), Number(r)), i)  => assert(r==0); AntePos(i) -> Map(l -> Sign.Neg0)
       case (GreaterEqual(l, Number(r)), i)       => assert(r==0); AntePos(i) -> Map(l -> Sign.Pos0)
@@ -77,6 +74,7 @@ object SignAnalysis {
   def bounds[T <: SeqPos](fmls: IndexedSeq[Formula], signs: Map[Term, Map[Sign.Sign, Set[AntePos]]], posFactory: Int=>T): Map[T, Map[Term, Map[Bound.Bound, Set[AntePos]]]] = {
     val bounds = fmls.zipWithIndex.filter(p => p._1.isInstanceOf[ComparisonFormula]).
         map(p => (normalize(p._1.asInstanceOf[ComparisonFormula]), p._2)).map {
+      case (NotEqual(l, Number(r)), i)           => assert(r==0); posFactory(i) -> Map(l -> Bound.Unknown)
       case (Equal(l, Number(r)), i)              => assert(r==0); posFactory(i) -> Map(l -> Bound.Exact)
       case (GreaterEqual(Neg(l), Number(r)), i)  => assert(r==0); posFactory(i) -> Map(l -> Bound.Upper)
       case (GreaterEqual(l, Number(r)), i)       => assert(r==0); posFactory(i) -> Map(l -> Bound.Lower)
@@ -125,6 +123,8 @@ object SignAnalysis {
     case Equal(_, Number(i)) if i == 0 => c
     case Equal(l@Number(i), r) if i == 0 => normalize(Equal(r, l))
     case Equal(l, r) => Equal(Minus(l, r), Number(0))
+    case NotEqual(l@Number(i), r) if i == 0 => normalize(NotEqual(r, l))
+    case NotEqual(l, r) => NotEqual(Minus(l, r), Number(0))
     case GreaterEqual(_, Number(i)) if i == 0 => c
     case GreaterEqual(Number(i), Neg(r)) if i == 0 => GreaterEqual(r, Number(0))
     case GreaterEqual(Number(i), r) if i == 0 => GreaterEqual(Neg(r), Number(0))
@@ -134,6 +134,7 @@ object SignAnalysis {
     case Greater(Number(i), r) if i == 0 => Greater(Neg(r), Number(0))
     case Greater(l, r) => Greater(Minus(l, r), Number(0))
   }} ensuring (r => r match {
+    case NotEqual(_,     Number(i)) => i == 0
     case Equal(_,        Number(i)) => i == 0
     case GreaterEqual(_, Number(i)) => i == 0
     case Greater(_,      Number(i)) => i == 0
