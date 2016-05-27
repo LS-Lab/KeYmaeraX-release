@@ -238,39 +238,6 @@ object ProofRuleTactics {
     }
   }
 
-//  /** US(subst, origin) reduces the proof to a proof of the premise `origin`, whose uniform substitution instance under `subst` the current goal is.
-//    * @see [[UniformSubstitutionRule]]
-//    * @see [[UnifyUSCalculus.US(USubst, Provable)]]
-//    */
-//  @deprecated("Use UnifyUSCalculus.US(subst,Provable) or use Provable.apply(USubst) forward instead")
-//  def US(subst: USubst, origin: Sequent) = new BuiltInTactic("US") {
-//    override def result(provable: Provable): Provable = {
-//      requireOneSubgoal(provable)
-//      provable(core.UniformSubstitutionRule(subst, origin), 0)
-//    }
-//  }
-
-  /**
-    * Use the substitution instance under `subst` of the axiom or axiomatic proof rule `axiomName`.
-    * @param axiomName name of the axiom or axiomatic proof rule to use
-    * @param subst uniform substitution instantiating the given axiom or axiomatic proof rule
-    * @todo if derived axioms play along: this does not need to be a dependent tactic since if cascade is static from axiomName so can come first.
-    */
-  @deprecated("Use UnifyUSCalculus.rule instead if auto-instantiated. Use ")
-  def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
-    override def computeExpr(v: BelleValue): BelleExpr =
-    //@todo this should have a more efficient lookup via AxiomInfo
-      if (Provable.rules.contains(axiomName)) {
-        TactixLibrary.by(Provable.rules(axiomName)(subst))
-      } else if (Provable.axioms.contains(axiomName)) {
-        TactixLibrary.by(Provable.axioms(axiomName)(subst))
-      } else if (DerivedAxiomInfo.locate(axiomName).isDefined) {
-        TactixLibrary.by(DerivedAxiomInfo(axiomName).provable(subst))
-      } else if (DerivedRuleInfo.locate(axiomName).isDefined) {
-        TactixLibrary.by(DerivedRuleInfo(axiomName).provable(subst))
-      } else throw new BelleError(s"Unknown axiom/rule $axiomName")
-  }
-
   /**
     * Uniform renaming `what~>repl` and vice versa.
     *

@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -29,7 +28,7 @@ object DLBySubst {
     *   [a]p |- [a]q
     * }}}
     */
-  lazy val monb = rule("[] monotone")
+  lazy val monb = byUS("[] monotone")
 //  new NamedTactic("monb", {
 //    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
 //    USubstPatternTactic(
@@ -37,7 +36,7 @@ object DLBySubst {
 //    )
 //  })
 
-  private[btactics] lazy val monb2 = rule("[] monotone 2")
+  private[btactics] lazy val monb2 = byUS("[] monotone 2")
 //  new NamedTactic("monb2", {
 //    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]q_(??)".asFormula), IndexedSeq("[a_;]p_(??)".asFormula)))
 //    USubstPatternTactic(
@@ -53,7 +52,7 @@ object DLBySubst {
    *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    */
-  lazy val mond = rule("<> monotone")
+  lazy val mond = byUS("<> monotone")
 //  new NamedTactic("mond", {
 //    val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
 //    USubstPatternTactic(
@@ -81,7 +80,7 @@ object DLBySubst {
       USubstPatternTactic(
         (pattern, (ru:RenUSubst) =>
           cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
-            ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst ++ USubst(
+            ru.getRenamingTactic & TactixLibrary.by("[] monotone 2", ru.substitution.usubst ++ USubst(
               SubstitutionPair(PredOf(Function("q_",None,Real,Bool),Anything), True) :: Nil
             )) &
               hideL(-1, True)
@@ -91,7 +90,11 @@ object DLBySubst {
             ))::Nil)
     else
       USubstPatternTactic(
-        (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("Goedel", ru.substitution.usubst))::Nil
+        (pattern, (ru:RenUSubst) => {
+          Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel");
+          //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
+          TactixLibrary.by("Goedel", ru.usubst)
+        })::Nil
     )
   }
 
@@ -511,11 +514,11 @@ object DLBySubst {
   })
 
   /**
-    * Loop induction. Wipes conditions that contain bound variables of the loop.
+    * Loop induction wiping all context.
     * {{{
-    *   step:           use:      init:
-    *   I |- [a]I       I |- p    G |- D, I
-    *   ------------------------------------
+    *   init:        step:       use:
+    *   G |- I, D    I |- [a]I   I |- p
+    *   --------------------------------
     *   G |- [{a}*]p, D
     * }}}
  *
@@ -525,15 +528,32 @@ object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(??)")
     val alast = AntePosition(sequent.ante.length)
-    cut(invariant) <(
-      cohide2(alast, pos) & generalize(invariant)(1) <(
-        rule("ind induction") partial(BelleLabels.indStep)
+    cutR(invariant)(pos.checkSucc.top) <(
+      ident partial(BelleLabels.initCase)
+      ,
+      cohide(pos) & implyR(1) & generalize(invariant)(1) <(
+        byUS("ind induction") partial(BelleLabels.indStep)
         ,
         ident partial(BelleLabels.useCase)
         )
-      ,
-      ident partial(BelleLabels.useCase)
       )
+    /*
+    * {{{
+    *   step:           use:      init:
+    *   I |- [a]I       I |- p    G |- I, D
+    *   ------------------------------------
+    *   G |- [{a}*]p, D
+    * }}}
+    */
+//    cut(invariant) <(
+//      cohide2(alast, pos) & generalize(invariant)(1) <(
+//        byUS("ind induction") partial(BelleLabels.indStep)
+//        ,
+//        ident partial(BelleLabels.useCase)
+//        )
+//      ,
+//      ident partial(BelleLabels.initCase)
+//      )
   })
 
   /**

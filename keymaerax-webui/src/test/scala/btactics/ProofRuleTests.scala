@@ -14,7 +14,7 @@ class ProofRuleTests extends TacticTestBase {
   "Axiomatic" should "support axiomatic rules" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq("[a_;]p_(??)".asFormula), immutable.IndexedSeq("[a_;]q_(??)".asFormula)),
-      ProofRuleTactics.axiomatic("[] monotone", USubst(Nil)))
+      TactixLibrary.by("[] monotone", USubst(Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "p_(??)".asFormula
     result.subgoals.head.succ should contain only "q_(??)".asFormula
@@ -23,7 +23,7 @@ class ProofRuleTests extends TacticTestBase {
   it should "use the provided substitution for axiomatic rules" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq("[?x>5;]x>2".asFormula), immutable.IndexedSeq("[?x>5;]x>0".asFormula)),
-      ProofRuleTactics.axiomatic("[] monotone",
+      TactixLibrary.by("[] monotone",
         USubst(
           SubstitutionPair(ProgramConst("a_"), Test("x>5".asFormula))::
           SubstitutionPair("p_(??)".asFormula, "x>2".asFormula)::
@@ -36,7 +36,7 @@ class ProofRuleTests extends TacticTestBase {
   it should "support axioms" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ x_>0 -> z>0".asFormula)),
-      ProofRuleTactics.axiomatic("all instantiate",
+      TactixLibrary.by("all instantiate",
         USubst(
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
@@ -46,7 +46,7 @@ class ProofRuleTests extends TacticTestBase {
   it should "support derived axioms" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asFormula)),
-      ProofRuleTactics.axiomatic("!all",
+      TactixLibrary.by("!all",
         USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::Nil)))
     result shouldBe 'proved
   }

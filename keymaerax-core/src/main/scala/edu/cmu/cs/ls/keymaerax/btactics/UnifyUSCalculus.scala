@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{axiomatic, closeTrue, coHideR, coHide2, commuteEquivR,
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, coHideR, coHide2, commuteEquivR,
 cut, cutLR, cutL, cutR, equivR, equivifyR, hideL, hideR, implyR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
@@ -22,23 +22,24 @@ import scala.language.postfixOps
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.
-  * Provides tactics for automatically applying axioms by matching inputs against them by unification
+  * Provides a tactic framework for automatically applying axioms and axiomatic rules by matching inputs against them by unification
   * according to their [[AxiomIndex]].
   *
   * @author Andre Platzer
-  * @see [[UnificationMatch]]
+  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch]]
   * @see [[AxiomIndex]]
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. arXiv 1601.06183, 2016.
   * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
   */
 trait UnifyUSCalculus {
-  //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  import BelleExpr.DEBUG
 
   /** Liberal context via replaceAt instead of Context substitutions (true) */
   private val LIBERAL = Context.GUARDED
 
-  /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
+  /** @note must be initialized from outside; is var so that unit tests can setup/tear down.
+    * @see [[DerivedAxioms]] */
   implicit var tool: QETool with DiffSolutionTool with CounterExampleTool = null
 
   /**
@@ -81,6 +82,88 @@ trait UnifyUSCalculus {
   }
 
   /*******************************************************************
+    * close or proceed in proof by providing a Provable fact
+    *******************************************************************/
+
+  /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved) */
+  //@todo auto-weaken as needed (maybe even exchangeleft)
+  def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
+    override def result(provable: Provable): Provable = {
+      require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
+      if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
+      else throw new BelleError("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
+    }
+  }
+  /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
+  def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
+  /**
+    * by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
+    * {{{
+    *    s(a) |- s(b)      a |- b
+    *   ------------- rule(---------) if s(g)=G and s(d)=D
+    *      G  |-  D        g |- d
+    * }}}
+    *
+    * @author Andre Platzer
+    * @param name the name of the fact to use to prove the sequent
+    * @param subst what substitution `s` to use for instantiating the fact called `name`.
+    * @see [[byUS()]]
+    */
+  def by(name: String, subst: USubst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+    by(subst(ProvableInfo(name).provable))
+  })
+  /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
+  def by(name: String, subst: Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+    by(subst.toForward(ProvableInfo(name).provable))
+  })
+
+  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification with the current goal.
+    *
+    * @see [[UnifyUSCalculus.US()]] */
+  def byUS(provable: Provable): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
+  /** byUS(lemma) proves by a uniform substitution instance of lemma. */
+  def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
+  /** byUS(axiom) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
+    *
+    * @see [[UnifyUSCalculus.byUS()]]
+    */
+  def byUS(name: String)     : BelleExpr = new NamedTactic(ProvableInfo(name).codeName, byUS(ProvableInfo(name).provable))
+
+  /**
+    * rule(name,inst) uses the given axiomatic rule to prove the sequent.
+    * Unifies the fact's conclusion with the current sequent and proceed to the instantiated premise of `fact`.
+    * {{{
+    *    s(a) |- s(b)      a |- b
+    *   ------------- rule(---------) if s(g)=G and s(d)=D
+    *      G  |-  D        g |- d
+    * }}}
+    *
+    * The behavior of rule(Provable) is essentially the same as that of by(Provable) except that
+    * the former prefetches the uniform substitution instance during tactics applicability checking.
+    *
+    * @author Andre Platzer
+    * @param name the name of the fact to use to prove the sequent
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in the conclusion.
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    * @see [[byUS()]]
+    * @see [[by()]]
+    */
+  def byUS(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+    val fact = Provable.rules.getOrElse(name, ProvableInfo(name).provable)
+    //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
+    USubstPatternTactic(
+      (SequentType(fact.conclusion),
+        (us: Subst) => {
+          val s = inst(us);
+          //@todo why not use s.toForward(fact) as in byUS(fact) instead of renaming the goal itself.
+          //@todo unsure about use of renaming
+          s.getRenamingTactic & by(fact(s.substitution.usubst))
+        }) :: Nil
+    )
+  })
+
+  /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
@@ -118,29 +201,6 @@ trait UnifyUSCalculus {
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
-  // prove by providing a fact
-
-  /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved) */
-  //@todo auto-weaken as needed (maybe even exchangeleft)
-  def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
-    override def result(provable: Provable): Provable = {
-      require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
-      if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
-      else throw new BelleError("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
-    }
-  }//new ByProvable(provable)
-  /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
-  def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
-  /** byVerbatim(axiom)  uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
-  private[btactics] def byVerbatim(axiom: String) : BelleExpr = by(AxiomInfo(axiom).provable)
-  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification.
-    *
-    * @see [[UnifyUSCalculus.US()]] */
-  def byUS(provable: Provable): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
-  /** byUS(lemma) proves by a uniform substitution instance of lemma. */
-  def byUS(lemma: Lemma)      : BelleExpr  = byUS(lemma.fact)
-  /** byUS(axiom) proves by a uniform substitution instance of axiom or derived axiom. */
-  def byUS(axiom: String)     : BelleExpr = byUS(AxiomInfo(axiom).provable)
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
@@ -150,7 +210,7 @@ trait UnifyUSCalculus {
     *
     * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
     */
-  def US(subst: USubst, fact: Provable): BuiltInTactic = TactixLibrary.by(fact(subst))
+  def US(subst: USubst, fact: Provable): BuiltInTactic = by(fact(subst))
   def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, AxiomInfo(axiom).provable)
   def US(subst: USubst): BuiltInTactic = new BuiltInTactic("US") {
     override def result(provable : Provable): Provable = provable(subst)
@@ -181,20 +241,20 @@ trait UnifyUSCalculus {
     }
   }
 
-  /**
-    * US(form) uses a suitable uniform substitution to reduce the proof to instead proving `form`.
-    * Unifies the current sequent with `form` and uses that unifier as a uniform substitution.
-    * {{{
-    *      form:
-    *     g |- d
-    *   --------- US where G=s(g) and D=s(d) where s=unify(form, G|-D)
-    *     G |- D
-    * }}}
-    *
-    * @author Andre Platzer
-    * @param form the sequent to reduce this proof to by a Uniform Substitution
-    * @see [[byUS()]]
-    */
+//  /**
+//    * US(form) uses a suitable uniform substitution to reduce the proof to instead proving `form`.
+//    * Unifies the current sequent with `form` and uses that unifier as a uniform substitution.
+//    * {{{
+//    *      form:
+//    *     g |- d
+//    *   --------- US where G=s(g) and D=s(d) where s=unify(form, G|-D)
+//    *     G |- D
+//    * }}}
+//    *
+//    * @author Andre Platzer
+//    * @param form the sequent to reduce this proof to by a Uniform Substitution
+//    * @see [[byUS()]]
+//    */
   //  @deprecated("use US(Provable) instead")
   //  def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
   //    override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -430,33 +490,6 @@ trait UnifyUSCalculus {
   }
 
 
-  /**
-    * rule(name,inst) uses the given axiomatic rule to prove the sequent.
-    * Unifies the fact's conclusion with the current sequent and proceed to the instantiated premise of `fact`.
-    * {{{
-    *    s(a) |- s(b)      a |- b
-    *   ------------- rule(---------) if s(g)=G and s(d)=D
-    *      G  |-  D        g |- d
-    * }}}
-    *
-    * @author Andre Platzer
-    * @param name the name of the fact to use to prove the sequent
-    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in the conclusion.
-    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
-    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
-    */
-  def rule(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(DerivedRuleInfo(name).codeName, {
-    val fact = Provable.rules.getOrElse(name, DerivedRuleInfo(name).provable)
-    //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
-    USubstPatternTactic(
-      (SequentType(fact.conclusion),
-        (us: Subst) => {
-          val s = inst(us);
-          s.getRenamingTactic & TactixLibrary.by(fact(s.substitution.usubst))
-        }) :: Nil
-    )
-  })
 
   // Let auto-tactics
 
@@ -499,7 +532,7 @@ trait UnifyUSCalculus {
           require(ctxF.isTermContext, "Formula context expected for CQ")
           if (DEBUG) println("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
           if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
-            axiomatic("CQ equation congruence", USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
+            by("CQ equation congruence", USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
           } else {
             if (DEBUG) println("CQ: Split " + p + " around " + inEqPos)
             val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
@@ -548,7 +581,7 @@ trait UnifyUSCalculus {
             require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
             require(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
             require(ctxP.isFormulaContext, "Formula context expected for CE")
-            axiomatic("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
+            by("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
           }
         case fml => throw new BelleError("Expected equivalence, but got " + fml)
       }

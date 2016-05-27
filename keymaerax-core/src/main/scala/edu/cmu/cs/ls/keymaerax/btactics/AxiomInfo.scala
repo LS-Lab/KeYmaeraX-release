@@ -55,15 +55,20 @@ object DerivationInfo {
   implicit def qeTool:QETool with DiffSolutionTool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
-  private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
+  //@todo
+  private val needsCodeName = "TODOTHISAXIOMSTILLNEEDSACODENAME"
 
   private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
 
+  private def convert(rules: Map[String,Provable]): List[DerivationInfo] =
+  //@todo display info is rather impoverished
+    rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name,name), canonicalize(name))).toList
+  private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
   /**
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = List(
+  private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("〈·〉", "<.>"), "〈a〉P ↔ ¬[a]¬P")
@@ -571,10 +576,6 @@ object DerivationInfo {
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
     //@todo unify axiomatic rule and derived rules mond / mondtodo
     new TacticInfo("mond", "Diamond Monotonicity", {case () => DLBySubst.mond}),
-    //@todo AxiomaticRuleInfo not DerivedRuleInfo
-    new DerivedRuleInfo("<> monotone"
-      , RuleDisplayInfo(SimpleDisplayInfo("<> monotone", "<>monotone"), SequentDisplay("<a;>p_(??)"::Nil, "<a;>q_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
-      , "mondtodo", {case () => DLBySubst.mond}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
@@ -684,7 +685,7 @@ object DerivationInfo {
   }
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
-  def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
+  def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit}, "valid code name: " + id)}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
   def ofCodeName(codeName:String): DerivationInfo = byCodeName.getOrElse(codeName.toLowerCase,
@@ -757,12 +758,34 @@ sealed trait DerivationInfo {
   val needsGenerator: Boolean = false
 }
 
+/** Meta-Information for a (derived) axiom or (derived) axiomatic rule */
+trait ProvableInfo extends DerivationInfo {
+  /** The Provable representing this (derived) axiom or (derived) axiomatic rule */
+  val provable: Provable
+}
+
+object ProvableInfo {
+  /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
+  def locate(name: String): Option[ProvableInfo] =
+    DerivationInfo(name) match {
+      case info: ProvableInfo => Some(info)
+      case _ => None
+    }
+  /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
+  def apply(name: String): ProvableInfo =
+    DerivationInfo(name) match {
+      case info: ProvableInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+    }
+
+  val allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
+}
+
+
 /** Meta-Information for an axiom or derived axiom */
-trait AxiomInfo extends DerivationInfo {
+trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   def formula: Formula
-  /** A Provable concluding this axiom */
-  def provable: Provable
 }
 
 /** Meta-Information for an axiom from the prover core */
@@ -844,8 +867,18 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
   override val numPositionArgs = 2
 }
 
+/** Information for an axiomatic rule */
+case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends ProvableInfo {
+  val expr = TactixLibrary.by(provable)
+  DerivationInfo.assertValidIdentifier(codeName)
+  def belleExpr = expr
+  lazy val provable: Provable = Provable.rules(canonicalName)
+  override val numPositionArgs = 0
+}
+
+
 /** Information for a derived rule proved from the core */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends DerivationInfo {
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   lazy val provable: Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)

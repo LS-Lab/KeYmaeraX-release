@@ -165,6 +165,9 @@ object DifferentialTactics {
 
             if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
 
+            /** byVerbatim(axiom)  uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
+            def byVerbatim(axiom: String) : BelleExpr = TactixLibrary.by(AxiomInfo(axiom).provable)
+
             cutLR(g)(pos) <(
               /* use */ skip,
               /* show */ cohide('Rlast) & equivifyR(1) & (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) &
