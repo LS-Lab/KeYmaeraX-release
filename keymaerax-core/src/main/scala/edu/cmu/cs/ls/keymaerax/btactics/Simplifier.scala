@@ -13,44 +13,55 @@ import scala.language.postfixOps
 
 
 /**
+  * Tactic Simplifier.simp performs term simplification everywhere within a formula,
+  * as many times as possible. Simplification is parameterized over a list of simplification
+  * steps. The default set of simplifications is guaranteed to terminate (using the number of constructors in the
+  * term as a termination metric), and an optional set of rules is provided for which termination is less clear.
+  * Any set of simplifications is allowed, as long as they terminate (the termination metric need not be the number
+  * of constructors in the term).
   * Created by bbohrer on 5/21/16.
   */
 object Simplifier {
+  /* A simplification takes a term t1 and optionally returns a
+   * pair (t2, e) of a simpler term t2 and a tactic that proves  |- t1 = t2*/
   type Simplification = (Term => Option[(Term, BelleExpr)])
 
   val timesZeroLeft:Simplification = {
     case Times(n: Number, t: Term) =>
-      if (n.value == 0) {Some((n, QE))} else None
+      if (n.value == 0) {Some(Number(0), useAt(DerivedAxioms.zeroTimes)(Position(1, 0::Nil)) & byUS("= reflexive"))} else None
     case _ => None
   }
 
   val timesZeroRight:Simplification = {
     case Times(t: Term, n: Number) =>
-      if (n.value == 0) {Some((n, QE))} else None
+      if (n.value == 0) {Some((Number(0), useAt(DerivedAxioms.timesZero)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
     case _ => None
   }
 
   val timesOneLeft:Simplification = {
     case Times(n: Number, t: Term) =>
-      if (n.value == 1) {Some((t, QE))} else None
+      if (n.value == 1) {Some((t,
+        useAt(DerivedAxioms.timesCommute)(1, 0::Nil) &
+        useAt(DerivedAxioms.timesIdentity)(Position(1, 0::Nil)) &
+        byUS("= reflexive")))} else None
     case _ => None
   }
 
   val timesOneRight:Simplification = {
     case Times(t: Term, n: Number) =>
-      if (n.value == 1) {Some((t, QE))} else None
+      if (n.value == 1) {Some((t, useAt(DerivedAxioms.timesIdentity)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
     case _ => None
   }
 
   val plusZeroRight:Simplification = {
     case Plus(t: Term, n: Number) =>
-      if (n.value == 0) {Some((t, QE))} else None
+      if (n.value == 0) {Some((t, useAt(DerivedAxioms.plusZero)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
     case _ => None
   }
 
   val plusZeroLeft:Simplification = {
     case Plus(n: Number, t: Term) =>
-      if (n.value == 0) {Some((t, QE))} else None
+      if (n.value == 0) {Some((t, useAt(DerivedAxioms.zeroPlus)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
     case _ => None
   }
 
@@ -116,7 +127,7 @@ object Simplifier {
   }
 
   val assocPlus:Simplification = {
-    case Plus(a:Term, Plus(b:Term, c:Term)) => print("\n\nputtin assoc in (" + a +"+" + b+") +"+c+"\n\n");Some(Plus(Plus(a,b), c), QE)
+    case Plus(a:Term, Plus(b:Term, c:Term)) => Some(Plus(Plus(a,b), c), QE)
     case _ => None
   }
 
@@ -220,6 +231,7 @@ object Simplifier {
     opt match {
       case Some((pos, t2, e)) =>
         val (ctx, t1:Term) = fml.at(pos)
+        print("Trying to prove " + Equal(t1,t2))
         val eqProof = TactixLibrary.proveBy(Equal(t1, t2), e)
         HilbertCalculus.useAt(HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0::Nil))(where)
       case None => TactixLibrary.nil
