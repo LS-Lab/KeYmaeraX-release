@@ -31,10 +31,10 @@ object KeYmaeraX {
   private val usage = "KeYmaera X Prover" + " " + VERSION +
     """
       |
-      |Usage: java -Xss20M -jar KeYmaeraX.jar
+      |Usage: java -Xss20M -jar keymaerax.jar
       |  -prove filename -tactic filename [-out filename] |
-      |  -modelplex filename [-vars var1,var2,..,varn] [-out filename] |
-      |  -codegen filename -format C|Spiral [-vars var1,var2,..,varn] [-out file] |
+      |  -modelplex filename [-out filename] |
+      |  -codegen filename -format C [-vars var1,var2,..,varn] [-out file] |
       |  -ui [filename] [web server options] |
       |  -parse [filename] |
       |  -bparse [filename]
@@ -54,11 +54,9 @@ object KeYmaeraX {
       |  -noverify skip checking proof certificates after proof search
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
-      |  -interactive start a simple command-line prover if -prove fails
       |  -cse      use common subexpression elimination in C code (not recommended)
-      |  -dnf      use disjunctive normal form in Spiral code
       |  -vars     use ordered list of variables, treating others as constant functions
-      |  -kind     kind of monitor to generate, one of ctrl or model
+      |  -kind ctrl|model kind of monitor to generate
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -security enable security manager imposing some security restrictions
