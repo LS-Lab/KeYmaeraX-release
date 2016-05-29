@@ -220,6 +220,10 @@ object TacticFactory {
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
+
+    def by(t: (Provable, SuccPosition) => Provable): BuiltInRightTactic = new BuiltInRightTactic(name) {
+      override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = t(provable, pos)
+    }
   }
 
 }
