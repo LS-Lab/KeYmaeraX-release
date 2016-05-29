@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -86,8 +87,7 @@ object ProofRuleTactics {
     }
   }
 
-  def andR = new BuiltInRightTactic("andR") {
-    override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
+  def andR = "andR" by { (provable: Provable, pos: SuccPosition) => {
       requireOneSubgoal(provable)
       //@todo how is isTopLevel ensured here and elsewhere? Call pos.checkTop.top?
       provable(core.AndRight(pos.top), 0)
