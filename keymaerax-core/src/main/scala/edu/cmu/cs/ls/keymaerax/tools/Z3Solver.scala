@@ -93,9 +93,9 @@ class Z3Solver extends SMTSolver {
     //@todo So far does not handle get-model or unsat-core
     val kResult = {
       //@todo investigate Z3 binding for Scala
-      if (z3Output.startsWith("unsat")) True
-      else if(z3Output.startsWith("sat")) False
-      else if(z3Output.startsWith("unknown")) False
+      if (z3Output.equals("unsat\n")) True
+      else if(z3Output.equals("sat\n")) False
+      else if(z3Output.equals("unknown\n")) False
       else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
     (z3Output, kResult)
