@@ -441,7 +441,7 @@ object DifferentialTactics {
    * @param b The constant term in y'=a*y+b.
    * @return The tactic.
    */
-  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos, sequent) => sequent.sub(pos) match {
+  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
       cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) <(
@@ -516,7 +516,7 @@ object DifferentialTactics {
    *        x<0 |- [x'=3,y'=2 & x>=0]y>0
    * }}}
    */
-  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
       cut(q) <(
@@ -525,7 +525,7 @@ object DifferentialTactics {
         )
   })
 
-  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos, sequent) => sequent.sub(pos) match {
+  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
@@ -573,7 +573,7 @@ object DifferentialTactics {
   })
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
-  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
@@ -592,7 +592,7 @@ object DifferentialTactics {
   })
 
   /** diffWeaken by DW & G */
-  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
       cohide(pos.top) & DW(1) & G
