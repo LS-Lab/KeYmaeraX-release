@@ -190,6 +190,9 @@ object TacticFactory {
    * @param name The tactic name.
    */
   implicit class TacticForNameFactory(val name: String) {
+    /** Creates a named tactic */
+    def by(t: BelleExpr): BelleExpr = new NamedTactic(name, t)
+
     /** Creates a dependent position tactic without inspecting the formula at that position */
     def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {

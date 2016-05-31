@@ -89,7 +89,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   })
 
   /** master: master tactic that tries hard to prove whatever it could */
-  def master(gen: Generator[Formula] = invGenerator): BelleExpr = NamedTactic("master", {
+  def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     OnAll(?(
       (close
         | ((must(normalize) partial)
