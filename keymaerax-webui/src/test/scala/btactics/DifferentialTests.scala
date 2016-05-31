@@ -918,6 +918,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("\\exists y [{x'=2,y'=3*y+10 & x>=0}]x>0".asFormula, "b=2".asFormula)
   }
 
+  it should "do basic unification" in {
+    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.DG("t'=1".asProgram, "0".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "t=0".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1}]x>0".asFormula
+  }
+
   it should "not allow non-linear ghosts (1)" in {
     a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "y".asTerm, "1".asTerm)(1))
   }

@@ -16,7 +16,8 @@ import scala.language.postfixOps
 
 /**
  * [[DifferentialTactics]] provides tactics for differential equations.
- * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
+  *
+  * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
 object DifferentialTactics {
@@ -29,7 +30,8 @@ object DifferentialTactics {
    *   -------------------------------------------
    *   G |- [{x'=f(??)&H(??)}]p(??), D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *    |- [{x'=1}][x':=1;]x>0
    *    -----------------------DE(1)
    *    |- [{x'=1}]x>0
@@ -180,7 +182,8 @@ object DifferentialTactics {
 
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
-   * @param qeTool Quantifier elimination tool for final QE step of tactic.
+    *
+    * @param qeTool Quantifier elimination tool for final QE step of tactic.
    * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
    *             'none: behaves as DI rule per cheat sheet
    *                    {{{
@@ -277,7 +280,8 @@ object DifferentialTactics {
 
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
-   * @example{{{
+    *
+    * @example{{{
    *    x>=5 |- x>=5    x>=5 |- [{x'=2}](x>=5)'
    *    ---------------------------------------DIRule(qeTool)(1)
    *    x>=5 |- [{x'=2}]x>=5
@@ -295,7 +299,8 @@ object DifferentialTactics {
   /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
    * used in the evolution domain constraint.
-   * @example{{{
+    *
+    * @example{{{
    *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
    *         -----------------------------------------------diffCut("x>0".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
@@ -372,7 +377,8 @@ object DifferentialTactics {
    * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
    * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
    * formulas are differential invariants. Fails if diffInd cannot prove invariants.
-   * @example{{{
+    *
+    * @example{{{
    *         x>0 |- [{x'=2&x>0}]x>=0
    *         ------------------------diffInvariant("x>0".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
@@ -404,7 +410,8 @@ object DifferentialTactics {
 
   /**
    * Turns things that are constant in ODEs into function symbols.
-   * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
+    *
+    * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
    * @return The tactic.
    */
   def Dconstify(inner: BelleExpr): DependentPositionTactic = new DependentPositionTactic("IDC introduce differential constants") {
@@ -426,7 +433,8 @@ object DifferentialTactics {
 
   /**
    * Differential ghost. Adds an auxiliary differential equation y'=a*y+b
-   * @example{{{
+    *
+    * @example{{{
    *         |- \exists y [{x'=2,y'=0*y+1}]x>0
    *         ---------------------------------- DG("y".asVariable, "0".asTerm, "1".asTerm)(1)
    *         |- [{x'=2}]x>0
@@ -452,6 +460,17 @@ object DifferentialTactics {
         )
   })
 
+  def DG(ghost: Program, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
+    val (y: Variable, a: Term, b: Term) = {
+      val s = UnificationMatch("z'=b()".asProgram, ghost)
+      (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b()".asTerm))
+    }
+
+    DG(y, a, b)(pos) &
+        DLBySubst.assignbExists(iv)(pos) &
+        DLBySubst.assignEquational(pos)
+  })
+
   /**
    * Syntactically derives a differential of a variable to a differential symbol.
    * {{{
@@ -459,7 +478,8 @@ object DifferentialTactics {
    *   --------------
    *   G |- (x)'=f, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   |- x'=1
    *   ----------Dvariable(1, 0::Nil)
    *   |- (x)'=1
