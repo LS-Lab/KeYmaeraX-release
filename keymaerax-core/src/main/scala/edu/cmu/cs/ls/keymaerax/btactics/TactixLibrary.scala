@@ -98,7 +98,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         | ((diffSolve(None)('R) partial)
         | ((diffInd partial)
         | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType() & ?(OnAll(QE))
-  })
+  }
 
   /*******************************************************************
     * unification and matching based auto-tactics
