@@ -111,6 +111,8 @@ object SeqPos {
  * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
  * the disjunction of the formulas in `succ`.
  *
+ * @param ante The ordered list of antecedents of this sequent whose conjunction is assumed.
+ * @param succ The orderd list of succedents of this sequent whose disjunction needs to be shown.
  * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
