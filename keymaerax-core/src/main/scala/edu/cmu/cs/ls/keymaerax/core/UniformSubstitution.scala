@@ -176,8 +176,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *   val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
  *   val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
  *   val next = UniformSubstitutionRule(s,
- *     Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
- *       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+ *     Sequent(IndexedSeq(), IndexedSeq(prem)))(
+ *       Sequent(IndexedSeq(), IndexedSeq(conc)))
  *   // results in: p(x) <-> ! ! p(- - x)
  *   println(next)
  * }}}
@@ -204,8 +204,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *     SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
  *   val conc = "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
  *   val next = UniformSubstitutionRule(s,
- *    Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
- *      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+ *    Sequent(IndexedSeq(), IndexedSeq(prem)))(
+ *      Sequent(IndexedSeq(), IndexedSeq(conc)))
  *   // results in: [x'=5;]x>=2 <-> [x'=5;](x>=2&true)
  *   println(next)
  * }}}
@@ -291,16 +291,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /**
    * Apply uniform substitution everywhere in the sequent.
    */
-  def apply(s: Sequent): Sequent = {
-    try {
-      //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
-    } catch {
-      case ex: ProverException => throw ex.inContext(s.toString)
-      /*case ex: IllegalArgumentException => //@todo does this still happen?
-        throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)*/
-    }
-  }
+  def apply(s: Sequent): Sequent = try {
+    //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
+    Sequent(s.ante.map(apply), s.succ.map(apply))
+  } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
   /**
     * Apply uniform substitution to a Provable (convenience method).
