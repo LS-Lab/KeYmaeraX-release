@@ -77,6 +77,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove all substitute" in withMathematica { implicit qeTool => check(allSubstitute)}
   it should "prove [:=] equational" in withMathematica { implicit qeTool => check(assignbEquationalAxiom)}
   ignore should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
+  it should "prove exists and" in {check(existsAndAxiom)}
+  it should "prove [:=] assign exists" in {check(assignbImpliesExistsAxiom)}
   it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}

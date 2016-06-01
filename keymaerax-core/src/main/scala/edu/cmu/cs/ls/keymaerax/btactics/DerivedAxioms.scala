@@ -843,6 +843,35 @@ object DerivedAxioms {
   lazy val assignbExistsT = derivedAxiomT(assignbExistsAxiom)
 
   /**
+    * {{{Axiom "[:=] assign exists".
+    *  [x_:=f();]p(??) -> \exists x_ p(??)
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val assignbImpliesExistsF = "[x_:=f_();]p_(??) <-> \\exists x_ (x_=f_() & p_(??))".asFormula
+  lazy val assignbImpliesExistsAxiom = derivedAxiom("[:=] assign exists",
+    Sequent(IndexedSeq(), IndexedSeq(assignbImpliesExistsF)),
+    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
+      & byUS("[:=] assign equality exists")
+  )
+  lazy val assignbImpliesExistsT = derivedAxiomT(assignbImpliesExistsAxiom)
+
+  /**
+    * {{{Axiom "\\exists& exists and".
+    *  \exists x_ (q_(??) & p_(??)) -> \exists x_ (p_(??))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val existsAndF = "\\exists x_ (q_(??) & p_(??)) -> \\exists x_ (p_(??))".asFormula
+  lazy val existsAndAxiom = derivedAxiom("\\exists& exists and",
+    Sequent(IndexedSeq(), IndexedSeq(existsAndF)),
+    /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
+  )
+  lazy val existsAndT = derivedAxiomT(existsAndAxiom)
+
+  /**
     * {{{Axiom "<:=> assign equality".
     *    <x:=f();>p(??) <-> \exists x (x=f() & p(??))
     * End.
