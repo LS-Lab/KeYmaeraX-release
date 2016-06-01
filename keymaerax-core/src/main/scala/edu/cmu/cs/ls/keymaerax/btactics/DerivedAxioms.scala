@@ -852,8 +852,10 @@ object DerivedAxioms {
   lazy val assignbImpliesExistsF = "[x_:=f_();]p_(??) <-> \\exists x_ (x_=f_() & p_(??))".asFormula
   lazy val assignbImpliesExistsAxiom = derivedAxiom("[:=] assign exists",
     Sequent(IndexedSeq(), IndexedSeq(assignbImpliesExistsF)),
-    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
-      & byUS("[:=] assign equality exists")
+//    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
+//      & byUS("[:=] assign equality exists")
+    useAt("[:=] assign equality exists", PosInExpr(0::Nil))(1, 0::Nil) &
+    byUS(existsAndAxiom)
   )
   lazy val assignbImpliesExistsT = derivedAxiomT(assignbImpliesExistsAxiom)
 
