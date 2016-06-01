@@ -60,6 +60,11 @@ http://arxiv.org/abs/1408.1980
 ------------------------------------------------------------------
 The date of last full code review is added to the top of the file as @note Code Review: 2016-03-09.
 A log of all major code reviews and the findings are reported here:
+Code Review: KeYmaera X Core Delta: 2016-06-01
+  NOTE Could turn DifferentialProgram into non-Program.
+  TODO Turn "[:=] assign exists" into DerivedAxiom
+  TODO Add checksum test and core version to string representation of Lemma. And Lemma name sanity.
+
 
 Code Review: KeYmaera X Core: 2016-03-09
 SetLattice reviewed and changed to pair matching style to improve readability. A few name changes.
