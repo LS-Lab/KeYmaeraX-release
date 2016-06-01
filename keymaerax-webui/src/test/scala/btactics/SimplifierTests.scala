@@ -23,28 +23,28 @@ class SimplifierTests extends TacticTestBase {
     val fml = "0 * x = x".asFormula
     val tactic = Simplifier.simp()(1) & debug("After simping", true)
     proveBy(fml, tactic).subgoals should contain only
-      Sequent(Nil, IndexedSeq(), IndexedSeq("0 = x".asFormula))
+      Sequent(IndexedSeq(), IndexedSeq("0 = x".asFormula))
   }
 
   it should "fold constants" in withMathematica { implicit qeTool =>
     val fml = "(((2 * (3 + (-(1))))/2)^3)-1 = x".asFormula
     val tactic = Simplifier.simp()(1) & debug("After simping", true)
     proveBy(fml, tactic).subgoals should contain only
-      Sequent(Nil, IndexedSeq(), IndexedSeq("7 = x".asFormula))
+      Sequent(IndexedSeq(), IndexedSeq("7 = x".asFormula))
   }
 
   it should "simp deep inside a formula" in withMathematica{ implicit qeTool =>
     val fml = "(p() -> (q() & (x + 0) >= y * (9 * 3))) & r() ".asFormula
     val tactic = Simplifier.simp()(1) & debug("After simping", true)
     proveBy(fml, tactic).subgoals should contain only
-      Sequent(Nil, IndexedSeq(), IndexedSeq("(p() -> (q() & x >= y * 27)) & r() ".asFormula))
+      Sequent(IndexedSeq(), IndexedSeq("(p() -> (q() & x >= y * 27)) & r() ".asFormula))
   }
 
   it should "handle association and inconveniently-placed addition" in withMathematica { implicit qeTool =>
     val fml = "x = (((x + 1) + (2 + x))  +  ((x + 3) + (4 + x)))".asFormula
     val tactic = Simplifier.simp(Simplifier.extendedSimps)(1)
     proveBy(fml, tactic).subgoals should contain only
-      Sequent(Nil, IndexedSeq(), IndexedSeq("x = 10 + x + x + x + x".asFormula))
+      Sequent(IndexedSeq(), IndexedSeq("x = 10 + x + x + x + x".asFormula))
   }
 
   "derived axioms" should "work how I think they do" in withMathematica { implicit qeTool =>

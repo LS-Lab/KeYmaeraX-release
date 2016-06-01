@@ -23,7 +23,7 @@ import scala.collection.immutable
 object ProofChecker {
   private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
 
-  private def goalSequent(phi : Formula) = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(phi))
+  private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = Provable.startProof(goalSequent(phi))
 
   /**

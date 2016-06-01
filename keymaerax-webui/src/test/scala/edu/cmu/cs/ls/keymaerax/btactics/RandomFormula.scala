@@ -65,7 +65,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   def nextSequent(size : Int): Sequent = {
     val vars = nextNames("z", size / 3 + 1)
-    Sequent(Nil, Range(0,rand.nextInt(size/2)).map(i => nextF(vars, size-1)), Range(0,rand.nextInt(size/2)).map(i => nextF(vars, size-1)))
+    Sequent(Range(0,rand.nextInt(size/2)).map(i => nextF(vars, size-1)), Range(0,rand.nextInt(size/2)).map(i => nextF(vars, size-1)))
   }
 
   /** Generate a random proof of a random tautological sequents */
@@ -91,7 +91,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     if (pr.conclusion.ante.length >= lefts) pr
     else {
       val fml = nextF(vars, n)
-      padLeft(vars, n, pr(pr.conclusion.glue(Sequent(Nil, IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(pr.conclusion.ante.length))), lefts)
+      padLeft(vars, n, pr(pr.conclusion.glue(Sequent(IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(pr.conclusion.ante.length))), lefts)
     }
   }
 
@@ -101,7 +101,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     if (pr.conclusion.succ.length >= rights) pr
     else {
       val fml = nextF(vars, n)
-      padRight(vars, n, pr(pr.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(pr.conclusion.succ.length))), rights)
+      padRight(vars, n, pr(pr.conclusion.glue(Sequent(IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(pr.conclusion.succ.length))), rights)
     }
   }
 
@@ -264,38 +264,31 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     val r = rand.nextInt(70)
     r match {
       case 0 => Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
-      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(Nil, IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
+      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
       case it if 10 until 20 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
-        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
+        p1(p1.conclusion.glue(Sequent(IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
       case it if 20 until 30 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
-        p1(p1.conclusion.glue(Sequent(Nil, IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(p1.conclusion.ante.length)))
+        p1(p1.conclusion.glue(Sequent(IndexedSeq(fml), IndexedSeq())), HideLeft(AntePos(p1.conclusion.ante.length)))
       case it if 30 until 40 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 2);
         val pos1 = if (p1.conclusion.ante.length<=2) AntePos(0) else AntePos(rand.nextInt(p1.conclusion.ante.length-2))
-        p1(Sequent(Nil, p1.conclusion.ante.dropRight(2).patch(pos1.getIndex, And(p1.conclusion.ante.dropRight(1).last, p1.conclusion.ante.last)::Nil, 0),
-          p1.conclusion.succ), AndLeft(pos1))
+        p1(Sequent(p1.conclusion.ante.dropRight(2).patch(pos1.getIndex, And(p1.conclusion.ante.dropRight(1).last, p1.conclusion.ante.last)::Nil, 0), p1.conclusion.succ), AndLeft(pos1))
       case it if 40 until 50 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 2);
         val pos1 = if (p1.conclusion.succ.length<=2) SuccPos(0) else SuccPos(rand.nextInt(p1.conclusion.succ.length-2))
-        p1(Sequent(Nil, p1.conclusion.ante,
-          p1.conclusion.succ.dropRight(2).patch(pos1.getIndex, Or(p1.conclusion.succ.dropRight(1).last, p1.conclusion.succ.last)::Nil, 0)),
+        p1(Sequent(p1.conclusion.ante, p1.conclusion.succ.dropRight(2).patch(pos1.getIndex, Or(p1.conclusion.succ.dropRight(1).last, p1.conclusion.succ.last)::Nil, 0)),
           OrRight(pos1))
       case it if 50 until 60 contains it => val p1 = padLeft(vars, n, padRight(vars, n, nextPr(vars, n-1), 1), 1);
         val posi1 = rand.nextInt(p1.conclusion.succ.length)
         val pos1 = SuccPos(posi1)
-        p1(Sequent(Nil, p1.conclusion.ante.patch(p1.conclusion.ante.length-1,Nil,1),
-          p1.conclusion.succ.patch(p1.conclusion.succ.length-1,Nil,1).patch(posi1,
-            Imply(p1.conclusion.ante.last, p1.conclusion.succ.last)::Nil
-            , 0)), ImplyRight(pos1))
+        p1(Sequent(p1.conclusion.ante.patch(p1.conclusion.ante.length-1,Nil,1), p1.conclusion.succ.patch(p1.conclusion.succ.length-1,Nil,1).patch(posi1,
+                    Imply(p1.conclusion.ante.last, p1.conclusion.succ.last)::Nil
+                    , 0)), ImplyRight(pos1))
       case it if 60 until 65 contains it => val p1 = padLeft(vars, n, nextPr(vars, n-1), 1);
         val pos1 = if (p1.conclusion.succ.isEmpty) 0 else rand.nextInt(p1.conclusion.succ.length)
-        p1(Sequent(Nil,
-          p1.conclusion.ante.dropRight(1),
-          p1.conclusion.succ.patch(pos1, Not(p1.conclusion(AntePos(p1.conclusion.ante.length-1)))::Nil, 0)),
+        p1(Sequent(p1.conclusion.ante.dropRight(1), p1.conclusion.succ.patch(pos1, Not(p1.conclusion(AntePos(p1.conclusion.ante.length-1)))::Nil, 0)),
           NotRight(SuccPos(pos1)))
       case it if 65 until 70 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1);
         val pos1 = if (p1.conclusion.ante.isEmpty) 0 else rand.nextInt(p1.conclusion.ante.length)
-        p1(Sequent(Nil,
-          p1.conclusion.ante.patch(pos1, Not(p1.conclusion(SuccPos(p1.conclusion.succ.length-1)))::Nil, 0),
-          p1.conclusion.succ.dropRight(1)), NotLeft(AntePos(pos1)))
+        p1(Sequent(p1.conclusion.ante.patch(pos1, Not(p1.conclusion(SuccPos(p1.conclusion.succ.length-1)))::Nil, 0), p1.conclusion.succ.dropRight(1)), NotLeft(AntePos(pos1)))
       case it if 70 until 75 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 1); val p2 = padRight(vars, n, nextPr(vars, n-1), 1);
         val pos1 = SuccPos(0) //@todo could do other positions if using ExchangeRight: SuccPos(rand.nextInt(Math.min(p1.conclusion.succ.length, p2.conclusion.succ.length)))
         val (pp1, pp2) = weakenRight(p1, p2, pos1)

@@ -194,7 +194,7 @@ object Augmentors {
     /** Replace all free occurrences of `what` in `seq` by `repl`. */
     def replaceFree(what: Term, repl: Term) = SubstitutionHelper.replaceFree(seq)(what,repl)
     /** Replace all occurrences of `what` in `seq` by `repl`. */
-    def replaceAll(what: Expression, repl: Expression) = Sequent(seq.pref, seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
+    def replaceAll(what: Expression, repl: Expression) = Sequent(seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
     //@todo implement returning both Ante+Succ
     def zipWithPositions: List[(Formula, TopPosition)] = ???
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */

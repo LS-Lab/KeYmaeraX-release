@@ -34,7 +34,7 @@ class HilbertTests extends TacticTestBase {
   val rand = new RandomFormula() //(-4317240407825764493L)
 
   "Hilbert calculus" should "prove x>=5 -> [{x'=2&x<=9}]x<=9" in {
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}]x<=9".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}]x<=9".asFormula)),
       implyR(1) &
         DW(1) &
         abstractionb(1) & allR(1) & prop
@@ -42,7 +42,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "prove x>=5 -> [{x'=2&x<=9}]x<=10" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}]x<=10".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}]x<=10".asFormula)),
       implyR(1) &
         DW(1) &
         abstractionb(1) & QE
@@ -51,7 +51,7 @@ class HilbertTests extends TacticTestBase {
 
   //@todo not everything ported yet
   it should "prove x>=5 -> [{x'=2}](x>=5)'" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}](x>=5)'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}](x>=5)'".asFormula)),
       implyR(1) &
         DE(1) &
         Dgreaterequal(1, 1::1::Nil) &
@@ -63,7 +63,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "prove (x+2*y)'=x'+2*y'" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       Dplus(1, 0::Nil) &
         Dvar(1, 0::0::Nil) &
         useAt("' linear")(1, 0::1::Nil) & // Dtimes(SuccPosition(0, 0::1::Nil))
@@ -75,107 +75,107 @@ class HilbertTests extends TacticTestBase {
   it should "prove (y)'=y forward" in withMathematica { implicit qeTool =>
     val x = Variable("y")
     proveBy(
-      Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
+      Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
       Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
     proveBy(
-      Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
+      Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
       Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
   }
 
   it should "derive (y)'=y'" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x+y)'=x'+y'" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x*y)'=x'*y+x*y'" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x^2)' >= 7 without crashing" in withMathematica{ implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
       stepAt(1, 0::Nil)
-    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
+    ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
   }
 
   //@todo we only support optimized
   ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   //@todo we only support optimized
   ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y)'=5*x'+2*y'" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::1::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
   it should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}](5*x>=6)'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=7}](5*x>=6)'".asFormula)),
       derive(1,1::Nil)
-    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
+    ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
   }
 
   it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
       derive(1,1::Nil)
-    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
+    ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
   }
 
   it should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
         DI(1) & (implyR(1) & andR(1)) <(
         prop,
@@ -189,7 +189,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "prove/derive x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
         DI(1) & (implyR(1) & andR(1)) <(
         prop,
@@ -206,7 +206,7 @@ class HilbertTests extends TacticTestBase {
   //  }
 
   ignore should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         DC("5<=x".asFormula)(1) & debug("after DC") &
         //@todo needs more branching to handle DI
@@ -217,7 +217,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   ignore should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         //@todo the problem is that DI should be used in show prereq branch of useAt instead of defaulting to master
         DC("5<=x".asFormula)(1) <(
@@ -228,7 +228,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   ignore should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & //ind
         useAt("[;] compose")(1) &
         useAt("[:=] assign equational")(1) &
@@ -244,77 +244,77 @@ class HilbertTests extends TacticTestBase {
 
   "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in {
     proveBy("[x:=x+1;x:=2*x;]x>1".asFormula, useAt("[;] compose")(1)).subgoals should contain only
-      Sequent(Nil, IndexedSeq(), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))
+      Sequent(IndexedSeq(), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))
   }
 
   it should "reduce x>5 |- [x:=x+1;][x:=2*x;]x>1 to x>5 |- [x:=x+1;x:=2*x;]x>1 by useAt backwards" in {
-    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
-      useAt("[;] compose", PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
+    proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
   }
 
   it should "reduce [x:=x+1;x:=2*x;]x>1 |- x>5 to [x:=x+1;][x:=2*x;]x>1 |- x>5 by useAt" in {
-    proveBy(Sequent(Nil, IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
-      useAt("[;] compose")(AntePos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+    proveBy(Sequent(IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose")(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
   it should "reduce [x:=x+1;][x:=2*x;]x>1 |- x>5 to [x:=x+1;x:=2*x;]x>1 |- x>5 by useAt backwards" in {
-    proveBy(Sequent(Nil, IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
-      useAt("[;] compose", PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+    proveBy(Sequent(IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
 
   it should "reduce x>5 |- [c;d;]x>1 to x>5 |- [c;][d;]x>1 by useAt" in {
-    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula)),
-      useAt("[;] compose")(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula))
+    proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula)),
+      useAt("[;] compose")(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula))
   }
 
   it should "reduce x>5 |- [c;][d;]x>1 to x>5 |- [c;d;]x>1 by useAt backwards" in {
-    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula)),
-      useAt("[;] compose", PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula))
+    proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula))
   }
 
   it should "reduce [c;d;]x>1 |- x>5 to [c;][d;]x>1 |- x>5 by useAt" in {
-    proveBy(Sequent(Nil, IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
-      useAt("[;] compose")(AntePos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+    proveBy(Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose")(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
   it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in {
-    proveBy(Sequent(Nil, IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
-      useAt("[;] compose", PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+    proveBy(Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
   "Chase" should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
   it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
   it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
   it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1".asFormula)),
       // chaseWide(3) works like an update calculus
       chase(3,3)(1) &
         QE
@@ -322,7 +322,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) &
         chase(3,3)(1) &
         //@todo need to locate diffInd to after update prefix
@@ -335,17 +335,17 @@ class HilbertTests extends TacticTestBase {
   it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
     proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula,
       chase(1, 1 :: Nil)
-    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
+    ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
   }
 
   it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs KeYmaeraXTestTags.CheckinTest in {
     proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula,
       chase(1, 1 :: Nil)
-    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
+    ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
   }
 
   it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & chase(1) &
         //@todo need to locate diffInd to after update prefix
         diffInd(qeTool)(1, 1::Nil) &
@@ -355,15 +355,15 @@ class HilbertTests extends TacticTestBase {
   }
 
   "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in {
-    val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (Provable.startProof(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
-    done.subgoals shouldBe List(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
-    done.conclusion shouldBe Sequent(Nil, IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
+    val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (Provable.startProof(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
+    done.subgoals shouldBe List(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
+    done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
   it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { implicit qeTool =>
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (basicImpl)
     done shouldBe 'proved
-    done.conclusion shouldBe Sequent(Nil, IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
+    done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
   private def shouldCMon(ctx: Context[Formula], basic: Provable = basicImpl): Unit = {
@@ -371,7 +371,7 @@ class HilbertTests extends TacticTestBase {
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
     done shouldBe 'proved
-    done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx(basic.conclusion.ante.head)), IndexedSeq(ctx(basic.conclusion.succ.head)))
+    done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.ante.head)), IndexedSeq(ctx(basic.conclusion.succ.head)))
   }
 
   private def shouldCMonA(ctx: Context[Formula], basic: Provable = basicImpl): Unit = {
@@ -379,7 +379,7 @@ class HilbertTests extends TacticTestBase {
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
     done shouldBe 'proved
-    done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx(basic.conclusion.succ.head)), IndexedSeq(ctx(basic.conclusion.ante.head)))
+    done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.succ.head)), IndexedSeq(ctx(basic.conclusion.ante.head)))
   }
 
   it should "prove y<2 & x>5 |- y<2 & x>2 from x>5 |- x>2" in withMathematica { implicit qeTool => shouldCMon(Context("y<2 & ⎵".asFormula))}
@@ -409,7 +409,7 @@ class HilbertTests extends TacticTestBase {
   it should "prove in antimonotone context (<x:=5;>_&a=3 -> y<2) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMonA(Context("(<x:=5;>⎵&a=3 -> y<2) & x<10 | x=7".asFormula))}
   it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
 
-  lazy val basicImpl = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)),
+  lazy val basicImpl = TactixLibrary.proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)),
     TactixLibrary.QE)
 
   it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica { implicit qeTool =>
@@ -426,7 +426,7 @@ class HilbertTests extends TacticTestBase {
             //@todo discard ctx if DotFormula somewhere underneath an Equiv
             val done = CMon(ctx)(basicImpl)
             done shouldBe 'proved
-            done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
+            done.conclusion shouldBe Sequent(IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
           }
         } catch {
           case e: ProverException => if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
@@ -442,11 +442,11 @@ class HilbertTests extends TacticTestBase {
 
   private def shouldReduceTo(input: Formula, pos: Int, inExpr: PosInExpr, result: Formula, fact: Provable = basicEq): Unit =
     proveBy(input, CEat(fact)(pos, inExpr.pos)).subgoals should contain only
-      new Sequent(Nil, IndexedSeq(), IndexedSeq(result))
+      new Sequent(IndexedSeq(), IndexedSeq(result))
 
   private def shouldReduceTo(input: Formula, pos: Int, inExpr: PosInExpr, result: Formula, fact: Provable, C: Context[Formula]): Unit =
     proveBy(input, CEat(fact, C)(pos, inExpr.pos)).subgoals should contain only
-      new Sequent(Nil, IndexedSeq(), IndexedSeq(result))
+      new Sequent(IndexedSeq(), IndexedSeq(result))
 
   "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in withMathematica { implicit qeTool =>
     shouldReduceTo("0*x+1<=3".asFormula, 1, PosInExpr(0::Nil), "1<=3".asFormula)
@@ -518,111 +518,111 @@ class HilbertTests extends TacticTestBase {
     useFor("DX diamond differential skip", PosInExpr(0::Nil),
       (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c"), KeYmaeraXParser.differentialProgramParser("x'=2"))))
     )(SuccPosition(1, Nil)) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("(true&x=y)".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<{x'=2}>x=y".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(true&x=y)".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y".asFormula))
   }
 
   it should "use DX to forward <{x'=2}>x=y -> bla() to (true&x=y) -> bla()" in {
     useFor("DX diamond differential skip")(SuccPosition(1, 0::Nil)) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<{x'=2}>x=y -> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y -> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <{x'=2}>x=y <-> bla() to (true&x=y) -> bla()" in {
     useFor("DX diamond differential skip")(SuccPosition(1, 0::Nil)) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<{x'=2}>x=y <-> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y <-> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
 
   // with context
 
   it should "use <*> approx to forward <x:=x+1;>x=y to <{x:=x+1;}*>x=y" in {
     useFor("<*> approx", PosInExpr(0::Nil))(SuccPosition(1, Nil)) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y".asFormula))
   }
 
   it should "use <*> approx to forward <{x:=x+1;}*>x=y -> bla() to <x:=x+1;>x=y -> bla()" in {
     useFor("<*> approx")(SuccPosition(1, 0::Nil)) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y -> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y -> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
   it should "use <*> approx to forward <{x:=x+1;}*>x=y <-> bla() to <x:=x+1;>x=y -> bla()" in {
     useFor("<*> approx")(SuccPosition(1, (0::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y <-> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y <-> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
   it should "use <*> approx to forward bla() <-> <{x:=x+1;}*>x=y to <x:=x+1;>x=y -> bla()" in {
     useFor("<*> approx")(SuccPosition(1, (1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("bla() <-> <{x:=x+1;}*>x=y".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("bla() <-> <{x:=x+1;}*>x=y".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
   it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in {
     useFor("DX diamond differential skip", PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{c}>x=y".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{c}>x=y".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in {
     useFor("DX diamond differential skip")(SuccPosition(1, (0::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in {
     useFor("DX diamond differential skip")(SuccPosition(1, (0::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
   it should "use <*> approx to forward <x:=1;>x=1 to <{x:=1;}*>x=1" in {
     useFor("<*> approx", PosInExpr(0::Nil))(SuccPosition(1, (Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>x=1".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<{x:=1;}*>x=1".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>x=1".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x:=1;}*>x=1".asFormula))
   }
 
   it should "use <*> approx to forward <x:=1;><x:=x+1;>x=y to <x:=1;><{x:=x+1;}*>x=y" in {
     useFor("<*> approx", PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y".asFormula))
   }
 
   it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y -> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in {
     useFor("<*> approx", PosInExpr(1::Nil))(SuccPosition(1, (0::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y -> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y -> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
   }
 
   it should "use <*> approx to forward bla() -> <x:=1;><x:=x+1;>x=y to bla() -> <x:=1;><{x:=x+1;}*>x=y" in {
     useFor("<*> approx", PosInExpr(0::Nil))(SuccPosition(1, (1::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("bla() -> <x:=1;><x:=x+1;>x=y".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("bla() -> <x:=1;><{x:=x+1;}*>x=y".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("bla() -> <x:=1;><x:=x+1;>x=y".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("bla() -> <x:=1;><{x:=x+1;}*>x=y".asFormula))
   }
 
   it should "use <*> approx to forward bla() -> (<x:=1;><{x:=x+1;}*>x=y -> foo()) to bla() -> (<x:=1;><x:=x+1;>x=y -> foo())" in {
     useFor("<*> approx", PosInExpr(1::Nil))(SuccPosition(1, (1::0::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("bla() -> (<x:=1;><{x:=x+1;}*>x=y -> foo())".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("bla() -> (<x:=1;><x:=x+1;>x=y -> foo())".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("bla() -> (<x:=1;><{x:=x+1;}*>x=y -> foo())".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("bla() -> (<x:=1;><x:=x+1;>x=y -> foo())".asFormula))
   }
 
   it should "use <*> approx to forward (<x:=1;><x:=x+1;>x=y -> bla()) -> foo() to (<x:=1;><{x:=x+1;}*>x=y -> bla()) -> foo()" in {
     useFor("<*> approx", PosInExpr(0::Nil))(SuccPosition(1, (0::0::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("(<x:=1;><x:=x+1;>x=y -> bla()) -> foo()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("(<x:=1;><{x:=x+1;}*>x=y -> bla()) -> foo()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(<x:=1;><x:=x+1;>x=y -> bla()) -> foo()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(<x:=1;><{x:=x+1;}*>x=y -> bla()) -> foo()".asFormula))
   }
 
   it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y <-> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in {
     useFor("<*> approx")(SuccPosition(1, (0::1::Nil))) (
-      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y <-> bla()".asFormula)))
-    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y <-> bla()".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
   }
 
   it should "use ^' derive power to forward (x^2)'=0 to 2*x^(2-1)*(x)'=0" in withMathematica { implicit qeTool =>
     useFor("^' derive power")(SuccPosition(1, 0::Nil)) (
-      Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
-    ).conclusion shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("(2*x^(2-1))*(x)'=0".asFormula))
+      Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
+    ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(2*x^(2-1))*(x)'=0".asFormula))
   }
 }

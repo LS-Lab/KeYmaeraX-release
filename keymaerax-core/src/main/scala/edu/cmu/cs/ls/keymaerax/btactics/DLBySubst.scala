@@ -74,7 +74,7 @@ object DLBySubst {
     * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
     */
   lazy val G: BelleExpr = {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
+    val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
     if (isGame)
       USubstPatternTactic(

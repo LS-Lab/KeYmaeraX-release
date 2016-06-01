@@ -341,7 +341,7 @@ class UnificationMatchBase extends BaseMatcher {
   }
 
   protected def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
-    if (!(s1.pref == s2.pref && s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1,s2)
+    if (!(s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1,s2)
     else {
       val composeFolder = (u1: List[SubstRepl], f1: Formula, f2: Formula) =>
         compose(unify(Subst(u1)(f1), f2), u1)

@@ -744,7 +744,7 @@ object SQLite {
       val modelId = getProofInfo(proofId).modelId
       val model = getModel(modelId)
       KeYmaeraXProblemParser(model.keyFile) match {
-        case fml:Formula => Sequent(Nil, collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
+        case fml:Formula => Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
         case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
       }
     }

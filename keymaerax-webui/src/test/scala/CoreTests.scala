@@ -71,10 +71,10 @@ class CoreTests extends FlatSpec with Matchers {
     Power(Variable("x", None, Real), Number(2)) should be (Power(Variable("x", None, Real), Number(2)))
   }
 
-  def rootSucc(f: Formula) = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
-  def rootAnte(f: Formula) = Provable.startProof(Sequent(Nil, IndexedSeq(f), IndexedSeq()))
+  def rootSucc(f: Formula) = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(f)))
+  def rootAnte(f: Formula) = Provable.startProof(Sequent(IndexedSeq(f), IndexedSeq()))
 
-  def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, IndexedSeq() ++ a, IndexedSeq() ++ b)
+  def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
     println("\tCheck " + rule) //@TODO turn into "should" output?
@@ -122,7 +122,7 @@ class CoreTests extends FlatSpec with Matchers {
   it should "complain about being applied to formulas of the wrong shape" in {
     var sPos = SeqPos(1).asInstanceOf[SuccPos]
     var aPos = SeqPos(-1).asInstanceOf[AntePos]
-    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
+    val s = Sequent(IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
 
     an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
     an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
@@ -169,7 +169,7 @@ class CoreTests extends FlatSpec with Matchers {
   }
 
   it should "complain about being applied to non-existent positions" in {
-    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
+    val s = Sequent(IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
 
     val sPos = SeqPos(5).asInstanceOf[SuccPos]
     val aPos = SeqPos(-5).asInstanceOf[AntePos]

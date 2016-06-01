@@ -150,7 +150,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def apply(s: Sequent): Sequent = {
     try {
       //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+      Sequent(s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>

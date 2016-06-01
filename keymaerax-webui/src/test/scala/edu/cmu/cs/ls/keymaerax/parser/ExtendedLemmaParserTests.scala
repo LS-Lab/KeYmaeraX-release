@@ -36,7 +36,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
 
     parseResult._1.get shouldBe "MyLemma"
     parseResult._2.length shouldBe 3
-    parseResult._2.head shouldBe new Sequent(Nil, IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
+    parseResult._2.head shouldBe new Sequent(IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
 
     Lemma.fromString(lemmaFile)
   }
@@ -60,7 +60,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
 
     parseResult._1.get shouldBe "MyLemma"
     parseResult._2.length shouldBe 1
-    parseResult._2.head shouldBe new Sequent(Nil, IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
+    parseResult._2.head shouldBe new Sequent(IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
 
     Lemma.fromString(lemmaFile)
   }
@@ -91,7 +91,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
 
     parseResult._1.get shouldBe "MyLemma"
     parseResult._2.length shouldBe 3
-    parseResult._2.head shouldBe new Sequent(Nil, IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
+    parseResult._2.head shouldBe new Sequent(IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
 
     Lemma.fromString(lemmaFile)
   }
@@ -122,7 +122,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
 
     parseResult._1.get shouldBe "MyLemma"
     parseResult._2.length shouldBe 3
-    parseResult._2.head shouldBe new Sequent(Nil, IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
+    parseResult._2.head shouldBe new Sequent(IndexedSeq("1=1".asFormula, "2=2".asFormula), IndexedSeq("3=3".asFormula, "4=4".asFormula))
 
     Lemma.fromString(lemmaFile)
   }

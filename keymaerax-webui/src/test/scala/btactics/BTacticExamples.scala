@@ -24,7 +24,7 @@ class BTacticExamples extends TacticTestBase  {
     import edu.cmu.cs.ls.keymaerax.core._
     // explicit proof certificate construction of |- !!p() <-> p()
     val proof = (Provable.startProof(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
+      Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
       (EquivRight(SuccPos(0)), 0)
       // right branch
       (NotRight(SuccPos(0)), 1)
@@ -36,7 +36,7 @@ class BTacticExamples extends TacticTestBase  {
       (Close(AntePos(0),SuccPos(0)), 0)
       )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
   }
 
 
@@ -44,7 +44,7 @@ class BTacticExamples extends TacticTestBase  {
     import TactixLibrary._
     // Explicit proof tactic for |- !!p() <-> p()
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
       equivR(SuccPos(0)) <(
         (notL(AntePos(0)) &
             notR(SuccPos(1)) &
@@ -56,14 +56,14 @@ class BTacticExamples extends TacticTestBase  {
       )
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
   }
 
   it should "prove !!p() <-> p() with modern index" in {
     import TactixLibrary._
     // Explicit proof tactic for |- !!p() <-> p()
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
       equivR(1) <(
         (notL(-1) &
           notR(2) &
@@ -75,7 +75,7 @@ class BTacticExamples extends TacticTestBase  {
         )
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
   }
 
 
@@ -83,11 +83,11 @@ class BTacticExamples extends TacticTestBase  {
     import TactixLibrary._
     // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
       prop
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula))
   }
 
 
@@ -96,7 +96,7 @@ class BTacticExamples extends TacticTestBase  {
     import DerivedAxioms._
     // Proof by pointing of  |- <v:=2*v+1;>v!=0 <-> 2*v+1!=0
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
       // use "<> diamond" axiom backwards at the indicated position on
       // |- __<v:=2*v+1;>q(v)__ <-> q(2*v+1)
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -111,14 +111,14 @@ class BTacticExamples extends TacticTestBase  {
         byUS(equivReflexiveAxiom)
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula))
   }
 
   it should "prove <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
     import TactixLibrary._
     // Proof by pointing of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
       // use "<> diamond" axiom backwards at the indicated position on
       // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -136,14 +136,14 @@ class BTacticExamples extends TacticTestBase  {
         prop
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
   it should "prove with steps <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
     import TactixLibrary._
     // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
       // use "<> diamond" axiom backwards at the indicated position on
       // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -163,7 +163,7 @@ class BTacticExamples extends TacticTestBase  {
         byUS("<-> reflexive")
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
   "Proof by Congruence" should "prove x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y" in withMathematica { implicit qeTool =>
@@ -184,7 +184,7 @@ class BTacticExamples extends TacticTestBase  {
         prop
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula))
   }
 
   it should "prove x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)" in withMathematica { implicit qeTool =>
@@ -198,7 +198,7 @@ class BTacticExamples extends TacticTestBase  {
         prop
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula))
   }
 
   it should "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in withMathematica { implicit qeTool =>
@@ -209,7 +209,7 @@ class BTacticExamples extends TacticTestBase  {
       CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
     // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
     proof.subgoals should contain only (
-      new Sequent(Nil, IndexedSeq(), IndexedSeq("x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula))
+      new Sequent(IndexedSeq(), IndexedSeq("x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula))
       )
   }
 
@@ -221,7 +221,7 @@ class BTacticExamples extends TacticTestBase  {
       chase(1, 1 :: Nil)
       // |- [{x'=22}]2*x'+(x'*y+x*y')>=0
     )
-    proof.subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
+    proof.subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
   }
 
   it should "prove [{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0" in withMathematica { implicit qeTool =>
@@ -233,20 +233,20 @@ class BTacticExamples extends TacticTestBase  {
       byUS("<-> reflexive")
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("[{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula))
   }
 
   it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1" in withMathematica { implicit qeTool =>
     import TactixLibrary._
     // proof by chase of |- [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1
     val proof = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
         // chase the box in the succedent away
         chase(1,Nil) &
         // |- (x>0->2*(x+1)>=1)&(x=0->1>=1)
         QE
     )
     proof shouldBe 'proved
-    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula))
+    proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula))
   }
 }

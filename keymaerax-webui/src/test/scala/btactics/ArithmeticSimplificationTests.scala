@@ -89,9 +89,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Sign analysis" should "compute seed from antecedent" in {
-    val s = Sequent(Nil,
-      IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
     SignAnalysis.seedSigns(s) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
@@ -112,9 +110,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   it should "aggregate signs from seed" in {
-    val s = Sequent(Nil,
-      IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
     val seed = SignAnalysis.aggregateSigns(SignAnalysis.seedSigns(s)) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
@@ -135,9 +131,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   it should "pushDown signs from seed after aggregation" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
-    val s = Sequent(Nil,
-      IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
     val seed = SignAnalysis.seedSigns(s)
     println("Seed\n" + seed.mkString("\n"))
     SignAnalysis.pushDownSigns(SignAnalysis.aggregateSigns(seed)) shouldBe Map(
@@ -160,9 +154,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   it should "pingpong until fixpoint" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
-    val s = Sequent(Nil,
-      IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
     SignAnalysis.computeSigns(s) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
@@ -226,9 +218,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Bound computation" should "compute wanted bounds from succedent" in {
-    val s = Sequent(Nil,
-      IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula),
-      IndexedSeq("x+5<=m".asFormula, "v^2<=2*B*(m-x)".asFormula))
+    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula), IndexedSeq("x+5<=m".asFormula, "v^2<=2*B*(m-x)".asFormula))
     val signs = SignAnalysis.computeSigns(s)
     SignAnalysis.bounds(s.succ, signs, SuccPos) shouldBe Map(
       SeqPos(1) -> Map(
@@ -268,9 +258,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Bounds hiding" should "find formulas with non-matching bounds" in withMathematica { tool =>
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
 
     proveBy(s, QE) shouldBe 'proved
 
@@ -278,25 +266,19 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   it should "find formulas with non-matching bounds (2)" in withMathematica { tool =>
-    val s = Sequent(Nil,
-      IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula),
-      IndexedSeq("x-xo >= 2*V*t".asFormula))
+    val s = Sequent(IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula), IndexedSeq("x-xo >= 2*V*t".asFormula))
 
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
   }
 
   it should "not choke on !=" in withMathematica { tool =>
-    val s = Sequent(Nil,
-      IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula, "r!=0".asFormula),
-      IndexedSeq("x-xo >= 2*V*t".asFormula))
+    val s = Sequent(IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula, "r!=0".asFormula), IndexedSeq("x-xo >= 2*V*t".asFormula))
 
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
   }
 
   it should "hide formulas with non-matching bounds" in withMathematica { tool =>
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
 
     proveBy(s, QE) shouldBe 'proved
 
@@ -321,25 +303,19 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Sign hiding" should "find inconsistent sign formulas" in {
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
 
     SignAnalysis.signHideCandidates(s) should contain theSameElementsAs List(SeqPos(-2), SeqPos(-3), SeqPos(-5), SeqPos(-6), SeqPos(1))
   }
 
   it should "hide inconsistent sign formulas" in withMathematica { tool =>
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
 
     proveBy(s, ArithmeticSpeculativeSimplification.hideInconsistentSigns & QE) shouldBe 'proved
   }
 
   "Multiple hidings together" should "figure it out" in withMathematica { tool =>
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula),
-      IndexedSeq("x<=m".asFormula))
+    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
 
     val boundHidden = proveBy(s, ArithmeticSpeculativeSimplification.hideNonmatchingBounds)
     boundHidden.subgoals should have size 1

@@ -17,7 +17,7 @@ import scala.collection.immutable.IndexedSeq
 class FOQuantifierTests extends TacticTestBase {
   "allL" should "instantiate simple predicate" in {
     val tactic = allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1)
-    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()), tactic)
+    val result = proveBy(Sequent(IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()), tactic)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "z>0".asFormula
     result.subgoals.head.succ shouldBe empty
@@ -25,7 +25,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate simple predicate with the quantified variable itself" in {
     val tactic = allInstantiate(Some("x".asVariable), None)(-1)
-    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()), tactic)
+    val result = proveBy(Sequent(IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()), tactic)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>0".asFormula
     result.subgoals.head.succ shouldBe empty
@@ -33,7 +33,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate the first variable if none is specified" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()),
       allInstantiate(None, Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "z>0".asFormula
@@ -42,7 +42,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate the first variable with itself if none is specified" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall x x>0".asFormula), IndexedSeq()),
       allInstantiate(None, None)(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>0".asFormula
@@ -51,7 +51,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "rename when instantiating simple predicate" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall y y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall y y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "z>0".asFormula
@@ -61,7 +61,7 @@ class FOQuantifierTests extends TacticTestBase {
   it should "instantiate with a universal quantifier following" in {
     {
       val result = proveBy(
-        Sequent(Nil, IndexedSeq("\\forall z \\forall y y>z".asFormula), IndexedSeq()),
+        Sequent(IndexedSeq("\\forall z \\forall y y>z".asFormula), IndexedSeq()),
         allInstantiate()(-1))
       result.subgoals should have size 1
       result.subgoals.head.ante should contain only "\\forall y y>z".asFormula
@@ -69,7 +69,7 @@ class FOQuantifierTests extends TacticTestBase {
     }
     {
       val result = proveBy(
-        Sequent(Nil, IndexedSeq("\\forall x \\forall y y>x".asFormula), IndexedSeq()),
+        Sequent(IndexedSeq("\\forall x \\forall y y>x".asFormula), IndexedSeq()),
         allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
       result.subgoals should have size 1
       result.subgoals.head.ante should contain only "\\forall y y>z".asFormula
@@ -79,7 +79,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate assignment modality" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall x [y:=x;][y:=2;]y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall x [y:=x;][y:=2;]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[y:=z;][y:=2;]y>0".asFormula
@@ -88,7 +88,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate assignment modality 2" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall y [y:=y+1;]y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall y [y:=y+1;]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z+1".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[y:=z+1+1;]y>0".asFormula
@@ -97,7 +97,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate free ODE modality" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall x [{y'=x}]y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall x [{y'=x}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[{y'=z}]y>0".asFormula
@@ -134,7 +134,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate free ODE modality whatever the names" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall u [{v'=u}]v>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall u [{v'=u}]v>0".asFormula), IndexedSeq()),
       allInstantiate(Some("u".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[{v'=z}]v>0".asFormula
@@ -143,7 +143,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate bound ODE modality" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     //result.subgoals.head.ante should contain only "[{z'=5}]z>0".asFormula
@@ -153,7 +153,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate bound ODE modality whatever the names" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall y [{y'=5}]y>=0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall y [{y'=5}]y>=0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("y=z".asFormula, "[{y'=5}]y>=0".asFormula)
@@ -162,7 +162,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate more complicated ODE modality" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("y=z".asFormula, "[{y'=x & y>2}]y>0".asFormula)
@@ -171,7 +171,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate even if ODE modality follows in some subformula" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("y=z".asFormula, "y=0 -> [{y'=x & y>2}]y>0".asFormula)
@@ -180,7 +180,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate assignment irrespective of what follows" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("\\forall x [y:=x;][{y'=1}]y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("\\forall x [y:=x;][{y'=1}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[y:=z;][{y'=1}]y>0".asFormula
@@ -189,7 +189,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate in context" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("b>2 & [a:=2;]!!\\forall x [y:=x;][{y'=1}]y>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("b>2 & [a:=2;]!!\\forall x [y:=x;][{y'=1}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1, 1::1::0::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "b>2 & [a:=2;]!![y:=z;][{y'=1}]y>0".asFormula
@@ -198,7 +198,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate in succedent when in simple negative polarity" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("!(\\forall x [y:=x;][{y'=1}]y>0)".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("!(\\forall x [y:=x;][{y'=1}]y>0)".asFormula)),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -207,7 +207,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate in succedent when in negative polarity" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("a=2 -> !(\\forall x [y:=x;][{y'=1}]y>0)".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("a=2 -> !(\\forall x [y:=x;][{y'=1}]y>0)".asFormula)),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(1, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -215,7 +215,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "instantiate by position" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula, "y>0".asFormula), IndexedSeq()),
+    val result = proveBy(Sequent(IndexedSeq("\\forall x x>0".asFormula, "y>0".asFormula), IndexedSeq()),
       allLPos(Position(-2, 0::Nil))(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "y>0".asFormula
@@ -224,7 +224,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   "existsR" should "instantiate simple formula" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
       existsInstantiate(Some("x".asVariable), Some("z".asTerm))(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -233,7 +233,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate in context" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq(), IndexedSeq("a=2 & \\exists x x>0".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("a=2 & \\exists x x>0".asFormula)),
       existsInstantiate(Some("x".asVariable), Some("z".asTerm))(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -242,7 +242,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "instantiate in antecedent when in negative polarity" in {
     val result = proveBy(
-      Sequent(Nil, IndexedSeq("a=2 -> !\\exists x x>0".asFormula), IndexedSeq()),
+      Sequent(IndexedSeq("a=2 -> !\\exists x x>0".asFormula), IndexedSeq()),
       existsInstantiate(Some("x".asVariable), Some("z".asTerm))(-1, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "a=2 -> !z>0".asFormula
@@ -250,7 +250,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   "exists generalize" should "only generalize the specified occurrences of t" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
+    val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "\\exists z z=a+b".asFormula
@@ -258,7 +258,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "generalize all the specified occurrences of t" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
+    val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "\\exists z z=z".asFormula
@@ -266,7 +266,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "reject positions that refer to different terms" in {
-    a [BelleError] should be thrownBy proveBy(Sequent(Nil, IndexedSeq("a+b=a+c".asFormula), IndexedSeq()),
+    a [BelleError] should be thrownBy proveBy(Sequent(IndexedSeq("a+b=a+c".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(-1))
   }
 
@@ -367,35 +367,35 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "skolemize with boundrenaming when variable to skolemize is there already" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0".asFormula
     result.subgoals.head.succ should contain only "x>0".asFormula
   }
 
   it should "not rename variables bound somewhere else" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula, "\\exists x x=1".asFormula), IndexedSeq("\\forall x x>0".asFormula, "<x:=2;>x=2".asFormula)), allSkolemize(1))
+    val result = proveBy(Sequent(IndexedSeq("\\forall x x>0".asFormula, "\\exists x x=1".asFormula), IndexedSeq("\\forall x x>0".asFormula, "<x:=2;>x=2".asFormula)), allSkolemize(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("\\forall x x>0".asFormula, "\\exists x x=1".asFormula)
     result.subgoals.head.succ should contain only ("x>0".asFormula, "<x:=2;>x=2".asFormula)
   }
 
   it should "not rename variables bound somewhere else if not top-level" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & \\forall x x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0 & \\forall x x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0 & \\forall x x>0".asFormula
     result.subgoals.head.succ should contain only "x>0".asFormula
   }
 
   "exists skolemize" should "skolemize simple" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-1))
+    val result = proveBy(Sequent(IndexedSeq("\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "skolemize with boundrenaming when variable to skolemize is there already" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula, "\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-2))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-2))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x>0".asFormula)
     result.subgoals.head.succ shouldBe empty

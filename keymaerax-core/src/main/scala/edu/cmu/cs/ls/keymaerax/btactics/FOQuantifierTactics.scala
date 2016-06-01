@@ -40,8 +40,7 @@ object FOQuantifierTactics {
             val subst = USubst(
               SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(Box(Assign(x, DotTerm), qf))) ::
               SubstitutionPair("f()".asTerm, t) :: Nil)
-            val orig = Sequent(Nil, IndexedSeq(),
-              IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(f())".asFormula))
+            val orig = Sequent(IndexedSeq(), IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(f())".asFormula))
 
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(

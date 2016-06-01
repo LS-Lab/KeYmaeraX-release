@@ -20,10 +20,7 @@ object SequentFactory {
    * @return The new sequent.
    */
   def sequent(pref: Seq[NamedSymbol], ante: Seq[Formula], succ: Seq[Formula]) =
-    new Sequent(pref.to[scala.collection.immutable.Seq],
-      ante.to[scala.collection.immutable.IndexedSeq],
-      succ.to[scala.collection.immutable.IndexedSeq]
-    )
+    new Sequent(ante.to[scala.collection.immutable.IndexedSeq], succ.to[scala.collection.immutable.IndexedSeq])
 
   /**
    * Create a new sequent with only succedent f, but no specified prefixes or antecedents

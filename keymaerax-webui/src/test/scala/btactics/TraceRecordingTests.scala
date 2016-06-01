@@ -38,8 +38,8 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   }
   "IOListener" should "Not Crash" in {
     val t1 = System.nanoTime()
-    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
-        TestLib.useAt("[;] compose", PosInExpr(1 :: Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
+    proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
+        TestLib.useAt("[;] compose", PosInExpr(1 :: Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
     val t2 = System.nanoTime()
     println("My time: " + (t2-t1)/1000000000.0)
     db.printStats
@@ -48,14 +48,14 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   /* Same sequent and proof as the mockup for the new proof tree UI. Should give us a good sense of whether this code
   * can support the new UI or not. */
   it should "handle branching proofs" in {
-    proveBy(Sequent(Nil,IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
+    proveBy(Sequent(IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
       implyR(SuccPos(0)) & andR(SuccPos(0)))
       db.printStats
   }
 
   it should "support multiple proof steps" in {
     val provable =
-      proveBy(Sequent(Nil,IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
+      proveBy(Sequent(IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
         implyR(SuccPos(0)))
     proveBy(provable.subgoals.head, andR(SuccPos(0)))
     db.printStats

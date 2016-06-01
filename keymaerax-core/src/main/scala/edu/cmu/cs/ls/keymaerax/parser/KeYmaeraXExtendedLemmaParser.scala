@@ -100,7 +100,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     val succParts = splitAtTerminal(FORMULA_BEGIN, succToks)
     val succs = succParts.map(x => KeYmaeraXParser.formulaTokenParser(x :+ Token(EOF)))
 
-    new Sequent(Nil, antes.toIndexedSeq, succs.toIndexedSeq)
+    new Sequent(antes.toIndexedSeq, succs.toIndexedSeq)
   }
 
   /**

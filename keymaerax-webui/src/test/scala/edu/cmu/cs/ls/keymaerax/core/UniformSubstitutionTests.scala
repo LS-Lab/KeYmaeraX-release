@@ -1245,10 +1245,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val aA = ProgramConst("a")
     //@TODO val prem = Axioms.axioms("V vacuous")
     val prem = Imply(p0, Box(aA, p0))
-    val premseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+    val premseq = Sequent(IndexedSeq(), IndexedSeq(prem))
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, f)
-    val concseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+    val concseq = Sequent(IndexedSeq(), IndexedSeq(conc))
     val s = USubst(
       SubstitutionPair(p0, f) ::
       SubstitutionPair(aA, prog) :: Nil)
@@ -1259,12 +1259,12 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
     val p = Function("p_", None, Real, Bool)
     val a = ProgramConst("a_")
-    val conc = Sequent(Seq(), IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
+    val conc = Sequent(IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
       SubstitutionPair(PredOf(p, Anything), "(-x)^2>=0".asFormula) ::
       SubstitutionPair(a, "x:=x-1;".asProgram) :: Nil)
     val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe conc
-    pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
+    pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }
 }
