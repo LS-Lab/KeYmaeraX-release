@@ -32,6 +32,7 @@ trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTo
   def runUnchecked(cmd : String) : (String, KExpr)
   def run(cmd : MExpr) : (String, KExpr)
 
+  //@todo Code Review: should probably be removed from the interface
   /**
    * @return true if the job is finished, false if it is still running.
    */
@@ -64,11 +65,7 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   private var queryIndex: Long = 0
 
-  private val checkExpr = new MExpr(Expr.SYMBOL, "Check")
-  private val exceptionExpr = new MExpr(Expr.SYMBOL, "$Exception")
-  private val abortedExpr = new MExpr(Expr.SYMBOL, "$Aborted")
   private val fetchMessagesCmd = "$MessageList"
-  private val listExpr = new MExpr(Expr.SYMBOL, "List")
   private val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
     new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
   private val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
@@ -162,10 +159,11 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   private def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
+    //@todo Code Review: querIndex increment should be synchronized
     queryIndex += 1
     val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
     // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-    val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
+    val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
     if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
 
     val taskId = executor.schedule(_ => {
@@ -184,6 +182,7 @@ class JLinkMathematicaLink extends MathematicaLink {
           throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
       }
       case None =>
+        //@note Thread is interrupted by another thread (e.g., UI button 'stop')
         cancel()
         executor.remove(taskId, force = true)
         if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
@@ -200,13 +199,15 @@ class JLinkMathematicaLink extends MathematicaLink {
    * blocks and returns the answer.
    */
   private def getAnswer[T](input: MExpr, cmdIdx: Long, converter: MExpr=>T): (String, T) = {
+    //@todo Properly dispose input in caller
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
-    if (res == abortedExpr) {
-      if (DEBUG) println("Aborted Mathematica " + input)
+    if (res == MathematicaSymbols.ABORTED) {
+      res.dispose()
+      //@todo Code Review do not hand MExpr to exceptions
       throw new MathematicaComputationAbortedException(input)
-    } else if (res == exceptionExpr) {
+    } else if (res == MathematicaSymbols.EXCEPTION) {
       res.dispose()
       // an exception occurred
       ml.evaluate(fetchMessagesCmd)
@@ -217,14 +218,14 @@ class JLinkMathematicaLink extends MathematicaLink {
       throw new IllegalArgumentException("Input " + input + " cannot be evaluated: " + txtMsg)
     } else {
       val head = res.head
-      if (head.equals(checkExpr)) {
+      if (head.equals(MathematicaSymbols.CHECK)) {
         val txtMsg = res.toString
         // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
         throw new IllegalStateException("Mathematica returned input as answer: " + txtMsg)
-      }
-      if(res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
+      } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
         val theResult = res.args.last
-        if (theResult == abortedExpr) {
+        if (theResult == MathematicaSymbols.ABORTED) {
+          res.dispose()
           throw new MathematicaComputationAbortedException(input)
         } else {
           val keymaeraResult = converter(theResult)
@@ -248,8 +249,8 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   def qeEvidence(f : Formula) : (Formula, Evidence) = {
-    val input = new MExpr(new MExpr(Expr.SYMBOL,  "Reduce"),
-      Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
+    val input = new MExpr(MathematicaSymbols.REDUCE,
+      Array(toMathematica(f), new MExpr(MathematicaSymbols.LIST, new Array[MExpr](0)), MathematicaSymbols.REALS))
     val (output, result) = run(input)
     result match {
       case f : Formula =>
@@ -284,7 +285,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(converter.fromKeYmaera(Not(fml)),
         new MExpr(
-          listExpr,
+          MathematicaSymbols.LIST,
           StaticSemantics.symbols(fml).toList.sorted.map(s => converter.fromKeYmaera(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
@@ -313,11 +314,11 @@ class JLinkMathematicaLink extends MathematicaLink {
       new MExpr(Expr.SYMBOL, "init"),
         new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(
           new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
-            new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(listExpr, Array(new MExpr(Expr.SYMBOL, "#"))))),
+            new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(MathematicaSymbols.LIST, Array(new MExpr(Expr.SYMBOL, "#"))))),
             new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
             Array(toMathematica(initial),
               new MExpr(
-                listExpr,
+                MathematicaSymbols.LIST,
                 StaticSemantics.symbols(initial).toList.sorted.map(toMathematica).toArray),
               new MExpr(Expr.SYMBOL, "Reals"),
               new MExpr(Expr.SYMBOL, "#")))))))))
@@ -334,11 +335,11 @@ class JLinkMathematicaLink extends MathematicaLink {
       new MExpr(Expr.SYMBOL, "step"),
         new MExpr(new MExpr(Expr.SYMBOL, "Function"),
           Array(new MExpr(new MExpr(Expr.SYMBOL, "Module"),
-            Array(new MExpr(listExpr, stepModuleInit),
+            Array(new MExpr(MathematicaSymbols.LIST, stepModuleInit),
               new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
               Array(toMathematica(stateRelation),
                 new MExpr(
-                  listExpr,
+                  MathematicaSymbols.LIST,
                   stepPostVars.toList.sorted.map(toMathematica).toArray),
                 new MExpr(Expr.SYMBOL, "Reals")))))))))
     // Map[N[NestList[step,#,steps]]&, init[n]]
@@ -347,7 +348,7 @@ class JLinkMathematicaLink extends MathematicaLink {
         Array(new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(new MExpr(new MExpr(Expr.SYMBOL, "NestList"),
           Array(new MExpr(Expr.SYMBOL, "step"), new MExpr(Expr.SYMBOL, "#"), new MExpr(steps))))))),
       new MExpr(new MExpr(Expr.SYMBOL, "Apply"), Array(new MExpr(Expr.SYMBOL, "init"),
-        new MExpr(listExpr, Array(new MExpr(n)))))))
+        new MExpr(MathematicaSymbols.LIST, Array(new MExpr(n)))))))
     // initial;step;simulate
     val simulate = new MExpr(new MExpr(Expr.SYMBOL, "CompoundExpression"), Array(init, step, exec))
 

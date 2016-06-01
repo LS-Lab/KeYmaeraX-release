@@ -14,8 +14,8 @@ import scala.collection.immutable.Seq
  * @author Ran Ji
  */
 object SMTConverter {
-  def apply(expr: Expression): String = generateAssertNegation(expr, "Z3")
-  def apply(expr: Expression, toolId: String) = generateAssertNegation(expr, toolId)
+  def apply(expr: Formula): String = generateAssertNegation(expr, "Z3")
+  def apply(expr: Formula, toolId: String) = generateAssertNegation(expr, toolId)
 
   private val SMT_ABS = "absolute"
   private val SMT_MIN = "minimum"
@@ -27,13 +27,13 @@ object SMTConverter {
     *   unsatisfied => original KeYmaera X formula is valid
     *   satisfiable => original KeYmaera X formula is not valid
     */
-  private def generateAssertNegation(expr: Expression, toolId: String): String = {
+  private def generateAssertNegation(expr: Formula, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
     varDec + "(assert (not " + smtFormula + "))"
   }
 
   /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
-  def generateSimplify(expr: Expression, toolId: String): String = {
+  def generateSimplify(expr: Term, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
     varDec + "(simplify " + smtFormula + ")"
   }
@@ -68,6 +68,7 @@ object SMTConverter {
   /** Generate parameters of function in the varDec of SMT */
   private def generateFuncPrmtSorts(t: Sort) : String = t match {
     case Unit => ""
+    // deassociate the arguments
     case Tuple(l, r) => generateFuncPrmtSorts(l) + " " + generateFuncPrmtSorts(r)
     case _ => t.toString
   }
@@ -108,6 +109,7 @@ object SMTConverter {
 
   /** Convert KeYmaera X term to string in SMT notation */
   private def convertTerm(t: Term, toolId: String) : String = {
+    //todo code review: ==Unit?
     require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
     t match {
       case Neg(c)       => "(- " + convertTerm(c, toolId) + ")"
@@ -117,7 +119,10 @@ object SMTConverter {
       case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Power(l, r)  => convertExp(l, r, toolId)
       case Number(n) =>
+        // todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
         assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+        // todo code review: maxlong?
+        // smt form of -5 is (- 5)
         if (n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
         else n.underlying().toString
       case t: Variable => nameIdentifier(t)
@@ -128,6 +133,7 @@ object SMTConverter {
         case "abs" => "(" + SMT_ABS + " " + convertTerm(child, toolId) + ")"
         case _ => "(" + nameIdentifier(fn) + " " + convertTerm(child, toolId) + ")"
       }
+      // deassociate the arguments
       case Pair(l, r)  => convertTerm(l, toolId) + " " + convertTerm(r, toolId)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
@@ -139,6 +145,7 @@ object SMTConverter {
     val base = simplifyTerm(l, toolId)
     val exp = simplifyTerm(r, toolId)
     if(base.equals(Number(0))) {
+      //@todo Code Review: 0-power conversion can't know value of r even after simplification. This is inconsistent for cases like x=0 -> 0^x=1 which will prove depending on what's replaced where
       println("[warning] converting 0^0 to SMT")
       if(exp.equals(Number(0))) "1" // 0^0 =1
       else "0" // 0^x = 0
@@ -148,15 +155,14 @@ object SMTConverter {
           if(n.isValidInt) {
             // index is integer
             if(n.intValue() == 0) {
+              //@todo Code Review: check consistency with 0^x=0
               "1"
             } else if(n.intValue() > 0 ) {
               val ba : String = convertTerm(base, toolId)
-              var res : String = "(*"
-              for (i <- 0 to n.intValue()-1) {
-                res += " " + ba
-              }
-              res += ")"
-              res
+              // todo code review: check (* a)
+              // (* a a a) = a*a*a
+              // to is inclusive
+              "(* " + (1 to n.intValue()).map(i => ba).mkString(" ") + ")"
             } else "(/ 1 " + convertExp(base, Number(n.underlying().negate()), toolId) + ")"
           } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
         case Neg(Number(n)) => "(/ 1 " + convertExp(base, Number(n), toolId) + ")"
@@ -168,6 +174,7 @@ object SMTConverter {
   /** Convert possibly nested forall KeYmaera X expression to SMT */
   private def convertForall(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsForall(vs, f)
+    // todo code review: assert sort==real and use sort
     "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 

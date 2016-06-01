@@ -60,11 +60,24 @@ http://arxiv.org/abs/1408.1980
 ------------------------------------------------------------------
 The date of last full code review is added to the top of the file as @note Code Review: 2016-03-09.
 A log of all major code reviews and the findings are reported here:
+Extended Code Review: KeYmaera X Core: 2016-06-01
+  TODO Clean handling of assumptions about interpreted functions. For example unproved premises that are substituted in with *formula* definitions in the end.
+  TODO FileLemmaDB needs to check all evidence not just the first.
+  TODO SMTSolvers cannot return False on satisfiable negations, because formulas other than false have satisfiable negations.
+  TODO Mathematica name clashes
+  TODO Confirm converse contract checking for translations
+  TODO Mathematica and SMT: clarify nary operators like - and *
+  TODO Synchronize query index updating (concurrent tool uses)
+  TODO Enforce memory management for Mathematica input expressions
+  TODO SMT conversion: power handling has inconsistencies
+  TODO SMT conversion: ^1 handling needs to be checked since translated as (* x)
+  TODO Safeguard return values from SMT solvers
+  TODO Polya should improve like Z3 does
+
 Code Review: KeYmaera X Core Delta: 2016-06-01
   NOTE Could turn DifferentialProgram into non-Program.
   TODO Turn "[:=] assign exists" into DerivedAxiom
   TODO Add checksum test and core version to string representation of Lemma. And Lemma name sanity.
-
 
 Code Review: KeYmaera X Core: 2016-03-09
 SetLattice reviewed and changed to pair matching style to improve readability. A few name changes.
@@ -82,11 +95,13 @@ Extended Code Review: KeYmaera X Core: 2015-08-25
   TODO FileLemmaDB.scala: move out of core
   TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
   TODO SMTConversions.scala: resolve issues
+
 Code Review: KeYmaera X Core: 2015-08-24
   TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
   TODO Proof.scala: UniformRenaming.semanticRenaming should be false
   TODO FileLemmaDB.scala: move out of core
   TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
+
 Code Review: KeYmaera X Core: 2015-05-01
   TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
   TODO AxiomBase.scala: Code Review confirms that DE needs ? not to have a '.

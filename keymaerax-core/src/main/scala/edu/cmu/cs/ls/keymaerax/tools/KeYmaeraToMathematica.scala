@@ -23,7 +23,7 @@ class KeYmaeraToMathematica {
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
    */
-  //@todo contract: convert back is identity
+  //@todo Code Review contract: convert back is identity, ask converse converter
   def fromKeYmaera(e: KExpr): MExpr = e match {
     case t: Term =>
       require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion")
@@ -32,6 +32,7 @@ class KeYmaeraToMathematica {
       require(disjointNames(StaticSemantics.symbols(f)), "Disjoint names required for Mathematica conversion")
       convertFormula(f)
     case fn: Function =>
+      //@todo Code Review: prefixed name must be disjoint from other names in the containing term/formula -> Mathematica namespace `constFn`
       MathematicaNameConversion.toMathematica(
         new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
   }
@@ -53,6 +54,7 @@ class KeYmaeraToMathematica {
 
     require(t.sort == Real || t.sort == Unit || flattenSort(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
+      //@todo Code Review: clean up FuncOf conversion into two cases here
       case FuncOf(fn, child) => convertFnApply(fn, child)
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
       case Plus(l, r) =>
@@ -97,6 +99,7 @@ class KeYmaeraToMathematica {
   }
 
   protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
+    //@todo Code Review: avoid duplicate code, see fromKeYmaera
     case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
       //@note single-argument Apply[f, {x}] == f[x] vs. Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
@@ -105,12 +108,14 @@ class KeYmaeraToMathematica {
       new MExpr(MathematicaSymbols.APPLY, args)
   }
 
+  //@todo Code Review: Forall+Exists could be 1 conversion
   /** Convert block of exists quantifiers into a single exists quantifier block */
   protected def convertExists(vs:Seq[NamedSymbol],f:Formula): MExpr = {
     val (vars, formula) = collectVarsExists(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
   }
+  /** Recursively converts sequences of quantifiers into a single block quantifier */
   private def collectVarsExists(vsSoFar:Seq[NamedSymbol],candidate:Formula): (Seq[NamedSymbol], Formula) = {
     candidate match {
       case Exists(nextVs, nextf) =>  collectVarsExists(vsSoFar ++ nextVs, nextf)

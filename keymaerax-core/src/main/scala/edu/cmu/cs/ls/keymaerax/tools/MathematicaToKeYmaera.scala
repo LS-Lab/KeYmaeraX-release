@@ -43,6 +43,7 @@ object MathematicaToKeYmaera {
         case exn : ExprFormatException => throw mathExnMsg(e, "Could not represent number as a big decimal: " + e.toString)
       }
     }
+    //@todo Code Review: assert arity 2 --> split into convertBinary and convertNary (see DIV, EXP, MINUS)
     else if (e.rationalQ()) {assert(hasHead(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
 
     // Arith expressions
@@ -80,6 +81,7 @@ object MathematicaToKeYmaera {
       hasHead(_, MathematicaSymbols.RULE)))) throw new ConversionException("Unsupported conversion List[RULE]")
 
     // Derivatives
+    //@todo Code Review: check e.head
     else if (e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
 
     // Functions
@@ -109,7 +111,7 @@ object MathematicaToKeYmaera {
 
   private def convertBinary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args().map(fromMathematica)
-    require(subexpressions.length >= 2, "binary operator expects 2 arguments")
+    require(subexpressions.length >= 2, "binary operator expects at least 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[T])
     asTerms.reduce((l,r) => op(l,r))
   }
@@ -124,14 +126,14 @@ object MathematicaToKeYmaera {
   private def convertQuantifier(e: MExpr, op:(Seq[Variable], Formula)=>Formula) = {
     require(e.args().length == 2, "Expected args size 2.")
 
-    val quantifiedVariables = e.args().headOption.getOrElse(
+    val variableBlock = e.args().headOption.getOrElse(
       throw new ConversionException("Found non-empty list after quantifier."))
 
-    val quantifiedVars: List[Variable] = if (quantifiedVariables.head().equals(MathematicaSymbols.LIST)) {
+    val quantifiedVars: List[Variable] = if (variableBlock.head().equals(MathematicaSymbols.LIST)) {
       //Convert the list of quantified variables
-      quantifiedVariables.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
+      variableBlock.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
     } else {
-      List(fromMathematica(quantifiedVariables).asInstanceOf[Variable])
+      List(fromMathematica(variableBlock).asInstanceOf[Variable])
     }
 
     //Recurse on the body of the expression.
@@ -165,6 +167,7 @@ object MathematicaToKeYmaera {
     }
   }
 
+  //@todo could streamline this implementation
   /** Converts inequality chains of the form a <= b < c < 0 to conjunctions of individual inequalities a <= b & b < c & c < 0 */
   private def convertInequality(e: MExpr): Formula = {
     /** Extract overlapping inequalities from a chain of inequalities, so x<y=z<=d will be x<y, y=z, z<=d */

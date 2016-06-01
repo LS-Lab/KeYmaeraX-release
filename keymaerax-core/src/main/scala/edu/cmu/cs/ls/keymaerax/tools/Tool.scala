@@ -11,7 +11,6 @@ import scala.collection.immutable.Map
  * It cannot be used after shutdown. For intermediate restarting, use check_and_recover.
  */
 trait Tool {
-  // TODO replace with constructor in tool base and dependency injection
   /**
    * Initializes the tool with tool-specific configuration parameters.
    */

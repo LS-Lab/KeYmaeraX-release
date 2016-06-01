@@ -13,6 +13,7 @@ import scala.collection.immutable.Map
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
+ * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
 class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
   private val jlink = new JLinkMathematicaLink

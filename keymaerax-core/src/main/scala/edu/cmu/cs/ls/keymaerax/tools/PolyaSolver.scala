@@ -103,6 +103,7 @@ class PolyaSolver extends SMTSolver {
     (polyaOutput, kResult)
   }
 
+  //@todo Code Review: this function should be removed
   /** Return Polya QE result */
   def qe(f: Formula) : Formula = {
     qeEvidence(f)._1
@@ -112,7 +113,7 @@ class PolyaSolver extends SMTSolver {
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Polya") + "\n(check-sat)\n"
     if (DEBUG) println("[Solving with Polya...] \n" + smtCode)
-    val smtFile = getUniqueSmt2File()
+    val smtFile = File.createTempFile("polyaQe", ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
@@ -133,7 +134,7 @@ class PolyaSolver extends SMTSolver {
   def simplify(t: Term) : Term = {
     val smtCode = SMTConverter.generateSimplify(t, "Polya")
     if (DEBUG) println("[Simplifying with Polya ...] \n" + smtCode)
-    val smtFile = getUniqueSmt2File()
+    val smtFile = File.createTempFile("polyaSimplify", ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()

@@ -87,20 +87,24 @@ class Z3Solver extends SMTSolver {
    * @param cmd the command for running Z3 with a given SMT file
    * @return    Z3 output as String and the interpretation of Z3 output as KeYmaera X formula
    */
-  def run(cmd: String) : (String, Formula)= {
+  private def run(cmd: String) : (String, Formula)= {
     val z3Output = cmd.!!
     if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     val kResult = {
+      //@todo Code Review startsWith is not a robust way of reading off answers from Z3
       //@todo investigate Z3 binding for Scala
       if (z3Output.startsWith("unsat")) True
+      //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
       else if(z3Output.startsWith("sat")) False
+      //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
       else if(z3Output.startsWith("unknown")) False
       else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
     (z3Output, kResult)
   }
 
+  //todo code review: delete this method
   /** Return Z3 QE result */
   def qe(f: Formula) : Formula = {
     qeEvidence(f)._1
@@ -110,7 +114,7 @@ class Z3Solver extends SMTSolver {
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
     if (DEBUG) println("[Solving with Z3...] \n" + smtCode)
-    val smtFile = getUniqueSmt2File()
+    val smtFile = File.createTempFile("z3qe", ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
@@ -131,7 +135,7 @@ class Z3Solver extends SMTSolver {
   def simplify(t: Term) : Term = {
     val smtCode = SMTConverter.generateSimplify(t, "Z3")
     if (DEBUG) println("[Simplifying with Z3 ...] \n" + smtCode)
-    val smtFile = getUniqueSmt2File()
+    val smtFile = File.createTempFile("z3simplify", ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()

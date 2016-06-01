@@ -98,6 +98,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case f: Function => f.asString
   }
 
+  /** True if negative numbers should get extra parentheses */
   private[parser] val negativeBrackets = false && OpSpec.negativeNumber
 
   /**@note The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */

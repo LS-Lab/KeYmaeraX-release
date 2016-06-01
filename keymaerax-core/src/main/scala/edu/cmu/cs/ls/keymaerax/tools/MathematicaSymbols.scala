@@ -18,7 +18,7 @@ private object MathematicaSymbols {
       "Times", "Divide", "Power", "Equal", "Unequal", "Less", "LessEqual",
       "Greater", "GreaterEqual", "Inequality", "ForAll", "Exists", "And",
       "Or", "Implies", "Equivalent", "InverseFunction", "Integrate", "Rule",
-      "List")
+      "List", "Reduce", "Reals")
       
   val FALSE = new MExpr(Expr.SYMBOL, "False")
   val TRUE = new MExpr(Expr.SYMBOL, "True")
@@ -51,4 +51,10 @@ private object MathematicaSymbols {
   val DERIVATIVE = new MExpr(Expr.SYMBOL, "Derivative")
   val D = new MExpr(Expr.SYMBOL, "D")
   val RULE = new MExpr(Expr.SYMBOL, "Rule")
+
+  val REDUCE = new MExpr(Expr.SYMBOL,  "Reduce")
+  val REALS = new MExpr(Expr.SYMBOL, "Reals")
+  val CHECK = new MExpr(Expr.SYMBOL, "Check")
+  val EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")
+  val ABORTED = new MExpr(Expr.SYMBOL, "$Aborted")
 }

@@ -32,7 +32,7 @@ class Polya extends ToolBase("Polya") with QETool with DiffSolutionTool with Cou
     initialized = jlink.init(linkName, libDir)
   }
 
-  def qe(formula: Formula): Formula = polya.qe(formula)
+  //def qe(formula: Formula): Formula = polya.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = polya.qeEvidence(formula)
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
