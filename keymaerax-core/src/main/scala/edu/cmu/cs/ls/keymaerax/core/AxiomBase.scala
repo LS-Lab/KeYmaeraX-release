@@ -282,10 +282,6 @@ Axiom "[:=] assign equality exists".
   [x_:=f();]p(??) <-> \exists x_ (x_=f() & p(??))
 End.
 
-Axiom "[:=] assign exists".
-  [x_:=f();]p(??) -> \exists x_ p(??)
-End.
-
 Axiom "[:=] self assign".
   [x_:=x_;]p(??) <-> p(??)
 End.

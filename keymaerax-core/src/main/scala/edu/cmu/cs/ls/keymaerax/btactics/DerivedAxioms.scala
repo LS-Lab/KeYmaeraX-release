@@ -178,6 +178,8 @@ object DerivedAxioms {
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
     case "[:=] assign equality exists" => Some(assignbExistsF, assignbExistsT)
+    case "[:=] assign exists" => Some(assignbImpliesExistsF, assignbImpliesExistsT)
+    case "\\exists& exists and" => Some(existsAndF, existsAndT)
     case "[:=] assign update" => Some(assignbUpdateF, assignbUpdateT)
     case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
     case "<:=> assign equational" => ??? //Some(assigndEquationalF, assigndEquationalT)
@@ -312,6 +314,7 @@ object DerivedAxioms {
     * Premise p(??)
     * Conclusion \forall x p(??)
     * End.
+    *
     * @derived from G or from [] monotone with program x:=*
     * @derived from Skolemize
     * @Note generalization of p(x) to p(??) as in Theorem 14
@@ -844,12 +847,13 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "[:=] assign exists".
-    *  [x_:=f();]p(??) -> \exists x_ p(??)
+    *  [x_:=f_();]p_(??) -> \exists x_ p_(??)
     * End.
     * }}}
+    *
     * @Derived
     */
-  lazy val assignbImpliesExistsF = "[x_:=f_();]p_(??) <-> \\exists x_ (x_=f_() & p_(??))".asFormula
+  lazy val assignbImpliesExistsF = "[x_:=f_();]p_(??) -> \\exists x_ p_(??)".asFormula
   lazy val assignbImpliesExistsAxiom = derivedAxiom("[:=] assign exists",
     Sequent(IndexedSeq(), IndexedSeq(assignbImpliesExistsF)),
 //    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
@@ -864,6 +868,7 @@ object DerivedAxioms {
     *  \exists x_ (q_(??) & p_(??)) -> \exists x_ (p_(??))
     * End.
     * }}}
+    *
     * @Derived
     */
   lazy val existsAndF = "\\exists x_ (q_(??) & p_(??)) -> \\exists x_ (p_(??))".asFormula
