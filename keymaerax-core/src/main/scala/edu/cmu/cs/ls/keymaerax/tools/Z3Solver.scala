@@ -74,6 +74,7 @@ class Z3Solver extends SMTSolver {
       val permissionCmd =
         if(osName.contains("windows")) "icacls " + z3AbsPath + " /e /p Everyone:F"
         else "chmod u+x " + z3AbsPath
+      //@todo preexisting files shouldn't be modified permissions
       Runtime.getRuntime.exec(permissionCmd)
       z3Source.close()
       z3Dest.close()
@@ -92,10 +93,13 @@ class Z3Solver extends SMTSolver {
     if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     val kResult = {
+      //@todo very dangerous code: Example output "sorry I couldn't prove its unsat, no luck today". Variable named unsat notunsat
+      //@todo investigate Z3 binding for Scala
       //@todo Code Review startsWith is not a robust way of reading off answers from Z3
       //@todo investigate Z3 binding for Scala
       if (z3Output.startsWith("unsat")) True
       //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
+      //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
       else if(z3Output.startsWith("sat")) False
       //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
       else if(z3Output.startsWith("unknown")) False

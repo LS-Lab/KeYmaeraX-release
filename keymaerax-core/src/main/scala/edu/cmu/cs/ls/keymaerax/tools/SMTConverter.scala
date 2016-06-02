@@ -140,7 +140,9 @@ object SMTConverter {
   }
 
   //@todo get rid of this function and have a tactic depower that gets rid of all powers by proof steps
-  /** Convert power to SMT notation */
+  /** Convert power to SMT notation 
+   * @todo use axiom x^(c()+1) = x*(x^c()) <- c()>=0
+   */
   private def convertExp(l: Term, r: Term, toolId: String) : String = {
     val base = simplifyTerm(l, toolId)
     val exp = simplifyTerm(r, toolId)
