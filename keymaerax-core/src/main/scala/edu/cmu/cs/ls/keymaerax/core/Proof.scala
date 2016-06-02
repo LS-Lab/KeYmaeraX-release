@@ -806,33 +806,6 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRul
   } ensuring (_.forall(r => r.sameSequentAs(s)), "structural rule subsequents")
 }
 
-// Contraction right rule duplicates a formula in the succedent
-/*
-object ContractionRight {
-  def apply(p: Position): Rule = new ContractionRightRule(p)
-
-  private class ContractionRightRule(p: Position) extends PositionRule("ContractionRight", p) {
-    require(!p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the succedent " + this)
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      immutable.List(Sequent(s.ante, s.succ :+ s.succ(p.getIndex)))
-    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-  }
-}
-
-// Contraction left rule duplicates a formula in the succedent
-
-object ContractionLeft {
-  def apply(p: Position): Rule = new ContractionLeftRule(p)
-
-  private class ContractionLeftRule(p: Position) extends PositionRule("ContractionLeft", p) {
-    require(p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the antecedent " + this)
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      immutable.List(Sequent(s.ante :+ s.ante(p.getIndex), s.succ))
-    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-  }
-}
-*/
-
 /*********************************************************************************
  * Sequent Proof Rules for identity/closing and cut
  *********************************************************************************
@@ -1250,14 +1223,11 @@ object RCF {
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
-
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
-
     //@note soundness-critical
     val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-
     Lemma(fact, evidence :: Nil)
   }
 }

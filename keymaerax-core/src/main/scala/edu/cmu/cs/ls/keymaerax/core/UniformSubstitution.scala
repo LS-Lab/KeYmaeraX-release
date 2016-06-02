@@ -487,8 +487,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * raise informative exception if not.
    */
   private def requireAdmissible(U: SetLattice[NamedSymbol], e: Expression, context: Expression): Unit =
-//    insist(admissible(U, e),
-//      "Substitution clash: " + this + " not " + U + "-admissible for " + e.prettyString + " when substituting in " + context.prettyString)
     if (!admissible(U, e))
       throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")
 
