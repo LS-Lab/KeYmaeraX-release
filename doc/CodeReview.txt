@@ -3,15 +3,15 @@ KeYmaera X Kernel Code Review
 
 1) The primary purpose of the code review is to establish correctness of all soundness-critical parts of the KeYmaera X theorem prover.
 
-2) The secondary purpose of the review is to identify whether there are better ways of implementing KeYmaera X, but precedence will be given to purpose 1). Those improvements will not be performed during the code review but noted for later in a separate todo file.
+2) The secondary purpose of the review is to identify whether there are better ways of implementing KeYmaera X, but precedence will be given to purpose 1). Except for minor edits, those improvements will not be performed during the code review but noted for later in a separate todo file.
 
-During the KeYmaera X Kernel Code Review, the whole source code will be reviewed for correctness and compliance with the theoretical results. We follow the principle of Cartesian Doubt and scrutinize the code until everybody present is convinced that the code is correct. The code review cannot proceed to other parts of the code until everybody has established its correctness. If anyone present during a kernel code review has any doubt about any part of the code, pertaining to its correctness, the code review cannot move on until the doubt has been settled or a flag has been placed along with an explanation:
+During the KeYmaera X Kernel Code Review, the whole source code of the relevant packages will be reviewed for correctness and compliance with the theoretical results. We follow the principle of Cartesian Doubt and scrutinize the code until everybody present is convinced that the code is correct. The code review cannot proceed to other parts of the code until everybody has established its correctness. If anyone present during a kernel code review has any doubt about any part of the code, pertaining to its correctness, the code review cannot move on until the doubt has been settled or a flag has been placed along with an explanation:
 
- //@todo Code Review: postponed
+ //@todo Code Review: indication of concern or reason or agenda
 
 The code review will only proceed successfully if everybody present clearly and independently stated that he is convinced that the code is correct.
 
-Please don't hesitate at all if some part of the code is unclear to you! It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Confusion about the code are likely sources of trouble. And simpler code is much easier to get sound than complex contraptions. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities.
+Please don't hesitate at all if some part of the code is unclear to you! It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Confusion about the code are likely sources of trouble. And simpler code is much easier to get sound than complex contraptions. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities or subtle nuances.
 
 KeYmaera X Kernel Code Review Steps
 ===================================
@@ -27,7 +27,7 @@ R8) QETool.scala for correctness
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
-Changes to the KeYmaera X Kernel need to be reviewed periodically in similar ways.
+Changes to the KeYmaera X Kernel need to be reviewed periodically in similar ways. Regular full core reviews are advised. Smaller changes will review only the differences formally (Delta Review) or informally (unmarked).
 
 If there are any questions about the KeYmaera X Kernel code review or any suggestions on how it could be improved, please ask! Questions and clarifications are good!
 
@@ -35,7 +35,7 @@ Extended Code Review:
 In addition to the above files, an extended code review also considers
 R9) parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
 R10) lemma package: LemmaDB.scala + FileLemmaDB.scala for correctness
-R11) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala
+R11) tools package: Tool*.scala, KeYmaera*.scala, Mathematica*.scala, SMT*.scala
 
 References
 ----------
@@ -55,10 +55,10 @@ http://www.cs.cmu.edu/~aplatzer/pub/freedL.pdf
 [4] André Platzer. 
 Differential game logic. 
 ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
-http://arxiv.org/abs/1408.1980
+http://dx.doi.org/10.1145/2817824
 
 ------------------------------------------------------------------
-The date of last full code review is added to the top of the file as @note Code Review: 2016-03-09.
+The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
 A log of all major code reviews and the findings are reported here:
 Extended Code Review: KeYmaera X Core: 2016-06-01
   TODO Clean handling of assumptions about interpreted functions. For example unproved premises that are substituted in with *formula* definitions in the end.
