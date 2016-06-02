@@ -2206,6 +2206,82 @@ object DerivedAxioms {
   lazy val greater = derivedAxiom(">", Sequent(IndexedSeq(), IndexedSeq(greaterF)), QE)
   lazy val greaterT = derivedAxiomT(greater)
 
+  // built-in arithmetic
+
+  /**
+    * {{{Axiom "!= elimination".
+    *   f()!=g() <-> \exists z (f()-g())*z=1
+    * End.
+    * }}}
+    * @see André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
+    */
+  lazy val notEqualElimF = "(f_()!=g_()) <-> \\exists z_ ((f_()-g_())*z_=1)".asFormula
+  lazy val notEqualElim = derivedAxiom("!= elimination", Sequent(IndexedSeq(), IndexedSeq(notEqualElimF)), QE)
+  lazy val notEqualElimT = derivedAxiomT(notEqualElim)
+
+  /**
+    * {{{Axiom ">= elimination".
+    *   f()>=g() <-> \exists z f()-g()=z^2
+    * End.
+    * }}}
+    * @see André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
+    */
+  lazy val greaterEqualElimF = "(f_()>=g_()) <-> \\exists z_ (f_()-g_()=z_^2)".asFormula
+  lazy val greaterEqualElim = derivedAxiom(">= elimination", Sequent(IndexedSeq(), IndexedSeq(greaterEqualElimF)), QE)
+  lazy val greaterEqualElimT = derivedAxiomT(greaterEqualElim)
+
+  /**
+    * {{{Axiom "> elimination".
+    *   f()>g() <-> \exists z (f()-g())*z^2=1
+    * End.
+    * }}}
+    * @see André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
+    */
+  lazy val greaterElimF = "(f_()>g_()) <-> \\exists z_ ((f_()-g_())*z_^2=1)".asFormula
+  lazy val greaterElim = derivedAxiom("> elimination", Sequent(IndexedSeq(), IndexedSeq(greaterElimF)), QE)
+  lazy val greaterElimT = derivedAxiomT(greaterElim)
+
+  /**
+    * {{{Axiom "1>0".
+    *   1>0
+    * End.
+    * }}}
+    */
+  lazy val oneGreaterZeroF = "1>0".asFormula
+  lazy val oneGreaterZero = derivedAxiom("1>0", Sequent(IndexedSeq(), IndexedSeq(oneGreaterZeroF)), QE)
+  lazy val oneGreaterZeroT = derivedAxiomT(oneGreaterZero)
+
+  /**
+    * {{{Axiom "nonnegative squares".
+    *   f()^2>=0
+    * End.
+    * }}}
+    */
+  lazy val nonnegativeSquaresF = "f_()^2>=0".asFormula
+  lazy val nonnegativeSquares = derivedAxiom("nonnegative squares", Sequent(IndexedSeq(), IndexedSeq(nonnegativeSquaresF)), QE)
+  lazy val nonnegativeSquaresT = derivedAxiomT(nonnegativeSquares)
+
+  /**
+    * {{{Axiom ">2!=".
+    *   f()>g() -> f()!=g()
+    * End.
+    * }}}
+    */
+  lazy val greaterImpliesNotEqualF = "f_()>g_() -> f_()!=g_()".asFormula
+  lazy val greaterImpliesNotEqual = derivedAxiom(">2!=", Sequent(IndexedSeq(), IndexedSeq(greaterImpliesNotEqualF)), QE)
+  lazy val greaterImpliesNotEqualT = derivedAxiomT(greaterImpliesNotEqual)
+
+  /**
+    * {{{Axiom "> monotone".
+    *   f()+h()>g() <- f()>g() & h()>=0
+    * End.
+    * }}}
+    */
+  lazy val greaterMonotoneF = "f_()+h_()>g_() <- f_()>g_() & h_()>=0".asFormula
+  lazy val greaterMonotone = derivedAxiom("> monotone", Sequent(IndexedSeq(), IndexedSeq(greaterMonotoneF)), QE)
+  lazy val greaterMonotoneT = derivedAxiomT(greaterMonotone)
+
+  // stuff
 
   /**
     * {{{Axiom "abs".
