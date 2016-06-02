@@ -145,6 +145,15 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove * closed" in withMathematica { implicit qeTool => check(timesClosed)}
   it should "prove <" in withMathematica { implicit qeTool => check(less)}
   it should "prove >" in withMathematica { implicit qeTool => check(greater)}
+
+  it should "prove != elimination" in withMathematica { implicit qeTool => check(notEqualElim)}
+  it should "prove >= elimination" in withMathematica { implicit qeTool => check(greaterEqualElim)}
+  it should "prove > elimination" in withMathematica { implicit qeTool => check(greaterElim)}
+  it should "prove 1>0" in withMathematica { implicit qeTool => check(oneGreaterZero)}
+  it should "prove nonnegative squares" in withMathematica { implicit qeTool => check(nonnegativeSquares)}
+  it should "prove >2!=" in withMathematica { implicit qeTool => check(greaterImpliesNotEqual)}
+  it should "prove > monotone" in withMathematica { implicit qeTool => check(greaterMonotone)}
+
   it should "prove abs" in withMathematica { implicit qeTool => check(absDef)}
   it should "prove min" in withMathematica { implicit qeTool => check(minDef)}
   it should "prove max" in withMathematica { implicit qeTool => check(maxDef)}
