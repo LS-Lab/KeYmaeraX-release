@@ -20,45 +20,8 @@ import scala.language.postfixOps
   * Created by nfulton on 11/3/15.
   */
 object DLBySubst {
-  /**
-    * Box monotonicity.
-    * {{{
-    *      p |- q
-    *   -------------monb
-    *   [a]p |- [a]q
-    * }}}
-    */
-  lazy val monb = byUS("[] monotone")
-//  new NamedTactic("monb", {
-//    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
-//    USubstPatternTactic(
-//      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
-//    )
-//  })
 
   private[btactics] lazy val monb2 = byUS("[] monotone 2")
-//  new NamedTactic("monb2", {
-//    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]q_(??)".asFormula), IndexedSeq("[a_;]p_(??)".asFormula)))
-//    USubstPatternTactic(
-//      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone 2", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
-//    )
-//  })
-
-  /**
-   * Diamond monotonicity.
-   * {{{
-   *      p |- q
-   *   -------------mond
-   *   ⟨a⟩p |- ⟨a⟩q
-   * }}}
-   */
-  lazy val mond = byUS("<> monotone")
-//  new NamedTactic("mond", {
-//    val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
-//    USubstPatternTactic(
-//      (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
-//    )
-//  })
 
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }

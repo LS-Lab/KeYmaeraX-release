@@ -582,10 +582,10 @@ object DerivationInfo {
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
-    new TacticInfo("monb", "Box Monotonicity", {case () => DLBySubst.monb}),
+    new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
     //@todo unify axiomatic rule and derived rules mond / mondtodo
-    new TacticInfo("mond", "Diamond Monotonicity", {case () => DLBySubst.mond}),
+    new TacticInfo("mond", "Diamond Monotonicity", {case () => TactixLibrary.mond}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),

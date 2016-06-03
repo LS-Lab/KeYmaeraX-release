@@ -28,7 +28,7 @@ class demo extends FlatSpec with Matchers {
 
   "usubst style dL tactic" should "work" in {
     val s = Sequent(IndexedSeq("[x:=1;]x>0".asFormula), IndexedSeq("[x:=1;]x>0".asFormula))
-    val output = interp(DLBySubst.monb, BelleProvable(Provable.startProof(s)))
+    val output = interp(TactixLibrary.monb, BelleProvable(Provable.startProof(s)))
     output match {
       case BelleProvable(p, _) => println(p.prettyString)
     }

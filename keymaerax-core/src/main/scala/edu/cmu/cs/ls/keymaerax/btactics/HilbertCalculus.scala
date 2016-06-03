@@ -61,16 +61,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
-  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
-  //def CQ(inEqPos: PosInExpr)  : Tactic
-  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
-  //def CE(inEqPos: PosInExpr)  : Tactic
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val monb               : BelleExpr         = DLBySubst.monb
+  lazy val monb               : BelleExpr         = byUS("[] monotone")
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val mond               : BelleExpr         = DLBySubst.mond
+  lazy val mond               : BelleExpr         = byUS("<> monotone")
 
 
   // axioms
