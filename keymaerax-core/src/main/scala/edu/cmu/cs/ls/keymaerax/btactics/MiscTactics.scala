@@ -248,6 +248,18 @@ object TacticFactory {
         t(provable, pos)
       }
     }
+
+    /** Creates a BuiltInTwoPositionTactic from a function turning provables and two positions into new provables.
+      * @example {{{
+      *         "andL" by((pr,pos)=> pr(AndLeft(pos.top),0))
+      *         }}}
+      */
+    def by(t: (Provable, Position, Position) => Provable): BuiltInTwoPositionTactic = new BuiltInTwoPositionTactic(name) {
+      override def computeResult(provable: Provable, pos1: Position, pos2: Position): Provable = {
+        requireOneSubgoal(provable)
+        t(provable, pos1, pos2)
+      }
+    }
   }
 
 }

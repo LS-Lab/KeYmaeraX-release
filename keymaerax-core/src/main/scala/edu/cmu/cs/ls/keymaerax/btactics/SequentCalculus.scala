@@ -35,22 +35,22 @@ trait SequentCalculus {
 
   /** Hide/weaken whether left or right */
   lazy val hide               : DependentPositionTactic = ProofRuleTactics.hide
-  /** Hide/weaken given formula at given position */
-//  def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
-//    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-//      override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
-//    }
-//  }
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   val hideL   : BuiltInLeftTactic = "HideL" by { (pr: Provable, pos: AntePosition) => pr(HideLeft(pos.checkTop), 0) }
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
   val hideR   : BuiltInRightTactic = "HideR" by { (pr: Provable, pos: SuccPosition) => pr(HideRight(pos.checkTop), 0) }
+  /** CoHide/weaken left: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
+  val cohideL : BuiltInLeftTactic = "cohideL" by { (pr: Provable, pos: AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
+  /** CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight CoHideRight]]) */
+  val cohideR : BuiltInRightTactic = "cohideR" by { (pr: Provable, pos: SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   lazy val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
-  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  //def cohide(fml: Formula)    : BelleExpr = DebuggingTactics.assert(fml, "cohiding") & cohide
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
-  def cohide2: BuiltInTwoPositionTactic = ProofRuleTactics.coHide2
+  def cohide2: BuiltInTwoPositionTactic = "CoHide2" by {(pr: Provable, ante: Position, succ: Position) => {
+      require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
+      pr(CoHide2(ante.checkAnte.top, succ.checkSucc.top), 0)
+    }
+  }
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
   val notL    : BuiltInLeftTactic = "notL" by { (pr: Provable, pos: AntePosition) => pr(NotLeft(pos.checkTop), 0) }
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
@@ -122,6 +122,7 @@ trait SequentCalculus {
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@todo improve efficiency by avoiding the unnecessary cohide2 step
+  //@todo compare with ProofRuleTactics.close
   def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     new BuiltInTactic("close") {
       override def result(provable: Provable) = {
