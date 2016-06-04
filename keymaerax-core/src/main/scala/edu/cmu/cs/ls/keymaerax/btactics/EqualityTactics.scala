@@ -68,7 +68,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos, sequent) => {
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos:Position, sequent:Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val condEquiv@Imply(_, Equiv(_, repl)) = sequent.sub(pos) match {
@@ -78,7 +78,7 @@ object EqualityTactics {
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
-        val (equivifyCommute, closeWhere) = if (pos.isSucc) (equivifyR(pos) & commuteEquivR(pos), Fixed(pos)) else (equivifyR('Rlast), new LastSucc(0))
+        val (equivifyCommute, closeWhere) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos)) else (equivifyR('Rlast), new LastSucc(0))
         cut(condEquiv) <(
           /* use */ (implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeIdWith(closeWhere)) partial) partial) partial,
           /* show */ cohide('Rlast) & byUS("const formula congruence")
