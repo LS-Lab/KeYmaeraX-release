@@ -192,6 +192,7 @@ trait AntePosition extends Position {
   override def top: AntePos
   final def checkAnte: AntePosition = this
   final def checkSucc = throw new IllegalArgumentException("Antecedent position was expected to be a succedent position: " + this)
+  override def checkTop: AntePos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
   override def topLevel: AntePosition with TopPosition
   override def advanceIndex(i: Int): AntePosition = {
     require(isTopLevel, "Advance index only at top level")
@@ -209,6 +210,7 @@ trait SuccPosition extends Position {
   override def top: SuccPos
   final def checkAnte = throw new IllegalArgumentException("Succedent position was expected to be an antecedent position: " + this)
   final def checkSucc: SuccPosition = this
+  override def checkTop: SuccPos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
   override def topLevel: SuccPosition with TopPosition
   override def advanceIndex(i: Int): SuccPosition = {
     require(isTopLevel, "Advance index only at top level")

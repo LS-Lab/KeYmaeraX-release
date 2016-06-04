@@ -61,9 +61,9 @@ class RandomReapplyTests extends FlatSpec with Matchers {
   }
 
 
-  "Expression reapply" should "reapply random formulas identically (checkin)" taggedAs(CheckinTest) in {test(10)}
-  it should "reapply random formulas identically (summary)" taggedAs(SummaryTest) in {test(50)}
-  it should "reapply random formulas identically (usual)" taggedAs(UsualTest) in {test(1000,10)}
+  "Expression reapply" should //"reapply random formulas identically (checkin)" taggedAs(CheckinTest) in {test(10)}
+  //it should "reapply random formulas identically (summary)" taggedAs(SummaryTest) in {test(50)}
+  "reapply random formulas identically (usual)" taggedAs(UsualTest) in {test(1000,10)}
   it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
   it should "reparse pretty-prints of random formulas (prints)" in {testPrint(100,20)}
 

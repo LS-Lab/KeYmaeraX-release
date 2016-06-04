@@ -22,7 +22,7 @@ object ProofRuleTactics {
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
-  private def requireOneSubgoal(provable: Provable) =
+  private[btactics] def requireOneSubgoal(provable: Provable) =
     if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
@@ -87,19 +87,18 @@ object ProofRuleTactics {
     }
   }
 
-  def andR = "andR" by { (provable: Provable, pos: SuccPosition) => {
-      requireOneSubgoal(provable)
-      //@todo how is isTopLevel ensured here and elsewhere? Call pos.checkTop.top?
-      provable(core.AndRight(pos.top), 0)
-    }
-  }
+  /**
+    * &R And right
+    * {{{
+    * G |- p, D    G |- q, D
+    * ---------------------- (&R And right)
+    *   G |- p&q, D
+    * }}}
+    * @see [[AndRight]]
+    */
+  def andR = "andR" by { (pr: Provable, pos: SuccPosition) => pr(core.AndRight(pos.checkTop), 0) }
 
-  def andL = new BuiltInLeftTactic("andL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition) = {
-      requireOneSubgoal(provable)
-      provable(core.AndLeft(pos.top), 0)
-    }
-  }
+  def andL = "andL" by { (pr: Provable, pos: AntePosition) => pr(core.AndLeft(pos.checkTop), 0) }
 
   def orR = new BuiltInRightTactic("orR") {
     override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
