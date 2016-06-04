@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.dRL
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{HilbertCalculus, ProofRuleTactics, PropositionalTactics, TacticHelper}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -18,7 +18,7 @@ object RefinementSequentCalculus {
     ???
   })
 
-  private val boxChoiceAssoc = HilbertCalculus.choiceb & HilbertCalculus.choiceb & ProofRuleTactics.andR
+  private val boxChoiceAssoc = HilbertCalculus.choiceb & HilbertCalculus.choiceb & SequentCalculus.andR
 
   /** Returns true if formula encodes a refinement relation. */
   private def isRefinement(formula : Formula) = formula match {
