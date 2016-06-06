@@ -100,12 +100,12 @@ class Z3Solver extends SMTSolver {
       //@todo investigate Z3 binding for Scala
       //@todo Code Review startsWith is not a robust way of reading off answers from Z3
       //@todo investigate Z3 binding for Scala
-      if (z3Output.startsWith("unsat")) True
+      if (z3Output.equals("unsat\n")) True
       //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
       //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
-      else if(z3Output.startsWith("sat")) False
+      else if(z3Output.equals("sat\n")) False
       //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
-      else if(z3Output.startsWith("unknown")) False
+      else if(z3Output.equals("unknown\n")) False
       else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
     (z3Output, kResult)
