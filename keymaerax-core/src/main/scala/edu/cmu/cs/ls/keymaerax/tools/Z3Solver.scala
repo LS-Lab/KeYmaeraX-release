@@ -90,22 +90,18 @@ class Z3Solver extends SMTSolver {
    * Check satisfiability with Z3
    * @param cmd the command for running Z3 with a given SMT file
    * @return    Z3 output as String and the interpretation of Z3 output as KeYmaera X formula
+    *           if result is unsat, then return True
+    *           if result is sat or unknown, then return the original formula
+    *           Z3 does not give other possible result for (check-sat)
    */
-  private def run(cmd: String) : (String, Formula)= {
+  private def run(cmd: String, f: Formula) : (String, Formula)= {
     val z3Output = cmd.!!
     if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     val kResult = {
-      //@todo very dangerous code: Example output "sorry I couldn't prove its unsat, no luck today". Variable named unsat notunsat
-      //@todo investigate Z3 binding for Scala
-      //@todo Code Review startsWith is not a robust way of reading off answers from Z3
-      //@todo investigate Z3 binding for Scala
       if (z3Output.equals("unsat\n")) True
-      //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
-      //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
-      else if(z3Output.equals("sat\n")) False
-      //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
-      else if(z3Output.equals("unknown\n")) False
+      else if(z3Output.equals("sat\n")) f
+      else if(z3Output.equals("unknown\n")) f
       else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
     (z3Output, kResult)
@@ -127,9 +123,9 @@ class Z3Solver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
-    val (z3Output, kResult) = run(cmd)
+    val (z3Output, kResult) = run(cmd, f)
     kResult match {
-      case f: Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
+      case ff: Formula => (ff, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }

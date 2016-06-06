@@ -10,6 +10,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
  * Created by ran on 3/27/15.
+ *
  * @author Ran Ji
  */
 class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
@@ -88,7 +89,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // ---------------------------
 
   it should "prove complex quantifiers" in {
-    z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
+    z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
     polya.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
   }
 
@@ -98,7 +99,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "prove complex 1" in {
-    z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
+    z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("x > 0 -> !x^2-2*x+1=0".asFormula)
     // TODO returns false but for the wrong reasons (Polya timeout)
 //    polya.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
   }
