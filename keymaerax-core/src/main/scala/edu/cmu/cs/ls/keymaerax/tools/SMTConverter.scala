@@ -164,9 +164,8 @@ object SMTConverter {
               "1"
             } else if(n.intValue() > 0 ) {
               val ba : String = convertTerm(base, toolId)
-              // todo code review: check (* a)
-              // (* a a a) = a*a*a
-              // to is inclusive
+              //@note: (* a) = a, (* a a a) = a*a*a
+              //@note: to is inclusive
               "(* " + (1 to n.intValue()).map(i => ba).mkString(" ") + ")"
             } else "(/ 1 " + convertExp(base, Number(n.underlying().negate()), toolId) + ")"
           } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
