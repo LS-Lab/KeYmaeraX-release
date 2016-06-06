@@ -107,8 +107,8 @@ class Z3Solver extends SMTSolver {
       * Z3 does not have other possible result for (check-sat)
       */
     if (z3Output.equals("unsat\n")) (True, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
-    else if(z3Output.equals("sat\n")) throw new SMTConversionException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) +"\n")
-    else if(z3Output.equals("unknown\n"))  throw new SMTConversionException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
+    else if(z3Output.equals("sat\n")) throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
+    else if(z3Output.equals("unknown\n")) throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
     else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
   }
 

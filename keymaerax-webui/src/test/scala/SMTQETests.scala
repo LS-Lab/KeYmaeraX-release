@@ -89,8 +89,8 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // ---------------------------
 
   it should "prove complex quantifiers" in {
-    a [SMTConversionException] should be thrownBy z3.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
-    a [SMTConversionException] should be thrownBy polya.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
+    a [SMTQeException] should be thrownBy z3.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
+    a [SMTQeException] should be thrownBy polya.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
   }
 
   it should "prove complex" in {
@@ -99,8 +99,8 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "prove complex 1" in {
-    a [SMTConversionException] should be thrownBy z3.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
-    a [SMTConversionException] should be thrownBy polya.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
+    a [SMTQeException] should be thrownBy z3.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
+    a [SMTQeException] should be thrownBy polya.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
   }
 
   it should "prove complex 2" in {
