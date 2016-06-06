@@ -88,22 +88,11 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // Complicated
   // ---------------------------
 
-  it should "prove complex quantifiers" in {
-    z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
-    polya.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
-  }
-
   it should "prove complex" in {
     z3.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
     polya.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
   }
-
-  it should "prove complex 1" in {
-    z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("x > 0 -> !x^2-2*x+1=0".asFormula)
-    // TODO returns false but for the wrong reasons (Polya timeout)
-//    polya.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
-  }
-
+  
   it should "prove complex 2" in {
     z3.qe("(c<1&c>=0&H>=0&g()>0&v^2<=2*g()*(H-h)&h>=0&kxtime_1=0&h_2()=h&v_2()=v&h_3=0&kxtime_4()=0&v_3=-1*kxtime_5*g()+v&0>=0&0=1/2*(-1*kxtime_5^2*g()+2*h+2*kxtime_5*v)&kxtime_5>=0&v_5=-c*(-1*kxtime_5*g()+v)->(-c*(-1*kxtime_5*g()+v))^2<=2*g()*(H-0))".asFormula) should be("true".asFormula)
     // TODO Polya disagrees with Z3
