@@ -122,14 +122,14 @@ object SMTConverter {
       case Number(n) =>
         /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
           *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
-          *      both have the maximal range in tis category */
+          *      both have the maximal range in their category */
         assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
         // smt form of -5 is (- 5)
         if (n.toDouble < 0) {
           /* negative number should also be in range */
           assert((0-n).isDecimalDouble || (0-n).isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
-          "(- " + (0-n).underlying().toString + ")" }
-        else n.underlying().toString
+          "(- " + (0-n).underlying().toString + ")"
+        } else n.underlying().toString
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) => nameIdentifier(fn) match {
