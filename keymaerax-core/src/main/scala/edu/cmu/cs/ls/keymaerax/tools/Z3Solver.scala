@@ -7,12 +7,13 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.io.{InputStream, FileOutputStream, FileWriter, File}
+import java.io.{File, FileOutputStream, FileWriter, InputStream}
 import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, ParseException}
+
 import scala.collection.immutable
 import scala.sys.process._
 
@@ -86,33 +87,6 @@ class Z3Solver extends SMTSolver {
     }
   }
 
-  /**
-   * Check satisfiability with Z3
-   * @param cmd the command for running Z3 with a given SMT file
-   * @return    Z3 output as String and the interpretation of Z3 output as KeYmaera X formula
-    *           if result is unsat, then return True
-    *           if result is sat or unknown, then throw exception
-    *           Z3 does not have other possible result for (check-sat)
-   */
-  private def run(cmd: String) : (String, Formula)= {
-    val z3Output = cmd.!!
-    if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
-    //@todo So far does not handle get-model or unsat-core
-    val kResult = {
-      if (z3Output.equals("unsat\n")) True
-      else if(z3Output.equals("sat\n")) throw new SMTConversionException("QE with Z3 gives SAT. Cannot reduce the formula to True")
-      else if(z3Output.equals("unknown\n"))  throw new SMTConversionException("QE with Z3 gives UNKNOWN. Cannot reduce the formula to True")
-      else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
-    }
-    (z3Output, kResult)
-  }
-
-  //todo code review: delete this method
-  /** Return Z3 QE result */
-  def qe(f: Formula) : Formula = {
-    qeEvidence(f)._1
-  }
-
   /** Return Z3 QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
@@ -123,11 +97,19 @@ class Z3Solver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
-    val (z3Output, kResult) = run(cmd)
-    kResult match {
-      case ff: Formula => (ff, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
-      case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
-    }
+    /** Z3 output as String, (check-sat) gives unsat, sat or unknown */
+    val z3Output = cmd.!!
+    if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
+    //@todo So far does not handle get-model or unsat-core
+    /** Interpretation of Z3 output as KeYmaera X formula
+      * if Z3 output  is unsat, then return True
+      * if Z3 output  is sat or unknown, then throw exception
+      * Z3 does not have other possible result for (check-sat)
+      */
+    if (z3Output.equals("unsat\n")) (True, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
+    else if(z3Output.equals("sat\n")) throw new SMTConversionException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) +"\n")
+    else if(z3Output.equals("unknown\n"))  throw new SMTConversionException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
+    else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
   }
 
   /**
