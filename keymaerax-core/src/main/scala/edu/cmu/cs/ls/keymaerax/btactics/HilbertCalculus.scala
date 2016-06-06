@@ -54,7 +54,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val hideG              : BelleExpr         = new DependentPositionTactic("hideG") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        ProofRuleTactics.coHideR(SuccPos(0)) & DLBySubst.G
+        SequentCalculus.cohideR(SuccPos(0)) & DLBySubst.G
       }
     }
   }

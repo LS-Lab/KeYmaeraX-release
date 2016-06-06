@@ -5,8 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, coHideR, coHide2, commuteEquivR,
-cut, cutLR, cutL, cutR, equivR, equivifyR, hideL, hideR, implyR}
+import SequentCalculus.{commuteEquivR, equivR, equivifyR, hideL, hideR, implyR, cohideR, cohide2}
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue,
+cut, cutLR, cutL, cutR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -360,7 +361,7 @@ trait UnifyUSCalculus {
           ,
           /* show cut */
           debug("    show cut") &
-            coHideR/*(expect)*/(cutPos) & assert(0, 1) & debug("    cohidden") &
+            cohideR/*(expect)*/(cutPos) & assert(0, 1) & debug("    cohidden") &
             //@todo SuccPosition(0) should be SuccPosition(previous length) if cutting left?
             assert(expect, "useAt show implication")(SuccPos(0)) &
             equivifyR(SuccPos(0)) & debug("    equivified") &
@@ -374,7 +375,7 @@ trait UnifyUSCalculus {
       }
 
       def implyStep(other: Expression): BelleExpr = {
-        val cohide = p match {case p: SuccPosition => coHideR(p.top) case p: AntePosition => coHideR('Rlast)}
+        val cohide = p match {case p: SuccPosition => cohideR(p.top) case p: AntePosition => cohideR('Rlast)}
         cutLR(C(subst(other)))(p.topLevel) <(
           /* use */ ident partial,
           /* show */ cohide & CMon(p.inExpr) & by(subst.toForward(fact))
@@ -393,7 +394,7 @@ trait UnifyUSCalculus {
 
         case DotFormula if !p.isTopLevel =>
           val provedFact = TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head,True),
-            equivR(1) <(closeTrue(1) , coHideR(1) & by(fact)))
+            equivR(1) <(closeTrue(1) , cohideR(1) & by(fact)))
           equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
 
         case Equiv(DotFormula, other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
@@ -473,7 +474,7 @@ trait UnifyUSCalculus {
               cut(C(subst(prereq))) <(
                 /* use: result remains open */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
                 hideL('Llast) partial,
-                coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) &
+                cohide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) &
                   by(Provable.startProof(Imply(subst(prereq), subst(Context(remainder)(k))))(subst.toForward(fact), 0))
                 ) partial,
                 /* show: prereq remains open */ hideR(p.top) partial
@@ -665,7 +666,7 @@ trait UnifyUSCalculus {
         val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
         cutLR(ctxOther)(pos.top) <(
           /* use */ ident,
-          /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & commute &  by(fact)
+          /* show */ cohideR(cutPos) & equivify & tactic(pos.inExpr) & commute &  by(fact)
           )
       }
     }
@@ -704,7 +705,7 @@ trait UnifyUSCalculus {
         val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
         cutLR(ctx(other))(pos.top) <(
           /* use */ ident partial,
-          /* show */ coHideR(cutPos) & //assertT(0,1) &
+          /* show */ cohideR(cutPos) & //assertT(0,1) &
           equivify & /*commuteEquivR(SuccPosition(0)) &*/
           by(tactic(C)(fact))
           )
