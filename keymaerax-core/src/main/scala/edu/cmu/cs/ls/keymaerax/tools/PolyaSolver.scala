@@ -82,31 +82,7 @@ class PolyaSolver extends SMTSolver {
       reversedOutput = reversedOutput.stripPrefix("\n")
     }
     val reversedResult = reversedOutput.substring(0, reversedOutput.indexOf("\n"))
-    return reversedResult.reverse
-  }
-
-  /**
-   * Check satisfiability with Polya
-   * @param cmd the command for running Polya with a given SMT file
-   * @return    Polya output as String and the interpretation of Polya output as KeYmaera X formula
-   */
-  def run(cmd: String) : (String, Formula) = {
-    val polyaOutput = cmd.!!
-    if (DEBUG) println("[Polya result] \n" + polyaOutput)
-    val polyaResult = getTruncatedResult(polyaOutput)
-    val kResult = {
-      if (polyaResult.startsWith("-1")) False
-      else if(polyaResult.startsWith("1")) True
-      else if(polyaResult.startsWith("0")) False
-      else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
-    }
-    (polyaOutput, kResult)
-  }
-
-  //@todo Code Review: this function should be removed
-  /** Return Polya QE result */
-  def qe(f: Formula) : Formula = {
-    qeEvidence(f)._1
+    reversedResult.reverse
   }
 
   /** Return Polya QE result and the proof evidence */
@@ -119,11 +95,19 @@ class PolyaSolver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
-    val (polyaOutput, kResult) = run(cmd)
-    kResult match {
-      case f: Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> polyaOutput)))
-      case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
-    }
+    /** Polya output as String, (check-sat) gives 1, -1 or 0 */
+    val polyaOutput = cmd.!!
+    if (DEBUG) println("[Polya result] \n" + polyaOutput)
+    val polyaResult = getTruncatedResult(polyaOutput)
+    /** Interpretation of Polya output as KeYmaera X formula
+      * if Polya output is 1, then return True
+      * if Polya output is -1 or 0, then throw exception
+      * Polya does not have other possible result for (check-sat)
+      */
+    if (polyaResult.equals("-1")) throw new SMTConversionException("QE with Polya gives -1 (POSSIBLY SAT). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) +"\n")
+    else if(polyaResult.equals("1")) (True, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> polyaOutput)))
+    else if(polyaResult.equals("0")) throw new SMTConversionException("QE with Polya gives 0 (TIMEOUT). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) +"\n")
+    else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
   }
 
   /**
