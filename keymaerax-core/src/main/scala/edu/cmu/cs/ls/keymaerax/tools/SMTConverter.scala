@@ -209,6 +209,7 @@ object SMTConverter {
 
   /** Call Z3 or Polya to simplify a KeYmaera X term */
   private def simplifyTerm(t: Term, toolId: String) : Term = {
+    //@todo This code is poor man's reflection. If retained then pass Tool, not tool name.
     if (toolId == "Z3") {
       val z3 = new Z3Solver
       z3.simplify(t)
