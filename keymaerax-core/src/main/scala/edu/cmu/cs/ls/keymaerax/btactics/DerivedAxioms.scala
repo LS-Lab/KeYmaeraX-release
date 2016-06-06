@@ -102,25 +102,6 @@ object DerivedAxioms {
         derivedAxiom(name, witness)
     }
 
-  /** Package a Lemma for a derived axiom up as a rule */
-//  private def derivedAxiomR(name: String): LookupLemma = {
-//    val lemmaName = axiom2lemmaName(name)
-//    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
-//    //@todo get rid of this
-//    LookupLemma(derivedAxiomDB, lemmaName)
-//  }
-
-  /** Package a Lemma for a derived axiom up as a tactic */
-  private def derivedAxiomT(lemma: Lemma): BelleExpr = {
-    require(derivedAxiomDB.contains(lemma.name.get), "Lemma " + lemma.name.get + " has already been added")
-//    val lemma2axiomName = axiom2lemmaName.map(_.swap)
-//    require(lemma2axiomName.contains(lemma.name.get), s"Lemma with name ${lemma.name.get} must prove an axiom")
-//    val axiomName = lemma2axiomName.get(lemma.name.get).get
-    val axiomName = AxiomInfo.ofCodeName(lemma.name.get).canonicalName
-    //@todo get rid of this
-    TactixLibrary.byUS(lemma.fact) //ProofRuleTactics.applyRule(derivedAxiomR(axiomName))
-  }
-
   private val x = Variable("x_", None, Real)
   private val px = PredOf(Function("p_", None, Real, Bool), x)
   private val pany = PredOf(Function("p_", None, Real, Bool), Anything)
@@ -131,18 +112,6 @@ object DerivedAxioms {
   private val ctxt = Function("ctx_", None, Real, Real) // function symbol
   private val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
-
-//  /**
-//   * Looks up a tactic by name to derive an axiom.
-//   * @note For interface stability reasons (see [[AxiomTactic.axiomLookupBaseT()]])
-//   * @param name The name of the derived axiom.
-//   * @return The tactic to apply the derived axiom, if found. None otherwise.
-//   */
-//  def derivedAxiomTactic(name: String): Option[BelleExpr] = derivedAxiomInfo(name) match {
-//    case Some((_, t)) => Some(t)
-//    case None => None
-//  }
-//
 
   /**
    * Looks up information about a derived axiom by name.
@@ -415,7 +384,7 @@ object DerivedAxioms {
       (Close(AntePos(0),SuccPos(0)), 0)
   )
 
-  lazy val equivReflexiveT = derivedAxiomT(equivReflexiveAxiom)
+  lazy val equivReflexiveT = TactixLibrary.byUS(equivReflexiveAxiom)
 
   /**
     * {{{Axiom "-> distributes over &".
@@ -431,7 +400,7 @@ object DerivedAxioms {
     prop
   )
 
-  lazy val implyDistAndT = derivedAxiomT(implyDistAndAxiom)
+  lazy val implyDistAndT = TactixLibrary.byUS(implyDistAndAxiom)
 
   /**
     * {{{Axiom "-> weaken".
@@ -447,7 +416,7 @@ object DerivedAxioms {
     prop
   )
 
-  lazy val implWeakenT = derivedAxiomT(implWeaken)
+  lazy val implWeakenT = TactixLibrary.byUS(implWeaken)
 
   /**
     * {{{Axiom "-> distributes over <->".
@@ -463,7 +432,7 @@ object DerivedAxioms {
     prop
   )
 
-  lazy val implyDistEquivT = derivedAxiomT(implyDistEquivAxiom)
+  lazy val implyDistEquivT = TactixLibrary.byUS(implyDistEquivAxiom)
 
   /**
     * {{{Axiom "!! double negation".
@@ -487,7 +456,7 @@ object DerivedAxioms {
       (Close(AntePos(0),SuccPos(0)), 0)
   )
 
-  lazy val doubleNegationT = derivedAxiomT(doubleNegationAxiom)
+  lazy val doubleNegationT = TactixLibrary.byUS(doubleNegationAxiom)
 
   /**
     * {{{Axiom "vacuous all quantifier".
@@ -516,7 +485,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val existsDualT = derivedAxiomT(existsDualAxiom)
+  lazy val existsDualT = TactixLibrary.byUS(existsDualAxiom)
 
   /**
     * {{{Axiom "!exists".
@@ -534,7 +503,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val notExistsT = derivedAxiomT(notExists)
+  lazy val notExistsT = TactixLibrary.byUS(notExists)
 
   /**
     * {{{Axiom "!all".
@@ -552,7 +521,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val notAllT = derivedAxiomT(notAll)
+  lazy val notAllT = TactixLibrary.byUS(notAll)
 
   /**
     * {{{Axiom "![]".
@@ -570,7 +539,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val notBoxT = derivedAxiomT(notBox)
+  lazy val notBoxT = TactixLibrary.byUS(notBox)
 
   /**
     * {{{Axiom "!<>".
@@ -588,7 +557,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val notDiamondT = derivedAxiomT(notDiamond)
+  lazy val notDiamondT = TactixLibrary.byUS(notDiamond)
 
   /**
     * {{{Axiom "all eliminate".
@@ -605,7 +574,7 @@ object DerivedAxioms {
       USubst(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil),
       Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)))
   )*/
-  lazy val allEliminateT = derivedAxiomT(allEliminateAxiom)
+  lazy val allEliminateT = ??? //TactixLibrary.byUS(allEliminateAxiom)
 
   /**
     * {{{Axiom "all distribute".
@@ -617,7 +586,7 @@ object DerivedAxioms {
   lazy val allDistributeAxiom = derivedAxiom("all distribute",
     Sequent(IndexedSeq(), IndexedSeq(allDistributeF)),
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
-  lazy val allDistributeT = derivedAxiomT(allDistributeAxiom)
+  lazy val allDistributeT = TactixLibrary.byUS(allDistributeAxiom)
 
   /**
     * {{{Axiom "all quantifier scope".
@@ -647,7 +616,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val boxT = derivedAxiomT(boxAxiom)
+  lazy val boxT = TactixLibrary.byUS(boxAxiom)
 
   /**
     * {{{Axiom "[]~><> propagation".
@@ -672,7 +641,7 @@ object DerivedAxioms {
         )
   )
 
-  lazy val boxDiamondPropagationT = derivedAxiomT(boxDiamondPropagation)
+  lazy val boxDiamondPropagationT = TactixLibrary.byUS(boxDiamondPropagation)
 
   /**
     * {{{Axiom "K1".
@@ -740,7 +709,7 @@ object DerivedAxioms {
       useAt(K2, PosInExpr(1::Nil))(1) & close
       )
   )
-  lazy val boxAndT = derivedAxiomT(boxAnd)
+  lazy val boxAndT = TactixLibrary.byUS(boxAnd)
 
   /**
     * {{{Axiom "boxSplitLeft".
@@ -785,7 +754,7 @@ object DerivedAxioms {
       useAt(notAnd)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
-  lazy val diamondOrT = derivedAxiomT(diamondOr)
+  lazy val diamondOrT = TactixLibrary.byUS(diamondOr)
 
   /**
     * {{{Axiom "<> split left".
@@ -843,7 +812,7 @@ object DerivedAxioms {
       //      and [v:=t()]p(??) <-> <v:=t()>p(??) not derivable since clash in allL
       useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
   )
-  lazy val assignbExistsT = derivedAxiomT(assignbExistsAxiom)
+  lazy val assignbExistsT = TactixLibrary.byUS(assignbExistsAxiom)
 
   /**
     * {{{Axiom "[:=] assign exists".
@@ -861,7 +830,7 @@ object DerivedAxioms {
     useAt("[:=] assign equality exists", PosInExpr(0::Nil))(1, 0::Nil) &
     byUS(existsAndAxiom)
   )
-  lazy val assignbImpliesExistsT = derivedAxiomT(assignbImpliesExistsAxiom)
+  lazy val assignbImpliesExistsT = TactixLibrary.byUS(assignbImpliesExistsAxiom)
 
   /**
     * {{{Axiom "\\exists& exists and".
@@ -876,7 +845,7 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq(existsAndF)),
     /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
   )
-  lazy val existsAndT = derivedAxiomT(existsAndAxiom)
+  lazy val existsAndT = TactixLibrary.byUS(existsAndAxiom)
 
   /**
     * {{{Axiom "<:=> assign equality".
@@ -897,7 +866,7 @@ object DerivedAxioms {
       CE(PosInExpr(0::Nil)) &
       byUS("[:=] assign equality")
   )
-  lazy val assigndEqualityT = derivedAxiomT(assigndEqualityAxiom)
+  lazy val assigndEqualityT = TactixLibrary.byUS(assigndEqualityAxiom)
 
 
   /**
@@ -917,7 +886,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val assigndT = derivedAxiomT(assigndAxiom)
+  lazy val assigndT = TactixLibrary.byUS(assigndAxiom)
 
   /**
     * {{{Axiom ":= assign dual".
@@ -935,7 +904,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val assignDualT = derivedAxiomT(assignDualAxiom)
+  lazy val assignDualT = TactixLibrary.byUS(assignDualAxiom)
 
   /**
     * {{{Axiom "[:=] assign equational".
@@ -953,7 +922,7 @@ object DerivedAxioms {
       byUS(allSubstitute)
   )
 
-  lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
+  lazy val assignbEquationalT = TactixLibrary.byUS(assignbEquationalAxiom)
 
   /**
     * {{{Axiom "[:=] assign update".
@@ -970,7 +939,7 @@ object DerivedAxioms {
     byUS(equivReflexiveAxiom)
   )
 
-  lazy val assignbUpdateT = derivedAxiomT(assignbUpdate)
+  lazy val assignbUpdateT = TactixLibrary.byUS(assignbUpdate)
 
   /**
     * {{{Axiom "<:=> assign update".
@@ -987,7 +956,7 @@ object DerivedAxioms {
     byUS(equivReflexiveAxiom)
   )
 
-  lazy val assigndUpdateT = derivedAxiomT(assigndUpdate)
+  lazy val assigndUpdateT = TactixLibrary.byUS(assigndUpdate)
 
   /**
     * {{{Axiom "[:=] vacuous assign".
@@ -1004,7 +973,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val vacuousAssignbT = derivedAxiomT(vacuousAssignbAxiom)
+  lazy val vacuousAssignbT = TactixLibrary.byUS(vacuousAssignbAxiom)
 
   /**
     * {{{Axiom "<:=> vacuous assign".
@@ -1023,7 +992,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val vacuousAssigndT = derivedAxiomT(vacuousAssigndAxiom)
+  lazy val vacuousAssigndT = TactixLibrary.byUS(vacuousAssigndAxiom)
 
   /**
     * {{{Axiom "<':=> differential assign".
@@ -1042,7 +1011,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val assignDT = derivedAxiomT(assignDAxiom)
+  lazy val assignDT = TactixLibrary.byUS(assignDAxiom)
 
   /**
     * {{{Axiom "<:*> assign nondet".
@@ -1063,7 +1032,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val nondetassigndT = derivedAxiomT(nondetassigndAxiom)
+  lazy val nondetassigndT = TactixLibrary.byUS(nondetassigndAxiom)
 
   /**
     * {{{Axiom "<?> test".
@@ -1081,7 +1050,7 @@ object DerivedAxioms {
       prop
   )
 
-  lazy val testdT = derivedAxiomT(testdAxiom)
+  lazy val testdT = TactixLibrary.byUS(testdAxiom)
 
   /**
     * {{{Axiom "<++> choice".
@@ -1101,7 +1070,7 @@ object DerivedAxioms {
       prop
   )
 
-  lazy val choicedT = derivedAxiomT(choicedAxiom)
+  lazy val choicedT = TactixLibrary.byUS(choicedAxiom)
 
   /**
     * {{{Axiom "<;> compose".
@@ -1122,7 +1091,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val composedT = derivedAxiomT(composedAxiom)
+  lazy val composedT = TactixLibrary.byUS(composedAxiom)
 
   /**
     * {{{Axiom "<*> iterate".
@@ -1144,7 +1113,7 @@ object DerivedAxioms {
       prop
   )
 
-  lazy val iteratedT = derivedAxiomT(iteratedAxiom)
+  lazy val iteratedT = TactixLibrary.byUS(iteratedAxiom)
 
   /**
     * {{{Axiom "<*> approx".
@@ -1164,7 +1133,7 @@ object DerivedAxioms {
         /* show */ hideR(1) & implyR('_) & mond & prop
         )
   )
-  lazy val loopApproxdT = derivedAxiomT(loopApproxd)
+  lazy val loopApproxdT = TactixLibrary.byUS(loopApproxd)
 
 
   /**
@@ -1186,7 +1155,7 @@ object DerivedAxioms {
 
         )
   )
-  lazy val loopApproxbT = derivedAxiomT(loopApproxb)
+  lazy val loopApproxbT = TactixLibrary.byUS(loopApproxb)
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
@@ -1208,7 +1177,7 @@ object DerivedAxioms {
       useAt("all instantiate", PosInExpr(0::Nil))(-2) &
       prop
   )
-  lazy val existsGeneralizeT = derivedAxiomT(existsGeneralize)
+  lazy val existsGeneralizeT = TactixLibrary.byUS(existsGeneralize)
 
   /**
     * {{{Axiom "exists eliminate".
@@ -1229,7 +1198,7 @@ object DerivedAxioms {
       prop
   )
 
-  lazy val existsEliminateT = derivedAxiomT(existsEliminate)
+  lazy val existsEliminateT = TactixLibrary.byUS(existsEliminate)
 
   /**
     * {{{Axiom "all substitute".
@@ -1247,7 +1216,7 @@ object DerivedAxioms {
       /* equiv right */ allR(1) & implyR(1) & eqL2R(-2)(1) & close
       )
   )
-  lazy val allSubstituteT = derivedAxiomT(allSubstitute)
+  lazy val allSubstituteT = TactixLibrary.byUS(allSubstitute)
 
 
   /**
@@ -1267,7 +1236,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val vacuousExistsT = derivedAxiomT(vacuousExistsAxiom)
+  lazy val vacuousExistsT = TactixLibrary.byUS(vacuousExistsAxiom)
 
   /**
     * {{{Axiom "V[:*] vacuous assign nondet".
@@ -1284,7 +1253,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val vacuousBoxAssignNondetT = derivedAxiomT(vacuousBoxAssignNondetAxiom)
+  lazy val vacuousBoxAssignNondetT = TactixLibrary.byUS(vacuousBoxAssignNondetAxiom)
 
   /**
     * {{{Axiom "V<:*> vacuous assign nondet".
@@ -1303,7 +1272,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val vacuousDiamondAssignNondetT = derivedAxiomT(vacuousDiamondAssignNondetAxiom)
+  lazy val vacuousDiamondAssignNondetT = TactixLibrary.byUS(vacuousDiamondAssignNondetAxiom)
 
 
   /**
@@ -1321,7 +1290,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val domainCommuteT = derivedAxiomT(domainCommute)
+  lazy val domainCommuteT = TactixLibrary.byUS(domainCommute)
 
   /**
     * {{{Axiom "[] post weaken".
@@ -1336,7 +1305,7 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq(postconditionWeakenF)),
     implyR(1) & monb & prop
   )
-  lazy val postconditionWeakenT = derivedAxiomT(postconditionWeaken)
+  lazy val postconditionWeakenT = TactixLibrary.byUS(postconditionWeaken)
 
 
   /**
@@ -1349,7 +1318,7 @@ object DerivedAxioms {
     */
   lazy val andCommuteF = "(p_() & q_()) <-> (q_() & p_())".asFormula
   lazy val andCommute = derivedAxiom("& commute", Sequent(IndexedSeq(), IndexedSeq(andCommuteF)), prop)
-  lazy val andCommuteT = derivedAxiomT(andCommute)
+  lazy val andCommuteT = TactixLibrary.byUS(andCommute)
 
   /**
     * {{{Axiom "& associative".
@@ -1361,7 +1330,7 @@ object DerivedAxioms {
     */
   lazy val andAssocF = "((p_() & q_()) & r_()) <-> (p_() & (q_() & r_()))".asFormula
   lazy val andAssoc = derivedAxiom("& associative", Sequent(IndexedSeq(), IndexedSeq(andAssocF)), prop)
-  lazy val andAssocT = derivedAxiomT(andAssoc)
+  lazy val andAssocT = TactixLibrary.byUS(andAssoc)
 
   /**
     * {{{Axiom "& reflexive".
@@ -1371,7 +1340,7 @@ object DerivedAxioms {
     */
   lazy val andReflexiveF = "p_() & p_() <-> p_()".asFormula
   lazy val andReflexive = derivedAxiom("& reflexive", Sequent(IndexedSeq(), IndexedSeq(andReflexiveF)), prop)
-  lazy val andReflexiveT = derivedAxiomT(andReflexive)
+  lazy val andReflexiveT = TactixLibrary.byUS(andReflexive)
 
   /**
     * {{{Axiom "<-> true".
@@ -1381,7 +1350,7 @@ object DerivedAxioms {
     */
   lazy val equivTrueF = "(p() <-> true) <-> p()".asFormula
   lazy val equivTrue = derivedAxiom("<-> true", Sequent(IndexedSeq(), IndexedSeq(equivTrueF)), prop)
-  lazy val equivTrueT = derivedAxiomT(equivTrue)
+  lazy val equivTrueT = TactixLibrary.byUS(equivTrue)
 
   /**
     * {{{Axiom "-> self".
@@ -1391,7 +1360,7 @@ object DerivedAxioms {
     */
   lazy val implySelfF = "(p_() -> p_()) <-> true".asFormula
   lazy val implySelf = derivedAxiom("-> self", Sequent(IndexedSeq(), IndexedSeq(implySelfF)), prop)
-  lazy val implySelfT = derivedAxiomT(implySelf)
+  lazy val implySelfT = TactixLibrary.byUS(implySelf)
 
   /**
     * {{{Axiom "!& deMorgan".
@@ -1403,7 +1372,7 @@ object DerivedAxioms {
     */
   lazy val notAndF = "(!(p_() & q_())) <-> ((!p_()) | (!q_()))".asFormula
   lazy val notAnd = derivedAxiom("!& deMorgan", Sequent(IndexedSeq(), IndexedSeq(notAndF)), prop)
-  lazy val notAndT = derivedAxiomT(notAnd)
+  lazy val notAndT = TactixLibrary.byUS(notAnd)
 
   /**
     * {{{Axiom "!| deMorgan".
@@ -1415,7 +1384,7 @@ object DerivedAxioms {
     */
   lazy val notOrF = "(!(p_() | q_())) <-> ((!p_()) & (!q_()))".asFormula
   lazy val notOr = derivedAxiom("!| deMorgan", Sequent(IndexedSeq(), IndexedSeq(notOrF)), prop)
-  lazy val notOrT = derivedAxiomT(notOr)
+  lazy val notOrT = TactixLibrary.byUS(notOr)
 
   /**
     * {{{Axiom "!-> deMorgan".
@@ -1427,7 +1396,7 @@ object DerivedAxioms {
     */
   lazy val notImplyF = "(!(p_() -> q_())) <-> ((p_()) & (!q_()))".asFormula
   lazy val notImply = derivedAxiom("!-> deMorgan", Sequent(IndexedSeq(), IndexedSeq(notImplyF)), prop)
-  lazy val notImplyT = derivedAxiomT(notImply)
+  lazy val notImplyT = TactixLibrary.byUS(notImply)
 
   /**
     * {{{Axiom "!<-> deMorgan".
@@ -1439,7 +1408,7 @@ object DerivedAxioms {
     */
   lazy val notEquivF = "(!(p_() <-> q_())) <-> (((p_()) & (!q_())) | ((!p_()) & (q_())))".asFormula
   lazy val notEquiv = derivedAxiom("!<-> deMorgan", Sequent(IndexedSeq(), IndexedSeq(notEquivF)), prop)
-  lazy val notEquivT = derivedAxiomT(notEquiv)
+  lazy val notEquivT = TactixLibrary.byUS(notEquiv)
 
   /**
     * {{{Axiom "-> expand".
@@ -1451,7 +1420,7 @@ object DerivedAxioms {
     */
   lazy val implyExpandF = "(p_() -> q_()) <-> ((!p_()) | q_())".asFormula
   lazy val implyExpand = derivedAxiom("-> expand", Sequent(IndexedSeq(), IndexedSeq(implyExpandF)), prop)
-  lazy val implyExpandT = derivedAxiomT(implyExpand)
+  lazy val implyExpandT = TactixLibrary.byUS(implyExpand)
 
   /**
     * {{{Axiom "PC1".
@@ -1464,7 +1433,7 @@ object DerivedAxioms {
     */
   lazy val PC1F = "p_()&q_() -> p_()".asFormula
   lazy val PC1 = derivedAxiom("PC1", Sequent(IndexedSeq(), IndexedSeq(PC1F)), prop)
-  lazy val PC1T = derivedAxiomT(PC1)
+  lazy val PC1T = TactixLibrary.byUS(PC1)
 
   /**
     * {{{Axiom "PC2".
@@ -1477,7 +1446,7 @@ object DerivedAxioms {
     */
   lazy val PC2F = "p_()&q_() -> q_()".asFormula
   lazy val PC2 = derivedAxiom("PC2", Sequent(IndexedSeq(), IndexedSeq(PC2F)), prop)
-  lazy val PC2T = derivedAxiomT(PC2)
+  lazy val PC2T = TactixLibrary.byUS(PC2)
 
   /**
     * {{{Axiom "PC3".
@@ -1490,7 +1459,7 @@ object DerivedAxioms {
     */
   lazy val PC3F = "p_()&q_() -> ((p_()->r_())->(p_()->q_()&r_())) <-> true".asFormula
   lazy val PC3 = derivedAxiom("PC3", Sequent(IndexedSeq(), IndexedSeq(PC3F)), prop)
-  lazy val PC3T = derivedAxiomT(PC3)
+  lazy val PC3T = TactixLibrary.byUS(PC3)
 
   /**
     * {{{Axiom "PC9".
@@ -1503,7 +1472,7 @@ object DerivedAxioms {
     */
   lazy val PC9F = "p_() -> p_() | q_()".asFormula
   lazy val PC9 = derivedAxiom("PC9", Sequent(IndexedSeq(), IndexedSeq(PC9F)), prop)
-  lazy val PC9T = derivedAxiomT(PC9)
+  lazy val PC9T = TactixLibrary.byUS(PC9)
 
   /**
     * {{{Axiom "PC10".
@@ -1516,7 +1485,7 @@ object DerivedAxioms {
     */
   lazy val PC10F = "q_() -> p_() | q_()".asFormula
   lazy val PC10 = derivedAxiom("PC10", Sequent(IndexedSeq(), IndexedSeq(PC10F)), prop)
-  lazy val PC10T = derivedAxiomT(PC10)
+  lazy val PC10T = TactixLibrary.byUS(PC10)
 
   /**
     * {{{Axiom "-> tautology".
@@ -1528,7 +1497,7 @@ object DerivedAxioms {
     */
   lazy val implyTautologyF = "(p_() -> (q_() -> p_()&q_())) <-> true".asFormula
   lazy val implyTautology = derivedAxiom("-> tautology", Sequent(IndexedSeq(), IndexedSeq(implyTautologyF)), prop)
-  lazy val implyTautologyT = derivedAxiomT(implyTautology)
+  lazy val implyTautologyT = TactixLibrary.byUS(implyTautology)
 
   /**
     * {{{Axiom "->' derive imply".
@@ -1544,7 +1513,7 @@ object DerivedAxioms {
     useAt(implyExpand)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
-  lazy val DimplyT = derivedAxiomT(Dimply)
+  lazy val DimplyT = TactixLibrary.byUS(Dimply)
 
   /**
     * {{{Axiom "\forall->\exists".
@@ -1562,7 +1531,7 @@ object DerivedAxioms {
       useAt("all instantiate")(-1) &
       closeId
   )
-  lazy val forallThenExistsT = derivedAxiomT(forallThenExistsAxiom)
+  lazy val forallThenExistsT = TactixLibrary.byUS(forallThenExistsAxiom)
 
   /**
     * {{{Axiom "->true".
@@ -1574,7 +1543,7 @@ object DerivedAxioms {
     */
   lazy val impliesTrueF = "(p_()->true) <-> true".asFormula
   lazy val impliesTrue = derivedAxiom("->true", Sequent(IndexedSeq(), IndexedSeq(impliesTrueF)), prop)
-  lazy val impliesTrueT = derivedAxiomT(impliesTrue)
+  lazy val impliesTrueT = TactixLibrary.byUS(impliesTrue)
 
   /**
     * {{{Axiom "true->".
@@ -1586,7 +1555,7 @@ object DerivedAxioms {
     */
   lazy val trueImpliesF = "(true->p_()) <-> p_()".asFormula
   lazy val trueImplies = derivedAxiom("true->", Sequent(IndexedSeq(), IndexedSeq(trueImpliesF)), prop)
-  lazy val trueImpliesT = derivedAxiomT(trueImplies)
+  lazy val trueImpliesT = TactixLibrary.byUS(trueImplies)
 
   /**
    * {{{Axiom "&true".
@@ -1598,7 +1567,7 @@ object DerivedAxioms {
    */
   lazy val andTrueF = "(p_()&true) <-> p_()".asFormula
   lazy val andTrue = derivedAxiom("&true", Sequent(IndexedSeq(), IndexedSeq(andTrueF)), prop)
-  lazy val andTrueT = derivedAxiomT(andTrue)
+  lazy val andTrueT = TactixLibrary.byUS(andTrue)
 
   /**
    * {{{Axiom "true&".
@@ -1610,7 +1579,7 @@ object DerivedAxioms {
    */
   lazy val trueAndF = "(true&p_()) <-> p_()".asFormula
   lazy val trueAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq(trueAndF)), prop)
-  lazy val trueAndT = derivedAxiomT(trueAnd)
+  lazy val trueAndT = TactixLibrary.byUS(trueAnd)
 
   /**
    * {{{Axiom "0*".
@@ -1622,7 +1591,7 @@ object DerivedAxioms {
    */
   lazy val zeroTimesF = "(0*f()) = 0".asFormula
   lazy val zeroTimes = derivedAxiom("0*", Sequent(IndexedSeq(), IndexedSeq(zeroTimesF)), QE)
-  lazy val zeroTimesT = derivedAxiomT(zeroTimes)
+  lazy val zeroTimesT = TactixLibrary.byUS(zeroTimes)
 
   /**
     * {{{Axiom "*0".
@@ -1638,7 +1607,7 @@ object DerivedAxioms {
       byUS(zeroTimes)
     else QE
   )
-  lazy val timesZeroT = derivedAxiomT(timesZero)
+  lazy val timesZeroT = TactixLibrary.byUS(timesZero)
 
   /**
    * {{{Axiom "0+".
@@ -1650,7 +1619,7 @@ object DerivedAxioms {
    */
   lazy val zeroPlusF = "(0+f()) = f()".asFormula
   lazy val zeroPlus = derivedAxiom("0+", Sequent(IndexedSeq(), IndexedSeq(zeroPlusF)), QE)
-  lazy val zeroPlusT = derivedAxiomT(zeroPlus)
+  lazy val zeroPlusT = TactixLibrary.byUS(zeroPlus)
 
   /**
     * {{{Axiom "+0".
@@ -1666,7 +1635,7 @@ object DerivedAxioms {
       byUS(zeroPlus)
     else QE
   )
-  lazy val plusZeroT = derivedAxiomT(plusZero)
+  lazy val plusZeroT = TactixLibrary.byUS(plusZero)
 
 
   // differential equations
@@ -1693,7 +1662,7 @@ object DerivedAxioms {
       useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW"), close)
       )
   )
-  lazy val DWeakeningT = derivedAxiomT(DWeakening)
+  lazy val DWeakeningT = TactixLibrary.byUS(DWeakening)
 
   /**
     * {{{Axiom "DI differential invariance".
@@ -1717,7 +1686,7 @@ object DerivedAxioms {
         prop & onAll(close)
     )
   )
-  lazy val DIinvarianceT = derivedAxiomT(DIinvariance)
+  lazy val DIinvarianceT = TactixLibrary.byUS(DIinvariance)
 
   /**
     * {{{Axiom "DI differential invariant".
@@ -1739,7 +1708,7 @@ object DerivedAxioms {
         cohide(2) & by(DIinvariance)
         )
   )
-  lazy val DIinvariantT = derivedAxiomT(DIinvariant)
+  lazy val DIinvariantT = TactixLibrary.byUS(DIinvariant)
 
   /**
     * {{{Axiom "DX diamond differential skip".
@@ -1758,7 +1727,7 @@ object DerivedAxioms {
       useAt("DX differential skip", PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt("<> diamond")(1, 0::Nil) & implyR(1) & close
   )
-  lazy val DskipdT = derivedAxiomT(Dskipd)
+  lazy val DskipdT = TactixLibrary.byUS(Dskipd)
 
   /**
     * {{{Axiom "DS differential equation solution".
@@ -1778,7 +1747,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val DSnodomainT = derivedAxiomT(DSnodomain)
+  lazy val DSnodomainT = TactixLibrary.byUS(DSnodomain)
 
   /**
     * {{{Axiom "Dsol differential equation solution".
@@ -1798,7 +1767,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val DSdnodomainT = derivedAxiomT(DSdnodomain)
+  lazy val DSdnodomainT = TactixLibrary.byUS(DSdnodomain)
 
   /**
     * {{{Axiom "Dsol& differential equation solution".
@@ -1819,7 +1788,7 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val DSddomainT = derivedAxiomT(DSddomain)
+  lazy val DSddomainT = TactixLibrary.byUS(DSddomain)
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
   //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
@@ -1852,7 +1821,7 @@ object DerivedAxioms {
       useAt(", commute")(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
-  lazy val DGpreghostT = derivedAxiomT(DGpreghost)
+  lazy val DGpreghostT = TactixLibrary.byUS(DGpreghost)
 
   /**
     * {{{Axiom "x' derive var commuted".
@@ -1866,7 +1835,7 @@ object DerivedAxioms {
     useAt(equalCommute)(1) &
       byUS("x' derive var")
   )
-  lazy val DvariableCommutedT = derivedAxiomT(DvariableCommuted)
+  lazy val DvariableCommutedT = TactixLibrary.byUS(DvariableCommuted)
 
   /**
     * {{{Axiom "x' derive variable".
@@ -1880,7 +1849,7 @@ object DerivedAxioms {
     (Skolemize(SuccPos(0)), 0)
     (Provable.axioms("x' derive var"), 0)
   )
-  lazy val DvariableT = derivedAxiomT(Dvariable)
+  lazy val DvariableT = TactixLibrary.byUS(Dvariable)
   //  /**
   //   * {{{Axiom "x' derive var".
   //   *    (x_)' = x_'
@@ -1900,7 +1869,7 @@ object DerivedAxioms {
   //    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
   //      byUS("= reflexive")*/
   //  )
-  //  lazy val DvarT = derivedAxiomT(Dvar)
+  //  lazy val DvarT = TactixLibrary.byUS(Dvar)
   /**
     * {{{Axiom "' linear".
     *    (c()*f(??))' = c()*(f(??))'
@@ -1916,7 +1885,7 @@ object DerivedAxioms {
       useAt(zeroPlus)(1, 0::Nil) &
       byUS(equalReflex)
   )
-  lazy val DlinearT = derivedAxiomT(Dlinear)
+  lazy val DlinearT = TactixLibrary.byUS(Dlinear)
   /**
     * {{{Axiom "' linear right".
     *    (f(??)*c())' = f(??)'*c()
@@ -1939,7 +1908,7 @@ object DerivedAxioms {
   //    useAt("* commute")(1, 1::Nil) &
   //    by(Dlinear)
   //)
-  lazy val DlinearRightT = derivedAxiomT(DlinearRight)
+  lazy val DlinearRightT = TactixLibrary.byUS(DlinearRight)
 
   // real arithmetic
 
@@ -1951,7 +1920,7 @@ object DerivedAxioms {
    */
   lazy val equalReflexiveF = "s_() = s_()".asFormula
   lazy val equalReflex = derivedAxiom("= reflexive", Sequent(IndexedSeq(), IndexedSeq(equalReflexiveF)), QE)
-  lazy val equalReflexiveT = derivedAxiomT(equalReflex)
+  lazy val equalReflexiveT = TactixLibrary.byUS(equalReflex)
 
   /**
     * {{{Axiom "= commute".
@@ -1961,7 +1930,7 @@ object DerivedAxioms {
     */
   lazy val equalCommuteF = "(f_()=g_()) <-> (g_()=f_())".asFormula
   lazy val equalCommute = derivedAxiom("= commute", Sequent(IndexedSeq(), IndexedSeq(equalCommuteF)), QE)
-  lazy val equalCommuteT = derivedAxiomT(equalCommute)
+  lazy val equalCommuteT = TactixLibrary.byUS(equalCommute)
 
   /**
     * {{{Axiom "* commute".
@@ -1971,7 +1940,7 @@ object DerivedAxioms {
     */
   lazy val timesCommuteF = "(f_()*g_()) = (g_()*f_())".asFormula
   lazy val timesCommute = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq(timesCommuteF)), QE)
-  lazy val timesCommuteT = derivedAxiomT(timesCommute)
+  lazy val timesCommuteT = TactixLibrary.byUS(timesCommute)
 
   /**
     * {{{Axiom "<=".
@@ -1981,7 +1950,7 @@ object DerivedAxioms {
     */
   lazy val lessEqualF = "(f_()<=g_()) <-> ((f_()<g_()) | (f_()=g_()))".asFormula
   lazy val lessEqual = derivedAxiom("<=", Sequent(IndexedSeq(), IndexedSeq(lessEqualF)), QE)
-  lazy val lessEqualT = derivedAxiomT(lessEqual)
+  lazy val lessEqualT = TactixLibrary.byUS(lessEqual)
 
   /**
     * {{{Axiom "! !=".
@@ -1991,7 +1960,7 @@ object DerivedAxioms {
     */
   lazy val notNotEqualF = "(!(f_() != g_())) <-> (f_() = g_())".asFormula
   lazy val notNotEqual = derivedAxiom("! !=", Sequent(IndexedSeq(), IndexedSeq(notNotEqualF)), QE)
-  lazy val notNotEqualT = derivedAxiomT(notNotEqual)
+  lazy val notNotEqualT = TactixLibrary.byUS(notNotEqual)
 
   /**
     * {{{Axiom "! =".
@@ -2001,7 +1970,7 @@ object DerivedAxioms {
     */
   lazy val notEqualF = "(!(f() = g())) <-> (f() != g())".asFormula
   lazy val notEqual = derivedAxiom("! =", Sequent(IndexedSeq(), IndexedSeq(notEqualF)), QE)
-  lazy val notEqualT = derivedAxiomT(notEqual)
+  lazy val notEqualT = TactixLibrary.byUS(notEqual)
 
   /**
     * {{{Axiom "! >".
@@ -2011,7 +1980,7 @@ object DerivedAxioms {
     */
   lazy val notGreaterF = "(!(f() > g())) <-> (f() <= g())".asFormula
   lazy val notGreater = derivedAxiom("! >", Sequent(IndexedSeq(), IndexedSeq(notGreaterF)), QE)
-  lazy val notGreaterT = derivedAxiomT(notGreater)
+  lazy val notGreaterT = TactixLibrary.byUS(notGreater)
 
   /**
     * {{{Axiom "! <".
@@ -2023,7 +1992,7 @@ object DerivedAxioms {
     */
   lazy val notLessF = "(!(f() < g())) <-> (f() >= g())".asFormula
   lazy val notLess = derivedAxiom("! <", Sequent(IndexedSeq(), IndexedSeq(notLessF)), QE)
-  lazy val notLessT = derivedAxiomT(notLess)
+  lazy val notLessT = TactixLibrary.byUS(notLess)
 
   /**
     * {{{Axiom "! <=".
@@ -2035,7 +2004,7 @@ object DerivedAxioms {
     */
   lazy val notLessEqualF = "(!(f() <= g())) <-> (f() > g())".asFormula
   lazy val notLessEqual = derivedAxiom("! <=", Sequent(IndexedSeq(), IndexedSeq(notLessEqualF)), QE)
-  lazy val notLessEqualT = derivedAxiomT(notLessEqual)
+  lazy val notLessEqualT = TactixLibrary.byUS(notLessEqual)
 
   /**
     * {{{Axiom "< negate".
@@ -2045,7 +2014,7 @@ object DerivedAxioms {
     */
   lazy val notGreaterEqualF = "(!(f() >= g())) <-> (f() < g())".asFormula
   lazy val notGreaterEqual = derivedAxiom("< negate", Sequent(IndexedSeq(), IndexedSeq(notGreaterEqualF)), QE)
-  lazy val notGreaterEqualT = derivedAxiomT(notGreaterEqual)
+  lazy val notGreaterEqualT = TactixLibrary.byUS(notGreaterEqual)
 
   /**
     * {{{Axiom ">= flip".
@@ -2055,7 +2024,7 @@ object DerivedAxioms {
     */
   lazy val flipGreaterEqualF = "(f_() >= g_()) <-> (g_() <= f_())".asFormula
   lazy val flipGreaterEqual = derivedAxiom(">= flip", Sequent(IndexedSeq(), IndexedSeq(flipGreaterEqualF)), QE)
-  lazy val flipGreaterEqualT = derivedAxiomT(flipGreaterEqual)
+  lazy val flipGreaterEqualT = TactixLibrary.byUS(flipGreaterEqual)
 
   /**
     * {{{Axiom "> flip".
@@ -2064,7 +2033,7 @@ object DerivedAxioms {
     * */
   lazy val flipGreaterF = "(f_() > g_()) <-> (g_() < f_())".asFormula
   lazy val flipGreater = derivedAxiom("> flip", Sequent(IndexedSeq(), IndexedSeq(flipGreaterF)), QE)
-  lazy val flipGreaterT = derivedAxiomT(flipGreater)
+  lazy val flipGreaterT = TactixLibrary.byUS(flipGreater)
 
   /**
     * {{{Axiom "+ associative".
@@ -2074,7 +2043,7 @@ object DerivedAxioms {
     */
   lazy val plusAssociativeF = "(f_() + g_()) + h_() = f_() + (g_() + h_())".asFormula
   lazy val plusAssociative = derivedAxiom("+ associative", Sequent(IndexedSeq(), IndexedSeq(plusAssociativeF)), QE)
-  lazy val plusAssociativeT = derivedAxiomT(plusAssociative)
+  lazy val plusAssociativeT = TactixLibrary.byUS(plusAssociative)
 
   /**
     * {{{Axiom "* associative".
@@ -2084,7 +2053,7 @@ object DerivedAxioms {
     */
   lazy val timesAssociativeF = "(f_() * g_()) * h_() = f_() * (g_() * h_())".asFormula
   lazy val timesAssociative = derivedAxiom("* associative", Sequent(IndexedSeq(), IndexedSeq(timesAssociativeF)), QE)
-  lazy val timesAssociativeT = derivedAxiomT(timesAssociative)
+  lazy val timesAssociativeT = TactixLibrary.byUS(timesAssociative)
 
   /**
     * {{{Axiom "+ commute".
@@ -2094,7 +2063,7 @@ object DerivedAxioms {
     */
   lazy val plusCommutativeF = "f_()+g_() = g_()+f_()".asFormula
   lazy val plusCommutative = derivedAxiom("+ commute", Sequent(IndexedSeq(), IndexedSeq(plusCommutativeF)), QE)
-  lazy val plusCommutativeT = derivedAxiomT(plusCommutative)
+  lazy val plusCommutativeT = TactixLibrary.byUS(plusCommutative)
 
   /**
     * {{{Axiom "* commute".
@@ -2104,7 +2073,7 @@ object DerivedAxioms {
     */
   lazy val timesCommutativeF = "f_()*g_() = g_()*f_()".asFormula
   lazy val timesCommutative = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq(timesCommutativeF)), QE)
-  lazy val timesCommutativeT = derivedAxiomT(timesCommutative)
+  lazy val timesCommutativeT = TactixLibrary.byUS(timesCommutative)
 
   /**
     * {{{Axiom "distributive".
@@ -2114,7 +2083,7 @@ object DerivedAxioms {
     */
   lazy val distributiveF = "f_()*(g_()+h_()) = f_()*g_() + f_()*h_()".asFormula
   lazy val distributive = derivedAxiom("distributive", Sequent(IndexedSeq(), IndexedSeq(distributiveF)), QE)
-  lazy val distributiveT = derivedAxiomT(distributive)
+  lazy val distributiveT = TactixLibrary.byUS(distributive)
 
   /**
     * {{{Axiom "+ identity".
@@ -2134,7 +2103,7 @@ object DerivedAxioms {
     */
   lazy val timesIdentityF = "f_()*1 = f_()".asFormula
   lazy val timesIdentity = derivedAxiom("* identity", Sequent(IndexedSeq(), IndexedSeq(timesIdentityF)), QE)
-  lazy val timesIdentityT = derivedAxiomT(timesIdentity)
+  lazy val timesIdentityT = TactixLibrary.byUS(timesIdentity)
 
   /**
     * {{{Axiom "+ inverse".
@@ -2144,7 +2113,7 @@ object DerivedAxioms {
     */
   lazy val plusInverseF = "f_() + (-f_()) = 0".asFormula
   lazy val plusInverse = derivedAxiom("+ inverse", Sequent(IndexedSeq(), IndexedSeq(plusInverseF)), QE)
-  lazy val plusInverseT = derivedAxiomT(plusInverse)
+  lazy val plusInverseT = TactixLibrary.byUS(plusInverse)
 
   /**
     * {{{Axiom "* inverse".
@@ -2154,7 +2123,7 @@ object DerivedAxioms {
     */
   lazy val timesInverseF = "f_() != 0 -> f_()*(f_()^-1) = 1".asFormula
   lazy val timesInverse = derivedAxiom("* inverse", Sequent(IndexedSeq(), IndexedSeq(timesInverseF)), QE)
-  lazy val timesInverseT = derivedAxiomT(timesInverse)
+  lazy val timesInverseT = TactixLibrary.byUS(timesInverse)
 
   /**
     * {{{Axiom "positivity".
@@ -2164,7 +2133,7 @@ object DerivedAxioms {
     */
   lazy val positivityF = "f_() < 0 | f_() = 0 | 0 < f_()".asFormula
   lazy val positivity = derivedAxiom("positivity", Sequent(IndexedSeq(), IndexedSeq(positivityF)), QE)
-  lazy val positivityT = derivedAxiomT(positivity)
+  lazy val positivityT = TactixLibrary.byUS(positivity)
 
   /**
     * {{{Axiom "+ closed".
@@ -2174,7 +2143,7 @@ object DerivedAxioms {
     */
   lazy val plusClosedF = "0 < f_() & 0 < g_() -> 0 < f_()+g_()".asFormula
   lazy val plusClosed = derivedAxiom("+ closed", Sequent(IndexedSeq(), IndexedSeq(plusClosedF)), QE)
-  lazy val plusClosedT = derivedAxiomT(plusClosed)
+  lazy val plusClosedT = TactixLibrary.byUS(plusClosed)
 
   /**
     * {{{Axiom "* closed".
@@ -2184,7 +2153,7 @@ object DerivedAxioms {
     */
   lazy val timesClosedF = "0 < f_() & 0 < g_() -> 0 < f_()*g_()".asFormula
   lazy val timesClosed = derivedAxiom("* closed", Sequent(IndexedSeq(), IndexedSeq(timesClosedF)), QE)
-  lazy val timesClosedT = derivedAxiomT(timesClosed)
+  lazy val timesClosedT = TactixLibrary.byUS(timesClosed)
 
   /**
     * {{{Axiom "<".
@@ -2194,7 +2163,7 @@ object DerivedAxioms {
     */
   lazy val lessF = "f_() < g_() <-> 0 < g_()-f_()".asFormula
   lazy val less = derivedAxiom("<", Sequent(IndexedSeq(), IndexedSeq(lessF)), QE)
-  lazy val lessT = derivedAxiomT(less)
+  lazy val lessT = TactixLibrary.byUS(less)
 
   /**
     * {{{Axiom ">".
@@ -2204,7 +2173,7 @@ object DerivedAxioms {
     */
   lazy val greaterF = "f_() > g_() <-> g_() < f_()".asFormula
   lazy val greater = derivedAxiom(">", Sequent(IndexedSeq(), IndexedSeq(greaterF)), QE)
-  lazy val greaterT = derivedAxiomT(greater)
+  lazy val greaterT = TactixLibrary.byUS(greater)
 
   // built-in arithmetic
 
@@ -2217,7 +2186,7 @@ object DerivedAxioms {
     */
   lazy val notEqualElimF = "(f_()!=g_()) <-> \\exists z_ ((f_()-g_())*z_=1)".asFormula
   lazy val notEqualElim = derivedAxiom("!= elimination", Sequent(IndexedSeq(), IndexedSeq(notEqualElimF)), QE)
-  lazy val notEqualElimT = derivedAxiomT(notEqualElim)
+  lazy val notEqualElimT = TactixLibrary.byUS(notEqualElim)
 
   /**
     * {{{Axiom ">= elimination".
@@ -2228,7 +2197,7 @@ object DerivedAxioms {
     */
   lazy val greaterEqualElimF = "(f_()>=g_()) <-> \\exists z_ (f_()-g_()=z_^2)".asFormula
   lazy val greaterEqualElim = derivedAxiom(">= elimination", Sequent(IndexedSeq(), IndexedSeq(greaterEqualElimF)), QE)
-  lazy val greaterEqualElimT = derivedAxiomT(greaterEqualElim)
+  lazy val greaterEqualElimT = TactixLibrary.byUS(greaterEqualElim)
 
   /**
     * {{{Axiom "> elimination".
@@ -2239,7 +2208,7 @@ object DerivedAxioms {
     */
   lazy val greaterElimF = "(f_()>g_()) <-> \\exists z_ ((f_()-g_())*z_^2=1)".asFormula
   lazy val greaterElim = derivedAxiom("> elimination", Sequent(IndexedSeq(), IndexedSeq(greaterElimF)), QE)
-  lazy val greaterElimT = derivedAxiomT(greaterElim)
+  lazy val greaterElimT = TactixLibrary.byUS(greaterElim)
 
   /**
     * {{{Axiom "1>0".
@@ -2249,7 +2218,7 @@ object DerivedAxioms {
     */
   lazy val oneGreaterZeroF = "1>0".asFormula
   lazy val oneGreaterZero = derivedAxiom("1>0", Sequent(IndexedSeq(), IndexedSeq(oneGreaterZeroF)), QE)
-  lazy val oneGreaterZeroT = derivedAxiomT(oneGreaterZero)
+  lazy val oneGreaterZeroT = TactixLibrary.byUS(oneGreaterZero)
 
   /**
     * {{{Axiom "nonnegative squares".
@@ -2259,7 +2228,7 @@ object DerivedAxioms {
     */
   lazy val nonnegativeSquaresF = "f_()^2>=0".asFormula
   lazy val nonnegativeSquares = derivedAxiom("nonnegative squares", Sequent(IndexedSeq(), IndexedSeq(nonnegativeSquaresF)), QE)
-  lazy val nonnegativeSquaresT = derivedAxiomT(nonnegativeSquares)
+  lazy val nonnegativeSquaresT = TactixLibrary.byUS(nonnegativeSquares)
 
   /**
     * {{{Axiom ">2!=".
@@ -2269,7 +2238,7 @@ object DerivedAxioms {
     */
   lazy val greaterImpliesNotEqualF = "f_()>g_() -> f_()!=g_()".asFormula
   lazy val greaterImpliesNotEqual = derivedAxiom(">2!=", Sequent(IndexedSeq(), IndexedSeq(greaterImpliesNotEqualF)), QE)
-  lazy val greaterImpliesNotEqualT = derivedAxiomT(greaterImpliesNotEqual)
+  lazy val greaterImpliesNotEqualT = TactixLibrary.byUS(greaterImpliesNotEqual)
 
   /**
     * {{{Axiom "> monotone".
@@ -2279,7 +2248,7 @@ object DerivedAxioms {
     */
   lazy val greaterMonotoneF = "f_()+h_()>g_() <- f_()>g_() & h_()>=0".asFormula
   lazy val greaterMonotone = derivedAxiom("> monotone", Sequent(IndexedSeq(), IndexedSeq(greaterMonotoneF)), QE)
-  lazy val greaterMonotoneT = derivedAxiomT(greaterMonotone)
+  lazy val greaterMonotoneT = TactixLibrary.byUS(greaterMonotone)
 
   // stuff
 
@@ -2293,7 +2262,7 @@ object DerivedAxioms {
     */
   lazy val absF = "(abs(s_()) = t_()) <->  ((s_()>=0 & t_()=s_()) | (s_()<0 & t_()=-s_()))".asFormula
   lazy val absDef = derivedAxiom("abs", Sequent(IndexedSeq(), IndexedSeq(absF)), QE)
-  lazy val absT = derivedAxiomT(absDef)
+  lazy val absT = TactixLibrary.byUS(absDef)
 
   /**
     * {{{Axiom "min".
@@ -2305,7 +2274,7 @@ object DerivedAxioms {
     */
   lazy val minF = "(min(f_(), g_()) = h_()) <-> ((f_()<=g_() & h_()=f_()) | (f_()>g_() & h_()=g_()))".asFormula
   lazy val minDef = derivedAxiom("min", Sequent(IndexedSeq(), IndexedSeq(minF)), QE)
-  lazy val minT = derivedAxiomT(minDef)
+  lazy val minT = TactixLibrary.byUS(minDef)
 
   /**
     * {{{Axiom "max".
@@ -2317,7 +2286,7 @@ object DerivedAxioms {
     */
   lazy val maxF = "(max(f_(), g_()) = h_()) <-> ((f_()>=g_() & h_()=f_()) | (f_()<g_() & h_()=g_()))".asFormula
   lazy val maxDef = derivedAxiom("max", Sequent(IndexedSeq(), IndexedSeq(maxF)), QE)
-  lazy val maxT = derivedAxiomT(maxDef)
+  lazy val maxT = TactixLibrary.byUS(maxDef)
 
   /**
     * {{{Axiom "<*> stuck".
@@ -2333,7 +2302,7 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq(loopStuckF)),
     byUS(equivReflexiveAxiom)
   )
-  lazy val loopStuckT = derivedAxiomT(loopStuck)
+  lazy val loopStuckT = TactixLibrary.byUS(loopStuck)
 
   /**
     * {{{Axiom "<'> stuck".
@@ -2349,7 +2318,7 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq(odeStuckF)),
     byUS(equivReflexiveAxiom)
   )
-  lazy val odeStuckT = derivedAxiomT(odeStuck)
+  lazy val odeStuckT = TactixLibrary.byUS(odeStuck)
 
   /**
    * {{{Axiom "+<= up".
@@ -2359,7 +2328,7 @@ object DerivedAxioms {
    */
   lazy val intervalUpPlusF = "f_()+g_()<=h_() <- ((f_()<=F_() & g_()<=G_()) & F_()+G_()<=h_())".asFormula
   lazy val intervalUpPlus = derivedAxiom("+<= up", Sequent(IndexedSeq(), IndexedSeq(intervalUpPlusF)), QE)
-  lazy val intervalUpPlusT = derivedAxiomT(intervalUpPlus)
+  lazy val intervalUpPlusT = TactixLibrary.byUS(intervalUpPlus)
 
   /**
    * {{{Axiom "-<= up".
@@ -2369,7 +2338,7 @@ object DerivedAxioms {
    */
   lazy val intervalUpMinusF = "f_()-g_()<=h_() <- ((f_()<=F_() & G_()<=g_()) & F_()-G_()<=h_())".asFormula
   lazy val intervalUpMinus = derivedAxiom("-<= up", Sequent(IndexedSeq(), IndexedSeq(intervalUpMinusF)), QE)
-  lazy val intervalUpMinusT = derivedAxiomT(intervalUpMinus)
+  lazy val intervalUpMinusT = TactixLibrary.byUS(intervalUpMinus)
 
 
   /**
@@ -2380,7 +2349,7 @@ object DerivedAxioms {
    */
   lazy val intervalUpTimesF = "f_()*g_()<=h_() <- ((ff_()<=f_() & f_()<=F_() & gg_()<=g_() & g_()<=G_()) & (ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_()))".asFormula
   lazy val intervalUpTimes = derivedAxiom("*<= up", Sequent(IndexedSeq(), IndexedSeq(intervalUpTimesF)), QE)
-  lazy val intervalUpTimesT = derivedAxiomT(intervalUpTimes)
+  lazy val intervalUpTimesT = TactixLibrary.byUS(intervalUpTimes)
 
 
   /**
@@ -2391,7 +2360,7 @@ object DerivedAxioms {
    */
   lazy val intervalUp1DivideF = "1/f_()<=h_() <- ((F_()<=f_() & F_()*f_()>0) & (1/F_()<=h_()))".asFormula
   lazy val intervalUp1Divide = derivedAxiom("1Div<= up", Sequent(IndexedSeq(), IndexedSeq(intervalUp1DivideF)), QE)
-  lazy val intervalUp1DivideT = derivedAxiomT(intervalUp1Divide)
+  lazy val intervalUp1DivideT = TactixLibrary.byUS(intervalUp1Divide)
 
 
   /**
@@ -2402,7 +2371,7 @@ object DerivedAxioms {
    */
   lazy val intervalUpDivideF = "f_()/g_()<=h_() <- (f_()*(1/g_())<=h_()) & g_()!=0".asFormula
   lazy val intervalUpDivide = derivedAxiom("Div<= up", Sequent(IndexedSeq(), IndexedSeq(intervalUpDivideF)), QE)
-  lazy val intervalUpDivideT = derivedAxiomT(intervalUpDivide)
+  lazy val intervalUpDivideT = TactixLibrary.byUS(intervalUpDivide)
 
 
   /**
@@ -2413,7 +2382,7 @@ object DerivedAxioms {
    */
   lazy val intervalDownPlusF = "h_()<=f_()+g_() <- ((F_()<=f_() & G_()<=g_()) & h_()<=F_()+G_())".asFormula
   lazy val intervalDownPlus = derivedAxiom("<=+ down", Sequent(IndexedSeq(), IndexedSeq(intervalDownPlusF)), QE)
-  lazy val intervalDownPlusT = derivedAxiomT(intervalDownPlus)
+  lazy val intervalDownPlusT = TactixLibrary.byUS(intervalDownPlus)
 
   /**
    * {{{Axiom "<=- down".
@@ -2423,7 +2392,7 @@ object DerivedAxioms {
    */
   lazy val intervalDownMinusF = "h_()<=f_()-g_() <- ((F_()<=f_() & g_()<=G_()) & h_()<=F_()-G_())".asFormula
   lazy val intervalDownMinus = derivedAxiom("<=- down", Sequent(IndexedSeq(), IndexedSeq(intervalDownMinusF)), QE)
-  lazy val intervalDownMinusT = derivedAxiomT(intervalDownMinus)
+  lazy val intervalDownMinusT = TactixLibrary.byUS(intervalDownMinus)
 
 
   /**
@@ -2434,7 +2403,7 @@ object DerivedAxioms {
    */
   lazy val intervalDownTimesF = "h_()<=f_()*g_()<- ((ff_()<=f_() & f_()<=F_() & gg_()<=g_() & g_()<=G_()) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_()))".asFormula
   lazy val intervalDownTimes = derivedAxiom("<=* down", Sequent(IndexedSeq(), IndexedSeq(intervalDownTimesF)), QE)
-  lazy val intervalDownTimesT = derivedAxiomT(intervalDownTimes)
+  lazy val intervalDownTimesT = TactixLibrary.byUS(intervalDownTimes)
 
 
   /**
@@ -2445,7 +2414,7 @@ object DerivedAxioms {
    */
   lazy val intervalDown1DivideF = "h_()<=1/f_() <- ((f_()<=F_() & F_()*f_()>0) & (h_()<=1/F_()))".asFormula
   lazy val intervalDown1Divide = derivedAxiom("<=1Div down", Sequent(IndexedSeq(), IndexedSeq(intervalDown1DivideF)), QE)
-  lazy val intervalDown1DivideT = derivedAxiomT(intervalDown1Divide)
+  lazy val intervalDown1DivideT = TactixLibrary.byUS(intervalDown1Divide)
 
 
   /**
@@ -2456,6 +2425,6 @@ object DerivedAxioms {
    */
   lazy val intervalDownDivideF = "h_()<=f_()/g_() <- h_()<=f_()*(1/g_()) & g_()!=0".asFormula
   lazy val intervalDownDivide = derivedAxiom("<=Div down", Sequent(IndexedSeq(), IndexedSeq(intervalDownDivideF)), QE)
-  lazy val intervalDownDivideT = derivedAxiomT(intervalDownDivide)
+  lazy val intervalDownDivideT = TactixLibrary.byUS(intervalDownDivide)
 
 }
