@@ -13,6 +13,8 @@ The code review will only proceed successfully if everybody present clearly and 
 
 Please don't hesitate at all if some part of the code is unclear to you! It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Confusion about the code are likely sources of trouble. And simpler code is much easier to get sound than complex contraptions. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities or subtle nuances.
 
+Follow-up: when resolving or addressing all important @todo comments introduced during a Code Review, the git commit messages should identify the issue that they are addressing explicitly. And a corresponding Delta Review needs to be initiated to confirm resolution of the matter. A record of the resolution of the @todo messages should be left explicitly.
+
 KeYmaera X Kernel Code Review Steps
 ===================================
 
