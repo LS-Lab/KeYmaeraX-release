@@ -52,6 +52,7 @@ object SMTConverter {
         case x: Variable =>
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")"
+        //@todo use Derived Axioms for abs/min/max
         case f: Function =>
           require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
           nameIdentifier(f) match {
