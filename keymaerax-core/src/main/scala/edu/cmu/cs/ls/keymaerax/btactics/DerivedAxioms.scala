@@ -4,25 +4,27 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, BelleExpr, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, ToolEvidence}
 
-import scala.annotation.switch
 import scala.collection.immutable
 import scala.collection.immutable._
 
+import scala.reflect.runtime.{universe=>ru}
+
 /**
  * Derived Axioms.
-  *
-  * @author Andre Platzer
+ *
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
-  * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
-  *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
-  *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
+ * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
+ *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
+ *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
+ * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
  */
 object DerivedAxioms {
 
@@ -113,167 +115,22 @@ object DerivedAxioms {
   private val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
 
-  /**
-   * Looks up information about a derived axiom by name.
-    *
-    * @param name The name of the derived axiom.
-   * @return The axiom formula and tactic, if found. None otherwise.
-   * @note Central index for looking up derived axioms by names.
-   * @todo this is only used for prepopulation and nothing else now
-   */
-  @deprecated("Use AxiomInfo(name) instead")
-  private def derivedAxiomInfo(name: String): Option[(Formula, BelleExpr)] = (name: @switch) match {
-    //@note implemented as match rather than lookup in a map to retain lazy evaluation
-    //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
-    case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
-    case "-> distributes over &" => Some(implyDistAndF, implyDistAndT)
-    case "-> distributes over <->" => Some(implyDistEquivF, implyDistEquivT)
-    case "-> weaken" => Some(implWeakenF, implWeakenT)
-    case "!! double negation" => Some(doubleNegationF, doubleNegationT)
-    case "exists dual" => Some(existsDualF, existsDualT)
-    case "!exists" => Some(notExistsF, notExistsT)
-    case "!all" => Some(notAllF, notAllT)
-    case "![]" => Some(notBoxF, notBoxT)
-    case "!<>" => Some(notDiamondF, notDiamondT)
-    case "[] box" => Some(boxF, boxT)
-    //case "K1" => Some(K1F, K1T)
-    //case "K2" => Some(K2F, K2T)
-    case "[] split" => Some(boxAndF, boxAndT)
-    //case "[] split left" => Some(boxSplitLeftF, boxSplitLeft)
-    //case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
-    case "<> split" => Some(diamondOrF, diamondOrT)
-    //case "<> split left" => Some(diamondSplitLeftF, diamondSplitLeftT)
-    case "<:=> assign" => Some(assigndF, assigndT)
-    case ":= assign dual" => Some(assignDualF, assignDualT)
-    case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
-    case "[:=] assign equality exists" => Some(assignbExistsF, assignbExistsT)
-    case "[:=] assign exists" => Some(assignbImpliesExistsF, assignbImpliesExistsT)
-    case "\\exists& exists and" => Some(existsAndF, existsAndT)
-    case "[:=] assign update" => Some(assignbUpdateF, assignbUpdateT)
-    case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
-    case "<:=> assign equational" => ??? //Some(assigndEquationalF, assigndEquationalT)
-    case "<:=> assign equality" => Some(assigndEqualityF, assigndEqualityT)
-    case "<:=> assign update" => Some(assigndUpdateF, assigndUpdateT)
-    case "<:=> vacuous assign" => Some(vacuousAssigndF, vacuousAssigndT)
-    case "<':=> differential assign" => Some(assignDF, assignDT)
-    case "<:*> assign nondet" => Some(nondetassigndF, nondetassigndT)
-    case "<?> test" => Some(testdF, testdT)
-    case "<++> choice" => Some(choicedF, choicedT)
-    case "<;> compose" => Some(composedF, composedT)
-    case "<*> iterate" => Some(iteratedF, iteratedT)
-    case "<*> approx" => Some(loopApproxdF, loopApproxdT)
-    case "[*] approx" => Some(loopApproxbF, loopApproxbT)
-    case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
-    case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
-    case "all substitute" => Some(allSubstituteF, allSubstituteT)
-    case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
-    case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
-    case "V<:*> vacuous assign nondet" => Some(vacuousDiamondAssignNondetF, vacuousDiamondAssignNondetT)
-    case "DX diamond differential skip" => Some(DskipdF, DskipdT)
-    case "DW differential weakening" => Some(DWeakeningF, DWeakeningT)
-    case "DS differential equation solution" => Some(DSnodomainF, DSnodomainT)
-    case "Dsol& differential equation solution" => Some(DSddomainF, DSddomainT)
-    case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
-    case "Domain Constraint Conjunction Reordering" => Some(domainCommuteF, domainCommuteT)
-    case "[] post weaken" => Some(postconditionWeakenF, postconditionWeakenT)
-    case "& commute" => Some(andCommuteF, andCommuteT)
-    case "& associative" => Some(andAssocF, andAssocT)
-    case "& reflexive" => Some(andReflexiveF, andReflexiveT)
-    case "!& deMorgan" => Some(notAndF, notAndT)
-    case "!| deMorgan" => Some(notOrF, notOrT)
-    case "!-> deMorgan" => Some(notImplyF, notImplyT)
-    case "!<-> deMorgan" => Some(notEquivF, notEquivT)
-    case "-> expand" => Some(implyExpandF, implyExpandT)
-    case "-> self" => Some(implySelfF, implySelfT)
-    case "<-> true" => Some(equivTrueF, equivTrueT)
-    case "PC1" => Some(PC1F, PC1T)
-    case "PC2" => Some(PC2F, PC2T)
-    case "PC3" => Some(PC3F, PC3T)
-    case "PC9" => Some(PC9F, PC9T)
-    case "PC10" => Some(PC10F, PC10T)
-    case "-> tautology" => Some(implyTautologyF, implyTautologyT)
-    case "->' derive imply" => Some(DimplyF, DimplyT)
-    case "\\forall->\\exists" => Some(forallThenExistsF, forallThenExistsT)
-    case "->true" => Some(impliesTrueF, impliesTrueT)
-    case "true->" => Some(trueImpliesF, trueImpliesT)
-    case "&true" => Some(andTrueF, andTrueT)
-    case "true&" => Some(trueAndF, trueAndT)
-    case "0*" => Some(zeroTimesF, zeroTimesT)
-    case "0+" => Some(zeroPlusF, zeroPlusT)
-    case "*0" => Some(timesZeroF, timesZeroT)
-    case "+0" => Some(plusZeroF, plusZeroT)
-    //    case "x' derive var" => Some(DvarF, DvarT)
-    case "x' derive var commuted" => Some(DvariableCommutedF, DvariableCommutedT)
-    case "x' derive variable" => Some(DvariableF, DvariableT)
-    case "' linear" => Some(DlinearF, DlinearT)
-    case "' linear right" => Some(DlinearRightF, DlinearRightT)
-    case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
-    case "= reflexive" => Some(equalReflexiveF, equalReflexiveT)
-    case "* commute" => Some(timesCommuteF, timesCommuteT)
-    case "= commute" => Some(equalCommuteF, equalCommuteT)
-    case "<=" => Some(lessEqualF, lessEqualT)
-    case "! !=" => Some(notNotEqualF, notNotEqualT)
-    case "! =" => Some(notEqualF, notEqualT)
-    case "! <" => Some(notLessF, notLessT)
-    case "! <=" => Some(notLessEqualF, notLessEqualT)
-    case "! >" => Some(notGreaterF, notGreaterT)
-    case "! >=" => derivedAxiomInfo("< negate")
-    case "< negate" => Some(notGreaterEqualF, notGreaterEqualT)
-    case ">= flip" => Some(flipGreaterEqualF, flipGreaterEqualT)
-    case "> flip" => Some(flipGreaterF, flipGreaterT)
-    case "<" => Some(lessF, lessT)
-    case ">" => Some(greaterF, greaterT)
-    case "abs" => Some(absF, absT)
-    case "min" => Some(minF, minT)
-    case "max" => Some(maxF, maxT)
-    case "<*> stuck" => Some(loopStuckF, loopStuckT)
-    case "<'> stuck" => Some(odeStuckF, odeStuckT)
-    case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
-    case "-<= up" => Some(intervalUpMinusF, intervalUpMinusT)
-    case "*<= up" => Some(intervalUpTimesF, intervalUpTimesT)
-    case "1Div<= up" => Some(intervalUp1DivideF, intervalUp1DivideT)
-    case "Div<= up" => Some(intervalUpDivideF, intervalUpDivideT)
-    case "<=+ down" => Some(intervalDownPlusF, intervalDownPlusT)
-    case "<=- down" => Some(intervalDownMinusF, intervalDownMinusT)
-    case "<=* down" => Some(intervalDownTimesF, intervalDownTimesT)
-    case "<=1Div down" => Some(intervalDown1DivideF, intervalDown1DivideT)
-    case "<=Div down" => Some(intervalDownDivideF, intervalDownDivideT)
-    case "all distribute" => Some(allDistributeF, allDistributeT)
-    case "[]~><> propagation" => Some(boxDiamondPropagationF, boxDiamondPropagationT)
-    case "* associative" => Some(timesAssociativeF, timesAssociativeT)
-    case "* inverse" => Some(timesInverseF, timesInverseT)
-    case "* closed" => Some(timesClosedF, timesClosedT)
-    case "* identity" => Some(timesIdentityF, timesIdentityT)
-    case "+ associative" => Some(plusAssociativeF, plusAssociativeT)
-    case "+ commute" => Some(plusCommutativeF, plusCommutativeT)
-    case "+ inverse" => Some(plusInverseF, plusInverseT)
-    case "+ closed" => Some(plusClosedF, plusClosedT)
-    case "positivity" => Some(positivityF, positivityT)
-    case "distributive" => Some(distributiveF, distributiveT)
-    case _ => None
-  }
-
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
   private[keymaerax] def prepopulateDerivedLemmaDatabase() = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
-    DerivedAxiomInfo.allInfo.map(key => {
-      try {
-        //@note: cannot use any of AxiomInfo.provable and AxiomInfo.formula, since
-        // both ask DerivedAxioms.deriveAxiom, which in turn requires the lemma that we want to prepopulate to be
-        // present in the database already; derivedAxiomInfo, as a side effect, stores the lemma to the DB
-        derivedAxiomInfo(key.canonicalName)
-        // nothing else to do, populated in the DB as a side effect of derivedAxiomInfo
-      } catch {
-        case _:NotImplementedError => println("WARNING: Axiom not implemented:  " + key.canonicalName)
-        case _:Throwable => println("WARNING: Unknown error populating axiom: " + key.canonicalName)
-      }
-    })
-    // populate derived rules
-    derivedRule("[] monotone", boxMonotone.fact)
-    derivedRule("[] monotone 2", boxMonotone2.fact)
-    derivedRule("CT term congruence", CTtermCongruence.fact)
-    //@todo all generalization must be populated after [] monotone -> need better dependency handling for derived rules
-    derivedRule("all generalization", allGeneralize.fact)
+
+    val lemmas = getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val fns = lemmas.map(_.getName)
+
+    val mirror = ru.runtimeMirror(getClass.getClassLoader)
+    // access the singleton object
+    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val im = mirror.reflect(moduleMirror.instance)
+
+    //@note lazy vals have a "hidden" getter method that does the initialization
+    val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fieldMirrors = fields.map(im.reflectMethod)
+    fieldMirrors.foreach(_()) //@note accessing the lazy getters adds lemmas to DB as side effect
   }
 
   // derived rules
@@ -292,11 +149,11 @@ object DerivedAxioms {
     //(immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(??)".asFormula)),
     useAt("[:*] assign nondet", PosInExpr(1::Nil))(1) &
-    cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
-      monb & hide(-1) partial
-      ,
-      dualFree(2) //closeT
-      )
+      cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
+        byUS(boxMonotone) & hide(-1) partial
+        ,
+        dualFree(2) //closeT
+        )
   )
 
   /**
@@ -314,7 +171,7 @@ object DerivedAxioms {
       ,
       equivifyR(1) &
         CQ(PosInExpr(0::0::Nil)) &
-        commuteEqual(1)
+        useAt(equalCommute)(1)
         partial
       )
   )
@@ -332,11 +189,11 @@ object DerivedAxioms {
     */
   lazy val boxMonotone = derivedRule("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(??)".asFormula), immutable.IndexedSeq("[a_;]q_(??)".asFormula)),
-    useAt("[] box", PosInExpr(1::Nil))(-1) & useAt("[] box", PosInExpr(1::Nil))(1) &
+    useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
       by("<> monotone", USubst(
         SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
-        SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
+          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
       notL(-1) & notR(1)
       partial
   )
@@ -354,12 +211,12 @@ object DerivedAxioms {
     */
   lazy val boxMonotone2 = derivedRule("[] monotone 2",
     Sequent(immutable.IndexedSeq("[a_;]q_(??)".asFormula), immutable.IndexedSeq("[a_;]p_(??)".asFormula)),
-    useAt("[] box", PosInExpr(1::Nil))(-1) & useAt("[] box", PosInExpr(1::Nil))(1) &
+    useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
       byUS("<> monotone") &
-//      ProofRuleTactics.axiomatic("<> monotone", USubst(
-//        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
-//          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
+      //      ProofRuleTactics.axiomatic("<> monotone", USubst(
+      //        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
+      //          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
       notL(-1) & notR(1)
       partial
   )
@@ -627,19 +484,22 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val boxDiamondPropagationF = "([a_;]p_(??) & <a_;>q_(??)) -> <a_;>(p_(??) & q_(??))".asFormula
-  lazy val boxDiamondPropagation = derivedAxiom("[]~><> propagation",
-    Sequent(IndexedSeq(), IndexedSeq(boxDiamondPropagationF)),
-    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::1::Nil) &
-      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
-      cut("[a_;]p_(??) & [a_;]!(p_(??)&q_(??)) -> [a_;]!q_(??)".asFormula) <(
-        /* use */ prop,
-        /* show */ hideR(1) &
-        cut("[a_;](p_(??) & !(p_(??)&q_(??)))".asFormula) <(
-          /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi() & CMon(PosInExpr(1::Nil)) & prop,
-          /* show */ implyR(1) & splitb(1) & prop
+  lazy val boxDiamondPropagation = {
+    boxAnd //@note access dependency hidden in CMon, so that it is added to the lemma database
+    derivedAxiom("[]~><> propagation",
+      Sequent(IndexedSeq(), IndexedSeq(boxDiamondPropagationF)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::1::Nil) &
+        useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+        cut("[a_;]p_(??) & [a_;]!(p_(??)&q_(??)) -> [a_;]!q_(??)".asFormula) <(
+          /* use */ prop,
+          /* show */ hideR(1) &
+          cut("[a_;](p_(??) & !(p_(??)&q_(??)))".asFormula) <(
+            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi() & CMon(PosInExpr(1::Nil)) & prop,
+            /* show */ implyR(1) & splitb(1) & prop
+            )
           )
-        )
-  )
+    )
+  }
 
   lazy val boxDiamondPropagationT = TactixLibrary.byUS(boxDiamondPropagation)
 
@@ -804,15 +664,16 @@ object DerivedAxioms {
     * @Derived by ":= assign dual" from "<:=> assign equality".
     * @todo does not derive yet
     */
-  lazy val assignbExistsF = "[x_:=f_();]p_(??) <-> \\exists x_ (x_=f_() & p_(??))".asFormula
-  lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
-    Sequent(IndexedSeq(), IndexedSeq(assignbExistsF)),
-    useAt("<:=> assign equality", PosInExpr(1::Nil))(1, 1::Nil) &
-      //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
-      //      and [v:=t()]p(??) <-> <v:=t()>p(??) not derivable since clash in allL
-      useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
-  )
-  lazy val assignbExistsT = TactixLibrary.byUS(assignbExistsAxiom)
+//  lazy val assignbExistsF = "[x_:=f_();]p_(??) <-> \\exists x_ (x_=f_() & p_(??))".asFormula
+//  lazy val assignbExistsAxiom =
+//    derivedAxiom("[:=] assign equality exists",
+//      Sequent(IndexedSeq(), IndexedSeq(assignbExistsF)),
+//      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
+//        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
+//        //      and [v:=t()]p(??) <-> <v:=t()>p(??) not derivable since clash in allL
+//        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
+//    )
+//  lazy val assignbExistsT = TactixLibrary.byUS(assignbExistsAxiom)
 
   /**
     * {{{Axiom "[:=] assign exists".
@@ -1760,7 +1621,7 @@ object DerivedAxioms {
   lazy val DSdnodomainF = "<{x_'=c_()}>p_(x_) <-> \\exists t_ (t_>=0 & <x_:=x_+(c_()*t_);>p_(x_))".asFormula
   lazy val DSdnodomain = derivedAxiom("Dsol differential equation solution",
     Sequent(IndexedSeq(), IndexedSeq(DSdnodomainF)),
-    useAt("Dsol& differential equation solution")(1, 0::Nil) &
+    useAt(DSddomain)(1, 0::Nil) &
       useAt(impliesTrue)(1, 0::0::1::0::0::Nil) &
       useAt("vacuous all quantifier")(1, 0::0::1::0::Nil) &
       useAt(trueAnd)(1, 0::0::1::Nil) &
