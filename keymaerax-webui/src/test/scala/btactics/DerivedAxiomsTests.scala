@@ -1,12 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
-import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -30,19 +28,13 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     lemma.fact.conclusion
   }
 
-  private def check(lemma: Lemma, lemT: BelleExpr): Sequent = {
-    println(lemma.name.get + "\n" + lemma.fact.conclusion)
-    lemma.fact shouldBe 'proved
-    theInterpreter(lemT, BelleProvable(Provable.startProof(lemma.fact.conclusion))) match {
-      case BelleProvable(provable, _) =>
-        provable shouldBe 'proved
-        provable.conclusion
-      case _ => fail()
-    }
-  }
-
   private def useToClose(lemma: Lemma): Unit = {
     Provable.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
+    //@note same test as previous line, just to make sure the lemma can be used by substitution
+    theInterpreter(TactixLibrary.byUS(lemma), BelleProvable(Provable.startProof(lemma.fact.conclusion))) match {
+      case BelleProvable(provable, _) => provable shouldBe 'proved
+      case _ => fail()
+    }
   }
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
@@ -168,42 +160,42 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <=1Div down" in withMathematica { implicit qeTool => check(intervalDown1Divide)}
   it should "prove <=Div down" in withMathematica { implicit qeTool => check(intervalDownDivide)}
 
-  "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveAxiom, equivReflexiveT)}
-  it should "prove !!" in {check(doubleNegationAxiom, doubleNegationT)}
-  it should "prove exists dual" in {check(existsDualAxiom, existsDualT)}
-  ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom, allEliminateT)}
-  ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate, existsEliminateT)}
-  it should "prove all distribute" in {check(allDistributeAxiom, allDistributeT)}
-  it should "prove box dual" in {check(boxAxiom, boxT)}
-  it should "prove <:=> assign" in {check(assigndAxiom, assigndT)}
-  it should "prove [:=] equational" in {check(assignbEquationalAxiom, assignbEquationalT)}
+  "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
+  it should "prove !!" in {check(doubleNegationAxiom)}
+  it should "prove exists dual" in {check(existsDualAxiom)}
+  ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
+  ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
+  it should "prove all distribute" in {check(allDistributeAxiom)}
+  it should "prove box dual" in {check(boxAxiom)}
+  it should "prove <:=> assign" in {check(assigndAxiom)}
+  it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
 //  it should "prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
-  it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom, vacuousAssignbT)}
-  it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom, vacuousAssigndT)}
-  it should "prove <':=> differential assign" in {check(assignDAxiom, assignDT)}
-  it should "prove <++> choice" in {check(choicedAxiom, choicedT)}
-  it should "prove <;> compose" in {check(composedAxiom, composedT)}
-  it should "prove <*> iterate" in {check(iteratedAxiom, iteratedT)}
-  it should "prove exists generalize" in {check(existsGeneralize, existsGeneralizeT)}
-  it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex, equalReflexiveT)}
-  it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute, equalCommuteT)}
-  it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual, lessEqualT)}
-  it should "prove ! !=" in withMathematica { implicit qeTool => check(notNotEqual, notNotEqualT)}
-  it should "prove < negate" in withMathematica { implicit qeTool => check(notGreaterEqual, notGreaterEqualT)}
-  it should "prove >= flip" in withMathematica { implicit qeTool => check(flipGreaterEqual, flipGreaterEqualT)}
-  it should "prove > flip" in withMathematica { implicit qeTool => check(flipGreater, flipGreaterT)}
-  it should "prove all substitute" in {check(allSubstitute, allSubstituteT)}
-  it should "prove vacuous exists" in {check(vacuousExistsAxiom, vacuousExistsT)}
-  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom, vacuousBoxAssignNondetT)}
-  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom, vacuousDiamondAssignNondetT)}
-  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
-  it should "prove DI differential invariance" in {check(DIinvariance, DIinvarianceT)}
-  it should "prove DI differential invariant" in {check(DIinvariant, DIinvariantT)}
-  it should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
-  it should "prove DW differential weakening" in {check(DWeakening, DWeakeningT)}
-  it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
-  it should "prove min" in withMathematica { implicit qeTool => check(minDef, minT)}
-  it should "prove max" in withMathematica { implicit qeTool => check(maxDef, maxT)}
+  it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
+  it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
+  it should "prove <':=> differential assign" in {check(assignDAxiom)}
+  it should "prove <++> choice" in {check(choicedAxiom)}
+  it should "prove <;> compose" in {check(composedAxiom)}
+  it should "prove <*> iterate" in {check(iteratedAxiom)}
+  it should "prove exists generalize" in {check(existsGeneralize)}
+  it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex)}
+  it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute)}
+  it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual)}
+  it should "prove ! !=" in withMathematica { implicit qeTool => check(notNotEqual)}
+  it should "prove < negate" in withMathematica { implicit qeTool => check(notGreaterEqual)}
+  it should "prove >= flip" in withMathematica { implicit qeTool => check(flipGreaterEqual)}
+  it should "prove > flip" in withMathematica { implicit qeTool => check(flipGreater)}
+  it should "prove all substitute" in {check(allSubstitute)}
+  it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
+  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
+  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
+  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  it should "prove DI differential invariance" in {check(DIinvariance)}
+  it should "prove DI differential invariant" in {check(DIinvariant)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghost)}
+  it should "prove DW differential weakening" in {check(DWeakening)}
+  it should "prove abs" in withMathematica { implicit qeTool => check(absDef)}
+  it should "prove min" in withMathematica { implicit qeTool => check(minDef)}
+  it should "prove max" in withMathematica { implicit qeTool => check(maxDef)}
 
   "Derived Rule" should "prove allG" in withMathematica { implicit qeTool => allGeneralize.fact.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(??)".asFormula))
