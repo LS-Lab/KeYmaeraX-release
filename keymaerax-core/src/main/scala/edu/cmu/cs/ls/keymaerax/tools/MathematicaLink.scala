@@ -36,10 +36,7 @@ trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTo
   def run(cmd : MExpr) : (String, KExpr)
 
   //@todo Code Review: should probably be removed from the interface
-  /**
-   * @return true if the job is finished, false if it is still running.
-   */
-  def ready: Boolean
+  //@solution: removed ready from interface, removed empty implementations from derived classes
 
   /** Cancels the current request.
     *
@@ -243,8 +240,6 @@ class JLinkMathematicaLink extends MathematicaLink {
       }
     }
   }
-
-  def ready = ???
 
   def cancel(): Boolean = {
     ml.abortEvaluation()
