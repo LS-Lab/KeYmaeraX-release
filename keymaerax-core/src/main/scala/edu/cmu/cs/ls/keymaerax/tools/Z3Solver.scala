@@ -106,11 +106,28 @@ class Z3Solver extends SMTSolver {
       * if Z3 output  is sat or unknown, then throw exception
       * Z3 does not have other possible result for (check-sat)
       */
+    //@todo very dangerous code: Example output "sorry I couldn't prove its unsat, no luck today". Variable named unsat notunsat
+    //@ran todo-resolved: check-sat only retuens sat, unsat, unknown. There is no other possibilities.
+    //@todo investigate Z3 binding for Scala
+    //@todo Code Review startsWith is not a robust way of reading off answers from Z3
+    //@ran todo-resolved: changed to equals
     if (z3Output.equals("unsat\n")) (True, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
+    //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
+    //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
+    //@ran todo-resolved: If it returns sat, throw an exception
     else if(z3Output.equals("sat\n")) throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
+    //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
+    //@ran todo-resolved: If it returns unknown, throw an exception
     else if(z3Output.equals("unknown\n")) throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
     else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
   }
+
+  //@todo code review: delete this method
+  //@ran todo-resolved: deleted
+//  /** Return Z3 QE result */
+//  def qe(f: Formula) : Formula = {
+//    qeEvidence(f)._1
+//  }
 
   /**
    * Simplify a KeYmaera X term into a possibly simple term

@@ -121,10 +121,14 @@ object SMTConverter {
       case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Power(l, r)  => convertExp(l, r, toolId)
       case Number(n) =>
+        //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
+        //@ran todo-resolved: double checked and see notes below
         /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
           *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
           *      both have the maximal range in their category */
         assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+        //@todo code review: maxlong?
+        //@ran todo-resolved: also checks if negative value is in range, see comment below
         // smt form of -5 is (- 5)
         if (n.toDouble < 0) {
           /* negative number should also be in range */
@@ -167,6 +171,8 @@ object SMTConverter {
               "1"
             } else if(n.intValue() > 0 ) {
               val ba : String = convertTerm(base, toolId)
+              //@todo code review: check (* a)
+              //@ran todo-resolved: double checked that (* a) = a
               //@note: (* a) = a, (* a a a) = a*a*a
               //@note: to is inclusive
               "(* " + (1 to n.intValue()).map(i => ba).mkString(" ") + ")"
@@ -181,6 +187,8 @@ object SMTConverter {
   /** Convert possibly nested forall KeYmaera X expression to SMT */
   private def convertForall(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsForall(vs, f)
+    //@todo code review: assert sort==real and use sort
+    //@ran todo-resolved: changed as suggested
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
     "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
