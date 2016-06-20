@@ -58,6 +58,7 @@ abstract class JLinkMathematicaLink(val k2m: KExpr => MExpr, val m2k: MExpr => K
 
   protected val mathematicaExecutor: ToolExecutor[(String, KExpr)] = ToolExecutor.defaultExecutor()
 
+  //@note all access to queryIndex must be synchronized
   private var queryIndex: Long = 0
 
   private val fetchMessagesCmd = "$MessageList"
@@ -149,15 +150,16 @@ abstract class JLinkMathematicaLink(val k2m: KExpr => MExpr, val m2k: MExpr => K
   protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     //@todo Code Review: querIndex increment should be synchronized
-    queryIndex += 1
-    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
+    //@solution: synchronized increment on global idx, then use local idx throughout instead; added a note to global queryIndex that all access must be synchronized
+    val qidx: Long = synchronized { queryIndex += 1; queryIndex }
+    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
     // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
     val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
     if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
 
     val taskId = executor.schedule(_ => {
       dispatch(checkErrorMsgCmd.toString)
-      getAnswer(indexedCmd, queryIndex, converter)
+      getAnswer(indexedCmd, qidx, converter)
     })
 
     executor.wait(taskId) match {
