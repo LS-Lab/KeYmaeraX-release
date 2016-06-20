@@ -26,7 +26,7 @@ import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, MathematicaComputationAbortedException, SimulationTool}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, MathematicaComputationAbortedException, SimulationTool, Tool}
 
 import scala.collection.immutable
 import scala.io.Source
@@ -121,7 +121,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     val fml = node.sequent.toFormula
     if (fml.isFOL) {
       try {
-        TactixLibrary.tool.findCounterExample(fml) match {
+        TactixLibrary.cexTool.findCounterExample(fml) match {
           //@todo return actual sequent, use collapsiblesequentview to display counterexample
           case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
           case None => new CounterExampleResponse("cex.none") :: Nil
@@ -193,7 +193,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
       primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
     val time: Variable = Variable("t_", None, Real)
     //@note replace initial values with original variable, since we turn them into assignments
-    val solution = replaceFree(TactixLibrary.tool.diffSol(ode, time, iv).get, iv.map(_.swap))
+    val solution = replaceFree(TactixLibrary.odeTool.diffSol(ode, time, iv).get, iv.map(_.swap))
     val flatSolution = flattenConjunctions(solution).
       sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
     Compose(
@@ -232,7 +232,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends Request {
   override def getResultingResponses(): List[Response] = {
     //@HACK do not want to change the tool type in TactixLibrary
-    TactixLibrary.tool match {
+    TactixLibrary.qeTool match {
       case s: SimulationTool =>
         val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
         val simulation = s.simulate(initial, timedStateRelation, steps, n)
@@ -978,10 +978,16 @@ class ShutdownReqeuest() extends Request {
           System.out.flush()
           System.err.flush()
           DerivedAxioms.qeTool match {
-            case mathematica: Mathematica => mathematica.shutdown(); DerivedAxioms.qeTool = null;
+            case t: Tool => t.shutdown(); DerivedAxioms.qeTool = null;
           }
-          TactixLibrary.tool match {
-            case mathematica: Mathematica => mathematica.shutdown(); TactixLibrary.tool = null;
+          TactixLibrary.qeTool match {
+            case t: Tool => t.shutdown(); TactixLibrary.qeTool = null;
+          }
+          TactixLibrary.odeTool match {
+            case t: Tool => t.shutdown(); TactixLibrary.odeTool = null;
+          }
+          TactixLibrary.cexTool match {
+            case t: Tool => t.shutdown(); TactixLibrary.cexTool = null;
           }
           System.out.flush()
           System.err.flush()

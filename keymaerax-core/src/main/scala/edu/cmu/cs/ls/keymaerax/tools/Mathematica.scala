@@ -19,7 +19,10 @@ import scala.collection.immutable.Map
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
 class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
-  private val jlink = new JLinkMathematicaLink
+  private val mQE = new MathematicaQETool
+  private val mCEX = new MathematicaCEXTool
+  private val mODE = new MathematicaODETool
+  private val mSim = new MathematicaSimulationTool
 
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
@@ -30,14 +33,19 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
 //        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
     }
     val libDir = config.get("libDir") // doesn't need to be defined
-    initialized = jlink.init(linkName, libDir)
+    initialized = mQE.init(linkName, libDir) && mCEX.init(linkName, libDir) && mODE.init(linkName, libDir) && mSim.init(linkName, libDir)
   }
 
   /** Closes the connection to Mathematica */
-  override def shutdown() = jlink.shutdown()
+  override def shutdown() = {
+    mQE.shutdown()
+    mCEX.shutdown()
+    mODE.shutdown()
+    mSim.shutdown()
+  }
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = mQE.qeEvidence(formula)
 
   /** Returns a formula describing the symbolic solution of the specified differential equation system.
    * @param diffSys The differential equation system
@@ -46,16 +54,16 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
    * @return The solution, if found. None otherwise.
    */
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
-                       iv: Predef.Map[Variable, Variable]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
+                       iv: Predef.Map[Variable, Variable]): Option[Formula] = mODE.diffSol(diffSys, diffArg, iv)
 
-  override def deriveBy(term: Term, v: Variable): Term = jlink.deriveBy(term, v)
+  override def deriveBy(term: Term, v: Variable): Term = mODE.deriveBy(term, v)
 
   /**
    * Returns a counterexample for the specified formula.
    * @param formula The formula.
    * @return A counterexample, if found. None otherwise.
    */
-  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = jlink.findCounterExample(formula)
+  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = mCEX.findCounterExample(formula)
 
   /**
     * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
@@ -68,7 +76,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     * @param n The number of simulations (different initial states) to create.
     * @return 'n' lists (length 'steps') of simulated states.
     */
-  override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = jlink.simulate(initial, stateRelation, steps, n)
+  override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = mSim.simulate(initial, stateRelation, steps, n)
 
   /**
     * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
@@ -79,8 +87,13 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     * @param steps The length of the simulation run (i.e., number of states).
     * @return A list (length 'steps') of simulated states.
     */
-  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = jlink.simulateRun(initial, stateRelation, steps)
+  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim.simulateRun(initial, stateRelation, steps)
 
   /** Restarts the MathKernel with the current configuration */
-  override def restart() = jlink.restart()
+  override def restart() = {
+    mQE.restart()
+    mCEX.restart()
+    mODE.restart()
+    mSim.restart()
+  }
 }

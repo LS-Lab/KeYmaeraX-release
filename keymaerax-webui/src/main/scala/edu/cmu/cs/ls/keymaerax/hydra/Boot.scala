@@ -63,7 +63,9 @@ object Boot extends App {
     }
 
     DerivedAxioms.qeTool = tool
-    TactixLibrary.tool = tool
+    TactixLibrary.qeTool = tool
+    TactixLibrary.odeTool = tool
+    TactixLibrary.cexTool = tool
     try {
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {

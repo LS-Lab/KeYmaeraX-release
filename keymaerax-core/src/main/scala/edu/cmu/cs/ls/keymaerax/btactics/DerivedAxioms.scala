@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -33,7 +33,7 @@ object DerivedAxioms {
   /** Database for derived axioms */
   val derivedAxiomDB = LemmaDBFactory.lemmaDB
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down */
-  implicit var qeTool: QETool with DiffSolutionTool = null
+  implicit var qeTool: QETool = null
   type LemmaID = String
 
   /** A Provable proving the derived axiom/rule named id (convenience) */

@@ -34,7 +34,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   override def beforeEach() = {
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
-    ml = new JLinkMathematicaLink()
+    ml = new JLinkMathematicaLink(new KeYmaeraToMathematica().fromKeYmaera, MathematicaToKeYmaera.fromMathematica) {}
     ml.init(mathematicaConfig("linkName"), None) //@todo jlink
   }
 

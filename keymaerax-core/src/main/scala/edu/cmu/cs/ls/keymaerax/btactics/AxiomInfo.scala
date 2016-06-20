@@ -52,7 +52,7 @@ object DerivationInfo {
     SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
   }
 
-  implicit def qeTool:QETool with DiffSolutionTool = DerivedAxioms.qeTool
+  implicit def qeTool: QETool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
   //@todo
