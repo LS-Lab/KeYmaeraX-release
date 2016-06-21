@@ -197,8 +197,8 @@ object MathematicaToKeYmaera {
     e.toString.equalsIgnoreCase("$Failed")
   }
 
-  private def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e)
-  private def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e)
+  private def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e.toString)
+  private def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e.toString)
 
   private def mathExnMsg(e:MExpr, s:String) : Exception =
     new ConversionException("Conversion of " + e.toString + " failed because: " + s)
