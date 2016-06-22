@@ -106,8 +106,8 @@ object KeYmaeraToMathematica extends BaseK2MConverter {
     case False => MathematicaSymbols.FALSE
     case True => MathematicaSymbols.TRUE
     case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
-    case Exists(vs, phi) => convertExists(vs,phi)
-    case Forall(vs, phi) => convertForall(vs,phi)
+    case Exists(vs, phi) => convertQuantified(vs, phi, Exists.unapply, MathematicaSymbols.EXISTS)
+    case Forall(vs, phi) => convertQuantified(vs, phi, Forall.unapply, MathematicaSymbols.FORALL)
     case _ => throw new ProverException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
@@ -125,31 +125,27 @@ object KeYmaeraToMathematica extends BaseK2MConverter {
   }
 
   //@todo Code Review: Forall+Exists could be 1 conversion
-  /** Convert block of exists quantifiers into a single exists quantifier block */
-  protected def convertExists(vs:Seq[NamedSymbol],f:Formula): MExpr = {
-    val (vars, formula) = collectVarsExists(vs, f)
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
-    new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
-  }
-  /** Recursively converts sequences of quantifiers into a single block quantifier */
-  private def collectVarsExists(vsSoFar:Seq[NamedSymbol],candidate:Formula): (Seq[NamedSymbol], Formula) = {
-    candidate match {
-      case Exists(nextVs, nextf) =>  collectVarsExists(vsSoFar ++ nextVs, nextf)
-      case _ => (vsSoFar,candidate)
-    }
-  }
+  //@solution: added parameters for unapplier (ua) and head symbol
+  /** Convert block of quantifiers into a single quantifier block, using unapply (ua) and matching head (FORALL/EXISTS) */
+  protected def convertQuantified[T <: Quantified](vs: Seq[NamedSymbol], f: Formula,
+                                                   ua: T => Option[(Seq[Variable], Formula)], head: MExpr): MExpr = {
+    require(head == MathematicaSymbols.EXISTS || head == MathematicaSymbols.FORALL,
+      "Expected either existential or universal quantifier as MExpr head")
 
-  /** Convert block of forall quantifiers into a single forall quantifier block */
-  protected def convertForall(vs:Seq[NamedSymbol],f:Formula): MExpr = {
-    val (vars, formula) = collectVarsForall(vs, f)
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
-    new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
-  }
-  private def collectVarsForall(vsSoFar:Seq[NamedSymbol],candidate:Formula): (Seq[NamedSymbol], Formula) = {
-    candidate match {
-      case Forall(nextVs, nextf) =>  collectVarsForall(vsSoFar ++ nextVs, nextf)
-      case _ => (vsSoFar,candidate)
+    /** Recursively collect quantified variables, return variables+quantified formula */
+    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: T): (Seq[NamedSymbol], Formula) = {
+      ua(candidate) match {
+        case Some((nextVs, nextf: T)) => collectVars(vsSoFar ++ nextVs, nextf)
+        case _ => (vsSoFar, candidate)
+      }
     }
+
+    val (vars, formula) = f match {
+      case q: T => collectVars(vs, q)
+      case _ => (vs, f)
+    }
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
+    new MExpr(head, Array[MExpr](variables, convertFormula(formula)))
   }
 
   /** Flattens left-associative binary term operators (keeps explicit right-associativity) */
