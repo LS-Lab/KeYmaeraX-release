@@ -43,12 +43,13 @@ object MathematicaToKeYmaera extends BaseM2KConverter {
       }
     }
     //@todo Code Review: assert arity 2 --> split into convertBinary and convertNary (see DIV, EXP, MINUS)
+    //@solution: introduced explicit convertNary (used for plus/times/and/or), convertBinary forwards to convertNary after contract checking (2 args)
     else if (e.rationalQ()) {assert(hasHead(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
 
     // Arith expressions
-    else if (hasHead(e,MathematicaSymbols.PLUS))  convertBinary(e, Plus.apply)
+    else if (hasHead(e,MathematicaSymbols.PLUS))  convertNary(e, Plus.apply)
     else if (hasHead(e,MathematicaSymbols.MINUS)) convertBinary(e, Minus.apply)
-    else if (hasHead(e,MathematicaSymbols.MULT))  convertBinary(e, Times.apply)
+    else if (hasHead(e,MathematicaSymbols.MULT))  convertNary(e, Times.apply)
     else if (hasHead(e,MathematicaSymbols.DIV))   convertBinary(e, Divide.apply)
     else if (hasHead(e,MathematicaSymbols.EXP))   convertBinary(e, Power.apply)
     else if (hasHead(e,MathematicaSymbols.MINUSSIGN)) convertUnary(e, Neg.apply)
@@ -66,8 +67,8 @@ object MathematicaToKeYmaera extends BaseM2KConverter {
     else if (hasHead(e, MathematicaSymbols.TRUE))   True
     else if (hasHead(e, MathematicaSymbols.FALSE))  False
     else if (hasHead(e, MathematicaSymbols.NOT))    convertUnary(e, Not.apply)
-    else if (hasHead(e, MathematicaSymbols.AND))    convertBinary(e, And.apply)
-    else if (hasHead(e, MathematicaSymbols.OR))     convertBinary(e, Or.apply)
+    else if (hasHead(e, MathematicaSymbols.AND))    convertNary(e, And.apply)
+    else if (hasHead(e, MathematicaSymbols.OR))     convertNary(e, Or.apply)
     else if (hasHead(e, MathematicaSymbols.IMPL))   convertBinary(e, Imply.apply)
     else if (hasHead(e, MathematicaSymbols.BIIMPL)) convertBinary(e, Equiv.apply)
 
@@ -113,8 +114,13 @@ object MathematicaToKeYmaera extends BaseM2KConverter {
   }
 
   private def convertBinary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
+    require(e.args().length == 2, "binary operator expects 2 arguments")
+    convertNary(e, op)
+  }
+
+  private def convertNary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args().map(apply)
-    require(subexpressions.length >= 2, "binary operator expects at least 2 arguments")
+    require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[T])
     asTerms.reduce((l,r) => op(l,r))
   }
