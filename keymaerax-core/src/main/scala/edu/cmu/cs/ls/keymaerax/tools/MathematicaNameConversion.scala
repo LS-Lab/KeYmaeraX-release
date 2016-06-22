@@ -84,7 +84,7 @@ private object MathematicaNameConversion {
     else functionToKeYmaera(e)
   }
 
-  private def unmaskName(e: com.wolfram.jlink.Expr): (String, Option[Int]) = {
+  def unmaskName(e: com.wolfram.jlink.Expr): (String, Option[Int]) = {
     val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
     //@todo Code Review: contains --> startsWith, improve readability/prefix+sep handling in a single name
     if (maskedName.contains(PREFIX) && maskedName.contains(SEP)) {

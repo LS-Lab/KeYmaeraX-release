@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import java.util.{Date, GregorianCalendar}
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaToKeYmaera.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable
 
@@ -48,7 +48,7 @@ trait MathematicaLink {
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-abstract class JLinkMathematicaLink(val k2m: KExpr => MExpr, val m2k: MExpr => KExpr) extends MathematicaLink {
+abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter) extends MathematicaLink {
   protected val DEBUG = System.getProperty("DEBUG", "true")=="true"
   protected val TIMEOUT = 10
 

@@ -8,13 +8,12 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 // favoring immutable Seqs
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
+import scala.collection.immutable._
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
-import scala.math.BigDecimal
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
+import scala.math.BigDecimal
 
 /**
  * Converts com.wolfram.jlink.Expr -> edu.cmu...keymaerax.core.Expr
@@ -22,15 +21,12 @@ import scala.math.BigDecimal
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-object MathematicaToKeYmaera {
-  type MExpr = com.wolfram.jlink.Expr
-  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
+object MathematicaToKeYmaera extends BaseM2KConverter {
 
-  /**
-   * Converts a Mathematica expression to a KeYmaera expression.
-   */
-  //@todo contract: convert back is identity
-  def fromMathematica(e : MExpr): KExpr = {
+  def k2m: K2MConverter = KeYmaeraToMathematica
+
+  /** Converts a Mathematica expression to a KeYmaera expression. */
+  def convert(e: MExpr): KExpr = {
     //Exceptional states
     if (isAborted(e)) throw abortExn(e)
     else if (isFailed(e))  throw failExn(e)
@@ -55,6 +51,7 @@ object MathematicaToKeYmaera {
     else if (hasHead(e,MathematicaSymbols.MULT))  convertBinary(e, Times.apply)
     else if (hasHead(e,MathematicaSymbols.DIV))   convertBinary(e, Divide.apply)
     else if (hasHead(e,MathematicaSymbols.EXP))   convertBinary(e, Power.apply)
+    else if (hasHead(e,MathematicaSymbols.MINUSSIGN)) convertUnary(e, Neg.apply)
 
     // Comparisons
     else if (hasHead(e, MathematicaSymbols.EQUALS))         convertComparison(e, Equal.apply)
@@ -90,6 +87,9 @@ object MathematicaToKeYmaera {
     // Functions
     else if (e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertAtomicTerm(e)
 
+    // Pairs
+    else if (e.listQ()) convertList(e)
+
     //Variables. This case intentionally comes last, so that it doesn't gobble up
     //and keywords that were not declared correctly in MathematicaSymbols (should be none)
     else if (e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) {
@@ -104,23 +104,23 @@ object MathematicaToKeYmaera {
     * Whether e is thing or starts with head thing.
     * @return true if ``e" and ``thing" are .equals-related.
     */
-  def hasHead(e:com.wolfram.jlink.Expr, thing:com.wolfram.jlink.Expr) =
+  def hasHead(e: MExpr, thing: MExpr) =
     e.equals(thing) || e.head().equals(thing)
 
   private def convertUnary[T<:Expression](e : MExpr, op: T=>T): T = {
-    val subformula = fromMathematica(e.args().head).asInstanceOf[T]
+    val subformula = apply(e.args().head).asInstanceOf[T]
     op(subformula)
   }
 
   private def convertBinary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
-    val subexpressions = e.args().map(fromMathematica)
+    val subexpressions = e.args().map(apply)
     require(subexpressions.length >= 2, "binary operator expects at least 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[T])
     asTerms.reduce((l,r) => op(l,r))
   }
 
   private def convertComparison[S<:Expression,T<:Expression](e : MExpr, op: (S,S) => T): T = {
-    val subexpressions = e.args().map(fromMathematica)
+    val subexpressions = e.args().map(apply)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
     op(asTerms(0), asTerms(1))
@@ -136,11 +136,11 @@ object MathematicaToKeYmaera {
       //Convert the list of quantified variables
       variableBlock.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
     } else {
-      List(fromMathematica(variableBlock).asInstanceOf[Variable])
+      List(apply(variableBlock).asInstanceOf[Variable])
     }
 
     //Recurse on the body of the expression.
-    val bodyOfQuantifier = fromMathematica(e.args().last).asInstanceOf[Formula]
+    val bodyOfQuantifier = apply(e.args().last).asInstanceOf[Formula]
 
     // convert quantifier block into chain of single quantifiers
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
@@ -149,26 +149,50 @@ object MathematicaToKeYmaera {
   private def convertDerivative(e: MExpr): KExpr = {
     require(e.args().length == 1, "Expected args size 1 (single differential symbol or single differential term)")
     require(e.head.args().length == 1 && e.head.args().head == new MExpr(1), "Expected 1 prime (e.g., v', not v'')")
-    fromMathematica(e.args.head) match {
+    apply(e.args.head) match {
       case v: Variable => DifferentialSymbol(v)
       case t: Term => Differential(t)
     }
   }
 
-  private def convertAtomicTerm(e: MExpr): KExpr = {
-    MathematicaNameConversion.toKeYmaera(e) match {
-      case result: Function =>
-        val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
-        if (arguments.nonEmpty) {
-          val args = if (arguments.length > 1) arguments.reduceRight[Term]((l, r) => Pair(l, r))
-          else { assert(arguments.length == 1); arguments.head }
-          FuncOf(result, args)
-        } else {
-          FuncOf(result, Nothing)
-        }
-      case result: Variable => result
+  private def convertFuncOf(fn: Function, arguments: Array[Term]): FuncOf = {
+    if (arguments.nonEmpty) {
+      val args = if (arguments.length > 1) arguments.reduceRight[Term]((l, r) => Pair(l, r))
+      else { assert(arguments.length == 1); arguments.head }
+      FuncOf(fn, args)
+    } else {
+      FuncOf(fn, Nothing)
     }
   }
+
+  private def convertFunctionDomain(arg: MExpr): Sort = {
+    if (arg.listQ()) {
+      assert(arg.args().length == 2)
+      Tuple(convertFunctionDomain(arg.args()(0)), convertFunctionDomain(arg.args()(1)))
+    } else {
+      Real
+    }
+  }
+
+  private def convertList(e: MExpr): Pair = {
+    if (e.listQ) {
+      assert(e.args.length == 2)
+      Pair(apply(e.args().head).asInstanceOf[Term], apply(e.args()(1)).asInstanceOf[Term])
+    } else throw new ConversionException("Expected a list, but got " + e)
+  }
+
+  private def convertAtomicTerm(e: MExpr): KExpr =
+    if (e.head.symbolQ() && e.head == MathematicaSymbols.APPLY) {
+      val fnName = MathematicaNameConversion.unmaskName(e.args().head)
+      assert(e.args().tail.length == 1)
+      val fnDomain = convertFunctionDomain(e.args().tail.head)
+      convertFuncOf(Function(fnName._1, fnName._2, fnDomain, Real), e.args().tail.map(apply).map(_.asInstanceOf[Term]))
+    } else {
+      MathematicaNameConversion.toKeYmaera(e) match {
+        case result: Function => convertFuncOf(result, e.args().map(apply).map(_.asInstanceOf[Term]))
+        case result: Variable => result
+      }
+    }
 
   //@todo could streamline this implementation
   /** Converts inequality chains of the form a <= b < c < 0 to conjunctions of individual inequalities a <= b & b < c & c < 0 */
@@ -183,7 +207,7 @@ object MathematicaToKeYmaera {
     // conjunction of converted indidivual inequalities
     extractInequalities(e.args()).
       map({case (arg1, op, arg2) => new MExpr(op, Array[MExpr](arg1, arg2))}).
-      map(fromMathematica(_).asInstanceOf[Formula]).reduce(And)
+      map(apply(_).asInstanceOf[Formula]).reduce(And)
   }
 
   // error catching and reporting

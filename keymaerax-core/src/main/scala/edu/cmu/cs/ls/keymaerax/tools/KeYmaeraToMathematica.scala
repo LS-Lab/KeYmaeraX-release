@@ -8,26 +8,28 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 // favoring immutable Seqs
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
+import scala.collection.immutable._
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+
+import scala.reflect.ClassTag
 
 /**
  * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
  * to Mathematica Expr objects.
  * @author Nathan Fulton
  */
-class KeYmaeraToMathematica {
-  type MExpr = com.wolfram.jlink.Expr
-  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
+object KeYmaeraToMathematica extends BaseK2MConverter {
+
+  def m2k: M2KConverter = MathematicaToKeYmaera
 
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
    */
   //@todo Code Review contract: convert back is identity, ask converse converter
-  def fromKeYmaera(e: KExpr): MExpr = e match {
+  //@solution: introduced traits/base traits that implement contract checking. here: convert without contract checking
+  def convert(e: KExpr): MExpr = e match {
     case t: Term =>
       require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion")
       convertTerm(t)
@@ -60,16 +62,24 @@ class KeYmaeraToMathematica {
       //@todo Code Review: clean up FuncOf conversion into two cases here
       case FuncOf(fn, child) => convertFnApply(fn, child)
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
-      case Plus(l, r) =>
-        new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case plus: Plus =>
+        new MExpr(MathematicaSymbols.PLUS, flattenLeftBinary(plus, Plus.unapply).map(convertTerm).toArray)
       case Minus(l, r) =>
         new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Times(l, r) =>
-        new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case times: Times =>
+        new MExpr(MathematicaSymbols.MULT, flattenLeftBinary(times, Times.unapply).map(convertTerm).toArray)
+      case Divide(l: Number, r: Number) =>
+        //@note for sake of roundtrip identity: set correct Rational type ID by reflection (no public JLink constructor!)
+        val rational = new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convertTerm(l), convertTerm(r)))
+        val tf = rational.getClass.getDeclaredField("type")
+        tf.setAccessible(true)
+        tf.set(rational, com.wolfram.jlink.Expr.RATIONAL)
+        rational
       case Divide(l, r) =>
         new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) =>
         new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Number(n) if n.isValidInt || n.isValidLong => new MExpr(n.longValue())
       case Number(n) => new MExpr(n.underlying())
       case Pair(l, r) =>
         //@note converts nested pairs into nested lists
@@ -83,10 +93,10 @@ class KeYmaeraToMathematica {
    * Converts KeYmaera formulas into Mathematica objects
    */
   protected def convertFormula(f : Formula): MExpr = f match {
-    case And(l,r)   => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
+    case and: And   => new MExpr(MathematicaSymbols.AND, flattenLeftBinary(and, And.unapply).map(convertFormula).toArray)
     case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
-    case Or(l,r)    => new MExpr(MathematicaSymbols.OR, Array[MExpr](convertFormula(l), convertFormula(r)))
+    case or: Or    => new MExpr(MathematicaSymbols.OR, flattenLeftBinary(or, Or.unapply).map(convertFormula).toArray)
     case Equal(l,r) => new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
     case NotEqual(l,r) => new MExpr(MathematicaSymbols.UNEQUAL, Array[MExpr](convertTerm(l), convertTerm(r)))
     case LessEqual(l,r) => new MExpr(MathematicaSymbols.LESS_EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
@@ -104,11 +114,14 @@ class KeYmaeraToMathematica {
   protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
     //@todo Code Review: avoid duplicate code, see fromKeYmaera
     case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
-    case _ =>
-      //@note single-argument Apply[f, {x}] == f[x] vs. Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
+    case p: Pair =>
+      //@note Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
       //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time
-      val args = Array[MExpr](MathematicaNameConversion.toMathematica(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
+      val args = Array[MExpr](MathematicaNameConversion.toMathematica(fn), convertTerm(child))
       new MExpr(MathematicaSymbols.APPLY, args)
+    case _ =>
+      //@note single-argument f[x]
+      new MExpr(MathematicaNameConversion.toMathematica(fn), Array[MExpr](convertTerm(child)))
   }
 
   //@todo Code Review: Forall+Exists could be 1 conversion
@@ -137,6 +150,14 @@ class KeYmaeraToMathematica {
       case Forall(nextVs, nextf) =>  collectVarsForall(vsSoFar ++ nextVs, nextf)
       case _ => (vsSoFar,candidate)
     }
+  }
+
+  /** Flattens left-associative binary term operators (keeps explicit right-associativity) */
+  private def flattenLeftBinary[T <: Expression, U <: T](t: U, ua: U => Option[(T, T)])(implicit mf: ClassTag[U]): Seq[T] = ua(t) match {
+    //@note Some((l: T, r)) does not match correctly
+    case Some((l, r)) if mf.runtimeClass.isAssignableFrom(l.getClass) => flattenLeftBinary(l.asInstanceOf[U], ua) :+ r
+    case Some((l, r)) => l :: r :: Nil
+    case None => t :: Nil
   }
 
   protected def keyExn(e: KExpr): Exception =

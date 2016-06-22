@@ -10,30 +10,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
 import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaToKeYmaera.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable
 
 object ToolConversions {
-  /** Extends default converter with rule and rule list handling */
-  def withRuleConverter(e: MExpr): KExpr = {
-    if (MathematicaToKeYmaera.hasHead(e, MathematicaSymbols.RULE)) convertRule(withRuleConverter)(e)
-    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      MathematicaToKeYmaera.hasHead(_, MathematicaSymbols.RULE))))
-      convertRuleList(MathematicaToKeYmaera.fromMathematica)(e)
-    else MathematicaToKeYmaera.fromMathematica(e)
-  }
-
-  /** Converts rules and rule lists, not to be used in QE! */
-  def convertRule(fromMathematica: MExpr=>KExpr)(e: MExpr): Formula = {
-    Equal(fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
-  }
-
-  def convertRuleList(fromMathematica: MExpr=>KExpr)(e: MExpr): Formula = {
-    val convertedRules = e.args().map(_.args().map(r => convertRule(fromMathematica)(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
-    if (convertedRules.isEmpty) False
-    else convertedRules.reduceLeft((lhs, rhs) => Or(lhs, rhs))
-  }
 
   def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
@@ -47,30 +28,65 @@ object ToolConversions {
   }
 }
 
+object UncheckedM2KConverter extends BaseM2KConverter {
+  //@note unchecked, because ambiguous And==&& vs. And==Rules conversion
+  def k2m = null
+
+  override def apply(e: MExpr): KExpr = convert(e)
+
+  /** Extends default converter with rule and rule list handling */
+  def convert(e: MExpr): KExpr = {
+    if (MathematicaToKeYmaera.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
+    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
+      MathematicaToKeYmaera.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
+    else MathematicaToKeYmaera.convert(e)
+  }
+
+  /** Converts rules and rule lists, not to be used in QE! */
+  def convertRule(e: MExpr): Formula = {
+    Equal(convert(e.args()(0)).asInstanceOf[Term], convert(e.args()(1)).asInstanceOf[Term])
+  }
+
+  def convertRuleList(e: MExpr): Formula = {
+    val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft(And))
+    if (convertedRules.isEmpty) False
+    else convertedRules.reduceLeft(Or)
+  }
+}
+
+object UncheckedK2MConverter extends BaseK2MConverter {
+  //@note unchecked, because ambiguous And==&& vs. And==Rule in converse conversion
+  def m2k = null
+
+  override def apply(e: KExpr): MExpr = convert(e)
+  def convert(e: KExpr): MExpr = KeYmaeraToMathematica.convert(e)
+}
+
 /**
  * Mathematica counter example implementation.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class MathematicaCEXTool extends JLinkMathematicaLink(
-  new KeYmaeraToMathematica().fromKeYmaera, ToolConversions.withRuleConverter) with CounterExampleTool {
+class MathematicaCEXTool extends JLinkMathematicaLink(UncheckedK2MConverter, UncheckedM2KConverter) with CounterExampleTool {
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
-    val converter = new KeYmaeraToMathematica() {
-      override protected def convertTerm(t: Term): MExpr = t match {
-        case Differential(c) =>
-          new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
-        case DifferentialSymbol(c) =>
-          new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
-        case _ => super.convertTerm(t)
-      }
+    val cexK2M = new BaseK2MConverter {
+      def m2k = null //@note non-soundness critical conversion -> use unchecked convert
+      override def convert(e: KExpr): MExpr = e match {
+          //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
+          case Differential(c) =>
+            new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+          case DifferentialSymbol(c) =>
+            new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+          case _ => KeYmaeraToMathematica.convert(e)
+        }
     }
 
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(converter.fromKeYmaera(Not(fml)),
+      Array(cexK2M.convert(Not(fml)),
         new MExpr(
           MathematicaSymbols.LIST,
-          StaticSemantics.symbols(fml).toList.sorted.map(s => converter.fromKeYmaera(s)).toArray),
+          StaticSemantics.symbols(fml).toList.sorted.map(s => cexK2M.convert(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, k2m(Number(TIMEOUT))))
 
@@ -99,8 +115,7 @@ class MathematicaCEXTool extends JLinkMathematicaLink(
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaODETool extends JLinkMathematicaLink(
-  new KeYmaeraToMathematica().fromKeYmaera, ToolConversions.withRuleConverter) with DiffSolutionTool with DerivativeTool {
+class MathematicaODETool extends JLinkMathematicaLink(UncheckedK2MConverter, UncheckedM2KConverter) with DiffSolutionTool with DerivativeTool {
 
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
@@ -225,8 +240,7 @@ class MathematicaODETool extends JLinkMathematicaLink(
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaSimulationTool extends JLinkMathematicaLink(
-  new KeYmaeraToMathematica().fromKeYmaera, ToolConversions.withRuleConverter) with SimulationTool {
+class MathematicaSimulationTool extends JLinkMathematicaLink(UncheckedK2MConverter, UncheckedM2KConverter) with SimulationTool {
   def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = {
     // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
     val init = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(

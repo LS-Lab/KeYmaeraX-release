@@ -16,7 +16,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class MathematicaQETool extends JLinkMathematicaLink(new KeYmaeraToMathematica().fromKeYmaera, MathematicaToKeYmaera.fromMathematica) with QETool {
+class MathematicaQETool extends JLinkMathematicaLink(KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool {
 
   def qeEvidence(f : Formula) : (Formula, Evidence) = {
     val input = new MExpr(MathematicaSymbols.REDUCE,
