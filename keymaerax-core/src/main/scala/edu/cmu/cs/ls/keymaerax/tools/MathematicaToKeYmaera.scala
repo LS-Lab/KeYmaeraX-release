@@ -21,9 +21,9 @@ import scala.math.BigDecimal
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-object MathematicaToKeYmaera extends BaseM2KConverter {
+object MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
-  def k2m: K2MConverter = KeYmaeraToMathematica
+  def k2m: K2MConverter[KExpr] = KeYmaeraToMathematica
 
   /** Converts a Mathematica expression to a KeYmaera expression. */
   def convert(e: MExpr): KExpr = {

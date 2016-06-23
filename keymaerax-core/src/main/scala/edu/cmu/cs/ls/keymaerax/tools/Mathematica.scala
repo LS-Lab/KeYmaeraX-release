@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 
 import scala.collection.immutable.Map
 
@@ -19,10 +20,13 @@ import scala.collection.immutable.Map
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
 class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
-  private val mQE = new MathematicaQETool
-  private val mCEX = new MathematicaCEXTool
-  private val mODE = new MathematicaODETool
-  private val mSim = new MathematicaSimulationTool
+  // JLink, shared between tools
+  private val link = new JLinkMathematicaLink
+
+  private val mQE = new MathematicaQETool(link)
+  private val mCEX = new MathematicaCEXTool(link)
+  private val mODE = new MathematicaODETool(link)
+  private val mSim = new MathematicaSimulationTool(link)
 
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
@@ -33,7 +37,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
 //        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
     }
     val libDir = config.get("libDir") // doesn't need to be defined
-    initialized = mQE.init(linkName, libDir) && mCEX.init(linkName, libDir) && mODE.init(linkName, libDir) && mSim.init(linkName, libDir)
+    initialized = link.init(linkName, libDir)
   }
 
   /** Closes the connection to Mathematica */
@@ -42,6 +46,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     mCEX.shutdown()
     mODE.shutdown()
     mSim.shutdown()
+    //@note last, because we want to shut down all executors (tool threads) before shutting down the JLink interface
+    link.shutdown()
   }
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
@@ -90,10 +96,5 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
   override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim.simulateRun(initial, stateRelation, steps)
 
   /** Restarts the MathKernel with the current configuration */
-  override def restart() = {
-    mQE.restart()
-    mCEX.restart()
-    mODE.restart()
-    mSim.restart()
-  }
+  override def restart() = link.restart()
 }

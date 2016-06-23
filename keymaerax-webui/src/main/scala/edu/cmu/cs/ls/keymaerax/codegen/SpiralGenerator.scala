@@ -46,7 +46,7 @@ object SpiralGenerator extends CodeGenerator {
 
   /** Mathematica settings */
   private val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
-  private val link : JLinkMathematicaLink= new JLinkMathematicaLink(KeYmaeraToMathematica, MathematicaToKeYmaera) {}
+  private val link : JLinkMathematicaLink = new JLinkMathematicaLink
   link.init(mathematicaConfig.apply(mathematicaConfig.keys.head), None)
 
   /** Name counter used for generating new vector names */

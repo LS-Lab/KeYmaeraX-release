@@ -5,15 +5,18 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core.{Formula, NamedSymbol, Number}
+import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
+
+object SimulationTool {
+  type SimState = Map[NamedSymbol, Number]
+  type SimRun = List[SimState]
+  type Simulation = List[SimRun]
+}
 
 /**
  * Simulation tool.
  */
 trait SimulationTool {
-  type SimState = Map[NamedSymbol, Number]
-  type SimRun = List[SimState]
-  type Simulation = List[SimRun]
-
   /**
    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
    * relation is a modality-free first-order formula. The simulation starts in a state where initial holds (first-order

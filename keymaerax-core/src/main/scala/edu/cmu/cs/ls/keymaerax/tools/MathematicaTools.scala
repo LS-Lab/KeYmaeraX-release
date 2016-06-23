@@ -10,7 +10,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
 import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 
 import scala.collection.immutable
 
@@ -28,7 +29,7 @@ object ToolConversions {
   }
 }
 
-object UncheckedM2KConverter extends BaseM2KConverter {
+object UncheckedM2KConverter extends BaseM2KConverter[KExpr] {
   //@note unchecked, because ambiguous And==&& vs. And==Rules conversion
   def k2m = null
 
@@ -54,7 +55,7 @@ object UncheckedM2KConverter extends BaseM2KConverter {
   }
 }
 
-object UncheckedK2MConverter extends BaseK2MConverter {
+object UncheckedK2MConverter extends BaseK2MConverter[KExpr] {
   //@note unchecked, because ambiguous And==&& vs. And==Rule in converse conversion
   def m2k = null
 
@@ -67,10 +68,12 @@ object UncheckedK2MConverter extends BaseK2MConverter {
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class MathematicaCEXTool extends JLinkMathematicaLink(UncheckedK2MConverter, UncheckedM2KConverter) with CounterExampleTool {
+class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, UncheckedK2MConverter, UncheckedM2KConverter) with CounterExampleTool {
+
+  private val TIMEOUT = 10
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
-    val cexK2M = new BaseK2MConverter {
+    val cexK2M = new BaseK2MConverter[KExpr] {
       def m2k = null //@note non-soundness critical conversion -> use unchecked convert
       override def convert(e: KExpr): MExpr = e match {
           //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
@@ -115,21 +118,10 @@ class MathematicaCEXTool extends JLinkMathematicaLink(UncheckedK2MConverter, Unc
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaODETool extends JLinkMathematicaLink(UncheckedK2MConverter, UncheckedM2KConverter) with DiffSolutionTool with DerivativeTool {
+class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, UncheckedK2MConverter, UncheckedM2KConverter) with DiffSolutionTool with DerivativeTool {
 
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
-
-  private def flattenConjunctions(f: Formula): List[Formula] = {
-    var result: List[Formula] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
-        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
-      }
-    }, f)
-    result
-  }
 
   /**
     * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
@@ -234,13 +226,53 @@ class MathematicaODETool extends JLinkMathematicaLink(UncheckedK2MConverter, Unc
   }
 }
 
+object SimulationM2KConverter extends BaseM2KConverter[Simulation] {
+
+  //@note unchecked, because in back-translation we don't know whether end-of-world 'false' was present in original or not
+  def k2m: K2MConverter[Simulation] = null
+  override def apply(e: MExpr): Simulation = convert(e)
+
+  private val m2k: M2KConverter[KExpr] = UncheckedM2KConverter
+
+  override def convert(e: MExpr): Simulation = {
+    if (e.listQ() && e.args.forall(_.listQ())) {
+      val states: Array[Array[KExpr]] = e.args().map(_.args().map(m2k))
+      states.map(state => {
+        val endOfWorld = if (state.contains(False)) state.indexOf(False) else state.length
+        state.slice(0, endOfWorld).map({
+          case fml: Formula => ToolConversions.flattenConjunctions(fml).map({
+            case Equal(name: NamedSymbol, value: Number) => name -> value
+            case Equal(FuncOf(fn, _), value: Number) => fn -> value
+            case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
+          }).toMap
+          case s => throw new IllegalArgumentException("Expected state formula, but got " + s)
+        }).toList}).toList
+    } else throw new IllegalArgumentException("Expected list of simulation states, but got " + e)
+  }
+}
+
+object SimulationK2MConverter extends BaseK2MConverter[Simulation] {
+
+  //@note unchecked, because don't know whether end-of-world 'false' was present in original or not
+  def m2k = null
+  override def apply(e: Simulation): MExpr = convert(e)
+
+  private val k2m: K2MConverter[KExpr] = UncheckedK2MConverter
+
+  override def convert(e: Simulation): MExpr = {
+    new MExpr(MathematicaSymbols.LIST,
+      e.map(r => new MExpr(MathematicaSymbols.LIST,
+        r.map(s => k2m(s.map{ case (n: Term, v) => Equal(n, v) }.reduceLeft(And))).toArray)).toArray)
+  }
+}
+
 /**
   * A link to Mathematica using the JLink interface.
   *
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaSimulationTool extends JLinkMathematicaLink(UncheckedK2MConverter, UncheckedM2KConverter) with SimulationTool {
+class MathematicaSimulationTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[Simulation](link, SimulationK2MConverter, SimulationM2KConverter) with SimulationTool {
   def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = {
     // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
     val init = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
@@ -249,10 +281,10 @@ class MathematicaSimulationTool extends JLinkMathematicaLink(UncheckedK2MConvert
         new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
           new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(MathematicaSymbols.LIST, Array(new MExpr(Expr.SYMBOL, "#"))))),
           new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-            Array(k2m(initial),
+            Array(UncheckedK2MConverter(initial),
               new MExpr(
                 MathematicaSymbols.LIST,
-                StaticSemantics.symbols(initial).toList.sorted.map(k2m).toArray),
+                StaticSemantics.symbols(initial).toList.sorted.map(UncheckedK2MConverter).toArray),
               new MExpr(Expr.SYMBOL, "Reals"),
               new MExpr(Expr.SYMBOL, "#")))))))))
     // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
@@ -260,9 +292,9 @@ class MathematicaSimulationTool extends JLinkMathematicaLink(UncheckedK2MConvert
     val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
     val stepModuleInit = stepPreVars.toList.sorted.map(s =>
       new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(
-        k2m(s),
+        UncheckedK2MConverter(s),
         new MExpr(new MExpr(Expr.SYMBOL, "ReplaceAll"), Array(
-          k2m(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
+          UncheckedK2MConverter(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
           new MExpr(Expr.SYMBOL, "#")))))).toArray
     val step = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
       new MExpr(Expr.SYMBOL, "step"),
@@ -270,10 +302,10 @@ class MathematicaSimulationTool extends JLinkMathematicaLink(UncheckedK2MConvert
         Array(new MExpr(new MExpr(Expr.SYMBOL, "Module"),
           Array(new MExpr(MathematicaSymbols.LIST, stepModuleInit),
             new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-              Array(k2m(stateRelation),
+              Array(UncheckedK2MConverter(stateRelation),
                 new MExpr(
                   MathematicaSymbols.LIST,
-                  stepPostVars.toList.sorted.map(k2m).toArray),
+                  stepPostVars.toList.sorted.map(UncheckedK2MConverter).toArray),
                 new MExpr(Expr.SYMBOL, "Reals")))))))))
     // Map[N[NestList[step,#,steps]]&, init[n]]
     val exec = new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
@@ -285,26 +317,7 @@ class MathematicaSimulationTool extends JLinkMathematicaLink(UncheckedK2MConvert
     // initial;step;simulate
     val simulate = new MExpr(new MExpr(Expr.SYMBOL, "CompoundExpression"), Array(init, step, exec))
 
-    val executor: ToolExecutor[(String, List[List[Map[NamedSymbol, Number]]])] = ToolExecutor.defaultExecutor()
-    def convert(e: MExpr): List[List[Map[NamedSymbol, Number]]] = {
-      if (e.listQ() && e.args.forall(_.listQ())) {
-        val states: Array[Array[KExpr]] = e.args().map(_.args().map(m2k))
-        states.map(state => {
-          val endOfWorld = if (state.contains(False)) state.indexOf(False) else state.length
-          state.slice(0, endOfWorld).map({
-            case fml: Formula => ToolConversions.flattenConjunctions(fml).map({
-              case Equal(name: NamedSymbol, value: Number) => name -> value
-              case Equal(FuncOf(fn, _), value: Number) => fn -> value
-              case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
-            }).toMap
-            case s => throw new IllegalArgumentException("Expected state formula, but got " + s)
-          }).toList}).toList
-      } else throw new IllegalArgumentException("Expected list of simulation states, but got " + e)
-    }
-
-    val result = run(simulate, executor, convert)
-    executor.shutdown()
-    result._2
+    run(simulate)._2
   }
 
   def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = ???

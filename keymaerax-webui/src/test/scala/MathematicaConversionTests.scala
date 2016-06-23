@@ -10,14 +10,15 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  type MExpr = com.wolfram.jlink.Expr
   val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
-  var ml : JLinkMathematicaLink = null //var so that we can instantiate within a test case.
+  var link: JLinkMathematicaLink = null
+  var ml : KeYmaeraMathematicaBridge[KExpr] = null //var so that we can instantiate within a test case.
 
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
@@ -34,12 +35,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   override def beforeEach() = {
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
-    ml = new JLinkMathematicaLink(KeYmaeraToMathematica, MathematicaToKeYmaera) {}
-    ml.init(mathematicaConfig("linkName"), None) //@todo jlink
+    link = new JLinkMathematicaLink()
+    link.init(mathematicaConfig("linkName"), None) //@todo jlink
+    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) {}
   }
 
   override def afterEach() = {
-    ml.shutdown()
+    link.shutdown()
+    link = null
     ml = null
   }
 

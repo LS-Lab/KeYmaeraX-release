@@ -10,26 +10,22 @@ package edu.cmu.cs.ls.keymaerax.tools
 import java.util.{Date, GregorianCalendar}
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 
 import scala.collection.immutable
 
 /**
  * An abstract interface to Mathematica link implementations.
- * The link may be used syncrhonously or asychronously.
- * Each MathematicaLink 
+ * The link may be used synchronously or asychronously.
  * Multiple MathematicaLinks may be created by instantiating multiple copies
- * of implementing classes.
+ * of implementing classes (depends on license).
  * 
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
 trait MathematicaLink {
-  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-  type MExpr = com.wolfram.jlink.Expr
-
-  def runUnchecked(cmd : String) : (String, KExpr)
-  def run(cmd : MExpr) : (String, KExpr)
+  def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T)
+  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T)
 
   //@todo Code Review: should probably be removed from the interface
   //@solution: removed ready from interface, removed empty implementations from derived classes
@@ -43,21 +39,42 @@ trait MathematicaLink {
 }
 
 /**
+  * Bridge for MathematicaLink, bundles tool executor (thread pools) with converters.
+  */
+trait KeYmaeraMathematicaBridge[T] {
+  def runUnchecked(cmd: String): (String, T)
+  def run(cmd: MExpr): (String, T)
+}
+
+/**
+  * Base class for Mathematica bridges. Running commands is synchronized.
+  * @param link The Mathematica link for executing commands.
+  * @param k2m Converts KeYmaeraX->Mathematica.
+  * @param m2k Converts Mathematica->KeYmaera X.
+  */
+abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k2m: K2MConverter[T],
+                                             val m2k: M2KConverter[T]) extends KeYmaeraMathematicaBridge[T] {
+  protected val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  protected val mathematicaExecutor: ToolExecutor[(String, T)] = ToolExecutor.defaultExecutor()
+
+  override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(cmd, m2k) }
+  override def run(cmd: MExpr): (String, T) = link.synchronized { link.run(cmd, m2k, mathematicaExecutor) }
+
+  def shutdown(): Unit = mathematicaExecutor.shutdown()
+}
+
+/**
  * A link to Mathematica using the JLink interface.
- * 
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter) extends MathematicaLink {
-  protected val DEBUG = System.getProperty("DEBUG", "true")=="true"
-  protected val TIMEOUT = 10
+class JLinkMathematicaLink extends MathematicaLink {
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   //@todo really should be private -> fix SpiralGenerator
   private[keymaerax] var ml: KernelLink = null
   private var linkName: String = null
   private var jlinkLibDir: Option[String] = None
-
-  protected val mathematicaExecutor: ToolExecutor[(String, KExpr)] = ToolExecutor.defaultExecutor()
 
   //@note all access to queryIndex must be synchronized
   private var queryIndex: Long = 0
@@ -114,7 +131,6 @@ abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter
       ml = null
       l.terminateKernel()
       l.close()
-      mathematicaExecutor.shutdown()
       println("...Done")
     }
   }
@@ -132,9 +148,11 @@ abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter
     * Runs the command and then halts program execution until answer is returned.
     *
     * @param cmd The Mathematica command.
+    * @param m2k The converter Mathematica->KeYmaera X
+    * @tparam T The exact KeYmaera X expression type expected as result.
     * @return The result, as string and as KeYmaera X expression.
     */
-  def runUnchecked(cmd: String): (String, KExpr) = {
+  def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.synchronized {
       ml.evaluate(cmd)
@@ -147,11 +165,13 @@ abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter
     * Runs a Mathematica command.
     *
     * @param cmd The Mathematica command to run. Disposed as a result of this method.
+    * @param m2k The converter Mathematica->KeYmaera X
+    * @tparam T The exact KeYmaera X expression type expected as result.
     * @return The result, as string and as KeYmaera X expression.
     * @note Disposes cmd, do not use afterwards.
     * @see [[run()]]
     */
-  def run(cmd: MExpr): (String, KExpr) = run(cmd, mathematicaExecutor, m2k)
+  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T) = run(cmd, executor, m2k)
 
   /**
     * Runs a Mathematica command on the specified executor, converts the result back with converter.
@@ -215,6 +235,8 @@ abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter
     * @param cmdIdx The expected command index to avoid returning stale answers.
     * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
     * @param ctx The context for error messages in exceptions.
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result as string and converted to the expected result type.
     */
   private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
     //@todo Properly dispose input in caller
@@ -316,7 +338,4 @@ abstract class JLinkMathematicaLink(val k2m: K2MConverter, val m2k: M2KConverter
       case e: Throwable => if (DEBUG) println("WARNING: Mathematica may not be functional \n cause: " + e); None
     }
   }
-
-  /** Reads a result from e using the specified conversion, disposes e. */
-  private def safeResult[T](e: MExpr, conversion: MExpr=>T): T = try { conversion(e) } finally { e.dispose() }
 }

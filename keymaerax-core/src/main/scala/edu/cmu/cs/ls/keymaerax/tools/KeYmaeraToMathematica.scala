@@ -20,9 +20,9 @@ import scala.reflect.ClassTag
  * to Mathematica Expr objects.
  * @author Nathan Fulton
  */
-object KeYmaeraToMathematica extends BaseK2MConverter {
+object KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
 
-  def m2k: M2KConverter = MathematicaToKeYmaera
+  def m2k: M2KConverter[KExpr] = MathematicaToKeYmaera
 
   /**
    * Converts KeYmaera expressions into Mathematica expressions.

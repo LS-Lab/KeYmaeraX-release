@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable
 
@@ -16,7 +17,8 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class MathematicaQETool extends JLinkMathematicaLink(KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool {
+class MathematicaQETool(override val link: MathematicaLink)
+  extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool {
 
   def qeEvidence(f : Formula) : (Formula, Evidence) = {
     val input = new MExpr(MathematicaSymbols.REDUCE,
