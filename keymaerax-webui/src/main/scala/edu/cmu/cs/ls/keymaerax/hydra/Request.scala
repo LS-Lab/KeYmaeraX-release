@@ -73,6 +73,10 @@ abstract class UserRequest(username: String) extends Request {
   override def permission(t: SessionToken) = t belongsTo username
 }
 
+abstract class LocalhostOnlyRequest() extends Request {
+  override def permission(t: SessionToken) = !Boot.isHosted
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Users
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -271,7 +275,7 @@ class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, node
 // System Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class KyxConfigRequest(db: DBAbstraction) extends Request {
+class KyxConfigRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
   val newline = "\n"
   override def resultingResponses() : List[Response] = {
     val mathConfig = db.getConfiguration("mathematica").config
@@ -296,7 +300,7 @@ class KeymaeraXVersionRequest() extends Request {
   }
 }
 
-class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends Request {
+class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends LocalhostOnlyRequest {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
   }
@@ -353,7 +357,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
   }
 }
 
-class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Request {
+class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
     val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
@@ -391,7 +395,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Request 
   }
 }
 
-class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
+class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -409,7 +413,7 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
   }
 }
 
-class MathematicaStatusRequest(db : DBAbstraction) extends Request {
+class MathematicaStatusRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
     new MathematicaStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
@@ -686,7 +690,7 @@ case class BelleTermInput(value: String, spec:Option[ArgInfo])
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[PositionLocator], pos2: Option[PositionLocator] = None, inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true) extends Request {
+                         pos: Option[PositionLocator], pos2: Option[PositionLocator] = None, inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true) extends UserRequest(userId) {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(node: TreeNode) = {
     val paramStrings: List[String] = inputs.map{
@@ -963,7 +967,7 @@ class IsLocalInstanceRequest() extends Request {
   override def resultingResponses(): List[Response] = new BooleanResponse(!Boot.isHosted) :: Nil
 }
 
-class ExtractDatabaseRequest() extends Request {
+class ExtractDatabaseRequest() extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     if(Boot.isHosted)
       throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
@@ -993,7 +997,7 @@ class ExtractDatabaseRequest() extends Request {
   }
 }
 
-class ShutdownReqeuest() extends Request {
+class ShutdownReqeuest() extends LocalhostOnlyRequest {
   override def resultingResponses() : List[Response] = {
     new Thread() {
       override def run() = {
