@@ -69,12 +69,18 @@ sealed trait Request {
   }
 }
 
+/**
+  * @todo we don't always check that the username is in fact associated with the other data that's touched by a request.
+  *       For example, openProof might not insist that the proofId actually belongs to the associated userId in the request.
+  *       The best solution to this in the long term is a re-design of the API, probably.
+  * @param username The username of the current user.
+  */
 abstract class UserRequest(username: String) extends Request {
   override def permission(t: SessionToken) = t belongsTo username
 }
 
 abstract class LocalhostOnlyRequest() extends Request {
-  override def permission(t: SessionToken) = !Boot.isHosted
+  override def permission(t: SessionToken) = !Boot.isHosted //@todo change this to a literal false prior to deployment.
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
