@@ -55,6 +55,7 @@ private object MathematicaSymbols {
   val RULE = new MExpr(Expr.SYMBOL, "Rule")
 
   val REDUCE = new MExpr(Expr.SYMBOL,  "Reduce")
+  val RESOLVE = new MExpr(Expr.SYMBOL,  "Resolve")
   val REALS = new MExpr(Expr.SYMBOL, "Reals")
   val CHECK = new MExpr(Expr.SYMBOL, "Check")
   val EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")

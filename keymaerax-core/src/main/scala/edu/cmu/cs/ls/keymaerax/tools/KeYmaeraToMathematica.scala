@@ -136,6 +136,7 @@ object KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     def collectVars(vsSoFar: Seq[NamedSymbol], candidate: T): (Seq[NamedSymbol], Formula) = {
       ua(candidate) match {
         case Some((nextVs, nextf: T)) => collectVars(vsSoFar ++ nextVs, nextf)
+        case Some((nextVs, nextf)) => (vsSoFar ++ nextVs, nextf)
         case _ => (vsSoFar, candidate)
       }
     }
