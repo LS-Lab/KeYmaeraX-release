@@ -12,6 +12,7 @@ import scala.collection.immutable._
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
 
 import scala.reflect.ClassTag
 
@@ -39,7 +40,8 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
       convertFormula(f)
     case fn: Function =>
       //@todo Code Review: prefixed name must be disjoint from other names in the containing term/formula -> Mathematica namespace `constFn`
-      //@solution uninterpreted function symbols are removed with tactics -> we disallow them here, constFn removed entirely
+      //@solution uninterpreted function symbols are removed with tactics -> we disallow them here, constFn removed entirely.
+      // can remove this case during next code review (if we remove: can also remove overridden CEXK2MConverter.convert). Non-soundness critical CEX and Simulation tools can override
       throw new ConversionException("Uninterpreted function symbols are disallowed")
   }
 
@@ -61,7 +63,16 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     require(t.sort == Real || t.sort == Unit || flattenSort(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       //@todo Code Review: clean up FuncOf conversion into two cases here
-      case FuncOf(fn, child) => convertFnApply(fn, child)
+      //@solution: inlined the FuncOf cases, moved uniform name conversion into MathematicaNameConversion
+      case FuncOf(fn, child) => child match {
+        case p: Pair =>
+          //@note Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
+          //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time
+          new MExpr(MathematicaSymbols.APPLY, Array[MExpr](toMathematica(fn), convertTerm(child)))
+        case _ =>
+          //@note single-argument f[x] (not encoded as APPLY for roundtrip identity -- Mathematica wants it that way)
+          new MExpr(toMathematica(fn), Array[MExpr](convertTerm(child)))
+      }
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
       case plus: Plus =>
         new MExpr(MathematicaSymbols.PLUS, flattenLeftBinary(plus, Plus.unapply).map(convertTerm).toArray)
@@ -86,7 +97,7 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
         //@note converts nested pairs into nested lists
         new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
 
-      case t: Variable => MathematicaNameConversion.toMathematica(t)
+      case t: Variable => toMathematica(t)
     }
   }
 
@@ -112,18 +123,6 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     case _ => throw new ProverException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
-  protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
-    //@todo Code Review: avoid duplicate code, see fromKeYmaera
-    case p: Pair =>
-      //@note Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
-      //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time
-      val args = Array[MExpr](MathematicaNameConversion.toMathematica(fn), convertTerm(child))
-      new MExpr(MathematicaSymbols.APPLY, args)
-    case _ =>
-      //@note single-argument f[x]
-      new MExpr(MathematicaNameConversion.toMathematica(fn), Array[MExpr](convertTerm(child)))
-  }
-
   //@todo Code Review: Forall+Exists could be 1 conversion
   //@solution: added parameters for unapplier (ua) and head symbol
   /** Convert block of quantifiers into a single quantifier block, using unapply (ua) and matching head (FORALL/EXISTS) */
@@ -145,7 +144,7 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
       case q: T => collectVars(vs, q)
       case _ => (vs, f)
     }
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
     new MExpr(head, Array[MExpr](variables, convertFormula(formula)))
   }
 
@@ -158,6 +157,6 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
   }
 
   protected def keyExn(e: KExpr): Exception =
-    new ConversionException("conversion not defined for KeYmaera expr: " + PrettyPrinter.printer(e))
+    new ConversionException("conversion not defined for KeYmaera expr: " + e.prettyString)
 }
 

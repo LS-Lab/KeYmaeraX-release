@@ -64,26 +64,18 @@ object CEXK2MConverter extends UncheckedK2MConverter {
   val CONST_FN_PREFIX = "fn$"
 
   override def convert(e: KExpr): MExpr = e match {
-    //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
-    case Differential(c) =>
-      new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-    case DifferentialSymbol(c) =>
-      new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
     case Function(name, index, Unit, _) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
     case _ => super.convert(e)
   }
 
   override protected def convertTerm(t: Term): MExpr = t match {
+    //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
     case Differential(c) =>
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
     case DifferentialSymbol(c) =>
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+    case FuncOf(Function(name, index, Unit, _), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
     case _ => super.convertTerm(t)
-  }
-
-  override protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
-    case Nothing => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + fn.name, fn.index))
-    case _ => super.convertFnApply(fn, child)
   }
 }
 
@@ -98,7 +90,6 @@ object CEXM2KConverter extends UncheckedM2KConverter {
       case _ => super.convertAtomicTerm(e)
     }
   }
-
 }
 
 /**
