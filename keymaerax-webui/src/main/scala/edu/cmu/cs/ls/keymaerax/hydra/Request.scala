@@ -486,9 +486,10 @@ class GetModelListRequest(db : DBAbstraction, userId : String) extends UserReque
   }
 }
 
-class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
+class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) extends UserRequest(userId) {
+  val model = db.getModel(modelId)
+  insist(model.userId == userId, s"model ${modelId} does not belong to ${userId}")
   def resultingResponses() = {
-    val model = db.getModel(modelId)
     new GetModelResponse(model) :: Nil
   }
 }
@@ -505,7 +506,7 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
- extends Request {
+ extends UserRequest(userId) {
   private var proofId : Option[String] = None
 
   def getProofId = proofId match {
@@ -546,7 +547,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
   * @param userId Identifies the user.
   * @param proofId Identifies the proof.
   */
-class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends UserRequest(userId) {
   def resultingResponses() = {
     val items = db.agendaItemsForProof(proofId.toInt)
     val closed = db.getProofInfo(proofId).closed
@@ -856,7 +857,7 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
 }
 
 
-class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends Request {
+class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends UserRequest(userId) {
   /**
     * Replay [trace] minus the steps specified in [prune]. The crux of the problem is branch renumbering: determining
     * which branch a kept step (as in not-pruned) will act on once other nodes have been pruned. We compute this by
@@ -963,7 +964,7 @@ class AcceptLicenseRequest(db : DBAbstraction) extends Request {
   }
 }
 
-class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) extends Request {
+class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = ???
 }
 
