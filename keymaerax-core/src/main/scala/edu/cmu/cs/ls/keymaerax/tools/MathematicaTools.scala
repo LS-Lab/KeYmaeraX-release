@@ -29,18 +29,17 @@ object ToolConversions {
   }
 }
 
-object UncheckedM2KConverter extends BaseM2KConverter[KExpr] {
+class UncheckedM2KConverter extends MathematicaToKeYmaera {
   //@note unchecked, because ambiguous And==&& vs. And==Rules conversion
-  def k2m = null
-
+  override def k2m = null
   override def apply(e: MExpr): KExpr = convert(e)
 
   /** Extends default converter with rule and rule list handling */
-  def convert(e: MExpr): KExpr = {
+  override def convert(e: MExpr): KExpr = {
     if (MathematicaToKeYmaera.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
       MathematicaToKeYmaera.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
-    else MathematicaToKeYmaera.convert(e)
+    else super.convert(e)
   }
 
   /** Converts rules and rule lists, not to be used in QE! */
@@ -55,41 +54,69 @@ object UncheckedM2KConverter extends BaseM2KConverter[KExpr] {
   }
 }
 
-object UncheckedK2MConverter extends BaseK2MConverter[KExpr] {
+class UncheckedK2MConverter extends KeYmaeraToMathematica {
   //@note unchecked, because ambiguous And==&& vs. And==Rule in converse conversion
-  def m2k = null
-
+  override def m2k = null
   override def apply(e: KExpr): MExpr = convert(e)
-  def convert(e: KExpr): MExpr = KeYmaeraToMathematica.convert(e)
+}
+
+object CEXK2MConverter extends UncheckedK2MConverter {
+  val CONST_FN_PREFIX = "fn$"
+
+  override def convert(e: KExpr): MExpr = e match {
+    //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
+    case Differential(c) =>
+      new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+    case DifferentialSymbol(c) =>
+      new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+    case Function(name, index, Unit, _) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case _ => super.convert(e)
+  }
+
+  override protected def convertTerm(t: Term): MExpr = t match {
+    case Differential(c) =>
+      new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+    case DifferentialSymbol(c) =>
+      new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+    case _ => super.convertTerm(t)
+  }
+
+  override protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
+    case Nothing => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + fn.name, fn.index))
+    case _ => super.convertFnApply(fn, child)
+  }
+}
+
+object CEXM2KConverter extends UncheckedM2KConverter {
+  override def k2m = null
+  override def apply(e: MExpr): KExpr = convert(e)
+
+  override protected def convertAtomicTerm(e: MExpr): KExpr = {
+    MathematicaNameConversion.toKeYmaera(e) match {
+      case Variable(name, index, sort) if name.startsWith(CEXK2MConverter.CONST_FN_PREFIX) =>
+        FuncOf(Function(name.replace(CEXK2MConverter.CONST_FN_PREFIX, ""), index, Unit, sort), Nothing)
+      case _ => super.convertAtomicTerm(e)
+    }
+  }
+
 }
 
 /**
  * Mathematica counter example implementation.
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, UncheckedK2MConverter, UncheckedM2KConverter) with CounterExampleTool {
+class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool {
 
   private val TIMEOUT = 10
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
-    val cexK2M = new BaseK2MConverter[KExpr] {
-      def m2k = null //@note non-soundness critical conversion -> use unchecked convert
-      override def convert(e: KExpr): MExpr = e match {
-          //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
-          case Differential(c) =>
-            new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-          case DifferentialSymbol(c) =>
-            new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-          case _ => KeYmaeraToMathematica.convert(e)
-        }
-    }
-
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(cexK2M.convert(Not(fml)),
+      Array(k2m.convert(Not(fml)),
         new MExpr(
           MathematicaSymbols.LIST,
-          StaticSemantics.symbols(fml).toList.sorted.map(s => cexK2M.convert(s)).toArray),
+          StaticSemantics.symbols(fml).toList.sorted.map(s => k2m.convert(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, k2m(Number(TIMEOUT))))
 
@@ -118,7 +145,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, UncheckedK2MConverter, UncheckedM2KConverter) with DiffSolutionTool with DerivativeTool {
+class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with DiffSolutionTool with DerivativeTool {
 
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
@@ -232,7 +259,7 @@ object SimulationM2KConverter extends BaseM2KConverter[Simulation] {
   def k2m: K2MConverter[Simulation] = null
   override def apply(e: MExpr): Simulation = convert(e)
 
-  private val m2k: M2KConverter[KExpr] = UncheckedM2KConverter
+  private val m2k: M2KConverter[KExpr] = new UncheckedM2KConverter
 
   override def convert(e: MExpr): Simulation = {
     if (e.listQ() && e.args.forall(_.listQ())) {
@@ -257,7 +284,7 @@ object SimulationK2MConverter extends BaseK2MConverter[Simulation] {
   def m2k = null
   override def apply(e: Simulation): MExpr = convert(e)
 
-  private val k2m: K2MConverter[KExpr] = UncheckedK2MConverter
+  private val k2m: K2MConverter[KExpr] = new UncheckedK2MConverter
 
   override def convert(e: Simulation): MExpr = {
     new MExpr(MathematicaSymbols.LIST,
@@ -273,6 +300,8 @@ object SimulationK2MConverter extends BaseK2MConverter[Simulation] {
   * @author Stefan Mitsch
   */
 class MathematicaSimulationTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[Simulation](link, SimulationK2MConverter, SimulationM2KConverter) with SimulationTool {
+  private val basek2m = new UncheckedK2MConverter
+
   def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = {
     // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
     val init = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
@@ -281,10 +310,10 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
           new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(MathematicaSymbols.LIST, Array(new MExpr(Expr.SYMBOL, "#"))))),
           new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-            Array(UncheckedK2MConverter(initial),
+            Array(basek2m(initial),
               new MExpr(
                 MathematicaSymbols.LIST,
-                StaticSemantics.symbols(initial).toList.sorted.map(UncheckedK2MConverter).toArray),
+                StaticSemantics.symbols(initial).toList.sorted.map(basek2m).toArray),
               new MExpr(Expr.SYMBOL, "Reals"),
               new MExpr(Expr.SYMBOL, "#")))))))))
     // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
@@ -292,9 +321,9 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
     val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
     val stepModuleInit = stepPreVars.toList.sorted.map(s =>
       new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(
-        UncheckedK2MConverter(s),
+        basek2m(s),
         new MExpr(new MExpr(Expr.SYMBOL, "ReplaceAll"), Array(
-          UncheckedK2MConverter(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
+          basek2m(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
           new MExpr(Expr.SYMBOL, "#")))))).toArray
     val step = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
       new MExpr(Expr.SYMBOL, "step"),
@@ -302,10 +331,10 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         Array(new MExpr(new MExpr(Expr.SYMBOL, "Module"),
           Array(new MExpr(MathematicaSymbols.LIST, stepModuleInit),
             new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-              Array(UncheckedK2MConverter(stateRelation),
+              Array(basek2m(stateRelation),
                 new MExpr(
                   MathematicaSymbols.LIST,
-                  stepPostVars.toList.sorted.map(UncheckedK2MConverter).toArray),
+                  stepPostVars.toList.sorted.map(basek2m).toArray),
                 new MExpr(Expr.SYMBOL, "Reals")))))))))
     // Map[N[NestList[step,#,steps]]&, init[n]]
     val exec = new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(

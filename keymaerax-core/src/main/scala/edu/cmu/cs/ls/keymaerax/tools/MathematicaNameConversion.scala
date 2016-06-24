@@ -10,9 +10,10 @@ package edu.cmu.cs.ls.keymaerax.tools
 // favoring immutable Seqs
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
-
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
+
 import scala.math.BigDecimal
 
 
@@ -32,8 +33,6 @@ private object MathematicaNameConversion {
   //@solution: insist in maskIdentifier
   private val MUNDERSCORE = "$u$" //Mathematica Underscore
 
-  val CONST_FN_PREFIX: String = "constfn$"
-
   private def regexOf(s: String) = {
     s.replace("$", "\\$")
   }
@@ -45,14 +44,12 @@ private object MathematicaNameConversion {
     insist(!name.contains(MUNDERSCORE), "String '" + MUNDERSCORE + "' not allowed in variable names")
     insist(!name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
     insist(!name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
-    insist(!name.contains(CONST_FN_PREFIX), "String '" + CONST_FN_PREFIX + "' not allowed in variable names")
 
-    //Do replacements.
     name.replace("_", MUNDERSCORE)
   }
 
 
-  def toMathematica(ns : NamedSymbol) : com.wolfram.jlink.Expr = {
+  def toMathematica(ns: NamedSymbol): MExpr = {
     //The identifier (portion of name excluding index) has one of the forms:
     //   name (for external functions)
     //   KeYmaera + name
@@ -65,16 +62,16 @@ private object MathematicaNameConversion {
       case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
       case Function("max",None,Tuple(Real,Real),Real) => "Max"
       case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
-      //      case n: Function if n.external => n.name
-      case _ => PREFIX + maskIdentifier(ns.name)
+      case Function(name, _, _, _) => PREFIX + maskIdentifier(name)
+      case Variable(name, _, _) => PREFIX + maskIdentifier(name)
     }
 
     //Add the index if it exists.
-    val fullName : String   = ns.index match {
-      case Some(idx) => identifier + SEP + idx.toString
+    val fullName: String   = ns.index match {
+      case Some(idx) => identifier + SEP + idx
       case None      => identifier
     }
-    new com.wolfram.jlink.Expr(com.wolfram.jlink.Expr.SYMBOL, fullName)
+    new MExpr(com.wolfram.jlink.Expr.SYMBOL, fullName)
   } ensuring (r => r.symbolQ(), "symbol names expected as result")
 
   ////
@@ -82,14 +79,43 @@ private object MathematicaNameConversion {
   // decompose based upon the possible forms of the name:
   // PREFIX + base + SEP + index ---> name + index
   // PREFIX + base               ---> name only
-  // base                        ---> external function
+  // base                        ---> special function
   ///
-  def toKeYmaera(e: com.wolfram.jlink.Expr): NamedSymbol = {
-    if (e.args().isEmpty) nullaryNameToKeYmaera(e)
-    else functionToKeYmaera(e)
+  def toKeYmaera(e: MExpr): NamedSymbol = {
+    if (e.args.isEmpty) {
+      val (name, index) = unmaskName(e)
+      Variable(name, index, Real)
+    } else unmaskName(e.head()) match {
+      //@note special function
+      case ("Abs", None) => Function("abs", None, Real, Real)
+      case ("Min", None) => Function("min", None, Tuple(Real, Real), Real)
+      case ("Max", None) => Function("max", None, Tuple(Real, Real), Real)
+      case ("Apply", None) =>
+        // nary functions
+        val fnName = unmaskName(e.args().head)
+        assert(e.args().tail.length == 1)
+        val fnDomain = convertFunctionDomain(e.args().tail.head)
+        Function(fnName._1, fnName._2, fnDomain, Real)
+      case (name, index) =>
+        // unary functions
+        assert(e.args().length == 1)
+        val fnDomain = convertFunctionDomain(e.args().head)
+        assert(fnDomain == Real, "Unary function should have domain Real")
+        Function(name, index, fnDomain, Real)
+    }
   }
 
-  def unmaskName(e: com.wolfram.jlink.Expr): (String, Option[Int]) = {
+  /** Converts a nested list of arguments into nested tuples of reals */
+  private def convertFunctionDomain(arg: MExpr): Sort = {
+    if (arg.listQ()) {
+      assert(arg.args().length == 2)
+      Tuple(convertFunctionDomain(arg.args()(0)), convertFunctionDomain(arg.args()(1)))
+    } else {
+      Real
+    }
+  }
+
+  def unmaskName(e: MExpr): (String, Option[Int]) = {
     val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
     //@todo Code Review: contains --> startsWith, improve readability/prefix+sep handling in a single name
     if (maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
@@ -109,27 +135,6 @@ private object MathematicaNameConversion {
       (maskedName.replace(PREFIX, ""), None)
     } else {
       (maskedName, None)
-    }
-  }
-
-  /** Returns a variable or function, depending on the prefix of the name */
-  private def nullaryNameToKeYmaera(e: com.wolfram.jlink.Expr): NamedSymbol = {
-    require(e.args().isEmpty, "Nullary names have no arguments")
-    val (name, index) = unmaskName(e)
-    if (name.startsWith(MathematicaNameConversion.CONST_FN_PREFIX)) Function(name.replace(CONST_FN_PREFIX, ""), index, Unit, Real)
-    else Variable(name, index, Real)
-  }
-
-  private def functionToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val (name, index) = unmaskName(e.head())
-    require(!name.startsWith(MathematicaNameConversion.CONST_FN_PREFIX), "Proper functions are not constant functions")
-    name match {
-      //@note special function
-      case "Abs" => Function("abs", None, Real, Real)
-      case "Min" => Function("min", None, Tuple(Real, Real), Real)
-      case "Max" => Function("max", None, Tuple(Real, Real), Real)
-      //@note This conversion only works for real-valued unary functions not for others. Term creation will catch binary argument attempts.
-      case _ => Function(name, index, Real, Real)
     }
   }
 }

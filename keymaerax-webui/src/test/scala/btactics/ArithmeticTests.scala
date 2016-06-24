@@ -95,9 +95,6 @@ class ArithmeticTests extends TacticTestBase {
   it should "work with functions" in withMathematica { implicit tool =>
     proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
     proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
-    proveBy("ep>0 & t>=ep & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) -> abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V()))".asFormula, TactixLibrary.QE) shouldBe 'proved
-//    proveBy("A(b)>0 -> A(b)>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
-//    proveBy("A(b,c)>0 -> A(b,c)>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
   }
 
   "counterExample" should "not choke on differential symbols" in withMathematica { tool =>

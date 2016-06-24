@@ -20,7 +20,8 @@ import scala.reflect.ClassTag
  * to Mathematica Expr objects.
  * @author Nathan Fulton
  */
-object KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
+object KeYmaeraToMathematica extends KeYmaeraToMathematica
+class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
 
   def m2k: M2KConverter[KExpr] = MathematicaToKeYmaera
 
@@ -38,8 +39,8 @@ object KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
       convertFormula(f)
     case fn: Function =>
       //@todo Code Review: prefixed name must be disjoint from other names in the containing term/formula -> Mathematica namespace `constFn`
-      MathematicaNameConversion.toMathematica(
-        new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
+      //@solution uninterpreted function symbols are removed with tactics -> we disallow them here, constFn removed entirely
+      throw new ConversionException("Uninterpreted function symbols are disallowed")
   }
 
   private def disjointNames(symbols: Set[NamedSymbol]): Boolean = {
@@ -113,7 +114,6 @@ object KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
 
   protected def convertFnApply(fn: Function, child: Term): MExpr = child match {
     //@todo Code Review: avoid duplicate code, see fromKeYmaera
-    case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case p: Pair =>
       //@note Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
       //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time

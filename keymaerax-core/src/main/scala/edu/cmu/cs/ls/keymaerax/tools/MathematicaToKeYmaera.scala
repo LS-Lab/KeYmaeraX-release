@@ -21,7 +21,8 @@ import scala.math.BigDecimal
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-object MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
+object MathematicaToKeYmaera extends MathematicaToKeYmaera
+class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
   def k2m: K2MConverter[KExpr] = KeYmaeraToMathematica
 
@@ -171,15 +172,6 @@ object MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     }
   }
 
-  private def convertFunctionDomain(arg: MExpr): Sort = {
-    if (arg.listQ()) {
-      assert(arg.args().length == 2)
-      Tuple(convertFunctionDomain(arg.args()(0)), convertFunctionDomain(arg.args()(1)))
-    } else {
-      Real
-    }
-  }
-
   private def convertList(e: MExpr): Pair = {
     if (e.listQ) {
       assert(e.args.length == 2)
@@ -187,14 +179,14 @@ object MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     } else throw new ConversionException("Expected a list, but got " + e)
   }
 
-  private def convertAtomicTerm(e: MExpr): KExpr =
+  protected def convertAtomicTerm(e: MExpr): KExpr =
     if (e.head.symbolQ() && e.head == MathematicaSymbols.APPLY) {
-      val fnName = MathematicaNameConversion.unmaskName(e.args().head)
-      assert(e.args().tail.length == 1)
-      val fnDomain = convertFunctionDomain(e.args().tail.head)
-      convertFuncOf(Function(fnName._1, fnName._2, fnDomain, Real), e.args().tail.map(apply).map(_.asInstanceOf[Term]))
+      MathematicaNameConversion.toKeYmaera(e) match {
+        case fn: Function => convertFuncOf(fn, e.args().tail.map(apply).map(_.asInstanceOf[Term]))
+      }
     } else {
       MathematicaNameConversion.toKeYmaera(e) match {
+        //@note nullary and unary functions are represented as A[] and A[b]
         case result: Function => convertFuncOf(result, e.args().map(apply).map(_.asInstanceOf[Term]))
         case result: Variable => result
       }
