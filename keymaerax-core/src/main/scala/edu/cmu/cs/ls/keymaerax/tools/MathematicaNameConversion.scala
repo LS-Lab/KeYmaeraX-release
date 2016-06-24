@@ -115,27 +115,20 @@ private object MathematicaNameConversion {
     }
   }
 
+  /** Unmasks an identifier, i.e., adds _ for $u$, removes the namespace prefix kyx`, and splits at $i$ into the name and its index. */
   def unmaskName(e: MExpr): (String, Option[Int]) = {
     val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
     //@todo Code Review: contains --> startsWith, improve readability/prefix+sep handling in a single name
-    if (maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
-      //Get the parts of the masked name.
-      val parts = maskedName.replace(PREFIX, "").split(regexOf(SEP))
-      if (parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
-      val (name, unparsedIndex) = (parts.head, parts.last)
-
-      val index = try {
-        Integer.parseInt(unparsedIndex)
-      } catch {
-        case e : NumberFormatException => throw new ConversionException("Expected number for index")
-      }
-      (name, Some(index))
-    }
-    else if (maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
-      (maskedName.replace(PREFIX, ""), None)
-    } else {
-      (maskedName, None)
-    }
+    //@solution: streamlined implementation
+    if (maskedName.startsWith(PREFIX)) {
+      val name = maskedName.replace(PREFIX, "")
+      if (name.contains(SEP)) {
+        // name is of the form thename$i$number, we split into thename and number
+        val parts = name.split(regexOf(SEP))
+        insist(parts.size == 2, "Expected " + SEP + " once only")
+        (parts.head, Some(Integer.parseInt(parts.last)))
+      } else (name , None)
+    } else (maskedName, None)
   }
 }
 
