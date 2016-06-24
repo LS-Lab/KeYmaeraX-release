@@ -26,10 +26,11 @@ import scala.math.BigDecimal
  * @author Stefan Mitsch
  */
 private object MathematicaNameConversion {
-  private val PREFIX = "KeYmaera`"
-  private val SEP    = "$beginIndex$"
+  private val PREFIX = "kyx`"
+  private val SEP    = "$i$"
   //@todo Code Review: disallow $ in names
-  private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
+  //@solution: insist in maskIdentifier
+  private val MUNDERSCORE = "$u$" //Mathematica Underscore
 
   val CONST_FN_PREFIX: String = "constfn$"
 
@@ -37,11 +38,15 @@ private object MathematicaNameConversion {
     s.replace("$", "\\$")
   }
 
-  private def maskIdentifier(name : String) = {
+  private def maskIdentifier(name: String): String = {
     //Ensure that none of the "special" strings occur in the variable name.
-    if (name.contains(MUNDERSCORE)) {
-      throw new ConversionException("Please do not use the string " + MUNDERSCORE + " in your variable names.")
-    }
+    insist(!name.contains("\\$"), "Character '$' not allowed in variable names")
+    //@note double-check with all separators
+    insist(!name.contains(MUNDERSCORE), "String '" + MUNDERSCORE + "' not allowed in variable names")
+    insist(!name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
+    insist(!name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
+    insist(!name.contains(CONST_FN_PREFIX), "String '" + CONST_FN_PREFIX + "' not allowed in variable names")
+
     //Do replacements.
     name.replace("_", MUNDERSCORE)
   }
