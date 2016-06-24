@@ -523,7 +523,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
   }
 }
 
-class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request {
+class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends UserRequest(db.getModel(modelId).userId) {
   def resultingResponses() = {
     val proofs = db.getProofsForModel(modelId).map(proof =>
       (proof, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof.proofId.toString).toString.toLowerCase*/))
@@ -531,8 +531,10 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
   }
 }
 
-class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends Request {
+class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends UserRequest(userId) {
+  insist(db.getModel(db.getProofInfo(proofId).modelId).userId == userId, s"User ${userId} does not own the model associated with proof ${proofId}")
   def resultingResponses() = {
+    val proofInfo = db.getProofInfo(proofId)
     new OpenProofResponse(db.getProofInfo(proofId), "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
   }
 }
