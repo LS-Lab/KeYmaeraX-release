@@ -8,21 +8,12 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 // favoring immutable Seqs
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-import com.wolfram.jlink._
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 
-import scala.math.BigDecimal
-
-
 /**
- * Handles conversion to/from Mathematica.
- *
- * TODO-nrf assertion that maskName and removeMask are inverses (compose to
- * id).
- *
+ * Name conversion to/from Mathematica.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
@@ -31,29 +22,18 @@ private object MathematicaNameConversion {
   private val SEP    = "$i$"
   //@todo Code Review: disallow $ in names
   //@solution: insist in maskIdentifier
-  private val MUNDERSCORE = "$u$" //Mathematica Underscore
+  private val MUNDERSCORE = "$u$"
 
-  private def regexOf(s: String) = {
-    s.replace("$", "\\$")
-  }
-
-  private def maskIdentifier(name: String): String = {
-    //Ensure that none of the "special" strings occur in the variable name.
-    insist(!name.contains("\\$"), "Character '$' not allowed in variable names")
-    //@note double-check with all separators
-    insist(!name.contains(MUNDERSCORE), "String '" + MUNDERSCORE + "' not allowed in variable names")
-    insist(!name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
-    insist(!name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
-
-    name.replace("_", MUNDERSCORE)
-  }
-
-
+  /**
+    * Converts a KeYmaera name into a Mathematica symbol. Masks names as follows:
+    * base + index     ---> PREFIX + base + SEP + index
+    * base only        ---> PREFIX + base
+    * special function ---> base
+    * @param ns The KeYmaera name to convert.
+    * @return The Mathematica symbol.
+    */
   def toMathematica(ns: NamedSymbol): MExpr = {
-    //The identifier (portion of name excluding index) has one of the forms:
-    //   name (for external functions)
-    //   KeYmaera + name
-    val identifier : String = ns match {
+    val name: String = ns match {
       //@note special function
       //@todo Code Review: handle interpreted functions properly, handle name conflicts
       case Function("abs",None,Real,Real) => "Abs"
@@ -62,37 +42,34 @@ private object MathematicaNameConversion {
       case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
       case Function("max",None,Tuple(Real,Real),Real) => "Max"
       case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
-      case Function(name, _, _, _) => PREFIX + maskIdentifier(name)
-      case Variable(name, _, _) => PREFIX + maskIdentifier(name)
+      case _ => maskName(ns)
     }
 
-    //Add the index if it exists.
-    val fullName: String   = ns.index match {
-      case Some(idx) => identifier + SEP + idx
-      case None      => identifier
-    }
-    new MExpr(com.wolfram.jlink.Expr.SYMBOL, fullName)
+    new MExpr(com.wolfram.jlink.Expr.SYMBOL, name)
   } ensuring (r => r.symbolQ(), "symbol names expected as result")
 
-  ////
-  // toKeYmaera section. We decompose by function vs. variable. In each case, we
-  // decompose based upon the possible forms of the name:
-  // PREFIX + base + SEP + index ---> name + index
-  // PREFIX + base               ---> name only
-  // base                        ---> special function
-  ///
+  /**
+    * Converts a Mathematica name into its corresponding KeYmaera X named symbol (Variable or Function). Distinguishes
+    * between variables and functions by the number of arguments (0 args -> Variable, at least 1 arg -> Function). In
+    * each case, decomposes the Mathematica name based upon the possible forms of the name:
+    * PREFIX + base + SEP + index ---> name + index
+    * PREFIX + base               ---> name only
+    * base                        ---> special function
+    * @param e The Mathematica 'name'
+    * @return The named symbol.
+    */
   def toKeYmaera(e: MExpr): NamedSymbol = {
     if (e.args.isEmpty) {
-      val (name, index) = unmaskName(e)
+      val (name, index) = unmaskName(e.asString())
       Variable(name, index, Real)
-    } else unmaskName(e.head()) match {
+    } else unmaskName(e.head().asString()) match {
       //@note special function
       case ("Abs", None) => Function("abs", None, Real, Real)
       case ("Min", None) => Function("min", None, Tuple(Real, Real), Real)
       case ("Max", None) => Function("max", None, Tuple(Real, Real), Real)
       case ("Apply", None) =>
         // nary functions
-        val fnName = unmaskName(e.args().head)
+        val fnName = unmaskName(e.args().head.asString())
         assert(e.args().tail.length == 1)
         val fnDomain = convertFunctionDomain(e.args().tail.head)
         Function(fnName._1, fnName._2, fnDomain, Real)
@@ -115,20 +92,54 @@ private object MathematicaNameConversion {
     }
   }
 
-  /** Unmasks an identifier, i.e., adds _ for $u$, removes the namespace prefix kyx`, and splits at $i$ into the name and its index. */
-  def unmaskName(e: MExpr): (String, Option[Int]) = {
-    val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
+  /** Masks a name, i.e., replaces _ with $u$, adds the namespace prefix kyx, and merges name and index (separated by $i$) */
+  private def maskName(ns: NamedSymbol): String = uncheckedMaskName(ns) ensuring(r => {
+    val (name, idx) = uncheckedUnmaskName(r); name == ns.name && idx == ns.index
+  }, "Unmasking a masked name should produce original unmasked name" +
+    "\n Original unmasked name" + ns.prettyString +
+    "\n Masked name " + uncheckedMaskName(ns) +
+    "\n Reunmasked to " + uncheckedUnmaskName(uncheckedMaskName(ns)))
+
+  /** Masking without contracts. */
+  private def uncheckedMaskName(ns: NamedSymbol): String = {
+    //Ensure that none of the "special" strings occur in the variable name.
+    insist(!ns.name.contains("\\$"), "Character '$' not allowed in variable names")
+    //@note double-check with all separators
+    insist(!ns.name.contains(MUNDERSCORE), "String '" + MUNDERSCORE + "' not allowed in variable names")
+    insist(!ns.name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
+    insist(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
+
+    val identifier = ns.name.replace("_", MUNDERSCORE)
+
+    PREFIX + (ns.index match {
+      case Some(idx) => identifier + SEP + idx
+      case None      => identifier
+    })
+  }
+
+  /** Unmasks a name, i.e., adds _ for $u$, removes the namespace prefix kyx, and splits at $i$ into the name and its index. */
+  private def unmaskName(maskedName: String): (String, Option[Int]) = uncheckedUnmaskName(maskedName) ensuring(r => {
+    r._1 == "Abs" || r._1 == "Min" || r._1 == "Max" || maskName(Variable(r._1, r._2, Real)) == maskedName
+  }, "Masking an unmasked name should produce original masked name" +
+     "\n Original masked name " + maskedName +
+     "\n Unmasked name " + uncheckedUnmaskName(maskedName) +
+     "\n Remasked to " + uncheckedMaskName(Variable(uncheckedUnmaskName(maskedName)._1, uncheckedUnmaskName(maskedName)._2, Real)))
+
+  /** Unmasking without contracts. */
+  private def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
+    def regexOf(s: String) = s.replace("$", "\\$")
+
+    val uscoreMaskedName = maskedName.replaceAll(regexOf(MUNDERSCORE), "_")
     //@todo Code Review: contains --> startsWith, improve readability/prefix+sep handling in a single name
     //@solution: streamlined implementation
-    if (maskedName.startsWith(PREFIX)) {
-      val name = maskedName.replace(PREFIX, "")
+    if (uscoreMaskedName.startsWith(PREFIX)) {
+      val name = uscoreMaskedName.replace(PREFIX, "")
       if (name.contains(SEP)) {
         // name is of the form thename$i$number, we split into thename and number
         val parts = name.split(regexOf(SEP))
         insist(parts.size == 2, "Expected " + SEP + " once only")
         (parts.head, Some(Integer.parseInt(parts.last)))
       } else (name , None)
-    } else (maskedName, None)
+    } else (uscoreMaskedName, None)
   }
 }
-
