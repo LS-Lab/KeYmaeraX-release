@@ -14,4 +14,5 @@ class MathematicaComputationFailedException(msg: String) extends ConversionExcep
 class MathematicaComputationAbortedException(msg: String) extends ConversionException(msg)
 
 class SMTConversionException(s: String) extends ConversionException(s)
+class SMTQeException(s: String) extends Exception(s)
 class NoCountExException(s: String) extends Exception(s)

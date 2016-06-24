@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 
 import scala.collection.immutable.Seq
 
@@ -52,7 +52,7 @@ object SMTConverter {
         case x: Variable =>
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")"
-          //@todo use Derived Axioms for abs/min/max
+        //@todo use Derived Axioms for abs/min/max
         case f: Function =>
           require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
           nameIdentifier(f) match {
@@ -71,7 +71,7 @@ object SMTConverter {
   /** Generate parameters of function in the varDec of SMT */
   private def generateFuncPrmtSorts(t: Sort) : String = t match {
     case Unit => ""
-    // deassociate the arguments
+    //@note: disassociate the arguments
     case Tuple(l, r) => generateFuncPrmtSorts(l) + " " + generateFuncPrmtSorts(r)
     case _ => t.toString
   }
@@ -112,8 +112,7 @@ object SMTConverter {
 
   /** Convert KeYmaera X term to string in SMT notation */
   private def convertTerm(t: Term, toolId: String) : String = {
-    //todo code review: ==Unit?
-    require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
+    require(t.sort == Real || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
     t match {
       case Neg(c)       => "(- " + convertTerm(c, toolId) + ")"
       case Plus(l, r)   => "(+ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
@@ -122,12 +121,20 @@ object SMTConverter {
       case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Power(l, r)  => convertExp(l, r, toolId)
       case Number(n) =>
-        // todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
+        //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
+        //@ran todo-resolved: double checked and see notes below
+        /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
+          *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
+          *      both have the maximal range in their category */
         assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
-        // todo code review: maxlong?
+        //@todo code review: maxlong?
+        //@ran todo-resolved: also checks if negative value is in range, see comment below
         // smt form of -5 is (- 5)
-        if (n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
-        else n.underlying().toString
+        if (n.toDouble < 0) {
+          /* negative number should also be in range */
+          assert((0-n).isDecimalDouble || (0-n).isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+          "(- " + (0-n).underlying().toString + ")"
+        } else n.underlying().toString
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) => nameIdentifier(fn) match {
@@ -136,7 +143,7 @@ object SMTConverter {
         case "abs" => "(" + SMT_ABS + " " + convertTerm(child, toolId) + ")"
         case _ => "(" + nameIdentifier(fn) + " " + convertTerm(child, toolId) + ")"
       }
-      // deassociate the arguments
+      //@note: disassociate the arguments
       case Pair(l, r)  => convertTerm(l, toolId) + " " + convertTerm(r, toolId)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
@@ -164,9 +171,10 @@ object SMTConverter {
               "1"
             } else if(n.intValue() > 0 ) {
               val ba : String = convertTerm(base, toolId)
-              // todo code review: check (* a)
-              // (* a a a) = a*a*a
-              // to is inclusive
+              //@todo code review: check (* a)
+              //@ran todo-resolved: double checked that (* a) = a
+              //@note: (* a) = a, (* a a a) = a*a*a
+              //@note: to is inclusive
               "(* " + (1 to n.intValue()).map(i => ba).mkString(" ") + ")"
             } else "(/ 1 " + convertExp(base, Number(n.underlying().negate()), toolId) + ")"
           } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
@@ -179,8 +187,10 @@ object SMTConverter {
   /** Convert possibly nested forall KeYmaera X expression to SMT */
   private def convertForall(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsForall(vs, f)
-    // todo code review: assert sort==real and use sort
-    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
+    //@todo code review: assert sort==real and use sort
+    //@ran todo-resolved: changed as suggested
+    require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
+    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested forall expression */
@@ -194,7 +204,8 @@ object SMTConverter {
   /** Convert possibly nested exists KeYmaera X expression to SMT */
   private def convertExists(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsExists(vs, f)
-    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
+    require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
+    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested exists expression */

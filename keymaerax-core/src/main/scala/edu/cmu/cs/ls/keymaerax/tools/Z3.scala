@@ -26,7 +26,6 @@ class Z3 extends ToolBase("Z3") with QETool with DiffSolutionTool with CounterEx
     initialized = true
   }
 
-  def qe(formula: Formula): Formula = z3.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = z3.qeEvidence(formula)
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,

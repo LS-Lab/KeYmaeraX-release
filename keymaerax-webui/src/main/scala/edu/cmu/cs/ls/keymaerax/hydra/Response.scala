@@ -147,9 +147,10 @@ class GetModelTacticResponse(model : ModelPOJO) extends Response {
   )
 }
 
-class LoginResponse(flag:Boolean, userId:String) extends Response {
+class LoginResponse(flag:Boolean, userId:String, sessionToken : Option[String]) extends Response {
   def getJson = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
+    "sessionToken" -> (if(flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
     "key" -> JsString("userId"),
     "value" -> JsString(userId),
     "type" -> JsString("LoginResponse")
@@ -166,6 +167,17 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
   def getJson = JsObject(
     "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
+    "type" -> JsString("error")
+  )
+}
+
+class PermissionDeniedResponse(val msg: String, val exn: Throwable = null) extends Response {
+  lazy val writer = new StringWriter
+  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
+  def getJson = JsObject(
+    "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
+    "errorThrown" -> JsString(stacktrace),
+    "permission" -> JsString("denied"),
     "type" -> JsString("error")
   )
 }
