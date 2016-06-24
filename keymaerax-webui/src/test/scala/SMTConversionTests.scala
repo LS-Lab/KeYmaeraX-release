@@ -2,9 +2,10 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import edu.cmu.cs.ls.keymaerax.codegen.CodeGenerationException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
  * Created by ran on 3/23/15.
@@ -16,6 +17,26 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Numbers" should "convert numbers" in {
     SMTConverter("1 > 2".asFormula, "Z3") should be("(assert (not (> 1 2)))")
     SMTConverter("1 > 2".asFormula, "Polya")  should be("(assert (not (> 1 2)))")
+  }
+
+  it should "convert legal big positive numbers" in {
+    SMTConverter("9223372036854775807 > 1".asFormula, "Z3") should be("(assert (not (> 9223372036854775807 1)))")
+    SMTConverter("9223372036854775807 > 1".asFormula, "Polya")  should be("(assert (not (> 9223372036854775807 1)))")
+  }
+
+  it should "convert legal big negative numbers" in {
+    SMTConverter("-9223372036854775807 < 1".asFormula, "Z3") should be("(assert (not (< (- 9223372036854775807) 1)))")
+    SMTConverter("-9223372036854775807 < 1".asFormula, "Polya")  should be("(assert (not (< (- 9223372036854775807) 1)))")
+  }
+
+  it should "thorw exception in converting illegal big positive numbers" in {
+    a [SMTConversionException] should be thrownBy SMTConverter("9223372036854775808 > 1".asFormula, "Z3")
+    a [SMTConversionException] should be thrownBy SMTConverter("9223372036854775808 > 1".asFormula, "Polya")
+  }
+
+  it should "thorw exception in converting illegal big negative numbers" in {
+    a [SMTConversionException] should be thrownBy SMTConverter("-9223372036854775808 < 1".asFormula, "Z3")
+    a [SMTConversionException] should be thrownBy SMTConverter("-9223372036854775808 < 1".asFormula, "Polya")
   }
 
   "Variables" should "convert numbers" in {
