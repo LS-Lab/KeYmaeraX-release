@@ -52,8 +52,6 @@ sealed trait Request {
   /** Returns true iff a user authenticated with name userName is allowed to access this resource. */
   def permission(t:SessionToken) : Boolean = true
 
-  protected final def defaultUserPermission(userId: String, token:SessionToken) = token belongsTo userId
-
   final def getResultingResponses(t:SessionToken) : List[Response] = {
     if(!permission(t))
       new PermissionDeniedResponse(
