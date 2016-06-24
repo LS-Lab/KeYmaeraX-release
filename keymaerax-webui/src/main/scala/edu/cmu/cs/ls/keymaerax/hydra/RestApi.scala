@@ -693,9 +693,11 @@ trait RestApi extends HttpService with SLF4JLogging {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // In-memory session managements @todo replace with something less naive.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+  * @todo replace this with an existing library that does The Right Things
+  * @todo do we want to enforce timeouts as well?
+  */
 object SessionManager {
-  val random: SecureRandom = new SecureRandom();
-
   private var sessionMap : Map[String, String] = Map() //Session tokens -> usernames
 
   def token(key: String): SessionToken = sessionMap.get(key) match {
@@ -714,9 +716,12 @@ object SessionManager {
   }
 
   private def generateToken(): String = {
-    val bytes = Array[Byte](50)
+    val random: SecureRandom = new SecureRandom();
+    val bytes = Array[Byte](20)
     random.nextBytes(bytes);
-    bytes.toString();
+    val candidate = bytes.toString();
+    if(sessionMap.contains(candidate)) generateToken()
+    else candidate
   }
 }
 
