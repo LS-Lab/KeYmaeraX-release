@@ -7,39 +7,28 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.util.{GregorianCalendar, Date}
+import java.util.{Date, GregorianCalendar}
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
-import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 
 import scala.collection.immutable
 
 /**
  * An abstract interface to Mathematica link implementations.
- * The link may be used syncrhonously or asychronously.
- * Each MathematicaLink 
+ * The link may be used synchronously or asychronously.
  * Multiple MathematicaLinks may be created by instantiating multiple copies
- * of implementing classes.
+ * of implementing classes (depends on license).
  * 
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
-  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-  type MExpr = com.wolfram.jlink.Expr
-
-  def runUnchecked(cmd : String) : (String, KExpr)
-  def run(cmd : MExpr) : (String, KExpr)
+trait MathematicaLink {
+  def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T)
+  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T)
 
   //@todo Code Review: should probably be removed from the interface
-  /**
-   * @return true if the job is finished, false if it is still running.
-   */
-  def ready: Boolean
+  //@solution: removed ready from interface, removed empty implementations from derived classes
 
   /** Cancels the current request.
     *
@@ -50,30 +39,47 @@ trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTo
 }
 
 /**
+  * Bridge for MathematicaLink, bundles tool executor (thread pools) with converters.
+  */
+trait KeYmaeraMathematicaBridge[T] {
+  def runUnchecked(cmd: String): (String, T)
+  def run(cmd: MExpr): (String, T)
+}
+
+/**
+  * Base class for Mathematica bridges. Running commands is synchronized.
+  * @param link The Mathematica link for executing commands.
+  * @param k2m Converts KeYmaeraX->Mathematica.
+  * @param m2k Converts Mathematica->KeYmaera X.
+  */
+abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k2m: K2MConverter[T],
+                                             val m2k: M2KConverter[T]) extends KeYmaeraMathematicaBridge[T] {
+  protected val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  protected val mathematicaExecutor: ToolExecutor[(String, T)] = ToolExecutor.defaultExecutor()
+
+  override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(cmd, m2k) }
+  override def run(cmd: MExpr): (String, T) = link.synchronized { link.run(cmd, m2k, mathematicaExecutor) }
+
+  def shutdown(): Unit = mathematicaExecutor.shutdown()
+}
+
+/**
  * A link to Mathematica using the JLink interface.
- * 
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
 class JLinkMathematicaLink extends MathematicaLink {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
-  private val TIMEOUT = 10
 
   //@todo really should be private -> fix SpiralGenerator
   private[keymaerax] var ml: KernelLink = null
   private var linkName: String = null
   private var jlinkLibDir: Option[String] = None
 
-  private val mathematicaExecutor: ToolExecutor[(String, KExpr)] = ToolExecutor.defaultExecutor()
-
+  //@note all access to queryIndex must be synchronized
   private var queryIndex: Long = 0
 
   private val fetchMessagesCmd = "$MessageList"
-  private val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
-    new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
-  private val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
-
-  private val defaultK2MConverter = new KeYmaeraToMathematica
 
   /**
    * Initializes the connection to Mathematica.
@@ -125,7 +131,6 @@ class JLinkMathematicaLink extends MathematicaLink {
       ml = null
       l.terminateKernel()
       l.close()
-      mathematicaExecutor.shutdown()
       println("...Done")
     }
   }
@@ -139,57 +144,83 @@ class JLinkMathematicaLink extends MathematicaLink {
     l.close()
   }
 
-  def toMathematica(expr : KExpr): MExpr = defaultK2MConverter.fromKeYmaera(expr)
-
-  def toKeYmaera(expr : MExpr): KExpr = MathematicaToKeYmaera.fromMathematica(expr)
-
   /**
-   * Runs the command and then halts program execution until answer is returned.
-   */
-  def runUnchecked(cmd: String): (String, KExpr) = {
+    * Runs the command and then halts program execution until answer is returned.
+    *
+    * @param cmd The Mathematica command.
+    * @param m2k The converter Mathematica->KeYmaera X
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result, as string and as KeYmaera X expression.
+    */
+  def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.synchronized {
       ml.evaluate(cmd)
       ml.waitForAnswer()
-      val res = ml.getExpr
-      val keymaeraResult = MathematicaToKeYmaera.fromMathematica(res)
-      // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-      (res.toString, keymaeraResult)
+      safeResult(ml.getExpr, res => (res.toString, m2k(res)))
     }
   }
 
-  def run(cmd: MExpr): (String, KExpr) = run(cmd, mathematicaExecutor, MathematicaToKeYmaera.fromMathematica)
+  /**
+    * Runs a Mathematica command.
+    *
+    * @param cmd The Mathematica command to run. Disposed as a result of this method.
+    * @param m2k The converter Mathematica->KeYmaera X
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result, as string and as KeYmaera X expression.
+    * @note Disposes cmd, do not use afterwards.
+    * @see [[run()]]
+    */
+  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T) = run(cmd, executor, m2k)
 
-  private def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
+  /**
+    * Runs a Mathematica command on the specified executor, converts the result back with converter.
+    *
+    * @param cmd The command to run. Disposed as a result of this method.
+    * @param executor Executes commands (scheduled).
+    * @param converter Converts Mathematica expressions to KeYmaera X expressions.
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result, as string and as KeYmaera X expression.
+    * @note Disposes cmd, do not use afterwards.
+    */
+  protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     //@todo Code Review: querIndex increment should be synchronized
-    queryIndex += 1
-    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
+    //@solution: synchronized increment on global idx, then use local idx throughout instead; added a note to global queryIndex that all access must be synchronized
+    val qidx: Long = synchronized { queryIndex += 1; queryIndex }
+    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
     // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
     val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
     if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
 
     val taskId = executor.schedule(_ => {
       dispatch(checkErrorMsgCmd.toString)
-      getAnswer(indexedCmd, queryIndex, converter)
+      getAnswer(qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
     })
 
-    executor.wait(taskId) match {
-      case Some(Left(result)) => result
-      case Some(Right(throwable)) => throwable match {
-        case ex: MathematicaComputationAbortedException =>
-          executor.remove(taskId)
-          throw ex
-        case ex: Throwable =>
+    try {
+      executor.wait(taskId) match {
+        case Some(Left(result)) => result
+        case Some(Right(throwable)) => throwable match {
+          case ex: MathematicaComputationAbortedException =>
+            executor.remove(taskId)
+            throw ex
+          case ex: Throwable =>
+            executor.remove(taskId, force = true)
+            throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+        }
+        case None =>
+          //@note Thread is interrupted by another thread (e.g., UI button 'stop')
+          cancel()
           executor.remove(taskId, force = true)
-          throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+          if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
+          throw new MathematicaComputationAbortedException(checkErrorMsgCmd.toString)
       }
-      case None =>
-        //@note Thread is interrupted by another thread (e.g., UI button 'stop')
-        cancel()
-        executor.remove(taskId, force = true)
-        if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
-        throw new MathematicaComputationAbortedException(checkErrorMsgCmd)
+    } finally {
+      //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
+      //@note nested cmd is disposed automatically
+      indexedCmd.dispose()
+      checkErrorMsgCmd.dispose()
     }
   }
 
@@ -199,354 +230,100 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   /**
-   * blocks and returns the answer.
-   */
-  private def getAnswer[T](input: MExpr, cmdIdx: Long, converter: MExpr=>T): (String, T) = {
+    * Blocks and returns the answer (as string and as KeYmaera X expression).
+    *
+    * @param cmdIdx The expected command index to avoid returning stale answers.
+    * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
+    * @param ctx The context for error messages in exceptions.
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result as string and converted to the expected result type.
+    */
+  private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
     //@todo Properly dispose input in caller
+    //@solution sole caller run() disposes input (+ other Expr) now in a finally block after the answer is retrieved
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
-    val res = ml.getExpr
-    if (res == MathematicaSymbols.ABORTED) {
-      res.dispose()
-      //@todo Code Review do not hand MExpr to exceptions
-      throw new MathematicaComputationAbortedException(input)
-    } else if (res == MathematicaSymbols.EXCEPTION) {
-      res.dispose()
-      // an exception occurred
-      ml.evaluate(fetchMessagesCmd)
-      ml.waitForAnswer()
-      val msg = ml.getExpr
-      val txtMsg = msg.toString
-      // msg.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-      throw new IllegalArgumentException("Input " + input + " cannot be evaluated: " + txtMsg)
-    } else {
-      val head = res.head
-      if (head.equals(MathematicaSymbols.CHECK)) {
-        val txtMsg = res.toString
-        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-        throw new IllegalStateException("Mathematica returned input as answer: " + txtMsg)
-      } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
-        val theResult = res.args.last
-        if (theResult == MathematicaSymbols.ABORTED) {
-          res.dispose()
-          throw new MathematicaComputationAbortedException(input)
+    safeResult(ml.getExpr,
+      res => {
+        if (res == MathematicaSymbols.ABORTED) {
+          //@todo Code Review do not hand MExpr to exceptions
+          //@solution: exceptions accept message instead of Expr, cleaned up getAnswer interface (Expr not necessary)
+          throw new MathematicaComputationAbortedException(ctx)
+        } else if (res == MathematicaSymbols.EXCEPTION) {
+          // an exception occurred
+          ml.evaluate(fetchMessagesCmd)
+          ml.waitForAnswer()
+          val txtMsg = safeResult(ml.getExpr, _.toString)
+          throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
         } else {
-          val keymaeraResult = converter(theResult)
-          val txtResult = theResult.toString
-          // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-          (txtResult, keymaeraResult)
+          val head = res.head
+          if (head.equals(MathematicaSymbols.CHECK)) {
+            throw new IllegalStateException("Mathematica returned input as answer: " + res.toString)
+          } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
+            val theResult = res.args.last
+            if (theResult == MathematicaSymbols.ABORTED) throw new MathematicaComputationAbortedException(ctx)
+            else (theResult.toString, converter(theResult))
+          } else {
+            throw new IllegalStateException("Mathematica returned a stale answer for " + res.toString)
+          }
         }
-      } else {
-        val txtResult = res.toString
-        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-        throw new IllegalStateException("Mathematica returned a stale answer for " + txtResult)
-      }
-    }
+      })
   }
-
-  def ready = ???
 
   def cancel(): Boolean = {
     ml.abortEvaluation()
     true
   }
 
-  def qeEvidence(f : Formula) : (Formula, Evidence) = {
-    val input = new MExpr(MathematicaSymbols.REDUCE,
-      Array(toMathematica(f), new MExpr(MathematicaSymbols.LIST, new Array[MExpr](0)), MathematicaSymbols.REALS))
-    val (output, result) = run(input)
-    result match {
-      case f : Formula =>
-        if (DEBUG) println("Mathematica QE result: " + f.prettyString)
-        (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
-      case _ => throw new ToolException("Expected a formula from Reduce call but got a non-formula expression.")
-    }
-  }
-
-  private def flattenConjunctions(f: Formula): List[Formula] = {
-    var result: List[Formula] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
-        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
-      }
-    }, f)
-    result
-  }
-
-  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
-    val converter = new KeYmaeraToMathematica() {
-      override protected def convertTerm(t: Term): MExpr = t match {
-        case Differential(c) =>
-          new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
-        case DifferentialSymbol(c) =>
-          new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
-        case _ => super.convertTerm(t)
-      }
-    }
-
-    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(converter.fromKeYmaera(Not(fml)),
-        new MExpr(
-          MathematicaSymbols.LIST,
-          StaticSemantics.symbols(fml).toList.sorted.map(s => converter.fromKeYmaera(s)).toArray),
-        new MExpr(Expr.SYMBOL, "Reals")))
-    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
-
-    run(inputWithTO, mathematicaExecutor, nonQEConverter) match {
-      case (_, cex: Formula) => cex match {
-        case False =>
-          if (DEBUG) println("No counterexample, Mathematica returned: " + cex.prettyString)
-          None
-        case _ =>
-          if (DEBUG) println("Counterexample " + cex.prettyString)
-          Some(flattenConjunctions(cex).map({
-            case Equal(name: NamedSymbol, value) => name -> value
-            case Equal(FuncOf(fn, _), value) => fn -> value
-          }).toMap)
-      }
-      case result =>
-        if (DEBUG) println("No counterexample, Mathematica returned: " + result)
-        None
-    }
-  }
-
-  def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = {
-    // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
-    val init = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
-      new MExpr(Expr.SYMBOL, "init"),
-        new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(
-          new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
-            new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(MathematicaSymbols.LIST, Array(new MExpr(Expr.SYMBOL, "#"))))),
-            new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-            Array(toMathematica(initial),
-              new MExpr(
-                MathematicaSymbols.LIST,
-                StaticSemantics.symbols(initial).toList.sorted.map(toMathematica).toArray),
-              new MExpr(Expr.SYMBOL, "Reals"),
-              new MExpr(Expr.SYMBOL, "#")))))))))
-    // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
-    val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.startsWith("pre"))
-    val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
-    val stepModuleInit = stepPreVars.toList.sorted.map(s =>
-      new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(
-        toMathematica(s),
-        new MExpr(new MExpr(Expr.SYMBOL, "ReplaceAll"), Array(
-          toMathematica(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
-          new MExpr(Expr.SYMBOL, "#")))))).toArray
-    val step = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
-      new MExpr(Expr.SYMBOL, "step"),
-        new MExpr(new MExpr(Expr.SYMBOL, "Function"),
-          Array(new MExpr(new MExpr(Expr.SYMBOL, "Module"),
-            Array(new MExpr(MathematicaSymbols.LIST, stepModuleInit),
-              new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-              Array(toMathematica(stateRelation),
-                new MExpr(
-                  MathematicaSymbols.LIST,
-                  stepPostVars.toList.sorted.map(toMathematica).toArray),
-                new MExpr(Expr.SYMBOL, "Reals")))))))))
-    // Map[N[NestList[step,#,steps]]&, init[n]]
-    val exec = new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
-      new MExpr(new MExpr(Expr.SYMBOL, "Function"),
-        Array(new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(new MExpr(new MExpr(Expr.SYMBOL, "NestList"),
-          Array(new MExpr(Expr.SYMBOL, "step"), new MExpr(Expr.SYMBOL, "#"), new MExpr(steps))))))),
-      new MExpr(new MExpr(Expr.SYMBOL, "Apply"), Array(new MExpr(Expr.SYMBOL, "init"),
-        new MExpr(MathematicaSymbols.LIST, Array(new MExpr(n)))))))
-    // initial;step;simulate
-    val simulate = new MExpr(new MExpr(Expr.SYMBOL, "CompoundExpression"), Array(init, step, exec))
-
-    val executor: ToolExecutor[(String, List[List[Map[NamedSymbol, Number]]])] = ToolExecutor.defaultExecutor()
-    def convert(e: MExpr): List[List[Map[NamedSymbol, Number]]] = {
-      if (e.listQ() && e.args.forall(_.listQ())) {
-        val states: Array[Array[KExpr]] = e.args().map(_.args().map(nonQEConverter))
-        states.map(state => {
-          val endOfWorld = if (state.contains(False)) state.indexOf(False) else state.length
-          state.slice(0, endOfWorld).map({
-          case fml: Formula => flattenConjunctions(fml).map({
-              case Equal(name: NamedSymbol, value: Number) => name -> value
-              case Equal(FuncOf(fn, _), value: Number) => fn -> value
-              case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
-            }).toMap
-          case s => throw new IllegalArgumentException("Expected state formula, but got " + s)
-        }).toList}).toList
-      } else throw new IllegalArgumentException("Expected list of simulation states, but got " + e)
-    }
-
-    val result = run(simulate, executor, convert)
-    executor.shutdown()
-    result._2
-  }
-
-  def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = ???
-
-  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
-    diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
-
-  /** Extends default converter with rule and rule list handling */
-  private def nonQEConverter(e: MExpr): KExpr = {
-    if (MathematicaToKeYmaera.hasHead(e, MathematicaSymbols.RULE)) convertRule(nonQEConverter)(e)
-    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      MathematicaToKeYmaera.hasHead(_, MathematicaSymbols.RULE))))
-      convertRuleList(MathematicaToKeYmaera.fromMathematica)(e)
-    else MathematicaToKeYmaera.fromMathematica(e)
-  }
-
-  /** Converts rules and rule lists, not to be used in QE! */
-  private def convertRule(fromMathematica: MExpr=>KExpr)(e: MExpr): Formula = {
-    Equal(fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
-  }
-  private def convertRuleList(fromMathematica: MExpr=>KExpr)(e: MExpr): Formula = {
-    val convertedRules = e.args().map(_.args().map(r => convertRule(fromMathematica)(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
-    if (convertedRules.isEmpty) False
-    else convertedRules.reduceLeft((lhs, rhs) => Or(lhs, rhs))
-  }
-
-  /**
-   * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
-    *
-    * @param diffSys The system of differential equations
-   * @param diffArg The name of the differential argument (dx/d diffArg = theta).
-   * @return The differential equation system in list form.
-   */
-  private def toDiffSys(diffSys: DifferentialProgram, diffArg: Variable): List[(Variable, Term)] = {
-    var result = List[(Variable, Term)]()
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case AtomicODE(DifferentialSymbol(x), theta) if x != diffArg => result = result :+ (x, theta); Left(None)
-        case AtomicODE(DifferentialSymbol(x), theta) if x == diffArg => Left(None)
-        case ODESystem(_, _) => Left(None)
-        case DifferentialProduct(_, _) => Left(None)
-      }
-    }, diffSys)
-    result
-  }
-
-  /**
-   * Computes the symbolic solution of a system of differential equations.
-    *
-    * @param diffArg The differential argument, i.e., d f(diffArg) / d diffArg.
-   * @param diffSys The system of differential equations of the form x' = theta.
-   * @return The solution if found; None otherwise
-   */
-  private def diffSol(diffArg: Variable, iv: Map[Variable, Variable], diffSys: (Variable, Term)*): Option[Formula] = {
-    val primedVars = diffSys.map(_._1)
-    val functionalizedTerms = diffSys.map{ case (x, theta) => ( x, functionalizeVars(theta, diffArg, primedVars:_*)) }
-    val mathTerms = functionalizedTerms.map{case (x, theta) =>
-      val diffSymbol = new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](toMathematica(x)))
-      (new MExpr(diffSymbol, Array[MExpr](toMathematica(diffArg))), toMathematica(theta))}
-    val convertedDiffSys = mathTerms.map{case (x, theta) =>
-      new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](x, theta))}
-
-    val functions = diffSys.map(t => toMathematica(functionalizeVars(t._1, diffArg)))
-
-    val initialValues = diffSys.map(t => toMathematica(
-      Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), iv(t._1))))
-
-    val input = new MExpr(new MExpr(Expr.SYMBOL, "DSolve"),
-      Array[MExpr](
-        new MExpr(Expr.SYM_LIST, (convertedDiffSys ++ initialValues).toArray),
-        new MExpr(Expr.SYM_LIST, functions.toArray),
-        toMathematica(diffArg)))
-    val (_, result) = run(input, mathematicaExecutor, nonQEConverter)
-    result match {
-      case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name):_*))
-      case _ => None
-    }
-  }
-
-  /**
-   * Replaces all occurrences of variables vars in the specified term t with functions of argument arg.
-    *
-    * @param t The term.
-   * @param arg The function argument.
-   * @param vars The variables to functionalize.
-   * @return The term with variables replaced by functions.
-   */
-  private def functionalizeVars(t: Term, arg: Term, vars: Variable*) = ExpressionTraversal.traverse(
-    new ExpressionTraversalFunction {
-      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case v@Variable(name, idx, sort) if vars.isEmpty || vars.contains(v) =>
-          Right(FuncOf(Function(name, idx, arg.sort, sort), arg))
-        case _ => Left(None)
-      }
-    }, t) match {
-    case Some(resultTerm) => resultTerm
-    case None => throw new IllegalArgumentException("Unable to functionalize " + t)
-  }
-
-  /**
-   * Replaces all functions with argument arg in formula f with a variable of the same name.
-    *
-    * @param f The formula.
-   * @param arg The function argument.
-   * @return The term with functions replaced by variables.
-   */
-  private def defunctionalize(f: Formula, arg: Term, fnNames: String*) = ExpressionTraversal.traverse(
-    new ExpressionTraversalFunction {
-      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case FuncOf(Function(name, idx, _, range), fnArg) if arg == fnArg
-          && (fnNames.isEmpty || fnNames.contains(name)) => Right(Variable(name, idx, range))
-        case _ => Left(None)
-      }
-    }, f) match {
-    case Some(resultF) => resultF
-    case None => throw new IllegalArgumentException("Unable to defunctionalize " + f)
-  }
-
-  def deriveBy(term: Term, v: Variable): Term = {
-    val mathTerm = toMathematica(term)
-    val mathVar = toMathematica(v)
-    val input = new MExpr(MathematicaSymbols.D, Array[MExpr](mathTerm, mathVar))
-    val (_, result) = run(input, mathematicaExecutor, nonQEConverter)
-    result match {
-      case t: Term => t
-    }
-  }
-
-
-
   /** Returns the version as (Major, Minor, Release) */
   private def getVersion: (String, String, String) = {
     ml.evaluate("$VersionNumber")
     ml.waitForAnswer()
-    val version = ml.getExpr
+    val (major, minor) = safeResult(
+      ml.getExpr,
+      version => { val versionParts = version.toString.split("\\."); (versionParts(0), versionParts(1)) })
     ml.evaluate("$ReleaseNumber")
     ml.waitForAnswer()
-    val release = ml.getExpr
+    val release = safeResult(ml.getExpr, _.toString)
     //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
-    val (major, minor) = { val versionParts = version.toString.split("\\."); (versionParts(0), versionParts(1)) }
-    (major, minor, release.toString)
+    (major, minor, release)
   }
 
   /** Checks if Mathematica is activated by querying the license expiration date */
   private def isActivated: Option[Boolean] = {
-    type MExpr = com.wolfram.jlink.Expr
     val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
+    val version = getVersion
+
+    def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[Boolean] = {
+      val date: Array[MExpr] = version match {
+        case ("9", _, _) => licenseExpirationDate.args
+        case ("10", _, _) => licenseExpirationDate.args.head.args
+        case (major, minor, _) => if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
+      }
+      if (date == null) None
+      else try {
+        if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+          //@note month in calendar is 0-based, in Mathematica it's 1-based
+          val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
+          val today = new Date()
+          Some(expiration.getTime.after(today))
+        } else if (date.length >= 1 && date(0).equals(infinity)) {
+          Some(true)
+        } else {
+          None
+        }
+      } catch {
+        case e: ExprFormatException => if (DEBUG) println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
+      }
+      //@note date disposed as part of licenseExpirationDate
+    }
 
     ml.evaluate("$LicenseExpirationDate")
     ml.waitForAnswer()
-    val licenseExpirationDate = ml.getExpr
-
-    val date: Array[MExpr] = getVersion match {
-      case ("9", _, _) => licenseExpirationDate.args
-      case ("10", _, _) => licenseExpirationDate.args.head.args
-      case (major, minor, _) => if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
-    }
-
-    if (date == null) None
-    else try {
-      if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
-        //@note month in calendar is 0-based, in Mathematica it's 1-based
-        val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
-        val today = new Date()
-        Some(expiration.getTime.after(today))
-      } else if (date.length >= 1 && date(0).equals(infinity)) {
-        Some(true)
-      } else {
-        None
-      }
-    } catch {
-      case e: ExprFormatException => if (DEBUG) println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
+    try {
+      safeResult(ml.getExpr, licenseExpiredConverter)
+    } finally {
+      infinity.dispose()
     }
   }
 
@@ -555,8 +332,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     try {
       ml.evaluate("6*9")
       ml.waitForAnswer()
-      val answer = ml.getExpr
-      Some(answer.integerQ() && answer.asInt() == 54)
+      Some(safeResult(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
     } catch {
       //@todo need better error reporting, this way it will never show up on UI
       case e: Throwable => if (DEBUG) println("WARNING: Mathematica may not be functional \n cause: " + e); None

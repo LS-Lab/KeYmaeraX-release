@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 
 /**
  * This is a symbol table used to check for matches using .equals()
@@ -15,8 +16,6 @@ import com.wolfram.jlink._
  * Jan-David.
  */
 private object MathematicaSymbols {
-  type MExpr = com.wolfram.jlink.Expr
-
   val keywords = Seq("False", "True", "Not", "Rational", "Plus", "Subtract", "Minus",
       "Times", "Divide", "Power", "Equal", "Unequal", "Less", "LessEqual",
       "Greater", "GreaterEqual", "Inequality", "ForAll", "Exists", "And",
@@ -56,6 +55,7 @@ private object MathematicaSymbols {
   val RULE = new MExpr(Expr.SYMBOL, "Rule")
 
   val REDUCE = new MExpr(Expr.SYMBOL,  "Reduce")
+  val RESOLVE = new MExpr(Expr.SYMBOL,  "Resolve")
   val REALS = new MExpr(Expr.SYMBOL, "Reals")
   val CHECK = new MExpr(Expr.SYMBOL, "Check")
   val EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")

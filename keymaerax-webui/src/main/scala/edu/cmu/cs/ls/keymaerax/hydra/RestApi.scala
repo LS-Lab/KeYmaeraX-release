@@ -223,7 +223,7 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val proofListForModel = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
     get {
-      val request = new ProofsForModelRequest(database, modelId)
+      val request = new ProofsForModelRequest(database, userId, modelId)
       complete(standardCompletion(request, t))
     }
   }}}
@@ -571,7 +571,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   val changeProofName = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "name" / Segment) { (userId, proofId, newName) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        complete(standardCompletion(new UpdateProofNameRequest(database, proofId, newName), t))
+        complete(standardCompletion(new UpdateProofNameRequest(database, userId, proofId, newName), t))
       }}
     }
   }}}
@@ -686,10 +686,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     dashInfo              ::
     Nil
 
-  val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalCookie("session") {
-    case Some(cookie) => {
-      routeForSession(SessionManager.token(cookie.content)) //@note tried doing this with implicits but there wasn't much of a benefit from a readability perspective.
-    }
+  val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
+    case Some(token) => routeForSession(SessionManager.token(token))
     case None => routeForSession(EmptyToken())
   })
 

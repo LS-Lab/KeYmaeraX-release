@@ -92,6 +92,11 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
+  it should "work with functions" in withMathematica { implicit tool =>
+    proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
+    proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
+  }
+
   "counterExample" should "not choke on differential symbols" in withMathematica { tool =>
     tool.findCounterExample("v'>=0".asFormula) match {
       //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time

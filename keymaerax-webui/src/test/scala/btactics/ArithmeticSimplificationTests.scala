@@ -70,16 +70,16 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       prop & transformEquality("t=ep".asFormula)(2) & closeId) shouldBe 'proved
   }
 
-  "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { tool =>
+  "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { implicit tool =>
     proveBy("abs(x-y)>=t -> abs(x-y+0)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
 
-  ignore should "prove abs(x-y)>=t -> abs(x-y)>=t+0" in withMathematica { tool =>
+  ignore should "prove abs(x-y)>=t -> abs(x-y)>=t+0" in withMathematica { implicit tool =>
     //@todo exhaustiveAbsSplit computes all abs positions before calling abs... but abs abbreviates both succ and ante if same
     proveBy("abs(x-y)>=t -> abs(x-y)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
 
-  it should "prove a Robix example" in withMathematica { tool =>
+  it should "prove a Robix example" in withMathematica { implicit tool =>
     val fml = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
     val tactic = alphaRule*@TheType() &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &

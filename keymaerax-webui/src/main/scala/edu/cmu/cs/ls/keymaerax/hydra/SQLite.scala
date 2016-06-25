@@ -60,7 +60,7 @@ object SQLite {
           cachedLemmas.get(id) match {
             case Some(lemma) => Some(lemma)
             case None =>
-              db.getLemma(id).map(Lemma.fromString _) match {
+              db.getLemma(id).map(Lemma.fromString) match {
                 case Some(lemma) =>
                   cachedLemmas = cachedLemmas.+((id, lemma))
                   Some(lemma)
@@ -217,14 +217,14 @@ object SQLite {
       */
     override def updateConfiguration(config: ConfigurationPOJO): Unit =
       synchronizedTransaction({
-        config.config.map(kvp => {
+        config.config.foreach(kvp => {
           val key = kvp._1
           val value = kvp._2
           nSelects = nSelects + 1
-          val configExists = Config.filter(c => c.configname === config.name && c.key === key).list.length != 0
+          val configExists = Config.filter(c => c.configname === config.name && c.key === key).list.nonEmpty
 
           if (configExists) {
-            val q = for {l <- Config if (l.configname === config.name && l.key === key)} yield l.value
+            val q = for {l <- Config if l.configname === config.name && l.key === key} yield l.value
             q.update(Some(value))
             nUpdates = nUpdates + 1
           }
@@ -246,7 +246,7 @@ object SQLite {
           .map(p => new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
             blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
         if (list.length > 1) throw new Exception("Duplicate proof " + proofId)
-        else if (list.length == 0) throw new Exception("Proof not found: " + proofId)
+        else if (list.isEmpty) throw new Exception("Proof not found: " + proofId)
         else list.head
       })
 
@@ -254,7 +254,7 @@ object SQLite {
     override def userExists(username: String): Boolean =
       synchronizedTransaction({
         nSelects = nSelects + 1
-        Users.filter(_.email === username).list.length != 0
+        Users.filter(_.email === username).list.nonEmpty
       })
 
 
@@ -262,11 +262,11 @@ object SQLite {
       synchronizedTransaction({
         val models = getModelList(userId)
 
-        models.map(model => {
+        models.flatMap(model => {
           val modelName = model.name
           val proofs = getProofsForModel(model.modelId)
           proofs.map((_, modelName))
-        }).flatten
+        })
       })
 
     override def checkPassword(username: String, password: String): Boolean =
@@ -318,7 +318,7 @@ object SQLite {
       })
 
     def deleteExecution(executionId: Int) = synchronizedTransaction({
-      val deletedExecutionSteps = Executionsteps.filter(_.executionid === executionId).delete == 1;
+      val deletedExecutionSteps = Executionsteps.filter(_.executionid === executionId).delete == 1
       val deletedExecution = Tacticexecutions.filter(_._Id === executionId).delete == 1
       deletedExecutionSteps && deletedExecution
     })
@@ -372,8 +372,8 @@ object SQLite {
 
     override def deleteModel(modelId: Int): Boolean =
       synchronizedTransaction({
-        Models.filter(_._Id === modelId).delete;
-        Proofs.filter(_.modelid === modelId).list.map(prf => deleteProof(prf._Id.get));
+        Models.filter(_._Id === modelId).delete
+        Proofs.filter(_.modelid === modelId).list.map(prf => deleteProof(prf._Id.get))
         true
       })
 
@@ -381,7 +381,7 @@ object SQLite {
       uid
 
     private def optToString[T](o: Option[T]) = o match {
-      case Some(x) => Some(x.toString())
+      case Some(x) => Some(x.toString)
       case None => None
     }
 
@@ -438,10 +438,10 @@ object SQLite {
       synchronizedTransaction({
         val status = ExecutionStepStatus.toString(step.status)
         val steps =
-          Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
-            step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid, step.resultprovableid, step.localprovableid, step.userexecuted.get, step.childrenrecorded.get,
-            step.rulename.get)
+          Executionsteps.map({case dbstep => (dbstep.executionid.get, dbstep.previousstep, dbstep.parentstep,
+            dbstep.branchorder.get, dbstep.branchlabel.get, dbstep.alternativeorder.get, dbstep.status.get, dbstep.executableid.get,
+            dbstep.inputprovableid, dbstep.resultprovableid, dbstep.localprovableid, dbstep.userexecuted.get, dbstep.childrenrecorded.get,
+            dbstep.rulename.get)
           }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
@@ -461,8 +461,7 @@ object SQLite {
       }
       val oldStep = get(alternativeTo)
       def addSteps(prev: Option[Int], globalProvable:Provable, steps:List[ExecutionStep]): Unit = {
-        if(steps.isEmpty) return
-        else {
+        if (steps.nonEmpty) {
           val thisStep = steps.head
           val thisPOJO = get(thisStep.stepId)
           val localProvable = loadProvable(thisPOJO.localprovableid.get)
@@ -604,7 +603,7 @@ object SQLite {
       val initialProvable = Provable.startProof(inputProvable.conclusion)
       def run(p: Provable, t:BelleExpr): Provable =
         SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
-          case BelleProvable(p, _) => p
+          case BelleProvable(pr, _) => pr
         }
       def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr.get).get
       trace.steps.foldLeft(initialProvable)({case (provable, currStep) =>
@@ -634,7 +633,7 @@ object SQLite {
     override def updateAgendaItem(item:AgendaItemPOJO) = {
       synchronizedTransaction({
         Agendaitems.filter(_._Id === item.itemId)
-          .map({case item => (item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+          .map({case dbitem => (dbitem.proofid.get, dbitem.initialproofnode.get, dbitem.displayname.get)})
           .update((item.proofId, item.initialProofNode, item.displayName))
       })
     }
@@ -707,7 +706,7 @@ object SQLite {
       loadProvable(provableId).conclusion
     }
 
-    def printStats = {
+    def printStats(): Unit = {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
     }
 

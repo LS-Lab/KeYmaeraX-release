@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('LoginCtrl',
-  function ($scope, $cookies, $cookieStore, $uibModal, $http) {
+  function ($scope, $cookies, $uibModal, $http, sessionService) {
     $scope.defaultLogin = function() { login("guest", "guest") }
 
     $scope.username = ""
@@ -20,8 +20,8 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
         .then(function(response) {
           if(response.data.type == "LoginResponse") {
             if(response.data.success) {
-              //@todo $cookieStore; also: AuthenticationService
-              document.cookie = response.data.key + " = " + response.data.value + "; path=/";
+              sessionService.setToken(response.data.sessionToken);
+              sessionService.setUser(response.data.value);
               document.location.href = "/dashboard.html"
             } else {
               showMessage($uibModal, "Login failed", "Please check user name and/or password");

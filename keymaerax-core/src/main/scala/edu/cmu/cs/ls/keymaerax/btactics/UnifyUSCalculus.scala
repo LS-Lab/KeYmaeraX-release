@@ -41,7 +41,9 @@ trait UnifyUSCalculus {
 
   /** @note must be initialized from outside; is var so that unit tests can setup/tear down.
     * @see [[DerivedAxioms]] */
-  implicit var tool: QETool with DiffSolutionTool with CounterExampleTool = null
+  implicit var qeTool: QETool = null
+  implicit var odeTool: DiffSolutionTool = null
+  implicit var cexTool: CounterExampleTool = null
 
   /**
     * Throw exception if there is more than one open subgoal on the provable.
