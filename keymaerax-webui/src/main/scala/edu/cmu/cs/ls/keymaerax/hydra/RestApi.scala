@@ -679,10 +679,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     dashInfo              ::
     Nil
 
-  val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalCookie("session") {
-    case Some(cookie) => {
-      routeForSession(SessionManager.token(cookie.content)) //@note tried doing this with implicits but there wasn't much of a benefit from a readability perspective.
-    }
+  val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
+    case Some(token) => routeForSession(SessionManager.token(token))
     case None => routeForSession(EmptyToken())
   })
 

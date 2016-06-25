@@ -16,6 +16,7 @@
   'ui.bootstrap.modal',
   'keymaerax.controllers',
   'keymaerax.errorHandlers',
+  'keymaerax.interceptors',
   'keymaerax.services',
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
@@ -114,7 +115,8 @@ keymaeraProofApp.config(['$uibTooltipProvider', function($tooltipProvider) {
   });
 }]);
 
-// intercept all generic ErrorResponses
+// intercept all generic ErrorResponses, intercept all requests to add authentication header
 keymaeraProofApp.config(['$httpProvider', function($httpProvider) {
   $httpProvider.interceptors.push('ResponseErrorHandler');
+  $httpProvider.interceptors.push('authInjector');
 }])

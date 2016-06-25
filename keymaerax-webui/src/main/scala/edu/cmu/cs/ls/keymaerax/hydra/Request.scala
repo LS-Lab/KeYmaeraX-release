@@ -96,7 +96,7 @@ class CreateUserRequest(db : DBAbstraction, username : String, password:String) 
         Some(SessionManager.add(username))
       }
       else None
-    new LoginResponse(userExists, username, sessionToken) ::  Nil //@todo make corresponding change to the user interface.
+    new LoginResponse(userExists, username, sessionToken) ::  Nil
   }
 }
 
