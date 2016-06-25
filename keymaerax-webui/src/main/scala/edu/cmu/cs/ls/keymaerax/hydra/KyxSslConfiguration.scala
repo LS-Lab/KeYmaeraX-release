@@ -19,7 +19,7 @@ trait KyxSslConfiguration {
   // since we want non-default settings in this example we make a custom SSLContext available here
   implicit def sslContext: SSLContext = {
     val keyStoreResource = "/KeyStore.jks"
-    val password = "" //@todo put password here during deployment.
+    val password = SQLite.ProdDB.getConfiguration("serverconfig").config("jks")
 
     val keyStore = KeyStore.getInstance("jks")
     keyStore.load(getClass.getResourceAsStream(keyStoreResource), password.toCharArray)
