@@ -414,7 +414,7 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
   }
 }
 
-class MathematicaStatusRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
+class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
     new MathematicaStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
