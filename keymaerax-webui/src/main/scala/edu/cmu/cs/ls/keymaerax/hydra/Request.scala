@@ -50,22 +50,18 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
  */
 sealed trait Request {
   /** Returns true iff a user authenticated with name userName is allowed to access this resource. */
-  def permission(t:SessionToken) : Boolean = true
+  def permission(t: SessionToken): Boolean = true
 
-  final def getResultingResponses(t:SessionToken) : List[Response] = {
-    if(!permission(t))
-      new PermissionDeniedResponse(
-        s"Permission to this resource (${this.getClass.getCanonicalName}) is denied for session ${t}",
-        new Exception() //pass along an exception jsut for display.
-      ) :: Nil
-    else resultingResponses()
+  final def getResultingResponses(t: SessionToken): List[Response] = {
+    assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
+    resultingResponses()
   }
 
-  def resultingResponses() : List[Response] //see Response.scala.
+  def resultingResponses(): List[Response] //see Response.scala.
 
-  def currentDate() : String = {
+  def currentDate(): String = {
     val format = new SimpleDateFormat("d-M-y")
-    format.format(Calendar.getInstance().getTime())
+    format.format(Calendar.getInstance().getTime)
   }
 }
 

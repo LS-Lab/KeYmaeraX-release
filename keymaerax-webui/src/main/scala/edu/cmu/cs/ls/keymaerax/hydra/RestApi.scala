@@ -19,6 +19,7 @@ import spray.http._
 import spray.json._
 import spray.routing
 import spray.util.LoggingContext
+import spray.http.StatusCodes.{Unauthorized, Forbidden}
 
 class RestApiActor extends Actor with RestApi {
   implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
@@ -73,14 +74,18 @@ trait RestApi extends HttpService with SLF4JLogging {
       super.complete(response)
     }
 
-  private def standardCompletion(r: Request, t: SessionToken) : String = t match {
-    case NewlyExpiredToken(t) => {
-      completeResponse(new SessionExpiredResponse() :: Nil)
-    }
-    case _ => {
+  private def completeRequest(r: Request, t: SessionToken) = t match {
+    case NewlyExpiredToken(_) => complete(Unauthorized, Nil, s"Session $t expired")
+    case _ =>
+      if (r.permission(t)) complete(standardCompletion(r, t))
+      else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
+  }
+
+  private def standardCompletion(r: Request, t: SessionToken): String = t match {
+    case NewlyExpiredToken(_) => throw new AssertionError("Expired tokens are not standard request completions, use completeRequest instead")
+    case _ =>
       val responses = r.getResultingResponses(t)
       completeResponse(responses)
-    }
   }
 
   /** @note you probably don't actually want to use this. Use standardCompletion instead. */
@@ -127,11 +132,11 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
         val request = new LoginRequest(database,username,password)
-        complete(standardCompletion(request, EmptyToken()))
+        completeRequest(request, EmptyToken())
       } ~
       post {
         val request = new CreateUserRequest(database, username, password)
-        complete(standardCompletion(request, EmptyToken()))
+        completeRequest(request, EmptyToken())
       }
     }
   }}
@@ -148,7 +153,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   // GET /models/user returns a list of all models belonging to this user. The cookie must be set.
   val modelList = (t : SessionToken) => pathPrefix("models" / "users" / Segment) {userId => { pathEnd { get {
     val request = new GetModelListRequest(database, userId)
-    complete(standardCompletion(request, t))
+    completeRequest(request, t)
   }}}}
 
   //POST /users/<user id>/model/< name >/< keyFile >
@@ -159,26 +164,26 @@ trait RestApi extends HttpService with SLF4JLogging {
         val data = formData.fields.last
         val contents = getFileContentsFromFormData(data)
         val request = new CreateModelRequest(database, userId, modelNameOrId, contents)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }}
     } ~
     get {
       val request = new GetModelRequest(database, userId, modelNameOrId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}}}
 
   val deleteModel = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "delete") { modelId => pathEnd {
     post {
       val r = new DeleteModelRequest(database, userId, modelId)
-      complete(standardCompletion(r, t))
+      completeRequest(r, t)
     }
   }}}
 
   val deleteProof = (t : SessionToken) => userPrefix {userId => pathPrefix("proof" / Segment / "delete") { proofId => pathEnd {
     post {
       val r = new DeleteProofRequest(database, userId, proofId)
-      complete(standardCompletion(r, t))
+      completeRequest(r, t)
     }
   }}}
 
@@ -188,20 +193,20 @@ trait RestApi extends HttpService with SLF4JLogging {
     post {
       entity(as[String]) { contents => {
         val request = new CreateModelRequest(database, userId, modelNameOrId, contents)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }}}}}}}}
 
   val modelTactic = (t : SessionToken) => path("user" / Segment / "model" / Segment / "tactic") { (userId, modelId) => pathEnd {
     get {
       val request = new GetModelTacticRequest(database, userId, modelId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}
 
   val extractTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (userId, proofId) => { pathEnd {
     get {
       val request = new ExtractTacticRequest(database, proofId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
@@ -216,7 +221,7 @@ trait RestApi extends HttpService with SLF4JLogging {
         val proofName        = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
         val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
         val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }}
     }
   }}}
@@ -224,56 +229,56 @@ trait RestApi extends HttpService with SLF4JLogging {
   val proofListForModel = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
     get {
       val request = new ProofsForModelRequest(database, userId, modelId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val proofList = (t: SessionToken) => path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
     get {
       val request = new ProofsForUserRequest(database, userId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val openProof = (t : SessionToken) => path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
       val request = new OpenProofRequest(database, userId, proofId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val dashInfo = (t : SessionToken) => path("users" / Segment / "dashinfo") { userId => pathEnd {
     get {
       val request = new DashInfoRequest(database, userId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}
 
   val proofTasksNew = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetAgendaAwesomeRequest(database, userId, proofId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val proofTasksParent = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new ProofTaskParentRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val proofTasksPathAll = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetPathAllRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val proofTasksBranchRoot = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetBranchRootRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
@@ -290,28 +295,28 @@ trait RestApi extends HttpService with SLF4JLogging {
   val axiomList = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
       val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val twoPosList = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "twoposlist") { (userId, proofId, nodeId, fml1Id, fml2Id) => { pathEnd {
     get {
       val request = new GetApplicableTwoPosTacticsRequest(database, userId, proofId, nodeId, parseFormulaId(fml1Id), parseFormulaId(fml2Id))
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val derivationInfo = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment) { (userId, proofId, nodeId, axiomId) => { pathEnd {
     get {
       val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val doAt = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}
   }}
 
@@ -331,7 +336,7 @@ trait RestApi extends HttpService with SLF4JLogging {
             BelleTermInput(paramValue, paramInfo)
           })
         val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }
     }}
   }}}
@@ -340,14 +345,14 @@ trait RestApi extends HttpService with SLF4JLogging {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
         Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))))
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}
   }}
 
   val doTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}
   }}
 
@@ -367,7 +372,7 @@ trait RestApi extends HttpService with SLF4JLogging {
             BelleTermInput(paramValue, paramInfo)
           })
         val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }
       }}
   }}}
@@ -376,7 +381,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     post {
       entity(as[String]) { tactic => {
         val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }}
     }}
   }}
@@ -389,7 +394,7 @@ trait RestApi extends HttpService with SLF4JLogging {
         case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
       }
       val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos))
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     } ~
     post {
       entity(as[String]) { params => {
@@ -411,7 +416,7 @@ trait RestApi extends HttpService with SLF4JLogging {
           case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
         }
         val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }
       }}
     }
@@ -420,55 +425,55 @@ trait RestApi extends HttpService with SLF4JLogging {
   val taskStatus = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "status") { (userId, proofId, nodeId, taskId) => { pathEnd {
     get {
       val request = new TaskStatusRequest(database, userId, proofId, nodeId, taskId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}
   }}
 
   val taskResult = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "result") { (userId, proofId, nodeId, taskId) => { pathEnd {
     get {
       val request = new TaskResultRequest(database, userId, proofId, nodeId, taskId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}
   }}
 
   val stopTask = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "stop") { (userId, proofId, nodeId, taskId) => { pathEnd {
     get {
       val request = new StopTaskRequest(database, userId, proofId, nodeId, taskId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}
   }}
 
   val pruneBelow = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new PruneBelowRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val getAgendaItem = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetAgendaItemRequest(database, userId, proofId, nodeId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }}}}
 
   val setAgendaItemName = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "name" / Segment) { (userId, proofId, nodeId, newName) => { pathEnd {
     post {
       entity(as[String]) { params => {
         val request = new SetAgendaItemNameRequest(database, userId, proofId, nodeId, newName)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
     }}}}}}
 
   val proofProgressStatus = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetProofProgressStatusRequest(database, userId, proofId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
   val proofCheckIsProved = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "validatedStatus") { (userId, proofId) => { pathEnd {
     get {
       val request = new CheckIsProvedRequest(database, userId, proofId)
-      complete(standardCompletion(request, t))
+      completeRequest(request, t)
     }
   }}}
 
@@ -476,7 +481,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
         val request = new CounterExampleRequest(database, userId, proofId, nodeId)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }
     }}
   }
@@ -485,7 +490,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
         val request = new SetupSimulationRequest(database, userId, proofId, nodeId)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
       }
     }}
   }
@@ -500,7 +505,7 @@ trait RestApi extends HttpService with SLF4JLogging {
           val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
           val stepDuration = obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm
           val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, stepDuration)
-          complete(standardCompletion(request, t))
+          completeRequest(request, t)
         }}}
     }}
   }
@@ -509,7 +514,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
         val request = new KyxConfigRequest(database)
-        complete(standardCompletion(request, EmptyToken()))
+        completeRequest(request, EmptyToken())
       }
     }
   }
@@ -518,7 +523,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
         val request = new KeymaeraXVersionRequest()
-        complete(standardCompletion(request, EmptyToken()))
+        completeRequest(request, EmptyToken())
       }
     }
   }
@@ -527,7 +532,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
         val request = new GetMathematicaConfigSuggestionRequest(database)
-        complete(standardCompletion(request, EmptyToken()))
+        completeRequest(request, EmptyToken())
       }
     }
   }
@@ -536,7 +541,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pathEnd {
       get {
           val request = new GetMathematicaConfigurationRequest(database)
-          complete(standardCompletion(request, EmptyToken()))
+          completeRequest(request, EmptyToken())
       } ~
       post {
         entity(as[String]) { params => {
@@ -546,7 +551,7 @@ trait RestApi extends HttpService with SLF4JLogging {
           val linkName : String = p("linkName")
           val jlinkLibDir : String = p("jlinkLibDir")
           val request = new ConfigureMathematicaRequest(database, linkName, jlinkLibDir)
-          complete(standardCompletion(request, EmptyToken()))
+          completeRequest(request, EmptyToken())
         }}
       }
     }
@@ -555,7 +560,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   val mathematicaStatus = path("config" / "mathematicaStatus") {
     pathEnd {
       get {
-        complete(standardCompletion(new MathematicaStatusRequest(database), EmptyToken()))
+        completeRequest(new MathematicaStatusRequest(database), EmptyToken())
       }
     }
   }
@@ -565,13 +570,13 @@ trait RestApi extends HttpService with SLF4JLogging {
       entity(as[String]) { params => {
         val term = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
         val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None)
-        complete(standardCompletion(request, t))
+        completeRequest(request, t)
   }}}}}}
 
   val changeProofName = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "name" / Segment) { (userId, proofId, newName) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        complete(standardCompletion(new UpdateProofNameRequest(database, userId, proofId, newName), t))
+        completeRequest(new UpdateProofNameRequest(database, userId, proofId, newName), t)
       }}
     }
   }}}
@@ -595,17 +600,17 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val isLocal = path("isLocal") { pathEnd { get {
     implicit val sessionUser = None
-    complete(standardCompletion(new IsLocalInstanceRequest(), EmptyToken()))
+    completeRequest(new IsLocalInstanceRequest(), EmptyToken())
   }}}
 
   val shutdown = path("shutdown") { pathEnd { get {
     implicit val sessionUser = None
-    complete(standardCompletion(new ShutdownReqeuest(), EmptyToken()))
+    completeRequest(new ShutdownReqeuest(), EmptyToken())
   }}}
 
   val extractdb = path("extractdb") { pathEnd { post {
     implicit val sessionUser = None
-    complete(standardCompletion(new ExtractDatabaseRequest(), EmptyToken()))
+    completeRequest(new ExtractDatabaseRequest(), EmptyToken())
   }}}
 
 
@@ -614,10 +619,10 @@ trait RestApi extends HttpService with SLF4JLogging {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   val license = path("licenseacceptance") {  {
     get {
-      complete(standardCompletion(new IsLicenseAcceptedRequest(database), EmptyToken()))
+      completeRequest(new IsLicenseAcceptedRequest(database), EmptyToken())
     } ~
     post {
-      complete(standardCompletion(new AcceptLicenseRequest(database), EmptyToken()))
+      completeRequest(new AcceptLicenseRequest(database), EmptyToken())
     }
   }}
 

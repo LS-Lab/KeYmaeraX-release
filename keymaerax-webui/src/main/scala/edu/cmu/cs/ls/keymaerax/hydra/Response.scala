@@ -171,24 +171,6 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
   )
 }
 
-class SessionExpiredResponse() extends Response {
-  def getJson = JsObject(
-    "type" -> JsString("error"),
-    "session_expired" -> JsTrue
-  )
-}
-
-class PermissionDeniedResponse(val msg: String, val exn: Throwable = null) extends Response {
-  lazy val writer = new StringWriter
-  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
-  def getJson = JsObject(
-    "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
-    "errorThrown" -> JsString(stacktrace),
-    "permission" -> JsString("denied"),
-    "type" -> JsString("error")
-  )
-}
-
 class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends ErrorResponse(msg, exn) {
   override def getJson = JsObject(super.getJson.fields ++ Map(
     "details" -> JsObject(
