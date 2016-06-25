@@ -16,8 +16,8 @@ import spray.can.Http
 import scala.concurrent.duration.FiniteDuration
 
 
-
-object Boot extends App {
+/** @todo this needs a rewrite. */
+object Boot extends App with KyxSslConfiguration {
   private type OptionMap = Map[Symbol, Any]
 
   def restart(): Unit = {
@@ -83,8 +83,8 @@ object Boot extends App {
   var service = system.actorOf(Props[RestApiActor], "hydra")
 
   val database = DBAbstractionObj.defaultDatabase
-  val config = database.getAllConfigurations.find(_.name == "serverconfig")
-  val (isHosted:Boolean, host:String, port:Int) = config match {
+  val databaserServerConfig = database.getAllConfigurations.find(_.name == "serverconfig")
+  val (isHosted:Boolean, host:String, port:Int) = databaserServerConfig match {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
