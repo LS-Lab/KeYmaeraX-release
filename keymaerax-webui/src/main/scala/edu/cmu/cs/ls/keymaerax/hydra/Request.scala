@@ -91,12 +91,11 @@ class CreateUserRequest(db : DBAbstraction, username : String, password:String) 
   override def resultingResponses() = {
     val userExists = db.userExists(username)
     val sessionToken =
-      if(!userExists) {
-        db.createUser(username,password);
+      if (!userExists) {
+        db.createUser(username,password)
         Some(SessionManager.add(username))
-      }
-      else None
-    new LoginResponse(userExists, username, sessionToken) ::  Nil
+      } else None
+    new LoginResponse(!userExists, username, sessionToken) ::  Nil
   }
 }
 
