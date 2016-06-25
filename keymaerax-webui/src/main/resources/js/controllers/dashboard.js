@@ -16,32 +16,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
     }
 }]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl.LicenseDialog', ['$scope', '$http', '$uibModal', '$uibModalInstance', function($scope, $http, $uibModal, $uibModalInstance) {
-  $scope.rejectLicense = function() {
-    alert("KeYmaera X cannot be used without accepting the license -- we are now shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
-    $uibModalInstance.dismiss('cancel')
-
-    $uibModal.open({
-      templateUrl: 'partials/shutdown_dialog.html',
-      controller: 'DashboardCtrl.ShutdownDialog',
-      backdrop: "static",
-      size: 'sm'
-    });
-
-    $http.get("/shutdown")
-  };
-
-  $scope.cancel = function() {
-    $http.post("/licenseacceptance")
-        .success(function(data) {
-            if (data.errorThrown) {
-                showCaughtErrorMessage($uibModal, data, "License Acceptance Failed")
-            }
-        }) //ok
-    $uibModalInstance.dismiss('cancel');
-  }
-}]);
-
 angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
   // Set the view for menu active class
   $scope.$on('routeLoaded', function (event, args) {
@@ -49,18 +23,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
   });
 
   $scope.noModalForHelpDialogHack = false;
-  $http.get("/licenseacceptance")
-       .success(function(data) {
-          if(!data.success && !$scope.licenseDialogDisplayed) {
-              $scope.licenseDialogDisplayed = true;
-              var modalInstance = $uibModal.open({
-                templateUrl: 'partials/license_dialog.html',
-                controller: 'DashboardCtrl.LicenseDialog',
-                backdrop: "static",
-                size: 'lg'
-              });
-          }
-       });
 
   $scope.mathematicaIsConfigured = true;
   $http.get("/config/mathematicaStatus")

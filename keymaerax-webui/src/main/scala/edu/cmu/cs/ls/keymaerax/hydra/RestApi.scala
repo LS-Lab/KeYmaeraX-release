@@ -617,14 +617,15 @@ trait RestApi extends HttpService with SLF4JLogging {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Licensing
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  val license = path("licenseacceptance") {  {
-    get {
-      completeRequest(new IsLicenseAcceptedRequest(database), EmptyToken())
-    } ~
-    post {
-      completeRequest(new AcceptLicenseRequest(database), EmptyToken())
-    }
-  }}
+  //@todo license acceptance per user
+//  val license = path("licenseacceptance") {  {
+//    get {
+//      completeRequest(new IsLicenseAcceptedRequest(database), EmptyToken())
+//    } ~
+//    post {
+//      completeRequest(new AcceptLicenseRequest(database), EmptyToken())
+//    }
+//  }}
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
@@ -633,7 +634,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   val publicRoutes =
     staticRoute        ::
     homePage           ::
-    license            ::
+//    license            ::
     isLocal            ::
     extractdb          ::
     shutdown           ::

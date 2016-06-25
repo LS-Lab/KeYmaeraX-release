@@ -22,3 +22,14 @@ angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', 
 
   $scope.$emit('routeLoaded', {theview: 'dashboard'});
 }]);
+
+angular.module('keymaerax.controllers').controller('LicenseDialogCtrl', ['$scope', '$uibModalInstance', function($scope, $uibModalInstance) {
+  $scope.rejectLicense = function() {
+    alert("KeYmaera X cannot be used without accepting the license -- guest use/registration rejected");
+    $uibModalInstance.dismiss('cancel')
+  };
+
+  $scope.ok = function() {
+    $uibModalInstance.close('accept');
+  }
+}]);
