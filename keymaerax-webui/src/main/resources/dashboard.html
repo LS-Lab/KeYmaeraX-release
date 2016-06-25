@@ -116,7 +116,7 @@
 
 <div class="container" ng-view></div>
 
-<div class="footer">
+<div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
         <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
             <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
@@ -176,6 +176,7 @@
 <script src="/js/controllers/simulator.js"></script>
 <script src="/js/controllers/derivationInfoDialog.js"></script>
 <script src="/js/controllers/tacticExtraction.js"></script>
+<script src="/js/controllers/serverinfo.js"></script>
 
 <!-- KeYmaera UI
 ================================================== -->
