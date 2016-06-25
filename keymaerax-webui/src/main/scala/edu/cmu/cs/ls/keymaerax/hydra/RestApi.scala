@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
+import java.util.{Calendar, Date}
 
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import akka.event.slf4j.SLF4JLogging
@@ -72,9 +73,14 @@ trait RestApi extends HttpService with SLF4JLogging {
       super.complete(response)
     }
 
-  private def standardCompletion(r: Request, t: SessionToken) : String = {
-    val responses = r.getResultingResponses(t)
-    completeResponse(responses)
+  private def standardCompletion(r: Request, t: SessionToken) : String = t match {
+    case NewlyExpiredToken(t) => {
+      completeResponse(new SessionExpiredResponse() :: Nil)
+    }
+    case _ => {
+      val responses = r.getResultingResponses(t)
+      completeResponse(responses)
+    }
   }
 
   /** @note you probably don't actually want to use this. Use standardCompletion instead. */
@@ -637,6 +643,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     Nil
 
   /** Requests that need a session token parameter.
+    *
     * @see [[sessionRoutes]] is built by wrapping all of these sessions in a cookieOptional("session") {...} that extrtacts the cookie name. */
   private val partialSessionRoutes : List[SessionToken => routing.Route] =
     modelList             ::
@@ -698,21 +705,35 @@ trait RestApi extends HttpService with SLF4JLogging {
   * @todo do we want to enforce timeouts as well?
   */
 object SessionManager {
-  private var sessionMap : Map[String, String] = Map() //Session tokens -> usernames
+  private var sessionMap : Map[String, (String, Date)] = Map() //Session tokens -> usernames
 
   def token(key: String): SessionToken = sessionMap.get(key) match {
-    case Some(username) => UsedToken(key, username)
+    case Some((username, timeout)) => {
+      if(new Date().before(timeout)) {
+        UsedToken(key, username)
+      }
+      else {
+        remove(key);
+        NewlyExpiredToken(key)
+      }
+    }
     case None => EmptyToken()
   }
 
   def add(username: String): String = {
     val sessionToken = generateToken() //@todo generate a proper key.
-    sessionMap = sessionMap + (sessionToken -> username)
+    sessionMap = sessionMap + (sessionToken -> (username, timeoutDate))
     sessionToken
   }
 
   def remove(key: String): Unit = {
     sessionMap = sessionMap.filter(p => p._1 != key)
+  }
+
+  private def timeoutDate : Date = {
+    val c = Calendar.getInstance()
+    c.add(Calendar.DATE, 7)
+    c.getTime
   }
 
   private def generateToken(): String = {
@@ -735,4 +756,5 @@ trait SessionToken {
   }
 }
 case class UsedToken(token: String, username: String) extends SessionToken
+case class NewlyExpiredToken(token: String) extends SessionToken
 case class EmptyToken() extends SessionToken
