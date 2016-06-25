@@ -217,7 +217,7 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val proofListForModel = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
     get {
-      val request = new ProofsForModelRequest(database, modelId)
+      val request = new ProofsForModelRequest(database, userId, modelId)
       complete(standardCompletion(request, t))
     }
   }}}
@@ -565,7 +565,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   val changeProofName = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "name" / Segment) { (userId, proofId, newName) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        complete(standardCompletion(new UpdateProofNameRequest(database, proofId, newName), t))
+        complete(standardCompletion(new UpdateProofNameRequest(database, userId, proofId, newName), t))
       }}
     }
   }}}

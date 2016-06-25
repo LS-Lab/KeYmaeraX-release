@@ -117,7 +117,7 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserReque
   }
 }
 
-class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : String) extends Request {
+class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : String, newName : String) extends UserRequest(userId) {
   def resultingResponses() = {
     val proof = db.getProofInfo(proofId)
     db.updateProofName(proofId, newName)
@@ -131,7 +131,7 @@ class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : Str
   * @param db
  * @param userId
  */
-class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
+class DashInfoRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) {
   override def resultingResponses() : List[Response] = {
     val openProofCount : Int = db.openProofs(userId).length
     val allModelsCount: Int = db.getModelList(userId).length
@@ -485,7 +485,7 @@ class GetModelListRequest(db : DBAbstraction, userId : String) extends UserReque
   }
 }
 
-class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
+class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) extends UserRequest(userId) {
   def resultingResponses() = {
     val model = db.getModel(modelId)
     new GetModelResponse(model) :: Nil
@@ -504,7 +504,7 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
- extends Request {
+    extends UserRequest(userId) {
   private var proofId : Option[String] = None
 
   def getProofId = proofId match {
@@ -522,7 +522,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
   }
 }
 
-class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends UserRequest(db.getModel(modelId).userId) {
+class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
   def resultingResponses() = {
     val proofs = db.getProofsForModel(modelId).map(proof =>
       (proof, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof.proofId.toString).toString.toLowerCase*/))
@@ -531,7 +531,7 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends UserReq
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends UserRequest(userId) {
-  insist(db.getModel(db.getProofInfo(proofId).modelId).userId == userId, s"User ${userId} does not own the model associated with proof ${proofId}")
+  insist(db.getModel(db.getProofInfo(proofId).modelId).userId == userId, s"User $userId does not own the model associated with proof $proofId")
   def resultingResponses() = {
     val proofInfo = db.getProofInfo(proofId)
     new OpenProofResponse(db.getProofInfo(proofId), "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
@@ -545,7 +545,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
   * @param userId Identifies the user.
   * @param proofId Identifies the proof.
   */
-class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends UserRequest(userId) {
   def resultingResponses() = {
     val items = db.agendaItemsForProof(proofId.toInt)
     val closed = db.getProofInfo(proofId).closed
@@ -855,7 +855,7 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
 }
 
 
-class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends Request {
+class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends UserRequest(userId) {
   /**
     * Replay [trace] minus the steps specified in [prune]. The crux of the problem is branch renumbering: determining
     * which branch a kept step (as in not-pruned) will act on once other nodes have been pruned. We compute this by
