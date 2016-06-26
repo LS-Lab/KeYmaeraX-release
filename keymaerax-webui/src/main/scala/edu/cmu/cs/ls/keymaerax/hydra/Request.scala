@@ -76,7 +76,7 @@ abstract class UserRequest(username: String) extends Request {
 }
 
 abstract class LocalhostOnlyRequest() extends Request {
-  override def permission(t: SessionToken) = !Boot.isHosted //@todo change this to a literal false prior to deployment.
+  override def permission(t: SessionToken) = !HyDRAServerConfig.isHosted //@todo change this to a literal false prior to deployment.
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -968,12 +968,12 @@ class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) exten
 /////
 
 class IsLocalInstanceRequest() extends Request {
-  override def resultingResponses(): List[Response] = new BooleanResponse(!Boot.isHosted) :: Nil
+  override def resultingResponses(): List[Response] = new BooleanResponse(!HyDRAServerConfig.isHosted) :: Nil
 }
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
-    if(Boot.isHosted)
+    if(HyDRAServerConfig.isHosted)
       throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
 
     val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
@@ -1024,7 +1024,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
           }
           System.out.flush()
           System.err.flush()
-          Boot.system.shutdown()
+          HyDRAServerConfig.system.shutdown()
           System.out.flush()
           System.err.flush()
           this.synchronized {

@@ -15,29 +15,102 @@ import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
 
+/**
+  * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations serverconfig.host and serverconfig.port.
+  * Uses localhost and 8090 by default.
+  *
+  * @note The HyDRA_SSL environmental variable needs to be set properly because it is used in application.conf.
+  *       Main.startServer should so the correct thing based upon the current value of that flag. However, from within
+  *       IntelliJ, you may want to modify application.conf directly and comment out the assertion at the top of this object.
+  *
+  * @see [[SSLBoot]] for SSL-enabled deployments.
+  * @author Nathan Fulton
+  */
+object NonSSLBoot extends App {
+  assert(!System.getenv().containsKey("HyDRA_SSL") || System.getenv("HyDRA_SSL").equals("off"),
+    "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
 
+  import HyDRAServerConfig._
+  implicit var system = ActorSystem("on-spray-can")
 
-object Boot extends App {
+  HyDRAInitializer(args, database)
+  IO(Http) ! Http.Bind(service, interface = host, port = port)
+
+  {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    def someTime(x:Int) = new FiniteDuration(x, scala.concurrent.duration.SECONDS)
+
+    system.scheduler.scheduleOnce(someTime(1))(LoadingDialogFactory().addToStatus(25))
+    system.scheduler.scheduleOnce(someTime(2))(LoadingDialogFactory().addToStatus(25))
+    system.scheduler.scheduleOnce(someTime(3))(LoadingDialogFactory().addToStatus(25))
+    system.scheduler.scheduleOnce(someTime(4))(LoadingDialogFactory().addToStatus(20))
+    system.scheduler.scheduleOnce(someTime(4))(onLoad())
+  }
+
+  def onLoad() : Unit = {
+    // Finally, print a message indicating that the server was started.
+    println(
+      "**********************************************************\n" +
+        "****                   KeYmaera X                     ****\n" +
+        "****                                                  ****\n" +
+        "**** OPEN YOUR WEB BROWSER AT  http://"+host+":"+port+"/ ****\n" +
+        "****                                                  ****\n" +
+        "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
+        "**********************************************************\n"
+    )
+    SystemWebBrowser(s"http://$host:$port/")
+    LoadingDialogFactory().close()
+  }
+}
+
+/**
+  * Boots a server with SSL enabled.
+  *
+  * Booting from SSL requires a KeyStore.jks file in the keymaerax-webui/src/main/resources directory.
+  * The password for this key strong should be stored in the config table of the production database under the configuration key serverconfig.jks.
+  *
+  * @note The HyDRA_SSL environmental variable needs to be set properly because it is used in application.conf.
+  *       Main.startServer should so the correct thing based upon the current value of that flag. However, from within
+  *       IntelliJ, you may want to modify application.conf directly and comment out the assertion at the top of this object.
+  *
+  * @see [[NonSSLBoot]] is better if you are binding to localhost or only exposing your server to trusted clients (i.e., not on the internet or a semi-public intranet.)
+  * @author Nathan Fulton
+  */
+object SSLBoot extends App with KyxSslConfiguration {
+  //@note when booting from IntelliJ, you will want to set HyDRA_SSL and then boot IntelliJ. Setting HyDRA_SSL in a separate terminal once IntelliJ is running won't work.
+  //Alternatively, you can comment out these assertions and then change application.conf to just say ssl-encryption = on.
+  assert(System.getenv().containsKey("HyDRA_SSL"),
+    s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently not set. (Current Environemnt: ${System.getenv.keySet().toArray().toList.mkString(", ")}).")
+  assert(System.getenv("HyDRA_SSL").equals("on"),
+    s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently set to ${System.getenv("HyDRA_SSL")}")
+
+  import HyDRAServerConfig._
+  implicit var system = ActorSystem("on-spray-can")
+
+  assert(database.getConfiguration("serverconfig").config.get("jks").isDefined,
+    "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
+
+  if(host != "0.0.0.0")
+    println("WARNING: Expecting host 0.0.0.0 in SSL mode.")
+
+  //@todo Should also check that the .aks file actually exists.
+
+  println(s"SSL BOOT: Attempting to listen on ${host}:${port}. SSL requests only!")
+  println("NOTE: No browser instance will open because we assume SSL-hosted servers are headless (i.e., SSL mode is for production deployments only -- if hosting locally, use NonSSLBoot!)")
+
+  HyDRAInitializer(args, database)
+  IO(Http) ! Http.Bind(service, interface = host, port = port)
+}
+
+/**
+  * Initializes the HyDRA server.
+  * @author Nathan Fulton
+  */
+object HyDRAInitializer {
   private type OptionMap = Map[Symbol, Any]
 
-  def restart(): Unit = {
-    this.system.shutdown()
-    this.system.awaitTermination()
-
-    //Re-initialize the server
-    this.system = ActorSystem("on-spray-can")
-    val service = system.actorOf(Props[RestApiActor], "hydra")
-    init()
-    IO(Http) ! Http.Bind(service, interface = host, port = port)
-  }
-
-  def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
-    case Nil => map
-    case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
-    case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
-  }
-
-  def init(): Unit = {
+  def apply(args : Array[String], database: DBAbstraction): Unit = {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
@@ -76,52 +149,10 @@ object Boot extends App {
     }
   }
 
-  // we need an ActorSystem to host our application in
-  implicit var system = ActorSystem("on-spray-can")
-
-  // create and start our service actor
-  var service = system.actorOf(Props[RestApiActor], "hydra")
-
-  val database = DBAbstractionObj.defaultDatabase
-  val config = database.getAllConfigurations.find(_.name == "serverconfig")
-  val (isHosted:Boolean, host:String, port:Int) = config match {
-    case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
-    case None => (false, "127.0.0.1", 8090)
-  }
-
-  init()
-
-  // start a new HTTP server on port 8080 with our service actor as the handler
-  val io = IO(Http)
-  val bind = Http.Bind(service, interface = host, port = port)
-
-  io ! bind
-
-  {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    def someTime(x:Int) = new FiniteDuration(x, scala.concurrent.duration.SECONDS)
-
-    this.system.scheduler.scheduleOnce(someTime(1))(LoadingDialogFactory().addToStatus(25))
-    this.system.scheduler.scheduleOnce(someTime(2))(LoadingDialogFactory().addToStatus(25))
-    this.system.scheduler.scheduleOnce(someTime(3))(LoadingDialogFactory().addToStatus(25))
-    this.system.scheduler.scheduleOnce(someTime(4))(LoadingDialogFactory().addToStatus(20))
-    this.system.scheduler.scheduleOnce(someTime(4))(onLoad())
-  }
-
-  def onLoad() : Unit = {
-    // Finally, print a message indicating that the server was started.
-    println(
-      "**********************************************************\n" +
-        "****                   KeYmaera X                     ****\n" +
-        "****                                                  ****\n" +
-        "**** OPEN YOUR WEB BROWSER AT  http://"+host+":"+port+"/ ****\n" +
-        "****                                                  ****\n" +
-        "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
-        "**********************************************************\n"
-    )
-    SystemWebBrowser(s"http://$host:$port/")
-    LoadingDialogFactory().close()
+  def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
+    case Nil => map
+    case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
+    case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
   }
 
   private def createTool(options: OptionMap): Tool with QETool with DiffSolutionTool with CounterExampleTool = {
@@ -132,6 +163,8 @@ object Boot extends App {
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
+
+
 
   private def initFromDB(tool: Tool, db: DBAbstraction) = tool match {
     case t: Mathematica => initMathematicaFromDB(t, db)
@@ -157,4 +190,32 @@ object Boot extends App {
     if (config.contains("jlinkLibDir")) Some(config.get("jlinkLibDir").get)
     else None
   }
+}
+
+/** Config vars needed for server setup. */
+object HyDRAServerConfig {
+  // we need an ActorSystem to host our application in
+  var system = ActorSystem("on-spray-can")
+  val database = DBAbstractionObj.defaultDatabase
+  var service = system.actorOf(Props[RestApiActor], "hydra")
+
+  val databaserServerConfig = database.getAllConfigurations.find(_.name == "serverconfig")
+
+  val (isHosted:Boolean, host:String, port:Int) = databaserServerConfig match {
+    case Some(c) => {
+      assert(c.config.keySet.contains("host"), "If serverconfig configuration exists then it should have a 'host' key.")
+      assert(c.config.keySet.contains("port"), "If serverconfig configuration exists then it should have a 'port' key.")
+
+      val isHosted = c.config.get("isHosted") match {
+        case Some(s) => s.equals("true")
+        case None => false
+      }
+
+      (isHosted, c.config("host"), Integer.parseInt(c.config("port")))
+    }
+    case None => (false, "127.0.0.1", 8090) //default values.
+  }
+
+  assert(isHosted || host == "127.0.0.1" || host == "localhost",
+    "Either isHosted should be set or else the host should be localhost. This is crucial -- isHosted is used in security-critical ways.")
 }

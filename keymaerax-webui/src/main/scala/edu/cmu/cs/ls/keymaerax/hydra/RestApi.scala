@@ -583,7 +583,7 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val devAction = path("dev" / Segment) { (action) => {
     get {
-      assert(!Boot.isHosted, "dev actions are only available on locally hosted instances.")
+      assert(!HyDRAServerConfig.isHosted, "dev actions are only available on locally hosted instances.")
       if(action.equals("deletedb")) {
         database.cleanup()
         complete("{}")
