@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="keymaeraProofApp">
+<html lang="en" ng-app="keymaeraProofApp" ng-controller="ProofAppCtrl">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -40,7 +40,7 @@
     <link href="css/angular-chart.min.css" rel="stylesheet" type="text/css">
 
     <!-- Custom styles for this template -->
-    <link href="css/app.css" title="KeYmaera X" rel="stylesheet" type="text/css">
+    <link ng-href="css/{{theme.css}}.css" title="KeYmaera X" rel="stylesheet" type="text/css">
     <link href="css/presentation_small.css" title="KeYmaera X Presentation Mode Small" rel="alternate stylesheet" type="text/css">
     <link href="css/presentation.css" title="KeYmaera X Presentation Mode Medium" rel="alternate stylesheet" type="text/css">
     <link href="css/presentation_large.css" title="KeYmaera X Presentation Mode Large" rel="alternate stylesheet" type="text/css">
@@ -75,6 +75,12 @@
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <!--<li><a href="#">Profile</a></li>-->
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown">Theme <span class="caret"></span></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-if="theme.name === t.name" class="fa fa-check"></i> {{t.name}}</a></li>
+                    </ul>
+                </li>
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
@@ -179,6 +185,7 @@
 <script src="/js/controllers/tacticExtraction.js"></script>
 <script src="/js/controllers/login.js"></script>
 <script src="/js/controllers/serverinfo.js"></script>
+<script src="/js/controllers/proofapp.js"></script>
 
 <!-- KeYmaera UI
 ================================================== -->
