@@ -17,20 +17,22 @@ GetOptions(
   '--host=s' => \$host,
   '--port=i' => \$port
 );
-$port = 8080 unless $port;
+$port = 8090 unless $port;
 
 
 # Update database.
-$dbh->do("delete from config where configName='serverconfig'");
-if($host) {
-  $dbh->do("insert into config (configName, key, value) VALUES('serverconfig', 'host', '$host') ");
-  $dbh->do("insert into config (configName, key, value) VALUES('serverconfig', 'port', '$port')");
-  $dbh->do("insert into config (configName, key, value) VALUES('serverconfig', 'isHosted', 'true')");
-  print "KeYmaera X will bind to $host:$port.\n"
-}
-else {
+$dbh->do("delete from config where configName='serverconfig' AND (key='host' OR key='port' OR key='isHosted')");
+if(!$host) {
+  $host = "localhost";
   print "No --host defined, so KeYmaera X will now bind to localhost:8090.\n";
 }
+
+$dbh->do("insert into config (configName, key, value) VALUES('serverconfig', 'host', '$host') ");
+$dbh->do("insert into config (configName, key, value) VALUES('serverconfig', 'port', '$port')");
+$dbh->do("insert into config (configName, key, value) VALUES('serverconfig', 'isHosted', 'true')");
+
+print "KeYmaera X will bind to $host:$port.\n";
+
 exit 0;
 __END__
 =head1 Author
