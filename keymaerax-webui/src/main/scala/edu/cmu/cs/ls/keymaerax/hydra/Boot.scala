@@ -45,22 +45,20 @@ object NonSSLBoot extends App {
     system.scheduler.scheduleOnce(someTime(2))(LoadingDialogFactory().addToStatus(25))
     system.scheduler.scheduleOnce(someTime(3))(LoadingDialogFactory().addToStatus(25))
     system.scheduler.scheduleOnce(someTime(4))(LoadingDialogFactory().addToStatus(20))
-    system.scheduler.scheduleOnce(someTime(4))(onLoad())
-  }
-
-  def onLoad() : Unit = {
-    // Finally, print a message indicating that the server was started.
-    println(
-      "**********************************************************\n" +
-        "****                   KeYmaera X                     ****\n" +
-        "****                                                  ****\n" +
-        "**** OPEN YOUR WEB BROWSER AT  http://"+host+":"+port+"/ ****\n" +
-        "****                                                  ****\n" +
-        "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
-        "**********************************************************\n"
-    )
-    SystemWebBrowser(s"http://$host:$port/")
-    LoadingDialogFactory().close()
+    system.scheduler.scheduleOnce(someTime(4))({
+      // Finally, print a message indicating that the server was started.
+      println(
+        "**********************************************************\n" +
+          "****                   KeYmaera X                     ****\n" +
+          "****                                                  ****\n" +
+          "**** OPEN YOUR WEB BROWSER AT  http://"+host+":"+port+"/ ****\n" +
+          "****                                                  ****\n" +
+          "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
+          "**********************************************************\n"
+      )
+      SystemWebBrowser(s"http://$host:$port/")
+      LoadingDialogFactory().close()
+    })
   }
 }
 
