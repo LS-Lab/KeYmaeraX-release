@@ -208,7 +208,15 @@ object SQLite {
         Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
           .insert((username, hash, salt, iterations))
         nInserts = nInserts + 1
+        copyTutorialModels(username)
       })}
+
+    private def copyTutorialModels(userId: String): Unit = {
+      val tutorialModels = Models.filter(_._Id <= 14).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
+        blankOk(element.date), blankOk(element.filecontents),
+        blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic, getNumProofs(element._Id.get)))
+      tutorialModels.foreach(m => createModel(userId, m.name, m.keyFile, m.date, Some(m.description), Some(m.pubLink), Some(m.title), m.tactic))
+    }
 
     /**
       * Poorly named -- either update the config, or else insert an existing key.
