@@ -34,14 +34,6 @@ private object MathematicaNameConversion {
     */
   def toMathematica(ns: NamedSymbol): MExpr = {
     val name: String = ns match {
-      //@note special function
-      //@todo Code Review: handle interpreted functions properly, handle name conflicts
-      case Function("abs",None,Real,Real) => "Abs"
-      case Function("Abs",None,Real,Real) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
-      case Function("min",None,Tuple(Real,Real),Real) => "Min"
-      case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
-      case Function("max",None,Tuple(Real,Real),Real) => "Max"
-      case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
       case _ => maskName(ns)
     }
 
@@ -63,10 +55,6 @@ private object MathematicaNameConversion {
       val (name, index) = unmaskName(e.asString())
       Variable(name, index, Real)
     } else unmaskName(e.head().asString()) match {
-      //@note special function
-      case ("Abs", None) => Function("abs", None, Real, Real)
-      case ("Min", None) => Function("min", None, Tuple(Real, Real), Real)
-      case ("Max", None) => Function("max", None, Tuple(Real, Real), Real)
       case ("Apply", None) =>
         // nary functions
         val fnName = unmaskName(e.args().head.asString())
@@ -109,17 +97,26 @@ private object MathematicaNameConversion {
     insist(!ns.name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
     insist(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
 
-    val identifier = ns.name.replace("_", MUNDERSCORE)
-
-    PREFIX + (ns.index match {
-      case Some(idx) => identifier + SEP + idx
-      case None      => identifier
-    })
+    //@todo Code Review: handle interpreted functions properly, handle name conflicts
+    ns match {
+      case Function("abs",None,Real,Real) => "Abs"
+      case Function("Abs",None,Real,Real) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
+      case Function("min",None,Tuple(Real,Real),Real) => "Min"
+      case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
+      case Function("max",None,Tuple(Real,Real),Real) => "Max"
+      case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
+      case _ =>
+        val identifier = ns.name.replace("_", MUNDERSCORE)
+        PREFIX + (ns.index match {
+          case Some(idx) => identifier + SEP + idx
+          case None      => identifier
+        })
+    }
   }
 
   /** Unmasks a name, i.e., adds _ for $u$, removes the namespace prefix kyx, and splits at $i$ into the name and its index. */
   private def unmaskName(maskedName: String): (String, Option[Int]) = uncheckedUnmaskName(maskedName) ensuring(r => {
-    r._1 == "Abs" || r._1 == "Min" || r._1 == "Max" || maskName(Variable(r._1, r._2, Real)) == maskedName
+    r._1 == "Apply" || r._1 == "abs" || r._1 == "min" || r._1 == "max" || maskName(Variable(r._1, r._2, Real)) == maskedName
   }, "Masking an unmasked name should produce original masked name" +
      "\n Original masked name " + maskedName +
      "\n Unmasked name " + uncheckedUnmaskName(maskedName) +
@@ -140,6 +137,15 @@ private object MathematicaNameConversion {
         insist(parts.size == 2, "Expected " + SEP + " once only")
         (parts.head, Some(Integer.parseInt(parts.last)))
       } else (name , None)
-    } else (uscoreMaskedName, None)
+    } else (uscoreMaskedName match {
+        //@todo Code Review: handle interpreted functions properly, handle name conflicts
+        case "Min" => "min"
+        case "Max" => "max"
+        case "Abs" => "abs"
+        case "min" => throw new IllegalArgumentException("Refuse translating min to KeYmaera to avoid confusion with min")
+        case "max" => throw new IllegalArgumentException("Refuse translating max to KeYmaera to avoid confusion with max")
+        case "abs" => throw new IllegalArgumentException("Refuse translating abs to KeYmaera to avoid confusion with abs")
+        case n => n
+    }, None)
   }
 }
