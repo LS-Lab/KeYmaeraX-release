@@ -181,7 +181,8 @@ object SQLite {
     override def getModelList(userId: String): List[ModelPOJO] = {
       synchronizedTransaction({
         nSelects = nSelects + 1
-        Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
+        //@todo DB schema: multiple users can share a model
+        Models.filter(m => m.userid === userId || m._Id <= 14).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
           blankOk(element.date), blankOk(element.filecontents),
           blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic, getNumProofs(element._Id.get)))
       })
