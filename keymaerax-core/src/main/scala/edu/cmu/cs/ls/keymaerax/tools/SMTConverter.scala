@@ -1,4 +1,4 @@
-/**
+x/**
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
@@ -126,9 +126,11 @@ object SMTConverter {
         /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
           *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
           *      both have the maximal range in their category */
+        //@todo This is incorrect, because 64bit longs are not representable in 64bit doubles.
         assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
         //@todo code review: maxlong?
         //@ran todo-resolved: also checks if negative value is in range, see comment below
+        //@todo this is incorrect, because 2th-complement integer arithmetic is nonsymmetric.
         // smt form of -5 is (- 5)
         if (n.toDouble < 0) {
           /* negative number should also be in range */
