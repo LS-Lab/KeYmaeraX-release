@@ -78,8 +78,8 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
     // nothing to do here, initialization is done already and will have failed if Mathematica is not activated
   }
 
-  "Function conversion" should "prove no-argument functions correctly" in withMathematica { link =>
-    link.qeEvidence("f()>0 -> f()>=0".asFormula)._1 shouldBe True
+  "Function conversion" should "refuse to prove no-argument functions" in withMathematica { link =>
+    a [MatchError] should be thrownBy link.qeEvidence("f()>0 -> f()>=0".asFormula)
   }
 
   it should "prove one-argument functions correctly" in withMathematica { link =>
