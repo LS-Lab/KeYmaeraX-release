@@ -52,31 +52,31 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
    "Mathematica -> KeYmaera" should "convert simple quantifiers" in {
     val f = True //TODO handle true and false!
-    ml.runUnchecked("ForAll[{KeYmaera`x}, KeYmaera`x==KeYmaera`x]")._2 should be (True)
-    ml.runUnchecked("Exists[{KeYmaera`x}, KeYmaera`x==0]")._2 should be (Exists(Seq(x), Equal(x,zero)))
-    ml.runUnchecked("ForAll[{KeYmaera`x}, KeYmaera`x==0]")._2 should be (Forall(Seq(x), Equal(x, zero)))
+    ml.runUnchecked("ForAll[{kyx`x}, kyx`x==kyx`x]")._2 should be (True)
+    ml.runUnchecked("Exists[{kyx`x}, kyx`x==0]")._2 should be (Exists(Seq(x), Equal(x,zero)))
+    ml.runUnchecked("ForAll[{kyx`x}, kyx`x==0]")._2 should be (Forall(Seq(x), Equal(x, zero)))
     //TODO-nrf polynomials?
     //TODO-nrf truth functions?
   }
 
   it should "convert equalities and inequalities" in {
-    ml.runUnchecked("KeYmaera`x == KeYmaera`y")._2 should be (Equal(x, y))
-    ml.runUnchecked("KeYmaera`x == 0")._2 should be (Equal(x, zero))
+    ml.runUnchecked("kyx`x == kyx`y")._2 should be (Equal(x, y))
+    ml.runUnchecked("kyx`x == 0")._2 should be (Equal(x, zero))
 
-    ml.runUnchecked("KeYmaera`x != KeYmaera`y")._2 should be (NotEqual(x, y))
-    ml.runUnchecked("KeYmaera`x != 0")._2 should be (NotEqual(x, zero))
+    ml.runUnchecked("kyx`x != kyx`y")._2 should be (NotEqual(x, y))
+    ml.runUnchecked("kyx`x != 0")._2 should be (NotEqual(x, zero))
 
-    ml.runUnchecked("KeYmaera`x > KeYmaera`y")._2 should be (Greater(x, y))
-    ml.runUnchecked("KeYmaera`x > 0")._2 should be (Greater(x, zero))
+    ml.runUnchecked("kyx`x > kyx`y")._2 should be (Greater(x, y))
+    ml.runUnchecked("kyx`x > 0")._2 should be (Greater(x, zero))
 
-    ml.runUnchecked("KeYmaera`x >= KeYmaera`y")._2 should be (GreaterEqual(x, y))
-    ml.runUnchecked("KeYmaera`x >= 0")._2 should be (GreaterEqual(x, zero))
+    ml.runUnchecked("kyx`x >= kyx`y")._2 should be (GreaterEqual(x, y))
+    ml.runUnchecked("kyx`x >= 0")._2 should be (GreaterEqual(x, zero))
 
-    ml.runUnchecked("KeYmaera`x < KeYmaera`y")._2 should be (Less(x, y))
-    ml.runUnchecked("KeYmaera`x < 0")._2 should be (Less(x, zero))
+    ml.runUnchecked("kyx`x < kyx`y")._2 should be (Less(x, y))
+    ml.runUnchecked("kyx`x < 0")._2 should be (Less(x, zero))
 
-    ml.runUnchecked("KeYmaera`x <= KeYmaera`y")._2 should be (LessEqual(x, y))
-    ml.runUnchecked("KeYmaera`x <= 0")._2 should be (LessEqual(x, zero))
+    ml.runUnchecked("kyx`x <= kyx`y")._2 should be (LessEqual(x, y))
+    ml.runUnchecked("kyx`x <= 0")._2 should be (LessEqual(x, zero))
   }
 
   it should "do math" in {
@@ -101,12 +101,12 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert arithmetic expressions correctly" in {
-    ml.runUnchecked("KeYmaera`x+KeYmaera`y")._2 should be (Plus(x,y))
-    ml.runUnchecked("KeYmaera`x*KeYmaera`y")._2 should be (Times(x,y))
-    ml.runUnchecked("KeYmaera`x-1")._2 should be (Plus(Number(-1), x)) //TODO-nrf these three tests are nasty.
-    ml.runUnchecked("KeYmaera`x-KeYmaera`y")._2 should be (Plus(x, Times(Number(-1), y)))
-    ml.runUnchecked("KeYmaera`x/KeYmaera`y")._2 should be (Times(x, Power(y,num(-1))))
-    ml.runUnchecked("ForAll[{KeYmaera`x}, KeYmaera`x/4 == 4]")._2 shouldBe
+    ml.runUnchecked("kyx`x+kyx`y")._2 should be (Plus(x,y))
+    ml.runUnchecked("kyx`x*kyx`y")._2 should be (Times(x,y))
+    ml.runUnchecked("kyx`x-1")._2 should be (Plus(Number(-1), x)) //TODO-nrf these three tests are nasty.
+    ml.runUnchecked("kyx`x-kyx`y")._2 should be (Plus(x, Times(Number(-1), y)))
+    ml.runUnchecked("kyx`x/kyx`y")._2 should be (Times(x, Power(y,num(-1))))
+    ml.runUnchecked("ForAll[{kyx`x}, kyx`x/4 == 4]")._2 shouldBe
       Forall(Seq(x),
         Equal(
           Times(
@@ -145,9 +145,9 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert names correctly" in {
-    ml.runUnchecked("KeYmaera`x")._2 should be (x)
-    ml.runUnchecked("Apply[KeYmaera`x, {KeYmaera`y}]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y", None, Real)))
-    ml.runUnchecked("Apply[KeYmaera`x, {KeYmaera`y0}]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real)))
+    ml.runUnchecked("kyx`x")._2 should be (x)
+    ml.runUnchecked("Apply[kyx`x, {kyx`y}]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y", None, Real)))
+    ml.runUnchecked("Apply[kyx`x, {kyx`y0}]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real)))
   }
 
   ignore should "convert crazy names correctly" in {
@@ -163,16 +163,16 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     //any reduction, but Mathematica's semantics are from from clear and in
     //future versions (or previous versions) these expressions might actually
     //evaluate
-    ml.runUnchecked("KeYmaera`x==KeYmaera`y && KeYmaera`y==KeYmaera`x")._2 should be (And(Equal(x,y),Equal(y,x)))
-    ml.runUnchecked("KeYmaera`x==KeYmaera`y || KeYmaera`y==KeYmaera`x")._2 should be (Or(Equal(x,y),Equal(y,x)))
-    ml.runUnchecked("!(KeYmaera`x==KeYmaera`y && KeYmaera`y==KeYmaera`x)")._2 should be (Not(And(Equal(x,y),Equal(y,x))))
+    ml.runUnchecked("kyx`x==kyx`y && kyx`y==kyx`x")._2 should be (And(Equal(x,y),Equal(y,x)))
+    ml.runUnchecked("kyx`x==kyx`y || kyx`y==kyx`x")._2 should be (Or(Equal(x,y),Equal(y,x)))
+    ml.runUnchecked("!(kyx`x==kyx`y && kyx`y==kyx`x)")._2 should be (Not(And(Equal(x,y),Equal(y,x))))
 
     //ml.runUnchecked("x==y -> y==z") should be (Imply(Equals(Real,x,y),Equals(Real,y,z)))
     //ml.runUnchecked("x==y <-> y==z") should be(Equiv(Equals(Real,x,y),Equals(Real,y,z)))
   }
 
   it should "not fail on a grab-bag of previous errors" in {
-    ml.runUnchecked("KeYmaera`x^2 + 2KeYmaera`x + 4")._2 shouldBe "4 + 2*x + x^2".asTerm
+    ml.runUnchecked("kyx`x^2 + 2kyx`x + 4")._2 shouldBe "4 + 2*x + x^2".asTerm
   }
 
 
@@ -196,8 +196,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
   }
 
-  it should "convert parameterless Apply()" in {
-    round trip FuncOf(Function("x", None, Unit, Real), Nothing)
+  it should "refuse to convert parameterless Apply()" in {
+    a [MatchError] should be thrownBy defaultK2MConverter(FuncOf(Function("x", None, Unit, Real), Nothing))
   }
 
   it should "convert Apply()" in {
@@ -230,24 +230,23 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   "KeYmaera -> Mathematica" should "convert Apply" in {
     val in = FuncOf(Function("y", None, Real, Real), Variable("x"))
-    val expected = new MExpr(new MExpr(Expr.SYMBOL, "KeYmaera`y"), Array[MExpr](new MExpr(Expr.SYMBOL, "KeYmaera`x")))
+    val expected = new MExpr(new MExpr(Expr.SYMBOL, "kyx`y"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
     defaultK2MConverter(in) should be (expected)
   }
 
-  it should "convert parameterless Apply()" in {
+  it should "refuse to convert parameterless Apply()" in {
     val in = FuncOf(Function("y", None, Unit, Real), Nothing)
-    val expected = new MExpr(Expr.SYMBOL, "KeYmaera`constfn$y")
-    defaultK2MConverter(in) should be (expected)
+    a [MatchError] should be thrownBy defaultK2MConverter(in)
   }
 
   it should "convert multi-argument Apply to nested lists" in {
     val in = FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real), Pair(Variable("x"), Pair(Variable("y"), Variable("z"))))
     val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
       Array[MExpr](
-        new MExpr(Expr.SYMBOL, "KeYmaera`f"),
+        new MExpr(Expr.SYMBOL, "kyx`f"),
         new MExpr(Expr.SYM_LIST, Array[MExpr](
-          new MExpr(Expr.SYMBOL, "KeYmaera`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
-            new MExpr(Expr.SYMBOL, "KeYmaera`y"), new MExpr(Expr.SYMBOL, "KeYmaera`z")))))))
+          new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
+            new MExpr(Expr.SYMBOL, "kyx`y"), new MExpr(Expr.SYMBOL, "kyx`z")))))))
     println(expected.toString)
     defaultK2MConverter(in) should be (expected)
   }
