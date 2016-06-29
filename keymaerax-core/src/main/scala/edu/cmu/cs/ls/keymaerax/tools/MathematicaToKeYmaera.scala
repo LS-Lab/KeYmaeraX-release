@@ -102,7 +102,7 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     }
   } ensuring(r => StaticSemantics.symbols(r).
     map(s => (s.name.toLowerCase, s)).
-    filter({ case (n, s) => n == "abs" || n == "min" || n == "max" }).
+    filter({ case (n, s) => (n == "abs" || n == "min" || n == "max") && s.index.isEmpty }). //@note e.g., abs_idx is ok
     forall({ case (_, s) => s match {
       case Function("abs", None, Real, Real) => true
       case Function("max", None, Tuple(Real, Real), Real) => true
