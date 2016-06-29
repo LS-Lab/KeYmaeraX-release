@@ -56,7 +56,7 @@ object KeYmaeraX {
       |  -nointerval  skip interval arithmetic presuming no floating point errors
       |  -cse      use common subexpression elimination in C code (not recommended)
       |  -vars     use ordered list of variables, treating others as constant functions
-      |  -kind ctrl|model kind of monitor to generate
+      |  -kind     ctrl|model kind of monitor to generate
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -security enable security manager imposing some security restrictions
@@ -73,15 +73,15 @@ object KeYmaeraX {
       |""".stripMargin
 
   private def launched() {
-    LAUNCH = true;
-    println("Launch flag was set.");
+    LAUNCH = true
+    println("Launch flag was set.")
   }
-  var LAUNCH : Boolean = false;
+  var LAUNCH: Boolean = false
 
   def main (args: Array[String]): Unit = {
     println("KeYmaera X Prover " + VERSION + "\n" +
       "Use option -help for usage and license information")
-    if (args.length == 0) return launchUI(args)
+    if (args.length == 0) launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
@@ -120,9 +120,6 @@ object KeYmaeraX {
           case "-vars" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
             else optionErrorReporter("-vars")
-          case "-format" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('format -> value), tail)
-            else optionErrorReporter("-format")
           case "-tactic" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
             else optionErrorReporter("-tactic")
@@ -156,14 +153,14 @@ object KeYmaeraX {
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
       require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
-      if (options.get('mode) == Some("codegen") && options.getOrElse('format, "C")=="C")
+      if (options.get('mode).contains("codegen"))
         //@note no MathKernel initialization needed for C generation
         codegen(options)
-      else if (options.get('mode) != Some("ui") ) {
+      else if (!options.get('mode).contains("ui") ) {
         try {
           initializeProver(options)
 
-          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
+          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
             case Some("prove") => prove(options)
             case Some("modelplex") => modelplex(options)
@@ -180,32 +177,29 @@ object KeYmaeraX {
   private def parseProblemFile(fileName: String) = {
     try {
       val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
-      val formula = KeYmaeraXProblemParser(fileContents);
+      val formula = KeYmaeraXProblemParser(fileContents)
       println(KeYmaeraXPrettyPrinter(formula))
-      println("Parsed file successfully");
+      println("Parsed file successfully")
       sys.exit(0)
     }
     catch {
-      case e : Exception => {
+      case e : Exception =>
         if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
-        println(e);
-        println("Failed to parse file");
+        println(e)
+        println("Failed to parse file")
         sys.exit(-1)
-      }
     }
   }
 
   private def parseBelleTactic(fileName: String) = {
     val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
     BTacticParser(fileContents) match {
-      case Some(_) => {
-        println("Parsed file successfully");
+      case Some(_) =>
+        println("Parsed file successfully")
         sys.exit(0)
-      }
-      case None => {
-        println("Failed to parse file.");
+      case None =>
+        println("Failed to parse file.")
         sys.exit(-1)
-      }
     }
   }
 
@@ -214,10 +208,9 @@ object KeYmaeraX {
     option match {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
+      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
-      case "-format" => println(noValueMessage + "Please use: -format C | Spiral\n\n" + usage); exit(1)
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.scala\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
       case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
@@ -320,7 +313,7 @@ object KeYmaeraX {
    * Prove given input file (with given tactic) to produce a lemma.
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
    *
-   * @param options
+   * @param options The prover options.
    * @todo tactic should default to master and builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
    */
   def prove(options: OptionMap) = {
@@ -477,7 +470,6 @@ object KeYmaeraX {
    */
   def codegen(options: OptionMap) = {
     require(options.contains('in), usage)
-    require(options.contains('format), usage)
 
     val inputFileNameDotMx = options.get('in).get.toString
     assert(inputFileNameDotMx.endsWith(".mx"),
@@ -500,56 +492,26 @@ object KeYmaeraX {
       println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
     }
 
-    if(options.get('format).get.toString == "C") {
-      var outputFileName = inputFileName
-      if(options.contains('out)) {
-        val outputFileNameDotC = options.get('out).get.toString
-        assert(outputFileNameDotC.endsWith(".c"),
-          "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
-        outputFileName = outputFileNameDotC.dropRight(2)
-      }
-      val vars: List[Variable] =
-        if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
-        else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
-      val cseMode = options.contains('cse)
-      val codegenStart = Platform.currentTime
-      val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
-      Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
-      val pw = new PrintWriter(outputFileName + ".c")
-      pw.write(stampHead(options))
-      pw.write("/* @evidence: print of CGenerator of input */\n\n")
-      pw.write(output)
-      pw.close()
-    } else if(options.get('format).get.toString == "Spiral") {
-      var outputFileName = inputFileName
-      if(options.contains('out)) {
-        val outputFileNameDotG = options.get('out).get.toString
-        assert(outputFileNameDotG.endsWith(".g"),
-          "\n[Error] Wrong file name " + outputFileNameDotG + " used for -out! Spiral generator only generates .g file and the .h file when necessary. Please use： -out FILENAME.g")
-        outputFileName = outputFileNameDotG.dropRight(2)
-      }
-      val dnfMode = options.contains('dnf)
-      var outputG = ""
-      if (options.contains('vars)) {
-        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName, dnfMode)
-        outputG = output._1
-        val outputH = output._2
-        val pwG = new PrintWriter(outputFileName + ".g")
-        pwG.write(stampHead(options))
-        pwG.write(outputG)
-        pwG.close()
-        val pwH = new PrintWriter(outputFileName + ".h")
-        pwH.write(stampHead(options))
-        pwH.write(outputH)
-        pwH.close()
-      } else {
-        outputG = SpiralGenerator(inputFormula, outputFileName)
-        val pwG = new PrintWriter(outputFileName + ".g")
-        pwG.write(stampHead(options))
-        pwG.write(outputG)
-        pwG.close()
-      }
-    } else throw new IllegalArgumentException("-format C or -format Spiral should be specified as a command line argument")
+    //@note codegen in C format only
+    var outputFileName = inputFileName
+    if(options.contains('out)) {
+      val outputFileNameDotC = options.get('out).get.toString
+      assert(outputFileNameDotC.endsWith(".c"),
+        "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
+      outputFileName = outputFileNameDotC.dropRight(2)
+    }
+    val vars: List[Variable] =
+      if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
+      else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
+    val cseMode = options.contains('cse)
+    val codegenStart = Platform.currentTime
+    val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
+    Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
+    val pw = new PrintWriter(outputFileName + ".c")
+    pw.write(stampHead(options))
+    pw.write("/* @evidence: print of CGenerator of input */\n\n")
+    pw.write(output)
+    pw.close()
   }
 
 
@@ -710,7 +672,7 @@ object KeYmaeraX {
           case "help" => println(interactiveUsage)
           case "exit" => exit(5)
           case "goals" => val open = root.subgoals
-            (1 to open.length).map(g => {println("Goal " + g); printNode(open(g-1))})
+            (1 to open.length).foreach(g => {println("Goal " + g); printNode(open(g-1))})
           case it if it.startsWith("goal ") => try {
             val g = it.substring("goal ".length).toInt
             if (1<=g&&g<=root.subgoals.size) node = root.subgoals(g-1)
