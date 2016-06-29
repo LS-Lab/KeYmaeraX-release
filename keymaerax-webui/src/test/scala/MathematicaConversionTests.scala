@@ -46,6 +46,15 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml = null
   }
 
+  private object round {
+    def trip(e: edu.cmu.cs.ls.keymaerax.core.Expression) = roundTrip(e) should be (e)
+
+    def roundTrip(e : edu.cmu.cs.ls.keymaerax.core.Expression) = {
+      val math = defaultK2MConverter(e)
+      ml.run(math)._2
+    }
+  }
+
   it should "convert numbers" in {
     ml.runUnchecked("2+2")._2 should be (Number(4))
   }
@@ -175,34 +184,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("kyx`x^2 + 2kyx`x + 4")._2 shouldBe "4 + 2*x + x^2".asTerm
   }
 
-
-  object round {
-    def trip(e: edu.cmu.cs.ls.keymaerax.core.Expression) = roundTrip(e) should be (e)
-
-    def roundTrip(e : edu.cmu.cs.ls.keymaerax.core.Expression) = {
-      val math = defaultK2MConverter(e)
-      ml.run(math)._2
-    }
-  }
-
-  "Mathematica -> KeYmaera" should "convert inequalities" in {
-    round trip "\\forall x x>y".asFormula
-    round trip "\\forall x x>=y".asFormula
-    round trip "\\forall x x<=y".asFormula
-    round trip "\\forall x x<y".asFormula
-  }
-
-  it should "associate correctly" in {
-    round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
-  }
-
   it should "refuse to convert parameterless Apply()" in {
     a [MatchError] should be thrownBy defaultK2MConverter(FuncOf(Function("x", None, Unit, Real), Nothing))
-  }
-
-  it should "convert Apply()" in {
-    round trip FuncOf(Function("x", None, Real, Real), Number(0))
-    round trip FuncOf(Function("x", None, Real, Real), Variable("y", None, Real))
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {
@@ -228,6 +211,28 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real))
   }
 
+  it should "convert inequalities" in {
+    round trip "\\forall x x>y".asFormula
+    round trip "\\forall x x>=y".asFormula
+    round trip "\\forall x x<=y".asFormula
+    round trip "\\forall x x<y".asFormula
+  }
+
+  it should "associate correctly" in {
+    round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
+  }
+
+  it should "convert Apply()" in {
+    round trip FuncOf(Function("x", None, Real, Real), Number(0))
+    round trip FuncOf(Function("x", None, Real, Real), Variable("y", None, Real))
+  }
+
+  it should "convert special functions" in {
+    round trip "abs(x)".asTerm
+    round trip "min(x,y)".asTerm
+    round trip "max(x,y)".asTerm
+  }
+
   "KeYmaera -> Mathematica" should "convert Apply" in {
     val in = FuncOf(Function("y", None, Real, Real), Variable("x"))
     val expected = new MExpr(new MExpr(Expr.SYMBOL, "kyx`y"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
@@ -241,13 +246,34 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "convert multi-argument Apply to nested lists" in {
     val in = FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real), Pair(Variable("x"), Pair(Variable("y"), Variable("z"))))
-    val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
-      Array[MExpr](
-        new MExpr(Expr.SYMBOL, "kyx`f"),
-        new MExpr(Expr.SYM_LIST, Array[MExpr](
-          new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
-            new MExpr(Expr.SYMBOL, "kyx`y"), new MExpr(Expr.SYMBOL, "kyx`z")))))))
+    val expected = new MExpr(new MExpr(Expr.SYMBOL, "kyx`f"),
+        Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
+            new MExpr(Expr.SYMBOL, "kyx`y"), new MExpr(Expr.SYMBOL, "kyx`z")))))
     println(expected.toString)
     defaultK2MConverter(in) should be (expected)
+  }
+
+  it should "convert special functions correctly" in {
+    defaultK2MConverter("abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
+    defaultK2MConverter("min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
+    defaultK2MConverter("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
+  }
+
+  it should "insist on correct domain/sort of special functions" in {
+    a [CoreException] should be thrownBy defaultK2MConverter(Variable("abs"))
+    a [CoreException] should be thrownBy defaultK2MConverter(Variable("Abs"))
+    a [CoreException] should be thrownBy defaultK2MConverter("abs()".asTerm)
+    a [CoreException] should be thrownBy defaultK2MConverter("Abs(x)".asTerm)  // correct domain, but uppercase
+    a [CoreException] should be thrownBy defaultK2MConverter("abs(x,y)".asTerm)
+    a [CoreException] should be thrownBy defaultK2MConverter(Variable("min"))
+    a [CoreException] should be thrownBy defaultK2MConverter(Variable("Min"))
+    a [CoreException] should be thrownBy defaultK2MConverter("min(x)".asTerm)
+    a [CoreException] should be thrownBy defaultK2MConverter("Min(x,y)".asTerm)  // correct domain, but uppercase
+    a [CoreException] should be thrownBy defaultK2MConverter("min(x,y,z)".asTerm)
+    a [CoreException] should be thrownBy defaultK2MConverter(Variable("max"))
+    a [CoreException] should be thrownBy defaultK2MConverter(Variable("Max"))
+    a [CoreException] should be thrownBy defaultK2MConverter("max(x)".asTerm)
+    a [CoreException] should be thrownBy defaultK2MConverter("Max(x,y)".asTerm) // correct domain, but uppercase
+    a [CoreException] should be thrownBy defaultK2MConverter("max(x,y,z)".asTerm)
   }
 }

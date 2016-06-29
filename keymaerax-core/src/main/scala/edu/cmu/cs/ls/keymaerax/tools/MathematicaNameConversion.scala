@@ -54,19 +54,10 @@ private object MathematicaNameConversion {
     if (e.args.isEmpty) {
       val (name, index) = unmaskName(e.asString())
       Variable(name, index, Real)
-    } else unmaskName(e.head().asString()) match {
-      case ("Apply", None) =>
-        // nary functions
-        val fnName = unmaskName(e.args().head.asString())
-        assert(e.args().tail.length == 1)
-        val fnDomain = convertFunctionDomain(e.args().tail.head)
-        Function(fnName._1, fnName._2, fnDomain, Real)
-      case (name, index) =>
-        // unary functions
-        assert(e.args().length == 1)
-        val fnDomain = convertFunctionDomain(e.args().head)
-        assert(fnDomain == Real, "Unary function should have domain Real")
-        Function(name, index, fnDomain, Real)
+    } else {
+      val (name, index) = unmaskName(e.head().asString())
+      val fnDomain = convertFunctionDomain(e.args())
+      Function(name, index, fnDomain, Real)
     }
   }
 
@@ -78,6 +69,11 @@ private object MathematicaNameConversion {
     } else {
       Real
     }
+  }
+  /** Converts a nested list of arguments into nested tuples of reals */
+  private def convertFunctionDomain(args: Array[MExpr]): Sort = {
+    assert(args.length <= 2, "Functions have at most 2 arguments (second can be a nested list)")
+    args.map(convertFunctionDomain).reduceRightOption(Tuple).getOrElse(Unit)
   }
 
   /** Masks a name, i.e., replaces _ with $u$, adds the namespace prefix kyx, and merges name and index (separated by $i$) */
@@ -98,6 +94,7 @@ private object MathematicaNameConversion {
     insist(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
 
     //@todo Code Review: handle interpreted functions properly, handle name conflicts
+    //@solution (name conflicts): symmetric name conversion in unmaskName, contract in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
       case Function("abs",None,Real,Real) => "Abs"
       case Function("Abs",None,Real,Real) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
@@ -139,6 +136,7 @@ private object MathematicaNameConversion {
       } else (name , None)
     } else (uscoreMaskedName match {
         //@todo Code Review: handle interpreted functions properly, handle name conflicts
+        //@solution: see same (copied) code review comment above
         case "Min" => "min"
         case "Max" => "max"
         case "Abs" => "abs"

@@ -100,7 +100,15 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     else {
       throw mathExn(e) //Other things to handle: integrate, rule, minussign, possibly some list.
     }
-  }
+  } ensuring(r => StaticSemantics.symbols(r).
+    map(s => (s.name.toLowerCase, s)).
+    filter({ case (n, s) => n == "abs" || n == "min" || n == "max" }).
+    forall({ case (_, s) => s match {
+      case Function("abs", None, Real, Real) => true
+      case Function("max", None, Tuple(Real, Real), Real) => true
+      case Function("min", None, Tuple(Real, Real), Real) => true
+      case _ => false
+    }}), "Special functions must have expected domain and sort")
 
   /**
     * Whether e is thing or starts with head thing.
@@ -162,16 +170,6 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     }
   }
 
-  private def convertFuncOf(fn: Function, arguments: Array[Term]): FuncOf = {
-    if (arguments.nonEmpty) {
-      val args = if (arguments.length > 1) arguments.reduceRight[Term]((l, r) => Pair(l, r))
-      else { assert(arguments.length == 1); arguments.head }
-      FuncOf(fn, args)
-    } else {
-      FuncOf(fn, Nothing)
-    }
-  }
-
   private def convertList(e: MExpr): Pair = {
     if (e.listQ) {
       assert(e.args.length == 2)
@@ -179,18 +177,13 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     } else throw new ConversionException("Expected a list, but got " + e)
   }
 
-  protected def convertAtomicTerm(e: MExpr): KExpr =
-    if (e.head.symbolQ() && e.head == MathematicaSymbols.APPLY) {
-      MathematicaNameConversion.toKeYmaera(e) match {
-        case fn: Function => convertFuncOf(fn, e.args().tail.map(apply).map(_.asInstanceOf[Term]))
-      }
-    } else {
-      MathematicaNameConversion.toKeYmaera(e) match {
-        //@note nullary and unary functions are represented as A[] and A[b]
-        case result: Function => convertFuncOf(result, e.args().map(apply).map(_.asInstanceOf[Term]))
-        case result: Variable => result
-      }
-    }
+  protected def convertAtomicTerm(e: MExpr): KExpr = MathematicaNameConversion.toKeYmaera(e) match {
+    case fn: Function =>
+      assert(e.args().length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + e.args())
+      val arguments = e.args().map(apply).map(_.asInstanceOf[Term])
+      FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
+    case result: Variable => result
+  }
 
   //@todo could streamline this implementation
   /** Converts inequality chains of the form a <= b < c < 0 to conjunctions of individual inequalities a <= b & b < c & c < 0 */

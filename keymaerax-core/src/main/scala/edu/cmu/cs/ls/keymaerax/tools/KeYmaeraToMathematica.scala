@@ -17,9 +17,10 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
 import scala.reflect.ClassTag
 
 /**
- * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
- * to Mathematica Expr objects.
- * @author Nathan Fulton
+  * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
+  * to Mathematica Expr objects.
+  * @author Stefan Mitsch
+  * @author Nathan Fulton
  */
 object KeYmaeraToMathematica extends KeYmaeraToMathematica
 class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
@@ -31,18 +32,27 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
    */
   //@todo Code Review contract: convert back is identity, ask converse converter
   //@solution: introduced traits/base traits that implement contract checking. here: convert without contract checking
-  def convert(e: KExpr): MExpr = e match {
-    case t: Term =>
-      require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion")
-      convertTerm(t)
-    case f: Formula =>
-      require(disjointNames(StaticSemantics.symbols(f)), "Disjoint names required for Mathematica conversion")
-      convertFormula(f)
-    case fn: Function =>
-      //@todo Code Review: prefixed name must be disjoint from other names in the containing term/formula -> Mathematica namespace `constFn`
-      //@solution uninterpreted function symbols are removed with tactics -> we disallow them here, constFn removed entirely.
-      // can remove this case during next code review (if we remove: can also remove overridden CEXK2MConverter.convert). Non-soundness critical CEX and Simulation tools can override
-      throw new ConversionException("Uninterpreted function symbols are disallowed")
+  def convert(e: KExpr): MExpr = {
+    insist(StaticSemantics.symbols(e).
+      map(s => (s.name.toLowerCase, s)).
+      filter({ case (n, s) => n == "abs" || n == "min" || n == "max" }).
+      forall({ case (_, s) => s match {
+        case Function("abs", None, Real, Real) => true
+        case Function("max", None, Tuple(Real, Real), Real) => true
+        case Function("min", None, Tuple(Real, Real), Real) => true
+        case _ => false
+      }}), "Special functions must have expected domain and sort (and must be functions)")
+    insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
+
+    e match {
+      case t: Term => convertTerm(t)
+      case f: Formula => convertFormula(f)
+      case fn: Function =>
+        //@todo Code Review: prefixed name must be disjoint from other names in the containing term/formula -> Mathematica namespace `constFn`
+        //@solution uninterpreted function symbols are removed with tactics -> we disallow them here, constFn removed entirely.
+        // can remove this case during next code review (if we remove: can also remove overridden CEXK2MConverter.convert). Non-soundness critical CEX and Simulation tools can override
+        throw new ConversionException("Uninterpreted function symbols are disallowed")
+    }
   }
 
   private def disjointNames(symbols: Set[NamedSymbol]): Boolean = {
@@ -63,15 +73,12 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     require(t.sort == Real || t.sort == Unit || flattenSort(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       //@todo Code Review: clean up FuncOf conversion into two cases here
-      //@solution: inlined the FuncOf cases, moved uniform name conversion into MathematicaNameConversion
+      //@solution: inlined and simplified the FuncOf cases, moved uniform name conversion into MathematicaNameConversion
       case FuncOf(fn, child) => child match {
-        case p: Pair =>
-          //@note Pair arguments turn into list arguments Apply[f, {{x,y}}] == f[{x,y}]
-          //@note Pairs will be transformed into nested lists, which makes f[{x, {y,z}] different from f[{{x,y},z}] and would require list arguments (instead of argument lists) when using the functions in Mathematica. Unproblematic for QE, since converted in the same fashion every time
-          new MExpr(MathematicaSymbols.APPLY, Array[MExpr](toMathematica(fn), convertTerm(child)))
-        case _ =>
-          //@note single-argument f[x] (not encoded as APPLY for roundtrip identity -- Mathematica wants it that way)
-          new MExpr(toMathematica(fn), Array[MExpr](convertTerm(child)))
+        case _: Pair =>
+          assert(convertTerm(child).listQ(), "Converted pair expected to be a list, but was " + convertTerm(child))
+          new MExpr(toMathematica(fn), convertTerm(child).args())
+        case _ => new MExpr(toMathematica(fn), Array[MExpr](convertTerm(child)))
       }
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
       case plus: Plus =>
@@ -155,8 +162,5 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     case Some((l, r)) => l :: r :: Nil
     case None => t :: Nil
   }
-
-  protected def keyExn(e: KExpr): Exception =
-    new ConversionException("conversion not defined for KeYmaera expr: " + e.prettyString)
 }
 
