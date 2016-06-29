@@ -110,6 +110,8 @@ trait RestApi extends HttpService with SLF4JLogging {
   //Some common partials.
   val userPrefix = pathPrefix("user" / Segment)
 
+  val denied = path("private" / "KeyStore.jks") { get { getFromResource("index_bootstrap.html") } }
+
   //The static directory.
   val staticRoute =
     pathPrefix("") { get {
@@ -632,7 +634,9 @@ trait RestApi extends HttpService with SLF4JLogging {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   val publicRoutes =
+    denied ::
     staticRoute        ::
+    denied ::
     homePage           ::
 //    license            ::
     isLocal            ::

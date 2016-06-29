@@ -18,7 +18,7 @@ trait KyxSslConfiguration {
   // if there is no SSLContext in scope implicitly the HttpServer uses the default SSLContext,
   // since we want non-default settings in this example we make a custom SSLContext available here
   implicit def sslContext: SSLContext = {
-    val keyStoreResource = "/KeyStore.jks"
+    val keyStoreResource = "/private/KeyStore.jks"
     val password = SQLite.ProdDB.getConfiguration("serverconfig").config("jks")
 
     val keyStore = KeyStore.getInstance("jks")
