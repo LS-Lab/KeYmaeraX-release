@@ -111,7 +111,7 @@ class Z3Solver extends SMTSolver {
     //@todo investigate Z3 binding for Scala
     //@todo Code Review startsWith is not a robust way of reading off answers from Z3
     //@ran todo-resolved: changed to equals
-    if (z3Output.equals("unsat\n")) (True, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
+    if (z3Output.equals("unsat\n")) (True, new ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
     //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
     //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
     //@ran todo-resolved: If it returns sat, throw an exception

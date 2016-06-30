@@ -130,11 +130,11 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     (ToolEvidence(evidence), remainderTokens.tail)
   }
 
-  def parseToolEvidenceLines(input: TokenStream): immutable.Map[String, String] = {
+  def parseToolEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
     require(input.head.tok match { case IDENT(_, _) => true case _ => false }, "expected to begin with key.")
     require(input.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false }, "expected actual value.")
 
-    var evidence = immutable.Map[String, String]()
+    var evidence = immutable.List[(String, String)]()
     var line = input
 
     while (line.nonEmpty &&
@@ -151,7 +151,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
         case _ => throw new AssertionError("Require should have failed.")
       }
 
-      evidence = evidence + (key -> value)
+      evidence = evidence :+ (key -> value)
       line = line.tail.tail
     }
 

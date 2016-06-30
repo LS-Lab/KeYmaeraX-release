@@ -20,7 +20,7 @@ class ArithmeticTests extends TacticTestBase {
 
     override def qeEvidence(formula: Formula): (Formula, Evidence) = {
       formula shouldBe expected
-      (False, ToolEvidence(Map("tool" -> "mock")))
+      (False, ToolEvidence(List("tool" -> "mock")))
     }
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {

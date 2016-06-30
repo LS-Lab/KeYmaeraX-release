@@ -105,7 +105,7 @@ class PolyaSolver extends SMTSolver {
       * Polya does not have other possible result for (check-sat)
       */
     if (polyaResult.equals("-1")) throw new SMTQeException("QE with Polya gives -1 (POSSIBLY SAT). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
-    else if(polyaResult.equals("1")) (True, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> polyaOutput)))
+    else if(polyaResult.equals("1")) (True, new ToolEvidence(immutable.List("input" -> smtCode, "output" -> polyaOutput)))
     else if(polyaResult.equals("0")) throw new SMTQeException("QE with Polya gives 0 (FAILED). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
     else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
   }

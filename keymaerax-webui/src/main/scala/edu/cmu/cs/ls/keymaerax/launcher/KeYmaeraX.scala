@@ -365,7 +365,7 @@ object KeYmaeraX {
       }
 
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
-      val evidence = ToolEvidence(Map(
+      val evidence = ToolEvidence(List(
         "tool" -> "KeYmaera X",
         "model" -> input,
         "tactic" -> scala.io.Source.fromFile(tacticFileNameDotScala).mkString,

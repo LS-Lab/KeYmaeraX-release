@@ -27,7 +27,7 @@ class MathematicaQETool(override val link: MathematicaLink)
     result match {
       case f : Formula =>
         if (DEBUG) println("Mathematica QE result: " + f.prettyString)
-        (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
+        (f, new ToolEvidence(immutable.List("input" -> input.toString, "output" -> output)))
       case _ => throw new ToolException("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }

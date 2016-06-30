@@ -559,7 +559,7 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
       synchronizedTransaction({
-        val lemma = Lemma(p, List(new ToolEvidence(Map("input" -> p.prettyString, "output" -> "true"))))
+        val lemma = Lemma(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true"))))
         lemmaDB.add(lemma).toInt
       })
     }

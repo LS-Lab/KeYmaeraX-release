@@ -49,7 +49,7 @@ object DerivedAxioms {
   private[btactics] def derivedAxiom(name: String, fact: Provable): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     // create evidence (traces input into tool and output from tool)
-    val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
+    val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = AxiomInfo(name).codeName
     val lemma = Lemma(fact, evidence, Some(lemmaName))
     if (!AUTO_INSERT) {
@@ -69,7 +69,7 @@ object DerivedAxioms {
 
   private[btactics] def derivedRule(name: String, fact: Provable): Lemma = {
     // create evidence (traces input into tool and output from tool)
-    val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
+    val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = DerivedRuleInfo(name).codeName
     val lemma = Lemma(fact, evidence, Some(lemmaName))
     if (!AUTO_INSERT) {
