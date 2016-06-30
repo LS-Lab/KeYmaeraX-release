@@ -35,14 +35,10 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
     //Numbers
     else if (e.numberQ() && !e.rationalQ()) {
-      try {
-        val number = e.asBigDecimal()
-        Number(BigDecimal(number))
-      }
-      catch {
-        case exn : NumberFormatException => throw mathExnMsg(e, "Could not convert number: " + e.toString)
-        case exn : ExprFormatException => throw mathExnMsg(e, "Could not represent number as a big decimal: " + e.toString)
-      }
+      if (e.realQ()) Number(e.asDouble()) //@note see internal type identifiers in realQ and asDouble (they fit)
+      else if (e.integerQ()) Number(e.asLong()) //@note see internal type identifiers in integerQ and asLong (they fit)
+      else if (e.bigDecimalQ()) Number(e.asBigDecimal()) //@note asBigDecimal does not convert doubles correctly!
+      else throw new ConversionException("Cannot convert " + e + " (neither double, long, nor big decimal)") //@note complexQ
     }
     //@todo Code Review: assert arity 2 --> split into convertBinary and convertNary (see DIV, EXP, MINUS)
     //@solution: introduced explicit convertNary (used for plus/times/and/or), convertBinary forwards to convertNary after contract checking (2 args)

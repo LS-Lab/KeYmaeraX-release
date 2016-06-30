@@ -101,9 +101,9 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   //The second thing causes a choke.
-  ignore should "not choke on other reasonable numbers" in {
+  it should "not choke on other reasonable numbers" in {
     ml.runUnchecked("Rationalize[0.5/10]")._2 should be (Divide(num(1),num(20)))
-    ml.runUnchecked(".25/10")._2
+    ml.runUnchecked(".25/10")._2 shouldBe Number(0.025)
   }
 
   ignore should "transcend" in {
@@ -138,20 +138,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ???
   }
 
-  it should "convert rules correctly with the nonQEConverter" ignore {
-    //@todo run(MExpr, executor, converter) is private, and so are executor and converter
-    ml.runUnchecked("Rule[x,y]")._2 shouldBe Equal(x, y)
-    ml.runUnchecked("Rule[x[y],y]")._2 should be (Equal(FuncOf(xFn, y), y))
-    ml.runUnchecked("{{Rule[x,y]}}")._2 should be (Equal(x, y))
-    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
-    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}, {Rule[x[y],y]}}")._2 shouldBe
+  it should "convert rules correctly with the nonQEConverter" in {
+    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    ml.runUnchecked("Rule[kyx`x,kyx`y]")._2 shouldBe Equal(x, y)
+    ml.runUnchecked("Rule[kyx`x[kyx`y],kyx`y]")._2 should be (Equal(FuncOf(xFn, y), y))
+    ml.runUnchecked("{{Rule[kyx`x,kyx`y]}}")._2 should be (Equal(x, y))
+    ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
+    ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}, {Rule[kyx`x[kyx`y],kyx`y]}}")._2 shouldBe
       Or(And(Equal(x, y), Equal(y, x)), Equal(FuncOf(xFn, y), y))
   }
 
   it should "not convert rules with the default converter" in {
-    a [ConversionException] should be thrownBy ml.runUnchecked("Rule[x,y]")
-    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[x,y]}}")
-    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")
+    a [ConversionException] should be thrownBy ml.runUnchecked("Rule[kyx`x,kyx`y]")
+    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[kyx`x,kyx`y]}}")
+    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}}")
   }
 
   it should "convert names correctly" in {
