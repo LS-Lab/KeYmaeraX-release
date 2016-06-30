@@ -87,13 +87,6 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
         new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case times: Times =>
         new MExpr(MathematicaSymbols.MULT, flattenLeftBinary(times, Times.unapply).map(convertTerm).toArray)
-      case Divide(l: Number, r: Number) =>
-        //@note for sake of roundtrip identity: set correct Rational type ID by reflection (no public JLink constructor!)
-        val rational = new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convertTerm(l), convertTerm(r)))
-        val tf = rational.getClass.getDeclaredField("type")
-        tf.setAccessible(true)
-        tf.set(rational, com.wolfram.jlink.Expr.RATIONAL)
-        rational
       case Divide(l, r) =>
         new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) =>

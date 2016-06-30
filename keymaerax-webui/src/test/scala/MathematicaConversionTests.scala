@@ -96,7 +96,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "not choke on rationals" in {
-    ml.runUnchecked("2/5")._2 should be (Divide(num(2), num(5)))
+    ml.runUnchecked("2/5")._2 shouldBe Divide(num(2), num(5))
+    ml.runUnchecked("Rational[2,5]")._2 shouldBe Divide(num(2), num(5))
   }
 
   //The second thing causes a choke.
