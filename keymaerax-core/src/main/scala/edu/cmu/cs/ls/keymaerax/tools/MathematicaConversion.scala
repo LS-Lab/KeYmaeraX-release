@@ -73,8 +73,11 @@ class KMComparator(val l: MExpr) {
   import KMComparator.hasHead
 
   /** Equality of Mathematica expressions */
-  def ===(r: MExpr): Boolean = l == r || (
-    if (hasHead(l, MathematicaSymbols.INEQUALITY)) {
+  def ===(r: MExpr): Boolean =
+    // traverse MExpr and forward to MExpr.== for atomic MExpr, use === for arguments
+    (l.head() == r.head() && l.args().length == r.args().length && l.args().zip(r.args()).forall({ case (la, ra) => la === ra })) ||
+    // or special comparison
+    (if (hasHead(l, MathematicaSymbols.INEQUALITY)) {
       def checkInequality(l: Array[MExpr], r: MExpr): Boolean = hasHead(r, l(1)) && r.args.length == 2 && r.args().head == l(0) && r.args().last == l(2)
       def checkInequalities(l: Array[MExpr], r: MExpr): Boolean = {
         require(l.length % 2 == 1 && r.args().length % 2 == 0, "Expected pairs of expressions separated by operators")
@@ -84,6 +87,11 @@ class KMComparator(val l: MExpr) {
       }
       checkInequalities(l.args(), r)
     } else if (hasHead(r, MathematicaSymbols.INEQUALITY)) {
+      new KMComparator(r).===(l)
+    } else if (hasHead(l, MathematicaSymbols.RATIONAL)) {
+      hasHead(r, MathematicaSymbols.DIV) && l.args().length == 2 && r.args().length == 2 &&
+        l.args().head == r.args().head && l.args().last == r.args().last
+    } else if (hasHead(r, MathematicaSymbols.RATIONAL)) {
       new KMComparator(r).===(l)
     } else false)
 }
