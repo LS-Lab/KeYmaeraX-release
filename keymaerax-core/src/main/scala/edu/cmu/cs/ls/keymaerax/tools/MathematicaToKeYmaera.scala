@@ -27,8 +27,8 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
   /** Converts a Mathematica expression to a KeYmaera expression. */
   def convert(e: MExpr): KExpr = {
     //Exceptional states
-    if (isAborted(e)) throw abortExn(e)
-    else if (isFailed(e))  throw failExn(e)
+    if (isAborted(e)) throw new MathematicaComputationAbortedException(e.toString)
+    else if (isFailed(e)) throw new MathematicaComputationFailedException(e.toString)
 
     //Numbers
     else if (e.numberQ() && !e.rationalQ()) {
@@ -84,12 +84,10 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
     //Variables. This case intentionally comes last, so that it doesn't gobble up
     //and keywords that were not declared correctly in MathematicaSymbols (should be none)
-    else if (e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) {
-      convertAtomicTerm(e)
-    }
-    else {
-      throw mathExn(e) //Other things to handle: integrate, rule, minussign, possibly some list.
-    }
+    else if (e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) convertAtomicTerm(e)
+
+    // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
+    else throw mathExn(e)
   } ensuring(r => StaticSemantics.symbols(r).
     map(s => (s.name.toLowerCase, s)).
     filter({ case (n, s) => (n == "abs" || n == "min" || n == "max") && s.index.isEmpty }). //@note e.g., abs_idx is ok
@@ -177,20 +175,11 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
   // error catching and reporting
 
-  private def isAborted(e : com.wolfram.jlink.Expr) = {
-    e.toString.equalsIgnoreCase("$Aborted") ||
-    e.toString.equalsIgnoreCase("Abort[]")
-  }
-  
-  private def isFailed(e : com.wolfram.jlink.Expr) = {
-    e.toString.equalsIgnoreCase("$Failed")
-  }
-
-  private def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e.toString)
-  private def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e.toString)
+  private def isAborted(e: MExpr) = e.toString.equalsIgnoreCase("$Aborted") || e.toString.equalsIgnoreCase("Abort[]")
+  private def isFailed(e: MExpr) = e.toString.equalsIgnoreCase("$Failed")
 
   private def mathExn(e:com.wolfram.jlink.Expr) : Exception =
-    new ConversionException("conversion not defined for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
+    new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   
   private def mathInfo(e : com.wolfram.jlink.Expr) : String = {
     "args:\t" + {if (e.args().length == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
