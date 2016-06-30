@@ -100,7 +100,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("Rational[2,5]")._2 shouldBe Divide(num(2), num(5))
   }
 
-  //The second thing causes a choke.
   it should "not choke on other reasonable numbers" in {
     ml.runUnchecked("Rationalize[0.5/10]")._2 should be (Divide(num(1),num(20)))
     ml.runUnchecked(".25/10")._2 shouldBe Number(0.025)
@@ -128,14 +127,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
           num(4)
         )
       )
-  }
-
-  ignore should "convert inverse functions correctly" in {
-    ???
-  }
-
-  ignore should "convert integrals correctly" in {
-    ???
   }
 
   it should "convert rules correctly with the nonQEConverter" in {

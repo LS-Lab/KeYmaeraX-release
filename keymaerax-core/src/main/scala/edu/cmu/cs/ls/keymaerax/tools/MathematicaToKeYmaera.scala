@@ -9,12 +9,9 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 // favoring immutable Seqs
 import scala.collection.immutable._
-import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
-
-import scala.math.BigDecimal
 
 /**
  * Converts com.wolfram.jlink.Expr -> edu.cmu...keymaerax.core.Expr
@@ -192,9 +189,6 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
   private def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e.toString)
   private def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e.toString)
 
-  private def mathExnMsg(e:MExpr, s:String) : Exception =
-    new ConversionException("Conversion of " + e.toString + " failed because: " + s)
-  
   private def mathExn(e:com.wolfram.jlink.Expr) : Exception =
     new ConversionException("conversion not defined for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   
