@@ -28,8 +28,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   val zero = Number(new BigDecimal("0"))
 
-  private val defaultK2MConverter = KeYmaeraToMathematica
-
   def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
 
@@ -47,10 +45,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   private object round {
-    def trip(e: edu.cmu.cs.ls.keymaerax.core.Expression) = roundTrip(e) should be (e)
+    def trip(e: KExpr, k2m: K2MConverter[KExpr] = KeYmaeraToMathematica) = roundTrip(e, k2m) should be (e)
 
-    def roundTrip(e : edu.cmu.cs.ls.keymaerax.core.Expression) = {
-      val math = defaultK2MConverter(e)
+    def roundTrip(e: KExpr, k2m: K2MConverter[KExpr]) = {
+      val math = k2m(e)
       ml.run(math)._2
     }
   }
@@ -172,7 +170,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "refuse to convert parameterless Apply()" in {
-    a [MatchError] should be thrownBy defaultK2MConverter(FuncOf(Function("x", None, Unit, Real), Nothing))
+    a [MatchError] should be thrownBy KeYmaeraToMathematica(FuncOf(Function("x", None, Unit, Real), Nothing))
   }
 
   it should "convert inequalities" in {
@@ -226,15 +224,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip "max(x,y)".asTerm
   }
 
+  it should "convert non-arg functions with nonQEConverter" in {
+    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    round trip("g()".asTerm, new UncheckedK2MConverter())
+  }
+
   "KeYmaera -> Mathematica" should "convert Apply" in {
     val in = FuncOf(Function("y", None, Real, Real), Variable("x"))
     val expected = new MExpr(new MExpr(Expr.SYMBOL, "kyx`y"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
-    defaultK2MConverter(in) should be (expected)
+    KeYmaeraToMathematica(in) should be (expected)
   }
 
   it should "refuse to convert parameterless Apply()" in {
     val in = FuncOf(Function("y", None, Unit, Real), Nothing)
-    a [MatchError] should be thrownBy defaultK2MConverter(in)
+    a [MatchError] should be thrownBy KeYmaeraToMathematica(in)
   }
 
   it should "convert multi-argument Apply to nested lists" in {
@@ -243,30 +246,30 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
         Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYM_LIST, Array[MExpr](
             new MExpr(Expr.SYMBOL, "kyx`y"), new MExpr(Expr.SYMBOL, "kyx`z")))))
     println(expected.toString)
-    defaultK2MConverter(in) should be (expected)
+    KeYmaeraToMathematica(in) should be (expected)
   }
 
   it should "convert special functions correctly" in {
-    defaultK2MConverter("abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
-    defaultK2MConverter("min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
-    defaultK2MConverter("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
+    KeYmaeraToMathematica("abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
+    KeYmaeraToMathematica("min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
+    KeYmaeraToMathematica("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
   }
 
   it should "insist on correct domain/sort of special functions" in {
-    a [CoreException] should be thrownBy defaultK2MConverter(Variable("abs"))
-    a [CoreException] should be thrownBy defaultK2MConverter(Variable("Abs"))
-    a [CoreException] should be thrownBy defaultK2MConverter("abs()".asTerm)
-    a [CoreException] should be thrownBy defaultK2MConverter("Abs(x)".asTerm)  // correct domain, but uppercase
-    a [CoreException] should be thrownBy defaultK2MConverter("abs(x,y)".asTerm)
-    a [CoreException] should be thrownBy defaultK2MConverter(Variable("min"))
-    a [CoreException] should be thrownBy defaultK2MConverter(Variable("Min"))
-    a [CoreException] should be thrownBy defaultK2MConverter("min(x)".asTerm)
-    a [CoreException] should be thrownBy defaultK2MConverter("Min(x,y)".asTerm)  // correct domain, but uppercase
-    a [CoreException] should be thrownBy defaultK2MConverter("min(x,y,z)".asTerm)
-    a [CoreException] should be thrownBy defaultK2MConverter(Variable("max"))
-    a [CoreException] should be thrownBy defaultK2MConverter(Variable("Max"))
-    a [CoreException] should be thrownBy defaultK2MConverter("max(x)".asTerm)
-    a [CoreException] should be thrownBy defaultK2MConverter("Max(x,y)".asTerm) // correct domain, but uppercase
-    a [CoreException] should be thrownBy defaultK2MConverter("max(x,y,z)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("abs"))
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("Abs"))
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("abs()".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("Abs(x)".asTerm)  // correct domain, but uppercase
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("abs(x,y)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("min"))
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("Min"))
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("min(x)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("Min(x,y)".asTerm)  // correct domain, but uppercase
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("min(x,y,z)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("max"))
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("Max"))
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("max(x)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("Max(x,y)".asTerm) // correct domain, but uppercase
+    a [CoreException] should be thrownBy KeYmaeraToMathematica("max(x,y,z)".asTerm)
   }
 }

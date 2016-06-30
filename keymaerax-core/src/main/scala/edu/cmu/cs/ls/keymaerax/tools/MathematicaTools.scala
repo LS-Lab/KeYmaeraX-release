@@ -30,6 +30,8 @@ object ToolConversions {
 }
 
 class UncheckedM2KConverter extends MathematicaToKeYmaera {
+  val CONST_FN_PREFIX = "fn$"
+
   //@note unchecked, because ambiguous And==&& vs. And==Rules conversion
   override def k2m = null
   override def apply(e: MExpr): KExpr = convert(e)
@@ -45,6 +47,10 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
     //@note e.head() by itself is not meaningful -- it combines e.head.head == Derivative and e.head.args == degree
     else if (e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1 &&
       e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
+    else if (e.symbolQ() && MathematicaNameConversion.toKeYmaera(e).name.startsWith(CONST_FN_PREFIX))
+      MathematicaNameConversion.toKeYmaera(e) match {
+        case Variable(name, index, sort) => FuncOf(Function(name.substring(CONST_FN_PREFIX.length), index, Unit, sort), Nothing)
+      }
     else super.convert(e)
   }
 
@@ -70,14 +76,19 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
 }
 
 class UncheckedK2MConverter extends KeYmaeraToMathematica {
+  val CONST_FN_PREFIX = "fn$"
+
   //@note unchecked, because ambiguous And==&& vs. And==Rule in converse conversion
   override def m2k = null
   override def apply(e: KExpr): MExpr = convert(e)
+
+  override protected def convertTerm(t: Term): MExpr = t match {
+    case FuncOf(Function(name, index, Unit, _), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case _ => super.convertTerm(t)
+  }
 }
 
 object CEXK2MConverter extends UncheckedK2MConverter {
-  val CONST_FN_PREFIX = "fn$"
-
   override def convert(e: KExpr): MExpr = e match {
     case Function(name, index, Unit, _) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
     case _ => super.convert(e)
