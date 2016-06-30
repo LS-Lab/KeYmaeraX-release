@@ -39,18 +39,33 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
     if (KMComparator.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
       KMComparator.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
+    // Derivatives are of the form Derivative[1][x]
+    //@todo Code Review: check e.head
+    //@solution: additional checks for head + moved into non-soundness-critical converter
+    //@note e.head() by itself is not meaningful -- it combines e.head.head == Derivative and e.head.args == degree
+    else if (e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1 &&
+      e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
     else super.convert(e)
   }
 
   /** Converts rules and rule lists, not to be used in QE! */
-  def convertRule(e: MExpr): Formula = {
+  private def convertRule(e: MExpr): Formula = {
     Equal(convert(e.args()(0)).asInstanceOf[Term], convert(e.args()(1)).asInstanceOf[Term])
   }
 
-  def convertRuleList(e: MExpr): Formula = {
+  private def convertRuleList(e: MExpr): Formula = {
     val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft(And))
     if (convertedRules.isEmpty) False
     else convertedRules.reduceLeft(Or)
+  }
+
+  private def convertDerivative(e: MExpr): KExpr = {
+    require(e.args().length == 1, "Expected args size 1 (single differential symbol or single differential term)")
+    require(e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1, "Expected 1 prime (e.g., v', not v'')")
+    convert(e.args.head) match {
+      case v: Variable => DifferentialSymbol(v)
+      case t: Term => Differential(t)
+    }
   }
 }
 

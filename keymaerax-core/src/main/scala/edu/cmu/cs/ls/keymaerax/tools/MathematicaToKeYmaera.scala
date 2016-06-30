@@ -83,10 +83,6 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
       hasHead(_, MathematicaSymbols.RULE)))) throw new ConversionException("Unsupported conversion List[RULE]")
 
-    // Derivatives
-    //@todo Code Review: check e.head
-    else if (e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
-
     // Functions
     else if (e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertAtomicTerm(e)
 
@@ -153,15 +149,6 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
     // convert quantifier block into chain of single quantifiers
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
-  }
-
-  private def convertDerivative(e: MExpr): KExpr = {
-    require(e.args().length == 1, "Expected args size 1 (single differential symbol or single differential term)")
-    require(e.head.args().length == 1 && e.head.args().head == new MExpr(1), "Expected 1 prime (e.g., v', not v'')")
-    convert(e.args.head) match {
-      case v: Variable => DifferentialSymbol(v)
-      case t: Term => Differential(t)
-    }
   }
 
   private def convertList(e: MExpr): Pair = {

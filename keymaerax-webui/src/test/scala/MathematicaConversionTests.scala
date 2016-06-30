@@ -193,6 +193,11 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("kyx`x < kyx`y == kyx`z < 0")._2 shouldBe "x<y & y=z & z<0".asFormula
   }
 
+  it should "convert derivatives with the nonQEConverter" in {
+    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    ml.runUnchecked("Derivative[1][kyx`x]")._2 shouldBe DifferentialSymbol(Variable("x"))
+  }
+
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x
