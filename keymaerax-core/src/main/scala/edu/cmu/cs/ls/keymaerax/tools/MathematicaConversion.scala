@@ -107,7 +107,7 @@ class KMComparator(val l: MExpr) {
   private def binaryEquals(l: MExpr, r: MExpr, expectedHead: MExpr): Boolean = {
     // Op[Op[a,b], c] === Op[a,b,c]
     def checkBinary(l: MExpr, r: MExpr, i: Int): Boolean = {
-      l.head() === r.head() && l.args().length == 2 && r.args().reverse(i) === l.args().last &&
+      l.head() === r.head() && l.args().length == 2 && l.args().last === r.args().reverse(i) &&
         (if (hasHead(l.args().head, expectedHead)) checkBinary(l.args().head, r, i+1)
          else l.args().head === r.args().reverse(i+1))
     }
