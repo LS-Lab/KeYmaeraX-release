@@ -81,16 +81,11 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
         case _ => new MExpr(toMathematica(fn), Array[MExpr](convertTerm(child)))
       }
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
-      case plus: Plus =>
-        new MExpr(MathematicaSymbols.PLUS, flattenLeftBinary(plus, Plus.unapply).map(convertTerm).toArray)
-      case Minus(l, r) =>
-        new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case times: Times =>
-        new MExpr(MathematicaSymbols.MULT, flattenLeftBinary(times, Times.unapply).map(convertTerm).toArray)
-      case Divide(l, r) =>
-        new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Power(l, r) =>
-        new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Plus(l, r) => new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Minus(l, r) => new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Times(l, r) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Divide(l, r) => new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Power(l, r) => new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Number(n) if n.isValidInt || n.isValidLong => new MExpr(n.longValue())
       case Number(n) => new MExpr(n.underlying())
       case Pair(l, r) =>
@@ -105,10 +100,10 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
    * Converts KeYmaera formulas into Mathematica objects
    */
   protected def convertFormula(f : Formula): MExpr = f match {
-    case and: And   => new MExpr(MathematicaSymbols.AND, flattenLeftBinary(and, And.unapply).map(convertFormula).toArray)
+    case And(l, r)  => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
-    case or: Or    => new MExpr(MathematicaSymbols.OR, flattenLeftBinary(or, Or.unapply).map(convertFormula).toArray)
+    case Or(l, r)   => new MExpr(MathematicaSymbols.OR, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Equal(l,r) => new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
     case NotEqual(l,r) => new MExpr(MathematicaSymbols.UNEQUAL, Array[MExpr](convertTerm(l), convertTerm(r)))
     case LessEqual(l,r) => new MExpr(MathematicaSymbols.LESS_EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
@@ -147,13 +142,4 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
     new MExpr(head, Array[MExpr](variables, convertFormula(formula)))
   }
-
-  /** Flattens left-associative binary term operators (keeps explicit right-associativity) */
-  private def flattenLeftBinary[T <: Expression, U <: T](t: U, ua: U => Option[(T, T)])(implicit mf: ClassTag[U]): Seq[T] = ua(t) match {
-    //@note Some((l: T, r)) does not match correctly
-    case Some((l, r)) if mf.runtimeClass.isAssignableFrom(l.getClass) => flattenLeftBinary(l.asInstanceOf[U], ua) :+ r
-    case Some((l, r)) => l :: r :: Nil
-    case None => t :: Nil
-  }
 }
-

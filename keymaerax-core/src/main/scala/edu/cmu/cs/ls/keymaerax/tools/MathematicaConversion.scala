@@ -68,6 +68,7 @@ object KMComparator {
   import scala.language.implicitConversions
   implicit def MExprToKMComparator(e: MExpr): KMComparator = new KMComparator(e)
 }
+
 /** Compares Mathematica expressions for equality (handles conversion differences). */
 class KMComparator(val l: MExpr) {
   import KMComparator.hasHead
@@ -81,10 +82,14 @@ class KMComparator(val l: MExpr) {
     else if (hasHead(r, MathematicaSymbols.INEQUALITY)) inequalityEquals(r, l)
     else if (hasHead(l, MathematicaSymbols.RATIONAL)) rationalEquals(l, r)
     else if (hasHead(r, MathematicaSymbols.RATIONAL)) rationalEquals(r, l)
+    else if (hasHead(l, MathematicaSymbols.PLUS)) binaryEquals(l, r, MathematicaSymbols.PLUS)
+    else if (hasHead(l, MathematicaSymbols.MULT)) binaryEquals(l, r, MathematicaSymbols.MULT)
+    else if (hasHead(l, MathematicaSymbols.AND)) binaryEquals(l, r, MathematicaSymbols.AND)
+    else if (hasHead(l, MathematicaSymbols.OR)) binaryEquals(l, r, MathematicaSymbols.OR)
     else false)
 
   private def inequalityEquals(l: MExpr, r: MExpr): Boolean = {
-    def checkInequality(l: Array[MExpr], r: MExpr): Boolean = hasHead(r, l(1)) && r.args.length == 2 && r.args().head == l(0) && r.args().last == l(2)
+    def checkInequality(l: Array[MExpr], r: MExpr): Boolean = hasHead(r, l(1)) && r.args.length == 2 && r.args().head === l(0) && r.args().last === l(2)
     def checkInequalities(l: Array[MExpr], r: MExpr): Boolean = {
       require(l.length % 2 == 1 && r.args().length % 2 == 0, "Expected pairs of expressions separated by operators")
       if (l.length <= 3) checkInequality(l, r)
@@ -96,6 +101,16 @@ class KMComparator(val l: MExpr) {
 
   private def rationalEquals(l: MExpr, r: MExpr): Boolean = {
     hasHead(r, MathematicaSymbols.DIV) && l.args().length == 2 && r.args().length == 2 &&
-      l.args().head == r.args().head && l.args().last == r.args().last
+      l.args().head === r.args().head && l.args().last === r.args().last
+  }
+
+  private def binaryEquals(l: MExpr, r: MExpr, expectedHead: MExpr): Boolean = {
+    // Op[Op[a,b], c] === Op[a,b,c]
+    def checkBinary(l: MExpr, r: MExpr, i: Int): Boolean = {
+      l.head() === r.head() && l.args().length == 2 && r.args().reverse(i) === l.args().last &&
+        (if (hasHead(l.args().head, expectedHead)) checkBinary(l.args().head, r, i+1)
+         else l.args().head === r.args().reverse(i+1))
+    }
+    checkBinary(l, r, 0)
   }
 }
