@@ -36,9 +36,9 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
 
   /** Extends default converter with rule and rule list handling */
   override def convert(e: MExpr): KExpr = {
-    if (MathematicaToKeYmaera.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
+    if (KMComparator.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      MathematicaToKeYmaera.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
+      KMComparator.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
     else super.convert(e)
   }
 

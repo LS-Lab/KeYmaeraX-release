@@ -188,6 +188,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     a [MatchError] should be thrownBy defaultK2MConverter(FuncOf(Function("x", None, Unit, Real), Nothing))
   }
 
+  it should "convert inequalities" in {
+    ml.runUnchecked("kyx`x < kyx`y == kyx`z < 0")._2 shouldBe "x<y & y=z & z<0".asFormula
+  }
+
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x

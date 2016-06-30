@@ -11,7 +11,8 @@ package edu.cmu.cs.ls.keymaerax.tools
 import scala.collection.immutable._
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
 
 import scala.math.BigDecimal
 
@@ -110,15 +111,8 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
       case _ => false
     }}), "Special functions must have expected domain and sort")
 
-  /**
-    * Whether e is thing or starts with head thing.
-    * @return true if ``e" and ``thing" are .equals-related.
-    */
-  def hasHead(e: MExpr, thing: MExpr) =
-    e.equals(thing) || e.head().equals(thing)
-
   private def convertUnary[T<:Expression](e : MExpr, op: T=>T): T = {
-    val subformula = apply(e.args().head).asInstanceOf[T]
+    val subformula = convert(e.args().head).asInstanceOf[T]
     op(subformula)
   }
 
@@ -128,14 +122,14 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
   }
 
   private def convertNary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
-    val subexpressions = e.args().map(apply)
+    val subexpressions = e.args().map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[T])
     asTerms.reduce((l,r) => op(l,r))
   }
 
   private def convertComparison[S<:Expression,T<:Expression](e : MExpr, op: (S,S) => T): T = {
-    val subexpressions = e.args().map(apply)
+    val subexpressions = e.args().map(convert)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
     op(asTerms(0), asTerms(1))
@@ -151,11 +145,11 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
       //Convert the list of quantified variables
       variableBlock.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
     } else {
-      List(apply(variableBlock).asInstanceOf[Variable])
+      List(convert(variableBlock).asInstanceOf[Variable])
     }
 
     //Recurse on the body of the expression.
-    val bodyOfQuantifier = apply(e.args().last).asInstanceOf[Formula]
+    val bodyOfQuantifier = convert(e.args().last).asInstanceOf[Formula]
 
     // convert quantifier block into chain of single quantifiers
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
@@ -164,7 +158,7 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
   private def convertDerivative(e: MExpr): KExpr = {
     require(e.args().length == 1, "Expected args size 1 (single differential symbol or single differential term)")
     require(e.head.args().length == 1 && e.head.args().head == new MExpr(1), "Expected 1 prime (e.g., v', not v'')")
-    apply(e.args.head) match {
+    convert(e.args.head) match {
       case v: Variable => DifferentialSymbol(v)
       case t: Term => Differential(t)
     }
@@ -173,32 +167,32 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
   private def convertList(e: MExpr): Pair = {
     if (e.listQ) {
       assert(e.args.length == 2)
-      Pair(apply(e.args().head).asInstanceOf[Term], apply(e.args()(1)).asInstanceOf[Term])
+      Pair(convert(e.args().head).asInstanceOf[Term], convert(e.args()(1)).asInstanceOf[Term])
     } else throw new ConversionException("Expected a list, but got " + e)
   }
 
   protected def convertAtomicTerm(e: MExpr): KExpr = MathematicaNameConversion.toKeYmaera(e) match {
     case fn: Function =>
       assert(e.args().length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + e.args())
-      val arguments = e.args().map(apply).map(_.asInstanceOf[Term])
+      val arguments = e.args().map(convert).map(_.asInstanceOf[Term])
       FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
     case result: Variable => result
   }
 
   //@todo could streamline this implementation
+  //@solution: streamlined + memory management
   /** Converts inequality chains of the form a <= b < c < 0 to conjunctions of individual inequalities a <= b & b < c & c < 0 */
   private def convertInequality(e: MExpr): Formula = {
     /** Extract overlapping inequalities from a chain of inequalities, so x<y=z<=d will be x<y, y=z, z<=d */
-    def extractInequalities(exprs: Array[Expr]): List[(MExpr, MExpr, MExpr)] = {
-      require(exprs.length >= 3 && exprs.length % 2 == 1, "Need pairs of expressions separated by operators")
-      if (exprs.length == 3) (exprs(0), exprs(1), exprs(2)) :: Nil
-      else (exprs(0), exprs(1), exprs(2)) :: extractInequalities(exprs.tail.tail)
+    def extractInequalities(exprs: Array[MExpr]): List[ComparisonFormula] = {
+      require(exprs.length % 2 == 1, "Expected pairs of expressions separated by operators")
+      if (exprs.length == 1) Nil
+      else safeResult(new MExpr(exprs(1), Array[MExpr](exprs(0), exprs(2))), convert).asInstanceOf[ComparisonFormula] ::
+        extractInequalities(exprs.tail.tail)
     }
 
-    // conjunction of converted indidivual inequalities
-    extractInequalities(e.args()).
-      map({case (arg1, op, arg2) => new MExpr(op, Array[MExpr](arg1, arg2))}).
-      map(apply(_).asInstanceOf[Formula]).reduce(And)
+    // conjunction of converted individual inequalities
+    extractInequalities(e.args()).reduceRight(And)
   }
 
   // error catching and reporting
