@@ -105,10 +105,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked(".25/10")._2 shouldBe Number(0.025)
   }
 
-  ignore should "transcend" in {
-    ml.runUnchecked("Sin[x]")._2
-  }
-
   it should "convert arithmetic expressions correctly" in {
     ml.runUnchecked("kyx`x+kyx`y")._2 should be (Plus(x,y))
     ml.runUnchecked("kyx`x*kyx`y")._2 should be (Times(x,y))
@@ -151,10 +147,9 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("Apply[kyx`x, {kyx`y0}]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real)))
   }
 
-  ignore should "convert crazy names correctly" in {
-    ml.runUnchecked("x$underscore$0")._2 should be (Variable("x_0", None, Real))
-    ml.runUnchecked("x$underscore$0$underscore$1")._2 should be (Variable("x_0_1", None, Real))
-    ml.runUnchecked("x[y$underscore$0]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real)))
+  it should "convert crazy names correctly" in {
+    ml.runUnchecked("kyx`x$u$")._2 should be (Variable("x_", None, Real))
+    ml.runUnchecked("kyx`x[kyx`y$u$]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real)))
   }
 
   it should "convert Boolean Algebra correctly" in {
@@ -203,13 +198,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real))
   }
 
-  ignore should "commute crazy names" in {
-    round trip Variable("x_0", None, Real)
+  it should "commute crazy names" in {
     round trip Variable("x_", None, Real)
     round trip Variable("_", None, Real)
-    round trip Variable("x_0_1", None, Real)
-    round trip Variable("_x_0", None, Real)
-    round trip FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real))
+    round trip FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real))
   }
 
   it should "convert inequalities" in {
