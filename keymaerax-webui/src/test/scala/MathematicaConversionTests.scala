@@ -96,17 +96,13 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "not choke on rationals" in {
-    ml.runUnchecked("2/5")._2 should be (Divide(num(2), num(5)))
+    ml.runUnchecked("2/5")._2 shouldBe Divide(num(2), num(5))
+    ml.runUnchecked("Rational[2,5]")._2 shouldBe Divide(num(2), num(5))
   }
 
-  //The second thing causes a choke.
-  ignore should "not choke on other reasonable numbers" in {
+  it should "not choke on other reasonable numbers" in {
     ml.runUnchecked("Rationalize[0.5/10]")._2 should be (Divide(num(1),num(20)))
-    ml.runUnchecked(".25/10")._2
-  }
-
-  ignore should "transcend" in {
-    ml.runUnchecked("Sin[x]")._2
+    ml.runUnchecked(".25/10")._2 shouldBe Number(0.025)
   }
 
   it should "convert arithmetic expressions correctly" in {
@@ -129,28 +125,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
       )
   }
 
-  ignore should "convert inverse functions correctly" in {
-    ???
-  }
-
-  ignore should "convert integrals correctly" in {
-    ???
-  }
-
-  it should "convert rules correctly with the nonQEConverter" ignore {
-    //@todo run(MExpr, executor, converter) is private, and so are executor and converter
-    ml.runUnchecked("Rule[x,y]")._2 shouldBe Equal(x, y)
-    ml.runUnchecked("Rule[x[y],y]")._2 should be (Equal(FuncOf(xFn, y), y))
-    ml.runUnchecked("{{Rule[x,y]}}")._2 should be (Equal(x, y))
-    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
-    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}, {Rule[x[y],y]}}")._2 shouldBe
+  it should "convert rules correctly with the nonQEConverter" in {
+    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    ml.runUnchecked("Rule[kyx`x,kyx`y]")._2 shouldBe Equal(x, y)
+    ml.runUnchecked("Rule[kyx`x[kyx`y],kyx`y]")._2 should be (Equal(FuncOf(xFn, y), y))
+    ml.runUnchecked("{{Rule[kyx`x,kyx`y]}}")._2 should be (Equal(x, y))
+    ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
+    ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}, {Rule[kyx`x[kyx`y],kyx`y]}}")._2 shouldBe
       Or(And(Equal(x, y), Equal(y, x)), Equal(FuncOf(xFn, y), y))
   }
 
   it should "not convert rules with the default converter" in {
-    a [ConversionException] should be thrownBy ml.runUnchecked("Rule[x,y]")
-    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[x,y]}}")
-    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")
+    a [ConversionException] should be thrownBy ml.runUnchecked("Rule[kyx`x,kyx`y]")
+    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[kyx`x,kyx`y]}}")
+    a [ConversionException] should be thrownBy ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}}")
   }
 
   it should "convert names correctly" in {
@@ -159,10 +147,9 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("Apply[kyx`x, {kyx`y0}]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real)))
   }
 
-  ignore should "convert crazy names correctly" in {
-    ml.runUnchecked("x$underscore$0")._2 should be (Variable("x_0", None, Real))
-    ml.runUnchecked("x$underscore$0$underscore$1")._2 should be (Variable("x_0_1", None, Real))
-    ml.runUnchecked("x[y$underscore$0]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real)))
+  it should "convert crazy names correctly" in {
+    ml.runUnchecked("kyx`x$u$")._2 should be (Variable("x_", None, Real))
+    ml.runUnchecked("kyx`x[kyx`y$u$]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real)))
   }
 
   it should "convert Boolean Algebra correctly" in {
@@ -188,6 +175,15 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     a [MatchError] should be thrownBy defaultK2MConverter(FuncOf(Function("x", None, Unit, Real), Nothing))
   }
 
+  it should "convert inequalities" in {
+    ml.runUnchecked("kyx`x < kyx`y == kyx`z < 0")._2 shouldBe "x<y & y=z & z<0".asFormula
+  }
+
+  it should "convert derivatives with the nonQEConverter" in {
+    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    ml.runUnchecked("Derivative[1][kyx`x]")._2 shouldBe DifferentialSymbol(Variable("x"))
+  }
+
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x
@@ -202,13 +198,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real))
   }
 
-  ignore should "commute crazy names" in {
-    round trip Variable("x_0", None, Real)
+  it should "commute crazy names" in {
     round trip Variable("x_", None, Real)
     round trip Variable("_", None, Real)
-    round trip Variable("x_0_1", None, Real)
-    round trip Variable("_x_0", None, Real)
-    round trip FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real))
+    round trip FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real))
   }
 
   it should "convert inequalities" in {
