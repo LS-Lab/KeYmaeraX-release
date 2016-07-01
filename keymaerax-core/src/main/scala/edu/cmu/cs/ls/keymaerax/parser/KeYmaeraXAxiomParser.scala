@@ -39,7 +39,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
    * @return A list of axiom names and the associated formulas.
    */
   def parseAxioms(input: TokenStream): List[(String, Formula)] = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axion block but found " + input.head)
     val (nextAxiom, nextFormula, remainder) = parseNextAxiom(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))

@@ -5,12 +5,14 @@ package parserTests
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Created by nfulton on 2/23/15.
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  */
 class ArithmeticParserTests extends FlatSpec with Matchers {
 
@@ -86,6 +88,13 @@ class ArithmeticParserTests extends FlatSpec with Matchers {
     val add = Divide(Divide(one, two), three)
     add.right should be (three)
     add.prettyString.asTerm.asInstanceOf[Divide].right shouldBe three
+  }
+
+  "Power" should "give useful location information" in {
+    //@note imbalanced parentheses, should still not forget where EOF is
+    val ex = the [ParseException] thrownBy "((f(??)^(c()))'".asTerm
+    ex.getMessage should include ("unmatched: :LPAREN$ at 1:1")
+    ex.getMessage should include ("Found:    EOF$ at 1:16")
   }
 
 
