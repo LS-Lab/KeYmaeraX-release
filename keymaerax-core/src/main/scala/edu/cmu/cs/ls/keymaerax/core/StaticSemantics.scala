@@ -95,7 +95,8 @@ object StaticSemantics {
     case xp: DifferentialSymbol => SetLattice(xp)
     case _: Number => bottom
     // Type hierarchy makes the assert superfluous, which is intentional to protect against change.
-    case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
+    case d: DotTerm => assert(!d.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
+    case p: Projection => freeVars(p.project())
     //@note except for Differential, the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => freeVars(f.left) ++ freeVars(f.right)
     // homomorphic cases
@@ -271,7 +272,8 @@ object StaticSemantics {
     case _: DifferentialSymbol => Set.empty
     case _: Number => Set.empty
     case FuncOf(f, arg) => Set(f) ++ signature(arg)
-    case DotTerm => Set(DotTerm)
+    case d: DotTerm => Set(d)
+    case p: Projection => signature(p.project())
     //@note the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => signature(f.left) ++ signature(f.right)
     // homomorphic cases

@@ -107,9 +107,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
    */
   private[core] def matchKey: NamedSymbol = what match {
-    case DotTerm => DotTerm
-    case FuncOf(f: Function, DotTerm | Nothing | Anything) => f
-    case PredOf(p: Function, DotTerm | Nothing | Anything) => p
+    case d: DotTerm => d
+    case FuncOf(f: Function, Projection(DotTerm, _) | DotTerm(_) | Nothing | Anything) => f
+    case PredOf(p: Function, Projection(DotTerm, _) | DotTerm(_) | Nothing | Anything) => p
     case Anything => Anything
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
@@ -125,10 +125,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   private[core] def sameHead(other: Expression): Boolean = what match {
     case FuncOf(lf, arg) =>
-      assert(arg match { case DotTerm | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      assert(arg match { case Projection(DotTerm, _) | DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
       other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, arg) =>
-      assert(arg match { case DotTerm | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      assert(arg match { case Projection(DotTerm, _) | DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
       other match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, arg) =>
       assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
@@ -317,6 +317,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    */
   private def matchHead(e: Expression): Boolean = subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
+  /** Projection of t onto position proj */
+  private def project(t: Term, proj: List[Int]): Term = proj match {
+    case head :: tail => t match {
+      case Pair(l, r) if head == 0 => project(l, tail)
+      case Pair(l, r) if head == 1 => project(r, tail)
+    }
+    case Nil => t
+  }
+
 
   // implementation of uniform substitution application
       
@@ -343,9 +352,12 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case Nothing =>
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
         Nothing
-      case DotTerm if  subsDefs.exists(_.what == DotTerm) =>
-        subsDefs.find(_.what == DotTerm).get.repl.asInstanceOf[Term]
-      case DotTerm if !subsDefs.exists(_.what == DotTerm) => DotTerm
+      case p@Projection(DotTerm, _) if subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
+        p.project(subsDefs.find(_.what.isInstanceOf[DotTerm]).get.repl.asInstanceOf[Term])
+      case Projection(DotTerm, _) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term
+      case DotTerm(_) if  subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
+        subsDefs.find(_.what.isInstanceOf[DotTerm]).get.repl.asInstanceOf[Term]
+      case DotTerm(_) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term
       case n: Number => n
       //@note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
       // case f:BinaryCompositeTerm => f.reapply(usubst(f.left), usubst(f.right))
@@ -370,7 +382,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
         val PredOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
-        assert(wArg == DotTerm || wArg == Nothing || wArg == Anything)
+        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing || wArg == Anything)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
