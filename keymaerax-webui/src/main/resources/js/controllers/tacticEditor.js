@@ -4,9 +4,13 @@ angular.module('keymaerax.controllers').controller('TacticEditorCtrl',
   $scope.customTactic = parentScope.customTactic;
 
   $scope.execute = function() {
-    $uibModalInstance.close('execute');
-    parentScope.customTactic = $scope.customTactic;
-    parentScope.doCustomTactic();
+    if($scope.customTactic == "") {
+      alert("Cannot execute an empty tactic.")
+    } else {
+      $uibModalInstance.close('execute');
+      parentScope.customTactic = $scope.customTactic;
+      parentScope.doCustomTactic();
+    }
   }
 
   $scope.cancel = function() {
