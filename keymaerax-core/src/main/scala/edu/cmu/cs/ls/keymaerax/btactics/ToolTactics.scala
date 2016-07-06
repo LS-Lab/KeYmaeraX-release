@@ -26,7 +26,7 @@ object ToolTactics {
       alphaRule*@TheType() &
       varExhaustiveEqL2R('L)*@TheType() &
       tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
-      toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool) &
+      Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool)) &
       DebuggingTactics.assertProved
   )}
   def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
