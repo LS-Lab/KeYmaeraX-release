@@ -318,12 +318,12 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
           remaining = nextInput
           loc = nextLoc
         case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
-          output.append(Token(EOF))
+          output.append(Token(EOF, loc))
           return output.to
       }
     }
-    output.append(Token(EOF))
-    return output.to
+    output.append(Token(EOF, loc))
+    output.to
   }
 
   /**

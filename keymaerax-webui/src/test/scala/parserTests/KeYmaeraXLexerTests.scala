@@ -26,7 +26,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
 
   it should "Handle empty string correctly" in {
     val input = ""
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(EOF, UnknownLocation)
+    KeYmaeraXLexer(input).head shouldBe Token(EOF, SuffixRegion(1, 1))
   }
 
   //@todo Nathan

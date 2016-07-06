@@ -187,10 +187,34 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   override def fullString: String = asString + ":" + domain + "->" + sort
 }
 
+/** Projection of terms onto their components */
+sealed case class Projection(t: Term, proj: List[Int]) extends Expression with AtomicTerm {
+  /** Projection of t onto position proj */
+  private def project(t: Term, proj: List[Int]): Term = proj match {
+    case Nil => t
+    case head :: tail => t match {
+      case Pair(l, _) if head == 0 => project(l, tail)
+      case Pair(_, r) if head == 1 => project(r, tail)
+      case DotTerm(Tuple(l, _)) if head == 0 => project(DotTerm(l), tail)
+      case DotTerm(Tuple(_, r)) if head == 1 => project(DotTerm(r), tail)
+    }
+  }
+
+  def sort: Sort = project().sort
+  def project(): Term = project(t)
+  def project(t: Term): Term = project(t, proj)
+}
+
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
-object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
+object DotTerm extends DotTerm(Real)
+sealed case class DotTerm(s: Sort) extends Expression with NamedSymbol with AtomicTerm {
+  def sort: Sort = s
   def name: String = "\\cdot"
   def index: Option[Int] = None
+
+  /** All dots are the same, regardless of their projection and sort */
+  override def equals(e: Any): Boolean = e match { case _: DotTerm => true case _ => false }
+  override def hashCode() = name.hashCode
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */

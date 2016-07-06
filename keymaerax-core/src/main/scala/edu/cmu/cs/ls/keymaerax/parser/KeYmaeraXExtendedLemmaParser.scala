@@ -45,7 +45,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @return A lemma (name, associated formula and evidence).
     */
   def parseLemma(input: TokenStream): Lemma = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block but found " + input.head)
     val (nextLemma, nextFormula, nextEvidence, remainder) = parseNextLemma(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
@@ -109,7 +109,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @return A list of evidence (tool input/output).
     */
   def parseEvidence(input: TokenStream): (Evidence, TokenStream) = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(input.head.tok.equals(TOOL_BEGIN), "expected Tool block but found " + input.head)
     val (evidence, remainder) = parseNextEvidence(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))

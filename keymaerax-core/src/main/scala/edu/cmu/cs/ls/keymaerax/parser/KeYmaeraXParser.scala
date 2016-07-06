@@ -169,7 +169,7 @@ object KeYmaeraXParser extends Parser {
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
   private[parser] def parse(input: TokenStream): Expression = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.last.tok == EOF, "token streams have to end in " + EOF)
     val parse = parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
       case context :+ Error(msg, loc, st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
@@ -840,7 +840,7 @@ object KeYmaeraXParser extends Parser {
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: Expression): ParseState = {
     val ParseState(s, input) = st
-    require(input == List(Token(EOF)), "Can only accept after all input has been read.\nRemaining input: " + input)
+    require(input.length == 1 && input.head.tok == EOF, "Can only accept after all input has been read.\nRemaining input: " + input)
     require(s.length == 1, "Can only accept with one single result on the stack.\nRemaining stack: " + s)
     ParseState(Bottom :+ Accept(result), input)
   }
