@@ -133,7 +133,7 @@ case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startS
   var endStep: Option[ExecutionStep] = None
   var children: List[TreeNode] = Nil
   if (parent.nonEmpty)
-    parent.get.children = this :: parent.get.children
+    parent.get.children = parent.get.children ::: List(this)
 
   def allDescendants:List[TreeNode] = this :: children.flatMap{case child => child.allDescendants}
   def rule:String = { startStep.map{case step => step.rule}.getOrElse("")}
