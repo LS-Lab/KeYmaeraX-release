@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
-import edu.cmu.cs.ls.keymaerax.core.{Imply, Box}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -65,6 +65,20 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with master and loop invariant from file" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
     proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
+    val tactic = implyR('_) & andL('_)*@TheType() & loop("J(v)".asFormula)('R) <(
+      skip,
+      skip,
+      chase('R) & prop & OnAll(diffSolve()('R) partial) partial
+      ) &
+      // J(.) ~> .>=0
+      US(USubst(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm), GreaterEqual(DotTerm, Number(0))) :: Nil)) &
+    OnAll(close | QE)
+
+    proveBy(s, tactic) shouldBe 'proved
   }
 
   ignore /*"Example 3a"*/ should "Example 3a be provable with master and loop invariant from file" in withMathematica { implicit tool =>
@@ -125,6 +139,28 @@ class StttTutorial extends TacticTestBase {
         printIndexed("Step") & chase('R) & normalize & printIndexed("Normalized") & OnAll(diffSolve()('R) partial) &
           printIndexed("After diffSolve") & OnAll(QE)
         )
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
+
+    val dot = DotTerm(Tuple(Real, Tuple(Real, Tuple(Real, Real))))
+
+    val tactic = implyR('R) & andL('L)*@TheType() &
+      loop("J(v,x,B,S)".asFormula)('R) <(
+        skip,
+        skip,
+        chase('R) & normalize & OnAll(diffSolve()('R) partial) partial
+        ) &
+      // J(.0,.1,.2,.3) ~> .0 >= 0 & .1+.0^2/(2*.3) <= .4
+      US(USubst(SubstitutionPair(PredOf(Function("J", None, Tuple(Real, Tuple(Real, Tuple(Real, Real))), Bool), dot),
+        And(
+          GreaterEqual(Projection(dot, 0::Nil), Number(0)),
+          LessEqual(Plus(Projection(dot, 1::0::Nil), Divide(Power(Projection(dot, 0::Nil), Number(2)),
+            Times(Number(2), Projection(dot, 1::1::0::Nil)))), Projection(dot, 1::1::1::Nil)))) :: Nil)) &
+      OnAll(close | QE)
 
     proveBy(s, tactic) shouldBe 'proved
   }
