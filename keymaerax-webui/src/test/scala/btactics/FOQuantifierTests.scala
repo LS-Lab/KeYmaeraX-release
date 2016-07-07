@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Position, BelleError, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable.IndexedSeq
-import scala.collection.parallel.immutable
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics]].
@@ -249,17 +248,6 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "a=2 -> !z>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
-
-  it should "work for axiomatic ode solver example" in {
-    val tactic = existsInstantiate(Some("t".asVariable), Some(Number(0)))(1)
-    val f = "\\exists t [{x'=v,v'=a, t'=1}]x>0".asFormula
-    proveBy(f, tactic)
-  }
-
-//  "Exists eliminate" should "instantiate example from axiomatic ODE solver" in {
-//    val tactic = HilbertCalculus.useAt("exists eliminate", (us:Subst) => {RenUSubst(scala.collection.immutable.Seq(("x_".asVariable, "t".asVariable)))})(1)
-//    val result = proveBy("\\exists t [{x'=v,v'=a, t'=1}]x>0".asFormula, tactic)
-//  }
 
   "exists generalize" should "only generalize the specified occurrences of t" in {
     val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
