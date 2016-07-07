@@ -359,6 +359,11 @@ class FOQuantifierTests extends TacticTestBase {
     a [BelleError] should be thrownBy proveBy("a>0 & x>5 & y<2".asFormula, universalClosure(Variable("b")::Nil)(1))
   }
 
+//  "Exists eliminate" should "instantiate example from axiomatic ODE solver" in {
+//    val tactic = HilbertCalculus.useAt("exists eliminate", (us:Subst) => {RenUSubst(scala.collection.immutable.Seq(("x_".asVariable, "t".asVariable)))})(1)
+//    val result = proveBy("\\exists t [{x'=v,v'=a, t'=1}]x>0".asFormula, tactic)
+//  }
+
   "all skolemize" should "skolemize simple" in {
     val result = proveBy("\\forall x x>0".asFormula, allSkolemize(1))
     result.subgoals should have size 1

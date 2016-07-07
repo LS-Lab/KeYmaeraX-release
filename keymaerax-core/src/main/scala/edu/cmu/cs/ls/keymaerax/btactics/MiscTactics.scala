@@ -47,9 +47,9 @@ object DebuggingTactics {
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
-  def debugAt(message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
+  def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
-      if (DEBUG) println("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
+      if (doPrint) println("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
         + " at position " + pos + " of first subgoal,"
         + "\n\t entire provable: " + provable + " =====")
       provable
