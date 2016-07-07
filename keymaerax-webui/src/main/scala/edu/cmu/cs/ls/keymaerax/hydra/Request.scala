@@ -34,7 +34,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import java.io.{File, FileInputStream, FileOutputStream}
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, HackyInlineErrorMsgPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 /**
@@ -1049,7 +1049,7 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   private val proofId = Integer.parseInt(proofIdStr)
 
   override def resultingResponses(): List[Response] = {
-    val exprText = new ExtractTacticFromTrace(db).extractTextWithoutParsing(proofId)
+    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(proofId))
     new ExtractTacticResponse(exprText) :: Nil
   }
 }
