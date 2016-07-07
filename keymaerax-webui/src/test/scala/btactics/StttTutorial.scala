@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -69,14 +69,14 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
+
     val tactic = implyR('_) & andL('_)*@TheType() & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
       chase('R) & prop & OnAll(diffSolve()('R) partial) partial
       ) &
-      // J(.) ~> .>=0
-      US(USubst(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm), GreaterEqual(DotTerm, Number(0))) :: Nil)) &
-    OnAll(close | QE)
+      US(UnificationMatch("J(v)".asFormula, "v>=0".asFormula).usubst) &
+      OnAll(close | QE)
 
     proveBy(s, tactic) shouldBe 'proved
   }
@@ -146,20 +146,13 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
-    val dot = DotTerm(Tuple(Real, Tuple(Real, Tuple(Real, Real))))
-
     val tactic = implyR('R) & andL('L)*@TheType() &
       loop("J(v,x,B,S)".asFormula)('R) <(
         skip,
         skip,
         chase('R) & normalize & OnAll(diffSolve()('R) partial) partial
         ) &
-      // J(.0,.1,.2,.3) ~> .0 >= 0 & .1+.0^2/(2*.3) <= .4
-      US(USubst(SubstitutionPair(PredOf(Function("J", None, Tuple(Real, Tuple(Real, Tuple(Real, Real))), Bool), dot),
-        And(
-          GreaterEqual(Projection(dot, 0::Nil), Number(0)),
-          LessEqual(Plus(Projection(dot, 1::0::Nil), Divide(Power(Projection(dot, 0::Nil), Number(2)),
-            Times(Number(2), Projection(dot, 1::1::0::Nil)))), Projection(dot, 1::1::1::Nil)))) :: Nil)) &
+      US(UnificationMatch("J(v,x,B,S)".asFormula, "v >= 0 & x+v^2/(2*B) <= S".asFormula).usubst) &
       OnAll(close | QE)
 
     proveBy(s, tactic) shouldBe 'proved
