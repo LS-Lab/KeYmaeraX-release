@@ -243,7 +243,7 @@ object AxiomaticODESolver {
     */
   private def odeConstraints(ode : DifferentialProgram) : List[Formula] = ode match {
     case AtomicODE(x,e)                   => Nil
-    case ODESystem(ode, constraint)       => constraint :: Nil
+    //case ODESystem(ode, constraint)       => constraint :: Nil
     case DifferentialProduct(left, right) => odeConstraints(left) ++ odeConstraints(right)
   }
 
@@ -254,7 +254,7 @@ object AxiomaticODESolver {
     */
   private def atomicODEs(ode : DifferentialProgram) : List[AtomicODE] = ode match {
     case AtomicODE(x, e)                  => AtomicODE(x,e) :: Nil
-    case ODESystem(ode, constraint)       => atomicODEs(ode)
+    //case ODESystem(ode, constraint)       => atomicODEs(ode)
     case DifferentialProduct(left, right) => atomicODEs(left) ++ atomicODEs(right)
   }
 
@@ -426,14 +426,14 @@ object AxiomaticODESolver {
 //    if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr.child)
 //    else SuccPosition(pos.checkSucc.top, pos.inExpr.child)
 
-  def parentPosition(pos: Position) =
+  def parentPosition(pos: Position): Position =
     if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr.parent)
     else SuccPosition(pos.checkSucc.top, pos.inExpr.parent)
 
-  def subPosition(pos: Position, sub: PosInExpr) =
+  def subPosition(pos: Position, sub: PosInExpr): Position =
     if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr + sub)
     else SuccPosition(pos.checkSucc.top, pos.inExpr + sub)
-  def subPosition(pos: Position, sub: List[Int]) = subPosition(pos, PosInExpr(sub))
+  def subPosition(pos: Position, sub: List[Int]): Position = subPosition(pos, PosInExpr(sub))
 
   //endregion
 }
