@@ -68,7 +68,7 @@ object AxiomaticODESolver {
         HilbertCalculus.DG(t, Number(0), Number(1))(modalityPos) &
         DebuggingTactics.error("Needs exists monotone") //@todo instantiate \exists t to an assignment [t:=0] or additional antecedent.
       }
-      case Diamond(_,_) => DebuggingTactics.error("TODO: support diamond modality")
+      case Diamond(_,_) => throw noDiamondsForNowExn
     }
   })
 
