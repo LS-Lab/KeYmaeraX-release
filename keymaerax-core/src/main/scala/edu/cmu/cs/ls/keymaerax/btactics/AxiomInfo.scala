@@ -241,7 +241,7 @@ object DerivationInfo {
 
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => }),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => }),
-    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => }),
+    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
 
 
     // Derived axioms

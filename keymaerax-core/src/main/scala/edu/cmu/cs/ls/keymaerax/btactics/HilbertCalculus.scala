@@ -253,6 +253,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val existsV            : DependentPositionTactic = namedUseAt("existsV", "vacuous exists quantifier")
   lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
 
+  lazy val existsE            : DependentPositionTactic = namedUseAt("existsE", "exists eliminate")
+
   //@todo make the other quantifier axioms accessible by useAt too
 
   /**
