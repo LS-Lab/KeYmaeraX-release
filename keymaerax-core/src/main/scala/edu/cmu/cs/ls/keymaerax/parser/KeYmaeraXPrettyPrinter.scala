@@ -108,7 +108,15 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   private val LEXSPACE: String = " "
 
   private def pp(term: Term): String = term match {
-    case DotTerm|Anything|Nothing=> op(term).opcode
+    case Anything|Nothing=> op(term).opcode
+    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case Projection(t, proj) =>
+      def toNumber(p: List[Int]): Int = p match {
+        case Nil => 0
+        case head::tail => head + 2*toNumber(tail)
+      }
+      //@note will parse as Projection(Pair(t, Pair(size,number)))
+      op(term).opcode + "(" + pp(t) + "," + proj.size + "," + toNumber(proj.reverse) + ")"
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
@@ -214,7 +222,15 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   //@todo could add contract that TermAugmentor(original)(q) == term
   private def pp(q: PosInExpr, term: Term): String = emit(q, term match {
-    case DotTerm|Anything|Nothing=> op(term).opcode
+    case Anything|Nothing=> op(term).opcode
+    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case Projection(t, proj) =>
+      def toNumber(p: List[Int]): Int = p match {
+        case Nil => 0
+        case head::tail => head + 2*toNumber(tail)
+      }
+      //@note will parse as Projection(Pair(t, Pair(size,number)))
+      op(term).opcode + "(" + pp(q, t) + "," + proj.size + "," + toNumber(proj.reverse) + ")"
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(q+0, x) + op(term).opcode
     case Differential(t)        => "(" + pp(q+0, t) + ")" + op(term).opcode

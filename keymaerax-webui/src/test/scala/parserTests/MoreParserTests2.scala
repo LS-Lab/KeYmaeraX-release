@@ -170,6 +170,25 @@ class MoreParserTests2 extends FlatSpec with Matchers {
     parser.formulaParser(parser.formulaParser("p(??)").prettyString) shouldBe PredOf(Function("p",None,Real,Bool), Anything)
   }
 
+  it should "round trip parse dot terms" in {
+    parser.termParser(parser.termParser(".").prettyString) shouldBe DotTerm
+    parser.termParser(parser.termParser("•").prettyString) shouldBe DotTerm
+    parser.termParser(parser.termParser("•()").prettyString) shouldBe DotTerm
+    parser.termParser(parser.termParser("•(•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Real))
+    parser.termParser(parser.termParser("•(•,•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)))
+  }
+
+  it should "round trip parse projections" in {
+    parser.termParser(parser.termParser("π((a,b),1,0)").prettyString) shouldBe Projection(Pair(Variable("a"), Variable("b")), 0::Nil)
+    parser.termParser(parser.termParser("π((a,b),1,1)").prettyString) shouldBe Projection(Pair(Variable("a"), Variable("b")), 1::Nil)
+    // projecting to 'a'
+    parser.termParser(parser.termParser("π((a,(b,c)),1,0)").prettyString) shouldBe Projection(Pair(Variable("a"), Pair(Variable("b"), Variable("c"))), 0::Nil)
+    // projecting to 'b'
+    parser.termParser(parser.termParser("π((a,(b,c)),2,2)").prettyString) shouldBe Projection(Pair(Variable("a"), Pair(Variable("b"), Variable("c"))), 1::0::Nil)
+    // projecting to 'c'
+    parser.termParser(parser.termParser("π((a,(b,c)),2,3)").prettyString) shouldBe Projection(Pair(Variable("a"), Pair(Variable("b"), Variable("c"))), 1::1::Nil)
+  }
+
   it should "foo" in {
     val t3 = Variable("t", Some(3))
     val B = Variable("B", None)
