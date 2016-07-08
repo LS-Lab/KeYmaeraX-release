@@ -7,11 +7,14 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 
+import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
@@ -81,10 +84,33 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  ignore /*"Example 3a"*/ should "Example 3a be provable with master and loop invariant from file" in withMathematica { implicit tool =>
+  "Example 3a" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
     // // needs evolution domain at time 0
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.key"))
     proveBy(s, master()) shouldBe 'proved
+  }
+
+  "Example3b" should "find correct safety condition" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.key"))
+    val tactic = implyR('_) & andL('_)*@TheType() & chase('R) & normalize & OnAll(diffSolve()('R) partial) & print("Foo")
+    val intermediate = proveBy(s, tactic)
+    intermediate.subgoals should have size 3
+    intermediate.subgoals(0) shouldBe Sequent(
+      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "true".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
+      IndexedSeq("((v>=0&t_>=0)&v=A*t_+v_0)&x=1/2*(A*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
+    intermediate.subgoals(1) shouldBe Sequent(
+      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "v_0=0".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
+      IndexedSeq("((v>=0&t_>=0)&v=v_0)&x=t_*v_0+x_0->x<=S".asFormula))
+    intermediate.subgoals(2) shouldBe Sequent(
+      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
+      IndexedSeq("((v>=0&t_>=0)&v=-1*B*t_+v_0)&x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
+
+    val brake = proveBy(intermediate.subgoals(2), ToolTactics.partialQE)
+    brake.subgoals should have size 1
+    brake.subgoals.head shouldBe Sequent(
+      IndexedSeq(),
+      // here is our evolution domain constraint (substitute t_ = v/B into S>= ... ) -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------v------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------v
+      IndexedSeq("v_0<=0|v_0>0&(t_<=0|t_>0&(((B<=0|(0 < B&B < t_^-1*v_0)&((S < x_0|(x_0<=S&S < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)&((v < -1*B*t_+v_0|v=-1*B*t_+v_0&((t__0 < 0|t__0=0&A<=0)|t__0>0))|v>-1*B*t_+v_0))|x>1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|S>=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|B=t_^-1*v_0&((S < x_0|(x_0<=S&S < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)&((v < 0|v=0&((t__0 < 0|t__0=0&A<=0)|t__0>0))|v>0))|x>1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|S>=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|B>t_^-1*v_0))".asFormula))
   }
 
   "Example 4a" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
@@ -97,7 +123,7 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, master()) shouldBe 'proved
   }
 
-  ignore /*"Example 4c"*/ should "Example 4c be provable with master and loop invariant from file" in withMathematica { implicit tool =>
+  "Example 4c" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
     // needs evolution domain at time 0
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.key"))
     proveBy(s, master()) shouldBe 'proved
@@ -201,22 +227,24 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  ignore /*"Example 10"*/ should "Example 10 be provable" in withMathematica { implicit tool =>
+  "Example 10" should "be provable" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.key"))
 
-    val ode = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, "v=old(v)+a*c".asFormula,
-      "-c*(v-a/2*c)<= y - old(y) & y - old(y) <= c*(v-a/2*c)".asFormula)('R) &
-      exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & diffWeaken('R)
+    def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
+      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) &
+      exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & andL('_)*@TheType() & diffWeaken('R)
 
-    // works in principle, just needs appropriate hiding and abs etc. before QE
     val tactic = implyR('R) & andL('L)*@TheType() &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
-        print("Base case") & QE,
-        print("Use case") & QE,
-        print("Step") & chase('R) & normalize & printIndexed("Normalized") & OnAll(ode) <(
-          printIndexed("Finish 1") partial,
-          printIndexed("Finish 2") partial,
-          printIndexed("Finish 3") partial
+        print("Base case") & speculativeQE,
+        print("Use case") & speculativeQE,
+        print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
+          printIndexed("Acc") & hideL(-9, "abs(y-ly)+v^2/(2*b) < lw".asFormula) & ode("a") &
+            alphaRule*@TheType() &
+            printIndexed("Before replaceTransform") & replaceTransform("ep".asTerm, "c".asTerm)(-8) &
+            prop & OnAll(speculativeQE),
+          printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
+          printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
           )
         )
 
