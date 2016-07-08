@@ -403,16 +403,17 @@ trait UnifyUSCalculus {
 
         case Equiv(other, DotFormula) => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
 
-        case Equal(DotTerm, other) =>
+        case Equal(DotTerm(_), other) =>
           equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 
-        case Equal(other, DotTerm) =>
+        case Equal(other, DotTerm(_)) =>
           equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
 
         case Imply(other, DotFormula) => implyStep(other)
 
         case Imply(DotFormula, other) => implyStep(other)
 
+        //@note all DotTerms are equal
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
           // try to prove prereq globally
           /* {{{

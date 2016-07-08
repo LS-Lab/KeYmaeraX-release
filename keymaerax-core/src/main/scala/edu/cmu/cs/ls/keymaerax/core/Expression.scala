@@ -201,7 +201,9 @@ sealed case class Projection(t: Term, proj: List[Int]) extends Expression with A
   }
 
   def sort: Sort = project().sort
+  /** Use the projection proj on this object's term t */
   def project(): Term = project(t)
+  /** Use the projection proj on term t (reuse the projection for other than this object's term t) */
   def project(t: Term): Term = project(t, proj)
 }
 
