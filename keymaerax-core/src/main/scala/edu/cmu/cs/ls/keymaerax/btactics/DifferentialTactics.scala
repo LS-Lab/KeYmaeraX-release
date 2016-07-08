@@ -16,7 +16,8 @@ import scala.language.postfixOps
 
 /**
  * [[DifferentialTactics]] provides tactics for differential equations.
- * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
+  *
+  * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
 object DifferentialTactics {
@@ -29,7 +30,8 @@ object DifferentialTactics {
    *   -------------------------------------------
    *   G |- [{x'=f(??)&H(??)}]p(??), D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *    |- [{x'=1}][x':=1;]x>0
    *    -----------------------DE(1)
    *    |- [{x'=1}]x>0
@@ -101,7 +103,7 @@ object DifferentialTactics {
             val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
               SubstitutionPair(aH, h) :: Nil)
             val uren = ProofRuleTactics.uniformRenaming(aX, x)
-            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${d.prettyString}=f(??)&H(??)}][${d.prettyString}:=f(??);]p(??)".asFormula))
+            val origin = Sequent(IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${d.prettyString}=f(??)&H(??)}][${d.prettyString}:=f(??);]p(??)".asFormula))
 
             cutLR(g)(pos) <(
               /* use */ skip,
@@ -136,7 +138,7 @@ object DifferentialTactics {
             val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, uren(c)) :: SubstitutionPair(aP, uren(p)) ::
               SubstitutionPair(aH, uren(h)) :: Nil)
             //            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${xp.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${xp.prettyString}=f(??)&H(??)}][${xp.prettyString}:=f(??);]p(??)".asFormula))
-            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect (system)")))
+            val origin = Sequent(IndexedSeq(), IndexedSeq(Provable.axiom("DE differential effect (system)")))
 
             if (true || DEBUG) println("DE: manual " + subst + " above " + uren + " to prove " + sequent.prettyString)
 
@@ -161,9 +163,12 @@ object DifferentialTactics {
 
             val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aP, uren(p)) ::
               SubstitutionPair(aQ, uren(h)) :: Nil
-            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect")))
+            val origin = Sequent(IndexedSeq(), IndexedSeq(Provable.axiom("DE differential effect")))
 
             if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
+
+            /** byVerbatim(axiom)  uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
+            def byVerbatim(axiom: String) : BelleExpr = TactixLibrary.by(AxiomInfo(axiom).provable)
 
             cutLR(g)(pos) <(
               /* use */ skip,
@@ -177,7 +182,8 @@ object DifferentialTactics {
 
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
-   * @param qeTool Quantifier elimination tool for final QE step of tactic.
+    *
+    * @param qeTool Quantifier elimination tool for final QE step of tactic.
    * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
    *             'none: behaves as DI rule per cheat sheet
    *                    {{{
@@ -274,7 +280,8 @@ object DifferentialTactics {
 
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
-   * @example{{{
+    *
+    * @example{{{
    *    x>=5 |- x>=5    x>=5 |- [{x'=2}](x>=5)'
    *    ---------------------------------------DIRule(qeTool)(1)
    *    x>=5 |- [{x'=2}]x>=5
@@ -292,7 +299,8 @@ object DifferentialTactics {
   /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
    * used in the evolution domain constraint.
-   * @example{{{
+    *
+    * @example{{{
    *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
    *         -----------------------------------------------diffCut("x>0".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
@@ -369,7 +377,8 @@ object DifferentialTactics {
    * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
    * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
    * formulas are differential invariants. Fails if diffInd cannot prove invariants.
-   * @example{{{
+    *
+    * @example{{{
    *         x>0 |- [{x'=2&x>0}]x>=0
    *         ------------------------diffInvariant("x>0".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
@@ -401,7 +410,8 @@ object DifferentialTactics {
 
   /**
    * Turns things that are constant in ODEs into function symbols.
-   * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
+    *
+    * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
    * @return The tactic.
    */
   def Dconstify(inner: BelleExpr): DependentPositionTactic = new DependentPositionTactic("IDC introduce differential constants") {
@@ -423,7 +433,8 @@ object DifferentialTactics {
 
   /**
    * Differential ghost. Adds an auxiliary differential equation y'=a*y+b
-   * @example{{{
+    *
+    * @example{{{
    *         |- \exists y [{x'=2,y'=0*y+1}]x>0
    *         ---------------------------------- DG("y".asVariable, "0".asTerm, "1".asTerm)(1)
    *         |- [{x'=2}]x>0
@@ -438,7 +449,7 @@ object DifferentialTactics {
    * @param b The constant term in y'=a*y+b.
    * @return The tactic.
    */
-  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos, sequent) => sequent.sub(pos) match {
+  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
       cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) <(
@@ -449,6 +460,17 @@ object DifferentialTactics {
         )
   })
 
+  def DG(ghost: Program, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
+    val (y: Variable, a: Term, b: Term) = {
+      val s = UnificationMatch("z'=b()".asProgram, ghost)
+      (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b()".asTerm))
+    }
+
+    DG(y, a, b)(pos) &
+        DLBySubst.assignbExists(iv)(pos) &
+        DLBySubst.assignEquational(pos)
+  })
+
   /**
    * Syntactically derives a differential of a variable to a differential symbol.
    * {{{
@@ -456,7 +478,8 @@ object DifferentialTactics {
    *   --------------
    *   G |- (x)'=f, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   |- x'=1
    *   ----------Dvariable(1, 0::Nil)
    *   |- (x)'=1
@@ -513,16 +536,16 @@ object DifferentialTactics {
    *        x<0 |- [x'=3,y'=2 & x>=0]y>0
    * }}}
    */
-  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
       cut(q) <(
         /* use */ skip,
-        /* show */ DI(pos) & implyR(pos) & closeId
+        /* show */ DI(pos) & implyR(pos) & closeIdWith('Llast)
         )
   })
 
-  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos, sequent) => sequent.sub(pos) match {
+  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
@@ -570,7 +593,7 @@ object DifferentialTactics {
   })
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
-  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
@@ -580,22 +603,16 @@ object DifferentialTactics {
       val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
 
       if (consts.nonEmpty) {
-        // andL puts both conjuncts at the end of ante -> andL second-to-last (except first, where there's only 1 formula)
-        val dw = diffWeakenG(pos) & implyR(1) & andL(-1) & andLSecondToLast*(consts.size-1) &
-          // original evolution domain is in second-to-last ante position
-          implyRi(AntePos(consts.size-1), SuccPos(0)) partial
-
-        //@note assumes that first subgoal is desired result, see diffCut
-        val vAllButFirst = dw +: Seq.tabulate(consts.length)(_ => V('Rlast) & close)
-        //@note cut in reverse so that andL after diffWeakenG turns them into the previous order
-        diffCut(consts.reverse: _*)(pos) <(vAllButFirst:_*) partial
+        val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0)) partial
+        val constFml = consts.reduceRight(And)
+        diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast), skip))*(consts.size-1) & closeIdWith('Rlast)) partial
       } else {
         diffWeakenG(pos)
       }
   })
 
   /** diffWeaken by DW & G */
-  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
       cohide(pos.top) & DW(1) & G

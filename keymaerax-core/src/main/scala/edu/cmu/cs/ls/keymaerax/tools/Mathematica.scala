@@ -2,9 +2,13 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+/**
+  * @note Code Review: 2016-06-01
+  */
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 
 import scala.collection.immutable.Map
 
@@ -13,11 +17,17 @@ import scala.collection.immutable.Map
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
+ * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool {
-  private val jlink = new JLinkMathematicaLink
+class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool {
+  // JLink, shared between tools
+  private val link = new JLinkMathematicaLink
 
-  // TODO replace with constructor and dependency injection
+  private val mQE = new MathematicaQETool(link)
+  private val mCEX = new MathematicaCEXTool(link)
+  private val mODE = new MathematicaODETool(link)
+  private val mSim = new MathematicaSimulationTool(link)
+
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
       case Some(l) => l
@@ -27,28 +37,64 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
 //        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
     }
     val libDir = config.get("libDir") // doesn't need to be defined
-    initialized = jlink.init(linkName, libDir)
+    initialized = link.init(linkName, libDir)
   }
 
-  override def shutdown() = jlink.shutdown()
+  /** Closes the connection to Mathematica */
+  override def shutdown() = {
+    mQE.shutdown()
+    mCEX.shutdown()
+    mODE.shutdown()
+    mSim.shutdown()
+    //@note last, because we want to shut down all executors (tool threads) before shutting down the JLink interface
+    link.shutdown()
+  }
 
-  def qe(formula: Formula): Formula = jlink.qe(formula)
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
-  @deprecated("Use findCounterExample instead")
-  def getCounterExample(formula: Formula): String = jlink.getCounterExample(formula)
+  /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = mQE.qeEvidence(formula)
+
+  /** Returns a formula describing the symbolic solution of the specified differential equation system.
+   * @param diffSys The differential equation system
+   * @param diffArg The independent variable of the ODE, usually time
+   * @param iv Names of initial values per variable, e.g., x -> x_0
+   * @return The solution, if found. None otherwise.
+   */
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
-                       iv: Predef.Map[Variable, Variable]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
+                       iv: Predef.Map[Variable, Variable]): Option[Formula] = mODE.diffSol(diffSys, diffArg, iv)
+
+  override def deriveBy(term: Term, v: Variable): Term = mODE.deriveBy(term, v)
 
   /**
    * Returns a counterexample for the specified formula.
    * @param formula The formula.
    * @return A counterexample, if found. None otherwise.
    */
-  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = jlink.findCounterExample(formula)
+  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = mCEX.findCounterExample(formula)
 
-  override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = jlink.simulate(initial, stateRelation, steps, n)
-  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = jlink.simulateRun(initial, stateRelation, steps)
+  /**
+    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
+    * relation is a modality-free first-order formula. The simulation starts in a state where initial holds (first-order
+    * formula).
+    * @param initial A first-order formula describing the initial state.
+    * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship
+    *                      is by name convention: postfix 'pre': prior state; no postfix: posterior state.
+    * @param steps The length of the simulation run (i.e., number of states).
+    * @param n The number of simulations (different initial states) to create.
+    * @return 'n' lists (length 'steps') of simulated states.
+    */
+  override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = mSim.simulate(initial, stateRelation, steps, n)
 
-  //@todo Implement Mathematica recovery actions
-  override def restart() = ???
+  /**
+    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
+    * relation is a modality-free first-order formula. The simulation starts in the specified initial state.
+    * @param initial The initial state: concrete values .
+    * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship
+    *                      is by name convention: postfix 'pre': prior state; no postfix: posterior state.
+    * @param steps The length of the simulation run (i.e., number of states).
+    * @return A list (length 'steps') of simulated states.
+    */
+  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim.simulateRun(initial, stateRelation, steps)
+
+  /** Restarts the MathKernel with the current configuration */
+  override def restart() = link.restart()
 }

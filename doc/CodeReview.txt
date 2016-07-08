@@ -3,19 +3,20 @@ KeYmaera X Kernel Code Review
 
 1) The primary purpose of the code review is to establish correctness of all soundness-critical parts of the KeYmaera X theorem prover.
 
-2) The secondary purpose of the review is to identify whether there are better ways of implementing KeYmaera X, but precedence will be given to purpose 1). Those improvements will not be performed during the code review but noted for later in a separate todo file.
+2) The secondary purpose of the review is to identify whether there are better ways of implementing KeYmaera X, but precedence will be given to purpose 1). Except for minor edits, those improvements will not be performed during the code review but noted for later in a separate todo file.
 
-During the KeYmaera X Kernel Code Review, the whole source code will be reviewed for correctness and compliance with the theoretical results. We follow the principle of Cartesian Doubt and scrutinize the code until everybody present is convinced that the code is correct. The code review cannot proceed to other parts of the code until everybody has established its correctness. If anyone present during a kernel code review has any doubt about any part of the code, pertaining to its correctness, the code review cannot move on until the doubt has been settled or a flag has been placed along with an explanation:
+During the KeYmaera X Kernel Code Review, the whole source code of the relevant packages will be reviewed for correctness and compliance with the theoretical results. We follow the principle of Cartesian Doubt and scrutinize the code until everybody present is convinced that the code is correct. The code review cannot proceed to other parts of the code until everybody has established its correctness. If anyone present during a kernel code review has any doubt about any part of the code, pertaining to its correctness, the code review cannot move on until the doubt has been settled or a flag has been placed along with an explanation:
 
- //@todo Code Review: postponed
+ //@todo Code Review: indication of concern or reason or agenda
 
 The code review will only proceed successfully if everybody present clearly and independently stated that he is convinced that the code is correct.
 
-Please don't hesitate at all if some part of the code is unclear to you! It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Confusion about the code are likely sources of trouble. And simpler code is much easier to get sound than complex contraptions. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities.
+Please don't hesitate at all if some part of the code is unclear to you! It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Confusion about the code are likely sources of trouble. And simpler code is much easier to get sound than complex contraptions. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities or subtle nuances.
 
+Follow-up: when resolving or addressing all important @todo comments introduced during a Code Review, the git commit messages should identify the issue that they are addressing explicitly. And a corresponding Delta Review needs to be initiated to confirm resolution of the matter. A record of the resolution of the @todo messages should be left explicitly.
 
 KeYmaera X Kernel Code Review Steps
------------------------------------
+===================================
 
 R1) Expression.scala for correctness and compliance with section 2.1 [1,2]
 R2) StaticSemantics.scala for correctness and compliance with section 2.3 [1,2]
@@ -23,13 +24,12 @@ R3) UniformSubstitution.scala for correctness and compliance with section 3.0 [1
 R4) UniformRenaming.scala for correctness
 R5) Proof.scala for correctness and compliance with [1,2,3]
 R6) AxiomBase.scala for correctness and compliance with Fig 2+3 [1,2,4]
-R7) SetLattice.scala for correctness
-    including a glance at Errors.scala and core.PrettyPrinter.scala
+R7) SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala
 R8) QETool.scala for correctness
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
-Changes to the KeYmaera X Kernel will have to be reviewed periodically in similar ways.
+Changes to the KeYmaera X Kernel need to be reviewed periodically in similar ways. Regular full core reviews are advised. Smaller changes will review only the differences formally (Delta Review) or informally (unmarked).
 
 If there are any questions about the KeYmaera X Kernel code review or any suggestions on how it could be improved, please ask! Questions and clarifications are good!
 
@@ -37,9 +37,7 @@ Extended Code Review:
 In addition to the above files, an extended code review also considers
 R9) parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
 R10) lemma package: LemmaDB.scala + FileLemmaDB.scala for correctness
-R11) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
-
-Andre
+R11) tools package: Tool*.scala, KeYmaera*.scala, Mathematica*.scala, SMT*.scala
 
 References
 ----------
@@ -49,8 +47,7 @@ arXiv 1601.06183 http://arxiv.org/abs/1601.06183
 
 [2] André Platzer. 
 A uniform substitution calculus for differential dynamic logic.
-In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.
-Extended version arXiv http://arxiv.org/abs/1503.01981
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.  Extended version arXiv http://arxiv.org/abs/1503.01981
 
 [3] André Platzer. 
 Differential dynamic logic for hybrid systems. 
@@ -60,11 +57,29 @@ http://www.cs.cmu.edu/~aplatzer/pub/freedL.pdf
 [4] André Platzer. 
 Differential game logic. 
 ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
-http://arxiv.org/abs/1408.1980
+http://dx.doi.org/10.1145/2817824
 
 ------------------------------------------------------------------
-The date of last full ode review is added to the top of the file as  @note Code Review.
+The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
 A log of all major code reviews and the findings are reported here:
+Extended Code Review: KeYmaera X Core: 2016-06-01
+  TODO Clean handling of assumptions about interpreted functions. For example unproved premises that are substituted in with *formula* definitions in the end.
+  TODO FileLemmaDB needs to check all evidence not just the first.
+  TODO SMTSolvers cannot return False on satisfiable negations, because formulas other than false have satisfiable negations.
+  TODO Mathematica name clashes
+  TODO Confirm converse contract checking for translations
+  TODO Mathematica and SMT: clarify nary operators like - and *
+  TODO Synchronize query index updating (concurrent tool uses)
+  TODO Enforce memory management for Mathematica input expressions
+  TODO SMT conversion: power handling has inconsistencies
+  TODO SMT conversion: ^1 handling needs to be checked since translated as (* x)
+  TODO Safeguard return values from SMT solvers
+  TODO Polya should improve like Z3 does
+
+Code Review: KeYmaera X Core Delta: 2016-06-01
+  NOTE Could turn DifferentialProgram into non-Program.
+  TODO Turn "[:=] assign exists" into DerivedAxiom
+  TODO Add checksum test and core version to string representation of Lemma. And Lemma name sanity.
 
 Code Review: KeYmaera X Core: 2016-03-09
 SetLattice reviewed and changed to pair matching style to improve readability. A few name changes.
@@ -82,11 +97,13 @@ Extended Code Review: KeYmaera X Core: 2015-08-25
   TODO FileLemmaDB.scala: move out of core
   TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
   TODO SMTConversions.scala: resolve issues
+
 Code Review: KeYmaera X Core: 2015-08-24
   TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
   TODO Proof.scala: UniformRenaming.semanticRenaming should be false
   TODO FileLemmaDB.scala: move out of core
   TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
+
 Code Review: KeYmaera X Core: 2015-05-01
   TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
   TODO AxiomBase.scala: Code Review confirms that DE needs ? not to have a '.

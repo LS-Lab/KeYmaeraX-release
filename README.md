@@ -187,6 +187,49 @@ To find out how to use KeYmaera X from command line, do `sbt clean assembly` and
 
 Make sure you have Java 1.8 for using command line. Java 1.7 and earlier versions may not work.
 
+Command Line Execution and Templates
+====================================
+For batch operation, KeYmaera X accepts models and tactics from the command line. Templates and example models can be
+ found in
+
+    keymaerax-webui/src/main/resources/cmdlinetemplates
+
+This directory provides templates for models, tactics, and scripts for running KeYmaera X from the command line. It
+further provides the example model from the KeYmaera X cheat sheet (CheatSheet.kyx), as well as tactics for proving
+the cheat sheet model.
+
+##### Files
+
+
+| File                          | Description                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| CheatSheet.kyx                | Model from page 1 http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-sheet.pdf        |
+| CheatSheetScriptTactic.scala  | A step-by-step proof script for proving CheatSheet.kyx                          |
+| CheatSheetSearchyTactic.scala | A proof search tactic for proving CheatSheet.kyx                                |
+| prove_script_macos_default.sh | Script to prove CheatSheet.kyx on MacOS with a default Mathematica installation |
+| prove.sh                      | Template for starting the prover with a model and a tactic to produce a proof   |
+| Template.kyx                  | Template for model files                                                        |
+| TemplateTactic.scala          | Template for tactic files                                                       |
+
+##### Configuration
+KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica.
+Depending on the operating system, Mathematica is installed in different locations. Adapt prove.sh to specify the
+parameters -mathkernel and -jlink according to the local Mathematica setup. Parameters that are appropriate when
+Mathematica is installed in the default location are provided below.
+
+##### Default Parameters per Operating System
+MacOS, 64bit, Mathematica 10.4
+* `-mathkernel /Applications/Mathematica.app/Contents/MacOS/MathKernel`
+* `-jlink /Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64`
+
+Linux, 64bit, Mathematica 10.4
+* `-mathkernel /usr/local/Wolfram/Mathematica/10.4/Executables/MathKernel`
+* `-jlink /usr/local/Wolfram/Mathematica/10.4/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64`
+
+Windows, 64bit, Mathematica 10.4
+* `-mathkernel "C:\Program Files\Wolfram Research\Mathematica\10.4\MathKernel.exe"`
+* `-jlink "C:\Program Files\Wolfram Research\Mathematica\10.4\SystemFiles\Links\JLink\SystemFiles\Libraries\Windows-x86-64"`
+
 Source Code Layout
 ==================
 

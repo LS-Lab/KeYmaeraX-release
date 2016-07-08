@@ -40,8 +40,7 @@ object FOQuantifierTactics {
             val subst = USubst(
               SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(Box(Assign(x, DotTerm), qf))) ::
               SubstitutionPair("f()".asTerm, t) :: Nil)
-            val orig = Sequent(Nil, IndexedSeq(),
-              IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(f())".asFormula))
+            val orig = Sequent(IndexedSeq(), IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(f())".asFormula))
 
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
@@ -165,8 +164,8 @@ object FOQuantifierTactics {
             SubstitutionPair(aT, sequent.sub(pos.topLevel + where.head).get) :: Nil)
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
-            /* use */ implyL('Llast) <(closeId, hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast) partial) partial,
-            /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiom("exists generalize")(subst))
+            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast) partial) partial,
+            /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiomOrRule("exists generalize")(subst))
             )
         case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
       }
@@ -211,7 +210,7 @@ object FOQuantifierTactics {
 
         val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos.top))(t, quantified))
         cut(genFml) <(
-          /* use */ allL(quantified, t)('Llast) & closeId,
+          /* use */ allL(quantified, t)('Llast) & closeIdWith('Llast),
           /* show */ hide(pos.top) partial
         )
       }

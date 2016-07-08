@@ -95,5 +95,5 @@ KeYmaeraX.jar
 
 .DS_Store
 keymaerax-webui/src/test/resources/examples/course/labs/*
-keymaerax-webui/src/test/scala/casestudies/acasxhsatp
 release_scaladoc.pl
+redo

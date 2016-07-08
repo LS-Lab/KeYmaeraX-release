@@ -38,7 +38,7 @@ class RandomContextTests extends FlatSpec with Matchers {
       case Some(_) => false
     })) return true
     val (ctx,e) = try { origin.at(pos) } catch {
-      case e: IllegalArgumentException => println("\nInput:      " + origin +
+      case ex: IllegalArgumentException => println("\nInput:      " + origin +
       "\nIllposition: " + pos); (Context(DotFormula), origin)
       case e: SubstitutionClashException => println("\nInput:      " + origin +
         "\nIllposition: " + pos); (Context(DotFormula), origin)
@@ -55,7 +55,7 @@ class RandomContextTests extends FlatSpec with Matchers {
     println(
         "\nReassemble: " + reassemble.getOrElse(Variable("undefined")) +
         "\nExpected:  " + origin)
-    if (reassemble.isDefined && !noCtx(ctx)) reassemble.get shouldBe origin
+    if (reassemble.isDefined && e!=Nothing && !noCtx(ctx)) reassemble.get shouldBe origin
     true
   }
 

@@ -8,13 +8,15 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, AntePos}
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 
 import scala.language.postfixOps
 import scala.reflect.runtime._
@@ -28,6 +30,44 @@ import scala.tools.reflect.ToolBox
  */
 @SlowTest
 class Robix extends TacticTestBase {
+
+  "Static Safety" should "be provable" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs.key"))
+
+    val invariant = """v >= 0
+                      | & dx^2+dy^2 = 1
+                      | & r != 0
+                      | & (abs(x-xo) > v^2 / (2*B)
+                      |  | abs(y-yo) > v^2 / (2*B))""".stripMargin.asFormula
+
+    def di(a: String): DependentPositionTactic = diffInvariant(
+      "t>=0".asFormula,
+      "dx^2 + dy^2 = 1".asFormula,
+      s"v = old(v) + $a*t".asFormula,
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula)
+
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & andL('_)*@TheType() &
+      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+
+    def accArithTactic: BelleExpr = alphaRule*@TheType() & printIndexed("Before replaceTransform") &
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
+
+    val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+      print("Acceleration branch") & hideL(Find.FindL(0, Some("abs(x-xo_0)>v^2/(2*B)|abs(y-yo_0)>v^2/(2*B)".asFormula))) &
+        di("a")(1) & dw & prop <(
+        hideFactsAbout("y", "yo") & accArithTactic,
+        hideFactsAbout("x", "xo") & accArithTactic
+        ) & print("Acceleration branch done")
+      ) & print("Induction step done")
+      ) & print("Proof done")
+    proveBy(s, tactic) shouldBe 'proved
+  }
 
   "Passive Safety" should "be provable" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
@@ -48,122 +88,60 @@ class Robix extends TacticTestBase {
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
-      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
-    val hideIrrelevantAssumptions: BelleExpr =
-      OnAll(
-        hideL(Find.FindL(0, Some("dx^2+dy^2=1".asFormula))) &
-        hideL(Find.FindL(0, Some("r!=0".asFormula))) &
-        hideL(Find.FindL(0, Some("dxo^2+dyo^2<=V^2".asFormula))) partial)
-
-    val brakeStoppedArith: BelleExpr =
-      hideIrrelevantAssumptions <(
-        hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE,
-        hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & QE,
-        hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE)
-
-    def accArithTactic(fml: Formula): BelleExpr = implyR(1) & andL('_)*@TheType() & cutL(fml)(AntePosition(5).top) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
-        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
-        hideL(-11) & hideL(-8) & QE,
-        hideR(1) & QE,
-        hideR(1) & QE,
-        hideL(-10) & hideL(-9) & QE
-        ),
-      hideR(1) & (-12 to -6).map(hideL(_)).reduce[BelleExpr](_&_) & implyR(1) & abs(1, 0::Nil) & hideL(-10) & QE
-      ) & debug("Proved acc arithmetic: " + fml)
-
-    val accArithX = "A>=0 & B>0 & V>=0 & ep>0 & abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=xo-xo_0 & xo-xo_0<=t*V & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
-    val accArithXLemma = proveBy(accArithX, accArithTactic("abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
-    accArithXLemma shouldBe 'proved
-
-    val accArithY = "A>=0 & B>0 & V>=0 & ep>0 & abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=yo-yo_0 & yo-yo_0<=t*V & -t*(v-a/2*t)<=y-y_0 & y-y_0<=t*(v-a/2*t) & v=v_0+a*t & t>=0 & t<=ep & v>=0 -> abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula
-    val accArithYLemma = proveBy(accArithY, accArithTactic("abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
-    accArithYLemma shouldBe 'proved
+    def accArithTactic: BelleExpr = alphaRule*@TheType() & printIndexed("Before replaceTransform") &
+      //@todo auto-transform
+      replaceTransform("ep".asTerm, "t".asTerm)(-10) & speculativeQE & print("Proved acc arithmetic")
 
     val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
-      /* base case */ QE & debug("Base case done"),
-      /* use case */ QE & debug("Use case done"),
-      /* induction step */ chase(1) & allR(1)*2 & implyR(1) & andR(1) <(
-        debug("Braking branch") & allR(1) & implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & debug("Braking branch done"),
-        andR(1) <(
-          debug("Stopped branch") & implyR(1) & allR(1) & implyR(1) & allR(1) & implyR(1) & di("0")(1) & dw & prop & brakeStoppedArith & debug("Stopped branch done"),
-          debug("Acceleration branch") & (allR(1) & implyR(1))*3 & allR(1)*2 & implyR(1) & allR(1) & implyR(1) &
-            andL('_)*@TheType() & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) &
-            di("a")(1) & dw & prop & hideIrrelevantAssumptions <(
-              hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula) &
-                hideL(-15, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(-14, "-t*(v-a/2*t)<=y-y_0".asFormula) &
-                hideL(-11, "yo-yo_0<=t*V".asFormula) & hideL(-10, "-t*V<=yo-yo_0".asFormula) &
-                hideL(-9, "r_0!=0".asFormula) & PropositionalTactics.toSingleFormula & by(accArithXLemma),
-              hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula) &
-                hideL(-18, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(-17, "-t*(v-a/2*t)<=x-x_0".asFormula) &
-                hideL(-13, "xo-xo_0<=t*V".asFormula) & hideL(-12, "-t*V<=xo-xo_0".asFormula) &
-                hideL(-9, "r_0!=0".asFormula) & PropositionalTactics.toSingleFormula & by(accArithYLemma)) & debug("Acceleration branch done")
-          )
-        ) & debug("Induction step done")
-      ) & debug("Proof done")
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+        print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+        print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+        print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
+          di("a")(1) & dw & prop & OnAll(hideFactsAbout("dxo", "dyo") partial) <(
+            hideFactsAbout("y", "yo") & accArithTactic,
+            hideFactsAbout("x", "xo") & accArithTactic
+          ) & print("Acceleration branch done")
+        ) & print("Induction step done")
+      ) & print("Proof done")
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable with abs when tactic is loaded from a file" in withMathematica { implicit qeTool =>
-    val tacticSource = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyAbsTacticGenerator.scala").mkString
-
-    val cm = universe.runtimeMirror(getClass.getClassLoader)
-    val tb = cm.mkToolBox()
-    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => BelleExpr]
-    val tactic = tacticGenerator()
-
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
-
-    proveBy(s, tactic) shouldBe 'proved
-  }
-
-  it should "be provable with KeYmaeraX command line interface" in {
-    // command line main has to initialize the prover itself, so dispose all test setup first
-    afterEach()
-
-    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
-    val tacticFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyAbsTacticGenerator.scala"
-    val outputFileName = File.createTempFile("passivesafetyabs", ".proof").getAbsolutePath
-
-    KeYmaeraX.main(Array("-prove", inputFileName, "-tactic", tacticFileName, "-verify", "-out", outputFileName))
-
-    val expectedProof = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.proof").mkString
-    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-
-    actualFileContent should include (expectedProof)
-  }
+  // todo: robix proof with let inv=bla in ...
+  // todo: also try to get distance letified...
 
   it should "prove just the acceleration x arithmetic" in withMathematica { implicit qeTool =>
-    val accArith = "A>=0 & B>0 & V>=0 & ep>0 & abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=xo-xo_0 & xo-xo_0<=t*V & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
+    val accArith = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> v=0|abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
 
-    val tactic = implyR(1) & andL('_)*@TheType() & cutL("abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula)(AntePos(4)) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
-        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
-        hideL(-11) & hideL(-8) & QE,
+    val tactic = alphaRule*@TheType() & replaceTransform("ep".asTerm, "t".asTerm)(-8, "abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
+      hideR(1, "v=0".asFormula) & hideL(-15, "t<=ep".asFormula) & hideL(-4, "ep>0".asFormula) &
+      abs(1, 0::Nil) & abs(-7, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
+      OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
+        hideL(-11, "x-x_0<=t*(v_0+a*t-a/2*t)".asFormula) & hideL(-8, "-t*V()<=xo-xo_0".asFormula) & QE,
         hideR(1) & QE,
         hideR(1) & QE,
-        hideL(-10) & hideL(-9) & QE
-        ),
-      hideR(1) & (-12 to -6).map(hideL(_)).reduce[BelleExpr](_&_) & implyR(1) & abs(1, 0::Nil) & hideL(-10) & QE
-      )
+        hideL(-10, "-t*(v_0+a*t-a/2*t)<=x-x_0".asFormula) & hideL(-9, "xo-xo_0<=t*V()".asFormula) & QE
+        )
 
     proveBy(accArith, tactic) shouldBe 'proved
   }
 
   it should "prove just the acceleration y arithmetic" in withMathematica { implicit qeTool =>
-    val accArith = "A>=0 & B>0 & V>=0 & ep>0 & abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=yo-yo_0 & yo-yo_0<=t*V & -t*(v-a/2*t)<=y-y_0 & y-y_0<=t*(v-a/2*t) & v=v_0+a*t & t>=0 & t<=ep & v>=0 -> abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula
+    val accArith = "A>=0&B>0&V()>=0&ep>0&v_0>=0&-B<=a&a<=A&abs(y_0-yo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))&-t*V()<=yo-yo_0&yo-yo_0<=t*V()&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep&v>=0->v=0|abs(y-yo)>v^2/(2*B)+V()*(v/B)".asFormula
 
-    val tactic = implyR(1) & andL('_)*@TheType() & cutL("abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula)(AntePos(4)) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
-        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
-        hideL(-11) & hideL(-8) & QE,
+    val tactic = alphaRule*@TheType() &
+      replaceTransform("ep".asTerm, "t".asTerm)(-8, "abs(y_0-yo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
+      hideR(1, "v=0".asFormula) & hideL(-15, "t<=ep".asFormula) & hideL(-4, "ep>0".asFormula) &
+      abs(1, 0::Nil) & abs(-7, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
+      OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
+        hideL(-11, "y-y_0<=t*(v_0+a*t-a/2*t)".asFormula) & hideL(-8, "-t*V()<=yo-yo_0".asFormula) & QE,
         hideR(1) & QE,
         hideR(1) & QE,
-        hideL(-10) & hideL(-9) & QE
-        ),
-      hideR(1) & (-12 to -6).map(hideL(_)).reduce[BelleExpr](_&_) & implyR(1) & abs(1, 0::Nil) & hideL(-10) & QE
-      )
+        hideL(-10, "-t*(v_0+a*t-a/2*t)<=y-y_0".asFormula) & hideL(-9, "yo-yo_0<=t*V()".asFormula) & QE
+        )
 
     proveBy(accArith, tactic) shouldBe 'proved
   }
@@ -313,63 +291,73 @@ class Robix extends TacticTestBase {
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
+    
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
+      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+
+    def accArithTactic: BelleExpr = alphaRule*@TheType() &
+      //@todo auto-transform
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
+
+    val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+      print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) &
+        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+        hideFactsAbout("y", "yo") & accArithTactic,
+        hideFactsAbout("x", "xo") & accArithTactic
+        ) & print("Acceleration branch done")
+      ) & print("Induction step done")
+      ) & print("Proof done")
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  "Passive Safety straight and curve using curvature with additional braking branch" should "be provable" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature_lightbrake.key"))
+
+    val invariant =
+      """v >= 0
+        | & dx^2+dy^2 = 1
+        | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V*(v/B)
+        |          | abs(y-yo) > v^2 / (2*B) + V*(v/B))""".stripMargin.asFormula
+
+    def di(a: String): DependentPositionTactic = diffInvariant(
+      "t>=0".asFormula,
+      "dx^2 + dy^2 = 1".asFormula,
+      s"v = old(v) + $a*t".asFormula,
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
+      "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
+      "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
       debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
 
-    val hideIrrelevantAssumptions: BelleExpr =
-      OnAll(
-        hideL(Find.FindL(0, Some("dx^2+dy^2=1".asFormula))) &
-          hideL(Find.FindL(0, Some("dxo^2+dyo^2<=V^2".asFormula))) partial)
-
-    val brakeStoppedArith: BelleExpr =
-      hideIrrelevantAssumptions <(
-        hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE,
-        hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & QE,
-        hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE)
-
-    def accArithTactic(fml: Formula): BelleExpr = implyR(1) & andL('_)*@TheType() & cutL(fml)(AntePos(4)) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
-        OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial) <(
-        hideL(-11) & hideL(-8) & QE,
-        hideR(1) & QE,
-        hideR(1) & QE,
-        hideL(-10) & hideL(-9) & QE
-        ),
-      hideR(1) & (-12 to -6).map(hideL(_)).reduce[BelleExpr](_&_) & implyR(1) & abs(1, 0::Nil) & hideL(-10) & QE
-      ) & debug("Proved acc arithmetic: " + fml)
-
-    val accArithX = "A>=0 & B>0 & V>=0 & ep>0 & abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=xo-xo_0 & xo-xo_0<=t*V & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
-    val accArithXLemma = proveBy(accArithX, accArithTactic("abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
-    accArithXLemma shouldBe 'proved
-
-    val accArithY = "A>=0 & B>0 & V>=0 & ep>0 & abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=yo-yo_0 & yo-yo_0<=t*V & -t*(v-a/2*t)<=y-y_0 & y-y_0<=t*(v-a/2*t) & v=v_0+a*t & t>=0 & t<=ep & v>=0 -> abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula
-    val accArithYLemma = proveBy(accArithY, accArithTactic("abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
-    accArithYLemma shouldBe 'proved
+    def accArithTactic: BelleExpr = alphaRule*@TheType() &
+      //@todo auto-transform
+      replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
 
     val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
-      /* base case */ QE & debug("Base case done"),
-      /* use case */  QE & debug("Use case done"),
-      /* induction step */ chase(1) & allR(1)*2 & implyR(1) & andR(1) <(
-        debug("Braking branch") & allR(1) & implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & debug("Braking branch done"),
-        andR(1) <(
-          debug("Stopped branch") & (implyR(1) & allR(1))*2 & implyR(1) & di("0")(1) & dw & prop & brakeStoppedArith & debug("Stopped branch done"),
-          debug("Acceleration branch") & allR(1) & implyR(1) & (allR(1)*2 & implyR(1))*2 & allR(1) & implyR(1)
-            & andL('_)*@TheType() & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) & di("a")(1) & dw & prop
-            & hideIrrelevantAssumptions <(
-              hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                & hideL(-14, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(-13, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                & hideL(-10, "yo-yo_0<=t*V".asFormula) & hideL(-9, "-t*V<=yo-yo_0".asFormula)
-                & PropositionalTactics.toSingleFormula & by(accArithXLemma),
-              hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                & hideL(-17, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(-16, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                & hideL(-12, "xo-xo_0<=t*V".asFormula) & hideL(-11, "-t*V<=xo-xo_0".asFormula)
-                & PropositionalTactics.toSingleFormula & by(accArithYLemma)
-            )
-        )
-      ) & debug("Induction step done")
-    ) & debug("Proof done")
-
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Light braking branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula))) &
+        di("-B/2")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+        hideFactsAbout("y", "yo") & speculativeQE,
+        hideFactsAbout("x", "xo") & speculativeQE
+        ) & print("Light braking branch done"),
+      print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+      print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) &
+        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+        hideFactsAbout("y", "yo") & accArithTactic,
+        hideFactsAbout("x", "xo") & accArithTactic
+        ) & print("Acceleration branch done")
+      ) & print("Induction step done")
+      ) & print("Proof done")
     proveBy(s, tactic) shouldBe 'proved
   }
 
@@ -536,5 +524,46 @@ class Robix extends TacticTestBase {
     val tactic = implyR('R) & andL('L)*@TheType() & orR('R) & passiveOrientationAccArithTactic
 
     proveBy(fml, tactic) shouldBe 'proved
+  }
+
+  "Passive safety with curvature and uncertainty" should "prove" in withZ3 { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature_uncertainty.key"))
+
+    val invariant =
+      """v >= 0
+        | & dx^2+dy^2 = 1
+        | & (v = 0 | abs(x-xo) > v^2 / (2*Da*B) + V*(v/(Da*B))
+        |          | abs(y-yo) > v^2 / (2*Da*B) + V*(v/(Da*B)))""".stripMargin.asFormula
+
+    def di(a: String): DependentPositionTactic = diffInvariant(
+      "t>=0".asFormula,
+      "dx^2 + dy^2 = 1".asFormula,
+      s"old(v) + $a*pa*t = v".asFormula,
+      s"-t * (v - $a*pa/2*t) <= x - old(x) & x - old(x) <= t * (v - $a*pa/2*t)".asFormula, // Mathematica won't prove -> need better hiding in DI
+      s"-t * (v - $a*pa/2*t) <= y - old(y) & y - old(y) <= t * (v - $a*pa/2*t)".asFormula,
+      "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
+      "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
+
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_)*@TheType() &
+      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+
+    def accArithTactic: BelleExpr = alphaRule*@TheType() & printIndexed("Before replaceTransform") &
+      //@todo auto-transform
+      replaceTransform("ep".asTerm, "t".asTerm)(-23) & speculativeQE & print("Proved acc arithmetic")
+
+    val tactic = implyR('_) & andL('_)*@TheType() & loop(invariant)('R) <(
+      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
+      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
+      print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
+      print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*Da*B)+V*(v/(Da*B))|abs(y-yo_0)>v^2/(2*Da*B)+V*(v/(Da*B))".asFormula))) &
+        di("a")(1) & dw & prop & OnAll(hideFactsAbout("dxo", "dyo") partial) <(
+        hideFactsAbout("y", "yo") & accArithTactic,
+        hideFactsAbout("x", "xo") & accArithTactic
+        ) & print("Acceleration branch done")
+      ) & print("Induction step done")
+      ) & print("Proof done")
+    proveBy(s, tactic) shouldBe 'proved
   }
 }

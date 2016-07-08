@@ -143,8 +143,8 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.right shouldBe TactixLibrary.andR(3)
   }
 
-  //@todo fix.
-  it should "parse e | b & c" in {
+  //@todo fix or decide on a precedence of | and &...
+  ignore should "parse e | b & c" in {
     val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[SeqTactic]
     result.left shouldBe TactixLibrary.andR(1)
     result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(2)
@@ -205,6 +205,47 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.right.asInstanceOf[SaturateTactic].child shouldBe   TactixLibrary.andR(1)
     tactic.right.asInstanceOf[SaturateTactic].annotation shouldBe TheType()
   }
+
+  //endregion
+
+  //region Comma lists
+
+  "comma separatred list folding" should "work" in (withMathematica { implicit qeTool => {
+    val t =
+      """
+        |nil<(nil, nil)
+      """.stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  it should "work for a tactic (e)" in (withMathematica { implicit qeTool => {
+    val t =
+      """
+        |nil<((nil), nil)
+      """.stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  it should "work for a tactic (e) in the final position" in (withMathematica { implicit qeTool => {
+    val t =
+      """
+        |nil<(nil, (nil))
+      """.stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
+
+  it should "work on tactic that caused original bug" in (withMathematica { implicit qeTool => {
+    val t = """implyR(1) &
+              |loop({`x<=m`}, 1) <(
+              |  MathematicaQE,
+              |  MathematicaQE,
+              |  partial(composeb(1) & choiceb(1) & andR(1) <(
+              |    assignb(1) & diffSolve(1) & nil,
+              |    testb(1) & implyR(1) & diffSolve(1) & nil
+              |  ))
+              |)""".stripMargin
+    BelleParser(t) //should not cause an exception.
+  }})
 
   //endregion
 

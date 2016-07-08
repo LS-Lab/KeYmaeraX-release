@@ -14,6 +14,8 @@ scalaVersion := "2.11.7"
 //parser combinators are not longer included by default.
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
 
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.7"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////

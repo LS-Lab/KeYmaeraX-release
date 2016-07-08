@@ -22,7 +22,7 @@ object SubstitutionHelper {
     new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)
   /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl`. */
   def replaceFree(seq: Sequent)(what: Term, repl:Term): Sequent =
-    new Sequent(seq.pref, seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
+    new Sequent(seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
 }
 
 class SubstitutionHelper(what: Term, repl: Term) {

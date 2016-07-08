@@ -2,10 +2,13 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
+/**
+  * @note Code Review: 2016-06-01
+  */
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 
 import scala.collection.immutable.Seq
 
@@ -14,8 +17,8 @@ import scala.collection.immutable.Seq
  * @author Ran Ji
  */
 object SMTConverter {
-  def apply(expr: Expression): String = generateAssertNegation(expr, "Z3")
-  def apply(expr: Expression, toolId: String) = generateAssertNegation(expr, toolId)
+  def apply(expr: Formula): String = generateAssertNegation(expr, "Z3")
+  def apply(expr: Formula, toolId: String) = generateAssertNegation(expr, toolId)
 
   private val SMT_ABS = "absolute"
   private val SMT_MIN = "minimum"
@@ -27,13 +30,13 @@ object SMTConverter {
     *   unsatisfied => original KeYmaera X formula is valid
     *   satisfiable => original KeYmaera X formula is not valid
     */
-  private def generateAssertNegation(expr: Expression, toolId: String): String = {
+  private def generateAssertNegation(expr: Formula, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
     varDec + "(assert (not " + smtFormula + "))"
   }
 
   /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
-  def generateSimplify(expr: Expression, toolId: String): String = {
+  def generateSimplify(expr: Term, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
     varDec + "(simplify " + smtFormula + ")"
   }
@@ -49,7 +52,7 @@ object SMTConverter {
         case x: Variable =>
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")"
-          //@todo use Derived Axioms for abs/min/max
+        //@todo use Derived Axioms for abs/min/max
         case f: Function =>
           require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
           nameIdentifier(f) match {
@@ -68,6 +71,7 @@ object SMTConverter {
   /** Generate parameters of function in the varDec of SMT */
   private def generateFuncPrmtSorts(t: Sort) : String = t match {
     case Unit => ""
+    //@note: disassociate the arguments
     case Tuple(l, r) => generateFuncPrmtSorts(l) + " " + generateFuncPrmtSorts(r)
     case _ => t.toString
   }
@@ -108,7 +112,7 @@ object SMTConverter {
 
   /** Convert KeYmaera X term to string in SMT notation */
   private def convertTerm(t: Term, toolId: String) : String = {
-    require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
+    require(t.sort == Real || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
     t match {
       case Neg(c)       => "(- " + convertTerm(c, toolId) + ")"
       case Plus(l, r)   => "(+ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
@@ -117,9 +121,22 @@ object SMTConverter {
       case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Power(l, r)  => convertExp(l, r, toolId)
       case Number(n) =>
+        //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
+        //@ran todo-resolved: double checked and see notes below
+        /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
+          *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
+          *      both have the maximal range in their category */
+        //@todo This is incorrect, because 64bit longs are not representable in 64bit doubles.
         assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
-        if (n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
-        else n.underlying().toString
+        //@todo code review: maxlong?
+        //@ran todo-resolved: also checks if negative value is in range, see comment below
+        //@todo this is incorrect, because 2th-complement integer arithmetic is nonsymmetric.
+        // smt form of -5 is (- 5)
+        if (n.toDouble < 0) {
+          /* negative number should also be in range */
+          assert((0-n).isDecimalDouble || (0-n).isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+          "(- " + (0-n).underlying().toString + ")"
+        } else n.underlying().toString
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) => nameIdentifier(fn) match {
@@ -128,17 +145,21 @@ object SMTConverter {
         case "abs" => "(" + SMT_ABS + " " + convertTerm(child, toolId) + ")"
         case _ => "(" + nameIdentifier(fn) + " " + convertTerm(child, toolId) + ")"
       }
+      //@note: disassociate the arguments
       case Pair(l, r)  => convertTerm(l, toolId) + " " + convertTerm(r, toolId)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
   }
 
   //@todo get rid of this function and have a tactic depower that gets rid of all powers by proof steps
-  /** Convert power to SMT notation */
+  /** Convert power to SMT notation 
+   * @todo use axiom x^(c()+1) = x*(x^c()) <- c()>=0
+   */
   private def convertExp(l: Term, r: Term, toolId: String) : String = {
     val base = simplifyTerm(l, toolId)
     val exp = simplifyTerm(r, toolId)
     if(base.equals(Number(0))) {
+      //@todo Code Review: 0-power conversion can't know value of r even after simplification. This is inconsistent for cases like x=0 -> 0^x=1 which will prove depending on what's replaced where
       println("[warning] converting 0^0 to SMT")
       if(exp.equals(Number(0))) "1" // 0^0 =1
       else "0" // 0^x = 0
@@ -148,15 +169,15 @@ object SMTConverter {
           if(n.isValidInt) {
             // index is integer
             if(n.intValue() == 0) {
+              //@todo Code Review: check consistency with 0^x=0
               "1"
             } else if(n.intValue() > 0 ) {
               val ba : String = convertTerm(base, toolId)
-              var res : String = "(*"
-              for (i <- 0 to n.intValue()-1) {
-                res += " " + ba
-              }
-              res += ")"
-              res
+              //@todo code review: check (* a)
+              //@ran todo-resolved: double checked that (* a) = a
+              //@note: (* a) = a, (* a a a) = a*a*a
+              //@note: to is inclusive
+              "(* " + (1 to n.intValue()).map(i => ba).mkString(" ") + ")"
             } else "(/ 1 " + convertExp(base, Number(n.underlying().negate()), toolId) + ")"
           } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
         case Neg(Number(n)) => "(/ 1 " + convertExp(base, Number(n), toolId) + ")"
@@ -168,7 +189,10 @@ object SMTConverter {
   /** Convert possibly nested forall KeYmaera X expression to SMT */
   private def convertForall(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsForall(vs, f)
-    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
+    //@todo code review: assert sort==real and use sort
+    //@ran todo-resolved: changed as suggested
+    require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
+    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested forall expression */
@@ -182,7 +206,8 @@ object SMTConverter {
   /** Convert possibly nested exists KeYmaera X expression to SMT */
   private def convertExists(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsExists(vs, f)
-    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
+    require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
+    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested exists expression */

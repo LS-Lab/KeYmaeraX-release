@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, Axiom}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedRuleInfo
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
@@ -23,7 +23,7 @@ import scala.collection.immutable
 object ProofChecker {
   private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
 
-  private def goalSequent(phi : Formula) = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(phi))
+  private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = Provable.startProof(goalSequent(phi))
 
   /**
@@ -35,7 +35,7 @@ object ProofChecker {
     e match {
       case dLConstant(label) => Some(
         Provable.startProof(goalSequent(phi))
-        (Axiom(label), 0)
+        (Provable.axioms(label), 0)
       )
 
       case FOLRConstant(f) => {
@@ -179,7 +179,7 @@ object ProofChecker {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
-          (AxiomaticRule("CT term congruence", usubst), 0)
+          (DerivedRuleInfo("CT term congruence").provable(usubst), 0)
           (equalityCert.get, 0)
         )
         else None
@@ -189,7 +189,7 @@ object ProofChecker {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
-          (AxiomaticRule("CQ term congruence", usubst), 0)
+          (Provable.rules("CQ term congruence")(usubst), 0)
           (equalityCert.get, 0)
         )
         else None
@@ -199,7 +199,7 @@ object ProofChecker {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
-          (AxiomaticRule("CE congruence", usubst), 0)
+          (Provable.rules("CE congruence")(usubst), 0)
           (equalityCert.get, 0)
         )
         else None

@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import ProofRuleTactics.requireOneSubgoal
 
 import scala.language.postfixOps
 
@@ -23,6 +24,13 @@ object DebuggingTactics {
     }
   }
 
+  def recordQECall(): BuiltInTactic = new BuiltInTactic("recordQECall") {
+    override def result(provable: Provable): Provable = {
+      println(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
+      provable
+    }
+  }
+
   /** debug is a no-op tactic that prints a message and the current provable, if doPrint (defaults to the system property DEBUG) is true. */
   def debug(message: => String, doPrint: Boolean = DEBUG, printer: Provable => String = _.toString): BuiltInTactic =
       new BuiltInTactic("debug") {
@@ -39,9 +47,9 @@ object DebuggingTactics {
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
-  def debugAt(message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
+  def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
-      if (DEBUG) println("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
+      if (doPrint) println("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
         + " at position " + pos + " of first subgoal,"
         + "\n\t entire provable: " + provable + " =====")
       provable
@@ -150,6 +158,8 @@ object Idioms {
   }
 
   /** Establishes the fact by appealing to an existing tactic. */
+  //@todo why is this not just UnifyUSCalculus.by(Provable)?
+  @deprecated("Use UnifyUSCalculus.by(Provable) instead")
   def by(fact: Provable) = new BuiltInTactic("Established by existing provable") {
     override def result(provable: Provable): Provable = {
       assert(provable.subgoals.length == 1, "Expected one subgoal but found " + provable.subgoals.length)
@@ -181,6 +191,9 @@ object TacticFactory {
    * @param name The tactic name.
    */
   implicit class TacticForNameFactory(val name: String) {
+    /** Creates a named tactic */
+    def by(t: BelleExpr): BelleExpr = new NamedTactic(name, t)
+
     /** Creates a dependent position tactic without inspecting the formula at that position */
     def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
@@ -210,6 +223,42 @@ object TacticFactory {
     /** Creates a dependent tactic, which can inspect the sole sequent */
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
+    }
+
+    /** Creates a BuiltInRightTactic from a function turning provables and succedent positions into new provables.
+      * @example {{{
+      *         "andR" by((pr,pos)=> pr(AndRight(pos.top),0))
+      *         }}}
+      */
+    def by(t: (Provable, SuccPosition) => Provable): BuiltInRightTactic = new BuiltInRightTactic(name) {
+      override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
+        requireOneSubgoal(provable)
+        t(provable, pos)
+      }
+    }
+
+    /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
+      * @example {{{
+      *         "andL" by((pr,pos)=> pr(AndLeft(pos.top),0))
+      *         }}}
+      */
+    def by(t: (Provable, AntePosition) => Provable): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
+      override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
+        requireOneSubgoal(provable)
+        t(provable, pos)
+      }
+    }
+
+    /** Creates a BuiltInTwoPositionTactic from a function turning provables and two positions into new provables.
+      * @example {{{
+      *         "andL" by((pr,pos)=> pr(AndLeft(pos.top),0))
+      *         }}}
+      */
+    def by(t: (Provable, Position, Position) => Provable): BuiltInTwoPositionTactic = new BuiltInTwoPositionTactic(name) {
+      override def computeResult(provable: Provable, pos1: Position, pos2: Position): Provable = {
+        requireOneSubgoal(provable)
+        t(provable, pos1, pos2)
+      }
     }
   }
 

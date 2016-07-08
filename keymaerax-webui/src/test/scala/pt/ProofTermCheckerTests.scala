@@ -1,6 +1,6 @@
 package pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Axiom, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
@@ -87,7 +87,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   //[v:=t();]p(v) <-> p(t())
   "usubst term checker" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" ignore {
     val axiomName = "[:=] assign"
-    val axiom = Axiom.axiom("[:=] assign").conclusion.succ.last
+    val axiom = Provable.axiom("[:=] assign")
     val instance = "[v:=1;]v=v <-> 1=1".asFormula
     val usubst = USubst(
       SubstitutionPair("t()".asTerm, "1".asTerm) ::

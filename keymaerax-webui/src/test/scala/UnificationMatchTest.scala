@@ -62,6 +62,27 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       SubstitutionPair("f(.)".asTerm, "(.)^2+y".asTerm) :: Nil))
   }
 
+  it should "unify 3+f(x,y) with 3+(x^2+y)" in {
+    //val dot = DotTerm(Tuple(Real, Real))
+    shouldUnify("3+f(x,y)".asTerm,
+      "3+(x^2+y)".asTerm, USubst(
+        SubstitutionPair(
+          //FuncOf(Function("f", None, Tuple(Real, Real), Real), dot),
+          "f(.(.,.))".asTerm,
+          //Plus(Power(Projection(dot, 0::Nil), Number(2)), Projection(dot, 1::Nil))
+          "π(.(.,.),1,0)^2+π(.(.,.),1,1)".asTerm) :: Nil
+      ))
+  }
+
+  it should "unify 3+f(x,y,z) with 3+(x^2+y)" in {
+    shouldUnify("3+f(x,y,z)".asTerm,
+      "3+(x^y+z)".asTerm, USubst(
+        SubstitutionPair(
+          "f(.(.,.,.))".asTerm,
+          "π(.(.,.,.),1,0)^π(.(.,.,.),2,2)+π(.(.,.,.),2,3)".asTerm
+        ) :: Nil
+      ))
+  }
 
   "Unification formulas" should "unify p() with x^2+y>=0" in {
     shouldUnify("p()".asFormula, "x^2+y>=0".asFormula, USubst(
@@ -89,8 +110,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   "Old unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (fails)" ignore {
-    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
-    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     //@todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
       SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
@@ -145,10 +166,26 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
+  it should "unify renaming and instance p(x,y) and x*y>5" in {
+    shouldMatch("p(x,y)".asFormula,
+      "x*y>5".asFormula, RenUSubst(
+        ("p(.(.,.))".asFormula,
+         "π(.(.,.),1,0)*π(.(.,.),1,1)>5".asFormula) :: Nil
+      ))
+  }
+
+  it should "unify renaming and instance p(x,y,z) and x*y>z" in {
+    shouldMatch("p(x,y,z)".asFormula,
+      "x*y>z".asFormula, RenUSubst(
+        ("p(.(.,.,.))".asFormula,
+         "π(.(.,.,.),1,0)*π(.(.,.,.),2,2)>π(.(.,.,.),2,3)".asFormula) :: Nil
+      ))
+  }
+
 
   it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
-    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
-    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     import edu.cmu.cs.ls.keymaerax.btactics._
     //@todo not sure about the expected exception
     a[ProverException] shouldBe thrownBy(
@@ -160,8 +197,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
-    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
-    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
     //@todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe RenUSubst(

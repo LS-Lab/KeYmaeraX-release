@@ -98,6 +98,7 @@ object SetLattice {
   def bottom[A]: SetLattice[A] = new FiniteSet(Set.empty[A])
   //def top[A](topSymbols: A*): SetLattice[A] = new CoFiniteSet(Set.empty, topSymbols.toSet)
   //@note this is an overapproximation of V\cup V'
+  //@note all DotTerms are the same, regardless of their projection and sort (see DotTerm)
   def topVarsDiffVars[A >: NamedSymbol](): SetLattice[A] = new CoFiniteSet(Set(DotTerm, DotFormula), Set.empty)
 
   /**

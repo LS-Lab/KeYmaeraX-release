@@ -7,6 +7,8 @@ package parserTests
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
+import testHelper.CustomAssertions.withSafeClue
+
 import org.scalatest._
 
 import scala.collection.immutable._
@@ -142,7 +144,7 @@ class ParserParenTests extends FlatSpec with Matchers {
 
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + testFile)).mkString
-      withClue(testFile) {
+      withSafeClue(testFile) {
         KeYmaeraXParser(src) //test fails on exception.
       }
     }
@@ -221,7 +223,7 @@ class ParserParenTests extends FlatSpec with Matchers {
 
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negativeALP/" + testFile)).mkString
-      withClue(testFile) {
+      withSafeClue(testFile) {
         a[Exception] should be thrownBy {
           KeYmaeraXAxiomParser(src)
         }

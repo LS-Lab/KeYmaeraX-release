@@ -4,9 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -32,7 +30,7 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
   }
 
   it should "parse the actual axiom file" in {
-    val axioms = Axiom.axioms
+    val axioms = Provable.axiom
   }
 
   val p = Function("p", None, Real, Bool)

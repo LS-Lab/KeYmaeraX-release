@@ -20,7 +20,7 @@ class ArithmeticTests extends TacticTestBase {
 
     override def qeEvidence(formula: Formula): (Formula, Evidence) = {
       formula shouldBe expected
-      (False, ToolEvidence(Map("tool" -> "mock")))
+      (False, ToolEvidence(List("tool" -> "mock")))
     }
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
@@ -40,9 +40,7 @@ class ArithmeticTests extends TacticTestBase {
         "\\forall x_1 \\forall v_1 \\forall t_0 \\forall s_0 (v_1>0&x_1 < s_0&-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1>=0&t_0>=0->1/2*(-1*(v_1^2/(2*(s_0-x_1)))*t_0^2+2*t_0*v_1+2*x_1)+(-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1)^2/(2*(v_1^2/(2*(s_0-x_1))))<=s_0)".asFormula)) { tool =>
     //@note actual assertions are made by MockTool, expect a BelleError since MockTool returns false as QE answer
     the [BelleError] thrownBy proveBy(
-      Sequent(Nil,
-        IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula),
-        IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
+      Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(v_0>0&x_0 < s, a=v_0^2/(2*(s-x_0)), t_0=0
                                                                             |  ==>  v>=0&t>=0&v=-1*a*t+v_0&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s
                                                                             |  from     ==>  false)""".stripMargin
@@ -50,9 +48,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "prove after apply equalities, transform to implication, and universal closure" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula),
-        IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
+      Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
       TactixLibrary.QE) shouldBe 'proved
   }
 
@@ -60,9 +56,7 @@ class ArithmeticTests extends TacticTestBase {
       new MockTool(
         "\\forall y_0 \\forall x_0 \\forall r_0 (x_0^2+y_0^2=r_0^2&r_0>0->y_0<=r_0)".asFormula)) { tool =>
     the [BelleError] thrownBy proveBy(
-      Sequent(Nil,
-        IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula),
-        IndexedSeq("y <= r".asFormula)),
+      Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(x^2+y^2=r^2, r>0
                                                                             |  ==>  y<=r
                                                                             |  from     ==>  false)""".stripMargin
@@ -70,43 +64,37 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "prove after only apply equalities for variables" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula),
-        IndexedSeq("y <= r".asFormula)),
+      Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "not choke on differential symbols" in withMathematica { tool =>
-    proveBy(
-      Sequent(Nil,
-        IndexedSeq(),
-        IndexedSeq("5=5 | x' = 1'".asFormula)),
-      TactixLibrary.QE) shouldBe 'proved
+  it should "not support differential symbols" in withMathematica { tool =>
+    the [BelleError] thrownBy { proveBy(
+      Sequent(IndexedSeq(), IndexedSeq("5=5 | x' = 1'".asFormula)),
+      TactixLibrary.QE) } should have message "[Bellerophon Runtime] x' (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
     the [BelleError] thrownBy proveBy(
-      Sequent(Nil,
-        IndexedSeq(),
-        IndexedSeq("x' = y'".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(  ==>  x'=y'
-                                                                            |  from     ==>  y'=x')""".stripMargin
+      Sequent(IndexedSeq(), IndexedSeq("x' = y'".asFormula)),
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] x' (of class edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol)"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
     the [BelleError] thrownBy proveBy(
-      Sequent(Nil,
-        IndexedSeq("a=1".asFormula, "a()=2".asFormula),
-        IndexedSeq("a=a()".asFormula)),
+      Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a=a()".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(a=1, a()=2
                                                                             |  ==>  a=a()
                                                                             |  from     ==>  false)""".stripMargin
 
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("a=1".asFormula, "a()=2".asFormula),
-        IndexedSeq("a<a()".asFormula)),
+      Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a<a()".asFormula)),
       TactixLibrary.QE) shouldBe 'proved
+  }
+
+  it should "work with functions" in withMathematica { implicit tool =>
+    proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
+    proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
   }
 
   "counterExample" should "not choke on differential symbols" in withMathematica { tool =>
@@ -147,41 +135,31 @@ class ArithmeticTests extends TacticTestBase {
 
   "transform" should "prove a simple example" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("a<b".asFormula),
-        IndexedSeq("b>a".asFormula)),
+      Sequent(IndexedSeq("a<b".asFormula), IndexedSeq("b>a".asFormula)),
       ToolTactics.transform("a<b".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "prove a simple example with modalities in other formulas" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("a<b".asFormula),
-        IndexedSeq("b>a".asFormula, "[x:=2;]x>0".asFormula)),
+      Sequent(IndexedSeq("a<b".asFormula), IndexedSeq("b>a".asFormula, "[x:=2;]x>0".asFormula)),
       ToolTactics.transform("a<b".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "keep enough context around to prove the transformation" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("a+b<c".asFormula, "b>=0&[y:=3;]y=3".asFormula, "y>4".asFormula),
-        IndexedSeq("a<c".asFormula, "[x:=2;]x>0".asFormula)),
+      Sequent(IndexedSeq("a+b<c".asFormula, "b>=0&[y:=3;]y=3".asFormula, "y>4".asFormula), IndexedSeq("a<c".asFormula, "[x:=2;]x>0".asFormula)),
       ToolTactics.transform("a+b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "work with division by zero" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("a/b<c".asFormula, "b>0".asFormula),
-        IndexedSeq("c>a/b".asFormula)),
+      Sequent(IndexedSeq("a/b<c".asFormula, "b>0".asFormula), IndexedSeq("c>a/b".asFormula)),
       ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "work with division by zero even with modalities somewhere" in withMathematica { tool =>
     proveBy(
-      Sequent(Nil,
-        IndexedSeq("a/b<c".asFormula, "b>0&[y:=3;]y=3".asFormula),
-        IndexedSeq("c>a/b".asFormula, "[x:=2;]x>0".asFormula)),
+      Sequent(IndexedSeq("a/b<c".asFormula, "b>0&[y:=3;]y=3".asFormula), IndexedSeq("c>a/b".asFormula, "[x:=2;]x>0".asFormula)),
       ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 

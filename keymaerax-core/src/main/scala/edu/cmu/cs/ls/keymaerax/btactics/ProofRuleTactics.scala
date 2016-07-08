@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -10,7 +11,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus
  * and other proof rules that are implemented by KeYmaera X.
- * @author Nathan Fulton
+  *
+  * @author Nathan Fulton
  * @see [[SequentCalculi]]
  */
 object ProofRuleTactics {
@@ -20,7 +22,7 @@ object ProofRuleTactics {
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
-  private def requireOneSubgoal(provable: Provable) =
+  private[btactics] def requireOneSubgoal(provable: Provable) =
     if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
@@ -71,97 +73,6 @@ object ProofRuleTactics {
     }
   }
 
-  def notL = new BuiltInLeftTactic("notL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.NotLeft(pos.top), 0)
-    }
-  }
-
-  def notR = new BuiltInRightTactic("notR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.NotRight(pos.top), 0)
-    }
-  }
-
-  def andR = new BuiltInRightTactic("andR") {
-    override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
-      requireOneSubgoal(provable)
-      //@todo how is isTopLevel ensured here and elsewhere? Call pos.checkTop.top?
-      provable(core.AndRight(pos.top), 0)
-    }
-  }
-
-  def andL = new BuiltInLeftTactic("andL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition) = {
-      requireOneSubgoal(provable)
-      provable(core.AndLeft(pos.top), 0)
-    }
-  }
-
-  def orR = new BuiltInRightTactic("orR") {
-    override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
-      requireOneSubgoal(provable)
-      provable(core.OrRight(pos.top), 0)
-    }
-  }
-
-  def orL = new BuiltInLeftTactic("OrL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition) = {
-      requireOneSubgoal(provable)
-      provable(core.OrLeft(pos.top), 0)
-    }
-  }
-
-  def implyR = new BuiltInRightTactic("implyR") {
-    override def computeSuccResult(provable : Provable, pos : SuccPosition) = {
-      requireOneSubgoal(provable)
-      provable(core.ImplyRight(pos.top), 0)
-    }
-  }
-
-  def implyL = new BuiltInLeftTactic("ImplyL") {
-    override def computeAnteResult(provable : Provable, pos: AntePosition) = {
-      requireOneSubgoal(provable)
-      provable(core.ImplyLeft(pos.top), 0)
-    }
-  }
-
-  def equivR = new BuiltInRightTactic("EquivR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.EquivRight(pos.top), 0)
-    }
-  }
-
-  def equivL = new BuiltInLeftTactic("EquivL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.EquivLeft(pos.top), 0)
-    }
-  }
-
-  def commuteEquivL = new BuiltInLeftTactic("CommuteEquivL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.CommuteEquivLeft(pos.top), 0)
-    }
-  }
-
-  def commuteEquivR = new BuiltInRightTactic("CommuteEquivR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.CommuteEquivRight(pos.top), 0)
-    }
-  }
-
-  def equivifyR = new BuiltInRightTactic("EquivifyR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.EquivifyRight(pos.top), 0)
-    }
-  }
 
   def hide = new DependentPositionTactic("Hide") {
     override def factory(pos: Position): DependentTactic = pos match {
@@ -174,96 +85,39 @@ object ProofRuleTactics {
     }
   }
 
-  def hideL = new BuiltInLeftTactic("HideL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.HideLeft(pos.top), 0)
-    }
-  }
-
-  def hideR = new BuiltInRightTactic("HideR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.HideRight(pos.top), 0)
-    }
-  }
 
   def coHide = new DependentPositionTactic("CoHide") {
     override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {
-        override def computeExpr(v: BelleValue): BelleExpr = coHideL(p)
+        override def computeExpr(v: BelleValue): BelleExpr = SequentCalculus.cohideL(p)
       }
       case p: SuccPosition => new DependentTactic(name) {
-        override def computeExpr(v: BelleValue): BelleExpr = coHideR(p)
+        override def computeExpr(v: BelleValue): BelleExpr = SequentCalculus.cohideR(p)
       }
     }
   }
 
-  def coHideL = new BuiltInLeftTactic("CoHideL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.CoHideLeft(pos.top), 0)
-    }
-  }
-
-  def coHideR = new BuiltInRightTactic("CoHideR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.CoHideRight(pos.top), 0)
-    }
-  }
-
-  def coHide2 = new BuiltInTwoPositionTactic("CoHide2") {
-    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
-      requireOneSubgoal(provable)
-      require(posOne.isAnte && posTwo.isSucc, "Should take an antecedent and a succedent position.")
-      provable(core.CoHide2(posOne.checkAnte.top, posTwo.checkSucc.top), 0)
-    }
-  }
-
-  def exchangeL = new BuiltInTwoPositionTactic("ExchangeL") {
-    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
-      requireOneSubgoal(provable)
-      require(posOne.isAnte && posTwo.isAnte, "Both positions should be in the Antecedent.")
-      provable(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
-    }
-  }
-
-  def exchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
-    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
-      requireOneSubgoal(provable)
-      require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
-      provable(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
-    }
-  }
-
-//  /** US(subst, origin) reduces the proof to a proof of the premise `origin`, whose uniform substitution instance under `subst` the current goal is.
-//    * @see [[UniformSubstitutionRule]]
-//    * @see [[UnifyUSCalculus.US(USubst, Provable)]]
-//    */
-//  @deprecated("Use UnifyUSCalculus.US(subst,Provable) or use Provable.apply(USubst) forward instead")
-//  def US(subst: USubst, origin: Sequent) = new BuiltInTactic("US") {
-//    override def result(provable: Provable): Provable = {
+//  def exchangeL = new BuiltInTwoPositionTactic("ExchangeL") {
+//    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
 //      requireOneSubgoal(provable)
-//      provable(core.UniformSubstitutionRule(subst, origin), 0)
+//      require(posOne.isAnte && posTwo.isAnte, "Both positions should be in the Antecedent.")
+//      provable(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
+//    }
+//  }
+//
+//  def exchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
+//    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
+//      requireOneSubgoal(provable)
+//      require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
+//      provable(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
 //    }
 //  }
 
-  def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
-    override def computeExpr(v: BelleValue): BelleExpr =
-      if (Provable.rules.contains(axiomName)) {
-        TactixLibrary.by(AxiomaticRule(axiomName)(subst))
-      } else if (Axiom.axioms.contains(axiomName)) {
-        TactixLibrary.by(Axiom.axiom(axiomName)(subst))
-      } else if (DerivedAxiomInfo.locate(axiomName).isDefined) {
-        TactixLibrary.by(DerivedAxioms.derivedAxiom(axiomName)(subst))
-      } else throw new BelleError(s"Unknown axiom/rule $axiomName")
-  }
-
   /**
     * Uniform renaming `what~>repl` and vice versa.
-    * @param what
-    * @param repl
+    *
+    * @param what What variable to replace (along with its associated DifferentialSymbol).
+    * @param repl The target variable to replace what with.
     * @return
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
@@ -277,6 +131,7 @@ object ProofRuleTactics {
   import TacticFactory._
   /**
     * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
+    *
     * @param what the variable bound at the position where this tactic will be used.
     * @param repl the new, fresh variable to be used for this bound variable instead.
     * @author Andre Platzer
@@ -321,6 +176,7 @@ object ProofRuleTactics {
   }
 
   /** contextualize(t) lifts (standard) top-level tactic `t` to also work on subpositions in any formula context C{_}.
+    *
     * @param tactic the tactic to be lifted, which is required to
     *               work on top-level left and right
     *               and only leave a single goal with one single formula changed.
@@ -398,7 +254,8 @@ object ProofRuleTactics {
   }
 
   /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
-  def trivialCloser = new BuiltInTactic("CloseTrivialForm") {
+  @deprecated("Use SequentCalculus.close(0,0) instead")
+  private[btactics] def trivialCloser = new BuiltInTactic("CloseTrivialForm") {
     override def result(provable: Provable) = {
       requireOneSubgoal(provable)
       if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)
@@ -408,6 +265,7 @@ object ProofRuleTactics {
   }
 
   /** Closes the goal using specified positions. */
+  //@todo compare with SequentCalculus.close
   def close = new BuiltInTwoPositionTactic("Close") {
     override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)

@@ -2,124 +2,148 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
+/**
+  * @note Code Review: 2016-06-01
+  */
 package edu.cmu.cs.ls.keymaerax.tools
 
 // favoring immutable Seqs
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
-import com.wolfram.jlink._
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
-import scala.math.BigDecimal
-
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 
 /**
- * Handles conversion to/from Mathematica.
- *
- * TODO-nrf assertion that maskName and removeMask are inverses (compose to
- * id).
- *
+ * Name conversion to/from Mathematica.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
 private object MathematicaNameConversion {
-  private val PREFIX = "KeYmaera`"
-  private val SEP    = "$beginIndex$"
-  private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
+  private val PREFIX = "kyx`"
+  private val SEP    = "$i$"
+  //@todo Code Review: disallow $ in names
+  //@solution: insist in maskIdentifier
+  private val MUNDERSCORE = "$u$"
 
-  val CONST_FN_PREFIX: String = "constfn$"
-
-  private def regexOf(s: String) = {
-    s.replace("$", "\\$")
-  }
-
-  private def maskIdentifier(name : String) = {
-    //Ensure that none of the "special" strings occur in the variable name.
-    if (name.contains(MUNDERSCORE)) {
-      throw new ConversionException("Please do not use the string " + MUNDERSCORE + " in your variable names.")
+  /**
+    * Converts a KeYmaera name into a Mathematica symbol. Masks names as follows:
+    * base + index     ---> PREFIX + base + SEP + index
+    * base only        ---> PREFIX + base
+    * special function ---> base
+    * @param ns The KeYmaera name to convert.
+    * @return The Mathematica symbol.
+    */
+  def toMathematica(ns: NamedSymbol): MExpr = {
+    val name: String = ns match {
+      case _ => maskName(ns)
     }
-    //Do replacements.
-    name.replace("_", MUNDERSCORE)
+
+    new MExpr(com.wolfram.jlink.Expr.SYMBOL, name)
+  } ensuring (r => r.symbolQ(), "symbol names expected as result")
+
+  /**
+    * Converts a Mathematica name into its corresponding KeYmaera X named symbol (Variable or Function). Distinguishes
+    * between variables and functions by the number of arguments (0 args -> Variable, at least 1 arg -> Function). In
+    * each case, decomposes the Mathematica name based upon the possible forms of the name:
+    * PREFIX + base + SEP + index ---> name + index
+    * PREFIX + base               ---> name only
+    * base                        ---> special function
+    * @param e The Mathematica 'name'
+    * @return The named symbol.
+    */
+  def toKeYmaera(e: MExpr): NamedSymbol = {
+    if (e.args.isEmpty) {
+      val (name, index) = unmaskName(e.asString())
+      Variable(name, index, Real)
+    } else {
+      val (name, index) = unmaskName(e.head().asString())
+      val fnDomain = convertFunctionDomain(e.args())
+      Function(name, index, fnDomain, Real)
+    }
   }
 
+  /** Converts a nested list of arguments into nested tuples of reals */
+  private def convertFunctionDomain(arg: MExpr): Sort = {
+    if (arg.listQ()) {
+      assert(arg.args().length == 2)
+      Tuple(convertFunctionDomain(arg.args()(0)), convertFunctionDomain(arg.args()(1)))
+    } else {
+      Real
+    }
+  }
+  /** Converts a nested list of arguments into nested tuples of reals */
+  private def convertFunctionDomain(args: Array[MExpr]): Sort = {
+    assert(args.length <= 2, "Functions have at most 2 arguments (second can be a nested list)")
+    args.map(convertFunctionDomain).reduceRightOption(Tuple).getOrElse(Unit)
+  }
 
-  def toMathematica(ns : NamedSymbol) : com.wolfram.jlink.Expr = {
-    //The identifier (portion of name excluding index) has one of the forms:
-    //   name (for external functions)
-    //   KeYmaera + name
-    val identifier : String = ns match {
-      //@note special function
+  /** Masks a name, i.e., replaces _ with $u$, adds the namespace prefix kyx, and merges name and index (separated by $i$) */
+  private def maskName(ns: NamedSymbol): String = uncheckedMaskName(ns) ensuring(r => {
+    val (name, idx) = uncheckedUnmaskName(r); name == ns.name && idx == ns.index
+  }, "Unmasking a masked name should produce original unmasked name" +
+    "\n Original unmasked name" + ns.prettyString +
+    "\n Masked name " + uncheckedMaskName(ns) +
+    "\n Reunmasked to " + uncheckedUnmaskName(uncheckedMaskName(ns)))
+
+  /** Masking without contracts. */
+  private def uncheckedMaskName(ns: NamedSymbol): String = {
+    //Ensure that none of the "special" strings occur in the variable name.
+    insist(!ns.name.contains("\\$"), "Character '$' not allowed in variable names")
+    //@note double-check with all separators
+    insist(!ns.name.contains(MUNDERSCORE), "String '" + MUNDERSCORE + "' not allowed in variable names")
+    insist(!ns.name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
+    insist(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
+
+    //@todo Code Review: handle interpreted functions properly, handle name conflicts
+    //@solution (name conflicts): symmetric name conversion in unmaskName, contract in KeYmaeraToMathematica and MathematicaToKeYmaera
+    ns match {
       case Function("abs",None,Real,Real) => "Abs"
       case Function("Abs",None,Real,Real) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
       case Function("min",None,Tuple(Real,Real),Real) => "Min"
       case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
       case Function("max",None,Tuple(Real,Real),Real) => "Max"
       case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
-      //      case n: Function if n.external => n.name
-      case _ => PREFIX + maskIdentifier(ns.name)
-    }
-
-    //Add the index if it exists.
-    val fullName : String   = ns.index match {
-      case Some(idx) => identifier + SEP + idx.toString
-      case None      => identifier
-    }
-    new com.wolfram.jlink.Expr(com.wolfram.jlink.Expr.SYMBOL, fullName)
-  } ensuring (r => r.symbolQ(), "symbol names expected as result")
-
-  ////
-  // toKeYmaera section. We decompose by function vs. variable. In each case, we
-  // decompose based upon the possible forms of the name:
-  // PREFIX + base + SEP + index ---> name + index
-  // PREFIX + base               ---> name only
-  // base                        ---> external function
-  ///
-  def toKeYmaera(e: com.wolfram.jlink.Expr): NamedSymbol = {
-    if (e.args().isEmpty) nullaryNameToKeYmaera(e)
-    else functionToKeYmaera(e)
-  }
-
-  private def unmaskName(e: com.wolfram.jlink.Expr): (String, Option[Int]) = {
-    val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
-    if (maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
-      //Get the parts of the masked name.
-      val parts = maskedName.replace(PREFIX, "").split(regexOf(SEP))
-      if (parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
-      val (name, unparsedIndex) = (parts.head, parts.last)
-
-      val index = try {
-        Integer.parseInt(unparsedIndex)
-      } catch {
-        case e : NumberFormatException => throw new ConversionException("Expected number for index")
-      }
-      (name, Some(index))
-    }
-    else if (maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
-      (maskedName.replace(PREFIX, ""), None)
-    } else {
-      (maskedName, None)
+      case _ =>
+        val identifier = ns.name.replace("_", MUNDERSCORE)
+        PREFIX + (ns.index match {
+          case Some(idx) => identifier + SEP + idx
+          case None      => identifier
+        })
     }
   }
 
-  /** Returns a variable or function, depending on the prefix of the name */
-  private def nullaryNameToKeYmaera(e: com.wolfram.jlink.Expr): NamedSymbol = {
-    require(e.args().isEmpty, "Nullary names have no arguments")
-    val (name, index) = unmaskName(e)
-    if (name.startsWith(MathematicaNameConversion.CONST_FN_PREFIX)) Function(name.replace(CONST_FN_PREFIX, ""), index, Unit, Real)
-    else Variable(name, index, Real)
-  }
+  /** Unmasks a name, i.e., adds _ for $u$, removes the namespace prefix kyx, and splits at $i$ into the name and its index. */
+  private def unmaskName(maskedName: String): (String, Option[Int]) = uncheckedUnmaskName(maskedName) ensuring(r => {
+    r._1 == "Apply" || r._1 == "abs" || r._1 == "min" || r._1 == "max" || maskName(Variable(r._1, r._2, Real)) == maskedName
+  }, "Masking an unmasked name should produce original masked name" +
+     "\n Original masked name " + maskedName +
+     "\n Unmasked name " + uncheckedUnmaskName(maskedName) +
+     "\n Remasked to " + uncheckedMaskName(Variable(uncheckedUnmaskName(maskedName)._1, uncheckedUnmaskName(maskedName)._2, Real)))
 
-  private def functionToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val (name, index) = unmaskName(e.head())
-    require(!name.startsWith(MathematicaNameConversion.CONST_FN_PREFIX), "Proper functions are not constant functions")
-    name match {
-      //@note special function
-      case "Abs" => Function("abs", None, Real, Real)
-      case "Min" => Function("min", None, Tuple(Real, Real), Real)
-      case "Max" => Function("max", None, Tuple(Real, Real), Real)
-      //@note This conversion only works for real-valued unary functions not for others. Term creation will catch binary argument attempts.
-      case _ => Function(name, index, Real, Real)
-    }
+  /** Unmasking without contracts. */
+  private def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
+    def regexOf(s: String) = s.replace("$", "\\$")
+
+    val uscoreMaskedName = maskedName.replaceAll(regexOf(MUNDERSCORE), "_")
+    //@todo Code Review: contains --> startsWith, improve readability/prefix+sep handling in a single name
+    //@solution: streamlined implementation
+    if (uscoreMaskedName.startsWith(PREFIX)) {
+      val name = uscoreMaskedName.replace(PREFIX, "")
+      if (name.contains(SEP)) {
+        // name is of the form thename$i$number, we split into thename and number
+        val parts = name.split(regexOf(SEP))
+        insist(parts.size == 2, "Expected " + SEP + " once only")
+        (parts.head, Some(Integer.parseInt(parts.last)))
+      } else (name , None)
+    } else (uscoreMaskedName match {
+        //@todo Code Review: handle interpreted functions properly, handle name conflicts
+        //@solution: see same (copied) code review comment above
+        case "Min" => "min"
+        case "Max" => "max"
+        case "Abs" => "abs"
+        case "min" => throw new IllegalArgumentException("Refuse translating min to KeYmaera to avoid confusion with min")
+        case "max" => throw new IllegalArgumentException("Refuse translating max to KeYmaera to avoid confusion with max")
+        case "abs" => throw new IllegalArgumentException("Refuse translating abs to KeYmaera to avoid confusion with abs")
+        case n => n
+    }, None)
   }
 }
-

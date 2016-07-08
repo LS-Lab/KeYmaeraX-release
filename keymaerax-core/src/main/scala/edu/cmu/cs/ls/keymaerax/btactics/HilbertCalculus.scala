@@ -54,23 +54,17 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val hideG              : BelleExpr         = new DependentPositionTactic("hideG") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        ProofRuleTactics.coHideR(SuccPos(0)) & DLBySubst.G
+        SequentCalculus.cohideR(SuccPos(0)) & DLBySubst.G
       }
     }
   }
 
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
-  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
-  //def CQ(inEqPos: PosInExpr)  : Tactic
-  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
-  //def CE(inEqPos: PosInExpr)  : Tactic
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val monb               : BelleExpr         = DLBySubst.monb
+  lazy val monb               : BelleExpr         = byUS("[] monotone")
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val mond               : BelleExpr         = DLBySubst.mond
+  lazy val mond               : BelleExpr         = byUS("<> monotone")
 
 
   // axioms
@@ -144,11 +138,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
 //  def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
+  @deprecated("Use with care since limited to hybrid systems. Use monb instead.")
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p.
     * @note Unsound for hybrid games
     * @see [[boxTrue]]
     */
+    //@todo useAt except with dualFree as the tactic to prove the global prereq [a]true.
   lazy val V                  : DependentPositionTactic = useAt("V vacuous")
 //
 //  // differential equations
@@ -168,11 +164,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
-  def DG(y:Variable, a:Term, b:Term) : BelleExpr = useAt("DG differential ghost", PosInExpr(1::0::Nil),
+  def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
-      (Variable("y",None,Real), y),
-      (FuncOf(Function("t",None,Real,Real),DotTerm), a),
-      (FuncOf(Function("s",None,Real,Real),DotTerm), b)))
+      (Variable("y_",None,Real), y),
+      (FuncOf(Function("t",None,Unit,Real),Nothing), a),
+      (FuncOf(Function("s",None,Unit,Real),Nothing), b)))
   )
 
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
@@ -241,7 +237,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   // def ind
 
-  /** dualFree: proves `[a]True` directly for hybrid systems `a` that are not hybrid games. */
+  /** dualFree: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
   val dualFree                : PositionalTactic = ProofRuleTactics.dualFree
   //@todo could do boxTrue = dualFree | master
   val boxTrue                 : PositionalTactic = dualFree
@@ -256,6 +252,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
   lazy val existsV            : DependentPositionTactic = namedUseAt("existsV", "vacuous exists quantifier")
   lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
+
+  lazy val existsE            : DependentPositionTactic = namedUseAt("existsE", "exists eliminate")
 
   //@todo make the other quantifier axioms accessible by useAt too
 

@@ -86,7 +86,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case EitherTactic(left, right) => try {
           val leftResult = apply(left, v)
           (leftResult, left) match {
-            case (BelleProvable(p, _), _) if p.isProved => leftResult
+            case (BelleProvable(p, _), _) /*if p.isProved*/ => leftResult
             case (_, x: PartialTactic) => leftResult
             case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(BelleDot, right), "Failed left-hand side of |:" + left)
           }
@@ -99,7 +99,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               case e: BelleError => throw e.inContext(EitherTactic(eleft.context, e.context), "Failed: both left-hand side and right-hand side " + expr)
             }
             (rightResult, right) match {
-              case (BelleProvable(p, _), _) if p.isProved => rightResult
+              case (BelleProvable(p, _), _) /*if p.isProved*/ => rightResult
               case (_, x: PartialTactic) => rightResult
               case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(left, BelleDot), "Failed right-hand side of |: " + right)
             }
@@ -142,7 +142,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 }
                 ithResult match {
                   case BelleProvable(resultingProvable, _) =>
-                    if (resultingProvable.isProved || e_i.isInstanceOf[PartialTactic]) resultingProvable
+                    if (resultingProvable.isProved || e_i.isInstanceOf[PartialTactic] || true) resultingProvable
                     else throw new BelleError("Every branching tactic must close its associated goal or else be annotated as a PartialTactic").inContext(expr, "")
                   case _ => throw new BelleError("Each piecewise application in a Branching tactic should result in a provable.").inContext(expr, "")
                 }
@@ -182,7 +182,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             } catch { case err: BelleError => errors += "in " + o + " " + err + "\n"; None }
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
             (someResult, e) match {
-              case (Some(BelleProvable(p, _)), _) if p.isProved => return someResult.get
+              case (Some(BelleProvable(p, _)), _) /*if p.isProved*/ => return someResult.get
               case (Some(_), x: PartialTactic) => return someResult.get
               case (Some(_), _) => errors += "option " + o + " " + new BelleError("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o) + "\n" // throw new BelleError("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o)
               case (None, _) => // option o had an error, so consider next option

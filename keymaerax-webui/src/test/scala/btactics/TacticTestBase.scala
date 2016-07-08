@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, DerivedAxioms, NoneGenerate, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
@@ -59,14 +58,26 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def withPolya(testcode: Polya => Any) {
     val polya = new Polya()
     polya.init(DefaultConfiguration.defaultMathematicaConfig)
-    withTool(polya)(testcode)
+    withQETool(polya)(testcode)
   }
 
   /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
   def withTool[T <: Tool with QETool with DiffSolutionTool with CounterExampleTool](tool: T)(testcode: T => Any): Unit = {
     tool shouldBe 'initialized
     DerivedAxioms.qeTool = tool
-    TactixLibrary.tool = tool
+    TactixLibrary.qeTool = tool
+    TactixLibrary.odeTool = tool
+    TactixLibrary.cexTool = tool
+    try {
+      testcode(tool)
+    } finally tool.shutdown()
+  }
+
+  /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
+  def withQETool[T <: Tool with QETool](tool: T)(testcode: T => Any): Unit = {
+    tool shouldBe 'initialized
+    DerivedAxioms.qeTool = tool
+    TactixLibrary.qeTool = tool
     try {
       testcode(tool)
     } finally tool.shutdown()
@@ -86,11 +97,19 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
       DerivedAxioms.qeTool = null
     }
-    if (TactixLibrary.tool != null) {
-      TactixLibrary.tool match { case t: Tool => t.shutdown() }
-      TactixLibrary.tool = null
-      TactixLibrary.invGenerator = new NoneGenerate()
+    if (TactixLibrary.qeTool != null) {
+      TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
+      TactixLibrary.qeTool = null
     }
+    if (TactixLibrary.cexTool != null) {
+      TactixLibrary.cexTool match { case t: Tool => t.shutdown() }
+      TactixLibrary.cexTool = null
+    }
+    if (TactixLibrary.odeTool != null) {
+      TactixLibrary.odeTool match { case t: Tool => t.shutdown() }
+      TactixLibrary.odeTool = null
+    }
+    TactixLibrary.invGenerator = new NoneGenerate()
   }
 
   /** Proves a formula using the specified tactic. Fails the test when tactic fails. */

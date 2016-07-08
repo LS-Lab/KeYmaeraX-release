@@ -4,13 +4,15 @@
  */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import edu.cmu.cs.ls.keymaerax.core.ProverException
 
-class ConversionException(s:String)
-  extends Exception(s)
-class MathematicaComputationFailedException(e:com.wolfram.jlink.Expr)
-  extends ConversionException(e.toString)
-class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr)
-  extends ConversionException(e.toString)
+/** Arithmetic tool exceptions */
+case class ToolException(msg: String, cause: Throwable = null) extends ProverException(msg, cause)
 
-class SMTConversionException(s:String) extends ConversionException(s)
-class NoCountExException(s:String) extends Exception(s)
+class ConversionException(s: String) extends Exception(s)
+class MathematicaComputationFailedException(msg: String) extends ConversionException(msg)
+class MathematicaComputationAbortedException(msg: String) extends ConversionException(msg)
+
+class SMTConversionException(s: String) extends ConversionException(s)
+class SMTQeException(s: String) extends Exception(s)
+class NoCountExException(s: String) extends Exception(s)

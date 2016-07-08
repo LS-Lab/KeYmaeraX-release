@@ -21,7 +21,6 @@ import scala.collection.JavaConversions._
 object Main {
   def startServer(args: Array[String]) : Unit = {
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
-    LoadingDialogFactory() //Intialize the loading dialog.
     try {
 //      throw new LemmbaDatabaseInitializationException("")
 //      LemmaDatabaseInitializer.initializeFromJAR
@@ -36,7 +35,13 @@ object Main {
       }
     }
     //@todo skip -ui -launch
-    edu.cmu.cs.ls.keymaerax.hydra.Boot.main(args)
+    if(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
+      edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
+    }
+    else {
+      LoadingDialogFactory() //Intialize the loading dialog.
+      edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
+    }
   }
 
 

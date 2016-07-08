@@ -16,7 +16,9 @@ object DLTactics {
    *   [a]p |- [a]q
    * }}}
    * @return The tactic.
+   * @see [[DLBySubst.monb]]
    */
+  @deprecated("Use DLBySubst.monb instead")
   def monb: DependentTactic = new DependentTactic("[] monotone") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
@@ -32,7 +34,7 @@ object DLTactics {
               val s = USubst(SubstitutionPair(aX, a) ::
                 SubstitutionPair(PredOf(pX, Anything), p) ::
                 SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-              axiomatic("[] monotone", s)
+              TactixLibrary.by("[] monotone", s)
             case Box(b, q) if a != b => throw new BelleError("Expected sole box property [a]q in succedent, matching [a]p from antecedent, but " +
               "got program " + a + " in antecedent and non-matching program " + b + " in succedent")
             case _ => throw new BelleError("Expected sole box property [a]q in succedent, matching [a]p from antecedent, but got " + sequent.succ.head)
@@ -50,7 +52,9 @@ object DLTactics {
    *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    * @return The tactic.
+    * @see [[DLBySubst.mond]]
    */
+  @deprecated("Use DLBySubst.mond instead")
   def mond: DependentTactic = new DependentTactic("<> monotone") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
@@ -66,7 +70,7 @@ object DLTactics {
               val s = USubst(SubstitutionPair(aX, a) ::
                 SubstitutionPair(PredOf(pX, Anything), p) ::
                 SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-              axiomatic("<> monotone", s)
+              TactixLibrary.by("<> monotone", s)
             case Diamond(b, q) if a != b => throw new BelleError("Expected sole diamond property <a>q in succedent, matching <a>p from antecedent, but " +
               "got program " + a + " in antecedent and non-matching program " + b + " in succedent")
             case _ => throw new BelleError("Expected sole diamond property <a>q in succedent, matching <a>p from antecedent, but got " + sequent.succ.head)

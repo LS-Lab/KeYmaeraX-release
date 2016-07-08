@@ -111,14 +111,12 @@ object SeqPos {
  * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
  * the disjunction of the formulas in `succ`.
  *
+ * @param ante The ordered list of antecedents of this sequent whose conjunction is assumed.
+ * @param succ The orderd list of succedents of this sequent whose disjunction needs to be shown.
  * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
-final case class Sequent(pref: immutable.Seq[NamedSymbol],
-                         ante: immutable.IndexedSeq[Formula],
-                         succ: immutable.IndexedSeq[Formula]) {
-  require(pref.isEmpty, "only empty sequent prefix supported so far " + pref)
-
+final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.IndexedSeq[Formula]) {
   /**
    * Retrieves the formula in sequent at a given position.
    *
@@ -159,15 +157,14 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   
   /**
    * A copy of this sequent concatenated with given sequent s.
-   * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
+   * Sequent(A,S) glue Sequent(B,T) == Sequent(A++B, S++T)
    *
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
    * @return a copy of this sequent concatenated with s.
    * Results in a least upper bound with respect to subsets of this and s.
    */
   def glue(s: Sequent): Sequent = {
-    require(s.pref == pref, "identical sequent prefix required when gluing " + this + " with " + s)
-    Sequent(pref, ante ++ s.ante, succ ++ s.succ)
+    Sequent(ante ++ s.ante, succ ++ s.succ)
     } ensuring(r => this.subsequentOf(r) && s.subsequentOf(r)
         && r.ante.forall(f=>this.ante.contains(f) || s.ante.contains(f))
         && r.succ.forall(f=>this.succ.contains(f) || s.succ.contains(f)),
@@ -183,10 +180,10 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
    */
   def updated(p: SeqPos, f: Formula): Sequent = {
     if (p.isAnte) {
-      Sequent(pref, ante.updated(p.getIndex, f), succ)
+      Sequent(ante.updated(p.getIndex, f), succ)
     } else {
       assert(p.isSucc)
-      Sequent(pref, ante, succ.updated(p.getIndex, f))
+      Sequent(ante, succ.updated(p.getIndex, f))
     }
   }
 
@@ -201,32 +198,34 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
    */
   def updated(p: SeqPos, s: Sequent): Sequent = {
     if (p.isAnte) {
-      Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
+      Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     } else {
       assert(p.isSucc)
-      Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
+      Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
     }
   } ensuring(r=> if (p.isAnte)
-    r.glue(Sequent(pref, immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s))
+    r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s))
   else
-    r.glue(Sequent(pref, immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
+    r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
     "result after re-including updated formula is equivalent to " + this + " glue " + s
     )
 
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
+ *
    * @note Used for contracts in the core.
    */
-  def subsequentOf(r: Sequent): Boolean = pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
+  def subsequentOf(r: Sequent): Boolean = ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
    * Check whether this sequent is the same as the given sequent r (considered as sets)
+ *
    * @note Used for contracts in the core.
    */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 
-  override def toString: String = {assert(pref.isEmpty);
-    ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")}
+  override def toString: String =
+    ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")
 
   /** Pretty-print sequent */
   def prettyString: String = (if (ante.isEmpty) "" else "   ") +
@@ -264,7 +263,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
  * {{{
  *   import scala.collection.immutable._
- *   val verum = new Sequent(Seq(), IndexedSeq(), IndexedSeq(True))
+ *   val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
  *   // conjecture
  *   val provable = Provable.startProof(verum)
  *   // construct a proof
@@ -275,7 +274,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  * @example Multiple Provable objects for subderivations obtained from different sources can also be merged
  * {{{
  *   // ... continuing other example
- *   val more = new Sequent(Seq(), IndexedSeq(),
+ *   val more = new Sequent(IndexedSeq(),
  *     IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
  *   // another conjecture
  *   val moreProvable = Provable.startProof(more)
@@ -291,7 +290,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  *  import scala.collection.immutable._
  *  val fm = Greater(Variable("x"), Number(5))
  *  // |- x>5 -> x>5 & true
- *  val finGoal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+ *  val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
  *  // conjecture
  *  val finProvable = Provable.startProof(finGoal)
  *  // construct a proof
@@ -309,20 +308,20 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  *  import scala.collection.immutable._
  *  val fm = Greater(Variable("x"), Number(5))
  *  // proof of x>5 |- x>5 & true merges left and right branch by AndRight
- *  val proof = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+ *  val proof = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
  *    AndRight(SuccPos(0)), 0) (
  *    // left branch: x>5 |- x>5
- *    Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
+ *    Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
  *      Close(AntePos(0), SuccPos(0)), 0),
  *    0) (
  *    //right branch: |- true
- *    Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
+ *    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
  *      CloseTrue(SuccPos(0)), 0)(
  *        // x>5 |- true
- *        Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
+ *        Sequent(IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
  *    0) (
  *    // |- x>5 -> x>5 & true
- *    new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
+ *    new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
  *    ImplyRight(SuccPos(0))
  *  )
  *  // proof of finGoal:  |- x>5 -> x>5 & true
@@ -333,20 +332,20 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  *  import scala.collection.immutable._
  *  val fm = Greater(Variable("x"), Number(5))
  *  // x>0 |- x>0
- *  val left = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
+ *  val left = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
  *    Close(AntePos(0), SuccPos(0)), 0)
  *  // |- true
- *  val right = Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
+ *  val right = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
  *    CloseTrue(SuccPos(0)), 0)
- *  val right2 = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)))(
+ *  val right2 = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(True)))(
  *    HideLeft(AntePos(0)), 0) (right, 0)
  *  // gluing order for subgoals is irrelevant. Could use: (right2, 1)(left, 0))
- *  val merged = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+ *  val merged = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
  *    AndRight(SuccPos(0)), 0) (
  *    left, 0)(
  *      right2, 0)
  *  // |- x>5 -> x>5 & true
- *  val finGoal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+ *  val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
  *  val proof = Provable.startProof(finGoal)(
  *    ImplyRight(SuccPos(0)), 0) (merged, 0)
  *  // proof of finGoal
@@ -357,7 +356,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  * {{{
  *  // explicit proof certificate construction of |- !!p() <-> p()
  *  val proof = (Provable.startProof(
- *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
+ *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
  *    (EquivRight(SuccPos(0)), 0)
  *    // right branch
  *      (NotRight(SuccPos(0)), 1)
@@ -526,7 +525,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    */
   final def apply(newConsequence: Sequent, rule: Rule): Provable = {
     //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
-    require(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " was expected to justify\n" + this.conclusion.prettyString + "\n-----------------------------" + rule + "??\n" + newConsequence.prettyString +
+    insist(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " was expected to justify\n" + this.conclusion.prettyString + "\n-----------------------------" + rule + "??\n" + newConsequence.prettyString +
       "\n\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule instead led to " + rule(newConsequence) +
       "\n\nExpected: " + edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(this.conclusion) +
       "\nFound:    " + rule(newConsequence).map(s=>edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(s)).mkString(", "))
@@ -601,7 +600,7 @@ object Provable {
     * @note soundness-critical: only valid formulas are sound axioms.
     */
   val axioms: immutable.Map[String, Provable] = axiom.mapValues(axiom =>
-    new Provable(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
+    new Provable(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
   )
 
   /** immutable list of locally sound axiomatic proof rules.
@@ -649,7 +648,7 @@ object Provable {
     * @note Not soundness-critical (convenience method)
     */
   def startProof(goal : Formula): Provable =
-    startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
+    startProof(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
   /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
@@ -683,6 +682,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   /** Name of this proof rule */
   val name: String
 
+  //@note Convenience method not used in the soundness-critical core nor anywhere else.
   override def toString: String = name
 }
 
@@ -756,7 +756,7 @@ case class HideRight(pos: SuccPos) extends RightRule {
   val name: String = "HideRight"
   /** weakening right = hide right */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante, s.succ.patch(pos.getIndex, Nil, 1)))
+    immutable.List(Sequent(s.ante, s.succ.patch(pos.getIndex, Nil, 1)))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -772,7 +772,7 @@ case class HideLeft(pos: AntePos) extends LeftRule {
   val name: String = "HideLeft"
   /** weakening left = hide left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
+    immutable.List(Sequent(s.ante.patch(pos.getIndex, Nil, 1), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -787,7 +787,7 @@ case class HideLeft(pos: AntePos) extends LeftRule {
 case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRule {
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
+    immutable.List(Sequent(s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
   } ensuring (_.forall(r => r.sameSequentAs(s)), "structural rule subsequents")
 }
 
@@ -802,36 +802,9 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
 case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
   val name: String = "ExchangeLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
+    immutable.List(Sequent(s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
   } ensuring (_.forall(r => r.sameSequentAs(s)), "structural rule subsequents")
 }
-
-// Contraction right rule duplicates a formula in the succedent
-/*
-object ContractionRight {
-  def apply(p: Position): Rule = new ContractionRightRule(p)
-
-  private class ContractionRightRule(p: Position) extends PositionRule("ContractionRight", p) {
-    require(!p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the succedent " + this)
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      immutable.List(Sequent(s.pref, s.ante, s.succ :+ s.succ(p.getIndex)))
-    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-  }
-}
-
-// Contraction left rule duplicates a formula in the succedent
-
-object ContractionLeft {
-  def apply(p: Position): Rule = new ContractionLeftRule(p)
-
-  private class ContractionLeftRule(p: Position) extends PositionRule("ContractionLeft", p) {
-    require(p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the antecedent " + this)
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      immutable.List(Sequent(s.pref, s.ante :+ s.ante(p.getIndex), s.succ))
-    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-  }
-}
-*/
 
 /*********************************************************************************
  * Sequent Proof Rules for identity/closing and cut
@@ -904,14 +877,14 @@ case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
   /** cut in the given formula c */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val use = new Sequent(s.pref, s.ante :+ c, s.succ)
-    val show = new Sequent(s.pref, s.ante, s.succ :+ c)
+    val use = new Sequent(s.ante :+ c, s.succ)
+    val show = new Sequent(s.ante, s.succ :+ c)
     immutable.List(use, show)
   } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)),
     "subsequent of subgoals of cuts"
     ) ensuring (r => r == immutable.List(
-    s.glue(Sequent(s.pref, immutable.IndexedSeq(c), immutable.IndexedSeq())),
-    s.glue(Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(c)))),
+    s.glue(Sequent(immutable.IndexedSeq(c), immutable.IndexedSeq())),
+    s.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(c)))),
     "same as glueing construction")
 }
 
@@ -933,7 +906,7 @@ case class NotRight(pos: SuccPos) extends RightRule {
   /** !R Not right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Not(p) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p), immutable.IndexedSeq())))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq())))
   }
 }
 
@@ -950,7 +923,7 @@ case class NotLeft(pos: AntePos) extends LeftRule {
   /** !L Not left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Not(p) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))))
   }
 }
 
@@ -984,7 +957,7 @@ case class AndLeft(pos: AntePos) extends LeftRule {
   /** &L And left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val And(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p,q), immutable.IndexedSeq())))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p,q), immutable.IndexedSeq())))
   }
 }
 
@@ -1001,7 +974,7 @@ case class OrRight(pos: SuccPos) extends RightRule {
   /** |R Or right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
   }
 }
 
@@ -1035,7 +1008,7 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
   /** ->R Imply right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p), immutable.IndexedSeq(q))))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq(q))))
   }
 }
 
@@ -1053,7 +1026,7 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
   /** ->L Imply left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))),
       s.updated(pos, q))
   }
 }
@@ -1071,8 +1044,8 @@ case class EquivRight(pos: SuccPos) extends RightRule {
   /** <->R Equiv right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p), immutable.IndexedSeq(q))),
-                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq(p))))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq(q))),
+                   s.updated(pos, Sequent(immutable.IndexedSeq(q), immutable.IndexedSeq(p))))
   }
 }
 
@@ -1125,7 +1098,7 @@ object UniformRenaming {
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
-  private val renaming: URename = URename(what, repl)
+  private[this] val renaming: URename = URename(what, repl)
 
   override def toString: String = renaming.toString
 
@@ -1148,7 +1121,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   val name: String = "Bound Renaming"
 
   //@note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
-  private val renaming = SyntacticURename(what, repl)
+  private[this] val renaming = SyntacticURename(what, repl)
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
@@ -1237,7 +1210,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
 /** Real arithmetic */
 object RCF {
   /** List of the class names of all external tools whose answers KeYmaera X would believe */
-  private val trustedTools: immutable.List[String] =
+  private[this] val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaerax.tools.Mathematica" ::
       (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Z3" :: "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
 
@@ -1250,17 +1223,11 @@ object RCF {
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
-
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
-
     //@note soundness-critical
-    val fact = Provable.oracle(new Sequent(
-      Nil,
-      immutable.IndexedSeq(),
-      immutable.IndexedSeq(Equiv(f, equivalent))),
+    val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-
     Lemma(fact, evidence :: Nil)
   }
 }
@@ -1333,7 +1300,7 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   val name: String = "CoHideRight"
   /** co-weakening right = co-hide right (all but indicated position) */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(s.succ(pos.getIndex))))
+    immutable.List(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(s.succ(pos.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -1346,13 +1313,14 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   * }}}
   *
   * @note Rarely useful (except for contradictory `p`)
+  * @note Not used, just contained for symmetry reasons
   * @derived
   */
 case class CoHideLeft(pos: AntePos) extends LeftRule {
   val name: String = "CoHideLeft"
   /** co-weakening left = co-hide left (all but indicated position) */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
+    immutable.List(Sequent(immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -1370,7 +1338,7 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
   val name: String = "CoHide2"
   /** co-weakening = co-hide all but the indicated positions */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos1.getIndex)), immutable.IndexedSeq(s.succ(pos2.getIndex))))
+    immutable.List(Sequent(immutable.IndexedSeq(s.ante(pos1.getIndex)), immutable.IndexedSeq(s.succ(pos2.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -1413,7 +1381,7 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
     immutable.List(s.updated(pos, c),
-                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c)))))
+                   s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c)))))
   }
 }
 
@@ -1444,6 +1412,7 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   * }}}
   *
   * @derived
+  * @note Not used, just contained for symmetry reasons
   */
 case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "CommuteEquivLeft"

@@ -101,6 +101,7 @@ sealed trait Position {
   //  def getIndex: Int = index
 
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
+  //@todo this+0!=this is pretty confusing. 0,1 is worse than 1,2.
   def +(child: PosInExpr): Position
 
   /** Advances the index by i on top-level positions. */
@@ -192,7 +193,8 @@ trait AntePosition extends Position {
   override def top: AntePos
   final def checkAnte: AntePosition = this
   final def checkSucc = throw new IllegalArgumentException("Antecedent position was expected to be a succedent position: " + this)
-  override def topLevel: AntePosition with TopPosition
+  override def checkTop: AntePos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
+  override def topLevel: TopAntePosition
   override def advanceIndex(i: Int): AntePosition = {
     require(isTopLevel, "Advance index only at top level")
     require(index0+i >= 0, "Cannot advance to negative index")
@@ -209,7 +211,8 @@ trait SuccPosition extends Position {
   override def top: SuccPos
   final def checkAnte = throw new IllegalArgumentException("Succedent position was expected to be an antecedent position: " + this)
   final def checkSucc: SuccPosition = this
-  override def topLevel: SuccPosition with TopPosition
+  override def checkTop: SuccPos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
+  override def topLevel: TopSuccPosition
   override def advanceIndex(i: Int): SuccPosition = {
     require(isTopLevel, "Advance index only at top level")
     require(index0+i >= 0, "Cannot advance to negative index")
@@ -218,16 +221,26 @@ trait SuccPosition extends Position {
   def +(child : PosInExpr): SuccPosition
 }
 
+/** A top-level anteedent position */
+trait TopAntePosition extends AntePosition with TopPosition {
+  final override def checkTop: AntePos = top
+}
+
+/** A top-level succedent position */
+trait TopSuccPosition extends SuccPosition with TopPosition {
+  final override def checkTop: SuccPos = top
+}
+
 // Pseudo-Constructors
 
 object AntePosition {
-  def apply(top: AntePos): AntePosition with TopPosition = new AntePositionImpl(top, HereP) with TopPosition
+  def apply(top: AntePos): TopAntePosition = new AntePositionImpl(top, HereP) with TopAntePosition
   def apply(top: AntePos, inExpr: PosInExpr): AntePosition = new AntePositionImpl(top, inExpr)
 
   def base0(index: Int, inExpr: PosInExpr = HereP): AntePosition = AntePosition.apply(AntePos(index), inExpr)
 
 
-  def apply(seqIdx: Int): AntePosition with TopPosition = apply(seqIdx2AntePos(seqIdx))
+  def apply(seqIdx: Int): TopAntePosition = apply(seqIdx2AntePos(seqIdx))
   def apply(seqIdx: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(seqIdx2AntePos(seqIdx), PosInExpr(inExpr))
   private def seqIdx2AntePos(base1: Int): AntePos = {
     require(base1>0, "positive indexing base 1: " + base1)
@@ -237,11 +250,11 @@ object AntePosition {
 }
 
 object SuccPosition {
-  def apply(top: SuccPos): SuccPosition with TopPosition = new SuccPositionImpl(top, HereP) with TopPosition
+  def apply(top: SuccPos): TopSuccPosition = new SuccPositionImpl(top, HereP) with TopSuccPosition
   def apply(top: SuccPos, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(top,inExpr)
   def base0(index: Int, inExpr: PosInExpr = HereP): SuccPosition = SuccPosition.apply(SuccPos(index), inExpr)
 
-  def apply(seqIdx: Int): SuccPosition with TopPosition = apply(seqIdx2SuccPos(seqIdx))
+  def apply(seqIdx: Int): TopSuccPosition = apply(seqIdx2SuccPos(seqIdx))
   def apply(seqIdx: Int, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(seqIdx2SuccPos(seqIdx), PosInExpr(inExpr))
 
   private def seqIdx2SuccPos(base1: Int): SuccPos = {

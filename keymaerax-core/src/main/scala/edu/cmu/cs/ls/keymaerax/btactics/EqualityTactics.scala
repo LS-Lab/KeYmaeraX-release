@@ -17,48 +17,6 @@ import scala.language.postfixOps
 object EqualityTactics {
 
   /**
-   * Rewrites a formula according to an equivalence appearing in the antecedent.
-   * @note Uses propositional tactics instead of builtin rules.
-   * @example{{{
-   *   x>0 <-> y>0 |- y>0 | y<=0, x>0->z=1
-   *   ------------------------------------equivRewriting(-1)(1)
-   *   x>0 <-> y>0 |- x>0 | y<=0, x>0->z=1
-   * }}}
-   * @param eqPos The position where the equivalence appears in the antecedent.
-   * @return The tactic.
-   */
-  def equivRewriting(eqPos: Int): DependentPositionTactic = equivRewriting(Position(eqPos).asInstanceOf[AntePosition])
-  def equivRewriting(eqPos: AntePosition): DependentPositionTactic = "Equivalence Rewriting" by ((pos, sequent) => {
-    require(eqPos.isTopLevel, "Equivalence to rewrite must occur in top-level position in antecedent")
-    sequent.sub(eqPos) match {
-      case Some(Equiv(a, b)) if a == sequent(pos.top) && !pos.isAnte =>
-        equivL(eqPos) <(
-          andL(eqPos) & closeId,
-          (andL(eqPos) & ProofRuleTactics.hide(pos) & notL('Llast) & ProofRuleTactics.hide('Llast)) partial
-          )
-      case Some(Equiv(a, b)) if a == sequent(pos.top) && pos.isAnte =>
-        equivL(eqPos) <(
-          (andL(eqPos) &
-            (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos)
-            else ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
-          andL(eqPos) & notL('Llast) & notL('Llast) & closeId
-          )
-      case Some(Equiv(a, b)) if b == sequent(pos.top) && !pos.isAnte =>
-        equivL(eqPos) <(
-          andL(eqPos) & closeId,
-          (andL(eqPos) & ProofRuleTactics.hide(pos) & notL(eqPos) & ProofRuleTactics.hide(eqPos)) partial
-          )
-      case Some(Equiv(a, b)) if b == sequent(pos.top) && pos.isAnte =>
-        equivL(eqPos) <(
-          (andL(eqPos) &
-            (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos)
-            else ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
-          andL(eqPos) & notL('Llast) & notL('Llast) & closeId
-          )
-    }
-  })
-
-  /**
    * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).
    * @note Base tactic for eqL2R and eqR2L.
    * @param name The name of the tactic.
@@ -110,7 +68,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos, sequent) => {
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos:Position, sequent:Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val condEquiv@Imply(_, Equiv(_, repl)) = sequent.sub(pos) match {
@@ -120,9 +78,9 @@ object EqualityTactics {
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
-        val equivifyCommute = if (pos.isSucc) equivifyR(pos) & commuteEquivR(pos) else equivifyR('Rlast)
+        val (equivifyCommute, closeWhere) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos)) else (equivifyR('Rlast), new LastSucc(0))
         cut(condEquiv) <(
-          /* use */ (implyL('Llast) <(closeId, cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeId) partial) partial) partial,
+          /* use */ (implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeIdWith(closeWhere)) partial) partial) partial,
           /* show */ cohide('Rlast) & byUS("const formula congruence")
           )
     }
@@ -216,15 +174,7 @@ object EqualityTactics {
 
         cut(Exists(v :: Nil, Equal(v, t))) <(
           /* use */ (existsL('Llast) & exhaustiveEqR2L('Llast)) partial,
-//          @note cannot use existsR because Unification match doesn't get it right yet
-//          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
-          /* show */ cohide('Rlast) & cut(Equiv(Exists(v :: Nil, Equal(v, t)), Equal(t, t))) <(
-            /* use */ equivRewriting(-1)(1) & byUS("= reflexive"),
-            /* show */ equivR('Rlast) <(
-              closeId,
-              FOQuantifierTactics.existsGeneralize(v, PosInExpr(0::Nil)::Nil)(-1) & closeId
-            )
-          )
+          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
         )
     }
   }

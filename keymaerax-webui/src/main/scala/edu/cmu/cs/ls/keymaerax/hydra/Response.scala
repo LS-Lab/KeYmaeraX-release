@@ -161,9 +161,10 @@ class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
   )
 }
 
-class LoginResponse(flag:Boolean, userId:String) extends Response {
+class LoginResponse(flag:Boolean, userId:String, sessionToken : Option[String]) extends Response {
   def getJson = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
+    "sessionToken" -> (if(flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
     "key" -> JsString("userId"),
     "value" -> JsString(userId),
     "type" -> JsString("LoginResponse")

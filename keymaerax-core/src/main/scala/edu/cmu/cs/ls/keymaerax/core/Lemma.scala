@@ -10,6 +10,11 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 
+// require favoring immutable Seqs for unmodifiable Lemma evidence
+
+import scala.collection.immutable
+import scala.collection.immutable._
+
 object Lemma {
   /**
    * Parses a lemma from its string representation.
@@ -69,7 +74,7 @@ object Lemma {
  * @see [[Lemma.fromString]]
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
-final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {
+final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name: Option[String] = None) {
   //@todo name is alphabetical and not "\".\n false"
   //@note Now allowing more general forms of lemmas. @todo check for soundness.
 //  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
@@ -82,7 +87,11 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
   override def toString: String = {
     toStringInternal
     //@note soundness-critical check that reparse succeeds as expected
-  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma")
+  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma\n\n" + toStringInternal + "\n\n" +
+    (if (Lemma.fromStringInternal(toStringInternal).fact == fact) " same fact " else " different fact ") +
+    (if (Lemma.fromStringInternal(toStringInternal).evidence == evidence) " same evidence " else " different evidence " + Lemma.fromStringInternal(toStringInternal).evidence.mkString("\n\n")) +
+    (if (Lemma.fromStringInternal(toStringInternal).name == name) " same name " else " different name ")
+  )
 
   private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +

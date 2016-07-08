@@ -53,6 +53,7 @@ object AxiomIndex {
     case "DW"              => (PosInExpr(Nil), Nil)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DE differential effect" | "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
+    case "DI differential invariance" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
     case "DG differential ghost" => directReduction
     case "DG differential Lipschitz ghost system" => directReduction
@@ -86,7 +87,7 @@ object AxiomIndex {
     case "x' derive var"   => nullaryDefault
 
     /* @todo Adapt for hybrid games */
-    case "V vacuous" => assert(Axiom.axioms(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
+    case "V vacuous" => assert(Provable.axiom(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
       (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "K modal modus ponens" => (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
     case "I induction" => (PosInExpr(1::Nil), /*PosInExpr(0::Nil)::*/PosInExpr(1::1::Nil)::PosInExpr(1::Nil)::Nil)

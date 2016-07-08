@@ -138,17 +138,19 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def apply(e: Expression): Expression = e match {
     case t: Term => apply(t)
     case f: Formula => apply(f)
+    case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
   }
 
   def apply(t: Term): Term
   def apply(f: Formula): Formula
   def apply(p: Program): Program
+  def apply(p: DifferentialProgram): DifferentialProgram
   /** Apply everywhere in the sequent. */
   def apply(s: Sequent): Sequent = {
     try {
       //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+      Sequent(s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>
@@ -205,6 +207,8 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
   def apply(f: Formula): Formula = try {rens.foldLeft(usubst(f))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(f.prettyString, "with " + this)}
 
   def apply(p: Program): Program = try {rens.foldLeft(usubst(p))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(p.prettyString, "with " + this)}
+
+  def apply(p: DifferentialProgram): DifferentialProgram = try {rens.foldLeft(usubst(p))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(p.prettyString, "with " + this)}
 }
 
 /**
@@ -251,4 +255,6 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
   def apply(f: Formula): Formula = try {usubst(rens.foldLeft(f)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
 
   def apply(p: Program): Program = try {usubst(rens.foldLeft(p)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
+
+  def apply(p: DifferentialProgram): DifferentialProgram = try {usubst(rens.foldLeft(p)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
 }

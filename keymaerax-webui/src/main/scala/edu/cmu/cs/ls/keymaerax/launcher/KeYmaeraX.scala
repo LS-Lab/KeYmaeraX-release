@@ -10,15 +10,16 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, ToolEvidence, Tool}
-import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CseCGenerator}
+
 import scala.collection.immutable
 import scala.compat.Platform
 import scala.util.Random
 
 /**
  * Command-line interface for KeYmaera X.
-  *
-  * @author Stefan Mitsch
+ *
+ * @author Stefan Mitsch
  * @author Andre Platzer
  * @author Ran Ji
  */
@@ -30,7 +31,7 @@ object KeYmaeraX {
   private val usage = "KeYmaera X Prover" + " " + VERSION +
     """
       |
-      |Usage: java -Xss20M -jar KeYmaeraX.jar
+      |Usage: java -Xss20M -jar keymaerax.jar
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-out filename] |
       |  -codegen filename -format C [-vars var1,var2,..,varn] [-out file] |
@@ -53,11 +54,9 @@ object KeYmaeraX {
       |  -noverify skip checking proof certificates after proof search
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
-      |  -interactive start a simple command-line prover if -prove fails
       |  -cse      use common subexpression elimination in C code (not recommended)
-      |  -dnf      use disjunctive normal form in Spiral code
       |  -vars     use ordered list of variables, treating others as constant functions
-      |  -kind     kind of monitor to generate, one of ctrl or model
+      |  -kind     ctrl|model kind of monitor to generate
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -security enable security manager imposing some security restrictions
@@ -74,15 +73,15 @@ object KeYmaeraX {
       |""".stripMargin
 
   private def launched() {
-    LAUNCH = true;
-    println("Launch flag was set.");
+    LAUNCH = true
+    println("Launch flag was set.")
   }
-  var LAUNCH : Boolean = false;
+  var LAUNCH: Boolean = false
 
   def main (args: Array[String]): Unit = {
     println("KeYmaera X Prover " + VERSION + "\n" +
       "Use option -help for usage and license information")
-    if (args.length == 0) return launchUI(args)
+    if (args.length == 0) launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
@@ -111,8 +110,6 @@ object KeYmaeraX {
           case "-codegen" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
             else optionErrorReporter("-codegen")
-          case "-ui" :: kyxFilePath :: "-tactic" :: tacticPath :: tail =>
-            launchUIWithTactic(kyxFilePath, tacticPath, tail.toArray); map ++ Map('mode -> "ui")
           case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
           // action options
           case "-out" :: value :: tail =>
@@ -124,9 +121,6 @@ object KeYmaeraX {
           case "-kind" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('kind -> Symbol(value)), tail)
             else optionErrorReporter("-kind")
-          case "-format" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('format -> value), tail)
-            else optionErrorReporter("-format")
           case "-tactic" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
             else optionErrorReporter("-tactic")
@@ -160,14 +154,14 @@ object KeYmaeraX {
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
       require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
-      if (options.get('mode) == Some("codegen") && options.getOrElse('format, "C")=="C")
+      if (options.get('mode).contains("codegen"))
         //@note no MathKernel initialization needed for C generation
         codegen(options)
-      else if (options.get('mode) != Some("ui") ) {
+      else if (!options.get('mode).contains("ui") ) {
         try {
           initializeProver(options)
 
-          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
+          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
             case Some("prove") => prove(options)
             case Some("modelplex") => modelplex(options)
@@ -184,32 +178,29 @@ object KeYmaeraX {
   private def parseProblemFile(fileName: String) = {
     try {
       val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
-      val formula = KeYmaeraXProblemParser(fileContents);
+      val formula = KeYmaeraXProblemParser(fileContents)
       println(KeYmaeraXPrettyPrinter(formula))
-      println("Parsed file successfully");
+      println("Parsed file successfully")
       sys.exit(0)
     }
     catch {
-      case e : Exception => {
+      case e : Exception =>
         if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
-        println(e);
-        println("Failed to parse file");
+        println(e)
+        println("Failed to parse file")
         sys.exit(-1)
-      }
     }
   }
 
   private def parseBelleTactic(fileName: String) = {
     val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
     BTacticParser(fileContents) match {
-      case Some(_) => {
-        println("Parsed file successfully");
+      case Some(_) =>
+        println("Parsed file successfully")
         sys.exit(0)
-      }
-      case None => {
-        println("Failed to parse file.");
+      case None =>
+        println("Failed to parse file.")
         sys.exit(-1)
-      }
     }
   }
 
@@ -218,10 +209,9 @@ object KeYmaeraX {
     option match {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
+      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
-      case "-format" => println(noValueMessage + "Please use: -format C | Spiral\n\n" + usage); exit(1)
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.scala\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
       case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
@@ -279,7 +269,9 @@ object KeYmaeraX {
     val mathematica = new Mathematica()
     mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
     DerivedAxioms.qeTool = mathematica
-    TactixLibrary.tool = mathematica
+    TactixLibrary.qeTool = mathematica
+    TactixLibrary.cexTool = mathematica
+    TactixLibrary.odeTool = mathematica
 
     //@note just in case the user shuts down the prover from the command line
     Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
@@ -290,11 +282,19 @@ object KeYmaeraX {
       DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
       DerivedAxioms.qeTool = null
     }
-    if (TactixLibrary.tool != null) {
-      TactixLibrary.tool match { case t: Tool => t.shutdown() }
-      TactixLibrary.tool = null
-      TactixLibrary.invGenerator = new NoneGenerate()
+    if (TactixLibrary.qeTool != null) {
+      TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
+      TactixLibrary.qeTool = null
     }
+    if (TactixLibrary.cexTool != null) {
+      TactixLibrary.cexTool match { case t: Tool => t.shutdown() }
+      TactixLibrary.cexTool = null
+    }
+    if (TactixLibrary.odeTool != null) {
+      TactixLibrary.odeTool match { case t: Tool => t.shutdown() }
+      TactixLibrary.odeTool = null
+    }
+    TactixLibrary.invGenerator = new NoneGenerate()
   }
 
   /** Exit gracefully */
@@ -310,8 +310,8 @@ object KeYmaeraX {
   /**
    * Prove given input file (with given tactic) to produce a lemma.
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
-    *
-    * @param options
+   *
+   * @param options The prover options.
    * @todo tactic should default to master and builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
    */
   def prove(options: OptionMap) = {
@@ -334,7 +334,7 @@ object KeYmaeraX {
       "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key or .kyx files. Please use: -prove FILENAME.[key/kyx]")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
-    val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+    val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
     val inputFileName = inputFileNameDotKey.dropRight(4)
     var outputFileName = inputFileName
     if(options.contains('out)) {
@@ -368,7 +368,7 @@ object KeYmaeraX {
       }
 
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
-      val evidence = ToolEvidence(Map(
+      val evidence = ToolEvidence(List(
         "tool" -> "KeYmaera X",
         "model" -> input,
         "tactic" -> scala.io.Source.fromFile(tacticFileNameDotScala).mkString,
@@ -416,8 +416,8 @@ object KeYmaeraX {
   /**
    * ModelPlex monitor synthesis for the given input files
    * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
-    *
-    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
+   *
+   * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
   def modelplex(options: OptionMap) = {
     require(options.contains('in), usage)
@@ -468,7 +468,6 @@ object KeYmaeraX {
    */
   def codegen(options: OptionMap) = {
     require(options.contains('in), usage)
-    require(options.contains('format), usage)
 
     val inputFileNameDotMx = options.get('in).get.toString
     assert(inputFileNameDotMx.endsWith(".mx"),
@@ -491,27 +490,26 @@ object KeYmaeraX {
       println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
     }
 
-    if(options.get('format).get.toString == "C") {
-      var outputFileName = inputFileName
-      if(options.contains('out)) {
-        val outputFileNameDotC = options.get('out).get.toString
-        assert(outputFileNameDotC.endsWith(".c"),
-          "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
-        outputFileName = outputFileNameDotC.dropRight(2)
-      }
-      val vars: List[Variable] =
-        if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
-        else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
-      val cseMode = options.contains('cse)
-      val codegenStart = Platform.currentTime
-      val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
-      Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
-      val pw = new PrintWriter(outputFileName + ".c")
-      pw.write(stampHead(options))
-      pw.write("/* @evidence: print of CGenerator of input */\n\n")
-      pw.write(output)
-      pw.close()
-    } else throw new IllegalArgumentException("-format C should be specified as a command line argument")
+    //@note codegen in C format only
+    var outputFileName = inputFileName
+    if(options.contains('out)) {
+      val outputFileNameDotC = options.get('out).get.toString
+      assert(outputFileNameDotC.endsWith(".c"),
+        "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
+      outputFileName = outputFileNameDotC.dropRight(2)
+    }
+    val vars: List[Variable] =
+      if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
+      else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
+    val cseMode = options.contains('cse)
+    val codegenStart = Platform.currentTime
+    val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
+    Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
+    val pw = new PrintWriter(outputFileName + ".c")
+    pw.write(stampHead(options))
+    pw.write("/* @evidence: print of CGenerator of input */\n\n")
+    pw.write(output)
+    pw.close()
   }
 
 
@@ -520,93 +518,13 @@ object KeYmaeraX {
     if(this.LAUNCH) Main.main("-launch" +: args)
     else Main.main(args)
   }
-
-  def launchUIWithTactic(kyxPath: String, tacticPath: String, uiArgs: Array[String]) : Unit = {
-    throw new Exception("This feature is not currently implemented")
-//    println("Launching UI and trying to prove " + kyxPath + " with tactic " + tacticPath)
-//    // Launch the web server if it's not already running, and then wait until the server is started.
-//    //@todo we need a much cleaner way of checking if the stack size is correct. Until then, calling Main.main from here is very spaghetti.
-////    if(!serverIsRunning())
-////      throw new IllegalStateException("Server must be running in order to execute a tactic on a .key file.")
-//
-//    //@todo we're assuming that the stack size is correct.
-//    Main.startServer()
-//    while(!serverIsRunning()) {
-//      this.synchronized({ this.wait(100) })
-//    }
-//
-//    //@todo is this ok...?
-//
-//    val db = DBAbstractionObj.defaultDatabase //@todo ???
-//    val username = "commandLineInterface"
-//
-//    // Create a new user; ignore any errors.
-//    new CreateUserRequest(db, username, "password").getResultingResponses()
-//
-//
-//    //Create the model
-//    val modelId = {
-//      val randomName = java.util.UUID.randomUUID().toString
-//      val kyxFile         = new File(kyxPath)
-//      val kyxFileContents = Files.readAllLines(Paths.get(kyxPath)).toArray().toList.mkString("\n")
-//      val modelRequest    = new CreateModelRequest(db, username, kyxFile.getName + "(noise: " + randomName + ")", kyxFileContents)
-//
-//      //The file should parse.
-//      try { KeYmaeraXProblemParser(kyxFileContents) }
-//      catch { case e: Throwable => System.err.println(".key file should parse!"); throw e }
-//
-//      modelRequest.getResultingResponses()
-//      modelRequest.getModelId
-//    }
-//
-//    // Create a new proof
-//    val proofId = {
-//      val createPrfRequest = new CreateProofRequest(db, username, modelId, s"$modelId -- Proof launched from CLI -- will not reload!", "")
-//
-//      createPrfRequest.getResultingResponses()
-//      createPrfRequest.getProofId
-//    }
-//
-//    // Run the scala file on the created proof -- blocking!
-//    new RunScalaFileRequest(db, proofId, new File(tacticPath)).getResultingResponses()
-//
-//    // Send the user's browser to the correct location.
-//    val host: String = "localhost" //@todo ???
-//    val port: Int    = 8090 //@todo ???
-//    val path: String = s"dashboard.html?#/proofs/$proofId"
-//    SystemWebBrowser(s"http://$host:$port/$path")
-//  }
-//  private def serverIsRunning() : Boolean = {
-//    try {
-//      new Socket("localhost", 8090)
-//      true
-//    }
-//    catch {
-//      case e : Exception => false
-//    }
-  }
-
+  
   // helpers
 
   /** Print brief information about all open goals in the proof tree under node */
   def printOpenGoals(node: Provable): Unit = node.subgoals.foreach(g => printNode(g))
 
   def printNode(node: Sequent): Unit = node.toString + "\n"
-
-//  /** Print brief information about the given node */
-//  def printNode(node: Sequent): Unit =
-//    println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n  " +
-//      (if (node.isProved) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
-//      node.toString() + "\n" +
-//      "  \tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") + "\n")
-//
-//  /** Print elaborate information about the given node */
-//  def elaborateNode(node: ProofNode): Unit = {
-//    println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===  " +
-//      (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
-//      "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
-//      "\n" + node.sequent.prettyString + "\n")
-//  }
 
   /** Implements the security policy for the KeYmaera X web server.
     *
@@ -672,7 +590,7 @@ object KeYmaeraX {
           case "help" => println(interactiveUsage)
           case "exit" => exit(5)
           case "goals" => val open = root.subgoals
-            (1 to open.length).map(g => {println("Goal " + g); printNode(open(g-1))})
+            (1 to open.length).foreach(g => {println("Goal " + g); printNode(open(g-1))})
           case it if it.startsWith("goal ") => try {
             val g = it.substring("goal ".length).toInt
             if (1<=g&&g<=root.subgoals.size) node = root.subgoals(g-1)

@@ -112,7 +112,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "[y:=1;]y>0 to 1>0 in the antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("[y:=1;]y>0".asFormula), IndexedSeq()), assignb(-1))
+    val result = proveBy(Sequent(IndexedSeq("[y:=1;]y>0".asFormula), IndexedSeq()), assignb(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "1>0".asFormula
     result.subgoals.head.succ shouldBe empty
@@ -175,9 +175,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not touch other assignments flatly" in {
-    val result = proveBy(Sequent(Nil,
-      IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula),
-      IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), DLBySubst.assignEquationalOld(1))
+    val result = proveBy(Sequent(IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), DLBySubst.assignEquationalOld(1))
     println(result)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0=1".asFormula, "[x:=2;]x=2".asFormula, "x=3".asFormula)
@@ -185,7 +183,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not touch other assignments" in {
-    val result = proveBy(Sequent(Nil,
+    val result = proveBy(Sequent(
       IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula),
       IndexedSeq("[x:=3;][{x'=x}]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), assignb(1))
     result.subgoals should have size 1
@@ -195,23 +193,21 @@ class DLTests extends TacticTestBase {
 
 
   it should "not touch other assignments and formulas when undoing stuttering" in {
-    val result = proveBy(Sequent(Nil,
-      IndexedSeq("x=2".asFormula, "[x:=2;]x=2".asFormula),
-      IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula, "[x:=3;]x>2".asFormula)), assignb(1))
+    val result = proveBy(Sequent(IndexedSeq("x=2".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula, "[x:=3;]x>2".asFormula)), assignb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0=2".asFormula, "[x:=2;]x=2".asFormula, "x=1".asFormula)
     result.subgoals.head.succ should contain only ("[{x:=x+1;}*]x>0".asFormula, "[x:=3;]x>2".asFormula)
   }
 
   it should "work in front of a loop in the antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula), IndexedSeq()), assignb(-1))
+    val result = proveBy(Sequent(IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula), IndexedSeq()), assignb(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=1".asFormula, "[{x:=x+1;}*]x>0".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "work in front of a loop in context" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x=2".asFormula), IndexedSeq("[y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula)), assignb(1, 1::Nil))
+    val result = proveBy(Sequent(IndexedSeq("x=2".asFormula), IndexedSeq("[y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula)), assignb(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0=2".asFormula
     result.subgoals.head.succ should contain only "[y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
@@ -303,7 +299,7 @@ class DLTests extends TacticTestBase {
   }
 
   "I" should "work on a simple example" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>2".asFormula), IndexedSeq("[{x:=x+1;}*]x>0".asFormula)),
+    val result = proveBy(Sequent(IndexedSeq("x>2".asFormula), IndexedSeq("[{x:=x+1;}*]x>0".asFormula)),
       I("x>1".asFormula)(1))
 
     result.subgoals should have size 3
@@ -319,9 +315,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "keep constants around" in {
-    val result = proveBy(Sequent(Nil,
-      IndexedSeq("x>2".asFormula, "y>0".asFormula),
-      IndexedSeq("[{x:=x+y;}*]x>0".asFormula)),
+    val result = proveBy(Sequent(IndexedSeq("x>2".asFormula, "y>0".asFormula), IndexedSeq("[{x:=x+y;}*]x>0".asFormula)),
       I("x>1".asFormula)(1))
 
     result.subgoals should have size 3
@@ -337,9 +331,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "wipe all formulas mentioning bound variables from the context" in {
-    val result = proveBy(Sequent(Nil,
-      IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula),
-      IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -354,9 +346,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "do the same with a slightly more complicated formula" in {
-    val result = proveBy(Sequent(Nil,
-        IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula),
-        IndexedSeq("[{x:=2; ++ y:=z;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2; ++ y:=z;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -371,9 +361,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "apply alpha rule to extract subformulas before wiping from the context" in {
-    val result = proveBy(Sequent(Nil,
-      IndexedSeq("x>0&y>1&z>7".asFormula),
-      IndexedSeq("x<3".asFormula, "[{x:=2;}*]x>2".asFormula, "x>5|y<4".asFormula)), I("x*y>5".asFormula)(2))
+    val result = proveBy(Sequent(IndexedSeq("x>0&y>1&z>7".asFormula), IndexedSeq("x<3".asFormula, "[{x:=2;}*]x>2".asFormula, "x>5|y<4".asFormula)), I("x*y>5".asFormula)(2))
 
     result.subgoals should have size 3
     // init
@@ -388,9 +376,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "remove duplicated formulas" in {
-    val result = proveBy(Sequent(Nil,
-        IndexedSeq("x>0".asFormula, "x>0".asFormula, "y>1".asFormula, "z>7".asFormula),
-        IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -406,7 +392,7 @@ class DLTests extends TacticTestBase {
 
   "I gen" should "work on a simple example" in {
     val succ@Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
+    val result = proveBy(Sequent(IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
       loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(1))
 
     result.subgoals should have size 3
@@ -454,13 +440,13 @@ class DLTests extends TacticTestBase {
   }
 
   it should "work with multi-variate abstract invariant" in {
-    val fml = "x>0 & y<0 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
+    val fml = "x>1 & y < -1 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
     val tactic = implyR('R) & loop("J(x,y)".asFormula)('R) <(skip, skip, normalize partial)
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3
     // init
-    result.subgoals.head.ante should contain only ("x>0".asFormula, "y<0".asFormula)
+    result.subgoals.head.ante should contain only ("x>1".asFormula, "y < -1".asFormula)
     result.subgoals.head.succ should contain only "J(x,y)".asFormula
     // use case
     result.subgoals(1).ante should contain only "J(x,y)".asFormula
@@ -469,21 +455,39 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).ante should contain only "J(x,y)".asFormula
     result.subgoals(2).succ should contain only "J(x+1,y-1)".asFormula
 
-    //@todo need distinguishable Dots
-//    val subst = USubst(SubstitutionPair(
-//      "J(x,y)".asFormula.replaceFree("x".asTerm, DotTerm),
-//      "x>=1&y<=-1".asFormula.replaceFree("x".asTerm, DotTerm))::Nil)
-//    val substResult = result(subst)
-//
-//    // init
-//    substResult.subgoals.head.ante should contain only ("x>0".asFormula, "y<0".asFormula)
-//    substResult.subgoals.head.succ should contain only "x>=1&y<=-1".asFormula
-//    // use case
-//    substResult.subgoals(1).ante should contain only "x>=1&y<=-1".asFormula
-//    substResult.subgoals(1).succ should contain only "x>0&y<0".asFormula
-//    // step
-//    substResult.subgoals(2).ante should contain only "x>=1&y<=-1".asFormula
-//    substResult.subgoals(2).succ should contain only "x+1>=1&y-1<=-1".asFormula
+    val dot = DotTerm(Tuple(Real, Real))
+
+    val subst = USubst(SubstitutionPair(
+      PredOf(Function("J", None, Tuple(Real, Real), Bool), dot),
+      "x>=1&y<=-1".asFormula.replaceFree("x".asTerm, Projection(dot, 0::Nil)).replaceFree("y".asTerm, Projection(dot, 1::Nil)))::Nil)
+    val substResult = result(subst)
+
+    // init
+    substResult.subgoals.head.ante should contain only ("x>1".asFormula, "y< -1".asFormula)
+    substResult.subgoals.head.succ should contain only "x>=1&y<=-1".asFormula
+    // use case
+    substResult.subgoals(1).ante should contain only "x>=1&y<=-1".asFormula
+    substResult.subgoals(1).succ should contain only "x>0&y<0".asFormula
+    // step
+    substResult.subgoals(2).ante should contain only "x>=1&y<=-1".asFormula
+    substResult.subgoals(2).succ should contain only "x+1>=1&y-1<=-1".asFormula
+  }
+
+  it should "keep constant context" in {
+    val succ@Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula
+    val result = proveBy(Sequent(IndexedSeq("A>0".asFormula, "x>2".asFormula, "B>0".asFormula), IndexedSeq("C<1".asFormula, succ, "D<1".asFormula)),
+      loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(2))
+
+    result.subgoals should have size 3
+    // init
+    result.subgoals.head.ante should contain only ("A>0".asFormula, "x>2".asFormula, "B>0".asFormula)
+    result.subgoals.head.succ should contain only ("C<1".asFormula, "x>1".asFormula, "D<1".asFormula)
+    // use case
+    result.subgoals(1).ante should contain only ("A>0".asFormula, "x>1".asFormula, "B>0".asFormula)
+    result.subgoals(1).succ should contain only "x>0".asFormula
+    // step
+    result.subgoals(2).ante should contain only ("A>0".asFormula, "x>1".asFormula, "B>0".asFormula)
+    result.subgoals(2).succ should contain only "[x:=A+B+1;]x>1".asFormula
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {
@@ -597,7 +601,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "work with other formulas around" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("\\exists t [{x'=1,t'=1}]x>0".asFormula, "z=1".asFormula)),
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("\\exists t [{x'=1,t'=1}]x>0".asFormula, "z=1".asFormula)),
       assignbExists("0".asTerm)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>0".asFormula
@@ -612,14 +616,14 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce self assignments for simple formula in antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[x:=x;]x>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "introduce self assignments in context in antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("[x:=2;]x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1, 1::Nil))
+    val result = proveBy(Sequent(IndexedSeq("[x:=2;]x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[x:=2;][x:=x;]x>0".asFormula
     result.subgoals.head.succ shouldBe empty

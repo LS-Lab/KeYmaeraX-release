@@ -56,9 +56,8 @@
 <!-- Main jumbotron for a primary message or call to action -->
 <div class="jumbotron">
     <div class="container">
-        <h1>KeYmaera X</h1>
+        <h1>KeYmaera X <a type="button" class="btn btn-info btn-lg" href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></h1>
         <p>An aXiomatic Tactical Theorem Prover for Hybrid Systems</p>
-        <!--<p><a class="btn btn-primary btn-lg" role="button">Learn more &raquo;</a></p>-->
     </div>
 </div>
 
@@ -76,7 +75,7 @@
             automated proof search.
             </p>
             <p>
-              Sign in at the top of this page to get started.
+              Sign in at the top of this page to get started online, or click 'Download' to install locally.
             </p>
             <p>
             </p>
@@ -87,61 +86,63 @@
             </blockquote>
         </div>
         <div class="col-md-2"></div>
-        <uib-carousel id="carousel-example-generic" class="col-md-4" interval="5000">
-            <uib-slide active="true">
-                <img ng-src="images/help/proofTree.png" alt="Proof tree view" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Proof Tree</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/proofSuggestions.png" alt="Proof suggestions" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Proof Suggestions</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/proofByBrowsing.png" alt="Proof by browsing" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Proof by Browsing</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/proofByPointing.png" alt="Proof by pointing" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Proof by Pointing</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/proofFound.png" alt="Proof found" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Proof Found!</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/modelList.png" alt="Model list" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Model List</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/modelDetails.png" alt="Model details" style="margin:auto;">
-                <div class="carousel-caption">
-                    <h4>Model Details</h4>
-                </div>
-            </uib-slide>
-            <uib-slide>
-                <img ng-src="images/help/proofList.png" alt="Proof list" style="margin:auto;">
-                <div class="carousel-caption">
-                    <p>Proof list</p>
-                </div>
-            </uib-slide>
-        </uib-carousel>
+        <div class="col-md-4">
+            <uib-carousel id="carousel-example-generic" interval="5000">
+                <uib-slide active="true">
+                    <img ng-src="images/help/proofTree.png" alt="Proof tree view" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Proof Tree</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/proofSuggestions.png" alt="Proof suggestions" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Proof Suggestions</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/proofByBrowsing.png" alt="Proof by browsing" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Proof by Browsing</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/proofByPointing.png" alt="Proof by pointing" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Proof by Pointing</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/proofFound.png" alt="Proof found" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Proof Found!</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/modelList.png" alt="Model list" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Model List</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/modelDetails.png" alt="Model details" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <h4>Model Details</h4>
+                    </div>
+                </uib-slide>
+                <uib-slide>
+                    <img ng-src="images/help/proofList.png" alt="Proof list" style="margin:auto;">
+                    <div class="carousel-caption">
+                        <p>Proof list</p>
+                    </div>
+                </uib-slide>
+            </uib-carousel>
+        </div>
     </div>
 
 </div> <!-- /container -->
 
-<div class="footer" ng-controller="DashboardCtrl">
+<div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
         <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
             <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
@@ -177,6 +178,10 @@
 <script src="/js/services/services.js"></script>
 <script src="/js/services/sequentproofservice.js"></script>
 <script src="/js/services/derivationinfos.js"></script>
+<script src="/js/services/session.js"></script>
+<!-- Load interceptors -->
+<script src="/js/controllers/interceptors.js"></script>
+<script src="/js/controllers/auth.js"></script>
 <!-- Load controller module -->
 <script src="/js/controllers.js"></script>
 <!-- Load individual controllers -->
@@ -193,6 +198,7 @@
 <script src="/js/controllers/proofs.js"></script>
 <script src="/js/controllers/provingawesome.js"></script>
 <script src="/js/controllers/login.js"></script>
+<script src="/js/controllers/serverinfo.js"></script>
 
 <!-- KeYmaera UI
 ================================================== -->

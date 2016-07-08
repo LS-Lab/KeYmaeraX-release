@@ -52,18 +52,23 @@ object DerivationInfo {
     SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
   }
 
-  implicit def qeTool:QETool with DiffSolutionTool = DerivedAxioms.qeTool
+  implicit def qeTool: QETool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
-  private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
+  //@todo
+  private val needsCodeName = "TODOTHISAXIOMSTILLNEEDSACODENAME"
 
   private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
 
+  private def convert(rules: Map[String,Provable]): List[DerivationInfo] =
+  //@todo display info is rather impoverished
+    rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name,name), canonicalize(name))).toList
+  private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
   /**
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = List(
+  private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("〈·〉", "<.>"), "〈a〉P ↔ ¬[a]¬P")
@@ -77,7 +82,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
-    new CoreAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt("[:=] assign exists") }),
+    new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
     //new DerivedAxiomInfo("[:=] assign equality exists", "[:=]", "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
     //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
@@ -132,6 +137,9 @@ object DerivationInfo {
     new CoreAxiomInfo("DE differential effect (system)"
       , AxiomDisplayInfo("DE", "[{x′=F,c&H}]P↔[{c,x′=F&H}][x′:=f(x)]P")
       , "DEs", {case () => HilbertCalculus.DE}),
+    new DerivedAxiomInfo("DI differential invariance"
+      , AxiomDisplayInfo("DI", "([{x′=f(x)&q(x)}]p(x)↔[?q(x)]p(x))←(q(x)→[{x′=f(x)&q(x)}](p(x))′)")
+      , "DIequiv", {case () => ???}),
     new CoreAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "[{x′=f(x)&q(x)}]p(x)←(q(x)→p(x)∧[{x′=f(x)&q(x)}](p(x))′)")
       , "DI", {case () => HilbertCalculus.DI}),
@@ -233,7 +241,7 @@ object DerivationInfo {
 
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => }),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => }),
-    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => }),
+    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
 
 
     // Derived axioms
@@ -256,6 +264,7 @@ object DerivationInfo {
 //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     //@note derived axiom exists eliminate not yet proven -> use core axiom instead
 //    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
+    new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", {case () => useAt(DerivedAxioms.existsAndAxiom)}),
     new DerivedAxiomInfo("exists dual", ("∃d","existsd"), "existsDual", {case () => useAt(DerivedAxioms.existsDualAxiom)}),
     new DerivedAxiomInfo("' linear", ("l′","l'"), "Dlinear", {case () => useAt(DerivedAxioms.Dlinear)}),
     new DerivedAxiomInfo("' linear right", ("l′","l'"), "DlinearRight", {case () => useAt(DerivedAxioms.DlinearRight)}),
@@ -314,6 +323,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("V<:*> vacuous assign nondet", "V<:*>", "vacuousDiamondAssignNondet", {case () => useAt(DerivedAxioms.vacuousDiamondAssignNondetAxiom)}),
     new DerivedAxiomInfo("Domain Constraint Conjunction Reordering", ("{∧}C","{&}C"), "domainCommute", {case () => useAt(DerivedAxioms.domainCommute)}), //@todo shortname
     new DerivedAxiomInfo("& commute", ("∧C","&C"), "andCommute", {case () => useAt(DerivedAxioms.andCommute)}),
+    new DerivedAxiomInfo("& reflexive", ("∧R","&R"), "andReflexive", {case () => useAt(DerivedAxioms.andReflexive)}),
     new DerivedAxiomInfo("& associative", ("∧A","&A"), "andAssoc", {case () => useAt(DerivedAxioms.andAssoc)}),
     new DerivedAxiomInfo("-> expand", ("→E","->E"), "implyExpand", {case () => useAt(DerivedAxioms.implyExpand)}),
     new DerivedAxiomInfo("-> tautology", ("→taut","->taut"), "implyTautology", {case () => useAt(DerivedAxioms.implyTautology)}),
@@ -348,6 +358,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("> flip", ">F", "flipGreater", {case () => useAt(DerivedAxioms.flipGreater)}),
     new DerivedAxiomInfo("<", "<", "less", {case () => useAt(DerivedAxioms.less)}),
     new DerivedAxiomInfo(">", ">", "greater", {case () => useAt(DerivedAxioms.greater)}),
+
+    new DerivedAxiomInfo("!= elimination", ("≠", "!="), "notEqualElim", {case () => useAt(DerivedAxioms.notEqualElim)}),
+    new DerivedAxiomInfo(">= elimination", ("≥", ">="), "greaterEqualElim", {case () => useAt(DerivedAxioms.greaterEqualElim)}),
+    new DerivedAxiomInfo("> elimination", ">", "greaterElim", {case () => useAt(DerivedAxioms.greaterElim)}),
+    new DerivedAxiomInfo("1>0", "1>0", "oneGreaterZero", {case () => useAt(DerivedAxioms.oneGreaterZero)}),
+    new DerivedAxiomInfo("nonnegative squares", "^2>=0", "nonnegativeSquares", {case () => useAt(DerivedAxioms.nonnegativeSquares)}),
+    new DerivedAxiomInfo(">2!=", ">2!=", "greaterImpliesNotEqual", {case () => useAt(DerivedAxioms.greaterImpliesNotEqual)}),
+    new DerivedAxiomInfo("> monotone", ">mon", "greaterMonotone", {case () => useAt(DerivedAxioms.greaterMonotone)}),
+
     new DerivedAxiomInfo("abs", "abs", "abs", {case () => useAt(DerivedAxioms.absDef)}),
     new DerivedAxiomInfo("min", "min", "min", {case () => useAt(DerivedAxioms.minDef)}),
     new DerivedAxiomInfo("max", "max", "max", {case () => useAt(DerivedAxioms.maxDef)}),
@@ -379,6 +398,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("distributive", "*+", "distributive", {case () => useAt(DerivedAxioms.distributive)}),
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", {case () => useAt(DerivedAxioms.boxDiamondPropagation)}),
     new DerivedAxiomInfo("-> self", ("→self","-> self"), "implySelf", {case () => useAt(DerivedAxioms.implySelf)}),
+    new DerivedAxiomInfo("<-> true", ("↔true","<-> true"), "equivTrue", {case () => useAt(DerivedAxioms.equivTrue)}),
     //@todo internal only
 //    new DerivedAxiomInfo("K1", "K1", "K1", {case () => useAt(DerivedAxioms.K1)}),
 //    new DerivedAxiomInfo("K2", "K2", "K2", {case () => useAt(DerivedAxioms.K2)}),
@@ -400,45 +420,45 @@ object DerivationInfo {
     // Proof rule position PositionTactics
     new PositionTacticInfo("notL"
       , RuleDisplayInfo(("¬L", "!L"), (List("¬P", "&Gamma;"),List("&Delta;")), List((List("&Gamma;"),List("&Delta;","P"))))
-      , {case () => ProofRuleTactics.notL}),
+      , {case () => SequentCalculus.notL}),
     new PositionTacticInfo("notR"
       , RuleDisplayInfo(("¬R", "!R"), (List("&Gamma;"),List("¬P","&Delta;")), List((List("&Gamma;","P"),List("&Delta;"))))
-      , {case () => ProofRuleTactics.notR}),
+      , {case () => SequentCalculus.notR}),
     new PositionTacticInfo("andR"
       , RuleDisplayInfo(("∧R", "^R"), (List("&Gamma;"),List("P∧Q","&Delta;")),
         List((List("&Gamma;"),List("P", "&Delta;")),
           (List("&Gamma;"), List("Q", "&Delta;"))))
-      , {case () => ProofRuleTactics.andR}),
+      , {case () => SequentCalculus.andR}),
     new PositionTacticInfo("andL"
       , RuleDisplayInfo(("∧L", "^L"), (List("P∧Q", "&Gamma;"),List("&Delta;")), List((List("&Gamma;","P","Q"),List("&Delta;"))))
-      , {case () => ProofRuleTactics.andL}),
+      , {case () => SequentCalculus.andL}),
     new PositionTacticInfo("orL"
       , RuleDisplayInfo(("∨L", "|L"), (List("P∨Q", "&Gamma;"),List("&Delta;")),
         List((List("&Gamma;", "P"),List("&Delta;")),
           (List("&Gamma;", "Q"),List("&Delta;"))))
-      , {case () => ProofRuleTactics.orL}),
+      , {case () => SequentCalculus.orL}),
     new PositionTacticInfo("orR"
       , RuleDisplayInfo(("∨R", "|R"), (List("&Gamma;"),List("P∨Q","&Delta;")), List((List("&Gamma;"),List("P","Q","&Delta;"))))
-      , {case () => ProofRuleTactics.orR}),
+      , {case () => SequentCalculus.orR}),
     new PositionTacticInfo("implyR"
       , RuleDisplayInfo(("→R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
-      , {case () => ProofRuleTactics.implyR}),
+      , {case () => SequentCalculus.implyR}),
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo(("→L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
         List((List("&Gamma;","P"),List("&Delta;")),
           (List("&Gamma;"),List("Q","&Delta;"))))
-      , {case () => ProofRuleTactics.implyL}),
+      , {case () => SequentCalculus.implyL}),
     new PositionTacticInfo("equivL"
       , RuleDisplayInfo(("↔L", "<->L"), (List("P↔Q","&Gamma;"),List("&Delta;")),
         List((List("&Gamma;","P∧Q"),List("&Delta;")),
           (List("&Gamma;","¬P∧¬Q"),List("&Delta;"))
          ))
-      , {case () => ProofRuleTactics.equivL}),
+      , {case () => SequentCalculus.equivL}),
     new PositionTacticInfo("equivR"
       , RuleDisplayInfo(("↔R", "<->R"), (List("&Gamma;"),List("P↔Q","&Delta;")),
         List((List("&Gamma;","P","Q"),List("&Delta;")),
           (List("&Gamma;","¬P","¬Q"),List("&Delta;"))))
-      , {case () => ProofRuleTactics.equivR}),
+      , {case () => SequentCalculus.equivR}),
     new InputPositionTacticInfo("allL"
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
         List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
@@ -471,19 +491,20 @@ object DerivationInfo {
         List())
       , {case () => HilbertCalculus.dualFree}),
 
-    new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => ProofRuleTactics.commuteEquivL}),
-    new PositionTacticInfo("commuteEquivR", ("↔CR", "<->CR"), {case () => ProofRuleTactics.commuteEquivR}),
-    new PositionTacticInfo("equivifyR", ("→↔","-><->"), {case () => ProofRuleTactics.equivifyR}),
+    new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => SequentCalculus.commuteEquivL}),
+    new PositionTacticInfo("commuteEquivR", ("↔CR", "<->CR"), {case () => SequentCalculus.commuteEquivR}),
+    new PositionTacticInfo("equivifyR", ("→↔","-><->"), {case () => SequentCalculus.equivifyR}),
     new PositionTacticInfo("hideL"
       , RuleDisplayInfo("WL", (List("&Gamma;", "P"),List("&Delta;"))
         , List((List("&Gamma;"),List("&Delta;")))),
-      {case () => ProofRuleTactics.hideL}),
+      {case () => SequentCalculus.hideL}),
     new PositionTacticInfo("hideR"
       , RuleDisplayInfo("WR", (List("&Gamma;"),List("P", "&Delta;"))
         , List((List("&Gamma;"),List("&Delta;")))),
-      {case () => ProofRuleTactics.hideR}),
-    new PositionTacticInfo("coHideL", "W", {case () => ProofRuleTactics.coHideL}),
-    new PositionTacticInfo("coHideR", "W", {case () => ProofRuleTactics.coHideR}),
+      {case () => SequentCalculus.hideR}),
+    new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}),
+    new PositionTacticInfo("coHideL", "W", {case () => SequentCalculus.cohideL}),
+    new PositionTacticInfo("coHideR", "W", {case () => SequentCalculus.cohideR}),
     new PositionTacticInfo("closeFalse"
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
       , {case () => ProofRuleTactics.closeFalse}),
@@ -493,17 +514,17 @@ object DerivationInfo {
     new PositionTacticInfo("skolemizeL", "skolem", {case () => ProofRuleTactics.skolemizeL}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
     new PositionTacticInfo("skolemize", "skolem", {case () => ProofRuleTactics.skolemize}),
-    new PositionTacticInfo("coHide", "W", {case () => ProofRuleTactics.coHide}),
-    new PositionTacticInfo("hide", "W", {case () => ProofRuleTactics.hide}),
+    new PositionTacticInfo("coHide", "W", {case () => SequentCalculus.cohide}),
+    new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
 
     // Proof rule two-position tactics
-    new TwoPositionTacticInfo("coHide2", "W", {case () => ProofRuleTactics.coHide2}),
-    new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
-    new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
+    new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
+//    new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
+//    new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
     new TwoPositionTacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => (ante: AntePosition, succ: SuccPosition) => TactixLibrary.close(ante, succ)}),
+      {case () => (ante: AntePosition, succ: SuccPosition) => TactixLibrary.close(ante.top, succ.top)}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
@@ -562,8 +583,10 @@ object DerivationInfo {
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
-    new TacticInfo("monb", "Box Monotonicity", {case () => DLBySubst.monb}),
-    new TacticInfo("mond", "Diamond Monotonicity", {case () => DLBySubst.mond}),
+    new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
+    new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
+    //@todo unify axiomatic rule and derived rules mond / mondtodo
+    new TacticInfo("mond", "Diamond Monotonicity", {case () => TactixLibrary.mond}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
@@ -622,7 +645,21 @@ object DerivationInfo {
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
     // DLBySubst
-    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)})
+    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+
+    // Derived axiomatic rules
+    new DerivedRuleInfo("all generalization"
+      , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall p_(??)"::Nil), SequentDisplay(Nil, "p_(??)"::Nil)::Nil)
+      , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
+    new DerivedRuleInfo("[] monotone"
+      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(??)"::Nil, "[a;]q_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
+      , "boxMonotone", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
+    new DerivedRuleInfo("[] monotone 2"
+      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]q_(??)"::Nil, "[a;]p_(??)"::Nil), SequentDisplay("p_(??)"::Nil, "q_(??)"::Nil)::Nil)
+      , "boxMonotone2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
+    new DerivedRuleInfo("CT term congruence"
+      , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(??)) = ctx_(g_(??))"::Nil), SequentDisplay(Nil, "f_(??) = g_(??)"::Nil)::Nil)
+      , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
@@ -630,7 +667,7 @@ object DerivationInfo {
     val canonicals = list.map(i => i.canonicalName.toLowerCase())
     val codeNames = list.map(i => i.codeName.toLowerCase()).filter(n => n!=needsCodeName)
     list.forall(i => i match {
-        case ax: CoreAxiomInfo => Axiom.axioms.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
+        case ax: CoreAxiomInfo => Provable.axiom.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
         case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
         case _ => true
       }
@@ -659,7 +696,7 @@ object DerivationInfo {
   }
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
-  def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
+  def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit}, "valid code name: " + id)}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
   def ofCodeName(codeName:String): DerivationInfo = byCodeName.getOrElse(codeName.toLowerCase,
@@ -732,12 +769,34 @@ sealed trait DerivationInfo {
   val needsGenerator: Boolean = false
 }
 
+/** Meta-Information for a (derived) axiom or (derived) axiomatic rule */
+trait ProvableInfo extends DerivationInfo {
+  /** The Provable representing this (derived) axiom or (derived) axiomatic rule */
+  val provable: Provable
+}
+
+object ProvableInfo {
+  /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
+  def locate(name: String): Option[ProvableInfo] =
+    DerivationInfo(name) match {
+      case info: ProvableInfo => Some(info)
+      case _ => None
+    }
+  /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
+  def apply(name: String): ProvableInfo =
+    DerivationInfo(name) match {
+      case info: ProvableInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+    }
+
+  val allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
+}
+
+
 /** Meta-Information for an axiom or derived axiom */
-trait AxiomInfo extends DerivationInfo {
+trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   def formula: Formula
-  /** A Provable concluding this axiom */
-  def provable: Provable
 }
 
 /** Meta-Information for an axiom from the prover core */
@@ -745,12 +804,12 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   override val formula:Formula = {
-    Axiom.axioms.get(canonicalName) match {
+    Provable.axiom.get(canonicalName) match {
       case Some(fml) => fml
-      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
+      case None => throw new AxiomNotFoundException("No formula for core axiom " + canonicalName)
     }
   }
-  override lazy val provable:Provable = Axiom.axiom(canonicalName)
+  override lazy val provable:Provable = Provable.axioms(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -759,14 +818,14 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   override lazy val formula: Formula =
-    DerivedAxioms.derivedAxiom(canonicalName).conclusion.succ.head
+    DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
 //  {
 //    DerivedAxioms.derivedAxiomMap.get(canonicalName) match {
 //      case Some(fml) => fml._1
 //      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
 //    }
 //  }
-  override lazy val provable:Provable = DerivedAxioms.derivedAxiom(canonicalName)
+  override lazy val provable:Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -817,4 +876,39 @@ case class InputPositionTacticInfo(override val codeName: String, override val d
 case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 2
+}
+
+/** Information for an axiomatic rule */
+case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends ProvableInfo {
+  val expr = TactixLibrary.by(provable)
+  DerivationInfo.assertValidIdentifier(codeName)
+  def belleExpr = expr
+  lazy val provable: Provable = Provable.rules(canonicalName)
+  override val numPositionArgs = 0
+}
+
+
+/** Information for a derived rule proved from the core */
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo {
+  DerivationInfo.assertValidIdentifier(codeName)
+  def belleExpr = expr()
+  lazy val provable: Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)
+  override val numPositionArgs = 0
+}
+
+object DerivedRuleInfo {
+  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
+  def locate(ruleName: String): Option[DerivedRuleInfo] =
+    DerivationInfo(ruleName) match {
+      case info: DerivedRuleInfo => Some(info)
+      case _ => None
+    }
+  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
+  def apply(ruleName: String): DerivedRuleInfo =
+    DerivationInfo(ruleName) match {
+      case info: DerivedRuleInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
+    }
+
+  val allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
 }

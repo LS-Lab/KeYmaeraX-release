@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -21,35 +20,11 @@ import scala.language.postfixOps
   * Created by nfulton on 11/3/15.
   */
 object DLBySubst {
-  /**
-    * Box monotonicity.
-    * {{{
-    *      p |- q
-    *   -------------monb
-    *   [a]p |- [a]q
-    * }}}
-    */
-  val monb = new NamedTactic("monb", {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
-    )
-  })
 
-  /**
-   * Diamond monotonicity.
-   * {{{
-   *      p |- q
-   *   -------------mond
-   *   ⟨a⟩p |- ⟨a⟩q
-   * }}}
-   */
-  def mond = new NamedTactic("mond", {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
-    )
-  })
+  private[btactics] lazy val monb2 = byUS("[] monotone 2")
+
+  /** whether games are currently allowed */
+  private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
 
   /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
@@ -57,20 +32,40 @@ object DLBySubst {
     *   ----------- G
     *    [a;]p(??)
     * }}}
+    *
     * @see [[monb]] with p(x)=True
-    * @note Unsound for hybrid games
+    * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
     */
   lazy val G: BelleExpr = {
-    val pattern = SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
-    USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("Goedel", ru.substitution.usubst))::Nil
+    val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
+    //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
+    if (isGame)
+      USubstPatternTactic(
+        (pattern, (ru:RenUSubst) =>
+          cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
+            ru.getRenamingTactic & TactixLibrary.by("[] monotone 2", ru.substitution.usubst ++ USubst(
+              SubstitutionPair(PredOf(Function("q_",None,Real,Bool),Anything), True) :: Nil
+            )) &
+              hideL(-1, True)
+              partial
+            ,
+            dualFree(2)
+            ))::Nil)
+    else
+      USubstPatternTactic(
+        (pattern, (ru:RenUSubst) => {
+          Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel");
+          //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
+          TactixLibrary.by("Goedel", ru.usubst)
+        })::Nil
     )
   }
 
   /**
    * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
    * of that modality.
-   * @example{{{
+    *
+    * @example{{{
    *           |- \forall x x>0
    *         ------------------abstractionb(1)
    *           |- [x:=2;]x>0
@@ -104,10 +99,10 @@ object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeId)) partial,
+              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeIdWith('Llast))) partial,
               /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
-              topAbstraction(1) & closeId
+              topAbstraction(1) & ProofRuleTactics.trivialCloser
               )
         }
       }
@@ -116,7 +111,8 @@ object DLBySubst {
 
   /**
    * Introduces a self assignment [x:=x;]p(??) in front of p(??).
-   * @param x The self-assigned variable.
+    *
+    * @param x The self-assigned variable.
    * @return The tactic.
    */
   def selfAssign(x: Variable): DependentPositionTactic = "[:=] self assign inverse" by ((pos, sequent) => sequent.at(pos) match {
@@ -177,9 +173,9 @@ object DLBySubst {
                       case _ => false
                     }
                     case _ => true
-                  }, "abstractionb: foralls must match") & closeId
+                  }, "abstractionb: foralls must match") & ProofRuleTactics.trivialCloser
                 )) partial,
-              /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeId
+              /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
             )
         }
       }
@@ -191,7 +187,8 @@ object DLBySubst {
    * or by equality assignment [x:=f();]p(??) <-> \forall x (x=f() -> p(??)) as a fallback.
    * Universal quantifiers are skolemized if applied at top-level in the succedent; they remain unhandled in the
    * antecedent and in non-top-level context.
-   * @example{{{
+    *
+    * @example{{{
    *    |- 1>0
    *    --------------------assignb(1)
    *    |- [x:=1;]x>0
@@ -227,6 +224,7 @@ object DLBySubst {
     * Equality assignment to a fresh variable.
     * Always introduces universal quantifier, which is already skolemized if applied at top-level in the
     * succedent; quantifier remains unhandled in the antecedent and in non-top-level context.
+    *
     * @example{{{
     *    x_0=x+1 |- [{x_0:=x_0+1;}*]x_0>0
     *    ----------------------------------assignEquality(1)
@@ -280,6 +278,7 @@ object DLBySubst {
   /**
     * Equational assignment: always introduces universal quantifier, which is skolemized if applied at top-level in the
     * succedent; it remains unhandled in the antecedent and in non-top-level context.
+    *
     * @example{{{
     *    x=1 |- [{x:=x+1;}*]x>0
     *    ----------------------------------assignEquational(1)
@@ -299,6 +298,7 @@ object DLBySubst {
     * @author Stefan Mitsch
     * @author Andre Platzer
     */
+  @deprecated("Use assignEquality instead")
   lazy val assignEquationalOld: DependentPositionTactic = "[:=] assign equality" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(fml@Box(Assign(x, _), _)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
@@ -337,7 +337,8 @@ object DLBySubst {
    *   -------------------------
    *          G |- [a]B, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   genUseLbl:        genShowLbl:
    *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
    *   ------------------------------------generalize("x>1".asFormula)(1)
@@ -372,7 +373,8 @@ object DLBySubst {
    *   ---------------------------------
    *          G |- [a]B, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   cutUseLbl:                       cutShowLbl:
    *   |- [x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
    *   -----------------------------------------------postCut("x>1".asFormula)(1)
@@ -385,6 +387,7 @@ object DLBySubst {
    *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
    * }}}
    * @todo same for diamonds by the dual of K
+   * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
   def postCut(C: Formula): DependentPositionTactic = new DependentPositionTactic("postCut") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -408,9 +411,9 @@ object DLBySubst {
               hide(conditional, conditioned) partial /*& label(BranchLabels.cutShowLbl)*/,
               /* show */
               assertE(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(pos.top) &
-              debug("K reduction") & useAt("K modal modus ponens", PosInExpr(1::Nil))(pos.top) &
+              debug("K reduction") & K(pos.top) &
               assertE(Box(a, Imply(C,post)), "[a](cut->post)")(pos.top) & debug("closing by K assumption") &
-              closeId
+              closeIdWith(pos.top)
             ) partial
           )
       }
@@ -425,7 +428,8 @@ object DLBySubst {
    *   --------------------------------------------------------------------
    *   G |- [{a}*]p, D
    * }}}
-   * @example{{{
+    *
+    * @example{{{
    *   use:          init:         step:
    *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
    *   ------------------------------------------------I("x>1".asFormula)(1)
@@ -439,6 +443,8 @@ object DLBySubst {
    * }}}
    * @param invariant The invariant.
    * @return The tactic.
+   * @see [[loopRule()]]
+   * @note Currently uses I induction axiom, which is unsound for hybrid games.
    */
   def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
@@ -453,10 +459,10 @@ object DLBySubst {
               else And(invariant, True)
             cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
               /* c */ useAt("I induction")(pos) & andR(pos) <(
-                andR(pos) <(ident /* indInit */, ((andR(pos) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
+                andR(pos) <(ident /* indInit */, ((andR(pos) <(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) partial(initCase),
                 cohide(pos) & G & implyR(1) & splitb(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
-                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial
+                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & ProofRuleTactics.trivialCloser) partial
               ) partial,
               /* c -> d */ cohide(pos) & CMon(pos.inExpr+1) & implyR(1) &
                 (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)
@@ -471,8 +477,52 @@ object DLBySubst {
   })
 
   /**
+    * Loop induction wiping all context.
+    * {{{
+    *   init:        step:       use:
+    *   G |- I, D    I |- [a]I   I |- p
+    *   --------------------------------
+    *   G |- [{a}*]p, D
+    * }}}
+ *
+    * @param invariant The invariant.
+    */
+  def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
+    require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(??)")
+    val alast = AntePosition(sequent.ante.length)
+    cutR(invariant)(pos.checkSucc.top) <(
+      ident partial(BelleLabels.initCase)
+      ,
+      cohide(pos) & implyR(1) & generalize(invariant)(1) <(
+        byUS("ind induction") partial(BelleLabels.indStep)
+        ,
+        ident partial(BelleLabels.useCase)
+        )
+      )
+    /*
+    * {{{
+    *   step:           use:      init:
+    *   I |- [a]I       I |- p    G |- I, D
+    *   ------------------------------------
+    *   G |- [{a}*]p, D
+    * }}}
+    */
+//    cut(invariant) <(
+//      cohide2(alast, pos) & generalize(invariant)(1) <(
+//        byUS("ind induction") partial(BelleLabels.indStep)
+//        ,
+//        ident partial(BelleLabels.useCase)
+//        )
+//      ,
+//      ident partial(BelleLabels.initCase)
+//      )
+  })
+
+  /**
    * Introduces a ghost.
-   * @example{{{
+    *
+    * @example{{{
    *         |- [y_0:=y;]x>0
    *         ----------------discreteGhost("y".asTerm)(1)
    *         |- x>0
@@ -510,7 +560,8 @@ object DLBySubst {
 
   /**
    * Turns an existential quantifier into an assignment.
-   * @example{{{
+    *
+    * @example{{{
    *         |- [t:=0;][x:=t;]x>=0
    *         -------------------------assignbExists("0".asTerm)(1)
    *         |- \exists t [x:=t;]x>=0

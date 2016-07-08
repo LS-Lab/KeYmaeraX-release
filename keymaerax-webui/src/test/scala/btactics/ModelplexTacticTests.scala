@@ -196,7 +196,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val outputFileName = File.createTempFile("watertank", ".mx").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-kind", "ctrl", "-out", outputFileName))
 
-    val expectedFileContent = "(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost_0()&lpost()=l)&cpost()=0".asFormula
+    val expectedFileContent = "(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost()&lpost()=l)&cpost()=0".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent

@@ -118,7 +118,7 @@ object ProofTree {
           branch is visible. Since we have to display a sequent, use  |- true to let the user know the branch is closed. */
         val goals = allNodes.filter(_.children.isEmpty)
         val newNodes = goals.map{case goal =>
-            treeNode(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("true".asFormula)),
+            treeNode(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("true".asFormula)),
               Some(goal), goal.endStep)}
         (allNodes ++ newNodes, newNodes)
       }
@@ -133,7 +133,7 @@ case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startS
   var endStep: Option[ExecutionStep] = None
   var children: List[TreeNode] = Nil
   if (parent.nonEmpty)
-    parent.get.children = this :: parent.get.children
+    parent.get.children = parent.get.children ::: List(this)
 
   def allDescendants:List[TreeNode] = this :: children.flatMap{case child => child.allDescendants}
   def rule:String = { startStep.map{case step => step.rule}.getOrElse("")}

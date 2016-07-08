@@ -2,6 +2,9 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+/**
+  * @note Code Review: 2016-06-01
+  */
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -23,7 +26,6 @@ class Z3 extends ToolBase("Z3") with QETool with DiffSolutionTool with CounterEx
     initialized = true
   }
 
-  def qe(formula: Formula): Formula = z3.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = z3.qeEvidence(formula)
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,

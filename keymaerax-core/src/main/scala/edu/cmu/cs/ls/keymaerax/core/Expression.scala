@@ -74,7 +74,6 @@ sealed trait Expression {
   override def toString : String = prettyString
   /** Pretty-printed string representing this expression */
   def prettyString : String = PrettyPrinter.printer(this)
-  private[core] def canonicalString : String = super.toString
 }
 
 /** Atomic expressions */
@@ -106,10 +105,10 @@ sealed trait ApplicationOf extends Expression {
  * @note User-level symbols should not use underscores, which are reserved for the core.
  */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
-  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
+  insist(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names): " + name)
   //@note the above requires conditions imply that !name.endsWith("__")
-  require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
+  insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
 //  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
 //    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
   //@note \\ part of the names for Nothing and Anything objects
@@ -174,7 +173,7 @@ sealed case class DifferentialSymbol(x: Variable)
   def name: String = x.name
   def index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
-  override def toString: String =  x.asString + "'" + "@" + getClass.getSimpleName
+  override def toString: String = asString //+ "@" + getClass.getSimpleName
 }
 
 /** Number literal */
@@ -188,10 +187,36 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   override def fullString: String = asString + ":" + domain + "->" + sort
 }
 
+/** Projection of terms onto their components */
+sealed case class Projection(t: Term, proj: List[Int]) extends Expression with AtomicTerm {
+  /** Projection of t onto position proj */
+  private def project(t: Term, proj: List[Int]): Term = proj match {
+    case Nil => t
+    case head :: tail => t match {
+      case Pair(l, _) if head == 0 => project(l, tail)
+      case Pair(_, r) if head == 1 => project(r, tail)
+      case DotTerm(Tuple(l, _)) if head == 0 => project(DotTerm(l), tail)
+      case DotTerm(Tuple(_, r)) if head == 1 => project(DotTerm(r), tail)
+    }
+  }
+
+  def sort: Sort = project().sort
+  /** Use the projection proj on this object's term t */
+  def project(): Term = project(t)
+  /** Use the projection proj on term t (reuse the projection for other than this object's term t) */
+  def project(t: Term): Term = project(t, proj)
+}
+
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
-object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
+object DotTerm extends DotTerm(Real)
+sealed case class DotTerm(s: Sort) extends Expression with NamedSymbol with AtomicTerm {
+  def sort: Sort = s
   def name: String = "\\cdot"
   def index: Option[Int] = None
+
+  /** All dots are the same, regardless of their projection and sort */
+  override def equals(e: Any): Boolean = e match { case _: DotTerm => true case _ => false }
+  override def hashCode() = name.hashCode
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */
@@ -221,6 +246,7 @@ sealed trait CompositeTerm extends Term with Composite
 /** Unary Composite Terms, i.e. terms composed of one real term. */
 sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the given argument as child instead. (copy)
+    * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
     *         Neg(Number(77)).reapply(Number(99)) == Neg(Number(99))
     *         Neg(Variable("x")).reapply(Plus(Number(42),Number(69))) == Neg(Plus(Number(42),Number(69)))
@@ -238,6 +264,7 @@ private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with R
 /** Binary Composite Terms, i.e. terms composed of two terms. */
 sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the give left and right arguments instead. (copy)
+    * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
     *         Times(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) == Times(Variable("a"), Number(99))
     *         }}}
@@ -363,7 +390,7 @@ sealed trait CompositeFormula extends Formula with Composite
 sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the given argument as child instead. (copy)
     * @example {{{
-    *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(UnEqual(Number(7),Number(9))) == Not(UnEqual(Number(7),Number(9)))
+    *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(NotEqual(Number(7),Number(9))) == Not(NotEqual(Number(7),Number(9)))
     *         Not(True).reapply(False) == Not(False)
     *         }}}
     */
@@ -375,7 +402,7 @@ sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula 
 sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
-    *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, UnEqual(Number(7),Number(9))) == Or(True, UnEqual(Number(7),Number(9)))
+    *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, NotEqual(Number(7),Number(9))) == Or(True, NotEqual(Number(7),Number(9)))
     *         }}}
     */
   def reapply: (Formula,Formula)=>Formula
@@ -402,9 +429,9 @@ sealed trait Quantified extends /*Unary?*/CompositeFormula {
 //  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
   /** Create a formula of this constructor but with the given variable list and child as argument instead. (copy)
     * @example {{{
-    *         Forall(immutable.Seq(Variable("x")), PredOf(Func("p",None,Real,Bool),Variable("x")).reapply(
-    *                immutable.Seq(Variable("y")), PredOf(Func("q",None,Real,Bool),Variable("y")))
-    *         == Forall(immutable.Seq(Variable("y")), PredOf(Func("q",None,Real,Bool),Variable("y"))
+    *         Forall(immutable.Seq(Variable("x")), PredOf(Function("p",None,Real,Bool),Variable("x"))).reapply(
+    *                immutable.Seq(Variable("y")), PredOf(Function("q",None,Real,Bool),Variable("y")))
+    *         == Forall(immutable.Seq(Variable("y")), PredOf(Function("q",None,Real,Bool),Variable("y"))))
     *         }}}
     */
   def reapply: (immutable.Seq[Variable],Formula)=>Formula
@@ -419,7 +446,13 @@ case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Quantif
 
 /** Modal formulas */
 sealed trait Modal extends CompositeFormula {
-  /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy) */
+  /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy)
+    * @example {{{
+    *         Box(ProgramConst("b"), Less(Variable("z"),Number(0))).reapply(
+    *             Compose(ProgramConst("a"),AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), GreaterEqual(Variable("x"),Number(2))
+    *        ) == Box(Compose(ProgramConst("a"),AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), GreaterEqual(Variable("x"),Number(2)))
+    *         }}}
+    */
   def reapply: (Program,Formula)=>Formula
   def program: Program
   def child: Formula

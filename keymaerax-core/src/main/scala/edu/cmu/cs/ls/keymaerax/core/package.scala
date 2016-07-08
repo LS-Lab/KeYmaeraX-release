@@ -44,7 +44,7 @@ package edu.cmu.cs.ls.keymaerax
  * Subgoals are identified by integers.
  * {{{
  *   import scala.collection.immutable._
- *   val verum = new Sequent(Seq(), IndexedSeq(), IndexedSeq(True))
+ *   val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
  *   // conjecture
  *   val provable = Provable.startProof(verum)
  *   // construct a proof
@@ -63,7 +63,7 @@ package edu.cmu.cs.ls.keymaerax
  * The above example can be continued to merge proofs as follows:
  * {{{
  *   // ... continued from above
- *   val more = new Sequent(Seq(), IndexedSeq(),
+ *   val more = new Sequent(IndexedSeq(),
  *       IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
  *   // another conjecture
  *   val moreProvable = Provable.startProof(more)
@@ -169,7 +169,7 @@ package edu.cmu.cs.ls.keymaerax
  */
 package object core {
   /** KeYmaera X core version number */
-  val VERSION = "4.2b1"
+  val VERSION = "4.2b2"
 
   /** Insist on requirement being true, throwing a [[CoreException]] if false.
     *  This method is a require` coming from the prover core that cannot be disabled.

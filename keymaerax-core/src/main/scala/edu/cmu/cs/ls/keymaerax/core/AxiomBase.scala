@@ -29,8 +29,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]]]
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]]]
  */
 private[core] object AxiomBase {
   /**
@@ -42,47 +41,16 @@ private[core] object AxiomBase {
    * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
-    val x = Variable("x_", None, Real)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
     val fany = FuncOf(Function("f_", None, Real, Real), Anything)
     val gany = FuncOf(Function("g_", None, Real, Real), Anything)
-    val ctxt = Function("ctx_", None, Real, Real) // function symbol
     val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
 
     Map(
-      /**
-       * Rule "all generalization".
-       * Premise p(x)
-       * Conclusion \forall x p(x)
-       * End.
-       */
-      /*("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
-      /**
-       * Rule "all generalization".
-       * Premise p(??)
-       * Conclusion \forall x p(??)
-       * End.
-       * @Note generalization of p(x) to p(??) as in Theorem 14
-       */
-      ("all generalization",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
-      /**
-       * Rule "CT term congruence".
-       * Premise f_(??) = g_(??)
-       * Conclusion ctxT_(f_(??)) = ctxT_(g_(??))
-       * End.
-       * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
-       */
-      ("CT term congruence",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       /**
        * Rule "CQ equation congruence".
        * Premise f_(??) = g_(??)
@@ -95,8 +63,8 @@ private[core] object AxiomBase {
        * }}}
        */
       ("CQ equation congruence",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
+          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       /**
        * Rule "CE congruence".
        * Premise p_(??) <-> q_(??)
@@ -109,20 +77,8 @@ private[core] object AxiomBase {
        * }}}
        */
       ("CE congruence",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
-      /**
-       * Rule "[] monotone".
-       * Premise p(??) ==> q(??)
-       * Conclusion [a;]p(??) ==> [a;]q(??)
-       * End.
-       * @derived useAt("<> diamond") & by("<> monotone")
-       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
-       * @see "André Platzer. Differential Hybrid Games."
-       */
-      ("[] monotone",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
+          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
        * Rule "<> monotone".
        * Premise p(??) ==> q(??)
@@ -131,8 +87,8 @@ private[core] object AxiomBase {
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("<> monotone",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
+          Sequent(immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
       /**
        * Rule "ind induction".
        * Premise p(??) ==> [a;]p(??)
@@ -145,8 +101,8 @@ private[core] object AxiomBase {
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 17(1), 2015.  Lemma 4.1"
        */
       ("ind induction",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
+          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /* UNSOUND FOR HYBRID GAMES */
       /**
        * Rule "Goedel".
@@ -162,8 +118,8 @@ private[core] object AxiomBase {
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
        */
       ("Goedel",
-        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Box(a, pany)))))
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
+          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Box(a, pany)))))
     )
   }
 
@@ -175,14 +131,8 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
-      //Code for old parser:
-//      val parser = new KeYmaeraParser(enabledLogging = false)
-//      val alp = parser.ProofFileParser
-//      val res = alp.runParser(loadAxiomString())
       val res = KeYmaeraXAxiomParser(loadAxiomString())
-
       assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
-
       res.map(k => (k._1 -> k._2)).toMap
     } catch { case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
@@ -199,7 +149,6 @@ private[core] object AxiomBase {
     val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
     val fany = FuncOf(Function("f", None, Real, Real), Anything)
     val gany = FuncOf(Function("g", None, Real, Real), Anything)
-    val t0 = FuncOf(Function("t", None, Unit, Real), Nothing)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
@@ -259,9 +208,6 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxiomString() : String =
 """
-Variables.
-End.
-
 /**
  * HYBRID PROGRAM MODALITY AXIOMS
  */
@@ -280,10 +226,6 @@ End.
 
 Axiom "[:=] assign equality exists".
   [x_:=f();]p(??) <-> \exists x_ (x_=f() & p(??))
-End.
-
-Axiom "[:=] assign exists".
-  [x_:=f();]p(??) -> \exists x_ p(??)
 End.
 
 Axiom "[:=] self assign".

@@ -61,10 +61,6 @@ sealed trait Renaming extends (Expression => Expression) {
   val what: Variable
   /** The target variable to replace `what` with and vice versa */
   val repl: Variable
-//  /** The variables that are not allowed to occur initially */
-//  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
-//  /** The variables that are affected and should be gone finally */
-//  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
 
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
   private[core] val semanticRenaming: Boolean
@@ -78,33 +74,28 @@ sealed trait Renaming extends (Expression => Expression) {
   def apply(e: Expression): Expression = e match {
     case t: Term => apply(t)
     case f: Formula => apply(f)
+    case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
   }
 
   /** apply this uniform renaming everywhere in a term */
   def apply(t: Term): Term = try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-    /*ensuring(r => StaticSemantics.symbols(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t
-    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /** apply this uniform renaming everywhere in a formula */
   def apply(f: Formula): Formula = try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-   /*ensuring(r => StaticSemantics.symbols(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f
-    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /** apply this uniform renaming everywhere in a program */
   def apply(p: DifferentialProgram): DifferentialProgram = try renameODE(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
 
   /** apply this uniform renaming everywhere in a program */
   def apply(p: Program): Program = try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  /* ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p
-    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /**
    * Apply uniform renaming everywhere in the sequent.
    */
   //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
-  def apply(s: Sequent): Sequent = try { Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
-    } catch { case ex: ProverException => throw ex.inContext(s.toString) }
+  def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
+  } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
   // implementation
 

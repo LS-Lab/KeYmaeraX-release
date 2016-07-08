@@ -74,6 +74,7 @@ class FileLemmaDB extends LemmaDB {
     val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
     assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
     assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals }should be identical to original lemma ${parse._2}")
+    //@todo Code Review: failed. All evidence needs to be preserved, not just the first evidence
     assert(parse._3 == lemma.evidence.head, "reparse of printed lemma's evidence should be identical to original lemma")
 
     val pw = new PrintWriter(file)
@@ -84,7 +85,7 @@ class FileLemmaDB extends LemmaDB {
     val lemmaFromDB = get(id)
     if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
       file.delete()
-      throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
+      throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted for lemma " + id)
     }
     // assertion duplicates condition and throw statement
     assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)

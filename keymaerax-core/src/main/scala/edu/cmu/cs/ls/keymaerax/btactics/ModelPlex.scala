@@ -18,11 +18,12 @@ import scala.language.postfixOps
 
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
- * Created by smitsch on 3/6/15.
  * @author Stefan Mitsch
  * @author Andre Platzer
- * @see "Stefan Mitsch and André Platzer. ModelPlex: Verified runtime validation of verified cyber-physical system models.
-In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014."
+ * @see Stefan Mitsch and André Platzer. [[http://dx.doi.org/10.1007/s10703-016-0241-z ModelPlex: Verified runtime validation of verified cyber-physical system models]].
+ *      Formal Methods in System Design, 42 pp. 2016. Special issue for selected papers from RV'14.
+ * @see Stefan Mitsch and André Platzer. [[http://dx.doi.org/10.1007/978-3-319-11164-3_17 ModelPlex: Verified runtime validation of verified cyber-physical system models]].
+ *      In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014.
  */
 object ModelPlex extends ModelPlexTrait {
   /**
@@ -49,7 +50,7 @@ object ModelPlex extends ModelPlexTrait {
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula) = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
     val mxInputFml = createMonitorSpecificationConjecture(formula, vars:_*)
-    val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
+    val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = kind match {
       case 'ctrl => implyR(1) & controllerMonitorByChase(1) & optimizationOneWithSearch(1)*@TheType()
       case 'model => modelplexAxiomaticStyle(useOptOne=true)(modelMonitorT)('R)
@@ -189,7 +190,7 @@ object ModelPlex extends ModelPlexTrait {
    * @see [[modelMonitorT]]
    */
   def modelplexAxiomaticStyle(useOptOne: Boolean)
-                             (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = "Modelplex In-Place" by ((pos, sequent) => {
+                             (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = "Modelplex In-Place" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Imply(_, Diamond(_, _))) =>
         implyR(pos) & ((debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))*@TheType()) &
@@ -246,7 +247,7 @@ object ModelPlex extends ModelPlexTrait {
 //          Nil)
 
   /** Propositional tactic that avoids branching in formulas without modalities. */
-  private def mxPropositionalRightT: DependentPositionTactic = "Modelplex Propositional Right" by ((pos, sequent) => {
+  private def mxPropositionalRightT: DependentPositionTactic = "Modelplex Propositional Right" by ((pos: Position, sequent: Sequent) => {
     ???
 //    var containsPrg = false
 //    sequent(pos.top) match {
@@ -264,7 +265,7 @@ object ModelPlex extends ModelPlexTrait {
   })
 
   /** Performs tactic t at the outermost quantifier underneath position p, if any. */
-  private def atOutermostQuantifier(t: DependentPositionTactic): DependentPositionTactic = "ModelPlex at outermost quantifier" by ((pos, sequent) => {
+  private def atOutermostQuantifier(t: DependentPositionTactic): DependentPositionTactic = "ModelPlex at outermost quantifier" by ((pos: Position, sequent: Sequent) => {
     require(positionOfOutermostQuantifier(sequent, pos).isDefined, "Bar")
     positionOfOutermostQuantifier(sequent, pos) match {
       case Some(pos) => t(pos)
@@ -277,7 +278,7 @@ object ModelPlex extends ModelPlexTrait {
    * variables that do not change in the ODE, before it hands over to the actual diff. solution tactic.
    * @return The tactic.
    */
-  def diamondDiffSolve2DT: DependentPositionTactic = "<','> differential solution" by ((pos, sequent) => {
+  def diamondDiffSolve2DT: DependentPositionTactic = "<','> differential solution" by ((pos: Position, sequent: Sequent) => {
     ??? //(diffIntroduceConstantT & ODETactics.diamondDiffSolve2DT)(p)
   })
 
@@ -336,7 +337,7 @@ object ModelPlex extends ModelPlexTrait {
    * @param tactics The list of tactics.
    * @return The tactic.
    */
-  def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic = "Modelplex Locate" by ((pos, sequent) => {
+  def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic = "Modelplex Locate" by ((pos: Position, sequent: Sequent) => {
     require(tactics.nonEmpty, "At least 1 tactic required")
     val here = tactics.map(_(pos) partial).reduceRight[BelleExpr]((t, comp) => (t | comp) partial)
 
@@ -378,7 +379,7 @@ object ModelPlex extends ModelPlexTrait {
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
     * somewhere in the quantified formula. */
-  private def optimizationOneWithSearchAt: DependentPositionTactic = "Optimization 1 with instance search" by ((pos, sequent) => {
+  private def optimizationOneWithSearchAt: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc =>
           var equality: Option[(Variable, Term)] = None
@@ -415,7 +416,7 @@ object ModelPlex extends ModelPlexTrait {
   def optimizationOne(inst: Option[(Variable, Term)] = None): DependentPositionTactic = locateT(optimizationOneAt(inst)::Nil)
 
   /** Opt. 1 at a specific position */
-  private def optimizationOneAt(inst: Option[(Variable, Term)] = None): DependentPositionTactic = "Optimization 1" by ((pos, sequent) => {
+  private def optimizationOneAt(inst: Option[(Variable, Term)] = None): DependentPositionTactic = "Optimization 1" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc => inst match {
           case Some(i) => debug("Foo") & existsR(i._1, i._2)(pos) & debug("Bar")

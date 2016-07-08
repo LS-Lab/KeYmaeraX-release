@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Sequent, Evidence}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
+import scala.collection.immutable
+
 /**
   * Created by smitsch on 7/03/15.
   * Modified by nfulton on 12/16/15 -- Lemmas are now more general.
@@ -43,7 +45,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @return A lemma (name, associated formula and evidence).
     */
   def parseLemma(input: TokenStream): Lemma = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block but found " + input.head)
     val (nextLemma, nextFormula, nextEvidence, remainder) = parseNextLemma(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
@@ -98,7 +100,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     val succParts = splitAtTerminal(FORMULA_BEGIN, succToks)
     val succs = succParts.map(x => KeYmaeraXParser.formulaTokenParser(x :+ Token(EOF)))
 
-    new Sequent(Nil, antes.toIndexedSeq, succs.toIndexedSeq)
+    new Sequent(antes.toIndexedSeq, succs.toIndexedSeq)
   }
 
   /**
@@ -107,7 +109,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @return A list of evidence (tool input/output).
     */
   def parseEvidence(input: TokenStream): (Evidence, TokenStream) = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(input.head.tok.equals(TOOL_BEGIN), "expected Tool block but found " + input.head)
     val (evidence, remainder) = parseNextEvidence(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
@@ -128,11 +130,11 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     (ToolEvidence(evidence), remainderTokens.tail)
   }
 
-  def parseToolEvidenceLines(input: TokenStream): Map[String, String] = {
+  def parseToolEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
     require(input.head.tok match { case IDENT(_, _) => true case _ => false }, "expected to begin with key.")
     require(input.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false }, "expected actual value.")
 
-    var evidence = Map[String, String]()
+    var evidence = immutable.List[(String, String)]()
     var line = input
 
     while (line.nonEmpty &&
@@ -149,7 +151,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
         case _ => throw new AssertionError("Require should have failed.")
       }
 
-      evidence = evidence + (key -> value)
+      evidence = evidence :+ (key -> value)
       line = line.tail.tail
     }
 

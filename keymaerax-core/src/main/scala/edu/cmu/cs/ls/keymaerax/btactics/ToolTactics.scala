@@ -22,10 +22,11 @@ object ToolTactics {
   def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
+      DebuggingTactics.recordQECall() &
       alphaRule*@TheType() &
       varExhaustiveEqL2R('L)*@TheType() &
       tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
-      toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool) &
+      Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool)) &
       DebuggingTactics.assertProved
   )}
   def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
