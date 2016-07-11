@@ -187,9 +187,21 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   override def fullString: String = asString + ":" + domain + "->" + sort
 }
 
-/** Projection of terms onto their components */
+/** Projection of terms onto their components
+  * @param t the term to project
+  * @param proj the projection to use on term `t`
+  * @example {{{
+  *         Projection(Pair(Pair(a,b), Pair(c, d)), List(0)) == Pair(a,b)
+  *         Projection(Pair(Pair(a,b), Pair(c, d)), List(1)) == Pair(c,d)
+  *         Projection(Pair(Pair(a,b), Pair(c, d)), List(0,0)) == a
+  *         Projection(Pair(Pair(a,b), Pair(c, d)), List(0,1)) == b
+  *         Projection(Pair(Pair(a,b), Pair(c, d)), List(1,0)) == c
+  *         Projection(Pair(Pair(a,b), Pair(c, d)), List(1,1)) == d
+  *         Projection(DotTerm(Tuple(Real,Real)), List(0)) will be projection of DotTerm to first argument
+  *         }}}
+  */
 sealed case class Projection(t: Term, proj: List[Int]) extends Expression with AtomicTerm {
-  /** Projection of t onto position proj */
+  /** Projection of `t` onto position `proj` */
   private def project(t: Term, proj: List[Int]): Term = proj match {
     case Nil => t
     case head :: tail => t match {
@@ -201,10 +213,10 @@ sealed case class Projection(t: Term, proj: List[Int]) extends Expression with A
   }
 
   def sort: Sort = project().sort
-  /** Use the projection proj on this object's term t */
+  /** Use the projection `proj` on this object's term `t` */
   def project(): Term = project(t)
-  /** Use the projection proj on term t (reuse the projection for other than this object's term t) */
-  def project(t: Term): Term = project(t, proj)
+  /** Use the same projection `proj` yet on another term `s` */
+  def project(s: Term): Term = project(t, proj)
 }
 
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
