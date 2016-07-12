@@ -54,21 +54,21 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   def freeVars: SetLattice[NamedSymbol] = repl match {
     case replt: Term => what match {
       case FuncOf(f: Function, Anything) => bottom // Anything locally binds all variables
-      case FuncOf(f: Function, DotTerm) =>
+      case FuncOf(f: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
-        assert(!StaticSemantics.freeVars(replt).contains(DotTerm)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
-        assert(!(StaticSemantics.freeVars(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
-        assert(StaticSemantics.freeVars(replt) -- Set(DotTerm) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+        assert(!StaticSemantics.freeVars(replt).contains(d)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
+        assert(!(StaticSemantics.freeVars(replt) -- Set(d)).contains(d), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(d)) + " leading to unnecessary clashes")
+        assert(StaticSemantics.freeVars(replt) -- Set(d) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
         StaticSemantics.freeVars(repl)
       case _: Term => StaticSemantics.freeVars(repl)
     }
     case replf: Formula => what match {
       case PredOf(p: Function, Anything) => bottom // Anything locally binds all variables
-      case PredOf(p: Function, DotTerm) =>
+      case PredOf(p: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
-        assert(!StaticSemantics.freeVars(replf).contains(DotTerm) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
-        assert(!(StaticSemantics.freeVars(replf) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotTerm)) + " leading to unnecessary clashes")
-        assert(StaticSemantics.freeVars(replf) -- Set(DotTerm) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+        assert(!StaticSemantics.freeVars(replf).contains(d) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
+        assert(!(StaticSemantics.freeVars(replf) -- Set(d)).contains(d), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(d)) + " leading to unnecessary clashes")
+        assert(StaticSemantics.freeVars(replf) -- Set(d) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
         StaticSemantics.freeVars(repl)
       // predicationals are not function nor predicate symbols
       case PredicationalOf(ctx: Function, DotFormula) => bottom
@@ -88,13 +88,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   def signature: immutable.Set[NamedSymbol] = repl match {
     case replt: Term => what match {
-      case FuncOf(f: Function, DotTerm) =>
-        StaticSemantics.signature(repl) -- immutable.Set(DotTerm)
+      case FuncOf(f: Function, d: DotTerm) =>
+        StaticSemantics.signature(repl) -- immutable.Set(d)
       case _: Term => StaticSemantics.signature(repl)
     }
     case replf: Formula => what match {
-      case PredOf(p: Function, DotTerm) =>
-        StaticSemantics.signature(repl) -- immutable.Set(DotTerm)
+      case PredOf(p: Function, d: DotTerm) =>
+        StaticSemantics.signature(repl) -- immutable.Set(d)
       case PredicationalOf(ctx: Function, DotFormula) =>
         StaticSemantics.signature(repl) -- immutable.Set(DotFormula)
       case _: Formula => StaticSemantics.signature(repl)
@@ -108,8 +108,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   private[core] def matchKey: NamedSymbol = what match {
     case d: DotTerm => d
-    case FuncOf(f: Function, Projection(DotTerm, _) | DotTerm(_) | Nothing | Anything) => f
-    case PredOf(p: Function, Projection(DotTerm, _) | DotTerm(_) | Nothing | Anything) => p
+    case FuncOf(f: Function, DotTerm(_) | Nothing | Anything) => f
+    case PredOf(p: Function, DotTerm(_) | Nothing | Anything) => p
     case Anything => Anything
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
@@ -125,10 +125,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   private[core] def sameHead(other: Expression): Boolean = what match {
     case FuncOf(lf, arg) =>
-      assert(arg match { case Projection(DotTerm, _) | DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      assert(arg match { case DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
       other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, arg) =>
-      assert(arg match { case Projection(DotTerm, _) | DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      assert(arg match { case DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
       other match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, arg) =>
       assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
@@ -317,16 +317,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    */
   private def matchHead(e: Expression): Boolean = subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
-  /** Projection of t onto position proj */
-  private def project(t: Term, proj: List[Int]): Term = proj match {
-    case head :: tail => t match {
-      case Pair(l, r) if head == 0 => project(l, tail)
-      case Pair(l, r) if head == 1 => project(r, tail)
-    }
-    case Nil => t
-  }
-
-
   // implementation of uniform substitution application
       
   /** uniform substitution on terms */
@@ -341,7 +331,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app))
         val FuncOf(wf, wArg) = subs.what
         assert(wf == of, "match on same function heads")
-        assert(wArg == DotTerm || wArg == Nothing || wArg == Anything)
+        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing || wArg == Anything)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Term])
@@ -352,9 +342,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case Nothing =>
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
         Nothing
-      case p@Projection(DotTerm, _) if subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
+      case p@Projection(DotTerm(_), _) if subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
         p.project(subsDefs.find(_.what.isInstanceOf[DotTerm]).get.repl.asInstanceOf[Term])
-      case Projection(DotTerm, _) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term
+      case Projection(DotTerm(_), _) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term
       case DotTerm(_) if  subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
         subsDefs.find(_.what.isInstanceOf[DotTerm]).get.repl.asInstanceOf[Term]
       case DotTerm(_) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term

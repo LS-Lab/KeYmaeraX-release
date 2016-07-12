@@ -148,7 +148,7 @@ object OpSpec {
   // terms
   private val unterm = TermKind
   private val binterm = (TermKind,TermKind)
-  val sDotTerm      = UnitOpSpec (DOT,      0, DotTerm)
+  val sDotTerm      = UnaryOpSpec[Term](DOT,       0, PrefixFormat, unterm, (e:Term) => DotTerm(e.sort))
   val sNothing      = UnitOpSpec (NOTHING,  0, Nothing)
   val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
   val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
@@ -163,6 +163,19 @@ object OpSpec {
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
   val sPlus         = BinaryOpSpec[Term](PLUS,     60, LeftAssociative, binterm, Plus.apply _)
   val sMinus        = BinaryOpSpec[Term](MINUS,    60, LeftAssociative/*!*/, binterm, Minus.apply _)
+  val sProjection   = UnaryOpSpec[Term](PROJ,       0, PrefixFormat, unterm, (e:Term) => {
+    def toList(d: Int, n: Int): List[Int] = n match {
+      case 0 if d==1 => 0::Nil
+      case 1 if d==1 => 1::Nil
+      case _ => (n%2)::toList(d-1, n/2)
+    }
+    val (term, depth, value) = e match {
+      case Pair(t, Pair(Number(d), Number(v))) => (t, d.intValue(),v.intValue())
+      case _ => ???
+    }
+    Projection(term, toList(depth, value).reverse)
+  })
+
 
   // formulas
   private val unfml = (FormulaKind)
@@ -250,6 +263,7 @@ object OpSpec {
     case t: Divide       => sDivide
     case t: Plus         => sPlus
     case t: Minus        => sMinus
+    case t: Projection   => sProjection
 
     // formulas
     case DotFormula      => sDotFormula
