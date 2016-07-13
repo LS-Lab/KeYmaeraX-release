@@ -143,7 +143,7 @@ object ModelPlex extends ModelPlexTrait {
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     // remove ODEs for controller monitor
     case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-    case _ => AxiomIndex.axiomsFor(e)
+    case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
   })
 
   /**
@@ -375,11 +375,23 @@ object ModelPlex extends ModelPlexTrait {
     * }}}
     * @see[[optimizationOneWithSearchAt]]
     */
-  def optimizationOneWithSearch: DependentPositionTactic = locateT(optimizationOneWithSearchAt::Nil)
+  def optimizationOneWithSearch: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
+    require(pos.isTopLevel, "Start Opt. 1 at top level")
+    var positions: List[Position] = Nil
+    //@note prepend, so that instantiated inside out, which keeps positions stable
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case Exists(_, _) if pos.isSucc => positions = (pos+p) :: positions; Left(None)
+        case Forall(_, _) if pos.isAnte => positions = (pos+p) :: positions; Left(None)
+        case _ => Left(None)
+      }
+    }, sequent(pos.top))
+    positions.map(p => optimizationOneWithSearchAt(p)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
+  })
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
     * somewhere in the quantified formula. */
-  private def optimizationOneWithSearchAt: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
+  private def optimizationOneWithSearchAt: DependentPositionTactic = "Optimization 1 with instance search at" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc =>
           var equality: Option[(Variable, Term)] = None
