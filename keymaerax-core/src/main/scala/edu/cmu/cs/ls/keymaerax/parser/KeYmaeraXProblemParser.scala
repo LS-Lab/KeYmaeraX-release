@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
@@ -22,6 +24,26 @@ object KeYmaeraXProblemParser {
       }
     }
     catch {case e: ParseException => throw e.inInput(input)}
+
+  /** Parses a file of the form Problem. ... End. Solution. ... End. */
+  def parseProblemAndTactic(input: String): (Formula, BelleExpr) = try {
+    firstNonASCIICharacter(input) match {
+      case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
+      case None => {
+        val parts = input.split("Solution.")
+        assert(parts.length == 2, "Expected a problem file followed by a single ``Solution`` section.")
+        val (problem, tactic) = (parts(0), parts(1))
+
+        assert(tactic.trim.endsWith("End."), "``Solution.`` does not have a closing ``End.``")
+
+        val belleExpr = BelleParser(tactic.trim.dropRight("End.".length))
+        val formula = apply(problem)
+
+        (formula, belleExpr)
+      }
+    }
+  }
+  catch {case e: ParseException => throw e.inInput(input)} //@todo properly offset Belle parse exceptions...
 
   /** Returns the location and value of the first non-ASCII character in a string. */
   private def firstNonASCIICharacter(s : String) : Option[(Location, Char)] = {

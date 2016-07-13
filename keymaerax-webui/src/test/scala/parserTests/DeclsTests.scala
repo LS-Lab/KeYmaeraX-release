@@ -37,4 +37,24 @@ class DeclsTests extends FlatSpec with Matchers {
     KeYmaeraXProblemParser(input)
   }
 
+  "Problem/Solution Block" should "parse correctly" in {
+    val input =
+      """
+        |Functions.
+        |  B A().
+        |End.
+        |Problem.
+        |  !(A() | !A()) -> !!(A() | !A())
+        |End.
+        |Solution.
+        |  implyR(1)
+        |End.
+      """.stripMargin
+
+    val (problem, solution) = KeYmaeraXProblemParser.parseProblemAndTactic(input)
+
+    println(problem)
+    println(solution)
+  }
+
 }
