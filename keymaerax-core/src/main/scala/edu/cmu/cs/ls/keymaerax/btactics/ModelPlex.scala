@@ -136,9 +136,6 @@ object ModelPlex extends ModelPlexTrait {
    * @return The tactic.
    */
   def controllerMonitorByChase: DependentPositionTactic = chase(3,3, (e:Expression) => e match {
-    // no equational assignments
-    case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
-    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
     // remove loops
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     // remove ODEs for controller monitor

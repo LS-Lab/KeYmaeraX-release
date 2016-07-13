@@ -330,7 +330,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(opt1Result.subgoals.head.succ.head, opt1Result, "Fixedwing controller monitor (forward chase)")
   }
 
-  "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" ignore {
+  "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma-ctrl.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1)
@@ -340,6 +340,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     report(result.subgoals.head.succ.head, result, "ETCS controller")
   }
+
 //
 //  ignore should "find correct controller monitor condition from model" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/icfem08/safetylemma.key")
@@ -358,6 +359,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //    report(result.openGoals().head.sequent.succ.head, result, "ETCS controller monitor (backward tactic)")
 //  }
 //
+
   it should "find correct controller monitor by updateCalculus implicationally" in {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -368,13 +370,13 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "true->\\exists al ((-B<=al&al<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&\\exists af ((-B<=af&af<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=af)&tpost()=0)|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|\\exists af ((-B<=af&af<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=af)&tpost()=0)))".asFormula
+    foResult.subgoals.head.succ should contain only "true->(\\exists do (do=d&\\exists mo (mo=m&\\exists m \\exists d \\exists vdes ((d>=0&do^2-d^2<=2*b*(m-mo)&vdes>=0)&(((((((((vdespost()=vdes&SBpost()=SB)&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)))|(((((((((vdespost()=vdes&SBpost()=SB)&vpost()=v)&statepost()=brake)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&\\exists a ((a>=-b&a<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a))|v>=vdes&\\exists a ((a < 0&a>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a))".asFormula
 
     // Opt. 1
     val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
-    opt1Result.subgoals.head.succ should contain only "true->(-B<=alpost()&alpost()<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&(-B<=afpost()&afpost()<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=afpost())&tpost()=0|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|(-B<=afpost()&afpost()<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=afpost())&tpost()=0)".asFormula
+    opt1Result.subgoals.head.succ should contain only "true->(d=d&m=m&(dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&(((((((((vdespost()=vdespost()&SBpost()=SB)&vpost()=v)&statepost()=state)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)&mpost()=mpost())&dpost()=dpost())&apost()=a|(((((((((vdespost()=vdes&SBpost()=SB)&vpost()=v)&statepost()=brake)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=apost())|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=apost())".asFormula
 
     report(opt1Result.subgoals.head.succ.head, opt1Result, "ETCS controller monitor (forward chase)")
   }
@@ -428,7 +430,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-kind", "ctrl", "-out", outputFileName))
 
-    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V^2&((0<=ep&v>=0)&((((((((((((apost()=-B&rpost()=r)&xopost()=xo)&yopost()=yo)&dxopost()=dxopost_0())&dyopost()=dyopost_0())&tpost()=0)&wpost()=w)&vpost()=v)&tpost()=0)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy|v=0&(0<=ep&v>=0)&((((((((((((apost()=0&rpost()=r)&xopost()=xo)&yopost()=yo)&dxopost()=dxopost_0())&dyopost()=dyopost_0())&tpost()=0)&wpost()=0)&vpost()=v)&tpost()=0)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy|(-B<=apost_0()&apost_0()<=A)&rpost_0()!=0&wpost_0()*rpost_0()=v&(abs(x-xopost_0())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost_0())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&((((((((((((apost()=apost_0()&rpost()=rpost_0())&xopost()=xopost_0())&yopost()=yopost_0())&dxopost()=dxopost_0())&dyopost()=dyopost_0())&tpost()=0)&wpost()=wpost_0())&vpost()=v)&tpost()=0)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)".asFormula
+    val expectedFileContent = "dxopost()^2+dyopost()^2<=V^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|(-B<=apost()&apost()<=A)&rpost()!=0&wpost()*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=wpost())&apost()=apost())&rpost()=rpost())&tpost()=0)".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
@@ -574,7 +576,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "VSL controller (backward tactic from prefabricated conjecture)")
   }
 
-  it should "find correct controller monitor condition from input file" in {
+  ignore should "find correct controller monitor condition from input file" in {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -606,7 +608,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     // Opt. 1
     val expected = "true->((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=-B)&tpost()=t|xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1post()&a1post()<=A)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1post())&tpost()=t|x1>=xsl&(-B<=a1post()&a1post()<=A&a1post()<=(v1-vsl)/ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1post())&tpost()=t|(vslpost()>=0&xslpost()>=x1+(v1^2-vslpost()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1))&(v1>=0&0<=ep)&((((xslpost()=xslpost()&vslpost()=vslpost())&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=0".asFormula
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*@TheType())
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only expected
