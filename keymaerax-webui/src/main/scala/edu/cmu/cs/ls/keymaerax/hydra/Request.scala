@@ -1054,6 +1054,16 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   }
 }
 
+class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(proofId))
+    val problem = db.getModel(db.getProofInfo(proofId).modelId).keyFile
+    new ExtractProblemSolutionResponse(problem + "\n" + "Solution.\n" + exprText + "\nEnd.") :: Nil
+  }
+}
+
 class MockRequest(resourceName: String) extends Request {
   override def resultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
 }

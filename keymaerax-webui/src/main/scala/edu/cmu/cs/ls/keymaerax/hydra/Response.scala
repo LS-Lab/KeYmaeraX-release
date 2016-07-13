@@ -743,6 +743,12 @@ class ExtractTacticResponse(tacticText: String) extends Response {
   )
 }
 
+class ExtractProblemSolutionResponse(tacticText: String) extends Response {
+  def getJson = JsObject(
+    "fileContents" -> JsString(tacticText)
+  )
+}
+
 class MockResponse(resourceName: String) extends Response {
   //@todo add schema
   def getJson = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson

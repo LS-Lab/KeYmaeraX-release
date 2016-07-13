@@ -287,6 +287,23 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         })
       })
     }
+
+    $scope.downloadProblemSolution = function() {
+        var proofId = $routeParams.proofId;
+        var userId = $cookies.get('userId');
+        $http.get('proofs/user/' + userId + '/' + proofId + '/download').success(function (data) {
+            $uibModal.open({
+                templateUrl: 'templates/tacticExtracted.html',
+                controller: 'TacticExtractionCtrl',
+                size: 'lg',
+                resolve: {
+                    tacticText: function () {
+                        return data.fileContents;
+                    }
+                }
+            })
+        })
+    }
       
     //Save a name edited using the inline editor.
     $scope.saveProofName = function(newName) {
