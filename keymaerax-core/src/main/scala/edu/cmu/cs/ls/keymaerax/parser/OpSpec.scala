@@ -161,6 +161,12 @@ object OpSpec {
       r
   }
 
+  /** The sort of an interpreted function or None if uninterpreted */
+  private[parser] def interpretedFuncSort(name: String): Option[Sort] = interpretation.get(name) match {
+    case None => None
+    case Some(f) => Some(f.sort)
+  }
+
   // operator notation specifications
 
   // terms

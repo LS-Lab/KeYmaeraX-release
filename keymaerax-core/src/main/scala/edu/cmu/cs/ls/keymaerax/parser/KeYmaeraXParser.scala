@@ -736,23 +736,30 @@ object KeYmaeraXParser extends Parser {
      */
   private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input@(Token(la, _) :: rest)) = st
-    if (termBinOp(la) || isTerm(st) && followsTerm(la))
-      reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
-    else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
-      reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
-    else if (followsFormula(la) && !followsTerm(la))
-      reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
-    else if (followsTerm(la) && !followsFormula(la))
-      reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
-    //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
-//    else if (followsFormula(la))
-//      reduce(st, consuming, PredOf(predFunc(name.name, name.index, arg.sort, Bool), arg), remainder)
-    else if (followsTerm(la))
-      reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
-    else if (followsFormula(la))
-      reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
-    else if (la == RPAREN) shift(st)
-    else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
+    OpSpec.interpretedFuncSort(name.name) match {
+      case Some(Real) =>
+        reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+      case Some(Bool) =>
+        reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+      case None =>
+        if (termBinOp(la) || isTerm(st) && followsTerm(la))
+          reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
+          reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (followsFormula(la) && !followsTerm(la))
+          reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (followsTerm(la) && !followsFormula(la))
+          reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
+        //    else if (followsFormula(la))
+        //      reduce(st, consuming, PredOf(predFunc(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (followsTerm(la))
+          reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        else if (followsFormula(la))
+          reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (la == RPAREN) shift(st)
+        else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
+    }
   }
 
   /** Top terminal token from stack or EOF if the top item is not a token or the stack is empty. */
