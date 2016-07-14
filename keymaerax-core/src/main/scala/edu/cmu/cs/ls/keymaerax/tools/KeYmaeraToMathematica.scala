@@ -37,9 +37,9 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
       map(s => (s.name.toLowerCase, s)).
       filter({ case (n, s) => (n == "abs" || n == "min" || n == "max") && s.index.isEmpty }). //@note e.g., abs_idx is ok
       forall({ case (_, s) => s match {
-        case Function("abs", None, Real, Real) => true
-        case Function("max", None, Tuple(Real, Real), Real) => true
-        case Function("min", None, Tuple(Real, Real), Real) => true
+        case Function("abs", None, Real, Real, true) => true
+        case Function("max", None, Tuple(Real, Real), Real, true) => true
+        case Function("min", None, Tuple(Real, Real), Real, true) => true
         case _ => false
       }}), "Special functions must have expected domain and sort (and must be functions)")
     insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")

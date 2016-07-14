@@ -52,12 +52,12 @@ private object MathematicaNameConversion {
     */
   def toKeYmaera(e: MExpr): NamedSymbol = {
     if (e.args.isEmpty) {
-      val (name, index) = unmaskName(e.asString())
+      val (name, index, false) = unmaskName(e.asString())
       Variable(name, index, Real)
     } else {
-      val (name, index) = unmaskName(e.head().asString())
+      val (name, index, interp) = unmaskName(e.head().asString())
       val fnDomain = convertFunctionDomain(e.args())
-      Function(name, index, fnDomain, Real)
+      Function(name, index, fnDomain, Real, interp)
     }
   }
 
@@ -78,7 +78,7 @@ private object MathematicaNameConversion {
 
   /** Masks a name, i.e., replaces _ with $u$, adds the namespace prefix kyx, and merges name and index (separated by $i$) */
   private def maskName(ns: NamedSymbol): String = uncheckedMaskName(ns) ensuring(r => {
-    val (name, idx) = uncheckedUnmaskName(r); name == ns.name && idx == ns.index
+    val (name, idx, interp) = uncheckedUnmaskName(r); name == ns.name && idx == ns.index
   }, "Unmasking a masked name should produce original unmasked name" +
     "\n Original unmasked name" + ns.prettyString +
     "\n Masked name " + uncheckedMaskName(ns) +
@@ -96,12 +96,12 @@ private object MathematicaNameConversion {
     //@todo Code Review: handle interpreted functions properly, handle name conflicts
     //@solution (name conflicts): symmetric name conversion in unmaskName, contract in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
-      case Function("abs",None,Real,Real) => "Abs"
-      case Function("Abs",None,Real,Real) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
-      case Function("min",None,Tuple(Real,Real),Real) => "Min"
-      case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
-      case Function("max",None,Tuple(Real,Real),Real) => "Max"
-      case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
+      case Function("abs",None,Real,Real,interp) => assert(interp); "Abs"
+      case Function("Abs",None,Real,Real,_) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
+      case Function("min",None,Tuple(Real,Real),Real,interp) => assert(interp); "Min"
+      case Function("Min",None,Tuple(Real,Real),Real,_) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
+      case Function("max",None,Tuple(Real,Real),Real,interp) => assert(interp); "Max"
+      case Function("Max",None,Tuple(Real,Real),Real,_) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
       case _ =>
         val identifier = ns.name.replace("_", MUNDERSCORE)
         PREFIX + (ns.index match {
@@ -112,7 +112,7 @@ private object MathematicaNameConversion {
   }
 
   /** Unmasks a name, i.e., adds _ for $u$, removes the namespace prefix kyx, and splits at $i$ into the name and its index. */
-  private def unmaskName(maskedName: String): (String, Option[Int]) = uncheckedUnmaskName(maskedName) ensuring(r => {
+  private def unmaskName(maskedName: String): (String, Option[Int], Boolean) = uncheckedUnmaskName(maskedName) ensuring(r => {
     r._1 == "Apply" || r._1 == "abs" || r._1 == "min" || r._1 == "max" || maskName(Variable(r._1, r._2, Real)) == maskedName
   }, "Masking an unmasked name should produce original masked name" +
      "\n Original masked name " + maskedName +
@@ -120,7 +120,7 @@ private object MathematicaNameConversion {
      "\n Remasked to " + uncheckedMaskName(Variable(uncheckedUnmaskName(maskedName)._1, uncheckedUnmaskName(maskedName)._2, Real)))
 
   /** Unmasking without contracts. */
-  private def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
+  private def uncheckedUnmaskName(maskedName: String): (String, Option[Int], Boolean) = {
     def regexOf(s: String) = s.replace("$", "\\$")
 
     val uscoreMaskedName = maskedName.replaceAll(regexOf(MUNDERSCORE), "_")
@@ -132,18 +132,18 @@ private object MathematicaNameConversion {
         // name is of the form thename$i$number, we split into thename and number
         val parts = name.split(regexOf(SEP))
         insist(parts.size == 2, "Expected " + SEP + " once only")
-        (parts.head, Some(Integer.parseInt(parts.last)))
-      } else (name , None)
-    } else (uscoreMaskedName match {
+        (parts.head, Some(Integer.parseInt(parts.last)), false)
+      } else (name , None, false)
+    } else uscoreMaskedName match {
         //@todo Code Review: handle interpreted functions properly, handle name conflicts
         //@solution: see same (copied) code review comment above
-        case "Min" => "min"
-        case "Max" => "max"
-        case "Abs" => "abs"
+        case "Min" => ("min", None, true)
+        case "Max" => ("max", None, true)
+        case "Abs" => ("abs", None, true)
         case "min" => throw new IllegalArgumentException("Refuse translating min to KeYmaera to avoid confusion with min")
         case "max" => throw new IllegalArgumentException("Refuse translating max to KeYmaera to avoid confusion with max")
         case "abs" => throw new IllegalArgumentException("Refuse translating abs to KeYmaera to avoid confusion with abs")
-        case n => n
-    }, None)
+        case n => (n, None, false)
+    }
   }
 }
