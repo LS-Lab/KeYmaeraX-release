@@ -49,13 +49,13 @@ object TacticHelper {
   def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T =
     if (symbols(f).exists(_.name == t.name)) t match {
       case Variable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
-      case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
+      case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
     } else t
 
   def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T =
     if (names(s).exists(_.name == t.name)) t match {
       case Variable(vName, _, vSort) => Variable(vName, freshIndexInSequent(vName, s), vSort).asInstanceOf[T]
-      case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
+      case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
     } else t
 
   /** Returns a list of formulas that invariants should treat as invariants. */

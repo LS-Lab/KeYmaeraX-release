@@ -353,7 +353,7 @@ object DifferentialTactics {
       var oldVars = Set[Variable]()
       ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-          case FuncOf(Function("old", None, Real, Real), v: Variable) => oldVars += v; Left(None)
+          case FuncOf(Function("old", None, Real, Real, false), v: Variable) => oldVars += v; Left(None)
           case _ => Left(None)
         }
       }, fml)
@@ -364,7 +364,7 @@ object DifferentialTactics {
     private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, Variable]): Formula = {
       ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-          case FuncOf(Function("old", None, Real, Real), v: Variable) => Right(ghostsByOld(v))
+          case FuncOf(Function("old", None, Real, Real, false), v: Variable) => Right(ghostsByOld(v))
           case _ => Left(None)
         }
       }, fml) match {
