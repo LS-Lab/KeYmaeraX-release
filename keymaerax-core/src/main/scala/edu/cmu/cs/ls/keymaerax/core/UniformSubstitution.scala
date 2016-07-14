@@ -108,14 +108,14 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   private[core] def matchKey: NamedSymbol = what match {
     case d: DotTerm => d
-    case FuncOf(f: Function, DotTerm(_) | Nothing | Anything) => f
-    case PredOf(p: Function, DotTerm(_) | Nothing | Anything) => p
+    case FuncOf(f: Function, DotTerm(_) | Nothing | Anything) if !f.interpreted => f
+    case PredOf(p: Function, DotTerm(_) | Nothing | Anything) if !p.interpreted => p
     case Anything => Anything
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst             => a
     case DotFormula                  => DotFormula
-    case PredicationalOf(p: Function, DotFormula) => p
+    case PredicationalOf(p: Function, DotFormula) if !p.interpreted => p
     case _ => throw new CoreException("Nonsubstitutable expression " + this)
   }
 
