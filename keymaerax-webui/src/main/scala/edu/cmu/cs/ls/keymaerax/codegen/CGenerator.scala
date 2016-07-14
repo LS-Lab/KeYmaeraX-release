@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 
 /**
+ * C code generator.
  * Created by ran on 6/16/15.
  * @author Ran Ji
  */

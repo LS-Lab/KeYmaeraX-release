@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
-  * Course infrastructure helpers.
+  * (Course infrastructure helpers).
   *
   * @author Nathan Fulton
   */

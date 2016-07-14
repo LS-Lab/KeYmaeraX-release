@@ -21,6 +21,7 @@ import scala.collection.immutable.Map
  * Hcol file consists of
  *  - monitor (.g): constant table + monitor
  *  - header (.h): coefficients vectors
+ * @author Ran Ji
  */
 class Hcol {
   private var constTbl : String = ""
@@ -35,6 +36,9 @@ class Hcol {
   def setCoefficients(ceh : String) = this.coeffs = ceh
 }
 
+/**
+  * @author Ran Ji
+  */
 object SpiralGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
   def apply(kExpr: Expression, fileName: String): String = apply(kExpr, Nil, fileName)._1
