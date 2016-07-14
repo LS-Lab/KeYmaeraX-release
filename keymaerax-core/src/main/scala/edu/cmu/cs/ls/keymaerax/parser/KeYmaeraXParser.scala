@@ -99,6 +99,7 @@ object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
  */
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
+  import OpSpec.func
 
   /** This default parser. */
   val parser = this
@@ -212,9 +213,9 @@ object KeYmaeraXParser extends Parser {
   /** Elaborate `e` to the expected `kind` of a part of op by lifting defaulted types as needed or return None. */
   private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
-    case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
+    case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(func(f.name,f.index,f.domain,Bool), t))
     // lift misclassified defaulted predicate application to function application when required by context type.
-    case PredOf(f, t) if kind==TermKind => Some(FuncOf(Function(f.name,f.index,f.domain,Real), t))
+    case PredOf(f, t) if kind==TermKind => Some(FuncOf(func(f.name,f.index,f.domain,Real), t))
     // lift misclassified defaulted differential program constant
     case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
     // lift misclassified defaulted program constant
@@ -397,12 +398,12 @@ object KeYmaeraXParser extends Parser {
 
       // predicational symbols arity>0
       case r :+ Token(IDENT(name,idx),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
-        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), f1), r)
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), f1), r)
         else error(st, List(FOLLOWSFORMULA))
 
       // predicational symbols arity>0: special elaboration case for misclassified c() as formula in P{c()}
       case r :+ Token(IDENT(name,idx),_) :+ (optok@Token(LBRACE,_)) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
-        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), elaborate(st, optok, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), elaborate(st, optok, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
         else error(st, List(FOLLOWSFORMULA))
 
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) =>
@@ -736,20 +737,20 @@ object KeYmaeraXParser extends Parser {
   private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input@(Token(la, _) :: rest)) = st
     if (termBinOp(la) || isTerm(st) && followsTerm(la))
-      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
     else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
-      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsFormula(la) && !followsTerm(la))
-      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsTerm(la) && !followsFormula(la))
-      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
     //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
 //    else if (followsFormula(la))
-//      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+//      reduce(st, consuming, PredOf(predFunc(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsTerm(la))
-      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
     else if (followsFormula(la))
-      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (la == RPAREN) shift(st)
     else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
   }
