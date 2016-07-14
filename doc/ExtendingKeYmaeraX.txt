@@ -3,7 +3,7 @@ Adding Special Functions
 
 Augmenting KeYmaera X with additional functions with special meaning is currently best done via adding appropriate function definitions with corresponding lemmas.
 
-Example: addition of abs/min/max functions in edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.scala
+Example: addition of abs/min/max functions in edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.scala
 
 Adding Operators
 ================
