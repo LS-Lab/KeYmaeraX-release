@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]: Axiom Indexing data structures for canonical proof strategies.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]: Meta-information for derivation steps such as axioms for user interface etc.
   *
   * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],
   * including its dependent tactics, which ultimately produce

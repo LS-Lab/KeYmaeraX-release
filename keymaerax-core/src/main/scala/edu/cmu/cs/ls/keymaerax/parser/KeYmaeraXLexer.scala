@@ -20,10 +20,10 @@ import scala.util.matching.Regex
  * LexerModes corresponds to file types.
  */
 sealed abstract class LexerMode
-case class ExpressionMode() extends LexerMode
-case class AxiomFileMode() extends LexerMode
-case class ProblemFileMode() extends LexerMode
-case class LemmaFileMode() extends LexerMode
+object ExpressionMode extends LexerMode
+object AxiomFileMode extends LexerMode
+object ProblemFileMode extends LexerMode
+object LemmaFileMode extends LexerMode
 
 /**
  * Terminal symbols of the differential dynamic logic grammar.
@@ -251,7 +251,7 @@ private object TOOL_VALUE_PAT {
 }
 
 /**
- * Created by aplatzer on 6/8/15.
+ * Lexer for KeYmaera X turns string into list of tokens.
   *
   * @author Andre Platzer
  * @author nfulton
@@ -264,7 +264,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
 
-  def normalizeNewlines(input: String) = input.replace("\r\n", "\n").replace("\r", "\n")
+  /** Normalize all new lines in input to a s*/
+  def normalizeNewlines(input: String): String = input.replace("\r\n", "\n").replace("\r", "\n")
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
@@ -282,7 +283,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     output
   }
 
-  def apply(input: String) = inMode(input, ExpressionMode())
+  def apply(input: String) = inMode(input, ExpressionMode)
 
   /**
    * The lexer.
@@ -392,84 +393,84 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       //Lemma file cases
       case LEMMA_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(LEMMA_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(LEMMA_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Lemma`` in non-lemma lexing mode.")
       }
       case TOOL_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TOOL_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(TOOL_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
       }
       case SEQUENT_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(SEQUENT_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(SEQUENT_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Sequent`` in a non-lemma file.")
       }
       case TURNSTILE.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TURNSTILE, loc)
+        case LemmaFileMode => consumeTerminalLength(TURNSTILE, loc)
         case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file.")
       }
       case FORMULA_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(FORMULA_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(FORMULA_BEGIN, loc)
         case _ => throw new Exception("Encountered a formula begin symbol (Formula:) in a non-lemma file.")
       }
 
       // File cases
       case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc)
         /*mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PERIOD, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PERIOD, loc)
         case _ => throw new Exception("Periods should only occur when processing files.")
       }*/
       case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
         case _ => throw new Exception("Functions. should only occur when processing files.")
       }
       case PROGRAM_VARIABLES_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
         case _ => throw new Exception("ProgramVariables. should only occur when processing files.")
       }
       case VARIABLES_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(VARIABLES_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(VARIABLES_BLOCK, loc)
         case _ => throw new Exception("Variables. should only occur when processing files.")
       }
       case BOOL.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(BOOL, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(BOOL, loc)
         case _ => throw new Exception("Bool symbol declaration should only occur when processing files.")
       }
       case REAL.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(REAL, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(REAL, loc)
         case _ => throw new Exception("Real symbol declaration should only occur when processing files.")
       }
       case TERM.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(TERM, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(TERM, loc)
         case _ => throw new Exception("Term symbol declaration should only occur when processing files.")
       }
       case PROGRAM.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PROGRAM, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM, loc)
         case _ => throw new Exception("Program symbol declaration should only occur when processing files.")
       }
       case CP.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(CP, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(CP, loc)
         case _ => throw new Exception("CP symbol declaration should only occur when processing files.")
       }
       case MFORMULA.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(MFORMULA, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(MFORMULA, loc)
         case _ => throw new Exception("MFORMULA symbol declaration should only occur when processing files.")
       }
       //.kyx file cases
       case PROBLEM_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PROBLEM_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode => consumeTerminalLength(PROBLEM_BLOCK, loc)
         case _ => throw new Exception("Problem./End. sections should only occur when processing .kyx files.")
       }
       //Axiom file cases
       case AXIOM_BEGIN.startPattern(_*) => mode match {
-        case AxiomFileMode() => consumeTerminalLength(AXIOM_BEGIN, loc)
+        case AxiomFileMode => consumeTerminalLength(AXIOM_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
       }
       case END_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(END_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(END_BLOCK, loc)
         case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
       }
       case LEMMA_AXIOM_NAME_PAT.startPattern(str) => mode match {
-        case AxiomFileMode() | LemmaFileMode() =>
+        case AxiomFileMode | LemmaFileMode =>
           //An axiom name looks like "blah". but only blah gets grouped, so there are three
           // extra characters to account for.
           consumeColumns(str.length + 3, LEMMA_AXIOM_NAME(str), loc)
@@ -477,7 +478,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
       //Lemma file cases (2)
       case TOOL_VALUE_PAT.startPattern(str, _) => mode match {
-        case LemmaFileMode() =>
+        case LemmaFileMode =>
           //A tool value looks like """"blah"""" but only blah gets grouped, so there are eight
           // extra characters to account for.
           consumeColumns(str.length + 8, TOOL_VALUE(str), loc)

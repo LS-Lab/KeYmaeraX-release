@@ -28,7 +28,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @return A list of named lemmas, each with tool evidence (tool input/output) occurring in the file.
     */
   def apply(input: String) : Lemma = try {
-    val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode())
+    val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
     if (DEBUG) println("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
     if (DEBUG) println("Declarations: " + decls)

@@ -113,7 +113,7 @@ object KeYmaeraXParser extends Parser {
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
-    val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
+    val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode)
     //if (DEBUG) println("\t" + input)
     try { parse(tokenStream) }
     catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}

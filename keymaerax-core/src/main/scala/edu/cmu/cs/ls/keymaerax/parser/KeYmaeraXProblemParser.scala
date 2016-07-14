@@ -21,7 +21,7 @@ object KeYmaeraXProblemParser {
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
       }
     }
     catch {case e: ParseException => throw e.inInput(input)}
