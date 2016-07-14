@@ -37,6 +37,7 @@ class Hcol {
 }
 
 /**
+  * Spiral generator.
   * @author Ran Ji
   */
 object SpiralGenerator extends CodeGenerator {
