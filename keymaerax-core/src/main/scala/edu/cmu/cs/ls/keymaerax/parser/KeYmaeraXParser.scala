@@ -25,7 +25,7 @@ private[parser] sealed trait Item
 private[parser] case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
   override def toString = tok.toString
 }
-object UnknownToken extends Token(PSEUDO, UnknownLocation)
+private[parser] object UnknownToken extends Token(PSEUDO, UnknownLocation)
 /** Expressions that are partially parsed on the parser item stack. */
 private[parser] case class Expr(expr: Expression) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
@@ -57,7 +57,7 @@ private[parser] case class Error(msg: String, loc: Location, st: String) extends
 
 /** Expected inputs */
 private[parser] trait Expected
-object Expected {
+private object Expected {
   /** Terminal input expected */
   private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected {
     override def toString: String = ParseException.tokenDescription(tok)
@@ -67,20 +67,20 @@ object Expected {
 private[parser] case class ExpectNonterminal(nonterm: String) extends Expected {
   override def toString: String = nonterm
 }
-object BINARYTERMOP extends ExpectNonterminal("<BinaryTermOp>")
-object BINARYFORMULAOP extends ExpectNonterminal("<BinaryFormulaOp>")
-object BINARYPROGRAMOP extends ExpectNonterminal("<BinaryProgramOp>")
-object FIRSTTERM extends ExpectNonterminal("<BeginningOfTerm>")
-object FIRSTFORMULA extends ExpectNonterminal("<BeginningOfFormula>")
-object FIRSTPROGRAM extends ExpectNonterminal("<BeginningOfProgram>")
-object FIRSTEXPRESSION extends ExpectNonterminal("<BeginningOfExpression>")
-object FOLLOWSTERM extends ExpectNonterminal("<FollowsTerm>")
-object FOLLOWSFORMULA extends ExpectNonterminal("<FollowsFormula>")
-object FOLLOWSPROGRAM extends ExpectNonterminal("<FollowsProgram>")
-object FOLLOWSEXPRESSION extends ExpectNonterminal("<FollowsExpression>")
-object FOLLOWSIDENT extends ExpectNonterminal("<FollowsIdentifier>")
+private object BINARYTERMOP extends ExpectNonterminal("<BinaryTermOp>")
+private object BINARYFORMULAOP extends ExpectNonterminal("<BinaryFormulaOp>")
+private object BINARYPROGRAMOP extends ExpectNonterminal("<BinaryProgramOp>")
+private object FIRSTTERM extends ExpectNonterminal("<BeginningOfTerm>")
+private object FIRSTFORMULA extends ExpectNonterminal("<BeginningOfFormula>")
+private object FIRSTPROGRAM extends ExpectNonterminal("<BeginningOfProgram>")
+private object FIRSTEXPRESSION extends ExpectNonterminal("<BeginningOfExpression>")
+private object FOLLOWSTERM extends ExpectNonterminal("<FollowsTerm>")
+private object FOLLOWSFORMULA extends ExpectNonterminal("<FollowsFormula>")
+private object FOLLOWSPROGRAM extends ExpectNonterminal("<FollowsProgram>")
+private object FOLLOWSEXPRESSION extends ExpectNonterminal("<FollowsExpression>")
+private object FOLLOWSIDENT extends ExpectNonterminal("<FollowsIdentifier>")
 /** Pseudo-nonterminal encoding that there's other possible expectations beyond what's listed */
-object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
+private object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
 
 /**
  * KeYmaera X parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
