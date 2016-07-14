@@ -179,8 +179,10 @@ sealed case class DifferentialSymbol(x: Variable)
 /** Number literal */
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
-/** Function symbol or predicate symbol or predicational symbol name_index:domain->sort */
-sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort)
+/** Function symbol or predicate symbol or predicational symbol `name_index:domain->sort`
+  * @param interpreted when `true` this function symbol has a fixed interpretation/definition.
+  */
+sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
   extends Expression with NamedSymbol {
   def kind: Kind = FunctionKind
   /** Full string with names and full types */

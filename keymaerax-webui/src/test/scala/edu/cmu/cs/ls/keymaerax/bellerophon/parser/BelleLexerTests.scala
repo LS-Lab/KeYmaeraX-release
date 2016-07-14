@@ -1,6 +1,5 @@
-package bellerophon.serializer
+package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser._
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

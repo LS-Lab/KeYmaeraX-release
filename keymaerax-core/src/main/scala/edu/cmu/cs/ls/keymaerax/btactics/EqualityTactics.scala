@@ -166,7 +166,7 @@ object EqualityTactics {
         val v = abbrvV match {
           case Some(vv) => vv
           case None => t match {
-            case FuncOf(Function(n, _, _, sort), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+            case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
             case Variable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
             case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
           }
@@ -189,7 +189,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def abs: DependentPositionTactic = "abs" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
+    case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
       val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val absVar = Variable(fn, freshAbsIdx)
 
@@ -208,7 +208,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def minmax: DependentPositionTactic = "min/max" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
+    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val minmaxVar = Variable(fn, freshMinMaxIdx)
 

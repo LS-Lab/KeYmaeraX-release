@@ -10,8 +10,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import scala.collection.immutable._
+import edu.cmu.cs.ls.keymaerax.core
 
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.Number
 
@@ -142,8 +143,31 @@ object OpSpec {
   import UnaryOpSpec.lUnaryOpSpecT
   import BinaryOpSpec.lBinaryOpSpec
 
-  // operator notation specifications
+  /** Interpreted symbols which are interpreted by tools or are defined to have a fixed semantics. */
+  private val interpretedSymbols: List[Function] = {
+    Function("abs",None,Real,Real,true) ::
+    Function("min",None,Tuple(Real,Real),Real,true) ::
+    Function("max",None,Tuple(Real,Real),Real,true) :: Nil
+  } ensuring(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
+  private val interpretation: Map[String,Function] = interpretedSymbols.map(f => (f.name -> f)).toMap
 
+  /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
+  private[parser] def func(name: String, index: Option[Int] = None, domain: Sort, sort: Sort): Function =
+  interpretation.get(name) match {
+    case None => Function(name,index,domain,sort)
+    case Some(r) =>
+      assert(r.interpreted, "interpreted function")
+      core.insist(r.name==name && r.index==index && r.domain==domain && r.sort==sort, "expected domain and sort " + Function(name,index,domain,sort).fullString)
+      r
+  }
+
+  /** The sort of an interpreted function or None if uninterpreted */
+  private[parser] def interpretedFuncSort(name: String): Option[Sort] = interpretation.get(name) match {
+    case None => None
+    case Some(f) => Some(f.sort)
+  }
+
+  // operator notation specifications
 
   // terms
   private val unterm = TermKind
@@ -153,7 +177,7 @@ object OpSpec {
   val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
   val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
   val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
-  val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
+  val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(func(name, None, e.sort, Real), e))
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME,0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
   val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,     5, PostfixFormat, unterm, Differential.apply _)
@@ -187,8 +211,8 @@ object OpSpec {
   val sDotFormula   = UnitOpSpec(PLACE,                 0, DotFormula)
   val sTrue         = UnitOpSpec(TRUE,                  0, True)
   val sFalse        = UnitOpSpec(FALSE,                 0, False)
-  val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(Function(name, None, Real, Bool), e.asInstanceOf[Term]))
-  val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
+  val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(func(name, None, e.sort, Bool), e.asInstanceOf[Term]))
+  val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(func(name, None, e.sort, Bool), e.asInstanceOf[Formula]))
   val sDifferentialFormula = UnaryOpSpec[Formula](PRIME,80, PostfixFormat, unfml, DifferentialFormula.apply _)
   val sEqual        = lBinaryOpSpec(EQ,                90, AtomicBinaryFormat, bintermfml, Equal.apply _)
   assert(sEqual>sMinus, "formulas bind weaker than their constituent terms")

@@ -64,7 +64,7 @@ object ArithmeticSpeculativeSimplification {
       val result = ListBuffer[PosInExpr]()
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-          case FuncOf(Function("abs", _, _, _), _) => result += p; Left(None)
+          case FuncOf(Function("abs", _, _, _, true), _) => result += p; Left(None)
           case _ => Left(None)
         }
       }, fml)

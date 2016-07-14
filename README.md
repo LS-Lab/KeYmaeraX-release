@@ -105,7 +105,7 @@ To generate unified scaladoc for all subprojects, run:
     sbt unidoc
 
 Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
-For instance `target/scala-2.11/api`.
+For instance `target/scala-2.11/unidoc`.
 
 Main documentation to read for KeYmaera X API:
 

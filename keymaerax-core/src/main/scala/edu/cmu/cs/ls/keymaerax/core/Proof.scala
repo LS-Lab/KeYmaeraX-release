@@ -252,14 +252,16 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
  *            G |- D           (conclusion)
  * }}}
  *
+ * Invariant: All Provables ever produced are locally sound,
+ * because only the prover kernel can create Provable objects and chooses not to use the globally sound uniform substitution rule.
+ *
  * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
  * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
  * @note soundness-critical logical framework.
  * @note Only private constructor calls for soundness
- * @note For soundness: No reflection to bybass constructor call privacy,
- *       nor reflection to bypass immutable val data structures.
+ * @note For soundness: No reflection should bypass constructor call privacy,
+ *       nor reflection to bypass immutable val algebraic data types.
  * @author Andre Platzer
- * @todo may want to split into different locality levels of subgoals
  * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
  * {{{
  *   import scala.collection.immutable._

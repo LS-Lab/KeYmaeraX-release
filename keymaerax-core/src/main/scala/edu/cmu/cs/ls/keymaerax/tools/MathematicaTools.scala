@@ -83,14 +83,14 @@ class UncheckedK2MConverter extends KeYmaeraToMathematica {
   override def apply(e: KExpr): MExpr = convert(e)
 
   override protected def convertTerm(t: Term): MExpr = t match {
-    case FuncOf(Function(name, index, Unit, _), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case FuncOf(Function(name, index, Unit, _, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
     case _ => super.convertTerm(t)
   }
 }
 
 object CEXK2MConverter extends UncheckedK2MConverter {
   override def convert(e: KExpr): MExpr = e match {
-    case Function(name, index, Unit, _) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case Function(name, index, Unit, _, false) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
     case _ => super.convert(e)
   }
 
@@ -100,7 +100,7 @@ object CEXK2MConverter extends UncheckedK2MConverter {
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
     case DifferentialSymbol(c) =>
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-    case FuncOf(Function(name, index, Unit, _), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case FuncOf(Function(name, index, Unit, _, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
     case _ => super.convertTerm(t)
   }
 }
@@ -250,7 +250,7 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
   private def defunctionalize(f: Formula, arg: Term, fnNames: String*) = ExpressionTraversal.traverse(
     new ExpressionTraversalFunction {
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case FuncOf(Function(name, idx, _, range), fnArg) if arg == fnArg
+        case FuncOf(Function(name, idx, _, range, false), fnArg) if arg == fnArg
           && (fnNames.isEmpty || fnNames.contains(name)) => Right(Variable(name, idx, range))
         case _ => Left(None)
       }

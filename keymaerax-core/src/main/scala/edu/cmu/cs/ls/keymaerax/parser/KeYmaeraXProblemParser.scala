@@ -11,8 +11,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.annotation.tailrec
 
 /**
- * Parses .kyx files.
+ * Parses .kyx KeYmaera X problem files.
  * @todo check sorts
+ * @author Nathan Fulton
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
@@ -20,7 +21,7 @@ object KeYmaeraXProblemParser {
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
       }
     }
     catch {case e: ParseException => throw e.inInput(input)}

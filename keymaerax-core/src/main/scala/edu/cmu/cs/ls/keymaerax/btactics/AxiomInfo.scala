@@ -42,6 +42,10 @@ case class InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: Strin
   override def asciiName = names.asciiName
 }
 
+/**
+  * Central list of all derivation steps (axioms, derived axioms, proof rules, tactics)
+  * with meta information of relevant names and display names and visualizations for the user interface.
+  */
 object DerivationInfo {
   implicit def displayInfo(name: String): SimpleDisplayInfo = {SimpleDisplayInfo(name, name)}
   implicit def displayInfo(pair: (String, String)): SimpleDisplayInfo = SimpleDisplayInfo(pair._1, pair._2)

@@ -20,10 +20,10 @@ import scala.util.matching.Regex
  * LexerModes corresponds to file types.
  */
 sealed abstract class LexerMode
-case class ExpressionMode() extends LexerMode
-case class AxiomFileMode() extends LexerMode
-case class ProblemFileMode() extends LexerMode
-case class LemmaFileMode() extends LexerMode
+object ExpressionMode extends LexerMode
+object AxiomFileMode extends LexerMode
+object ProblemFileMode extends LexerMode
+object LemmaFileMode extends LexerMode
 
 /**
  * Terminal symbols of the differential dynamic logic grammar.
@@ -39,27 +39,27 @@ sealed abstract class Terminal(val img: String) {
 
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
-abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
+private abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
-case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name + (index match {case Some(x) => "_"+x.toString case None => ""})) {
+private case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name + (index match {case Some(x) => "_"+x.toString case None => ""})) {
   override def toString = "ID(\"" + (index match {
     case None => name
     case Some(idx) => name + "," + idx
   }) + "\")"
   override def regexp = IDENT.regexp
 }
-object IDENT {
+private object IDENT {
   //@note Pattern is more permissive than NamedSymbol's since Lexer's IDENT will include the index, so xy_95 is acceptable.
   def regexp = """([a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
-case class NUMBER(value: String) extends Terminal(value) {
+private case class NUMBER(value: String) extends Terminal(value) {
   override def toString = "NUM(" + value + ")"
   override def regexp = NUMBER.regexp
 }
-object NUMBER {
+private object NUMBER {
   //A bit weird, but this gives the entire number in a single group.
   //def regexp = """(-?[0-9]+\.?[0-9]*)""".r
   //@NOTE Minus sign artificially excluded from the number to make sure x-5 lexes as IDENT("x"),MINUS,NUMBER("5") not as IDENT("x"),NUMBER("-5")
@@ -74,176 +74,176 @@ object EOF extends Terminal("<EOF>") {
   override def regexp = "$^".r //none.
 }
 
-object LPAREN  extends Terminal("(") {
+private object LPAREN  extends Terminal("(") {
   override def regexp = """\(""".r
 }
-object RPAREN  extends Terminal(")") {
+private object RPAREN  extends Terminal(")") {
   override def regexp = """\)""".r
 }
-object LBRACE  extends Terminal("{") {
+private object LBRACE  extends Terminal("{") {
   override def regexp = """\{""".r
 }
-object RBRACE  extends Terminal("}") {
+private object RBRACE  extends Terminal("}") {
   override def regexp = """\}""".r
 }
-object LBOX    extends Terminal("[") {
+private object LBOX    extends Terminal("[") {
   override def regexp = """\[""".r
 }
-object RBOX    extends Terminal("]") {
+private object RBOX    extends Terminal("]") {
   override def regexp = """\]""".r
 }
-object LDIA    extends OPERATOR("<") {
+private object LDIA    extends OPERATOR("<") {
   override def regexp = """\<""".r
 }//@todo really operator or better not?
-object RDIA    extends OPERATOR(">") {
+private object RDIA    extends OPERATOR(">") {
   override def regexp = """\>""".r
 }
 
-object COMMA   extends OPERATOR(",")
+private object COMMA   extends OPERATOR(",")
 
-object PRIME   extends OPERATOR("'")
-object POWER   extends OPERATOR("^") {
+private object PRIME   extends OPERATOR("'")
+private object POWER   extends OPERATOR("^") {
   override def regexp = """\^""".r
 }
-object STAR    extends OPERATOR("*") {
+private object STAR    extends OPERATOR("*") {
   override def regexp = """\*""".r
 }
-object SLASH   extends OPERATOR("/")
-object PLUS    extends OPERATOR("+") {
+private object SLASH   extends OPERATOR("/")
+private object PLUS    extends OPERATOR("+") {
   override def regexp = """\+""".r
 }
-object MINUS   extends OPERATOR("-")
+private object MINUS   extends OPERATOR("-")
 
-object NOT     extends OPERATOR("!") {
+private object NOT     extends OPERATOR("!") {
   override def regexp = """\!""".r
 }
-object AMP     extends OPERATOR("&")
-object OR      extends OPERATOR("|") {
+private object AMP     extends OPERATOR("&")
+private object OR      extends OPERATOR("|") {
   override def regexp = """\|""".r
 }
-object EQUIV   extends OPERATOR("<->")
-object IMPLY   extends OPERATOR("->")
+private object EQUIV   extends OPERATOR("<->")
+private object IMPLY   extends OPERATOR("->")
 //@todo maybe could change to <-- to disambiguate poor lexer's x<-7 REVIMPLY from LDIA MINUS
-object REVIMPLY extends OPERATOR("<-")
+private object REVIMPLY extends OPERATOR("<-")
 
-object FORALL  extends OPERATOR("\\forall") {
+private object FORALL  extends OPERATOR("\\forall") {
   override def regexp = """\\forall""".r
 }
-object EXISTS  extends OPERATOR("\\exists") {
+private object EXISTS  extends OPERATOR("\\exists") {
   override def regexp = """\\exists""".r
 }
 
-object EQ      extends OPERATOR("=")
-object NOTEQ   extends OPERATOR("!=") {
+private object EQ      extends OPERATOR("=")
+private object NOTEQ   extends OPERATOR("!=") {
   override def regexp = """\!=""".r
 }
-object GREATEREQ extends OPERATOR(">=")
-object LESSEQ  extends OPERATOR("<=")
+private object GREATEREQ extends OPERATOR(">=")
+private object LESSEQ  extends OPERATOR("<=")
 
-object TRUE    extends OPERATOR("true")
-object FALSE   extends OPERATOR("false")
+private object TRUE    extends OPERATOR("true")
+private object FALSE   extends OPERATOR("false")
 
 //@todo should probably also allow := *
-object ASSIGNANY extends OPERATOR(":=*") {
+private object ASSIGNANY extends OPERATOR(":=*") {
   override def regexp = """:=\*""".r
 }
-object ASSIGN  extends OPERATOR(":=")
-object TEST    extends OPERATOR("?") {
+private object ASSIGN  extends OPERATOR(":=")
+private object TEST    extends OPERATOR("?") {
   override def regexp = """\?""".r
 }
-object SEMI    extends OPERATOR(";")
-object CHOICE  extends OPERATOR("++") {
+private object SEMI    extends OPERATOR(";")
+private object CHOICE  extends OPERATOR("++") {
   override def regexp = """\+\+""".r
 }
 //@todo simplify lexer by using silly ^@ notation rather than ^d for now. @ for adversary isn't too bad to remember but doesn't look as good as ^d.
-object DUAL    extends OPERATOR("^@") {
+private object DUAL    extends OPERATOR("^@") {
   override def regexp = """\^\@""".r
 }
 
 /*@TODO
-object DCHOICE  extends OPERATOR("--") {
+private object DCHOICE  extends OPERATOR("--") {
   override def regexp = """--""".r
 }
 */
 
 // pseudos: could probably demote so that some are not OPERATOR
-object NOTHING extends Terminal("")
-object DOT     extends OPERATOR("•") //(".")
-object PROJ    extends OPERATOR("π")
-object PLACE   extends OPERATOR("⎵") //("_")
-object ANYTHING extends OPERATOR(Anything.prettyString) {
+private object NOTHING extends Terminal("")
+private object DOT     extends OPERATOR("•") //(".")
+private object PROJ    extends OPERATOR("π")
+private object PLACE   extends OPERATOR("⎵") //("_")
+private object ANYTHING extends OPERATOR(Anything.prettyString) {
   assert(Anything.prettyString=="??")
   override def regexp = """\?\?""".r
 }
-object PSEUDO  extends Terminal("<pseudo>")
+private object PSEUDO  extends Terminal("<pseudo>")
 
 
 // @annotations
 
-object INVARIANT extends Terminal("@invariant") {
+private object INVARIANT extends Terminal("@invariant") {
   override def regexp = """\@invariant""".r
 }
 
 
 // axiom and problem file
 
-object AXIOM_BEGIN extends Terminal("Axiom") {
+private object AXIOM_BEGIN extends Terminal("Axiom") {
   override def regexp = """Axiom""".r
 }
-object END_BLOCK extends Terminal("End.")
-case class LEMMA_AXIOM_NAME(var s: String) extends Terminal("<string>") {
+private object END_BLOCK extends Terminal("End.")
+private case class LEMMA_AXIOM_NAME(var s: String) extends Terminal("<string>") {
   override def regexp = LEMMA_AXIOM_NAME_PAT.regexp
 }
-object LEMMA_AXIOM_NAME_PAT {
+private object LEMMA_AXIOM_NAME_PAT {
   def regexp = """\"(.*)\"\.""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
-object PERIOD extends Terminal(".") {
+private object PERIOD extends Terminal(".") {
   override def regexp = "\\.".r
 }
-object FUNCTIONS_BLOCK extends Terminal("Functions.") {
+private object FUNCTIONS_BLOCK extends Terminal("Functions.") {
   //not totally necessary -- you'll still get the right behavior because . matches \. But also allows stuff like Functions: which maybe isn't terrible.
 //  override def regexp = """Functions\.""".r
 }
-object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
-object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
-object PROBLEM_BLOCK extends Terminal("Problem.")
+private object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
+private object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
+private object PROBLEM_BLOCK extends Terminal("Problem.")
 //@todo the following R, B, T, P etc should be lexed as identifiers. Adapt code to make them disappear.
 //@todo the following should all be removed or at most used as val REAL = Terminal("R")
-object REAL extends Terminal("$$$R")
-object BOOL extends Terminal("$$$B")
+private object REAL extends Terminal("$$$R")
+private object BOOL extends Terminal("$$$B")
 //Is there any reason we parse a bunch of stuff just to throw it away? Are these suppose to be in our sort heirarchy...?
-object TERM extends Terminal("$$$T")
-object PROGRAM extends Terminal("$$$P")
-object CP extends Terminal("$$$CP")
-object MFORMULA extends Terminal("$$F")
+private object TERM extends Terminal("$$$T")
+private object PROGRAM extends Terminal("$$$P")
+private object CP extends Terminal("$$$CP")
+private object MFORMULA extends Terminal("$$F")
 
 ///////////
 // Section: Terminal signals for extended lemma files.
 ///////////
-object SEQUENT_BEGIN extends Terminal("Sequent.")  {
+private object SEQUENT_BEGIN extends Terminal("Sequent.")  {
   override def regexp = """Sequent\.""".r
 }
-object TURNSTILE extends Terminal("==>") {
+private object TURNSTILE extends Terminal("==>") {
   override def regexp = """==>""".r
 }
-object FORMULA_BEGIN extends Terminal("Formula:") {
+private object FORMULA_BEGIN extends Terminal("Formula:") {
   override def regexp = """Formula:""".r
 }
 
 ///////////
 // Section: Terminal signals for tool files.
 ///////////
-object LEMMA_BEGIN extends Terminal("Lemma") {
+private object LEMMA_BEGIN extends Terminal("Lemma") {
   override def regexp = """Lemma""".r
 }
-object TOOL_BEGIN extends Terminal("Tool") {
+private object TOOL_BEGIN extends Terminal("Tool") {
   override def regexp = """Tool""".r
 }
-case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
+private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
   override def regexp = TOOL_VALUE_PAT.regexp
 }
-object TOOL_VALUE_PAT {
+private object TOOL_VALUE_PAT {
   // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
   def regexp = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
 //  def regexp = "\"([^\"]*)\"".r
@@ -251,7 +251,7 @@ object TOOL_VALUE_PAT {
 }
 
 /**
- * Created by aplatzer on 6/8/15.
+ * Lexer for KeYmaera X turns string into list of tokens.
   *
   * @author Andre Platzer
  * @author nfulton
@@ -264,7 +264,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
 
-  def normalizeNewlines(input: String) = input.replace("\r\n", "\n").replace("\r", "\n")
+  /** Normalize all new lines in input to a s*/
+  def normalizeNewlines(input: String): String = input.replace("\r\n", "\n").replace("\r", "\n")
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
@@ -282,7 +283,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     output
   }
 
-  def apply(input: String) = inMode(input, ExpressionMode())
+  def apply(input: String) = inMode(input, ExpressionMode)
 
   /**
    * The lexer.
@@ -392,84 +393,84 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       //Lemma file cases
       case LEMMA_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(LEMMA_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(LEMMA_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Lemma`` in non-lemma lexing mode.")
       }
       case TOOL_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TOOL_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(TOOL_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
       }
       case SEQUENT_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(SEQUENT_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(SEQUENT_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Sequent`` in a non-lemma file.")
       }
       case TURNSTILE.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TURNSTILE, loc)
+        case LemmaFileMode => consumeTerminalLength(TURNSTILE, loc)
         case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file.")
       }
       case FORMULA_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(FORMULA_BEGIN, loc)
+        case LemmaFileMode => consumeTerminalLength(FORMULA_BEGIN, loc)
         case _ => throw new Exception("Encountered a formula begin symbol (Formula:) in a non-lemma file.")
       }
 
       // File cases
       case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc)
         /*mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PERIOD, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PERIOD, loc)
         case _ => throw new Exception("Periods should only occur when processing files.")
       }*/
       case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
         case _ => throw new Exception("Functions. should only occur when processing files.")
       }
       case PROGRAM_VARIABLES_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
         case _ => throw new Exception("ProgramVariables. should only occur when processing files.")
       }
       case VARIABLES_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(VARIABLES_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(VARIABLES_BLOCK, loc)
         case _ => throw new Exception("Variables. should only occur when processing files.")
       }
       case BOOL.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(BOOL, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(BOOL, loc)
         case _ => throw new Exception("Bool symbol declaration should only occur when processing files.")
       }
       case REAL.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(REAL, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(REAL, loc)
         case _ => throw new Exception("Real symbol declaration should only occur when processing files.")
       }
       case TERM.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(TERM, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(TERM, loc)
         case _ => throw new Exception("Term symbol declaration should only occur when processing files.")
       }
       case PROGRAM.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PROGRAM, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM, loc)
         case _ => throw new Exception("Program symbol declaration should only occur when processing files.")
       }
       case CP.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(CP, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(CP, loc)
         case _ => throw new Exception("CP symbol declaration should only occur when processing files.")
       }
       case MFORMULA.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(MFORMULA, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(MFORMULA, loc)
         case _ => throw new Exception("MFORMULA symbol declaration should only occur when processing files.")
       }
       //.kyx file cases
       case PROBLEM_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PROBLEM_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode => consumeTerminalLength(PROBLEM_BLOCK, loc)
         case _ => throw new Exception("Problem./End. sections should only occur when processing .kyx files.")
       }
       //Axiom file cases
       case AXIOM_BEGIN.startPattern(_*) => mode match {
-        case AxiomFileMode() => consumeTerminalLength(AXIOM_BEGIN, loc)
+        case AxiomFileMode => consumeTerminalLength(AXIOM_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
       }
       case END_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(END_BLOCK, loc)
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(END_BLOCK, loc)
         case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
       }
       case LEMMA_AXIOM_NAME_PAT.startPattern(str) => mode match {
-        case AxiomFileMode() | LemmaFileMode() =>
+        case AxiomFileMode | LemmaFileMode =>
           //An axiom name looks like "blah". but only blah gets grouped, so there are three
           // extra characters to account for.
           consumeColumns(str.length + 3, LEMMA_AXIOM_NAME(str), loc)
@@ -477,7 +478,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
       //Lemma file cases (2)
       case TOOL_VALUE_PAT.startPattern(str, _) => mode match {
-        case LemmaFileMode() =>
+        case LemmaFileMode =>
           //A tool value looks like """"blah"""" but only blah gets grouped, so there are eight
           // extra characters to account for.
           consumeColumns(str.length + 8, TOOL_VALUE(str), loc)

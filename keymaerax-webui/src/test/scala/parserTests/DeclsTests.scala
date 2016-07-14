@@ -15,7 +15,7 @@ class DeclsTests extends FlatSpec with Matchers {
         |R z_0.
         |End.
       """.stripMargin
-    val decls = KeYmaeraXDeclarationsParser(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._1
+    val decls = KeYmaeraXDeclarationsParser(KeYmaeraXLexer.inMode(input, ProblemFileMode))._1
     decls.keySet.contains("x", None) shouldBe true
     decls.keySet.contains("z", None) shouldBe true
     decls.keySet.contains("z", Some(0)) shouldBe true

@@ -26,6 +26,10 @@ class C {
   def setBody(body : String) = this.body = body
 }
 
+/**
+  * Common-subexpression C generator
+  * @author Ran Ji
+  */
 object CseCGenerator extends CodeGenerator {
   def apply(expr: Expression): String = apply(expr, "long double", Nil, "")
   def apply(expr: Expression, vars: List[Variable]): String = apply(expr, "long double", vars, "")
