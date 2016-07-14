@@ -62,13 +62,14 @@ class AxiomaticODESolverTests extends TacticTestBase {
       AxiomaticODESolver.cutInSoln(qeTool)(1) &
       AxiomaticODESolver.cutInSoln(qeTool)(1)
     println(proveBy(f,t))
-
-
   })}
 
   //endregion
 
-
-
+  "axiomatic ode solver" should "solve double integrator" in {withMathematica(implicit qeTool => {
+    val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver(qeTool)(1)
+    println(proveBy(f,t))
+  })}
 
 }

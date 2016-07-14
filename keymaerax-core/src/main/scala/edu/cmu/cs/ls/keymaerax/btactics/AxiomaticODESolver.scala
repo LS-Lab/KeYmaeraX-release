@@ -23,12 +23,16 @@ object AxiomaticODESolver {
   import TacticFactory._
   import Augmentors._
 
+  def apply(implicit qeTool: QETool) = axiomaticSolve(qeTool)
+
   /** The main tactic. */
   def axiomaticSolve(implicit qeTool: QETool) = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
 
     addTimeVarIfNecessary(odePos) & //@todo initialize time var so that there's always a t:=0 in front. Then munge positions.
-    cutInSoln(qeTool)(pos).*@(TheType())
+    cutInSoln(qeTool)(pos).*@(TheType()) &
+    cutInTimeLB(qeTool)(pos) &
+    HilbertCalculus.DW(pos)
   })
 
   //region Setup time variable
@@ -44,7 +48,7 @@ object AxiomaticODESolver {
       case x:DifferentialProgram if timeVar(x).nonEmpty => Idioms.nil
       case x:ODESystem if timeVar(x).isEmpty => addTimeVar(pos)
       case x:ODESystem if timeVar(x).nonEmpty => Idioms.nil
-      case _ => throw AxiomaticODESolverExn("Expected DifferentialProgram or ODESystem")
+      case _ => throw AxiomaticODESolverExn(s"Expected DifferentialProgram or ODESystem but found ${s(pos).getClass}")
   })
 
   /** Rewrites [{c}]p to [{c, t'=1}]p whenever the system c does not already contain a clock.
@@ -90,7 +94,7 @@ object AxiomaticODESolver {
     //@todo I don't think that the extractInitialConditions code picks up a=0 as an initial condtion for x'=v,v'=a. Check this when changing None.
     val initialConditions = s.ante.flatMap(extractInitialConditions(None)).toList
 
-    val nextEqn = sortAtomicOdes(atomicODEs(system))
+    val nextEqn = sortAtomicOdes(atomicOdes(system))
       .filter(eqn => !isOne(eqn.e))
       .filter(eqn => isUnsolved(eqn.xp.x, system))
       .head
@@ -101,11 +105,10 @@ object AxiomaticODESolver {
     val solnToCut =
       Integrator(conditionsToValues(initialConditions), system).find(eq => eq.left == nextEqn.xp.x)
         .getOrElse(throw new Exception(s"Could not get integrated value for ${nextEqn.xp.x} using new integration logic."))
-//    val solnToCut = Equal(nextEqn.xp.x, integralOf(nextEqn.xp.x, system, initialConditions))
 
-    tmpmsg(s"Soltuion for ${nextEqn.prettyString} is ${solnToCut}")
+    tmpmsg(s"Solution for ${nextEqn.prettyString} is ${solnToCut}")
 
-    //@note we have to cute one at a time instead of just constructing a single tactic because solutions need to be added
+    //@note we have to cut one at a time instead of just constructing a single tactic because solutions need to be added
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
     s(pos) match {
@@ -132,25 +135,13 @@ object AxiomaticODESolver {
   }
 
   /**
-    * @param ode
-    * @return The list of atomic differential equations occurring in the differential program.
-    * @author Nathan Fulton
-    */
-  def atomicODEs(ode : Program) : List[AtomicODE] = ode match {
-    case AtomicODE(x, e)                  => AtomicODE(x,e) :: Nil
-    case ODESystem(ode, constraint)       => atomicODEs(ode)
-    case DifferentialProduct(left, right) => atomicODEs(left) ++ atomicODEs(right)
-    case _                                => throw AxiomaticODESolverExn("Expected AtomicODE, ODESystem, or DifferentialProduct.") //@todo what about other differential programs?
-  }
-
-  /**
     *
     * @param v A variable occuring in the odes program.
     * @param system An ode system.
     * @return true if the program does not already contain an = constraint (a.k.a. sol'n) for v in the evolution domain.
     */
   def isUnsolved(v : Variable, system : ODESystem) = {
-    val odes = atomicODEs(system.ode)
+    val odes = atomicOdes(system.ode)
     if(odes.find(_.xp.x.equals(v)).isEmpty) false //Variables that don't occur in the ODE are trivially already solved.
     else if(timeVar(system.ode).equals(v)) false //Don't need to solve for the time var.
     //In non-special cases, check for a = evolution domain constraint in the ode.
@@ -165,113 +156,25 @@ object AxiomaticODESolver {
 
   //endregion
 
-  //region Simple integrator
+  //region diffCut lower bound on time @todo won't work on newly cut in times until I add in Stefan's hack for getting exists time to work out...
 
-  /**
-    * If v' = term occurs in the system of ODEs, then this function computes the integral of term.
-    * Assumes that the ODEs have a time variable, that a formula of the form v=f occurs in the initialConditions formulas,
-    * and that the system of odes is blah blah.
-    *
-    * @param v
-    * @param system
-    * @param initialConditions
-    * @return Integral of f assuming v' = f occurs in ODEs.
-    */
-  def integralOf(v : Variable, system : ODESystem, initialConditions : List[Formula]) : Term = {
-    val termToIntegrate = resolveRecurrences(v, system, initialConditions)
-    println("Integrating term " + termToIntegrate + s" (after resolving recurrences for the equational definition of ${v.prettyString}' in the ode ${system.prettyString}")
+  /** Adds t>=0 to the differential equation's domain constraint.
+    * @todo Why is this necessary? It's not included in the paper proof. */
+  def cutInTimeLB(implicit qeTool: QETool) = "cutInTimeLB" by ((pos: Position, s: Sequent) => {
+    assert(s(pos).isInstanceOf[Modal], s"Expected modality at position ${pos} of ${s.prettyString}")
+    assert(s(pos).asInstanceOf[Modal].program.isInstanceOf[ODESystem], s"Expected modality to contain ODE System but it did not in ${s(pos)}")
 
-    val t = timeVar(system) match {
-      case Some(t) => t
-      case None    => throw new Exception("Could not find time variable in ODEs")
+    val system = s(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem]
+
+    val lowerBound = Number(0) //@todo check that this is actually the lower bound. Lower bound could be symbolic.
+    val timer = timeVar(system).getOrElse(throw AxiomaticODESolverExn("Expected ODE System to already have a time variable when cutInTimeLB is called."))
+
+    //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
+    s(pos).asInstanceOf[Modal] match {
+      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(TactixLibrary.diffInd(qeTool)(pos), Idioms.nil)
+      case Diamond(_,_) => throw noDiamondsForNowExn
     }
-
-    val v_0 : Term = conditionsToValues(initialConditions).get(v) match {
-      case Some(x) => x
-      case None => throw new Exception("Could not find initial condition for " + v.name)
-    }
-
-    Plus(integrator(termToIntegrate, t, system), v_0)
-  }
-
-
-
-  /**
-    * Given x' = f, replaces all variables in f with their recurrences or initial conditions.
-    *
-    * @param v A variable s.t. v' = f occurs in the ODEs.
-    * @param system ODE(s) with a time variable (some x s.t. x' = 1).
-    * @param initialConditions Any initial conditions for the ODE.
-    * @return f with all variables replaced by their recurrences or initial conditions.
-    */
-  def resolveRecurrences(v : Variable, system : ODESystem, initialConditions : List[Formula]) : Term = {
-    val odes         = atomicODEs(system)
-
-    val time : Variable = timeVar(system) match {
-      case Some(theTimeVar) => theTimeVar
-      case None             => throw new Exception(s"A time variable should exist prior to calling resolveRecurrences, but none exists in ${system.prettyString}")
-    }
-
-    //The assertion message is not technically true becuase the solution would just be zero.
-    //But if the variable requested is not in the ODE, it's most likely this indicates a programming error rather than
-    //an honest inquiry.
-    assert(odes.find(ode => ode.xp.x.equals(v)).isDefined, "Cannot solve for a variable that does not occur in the ODE")
-
-    val primedVariables : Set[Variable] = odes.map(_.xp.x).toSet
-
-    //Compute the free variables in the ode corresponding to v'.
-    val ode = odes.find(_.xp.x.equals(v)).getOrElse(throw new Exception("Could not find ODE associated with " + v))
-    val varsInOde = StaticSemantics.freeVars(ode.e).toSet.map((x : NamedSymbol) => {
-      assert(x.isInstanceOf[Variable], "Only variables should occur as the child of the LHS of an ODE")
-      x.asInstanceOf[Variable]
-    })
-
-    //Variables that occur in the term associated with v' and also occur primed in the ODE.
-    val recurrenceVars : Set[Variable] = (varsInOde intersect primedVariables) //for lack of a better name.
-
-    //Variables that occur in the term associated with v' but do not occur primed in the ODE.
-    val nonRecurringVars : Set[Variable] = varsInOde -- recurrenceVars
-
-    if(recurrenceVars.isEmpty) {
-      // If x' = a where a is not a variable occurring in the system of odes, then the solution is
-      // x = at + x_0 where t is the time variable and x_0 is the value in initialValues associated with
-      val f_initValuesResolved = nonRecurringVars.foldLeft[Term](ode.e)((currTerm, x) => {
-        val x_0 = initValue(initialConditions, x)
-        assert(x_0.isDefined, "Need an initial condition for non-recurring variable " + x + " while solve for " + v)
-        SubstitutionHelper.replaceFree(currTerm)(x, x_0.get)
-      })
-
-      f_initValuesResolved
-    }
-    else {
-      //Replace all instance of primed variables in the term assocaited with v'
-      val f_substRecurrences = recurrenceVars.foldLeft[Term](ode.e)((currTerm, x) => {
-        val xSoln = recurrence(ode, initialConditions, x)
-        assert(xSoln.isDefined, "Need a solution for recurring variable " + x + " while solving for " + v)
-        SubstitutionHelper.replaceFree(currTerm)(x, xSoln.get)
-      })
-      val f_substInitValues = nonRecurringVars.foldLeft[Term](f_substRecurrences)((currTerm, x) => {
-        val x_0 = initValue(initialConditions, x)
-        assert(x_0.isDefined, "Need an initial condition for non-recurring variable " + x + " while solve for " + v)
-        SubstitutionHelper.replaceFree(currTerm)(x, x_0.get)
-      })
-      f_substInitValues
-    }
-  }
-
-  /**
-    * @param program (An system of) odes.
-    * @param initialConstraints Formulas describing initial values.
-    * @param x A variable that occurs on the left hand side of some ode.
-    * @return Some(term) if x = term occurs in either the ev.dom. constraint or the initial constraints. Otherwise, None.
-    */
-  private def recurrence(program : DifferentialProgram, initialConstraints : List[Formula], x : Variable) : Option[Term] = {
-    val odeConditions = conditionsToValues(flattenAnds(odeConstraints(program)))
-    val initialConditions = conditionsToValues(flattenAnds(initialConstraints))
-    if(odeConditions.contains(x)) odeConditions.get(x)
-    else if(initialConditions.contains(x)) initialConditions.get(x)
-    else None
-  }
+  })
 
   //endregion
 
@@ -280,10 +183,6 @@ object AxiomaticODESolver {
   /** Exceptions thrown by the axiomatic ODE solver. */
   case class AxiomaticODESolverExn(msg: String) extends Exception(msg)
   val noDiamondsForNowExn = AxiomaticODESolverExn("No diamonds for now.")
-
-//  def childPosition(pos: Position) =
-//    if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr.child)
-//    else SuccPosition(pos.checkSucc.top, pos.inExpr.child)
 
   def parentPosition(pos: Position): Position =
     if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr.parent)
