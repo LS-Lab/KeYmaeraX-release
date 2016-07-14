@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{SuccPosition, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
+import edu.cmu.cs.ls.keymaerax.core.ODESystem
 
 /**
   * @author Nathan Fulton
@@ -16,9 +17,20 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 class AxiomaticODESolverTests extends TacticTestBase {
 //  import Augmentors._
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //region integarator
+
+  import DifferentialHelper._
+
+  "Integrator.apply" should "world on x'=v, v'=a" in {
+    val initialConds = conditionsToValues(extractInitialConditions(None)("x=1&v=2&a=3&t=0".asFormula))
+    val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
+    val result = Integrator.apply(initialConds, system)
+    println(result.mkString(","))
+  }
+  //endregion
+
   //region unit tests
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //@todo exists monotone
   "setupTimeVar" should "work when time exists" ignore {
@@ -56,11 +68,7 @@ class AxiomaticODESolverTests extends TacticTestBase {
 
   //endregion
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //region comprehensive tests
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  //endregion
 
 
 }
