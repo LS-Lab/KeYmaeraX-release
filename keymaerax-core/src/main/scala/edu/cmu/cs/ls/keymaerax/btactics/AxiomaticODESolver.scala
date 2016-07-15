@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import DifferentialHelper._
-import Integrator.integrator
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 /**
   * An Axiomatic ODE solver (second attempt)
@@ -17,6 +17,9 @@ import Integrator.integrator
   * @author Nathan Fulton
   */
 object AxiomaticODESolver {
+  /** The name of the explicit time variables. */
+  private val TIMEVAR : String = "kyxtime"
+
   def tmpmsg(s:String) = println(s) //@todo before deployment, remove this method.
 
   //implicits for "by" notation and functional application of positions to sequents/formulas.
@@ -24,21 +27,20 @@ object AxiomaticODESolver {
   import Augmentors._
 
   def apply(implicit qeTool: QETool) = axiomaticSolve(qeTool)
-
-  /** The main tactic. */
   def axiomaticSolve(implicit qeTool: QETool) = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
 
-    addTimeVarIfNecessary(odePos) & //@todo initialize time var so that there's always a t:=0 in front. Then munge positions.
+    addTimeVarIfNecessary(odePos) &
+    assertInitializedTimeVar(odePos) &
+    DebuggingTactics.debug("here!", true) &
     cutInSoln(qeTool)(pos).*@(TheType()) &
+    DebuggingTactics.debug("here 2!", true) &
     cutInTimeLB(qeTool)(pos) &
-    HilbertCalculus.DW(pos)
+    HilbertCalculus.DW(pos) &
+    simplifyPostCondition(qeTool)(pos)
   })
 
   //region Setup time variable
-
-  /** The name of the explicit time variables. */
-  private val TIMEVAR : String = "kyxtime"
 
   /** Adds a time variable to the ODE if there isn't one already; otherwise, does nothing.
     *
@@ -49,6 +51,23 @@ object AxiomaticODESolver {
       case x:ODESystem if timeVar(x).isEmpty => addTimeVar(pos)
       case x:ODESystem if timeVar(x).nonEmpty => Idioms.nil
       case _ => throw AxiomaticODESolverExn(s"Expected DifferentialProgram or ODESystem but found ${s(pos).getClass}")
+  })
+
+  val assertInitializedTimeVar = "assertInitializedTimeVar" by ((pos: Position, s: Sequent) => {
+    val timer = (s(pos) match {
+      case x: ODESystem => timeVar(x)
+      case x: DifferentialProgram => timeVar(x)
+      case _ => throw AxiomaticODESolverExn(s"Expected differential program or ode system but found ${s(pos).prettyString}")
+    }) match {
+      case Some(x) => x
+      case None => throw new AxiomaticODESolverExn(s"Expected to have a time var by now in ${s(pos).prettyString}")
+    }
+    val initialConditions = conditionsToValues(s.ante.flatMap(extractInitialConditions(None)).toList)
+
+    DebuggingTactics.assert(_ => initialConditions.keySet contains timer,
+      s"There is no initialCondition for the time variable ${timer}") &
+    DebuggingTactics.assert(_ => initialConditions(timer) == Number(0),
+      s"The initial condition for ${timer} is non-zero (${initialConditions(timer)})")
   })
 
   /** Rewrites [{c}]p to [{c, t'=1}]p whenever the system c does not already contain a clock.
@@ -73,7 +92,8 @@ object AxiomaticODESolver {
     s(modalityPos) match {
       case Box(_,_) => {
         HilbertCalculus.DG(t, Number(0), Number(1))(modalityPos) &
-        DebuggingTactics.error("Needs exists monotone") //@todo instantiate \exists t to an assignment [t:=0] or additional antecedent.
+        DLBySubst.assignbExists(Number(0))(modalityPos) &
+        DLBySubst.assignEquational(modalityPos)
       }
       case Diamond(_,_) => throw noDiamondsForNowExn
     }
@@ -171,10 +191,56 @@ object AxiomaticODESolver {
 
     //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
     s(pos).asInstanceOf[Modal] match {
-      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(TactixLibrary.diffInd(qeTool)(pos), Idioms.nil)
+      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(Idioms.nil, TactixLibrary.diffInd(qeTool)(pos) & DebuggingTactics.assertProved)
       case Diamond(_,_) => throw noDiamondsForNowExn
     }
   })
+
+  //endregion
+
+  //region Simplify post-condition
+
+  def simplifyPostCondition(implicit qetool: QETool) = "simplifyPostCondition" by ((pos: Position, s: Sequent) => {
+    val modality = s(pos).asInstanceOf[Modal]
+    val Box(ode, Imply(evolutionDomain, originalConclusion)) = modality
+
+    val implication = Imply(simplifiedConclusion(evolutionDomain, originalConclusion), modality.child)
+
+    tmpmsg(s"Implication is ${implication.prettyString}")
+    tmpmsg(s"And modality is ${s(pos).prettyString}")
+    /*
+     * Explanation:
+     * The tactic in the next four lines creates a new lemma that proves `implication`, then uses that lemma to perform useAt rewriting on the
+     * conclusion of the box modality. This is IMO much cleaner than the old approach of cutting in an equivalence and proving by G,K,etc. manually.
+     *
+     * This tactic uses the name "_simplifyPostCondition" for the lemma.
+     * This name must not exist must not exist prior to executing the tactic because the ProveAs tactic assumes the name is fresh.
+     * Therefore, we clear out any lemma with this name from the database both before *and* after running the proveAs.
+     * We clear out after for the obvious reason (the lemma's usage should be local). We clear out before as well in case
+     * there was some exception in an early execution of this tactic that resulting in the tactic not running to completion
+     * @todo ProveAs should do this be default at the end of each execution, and should implicitly use a namespace that lazuUseAt et al knows about.
+     */
+    clearProveAsScope("_simplifyPostCondition") &
+    ProveAs("_simplifyPostCondition", implication, TactixLibrary.QE) &
+    HilbertCalculus.lazyUseAt("_simplifyPostCondition", PosInExpr(1 :: Nil))(subPosition(pos, PosInExpr(1::Nil))) & //@todo weird positioning...
+    clearProveAsScope("_simplifyPostCondition")
+  })
+
+  private def simplifiedConclusion(evolutionDomain: Formula, originalConclusion: Formula): Formula = {
+    val fvs = StaticSemantics.freeVars(originalConclusion)
+    val varsToReplace : Map[Variable, Term] = conditionsToValues(extractInitialConditions(None)(evolutionDomain)).filterKeys(fvs.contains)
+
+    varsToReplace.foldLeft(originalConclusion)(
+      (currentFormula, nextPair) => SubstitutionHelper.replaceFree(currentFormula)(nextPair._1, nextPair._2)
+    )
+  }
+
+  private def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
+    override def computeExpr(p:Provable) = {
+      LemmaDBFactory.lemmaDB.remove(lemmaName)
+      Idioms.nil
+    }
+  }
 
   //endregion
 
