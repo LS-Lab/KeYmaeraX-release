@@ -5,9 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import SequentCalculus.{commuteEquivR, equivR, equivifyR, hideL, hideR, implyR, cohideR, cohide2}
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue,
-cut, cutLR, cutL, cutR}
+import SequentCalculus.{cohide2, cohideR, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutL, cutLR, cutR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -17,6 +16,7 @@ import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
 import PosInExpr.HereP
 import StaticSemanticsTools._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -170,6 +170,8 @@ trait UnifyUSCalculus {
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
+  import TacticFactory._
+
   /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic, inst: Subst=>Subst): PositionTactic = useAt(fact, key, tactic, inst)
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = useAt(fact, key, tactic)
@@ -196,7 +198,14 @@ trait UnifyUSCalculus {
   def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(lem.fact, key, inst)
   def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem.fact, key)
   def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
+
+  /** Lazy use at of lemma by name. For use with ProveAs. */
+  def lazyUseAt(lemmaName: String) : DependentPositionTactic =
+    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, PosInExpr(Nil))(pos))
+  def lazyUseAt(lemmaName: String, key:PosInExpr) : DependentPositionTactic =
+    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, key)(pos))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
+
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key, inst)
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key)
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
