@@ -47,7 +47,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
 
             it.name + "(" + argPrinter(theArg) + ")"
           }
-          case _ => throw PrinterException(s"Do not no how to pretty-print ${e}")
+          case ProveAs(lemmaName, pos, e) => "proveAs"
+          case _ => throw PrinterException(s"Do not know how to pretty-print ${e}")
         }
     }
   }

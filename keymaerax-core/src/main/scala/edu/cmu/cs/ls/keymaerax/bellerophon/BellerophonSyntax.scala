@@ -529,6 +529,10 @@ case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends Be
   override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
 }
 
+case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
+  override def prettyString: String = s"proveAs(${lemmaName})"
+}
+
 /**
  * Bellerophon expressions that are values.
  */

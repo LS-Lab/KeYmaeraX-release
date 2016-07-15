@@ -5,9 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
@@ -27,6 +30,34 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     try {
       val result: BelleValue =
       expr match {
+        case ProveAs(lemmaName, f, e) => {
+          val BelleProvable(provable, labels) = v
+          assert(provable.subgoals.length == 1)
+
+          val lemma = Provable.startProof(f)
+
+          //Prove the lemma iff it's not already proven.
+          if(LemmaDBFactory.lemmaDB.contains(lemmaName)) {
+            assert(LemmaDBFactory.lemmaDB.get(lemmaName).head.fact.conclusion == lemma.conclusion)
+          }
+          else {
+            val BelleProvable(result, resultLabels) = apply(e, BelleProvable(lemma))
+            assert(result.isProved, "Result of proveAs should always be proven.")
+
+            val tacticText: String = try { BellePrettyPrinter(e) } catch { case _ => "nil" }
+
+            val evidence = ToolEvidence(List(
+              "tool" -> "KeYmaera X",
+              "model" -> lemma.prettyString,
+              "tactic" -> tacticText,
+              "proof" -> "" //@todo serialize proof
+            )) :: Nil
+
+            //Save the lemma.
+            LemmaDBFactory.lemmaDB.add(Lemma(result, evidence, Some(lemmaName)))
+          }
+          v //nop on the original goal.
+        }
         case named: NamedTactic => apply(named.tactic, v)
         case builtIn: BuiltInTactic => v match {
           case BelleProvable(pr, _) => try {
