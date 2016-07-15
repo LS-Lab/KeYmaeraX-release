@@ -290,7 +290,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "LLC controller monitor (backward tactic)")
   }
 
-  it should "find correct controller monitor by updateCalculus implicationally" in {
+  it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -307,10 +307,16 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->(-B<=alpost()&alpost()<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&(-B<=afpost()&afpost()<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=afpost())&tpost()=0|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|(-B<=afpost()&afpost()<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=afpost())&tpost()=0)".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "LLC controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "(-B<=alpost()&alpost()<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&(-B<=afpost()&afpost()<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl))&xfpost()=xf)&vfpost()=vf))&tpost()=0|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl))&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|(-B<=afpost()&afpost()<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl))&xfpost()=xf)&vfpost()=vf))&tpost()=0)".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "LLC controller monitor (forward chase)")
   }
 
-  "Fixedwing" should "find correct controller monitory" in {
+  "Fixedwing" should "find correct controller monitory" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fixedwing_simple_nobound.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -327,7 +333,13 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "(true->(v=Vmin&(theta=Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|theta=-Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(0<=theta&theta < Theta)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(-Theta < theta&theta < 0)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=-W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=-W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy)|v>Vmin&(theta=Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|theta=-Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(0<=theta&theta < Theta)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(-Theta < theta&theta < 0)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=-W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=-W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy))|(-B<=apost()&apost()<=A)&(-W<=wpost()&wpost()<=W)&vpost()>=Vmin&(-Theta<=thetapost()&thetapost()<=Theta)&(abs(x-xopost())>(vpost()^2-Vmin^2)/(2*B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())&abs(x-xopost())>(vpost()^2-Vmin^2)/(2*B)+Vmin*((Theta-abs(thetapost()))/W-(vpost()-Vmin)/B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())+Vmin*ep|abs(y-yopost())>(vpost()^2-Vmin^2)/(2*B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())&abs(y-yopost())>(vpost()^2-Vmin^2)/(2*B)+Vmin*((Theta-abs(thetapost()))/W-(vpost()-Vmin)/B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())+Vmin*ep)&(0<=ep&vpost()>=Vmin&-Theta<=thetapost()&thetapost()<=Theta)&((((((((((((apost()=apost()&wpost()=wpost())&xopost()=xopost())&thetapost()=thetapost())&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=vpost())&dxpost()=dx)&wpost()=wpost())&yopost()=yopost())&dzpost()=dz)&xpost()=x)&dypost()=dy)".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "Fixedwing controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "(v=Vmin&(theta=Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|theta=-Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(0<=theta&theta < Theta)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(-Theta < theta&theta < 0)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=0&wpost()=-W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=-W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy)|v>Vmin&(theta=Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|theta=-Theta&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=0)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=0)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(0<=theta&theta < Theta)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy|(-Theta < theta&theta < 0)&((!theta=Theta|dxy=dXY&dz=dZ)&(!theta=-Theta|dxy=-dXY&dz=dZ))&(0<=ep&v>=Vmin&-Theta<=theta&theta<=Theta)&((((((((((((apost()=-B&wpost()=-W)&xopost()=xo)&thetapost()=theta)&dxypost()=dxy)&ypost()=y)&tpost()=0)&vpost()=v)&dxpost()=dx)&wpost()=-W)&yopost()=yo)&dzpost()=dz)&xpost()=x)&dypost()=dy))|(-B<=apost()&apost()<=A)&(-W<=wpost()&wpost()<=W)&vpost()>=Vmin&(-Theta<=thetapost()&thetapost()<=Theta)&(abs(x-xopost())>(vpost()^2-Vmin^2)/(2*B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())&abs(x-xopost())>(vpost()^2-Vmin^2)/(2*B)+Vmin*((Theta-abs(thetapost()))/W-(vpost()-Vmin)/B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())+Vmin*ep|abs(y-yopost())>(vpost()^2-Vmin^2)/(2*B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())&abs(y-yopost())>(vpost()^2-Vmin^2)/(2*B)+Vmin*((Theta-abs(thetapost()))/W-(vpost()-Vmin)/B)+2*r+(A/B+1)*(A/2*ep^2+ep*vpost())+Vmin*ep)&(0<=ep&vpost()>=Vmin&-Theta<=thetapost()&thetapost()<=Theta)&(((((dxypost()=dxy&ypost()=y)&tpost()=0)&dxpost()=dx)&dzpost()=dz)&xpost()=x)&dypost()=dy".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "Fixedwing controller monitor (forward chase)")
   }
 
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
@@ -360,7 +372,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //  }
 //
 
-  it should "find correct controller monitor by updateCalculus implicationally" in {
+  it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("SB"), Variable("v"),
@@ -378,10 +390,16 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->(d=d&m=m&(dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&(((((((((vdespost()=vdespost()&SBpost()=SB)&vpost()=v)&statepost()=state)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)&mpost()=mpost())&dpost()=dpost())&apost()=a|(((((((((vdespost()=vdes&SBpost()=SB)&vpost()=v)&statepost()=brake)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=apost())|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=apost())".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "ETCS controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&(((((((((SBpost()=SB)&vpost()=v)&statepost()=state)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)))&apost()=a|(((((((((vdespost()=vdes&SBpost()=SB)&vpost()=v)&statepost()=brake)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d))|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|state=brake)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&statepost()=state)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d))".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "ETCS controller monitor (forward chase)")
   }
 
-  "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in {
+  "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -398,7 +416,13 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->dxopost()^2+dyopost()^2<=V^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|(-B<=apost()&apost()<=A)&rpost()!=0&wpost()*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=wpost())&apost()=apost())&rpost()=rpost())&tpost()=0)".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "RSS controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "dxopost()^2+dyopost()^2<=V^2&((0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|(-B<=apost()&apost()<=A)&rpost()!=0&wpost()*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&((((xpost()=x&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&tpost()=0)".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
   }
 
   it should "find the correct controller monitor condition from the input model" in {
@@ -436,7 +460,7 @@ class ModelplexTacticTests extends TacticTestBase {
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
   }
 
-  "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor by updateCalculus implicationally" in {
+  "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model, Variable("a"), Variable("r"),
@@ -455,10 +479,16 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->odxpost()^2+odypost()^2<=V()^2&(wpost()*r=v&(0<=ep&v>=0)&((((((((((((((apost()=-b()&rpost()=r)&talphapost()=talpha)&odxpost()=odxpost())&odypost()=odypost())&oxpost()=ox)&oypost()=oy)&dxpost()=dx)&dypost()=dy)&wpost()=wpost())&isVisiblepost()=isVisible)&tpost()=0)&vpost()=v)&talphapost()=talpha)&xpost()=x)&ypost()=y|v=0&wpost()*r=v&(0<=ep&v>=0)&((((((((((((((apost()=0&rpost()=r)&talphapost()=talpha)&odxpost()=odxpost())&odypost()=odypost())&oxpost()=ox)&oypost()=oy)&dxpost()=-dx)&dypost()=-dy)&wpost()=wpost())&isVisiblepost()=isVisible)&tpost()=0)&vpost()=v)&talphapost()=talpha)&xpost()=x)&ypost()=y|(-b()<=apost()&apost()<=A)&rpost()!=0&(v+apost()*ep < 0&(isVisiblepost() < 0|(x-oxpost()>=0->x-oxpost()>v^2/(-2*apost())+V()*(v/-apost()))&(x-oxpost()<=0->oxpost()-x>v^2/(-2*apost())+V()*(v/-apost()))|(y-oypost()>=0->y-oypost()>v^2/(-2*apost())+V()*(v/-apost()))&(y-oypost()<=0->oypost()-y>v^2/(-2*apost())+V()*(v/-apost())))&((rpost()>=0->v^2/(-2*apost()) < alpha()*rpost())&(rpost() < 0->v^2/(-2*apost()) < -alpha()*rpost()))&wpost()*rpost()=v&(0<=ep&v>=0)&((((((((((((((apost()=apost()&rpost()=rpost())&talphapost()=0)&odxpost()=odxpost())&odypost()=odypost())&oxpost()=oxpost())&oypost()=oypost())&dxpost()=dx)&dypost()=dy)&wpost()=wpost())&isVisiblepost()=isVisiblepost())&tpost()=0)&vpost()=v)&talphapost()=0)&xpost()=x)&ypost()=y|v+apost()*ep>=0&(isVisiblepost() < 0|(x-oxpost()>=0->x-oxpost()>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V())))&(x-oxpost()<=0->oxpost()-x>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V())))|(y-oypost()>=0->y-oypost()>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V())))&(y-oypost()<=0->oypost()-y>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V()))))&((rpost()>=0->v^2/(2*b())+(apost()/b()+1)*(apost()/2*ep^2+ep*v) < alpha()*rpost())&(rpost() < 0->v^2/(2*b())+(apost()/b()+1)*(apost()/2*ep^2+ep*v) < -alpha()*rpost()))&wpost()*rpost()=v&(0<=ep&v>=0)&((((((((((((((apost()=apost()&rpost()=rpost())&talphapost()=0)&odxpost()=odxpost())&odypost()=odypost())&oxpost()=oxpost())&oypost()=oypost())&dxpost()=dx)&dypost()=dy)&wpost()=wpost())&isVisiblepost()=isVisiblepost())&tpost()=0)&vpost()=v)&talphapost()=0)&xpost()=x)&ypost()=y))".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "RSS passive orientation controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "odxpost()^2+odypost()^2<=V()^2&(wpost()*r=v&(0<=ep&v>=0)&(((((((((((apost()=-b()&rpost()=r)&talphapost()=talpha)&oxpost()=ox)&oypost()=oy)&dxpost()=dx)&dypost()=dy)&isVisiblepost()=isVisible)&tpost()=0)&vpost()=v)&talphapost()=talpha)&xpost()=x)&ypost()=y|v=0&wpost()*r=v&(0<=ep&v>=0)&(((((((((((apost()=0&rpost()=r)&talphapost()=talpha)&oxpost()=ox)&oypost()=oy)&dxpost()=-dx)&dypost()=-dy)&isVisiblepost()=isVisible)&tpost()=0)&vpost()=v)&talphapost()=talpha)&xpost()=x)&ypost()=y|(-b()<=apost()&apost()<=A)&rpost()!=0&(v+apost()*ep < 0&(isVisiblepost() < 0|(x-oxpost()>=0->x-oxpost()>v^2/(-2*apost())+V()*(v/(-apost())))&(x-oxpost()<=0->oxpost()-x>v^2/(-2*apost())+V()*(v/(-apost())))|(y-oypost()>=0->y-oypost()>v^2/(-2*apost())+V()*(v/(-apost())))&(y-oypost()<=0->oypost()-y>v^2/(-2*apost())+V()*(v/(-apost()))))&((rpost()>=0->v^2/(-2*apost()) < alpha()*rpost())&(rpost() < 0->v^2/(-2*apost()) < -alpha()*rpost()))&wpost()*rpost()=v&(0<=ep&v>=0)&((((((talphapost()=0&dxpost()=dx)&dypost()=dy)&tpost()=0)&vpost()=v)&talphapost()=0)&xpost()=x)&ypost()=y|v+apost()*ep>=0&(isVisiblepost() < 0|(x-oxpost()>=0->x-oxpost()>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V())))&(x-oxpost()<=0->oxpost()-x>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V())))|(y-oypost()>=0->y-oypost()>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V())))&(y-oypost()<=0->oypost()-y>v^2/(2*b())+V()*(v/b())+(apost()/b()+1)*(apost()/2*ep^2+ep*(v+V()))))&((rpost()>=0->v^2/(2*b())+(apost()/b()+1)*(apost()/2*ep^2+ep*v) < alpha()*rpost())&(rpost() < 0->v^2/(2*b())+(apost()/b()+1)*(apost()/2*ep^2+ep*v) < -alpha()*rpost()))&wpost()*rpost()=v&(0<=ep&v>=0)&((((((talphapost()=0&dxpost()=dx)&dypost()=dy)&tpost()=0)&vpost()=v)&talphapost()=0)&xpost()=x)&ypost()=y))".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS passive orientation controller monitor (forward chase)")
   }
 
-  "RSS passive safety curve straight" should "find correct controller monitor" in {
+  "RSS passive safety curve straight" should "find correct controller monitor" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -476,10 +506,16 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->dxopost()^2+dyopost()^2<=V^2&((w=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|w!=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0)|v=0&(0=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|0!=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0)|(-B<=apost()&apost()<=A)&((abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0=0&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=apost())&rpost()=r)&tpost()=0|0!=0&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=apost())&rpost()=r)&tpost()=0)|rpost()!=0&0*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0=0&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=apost())&rpost()=rpost())&tpost()=0|0!=0&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=apost())&rpost()=rpost())&tpost()=0)))".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "RSS controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "dxopost()^2+dyopost()^2<=V^2&((w=0&(0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|w!=0&(0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0)|v=0&((0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|0!=0&(0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0)|(-B<=apost()&apost()<=A)&((abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&((0<=ep&v>=0)&((((((xpost()=x&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&rpost()=r)&tpost()=0|0!=0&(0<=ep&v>=0)&((((((xpost()=x&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&rpost()=r)&tpost()=0)|rpost()!=0&0*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&((0<=ep&v>=0)&(((((xpost()=x&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&tpost()=0|0!=0&(0<=ep&v>=0)&(((((xpost()=x&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&tpost()=0)))".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
   }
 
-  "RSS passive safety curve straight curvature" should "find correct controller monitor" in {
+  "RSS passive safety curve straight curvature" should "find correct controller monitor" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -497,7 +533,13 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->dxopost()^2+dyopost()^2<=V^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&kpost()=k)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&kpost()=k)&tpost()=0|(-B<=apost()&apost()<=A)&v*kpost()=v*kpost()&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=v*kpost())&apost()=apost())&kpost()=kpost())&tpost()=0)".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "RSS controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "dxopost()^2+dyopost()^2<=V^2&((0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&kpost()=k)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((xopost()=xo&yopost()=yo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&kpost()=k)&tpost()=0|(-B<=apost()&apost()<=A)&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&(((((xpost()=x&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=v*kpost())&tpost()=0)".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
   }
 //
 //  ignore should "extract the correct controller monitor" in {
@@ -540,7 +582,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(result.subgoals.head.succ.head, result, "Hybrid quadcopter controller monitor (backward tactic)")
   }
 
-  it should "extract the correct controller monitor by updateCalculus implicationally" in {
+  it should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model, Variable("href"), Variable("v"), Variable("h"))
@@ -551,12 +593,18 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.head.succ should contain only "true->\\exists href ((h>=href&href>0&((kp < 0&v=0&href>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*href*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*href*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&href=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*href*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*href*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*href*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*href*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*href*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>href)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*href*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*href*kp)|kp>0&v=0&(h!=href&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>href|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*href*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*href*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*href*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*href*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*href*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*href*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2=0))&(hrefpost()=href&vpost()=v)&hpost()=h)".asFormula
 
     // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*@TheType())
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "true->(h>=h&h>0&((kp < 0&v=0&h>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*h*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*h*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&h=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*h*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*h*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*h*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*h*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*h*kp^2+h^2*kp^2+h*kd()*kp*v-h*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>h)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*h*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*h*kp)|kp>0&v=0&(h!=h&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>h|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*h*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*h*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*h*kp|2*h*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*h*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*h*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*h*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*h*kp|2*h*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*h*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*h*kp^2+h^2*kp^2+h*kd()*kp*v-h*kd()*kp*v+kp*v^2=0))&(hrefpost()=h&vpost()=v)&hpost()=h".asFormula
 
-    report(opt1Result.subgoals.head.succ.head, opt1Result, "Hybrid quadcopter controller monitor (forward chase)")
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "(h>0&((kp < 0&v=0|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*h*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*h*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*h*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*h*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*h*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*h*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*h*kp^2+h^2*kp^2+h*kd()*kp*v-h*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>h)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*h*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*h*kp)|kp>0&v=0&(h!=h&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>h|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*h*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*h*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*h*kp|2*h*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*h*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*h*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*h*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*h*kp|2*h*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*h*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*h*kp^2+h^2*kp^2+h*kd()*kp*v-h*kd()*kp*v+kp*v^2=0))&(hrefpost()=h&vpost()=v)&hpost()=h".asFormula
+
+    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "Hybrid quadcopter controller monitor (forward chase)")
   }
 
   "VSL modelplex in place" should "find correct controller monitor condition" in {
@@ -595,7 +643,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "VSL controller monitor (backward tactic)")
   }
 
-  it should "find correct controller monitor by updateCalculus implicationally" in {
+  it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -612,6 +660,12 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only expected
+
+    // simplify
+    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
+    simplifiedResult.subgoals should have size 1
+    simplifiedResult.subgoals.head.ante shouldBe empty
+    simplifiedResult.subgoals.head.succ should contain only "true".asFormula
 
     report(expected, foResult, "VSL controller monitor (forward chase without Opt. 1)")
     report(expected, opt1Result, "VSL controller monitor (forward chase with Opt. 1)")

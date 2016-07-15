@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.StopTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -18,7 +19,8 @@ import scala.language.postfixOps
 
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
- * @author Stefan Mitsch
+  *
+  * @author Stefan Mitsch
  * @author Andre Platzer
  * @see Stefan Mitsch and André Platzer. [[http://dx.doi.org/10.1007/s10703-016-0241-z ModelPlex: Verified runtime validation of verified cyber-physical system models]].
  *      Formal Methods in System Design, 42 pp. 2016. Special issue for selected papers from RV'14.
@@ -44,8 +46,9 @@ object ModelPlex extends ModelPlexTrait {
 
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
-   @ param kind The kind of monitor, either 'ctrl or 'model.
-   * @param checkProvable true to check the Provable proof certificates (recommended).
+    * @ param kind The kind of monitor, either 'ctrl or 'model.
+    *
+    * @param checkProvable true to check the Provable proof certificates (recommended).
    */
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula) = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
@@ -89,7 +92,8 @@ object ModelPlex extends ModelPlexTrait {
 
   /**
    * Construct ModelPlex monitor specification conjecture corresponding to given formula.
-   * @param fml A formula of the form p -> [a]q, which was proven correct.
+    *
+    * @param fml A formula of the form p -> [a]q, which was proven correct.
    * @param vars A list of variables V, superset of BV(a).
    * @see Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
    */
@@ -115,7 +119,8 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Returns a tactic to derive a controller monitor in axiomatic style using forward chase. The tactic is designed to
    * operate on input produced by createMonitorSpecificationConjecture.
-   * @see [[createMonitorSpecificationConjecture]]
+    *
+    * @see [[createMonitorSpecificationConjecture]]
    * @example{{{
    *        |- xpost()=1
    *        ------------------------------controllerMonitorByChase(1)
@@ -146,7 +151,8 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * ModelPlex sequent-style synthesis technique, i.e., with branching so that the tactic can operate on top-level
    * operators. Operates on monitor specification conjectures.
-   * @see[[createMonitorSpecificationConjecture]]
+    *
+    * @see[[createMonitorSpecificationConjecture]]
    * @return The tactic.
    */
   def modelplexSequentStyle: DependentPositionTactic = ???
@@ -180,7 +186,8 @@ object ModelPlex extends ModelPlexTrait {
    * ModelPlex backward proof tactic for axiomatic-style monitor synthesis, i.e., avoids proof branching as occuring in
    * the sequent-style synthesis technique. The tactic 'unprog' determines what kind of monitor (controller monitor,
    * model monitor) to synthesize. Operates on monitor specification conjectures.
-   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+    *
+    * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @param unprog A tactic for a specific monitor type (either controller monitor or model monitor).
    * @see [[createMonitorSpecificationConjecture]]
    * @see [[controllerMonitorT]]
@@ -201,7 +208,8 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Returns a backward tactic for deriving controller monitors. Uses Opt. 1 immediately after nondeterministic
    * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
-   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+    *
+    * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
   def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic =
@@ -225,7 +233,8 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Returns a backward tactic for deriving model monitors. Uses Opt. 1 immediately after nondeterministic
    * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
-   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+    *
+    * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
   def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = ???
@@ -273,7 +282,8 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Returns a tactic to solve two-dimensional differential equations. Introduces constant function symbols for
    * variables that do not change in the ODE, before it hands over to the actual diff. solution tactic.
-   * @return The tactic.
+    *
+    * @return The tactic.
    */
   def diamondDiffSolve2DT: DependentPositionTactic = "<','> differential solution" by ((pos: Position, sequent: Sequent) => {
     ??? //(diffIntroduceConstantT & ODETactics.diamondDiffSolve2DT)(p)
@@ -281,7 +291,8 @@ object ModelPlex extends ModelPlexTrait {
 
   /**
    * Returns a modified test tactic for axiom <?H>p <-> H & (H->p)
-   * @example{{{
+    *
+    * @example{{{
    *          |- x>0 & (x>0 -> [x'=x]x>0)
    *          ---------------------------diamondTestRetainCondition
    *          |- <?x>0>[x'=x]x>0
@@ -326,7 +337,8 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s,
    * taking the outermost such sub-position of p. Formulas only.
-   * @example{{{
+    *
+    * @example{{{
    *           |- a=1 & (<x:=2;>x+y>0 & <y:=3;>x+y>0)
    *           ---------------------------------------locateT(diamondSeqT :: diamondChoiceT :: Nil)(1)
    *           |- a=1 & <x:=2; ++ y:=3;>x+y>0
@@ -365,6 +377,7 @@ object ModelPlex extends ModelPlexTrait {
 
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
     * somewhere in the quantified formula.
+    *
     * @example{{{
     *           |- xpost()>0 & xpost()=xpost()
     *           ------------------------------optimizationOneWithSearch
@@ -374,15 +387,11 @@ object ModelPlex extends ModelPlexTrait {
     */
   def optimizationOneWithSearch: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel, "Start Opt. 1 at top level")
-    var positions: List[Position] = Nil
-    //@note prepend, so that instantiated inside out, which keeps positions stable
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Exists(_, _) if pos.isSucc => positions = (pos+p) :: positions; Left(None)
-        case Forall(_, _) if pos.isAnte => positions = (pos+p) :: positions; Left(None)
-        case _ => Left(None)
-      }
-    }, sequent(pos.top))
+    val positions: List[Position] = collectSubpositions(pos, sequent, {
+        case Exists(_, _) => pos.isSucc
+        case Forall(_, _) => pos.isAnte
+        case _ => false
+      })
     positions.map(p => optimizationOneWithSearchAt(p)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
   })
 
@@ -408,7 +417,8 @@ object ModelPlex extends ModelPlexTrait {
    * Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates an existential quantifier with a post-variable. Since
    * the tactic may be used in intermediate steps of ModelPlex, it uses fresh variants of the post-variable for
    * instantiation, if asked to automatically instantiate.
-   * @example{{{
+    *
+    * @example{{{
    *           |- z>0 & xpost()=z
    *           -----------------------------------optimizationOne(Some(Variable("x"), Variable("z")))
    *           |- \exists x (x>0 & xpost()=x)
@@ -445,4 +455,62 @@ object ModelPlex extends ModelPlexTrait {
         }
     }
   })
+
+  /** Simplifies reflexive comparisons and implications/conjunctions/disjunctions with true. */
+  def simplify(): DependentTactic = "ModelPlex Simplify" by ((sequent: Sequent) => {
+    simplifyReflexivity & simplifyTrue*@TheType()
+  })
+
+  /** Simplifies reflexive comparisons to true. */
+  private def simplifyReflexivity: DependentTactic = "ModelPlex Simplify Reflexivity" by ((sequent: Sequent) => {
+    val equalReflexTrue = trueFact("s_()=s_()".asFormula, DerivedAxioms.equalReflex)
+    val geqReflexTrue = trueFact("s_()>=s_()".asFormula, DerivedAxioms.greaterEqualReflex)
+
+    def m(e: Expression) = e match {
+      case Equal(lhs, rhs) => lhs == rhs
+      case GreaterEqual(lhs, rhs) => lhs == rhs
+      case _ => false
+    }
+
+    val positions =
+      sequent.ante.indices.flatMap(i => collectSubpositions(AntePos(i), sequent, m)) ++
+      sequent.succ.indices.flatMap(i => collectSubpositions(SuccPos(i), sequent, m))
+
+    positions.map(p => useAt(equalReflexTrue, PosInExpr(0::Nil))(p) | useAt(geqReflexTrue, PosInExpr(0::Nil))(p)).
+      reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
+  })
+
+  /** Simplifies implications, conjunctions, and disjunctions having one operand true. */
+  private def simplifyTrue: DependentTactic = "ModelPlex Simplify True" by ((sequent: Sequent) => {
+    def m(e: Expression) = e match {
+      case Imply(True, _) => true
+      case Imply(_, True) => true
+      case And(True, _) => true
+      case And(_, True) => true
+      case Or(True, _) => true
+      case Or(_, True) => true
+      case _ => false
+    }
+    val positions =
+      sequent.ante.indices.flatMap(i => collectSubpositions(AntePos(i), sequent, m)) ++
+      sequent.succ.indices.flatMap(i => collectSubpositions(SuccPos(i), sequent, m))
+
+    positions.map(chase(_)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
+  })
+
+  private def trueFact(fact: Formula, factProof: Lemma): Provable =
+    TactixLibrary.proveBy(Equiv(fact, True), equivR(1) <(closeT, cohide(1) & byUS(factProof)))
+
+  /** Collects the subpositions at/under pos that satisfy condition cond. Ordered: reverse depth (deepest first). */
+  private def collectSubpositions(pos: Position, sequent: Sequent, cond: Expression => Boolean): List[Position] = {
+    require(pos.isTopLevel, "Collecting at top level")
+    var positions: List[Position] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+        if (cond(e)) { positions = (pos + p) :: positions; Left(None) } else Left(None)
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+        if (cond(t)) { positions = (pos + p) :: positions; Left(None) } else Left(None)
+    }, sequent(pos.top))
+    positions
+  }
 }
