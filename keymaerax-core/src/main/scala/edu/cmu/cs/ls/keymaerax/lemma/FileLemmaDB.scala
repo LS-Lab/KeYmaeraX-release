@@ -59,6 +59,10 @@ class FileLemmaDB extends LemmaDB {
     id
   }
 
+  override def remove(lemmaName: String): Boolean =
+    try {new File(lemmadbpath, lemmaName + ".alp").delete()}
+    finally {false}
+
   private def isUniqueLemmaName(name: String): Boolean =
     !new File(lemmadbpath, name + ".alp").exists()
 

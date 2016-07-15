@@ -116,6 +116,10 @@ object SQLite {
       id.toString
     }
 
+    override def remove(name: String): Boolean = {
+      ???
+    }
+
     override def deleteDatabase(): Unit = {
       db.deleteAllLemmas()
       cachedLemmas = Map.empty

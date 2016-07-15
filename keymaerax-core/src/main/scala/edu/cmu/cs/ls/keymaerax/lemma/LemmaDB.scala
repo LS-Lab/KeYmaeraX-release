@@ -62,6 +62,8 @@ trait LemmaDB {
    */
   def add(lemma: Lemma): LemmaID
 
+  /** Should return true if removed and false if not. Should not throw errors on failure to remove. */
+  def remove(name: String): Boolean
 
   def deleteDatabase(): Unit
 }
