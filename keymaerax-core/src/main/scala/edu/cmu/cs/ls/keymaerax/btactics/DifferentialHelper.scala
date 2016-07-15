@@ -30,7 +30,11 @@ object DifferentialHelper {
   }
   def timeVar(system: ODESystem): Option[Variable] = timeVar(system.ode)
 
-  def isOne(t: Term) = t == Number(1) //@todo more robust implementation. E.g. QE.
+  def isOne(t: Term) = t match {
+    case n:Number => n==Number(1)
+    case Plus(Times(zero, _), one) => zero==Number(0) && one==Number(1)
+    case _ => false
+  }//@todo more robust implementation. E.g. QE.
 
   def atomicOdes(system: ODESystem): List[AtomicODE] = atomicOdes(system.ode)
   def atomicOdes(dp: DifferentialProgram): List[AtomicODE] = dp match {
