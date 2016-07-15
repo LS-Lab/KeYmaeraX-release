@@ -72,10 +72,10 @@ object ArithmeticSpeculativeSimplification {
     }
 
     val anteAbs = sequent.ante.zipWithIndex.
-      filter{ case (f,i) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real))}.
+      filter{ case (f,i) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, true))}.
       map{ case (f, i) => (f, AntePosition.base0(i)) }
     val succAbs = sequent.succ.zipWithIndex.
-      filter{ case (f,i) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real))}.
+      filter{ case (f,i) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, true))}.
       map{ case (f,i) => (f, SuccPosition.base0(i)) }
 
     val absTactic = (anteAbs++succAbs).
