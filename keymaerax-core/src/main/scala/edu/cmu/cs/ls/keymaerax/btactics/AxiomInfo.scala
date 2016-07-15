@@ -345,6 +345,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("*0", "*0", "timesZero", {case () => useAt(DerivedAxioms.timesZero)}),
     new DerivedAxiomInfo("+0", "+0", "plusZero", {case () => useAt(DerivedAxioms.plusZero)}),
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => useAt(DerivedAxioms.equalReflex)}),
+    new DerivedAxiomInfo(">= reflexive", ">=R", "greaterEqualReflexive", {case () => useAt(DerivedAxioms.greaterEqualReflex)}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => useAt(DerivedAxioms.equalCommute)}),
     new DerivedAxiomInfo("<=", "<=", "lessEqual", {case () => useAt(DerivedAxioms.lessEqual)}),
     new DerivedAxiomInfo("! <"
