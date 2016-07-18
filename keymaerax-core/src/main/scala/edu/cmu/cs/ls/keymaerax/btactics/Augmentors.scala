@@ -161,6 +161,8 @@ object Augmentors {
       }, fml)
       result
     }
+
+    def ~>(repl: Formula) = SubstitutionPair(fml,repl)
   }
 
   /**
@@ -176,6 +178,8 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
+
+    def ~>(repl: Program) = SubstitutionPair(prog,repl)
   }
 
   /**
