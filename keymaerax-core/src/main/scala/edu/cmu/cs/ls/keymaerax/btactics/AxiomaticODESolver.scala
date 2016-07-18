@@ -280,25 +280,6 @@ object AxiomaticODESolver {
     case _ => false
   }
 
-//  val mvPartialSolnStep = "mvPartialSolnStep" by ((pos: Position, s:Sequent) => {
-//    val continue: Boolean = s(pos) match {
-//      case Box(ODESystem(ode, constraint), postcond) => {
-//        val lastPartialSoln = extractInitialConditions(Some(ode))(constraint).lastOption
-//        conjunctionToList(constraint).last != lastPartialSoln
-//      }
-//    }
-//
-//    if(continue) andReordering(pos) else Idioms.nil
-//  })
-//
-//  val andReordering =
-//    "andReordering" by ((pos: Position) => HilbertCalculus.useAt("Domain Constraint Conjunction Reordering")(pos))
-//
-//  private def conjunctionToList(f: Formula): List[Formula] = f match {
-//    case And(l,r) => conjunctionToList(l) ++ conjunctionToList(r)
-//    case _ => f :: Nil
-//  }
-
   //endregion
 
 
