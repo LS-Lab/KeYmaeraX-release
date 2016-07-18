@@ -7,8 +7,14 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import TacticFactory._
+import Augmentors._
+import com.sun.org.apache.xpath.internal.operations.Equals
+
+import scala.collection.parallel.immutable
 
 /**
   * An Axiomatic ODE solver (second attempt)
@@ -22,23 +28,23 @@ object AxiomaticODESolver {
 
   def tmpmsg(s:String) = println(s) //@todo before deployment, remove this method.
 
-  //implicits for "by" notation and functional application of positions to sequents/formulas.
-  import TacticFactory._
-  import Augmentors._
+  //region The main tactic
 
   def apply(implicit qeTool: QETool) = axiomaticSolve(qeTool)
+
   def axiomaticSolve(implicit qeTool: QETool) = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
 
     addTimeVarIfNecessary(odePos) &
     assertInitializedTimeVar(odePos) &
-    DebuggingTactics.debug("here!", true) &
     cutInSoln(qeTool)(pos).*@(TheType()) &
-    DebuggingTactics.debug("here 2!", true) &
-    cutInTimeLB(qeTool)(pos) &
+//    cutInTimeLB(qeTool)(pos) & @todo why is this done at all, let alone before performing the inverse idff cuts?
     HilbertCalculus.DW(pos) &
-    simplifyPostCondition(qeTool)(pos)
+    simplifyPostCondition(qeTool)(pos) &
+    inverseDiffCut(qeTool)(pos).*@(TheType())
   })
+
+  //endregion
 
   //region Setup time variable
 
@@ -176,7 +182,7 @@ object AxiomaticODESolver {
 
   //endregion
 
-  //region diffCut lower bound on time @todo won't work on newly cut in times until I add in Stefan's hack for getting exists time to work out...
+  //region diffCut lower bound on time
 
   /** Adds t>=0 to the differential equation's domain constraint.
     * @todo Why is this necessary? It's not included in the paper proof. */
@@ -235,7 +241,8 @@ object AxiomaticODESolver {
     )
   }
 
-  private def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
+  @deprecated("Move this to a centralized location for ProveAs stuff", "4.2b2")
+  def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
     override def computeExpr(p:Provable) = {
       LemmaDBFactory.lemmaDB.remove(lemmaName)
       Idioms.nil
@@ -243,6 +250,58 @@ object AxiomaticODESolver {
   }
 
   //endregion
+
+
+  //region Inverse diff cuts
+
+  /**
+    * Inverse diff cut: From [{c&(H&r)}]p) show [{c&H}]p by first showing [{c&H}]r.
+    * I'm not totally convinced that all of the mvPartialSolnStep stuff is necessary.
+    */
+  def inverseDiffCut(implicit qeTool: QETool) = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
+    val f: Modal = s(pos).asInstanceOf[Modal]
+    val ODESystem(ode, And(constraint, nextF)) = f.program
+    val p = f.child
+
+    if(isPartOfSoln(ode, nextF)) f match {
+      case f:Box =>
+        HilbertCalculus.useExpansionAt("DC differential cut")(pos) <(
+          Idioms.nil, /* Branch with no ev dom contraint */
+          DifferentialTactics.diffInd(qeTool)(1) & DebuggingTactics.assertProved /* Show precond of diff cut */
+        )
+      case f:Diamond => throw noDiamondsForNowExn
+    }
+    else Idioms.nil
+  })
+
+  /** Returns true iff f is part of the cut-in solution for the ODE. */
+  private def isPartOfSoln(ode: DifferentialProgram, f: Formula): Boolean = f match {
+    case Equal(t1, t2) => atomicOdes(ode).exists(a => a.xp.x == t1 || a.xp.x == t2)
+    case _ => false
+  }
+
+//  val mvPartialSolnStep = "mvPartialSolnStep" by ((pos: Position, s:Sequent) => {
+//    val continue: Boolean = s(pos) match {
+//      case Box(ODESystem(ode, constraint), postcond) => {
+//        val lastPartialSoln = extractInitialConditions(Some(ode))(constraint).lastOption
+//        conjunctionToList(constraint).last != lastPartialSoln
+//      }
+//    }
+//
+//    if(continue) andReordering(pos) else Idioms.nil
+//  })
+//
+//  val andReordering =
+//    "andReordering" by ((pos: Position) => HilbertCalculus.useAt("Domain Constraint Conjunction Reordering")(pos))
+//
+//  private def conjunctionToList(f: Formula): List[Formula] = f match {
+//    case And(l,r) => conjunctionToList(l) ++ conjunctionToList(r)
+//    case _ => f :: Nil
+//  }
+
+  //endregion
+
+
 
   //region Misc.
 
@@ -261,11 +320,3 @@ object AxiomaticODESolver {
 
   //endregion
 }
-
-/*
-Todo list:
- 1. Implement differential ghosts and inverse differential ghosts.
- 2. Add t' = 1 if it's not already present
- 3. Re-order the ODE so that it's in the correct dependency ordering.
- ...
- */

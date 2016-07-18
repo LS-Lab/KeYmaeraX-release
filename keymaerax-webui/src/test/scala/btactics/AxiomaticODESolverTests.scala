@@ -5,11 +5,11 @@
 
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{ProveAs, SuccPosition, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, ProveAs, SuccPosition, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
-import edu.cmu.cs.ls.keymaerax.core.{ODESystem, SeqPos}
+import edu.cmu.cs.ls.keymaerax.core.{ODESystem, Provable, SeqPos, SuccPos}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 /**
@@ -17,7 +17,8 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
   */
 class AxiomaticODESolverTests extends TacticTestBase {
   import DifferentialHelper._
-
+  import Augmentors._
+  import TacticFactory._
 
   //region stand-along integrator
 
@@ -96,7 +97,23 @@ class AxiomaticODESolverTests extends TacticTestBase {
   it should "work in simplifyPostCondition" in {withMathematica(implicit qeTool => {
     val f = "[{x'=1}](x=22 -> x>0)".asFormula
     val t = simplifyPostCondition(qeTool)(1)
-    proveBy(f,t).prettyString shouldBe "[{x'=1&true}]22>0".asFormula
+    proveBy(f,t) shouldBe "[{x'=1&true}]22>0".asFormula
+  })}
+
+  //endregion
+
+
+  //region inverse diff cut missing around.
+
+  "inverse diff cut" should "work" in { withMathematica(implicit qeTool => {
+//    val fwd = "blah" by ((p: Provable, s: SuccPosition) => {
+//      HilbertCalculus.useFor("DC differential cut")(s)(p)
+//    })
+
+    val f = "v=0&a=0&x=0&t=0 -> [{x'=v, v'=a, t'=1 &true&v=0*t+0}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & inverseDiffCut(qeTool)(1)
+
+    println(proveBy(f,t).prettyString)
   })}
 
   //endregion
