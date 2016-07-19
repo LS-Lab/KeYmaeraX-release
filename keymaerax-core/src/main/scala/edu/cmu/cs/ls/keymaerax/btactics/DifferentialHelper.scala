@@ -163,4 +163,6 @@ object DifferentialHelper {
     val primedVars = atomicOdes(system).map(ode => ode.xp.x)
     atomicOdes(system).filter(x => freeVars(x).toSet.filterNot(x => x == timeVar(system)).intersect(primedVars.toSet).isEmpty)
   }
+
+  def isLinear(ode: DifferentialProgram) = true //@todo
 }
