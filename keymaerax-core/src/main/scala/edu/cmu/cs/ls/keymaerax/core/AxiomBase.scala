@@ -309,11 +309,11 @@ Axiom "DG differential Lipschitz ghost system".
 End.
 
 Axiom "DG++ System".
-  ([{x_'=f(x_),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_),c&H(??)}]p(??))
+  ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
 End.
 
 Axiom "DG++".
-  ([{x_'=f(x_)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(??)}]p(??))
+  ([{x_'=f(??)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??)&H(??)}]p(??))
 End.
 
 /* Formatter axioms for diff eqs. */
