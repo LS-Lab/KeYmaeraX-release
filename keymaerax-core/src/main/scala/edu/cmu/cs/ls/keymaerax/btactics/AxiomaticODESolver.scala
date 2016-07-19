@@ -251,27 +251,25 @@ object AxiomaticODESolver {
 
   //endregion
 
-
   //region Inverse diff cuts
 
-  /**
-    * Inverse diff cut: From [{c&(H&r)}]p) show [{c&H}]p by first showing [{c&H}]r.
-    * I'm not totally convinced that all of the mvPartialSolnStep stuff is necessary.
-    */
   def inverseDiffCut(implicit qeTool: QETool) = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
     val f: Modal = s(pos).asInstanceOf[Modal]
-    val ODESystem(ode, And(constraint, nextF)) = f.program
+    val ODESystem(ode, constraint) = f.program
     val p = f.child
 
-    if(isPartOfSoln(ode, nextF)) f match {
-      case f:Box =>
-        HilbertCalculus.useExpansionAt("DC differential cut")(pos) <(
-          Idioms.nil, /* Branch with no ev dom contraint */
-          DifferentialTactics.diffInd(qeTool)(1) & DebuggingTactics.assertProved /* Show precond of diff cut */
-        )
-      case f:Diamond => throw noDiamondsForNowExn
+    constraint match {
+      case And(leftConstriant, nextConstraint) if(isPartOfSoln(ode, nextConstraint)) => f match {
+        case Box(_, _) => {
+          HilbertCalculus.useExpansionAt("DC differential cut")(pos) <(
+            Idioms.nil, /* Branch with no ev dom contraint */
+            DifferentialTactics.diffInd(qeTool)(1) & DebuggingTactics.assertProved /* Show precond of diff cut */
+            )
+        }
+        case Diamond(_,_) => throw noDiamondsForNowExn
+      }
+      case _ => Idioms.nil
     }
-    else Idioms.nil
   })
 
   /** Returns true iff f is part of the cut-in solution for the ODE. */
@@ -282,7 +280,63 @@ object AxiomaticODESolver {
 
   //endregion
 
+  //region Inverse diff ghosts
 
+  def inverseDiffGhost(implicit qeTool: QETool) = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
+    val f: Modal = s(pos).asInstanceOf[Modal]
+    val ODESystem(ode, constraint) = f.program
+    val p = f.child
+
+    ode match {
+      case ode:DifferentialProduct => {
+        val y_ = firstODE(ode)
+        val x_ = secondODE(ode)
+
+        /* Note: Constructing our own substitution because the default substitution seems to get at least g(??) wrong. */
+//        def subst(r: RenUSubst) = {
+//          RenUSubst(USubst(
+//              "g(??)".asTerm ~> y_.e ::
+//              FuncOf(Function("f", None, Real, Real), DotTerm) ~> x_.e ::
+//              "H(??)".asFormula ~> r("H(??)".asFormula) ::
+//              DifferentialProgramConst("c") ~> r(DifferentialProgramConst("c")) ::
+//              "p(??)".asFormula ~> r("p(??)".asFormula) ::
+//              Nil)) ++
+//          RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++
+//          RenUSubst(URename("x_".asTerm.asInstanceOf[Variable], x_.xp.x))
+//        }
+        def subst(r: RenUSubst) = r
+
+        TactixLibrary.cut(Forall(y_.xp.x::Nil, f)) <(
+          HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved
+          ,
+          TactixLibrary.hide(pos) &
+          DebuggingTactics.debug("here 9", true) &
+          HilbertCalculus.useAt("DG++ System", ((s:RenUSubst) => subst(s)))(pos) <(
+            DebuggingTactics.debug("here 1", true),
+            DebuggingTactics.debug("here 2", true)
+          )
+        )
+      }
+      case _ => Idioms.nil
+    }
+  })
+
+  private def firstODE(ode: DifferentialProduct):AtomicODE = ode.left match {
+    case pi:DifferentialProduct => firstODE(pi)
+    case l:AtomicODE => l
+    case _ => ???
+  }
+
+  private def secondODE(ode: DifferentialProduct):AtomicODE = ode.left match {
+    case pi:DifferentialProduct => secondODE(pi)
+    case l:AtomicODE => ode.right match {
+      case pi:DifferentialProduct => firstODE(pi)
+      case r:AtomicODE => r
+      case _ => ???
+    }
+  }
+
+  //endregion
 
   //region Misc.
 

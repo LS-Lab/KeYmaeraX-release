@@ -103,7 +103,7 @@ class AxiomaticODESolverTests extends TacticTestBase {
   //endregion
 
 
-  //region inverse diff cut missing around.
+  //region inverse diff cut/ghost missing around.
 
   "inverse diff cut" should "work" in { withMathematica(implicit qeTool => {
 //    val fwd = "blah" by ((p: Provable, s: SuccPosition) => {
@@ -112,6 +112,18 @@ class AxiomaticODESolverTests extends TacticTestBase {
 
     val f = "v=0&a=0&x=0&t=0 -> [{x'=v, v'=a, t'=1 &true&v=0*t+0}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & inverseDiffCut(qeTool)(1)
+
+    println(proveBy(f,t).prettyString)
+  })}
+
+
+  "inverse diff ghost" should "work" in { withMathematica(implicit qeTool => {
+    //    val fwd = "blah" by ((p: Provable, s: SuccPosition) => {
+    //      HilbertCalculus.useFor("DC differential cut")(s)(p)
+    //    })
+
+    val f = "v=0&a=0&x=0&t=0 -> [{x'=v, v'=a, t'=1 &true}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & inverseDiffGhost(qeTool)(1)
 
     println(proveBy(f,t).prettyString)
   })}
