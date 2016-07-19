@@ -35,13 +35,35 @@ object AxiomaticODESolver {
   def axiomaticSolve(implicit qeTool: QETool) = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
 
+    odeSolverPreconds(pos) &
     addTimeVarIfNecessary(odePos) &
-    assertInitializedTimeVar(odePos) &
+    assertInitializedTimeVar(odePos) & //@note we leave t'=0*t+1 for now because it's easier to name the position after inverseDiffGhost steps.
     cutInSoln(qeTool)(pos).*@(TheType()) &
-//    cutInTimeLB(qeTool)(pos) & @todo why is this done at all, let alone before performing the inverse idff cuts?
     HilbertCalculus.DW(pos) &
     simplifyPostCondition(qeTool)(pos) &
-    inverseDiffCut(qeTool)(pos).*@(TheType())
+    inverseDiffCut(qeTool)(pos).*@(TheType()) &
+    inverseDiffGhost(qeTool)(pos).*@(TheType()) &
+    rewriteTime(pos) &
+    HilbertCalculus.useAt("DS& differential equation solution")(pos)
+    //    cutInTimeLB(qeTool)(pos) & @todo why is this done at all, let alone before performing the inverse idff cuts?
+  })
+
+  //endregion
+
+  //region Preconditions
+
+  val odeSolverPreconds =  "odeSolverPreconds" by ((pos: Position, s: Sequent) => {
+    val modal = s(pos).asInstanceOf[Modal]
+    val ODESystem(ode, constraint) = modal.program
+
+    if(modal.isInstanceOf[Diamond])
+      throw noDiamondsForNowExn
+    else if(timeVar(ode).nonEmpty && atomicOdes(ode).last.xp.x != timeVar(ode).get)
+      DebuggingTactics.error("Expected time var to occur at the end of the ODE.")
+    else if(!isLinear(ode)) //@todo implement this check.
+      DebuggingTactics.error("Expected ODE to be linear.")
+    else
+      Idioms.nil
   })
 
   //endregion
@@ -293,29 +315,29 @@ object AxiomaticODESolver {
         val x_ = secondODE(ode)
 
         /* Note: Constructing our own substitution because the default substitution seems to get at least g(??) wrong. */
-//        def subst(r: RenUSubst) = {
-//          RenUSubst(USubst(
-//              "g(??)".asTerm ~> y_.e ::
-//              FuncOf(Function("f", None, Real, Real), DotTerm) ~> x_.e ::
-//              "H(??)".asFormula ~> r("H(??)".asFormula) ::
-//              DifferentialProgramConst("c") ~> r(DifferentialProgramConst("c")) ::
-//              "p(??)".asFormula ~> r("p(??)".asFormula) ::
-//              Nil)) ++
-//          RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++
-//          RenUSubst(URename("x_".asTerm.asInstanceOf[Variable], x_.xp.x))
-//        }
-        def subst(r: RenUSubst) = r
+        def subst(r: RenUSubst) = {
+          RenUSubst(USubst(
+              "g(??)".asTerm ~> y_.e ::
+              "f(??)".asTerm ~> x_.e ::
+              "H(??)".asFormula ~> r("H(??)".asFormula) ::
+              DifferentialProgramConst("c") ~> r(DifferentialProgramConst("c")) ::
+              "p(??)".asFormula ~> r("p(??)".asFormula) ::
+              Nil)) ++
+          RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++
+          RenUSubst(URename("x_".asTerm.asInstanceOf[Variable], x_.xp.x))
+        }
 
-        TactixLibrary.cut(Forall(y_.xp.x::Nil, f)) <(
-          HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved
-          ,
-          TactixLibrary.hide(pos) &
-          DebuggingTactics.debug("here 9", true) &
-          HilbertCalculus.useAt("DG++ System", ((s:RenUSubst) => subst(s)))(pos) <(
-            DebuggingTactics.debug("here 1", true),
-            DebuggingTactics.debug("here 2", true)
-          )
-        )
+        f match {
+          case Box(_,_) => {
+            val axiomName = if(atomicOdes(ode).length > 2) "DG++ System" else "DG++"
+            TactixLibrary.cut(Forall(y_.xp.x::Nil, f)) <(
+              HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved,
+              TactixLibrary.hide(pos) & HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos)
+            )
+          }
+          case Diamond(_,_) => throw noDiamondsForNowExn
+        }
+
       }
       case _ => Idioms.nil
     }
@@ -335,6 +357,35 @@ object AxiomaticODESolver {
       case _ => ???
     }
   }
+
+  //endregion
+
+  //region DS Diff Solve setup
+
+  /** Rewrites t'=0*t+1 to t'=1
+    * @todo this ought to be a post-processing stop for [[addTimeVar]] but isn't because locating the position could end up buggy too easily. */
+  val rewriteTime = "rewriteTime" by ((pos: Position, s: Sequent) => {
+    val f: Modal = s(pos).asInstanceOf[Modal]
+    val ODESystem(AtomicODE(time, c), constraint) = f.program
+
+//    val lemma = f match {
+//      case Box(_,_) => Equiv(Box(ODESystem(AtomicODE(time, Number(1)), constraint), f.child), f)
+//      case x:Diamond => throw noDiamondsForNowExn
+//    }
+
+    c match {
+      case Plus(Times(zero, t), one) if(zero == Number(0) && one == Number(1)) => {
+        DebuggingTactics.error("Don't know how to do this yet.")
+//        clearProveAsScope("rewriteTimeLemma") &
+//        ProveAs("rewriteTimeLemma", Equal(Number(1), c), TactixLibrary.QE) &
+//        DebuggingTactics.debugAt("here1234", true)(subPosition(pos, PosInExpr(0 :: 0 :: 1 :: Nil))) &
+//        HilbertCalculus.lazyUseAt("rewriteTimeLemma", PosInExpr(0 :: 0 :: 1 :: Nil))(pos) &
+//        clearProveAsScope("rewriteTimeLemma")
+      }
+      case n:Number if(n == Number(1)) => Idioms.nil
+      case _ => DebuggingTactics.error("Don't know how to handle this.")
+    }
+  })
 
   //endregion
 
