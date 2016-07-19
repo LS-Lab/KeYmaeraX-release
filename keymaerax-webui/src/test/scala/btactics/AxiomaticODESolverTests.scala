@@ -40,6 +40,13 @@ class AxiomaticODESolverTests extends TacticTestBase {
     println(result.prettyString)
   })
 
+  it should "work using my own time" in withMathematica(implicit qeTool => {
+    val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & apply(qeTool)(1)
+    val result = proveBy(f, t)
+    println(result.prettyString)
+  })
+
   //endregion
 
 
@@ -123,8 +130,20 @@ class AxiomaticODESolverTests extends TacticTestBase {
     //    })
 
     val f = "v=0&a=0&x=0&t=0 -> [{x'=v, v'=a, t'=1 &true}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) & inverseDiffGhost(qeTool)(1)
+    val t = TactixLibrary.implyR(1) & inverseDiffGhost(qeTool)(1) & inverseDiffGhost(qeTool)(1)
 
+    println(proveBy(f,t).prettyString)
+  })}
+
+  "cq" should "work for time thing" in { withMathematica(implicit qeTool => {
+    val f = "[{kyxtime'=1&true}](a/2*kyxtime^2+2*kyxtime+1)^3>=1 <-> [{kyxtime'=0*kyxtime+1&true}](a/2*kyxtime^2+2*kyxtime+1)^3>=1".asFormula
+    val t = HilbertCalculus.CQ(PosInExpr(0::0::1::Nil))
+    println(proveBy(f,t).prettyString)
+  })}
+
+  it should "work at all" in { withMathematica(implicit qeTool => {
+    val f = "[{x'=1 & 1=1}]2=2 <-> [{x'=1 & 0+1=1}]2=2".asFormula
+    val t = HilbertCalculus.CQ(PosInExpr(0::1::0::Nil))
     println(proveBy(f,t).prettyString)
   })}
 
