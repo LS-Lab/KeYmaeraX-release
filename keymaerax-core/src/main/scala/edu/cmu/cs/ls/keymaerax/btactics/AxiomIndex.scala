@@ -58,7 +58,7 @@ object AxiomIndex {
     case "DG differential ghost" => directReduction
     case "DG differential Lipschitz ghost system" => directReduction
     case "DG++ System" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
-    case "DG++" => ???
+    case "DG++" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil) //todo copies from DG++ System. Not sure if this is correct.
     case ", commute" => (PosInExpr(0::Nil), Nil)
     case "DS& differential equation solution" => (PosInExpr(0::Nil), PosInExpr(0::1::1::Nil)::PosInExpr(Nil)::Nil)
     case "DX differential skip" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
