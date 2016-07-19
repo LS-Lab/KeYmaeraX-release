@@ -295,8 +295,8 @@ Axiom "DG differential ghost".
 End.
 
 /* Less general version of DG differential ghost that ghosts in a time variable which DS can remove without additional rewriting. */
-Axiom "DG differential ghost 1".
-  [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=1&H(??)}]p(??)
+Axiom "DG differential ghost constant".
+  [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
 End.
 
 

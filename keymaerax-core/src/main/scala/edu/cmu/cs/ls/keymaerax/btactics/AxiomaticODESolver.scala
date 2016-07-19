@@ -123,7 +123,7 @@ object AxiomaticODESolver {
 
     s(modalityPos) match {
       case Box(_,_) => {
-        HilbertCalculus.DG1(t)(modalityPos) &
+        HilbertCalculus.DGC(t, Number(1))(modalityPos) &
         DLBySubst.assignbExists(Number(0))(modalityPos) &
         DLBySubst.assignEquational(modalityPos)
       }
