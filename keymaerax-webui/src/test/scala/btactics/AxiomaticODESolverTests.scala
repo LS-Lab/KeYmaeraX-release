@@ -44,7 +44,7 @@ class AxiomaticODESolverTests extends TacticTestBase {
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & apply(qeTool)(1)
     val result = proveBy(f, t)
-    println(result.prettyString)
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;](a/2*t^2+2*t+1)^3>=1)".asFormula
   })
 
   //endregion
