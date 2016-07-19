@@ -43,7 +43,6 @@ object AxiomaticODESolver {
     simplifyPostCondition(qeTool)(pos) &
     inverseDiffCut(qeTool)(pos).*@(TheType()) &
     inverseDiffGhost(qeTool)(pos).*@(TheType()) &
-    rewriteTime(pos) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos)
     //    cutInTimeLB(qeTool)(pos) & @todo why is this done at all, let alone before performing the inverse idff cuts?
   })
@@ -119,7 +118,7 @@ object AxiomaticODESolver {
 
     s(modalityPos) match {
       case Box(_,_) => {
-        HilbertCalculus.DG(t, Number(0), Number(1))(modalityPos) &
+        HilbertCalculus.DG1(t)(modalityPos) &
         DLBySubst.assignbExists(Number(0))(modalityPos) &
         DLBySubst.assignEquational(modalityPos)
       }
@@ -363,28 +362,11 @@ object AxiomaticODESolver {
   //region DS Diff Solve setup
 
   /** Rewrites t'=0*t+1 to t'=1
-    * @todo this ought to be a post-processing stop for [[addTimeVar]] but isn't because locating the position could end up buggy too easily. */
+    * @note This is no longer necessary because we'ver replaced DG with DG1  */
   val rewriteTime = "rewriteTime" by ((pos: Position, s: Sequent) => {
     val f: Modal = s(pos).asInstanceOf[Modal]
     val ODESystem(AtomicODE(time, c), constraint) = f.program
-
-//    val lemma = f match {
-//      case Box(_,_) => Equiv(Box(ODESystem(AtomicODE(time, Number(1)), constraint), f.child), f)
-//      case x:Diamond => throw noDiamondsForNowExn
-//    }
-
-    c match {
-      case Plus(Times(zero, t), one) if(zero == Number(0) && one == Number(1)) => {
-        DebuggingTactics.error("Don't know how to do this yet.")
-//        clearProveAsScope("rewriteTimeLemma") &
-//        ProveAs("rewriteTimeLemma", Equal(Number(1), c), TactixLibrary.QE) &
-//        DebuggingTactics.debugAt("here1234", true)(subPosition(pos, PosInExpr(0 :: 0 :: 1 :: Nil))) &
-//        HilbertCalculus.lazyUseAt("rewriteTimeLemma", PosInExpr(0 :: 0 :: 1 :: Nil))(pos) &
-//        clearProveAsScope("rewriteTimeLemma")
-      }
-      case n:Number if(n == Number(1)) => Idioms.nil
-      case _ => DebuggingTactics.error("Don't know how to handle this.")
-    }
+    ???
   })
 
   //endregion
