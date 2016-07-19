@@ -212,7 +212,7 @@ trait UnifyUSCalculus {
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
-
+  def useExpansionAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
