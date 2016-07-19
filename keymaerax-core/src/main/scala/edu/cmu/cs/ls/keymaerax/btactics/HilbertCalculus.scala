@@ -171,6 +171,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (FuncOf(Function("s",None,Unit,Real),Nothing), b)))
   )
 
+  def DG1(y:Variable) = useAt("DG differential ghost 1", PosInExpr(0::Nil),
+    (us:Subst)=>us++RenUSubst(Seq(
+      (Variable("y_",None,Real), y)
+    ))
+  )
+
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a simple differential equation `[x'=c&q(x)]p(x)` by reduction to

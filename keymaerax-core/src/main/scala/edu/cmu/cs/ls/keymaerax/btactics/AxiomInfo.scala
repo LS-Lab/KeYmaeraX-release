@@ -151,6 +151,10 @@ object DerivationInfo {
       , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=a(x)y+b(x)&q(x)}]p(x)")
       , "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => HilbertCalculus.DG(x,t1,t2)},
       List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
+    new CoreAxiomInfo("DG differential ghost 1"
+      , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=1&q(x)}]p(x)")
+      , "DG1", {case () => (x:Variable) => HilbertCalculus.DG1(x)},
+      List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
     new CoreAxiomInfo("DG differential Lipschitz ghost system", "DG", "DGs", {case () => ???}),
     new CoreAxiomInfo("DG++ System", "DG++", "DGpps", {case () => ???}),
     new CoreAxiomInfo("DG++", "DG++", "DGpp", {case () => ???}),

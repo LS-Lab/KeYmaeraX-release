@@ -294,6 +294,12 @@ Axiom "DG differential ghost".
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
+/* Less general version of DG differential ghost that ghosts in a time variable which DS can remove without additional rewriting. */
+Axiom "DG differential ghost 1".
+  [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=1&H(??)}]p(??)
+End.
+
+
 /* DG differential ghost, general Lipschitz case */
 /*Axiom "DG differential Lipschitz ghost".
   ([x_'=f(x_)&q(x_);]p(x_) <-> \exists y_ [{x_'=f(x_),y_'=g(x_,y_)&q(x_)}]p(x_))
