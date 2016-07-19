@@ -32,7 +32,6 @@ object DifferentialHelper {
 
   def isOne(t: Term) = t match {
     case n:Number => n==Number(1)
-//    case Plus(Times(zero, _), one) => zero==Number(0) && one==Number(1)
     case _ => false
   }
 

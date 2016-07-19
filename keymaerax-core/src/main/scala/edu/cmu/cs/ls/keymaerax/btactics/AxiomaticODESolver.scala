@@ -44,7 +44,6 @@ object AxiomaticODESolver {
     inverseDiffCut(qeTool)(pos).*@(TheType()) &
     inverseDiffGhost(qeTool)(pos).*@(TheType()) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos)
-    //    cutInTimeLB(qeTool)(pos) & @todo why is this done at all, let alone before performing the inverse idff cuts?
   })
 
   //endregion
@@ -356,18 +355,6 @@ object AxiomaticODESolver {
       case _ => ???
     }
   }
-
-  //endregion
-
-  //region DS Diff Solve setup
-
-  /** Rewrites t'=0*t+1 to t'=1
-    * @note This is no longer necessary because we'ver replaced DG with DG1  */
-  val rewriteTime = "rewriteTime" by ((pos: Position, s: Sequent) => {
-    val f: Modal = s(pos).asInstanceOf[Modal]
-    val ODESystem(AtomicODE(time, c), constraint) = f.program
-    ???
-  })
 
   //endregion
 
