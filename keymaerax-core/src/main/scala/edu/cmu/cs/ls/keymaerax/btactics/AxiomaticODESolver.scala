@@ -17,7 +17,13 @@ import com.sun.org.apache.xpath.internal.operations.Equals
 import scala.collection.parallel.immutable
 
 /**
-  * An Axiomatic ODE solver (second attempt)
+  * An Axiomatic ODE solver.
+  * Current Limitations:
+  *   * Only works in top-level succedent positions. I think this is only
+  *     a limitation imposed by the differential tactics used herein.
+  *   * Initial conditions must already exist. Stefan has a work-around
+  *     that ghosts in initial conditions already in the diffSolve tactic.
+  *   * Brittle when the initial ODE already has a domain constraint.
   *
   * @see Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
   * @author Nathan Fulton
