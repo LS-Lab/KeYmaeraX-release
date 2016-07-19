@@ -69,6 +69,8 @@ object Augmentors {
       }, term)
       pos
     }
+
+    def ~>(other: Term) = SubstitutionPair(term, other)
   }
 
   /**
