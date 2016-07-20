@@ -10,8 +10,8 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 Branches
 ========
 
-- `release` is the stable branch for KeYmaera X releases.
 - `master` is the branch for active ongoing developments of KeYmaera X.
+- [The Repository's Releases Page](https://github.com/LS-Lab/KeYmaeraX-release/releases) lists all tagged stable releases.
 
 Dependencies
 ============
