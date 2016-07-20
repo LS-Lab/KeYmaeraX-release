@@ -162,7 +162,7 @@ Front End
 The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
-    java -jar keymaerax-webui/target/scala-2.11/keymaerax-4.2b2.jar -ui
+    java -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -ui
     open http://127.0.0.1:8090/
 
 The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
@@ -183,7 +183,7 @@ KeYmaera X is successfully started when you see the following console output
 
 To find out how to use KeYmaera X from command line, do `sbt clean assembly` and run
 
-    java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-4.0b1.jar -help
+    java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -help
 
 Make sure you have Java 1.8 for using command line. Java 1.7 and earlier versions may not work.
 

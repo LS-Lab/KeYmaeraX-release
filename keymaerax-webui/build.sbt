@@ -6,7 +6,7 @@ version := "4.2b2"
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
 
-assemblyJarName in assembly := "keymaerax-web-" + version.value + ".jar"
+assemblyJarName in assembly := "keymaerax-web.jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 

@@ -8,7 +8,7 @@ lazy val core = (project in file("keymaerax-core"))
 
 lazy val keymaeraxAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
   mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX"),
-  assemblyJarName in assembly := "keymaerax-web-" + version.value + ".jar",
+  assemblyJarName in assembly := "keymaerax.jar",
   test in assembly := {},
   assemblyMergeStrategy in assembly := {
     case PathList("examples", xs @ _*) => MergeStrategy.last
