@@ -141,11 +141,11 @@ object DerivationInfo {
         "diffGhost",
         ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
         List(
-          (List("&Gamma;"), List("∃ y [{c,y'=(t()*y)+s()&H}]P", "&Delta;"))
+          (List("&Gamma;", "y=i()"), List("[{c,y'=(t()*y)+s()&H}]P", "&Delta;"))
         )
       ),
-      List(VariableArg("y"), TermArg("t()"), TermArg("s()")),
-      {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(y.asInstanceOf[Variable], t1, t2)}
+      List(VariableArg("y"), TermArg("t()"), TermArg("s()"), TermArg("i()")),
+      {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(y, t1, t2, i)}
     ),
 
     new CoreAxiomInfo("DE differential effect"

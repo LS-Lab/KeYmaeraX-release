@@ -460,6 +460,12 @@ object DifferentialTactics {
         )
   })
 
+  def diffGhost(y: Variable, a: Term, b: Term, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
+    DG(y,a,b)(pos) &
+    DLBySubst.assignbExists(initialValue)(pos) &
+    DLBySubst.assignEquational(pos)
+  })
+
   def DG(ghost: Program, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
     val (y: Variable, a: Term, b: Term) = {
       val s = UnificationMatch("z'=b()".asProgram, ghost)
