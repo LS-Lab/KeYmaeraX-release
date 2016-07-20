@@ -1,7 +1,9 @@
 package bellerophon.pptests
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser._
+import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.core.Variable
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
   * Parser test cases that arise from known bugs.
@@ -12,7 +14,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   * @author Nathan Fulton
   */
 class BelleParserRegressionTest extends TacticTestBase {
-  //ok.
+  "expression pattern" should "match multi-expression-argument input" in {
+    "{`1=1`}, {`1=2`}, 1)" match {
+      case EXPRESSION2.startPattern(e) => e shouldBe "{`1=1`}"
+      case _ => assert(false, "Expected EXPRESSION2 to match the current input")
+    }
+  }
 
-
+  "diffGhost" should "parse" in {
+    BelleParser("diffGhost({`t`}, {`0`}, {`1`}, 1)") shouldBe DifferentialTactics.DG("t".asTerm.asInstanceOf[Variable], "0".asTerm, "1".asTerm)(1)
+  }
 }
