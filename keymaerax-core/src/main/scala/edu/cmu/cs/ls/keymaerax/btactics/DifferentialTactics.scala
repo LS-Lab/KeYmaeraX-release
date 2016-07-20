@@ -618,11 +618,6 @@ object DifferentialTactics {
       cohide(pos.top) & DW(1) & G
   })
 
-  /** Helper for diffWeaken: andL the second-to-last formula */
-  private lazy val andLSecondToLast: DependentTactic = new SingleGoalDependentTactic("andL-2nd-to-last") {
-    override def computeExpr(sequent: Sequent): BelleExpr = andL(-(sequent.ante.length-1))
-  }
-
   private def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
