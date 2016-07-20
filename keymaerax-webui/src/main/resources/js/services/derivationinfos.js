@@ -87,7 +87,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
         result[1] = serviceDef.createInput(formula, tactic, inputBoundaries[0]);
         for (var i = 1; i < inputBoundaries.length; i++) {
           result[i+1] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
-          result[i+2] = createInput(formula, tactic, inputBoundaries[i]);
+          result[i+2] = serviceDef.createInput(formula, tactic, inputBoundaries[i]);
         }
         result[inputBoundaries.length+1] = {
           text: formula.slice(inputBoundaries[inputBoundaries.length-1].end, formula.length),
