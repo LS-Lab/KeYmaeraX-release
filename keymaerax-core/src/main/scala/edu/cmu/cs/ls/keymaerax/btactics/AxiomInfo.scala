@@ -135,6 +135,19 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
     , List(FormulaArg("r(x)")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , {case () => (fml: Formula) => TactixLibrary.diffCut(fml)}),
+
+    new InputPositionTacticInfo("diffGhost",
+      RuleDisplayInfo(
+        "diffGhost",
+        ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
+        List(
+          (List("&Gamma;"), List("∃ y [{c,y'=(t()*y)+s()&H}]P", "&Delta;"))
+        )
+      ),
+      List(VariableArg("y"), TermArg("t()"), TermArg("s()")),
+      {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(y.asInstanceOf[Variable], t1, t2)}
+    ),
+
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
@@ -578,6 +591,7 @@ object DerivationInfo {
           (List("j(x)"),List("[a]j(x)")),
           (List("j(x)"),List("P"))))
       , List(FormulaArg("j(x)")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+
     new InputPositionTacticInfo("generalizeb",
     RuleDisplayInfo("G[]",(List("&Gamma;"), List("[a]P", "&Delta;")),
       List(
