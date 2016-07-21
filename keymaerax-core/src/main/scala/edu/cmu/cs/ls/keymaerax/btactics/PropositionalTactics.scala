@@ -3,9 +3,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
-
+import TacticFactory._
+import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.core
 
 import scala.language.postfixOps
 
@@ -179,4 +181,99 @@ object PropositionalTactics {
         )
     }
   }
+
+  /**
+    * Performs equivalence rewriting in either direction at any top-level position in a sequent,
+    * leaving the original equivalence in place.
+    *
+    * Examples:
+    * {{{
+    *   P<->Q |- Q
+    *   ----------- equivRewriting(-1, 1)
+    *   P<->Q |- P
+    * }}}
+    *
+    * {{{
+    *   P<->Q, Q |-
+    *   ------------ equivRewriting(-1, 1)
+    *   P<->Q, P |-
+    * }}}
+    *
+    * {{{
+    *   P<->Q, P |-
+    *   ------------ equivRewriting(-1, 1)
+    *   P<->Q, Q |-
+    * }}}
+    */
+  val equivRewriting = "equivRewriting" by ((p: Provable, equivPos: Position, targetPos: Position) => {
+    import Augmentors._
+    assert(p.subgoals.length == 1, "Assuming one subgoal.")
+
+    //@note equivalence == target <-> other.
+    val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte).asInstanceOf[Equiv]
+    val targetValue : Formula = p.subgoals.head(targetPos.top)
+    val otherValue : Formula = if(equivalence.left == targetValue) equivalence.right else equivalence.left
+
+    val newEquivPos = AntePos(p.subgoals.head.ante.length)
+
+    //First constraint a sequent that we can close as long as we know which positions to target with CloseId
+    val postCut =
+      p.apply(Cut(equivalence), 0)
+        .apply(Close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
+        .apply(EquivLeft(newEquivPos), 0)
+        .apply(AndLeft(newEquivPos), 0)
+        .apply(AndLeft(newEquivPos), 1)
+
+    if(targetPos.isAnte) {
+      /*
+       * Positive subgoal (A&B) is the result branch. Cleanup as follows:
+       *    1. Ante reduces from
+       *          G, {target, other} |- D
+       *       to
+       *          G', other |- D
+       *       where G' is G with targetPos hidden, and {target, other} could occur in either direction.
+       *       I.e., we just hid both the original targetPos and the new targetPos that came from breaking up the And.
+       */
+      val positiveSubgoalCleanup = {
+        val redundantTargetPosition =
+          if (postCut.subgoals(0).ante.last == targetValue) AntePos(postCut.subgoals(0).ante.length - 1)
+          else AntePos(postCut.subgoals(0).ante.length - 2)
+
+        postCut
+          .apply(HideLeft(redundantTargetPosition), 0)
+          .apply(HideLeft(targetPos.checkAnte.top), 0)
+      }
+
+      /*
+       * Negative subgoal (!A&!B) closes:
+       *   1. Identify location of negated other of equivalence
+       *   2.
+       */
+      val negatedTargetPos =
+        if(positiveSubgoalCleanup.subgoals(1).ante.last == Not(targetValue))
+          AntePos(positiveSubgoalCleanup.subgoals(1).ante.length - 1)
+        else
+          AntePos(positiveSubgoalCleanup.subgoals(1).ante.length - 2)
+      val unNegatedTargetPos = SuccPos(positiveSubgoalCleanup.subgoals(1).succ.length)
+
+      positiveSubgoalCleanup
+        .apply(NotLeft(negatedTargetPos), 1)
+        .apply(Close(targetPos.checkAnte.top, unNegatedTargetPos), 1)
+    }
+    else { //targetPos is in the succedent.
+      val anteTargetPos =
+        if (postCut.subgoals(0).ante.last == targetValue) AntePos(postCut.subgoals(0).ante.length - 1)
+        else AntePos(postCut.subgoals(0).ante.length - 2)
+
+      val negatedOtherPos =
+        if (postCut.subgoals(1).ante.last == Not(otherValue)) AntePos(postCut.subgoals(1).ante.length - 1)
+        else AntePos(postCut.subgoals(1).ante.length - 2)
+
+      postCut
+        .apply(Close(anteTargetPos, targetPos.checkSucc.top), 0)
+        .apply(HideRight(targetPos.checkSucc.top), 0) //@note these are not position 0 instead of position 1 because the other goal has now closed.
+        .apply(NotLeft(negatedOtherPos), 0)
+        .apply(HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
+    }
+  })
 }
