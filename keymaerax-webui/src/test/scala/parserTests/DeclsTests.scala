@@ -98,4 +98,29 @@ class DeclsTests extends FlatSpec with Matchers {
 
     a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
   }
+
+  it should "parse correctly when fully explicit" in {
+    val input =
+      """
+        |Functions.
+        |  B Cimpl((R, R), R).
+        |End.
+        |Problem.
+        |  Cimpl((0,1),2) <-> true
+        |End.
+      """.stripMargin
+
+    val input2 =
+      """
+        |Functions.
+        |  B Cimpl(R, (R, R)).
+        |End.
+        |Problem.
+        |  Cimpl(0,(1,2)) <-> true
+        |End.
+      """.stripMargin
+
+    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input2)
+  }
 }
