@@ -206,6 +206,7 @@ object UIIndex {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
+      case (_, _: AntePosition, Some(_: Equiv), Some(_: Formula)) => "equivRewriting" :: Nil //@note for applying function definitions.
       case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
       case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
       case _ => Nil
