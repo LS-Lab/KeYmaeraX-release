@@ -99,7 +99,7 @@ class DeclsTests extends FlatSpec with Matchers {
     a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
   }
 
-  it should "parse correctly when fully explicit" in {
+  it should "parse correctly when fully explicit" ignore {
     val input =
       """
         |Functions.
