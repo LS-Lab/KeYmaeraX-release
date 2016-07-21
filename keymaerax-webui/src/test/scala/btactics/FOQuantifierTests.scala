@@ -249,6 +249,15 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "instantiate variables bound in an ODE" in {
+    val result = proveBy(
+      Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
+      existsInstantiate()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "y=y_0".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2,y'=0*y+1&true}]x>0".asFormula
+  }
+
   "exists generalize" should "only generalize the specified occurrences of t" in {
     val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(-1))

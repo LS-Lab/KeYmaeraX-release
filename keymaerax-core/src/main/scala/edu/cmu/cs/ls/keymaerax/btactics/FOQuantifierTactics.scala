@@ -20,8 +20,9 @@ object FOQuantifierTactics {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(provable: Provable): BelleExpr =
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
-          (if (atTopLevel) notL(pos) & base('Rlast) & notR('Rlast)
-           else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
+          (if (atTopLevel || pos.isTopLevel) {
+            if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
+          } else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
     }
   }
 
@@ -37,15 +38,10 @@ object FOQuantifierTactics {
             val t = inst(vars)
             val p = forall(qf)
 
-            val subst = USubst(
-              SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(Box(Assign(x, DotTerm), qf))) ::
-              SubstitutionPair("f()".asTerm, t) :: Nil)
-            val orig = Sequent(IndexedSeq(), IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(f())".asFormula))
-
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
               assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")  //US(subst, orig) & byUS("all instantiate")
+              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
               )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
