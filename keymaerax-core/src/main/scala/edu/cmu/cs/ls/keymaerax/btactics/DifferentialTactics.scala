@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -476,6 +476,46 @@ object DifferentialTactics {
         DLBySubst.assignbExists(iv)(pos) &
         DLBySubst.assignEquational(pos)
   })
+
+  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
+    * {{{
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    *
+    * @see[[DA(Variable, Term, Term, Provable)]]
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    */
+  def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
+    "DA" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
+    })
+
+
+  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
+    * {{{
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by auxEquiv
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    */
+  def DA(y: Variable, a: Term, b: Term, auxEquiv: Provable): DependentPositionTactic =
+    "DAbase" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
+        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) => null
+
+        val Equiv(p, _) = auxEquiv.conclusion.succ.head
+
+        cutR(p)(pos.checkSucc.top) <(
+          skip,
+          implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
+            DG(y, a, b)(pos) &
+            existsR(pos) & exhaustiveEqR2L(hide=true)('Llast) &
+            useAt(auxEquiv, PosInExpr(0::Nil))(pos + PosInExpr(1::Nil)) &
+            existsR(pos + PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
+          )
+    })
 
   /**
    * Syntactically derives a differential of a variable to a differential symbol.

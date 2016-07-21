@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, SingleGoalDependentTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, SingleGoalDependentTactic, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -923,6 +923,87 @@ class DifferentialTests extends TacticTestBase {
 
   it should "not allow ghosts that are already present in the ODE" in {
     a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("x".asVariable, "0".asTerm, "1".asTerm)(1))
+  }
+
+  "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { implicit tool =>
+    val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "add y'=1 to [x'=2]x>0 when provided a provable explicitly" in withMathematica { implicit tool =>
+    val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
+    val auxEquiv = TactixLibrary.proveBy("x>0 <-> \\exists y (y>0 & x*y>0)".asFormula, TactixLibrary.QE)
+    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, auxEquiv)(1)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "also cut in x>0 if already present in antecedent when adding y'=1 to [x'=2]x>0" in withMathematica { implicit tool =>
+    val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.last.ante should contain only "x>0".asFormula
+    result.subgoals.last.succ should contain only "y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  ignore should "work in a simple context" in withMathematica { implicit tool =>
+    val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
+    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "y>0 & x*y>0 -> (a=2 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0))".asFormula
+  }
+
+  ignore should "work in a complicated context" in {
+    val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
+    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "y>0 & x*y>0 -> (a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2,y'=0*y+1}](y>0 & x*y>0))".asFormula
+  }
+
+  it should "add y'=-a() to [x'=2]x>0" in withMathematica { implicit tool =>
+    val s = Sequent(IndexedSeq("a()>0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = DA(Variable("y"), "0".asTerm, "-a()".asTerm, "x>0 & y<0".asFormula)(1)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("a()>0".asFormula, "x>0".asFormula)
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.head.ante should contain only ("a()>0".asFormula, "x>0".asFormula)
+    result.subgoals.last.succ should contain only "x>0 & y<0 -> [{x'=2,y'=0*y+-a()}](x>0 & y<0)".asFormula
+  }
+
+  it should "solve x'=x" in withMathematica { implicit tool =>
+    //val s = Sequent(IndexedSeq(), IndexedSeq("t=0 & x=1 -> [{x'=x, t'=1 & t<1}] x>0".asFormula))
+    val s = Sequent(IndexedSeq(), IndexedSeq("x>0 -> [{x'=x}]x>0".asFormula))
+    val t = implyR(1) & andL('_)*@TheType() & DA("z".asVariable, "-1/2".asTerm, "0".asTerm, "x*z^2=1".asFormula)(1) <(
+      closeId, implyR(1) & diffInd(tool, 'full)(1))
+    proveBy(s, t) shouldBe 'proved
   }
 
   "diffSolve" should "use provided solution" in withMathematica { tool =>
