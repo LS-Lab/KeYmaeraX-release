@@ -215,7 +215,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
     */
-  def DA(y:Variable, a:Term, b:Term, r:Formula) : BuiltInPositionTactic = ??? //ODETactics.diffAuxiliariesRule(y,a,b,r)
+  def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
   /**
    * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
    * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
@@ -226,7 +226,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * @see[[DA(Variable, Term, Term, Formula)]]
    * @see[[by]]
    **/
-  def DA(y:Variable, a:Term, b:Term, r:Provable) : BuiltInPositionTactic = Predef.??? //ODETactics.diffAuxiliariesRule(y,a,b,r)
+  def DA(y: Variable, a: Term, b: Term, r: Provable): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
 
   // more
 
