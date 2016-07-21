@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core.{Number, ODESystem, Term, _}
 
 /**
+  * @todo move to formula tools? Or make this ProgramTools?
   * Created by nfulton on 7/14/16.
   */
 object DifferentialHelper {
