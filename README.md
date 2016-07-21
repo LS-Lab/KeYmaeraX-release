@@ -10,15 +10,15 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 Branches
 ========
 
-- `release` is the stable branch for KeYmaera X releases.
 - `master` is the branch for active ongoing developments of KeYmaera X.
+- [The Repository's Releases Page](https://github.com/LS-Lab/KeYmaeraX-release/releases) lists all tagged stable releases.
 
 Dependencies
 ============
 - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 9.0 or greater recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
+  (version 10+ recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
 - [Java Development Kit JDK](https://java.com/download)
-  (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is also compatible with Java 1.8)
+  (version 1.8+ recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is also compatible with Java 1.8)
 - [Scala Build Tool sbt](http://www.scala-sbt.org)
   (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
 - [Scala 2.11.7](http://www.scala-lang.org)
@@ -33,13 +33,13 @@ The easiest way to run KeYmaera X is to download the `keymaerax.jar` binary file
 
 and run it via
 
-    java -Xss20M -jar keymaerax.jar
+    java -jar keymaerax.jar
 
 If this results in the error `Invalid or corrupt jarfile` then update to Java 1.8 or run it via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
 
-The easiest way to run KeYmaera X from source is to install its dependencies and build it via SBT:
+The easiest way to run KeYmaera X from source is to install its dependencies and build it via Scala Build Tool sbt:
 
     * Install the dependencies (see Dependencies section)
     * Point the JLINK_JAR_LOCATION environment variable to Mathematic's JLink.jar file (see FAQ)
@@ -59,9 +59,9 @@ Detailed instructions are available at that website as well. Briefly, type
 
 to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries, including Scala itself. 
 
-To run the regression test case suite, type
+To run the regression test case suite, type, for example,
 
-    sbt test -l edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
+    sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 
 FAQ: Build Problems
 ===================
@@ -82,7 +82,7 @@ FAQ: Run Problems
 =================
 
 If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
-You could also try removing or renaming keymaerax.sqlite (if this file has become corrupt, it may prevent KeYmaera from working).
+You could also try removing or renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
 
 
 Generating API Documentation
@@ -92,20 +92,20 @@ KeYmaera X API Documentation is generated via Scaladoc.
   
    http://www.keymaerax.org/scaladoc
 
-To generate KeYmaera X API documentation files locally, run:
+To generate unified scaladoc for all subprojects locally, run:
+
+    sbt unidoc
+
+Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
+For instance `target/scala-2.11/unidoc`.
+
+To generate just the core KeYmaera X API documentation files locally, run:
 
     sbt doc
 
 Documentation will be generated for each subproject in the 
 `target/scala-x.xx/api` directory of the subproject. 
 For instance, `keymaerax-core/target/scala-2.11/api` for the core subproject.
-
-To generate unified scaladoc for all subprojects, run:
-
-    sbt unidoc
-
-Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
-For instance `target/scala-2.11/unidoc`.
 
 Main documentation to read for KeYmaera X API:
 
@@ -162,8 +162,8 @@ Front End
 The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
-    java -jar keymaerax-webui/target/scala-2.11/keymaerax-4.2b1.jar -ui
-    open http://127.0.0.1:8090/
+    java -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -ui
+    open http://localhost:8090/
 
 The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
 In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
@@ -183,9 +183,9 @@ KeYmaera X is successfully started when you see the following console output
 
 To find out how to use KeYmaera X from command line, do `sbt clean assembly` and run
 
-    java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-4.0b1.jar -help
+    java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -help
 
-Make sure you have Java 1.8 for using command line. Java 1.7 and earlier versions may not work.
+Make sure you have Java 1.8 for using command line like this. Java 1.7 and earlier versions may limit functionality.
 
 Command Line Execution and Templates
 ====================================
@@ -203,7 +203,7 @@ the cheat sheet model.
 
 | File                          | Description                                                                     |
 | ----------------------------- | ------------------------------------------------------------------------------- |
-| CheatSheet.kyx                | Model from page 1 http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-sheet.pdf        |
+| CheatSheet.kyx                | Model from page 1 http://keymaeraX.org/KeYmaeraX-sheet.pdf        |
 | CheatSheetScriptTactic.scala  | A step-by-step proof script for proving CheatSheet.kyx                          |
 | CheatSheetSearchyTactic.scala | A proof search tactic for proving CheatSheet.kyx                                |
 | prove_script_macos_default.sh | Script to prove CheatSheet.kyx on MacOS with a default Mathematica installation |
@@ -217,7 +217,7 @@ Depending on the operating system, Mathematica is installed in different locatio
 parameters -mathkernel and -jlink according to the local Mathematica setup. Parameters that are appropriate when
 Mathematica is installed in the default location are provided below.
 
-##### Default Parameters per Operating System
+##### Default Configuration Parameters per Operating System
 MacOS, 64bit, Mathematica 10.4
 * `-mathkernel /Applications/Mathematica.app/Contents/MacOS/MathKernel`
 * `-jlink /Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64`

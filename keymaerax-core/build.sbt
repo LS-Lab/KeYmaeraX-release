@@ -3,9 +3,9 @@ import java.util.Properties
 
 name := "KeYmaeraX-Core"
 
-version := "4.2b1"
+version := "4.2b2"
 
-assemblyJarName in assembly := "keymaerax-core-" + version.value + ".jar" 
+assemblyJarName in assembly := "keymaerax-core.jar" 
 
 scalaVersion := "2.11.7"
 
