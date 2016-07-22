@@ -329,6 +329,11 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val exportFormula = (t: SessionToken) => path("proofs" / "user" / "exportformula" / Segment / Segment / Segment / Segment) { (userId, proofId, nodeId, formulaId) => { pathEnd {
+    val request = new ExportFormula(database, userId, proofId, nodeId, formulaId)
+    completeRequest(request, t)
+  }}}
+
   val doAt = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
@@ -710,6 +715,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     pruneBelow            ::
     dashInfo              ::
     exportSequent         ::
+    exportFormula         ::
     Nil
 
   val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {

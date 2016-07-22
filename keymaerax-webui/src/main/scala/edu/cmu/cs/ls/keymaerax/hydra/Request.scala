@@ -710,6 +710,28 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
   }
 }
 
+class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
+      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+    }
+    else {
+      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+      tree.findNode(nodeId) match {
+        case Some(node) => {
+          try {
+            val formula = node.sequent(SeqPos(formulaId.toInt))
+            new KvpResponse("formula", formula.prettyString) :: Nil
+          } finally {
+            new ErrorResponse(s"Could not find formula with formulaId ${formulaId} in node ${nodeId}")
+          }
+        }
+        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
+      }
+    }
+  }
+}
+
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
