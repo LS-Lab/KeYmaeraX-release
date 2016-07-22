@@ -701,8 +701,8 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
       tree.findNode(nodeId) match {
         case Some(node) => {
           val provable = Provable.startProof(node.sequent)
-          val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None) //@todo also/instead show this, since it can at least be parsed...
-          new KvpResponse("sequent", provable.prettyString) :: Nil
+          val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
+          new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
         }
         case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
       }
