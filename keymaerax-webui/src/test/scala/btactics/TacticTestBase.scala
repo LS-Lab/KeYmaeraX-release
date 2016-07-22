@@ -130,6 +130,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
 
+  def proveBy(p: Provable, tactic: BelleExpr): Provable = {
+    val v = BelleProvable(p)
+    theInterpreter(tactic, v) match {
+      case BelleProvable(provable, _) => provable
+      case r => fail("Unexpected tactic result " + r)
+    }
+  }
+
   /** Removes all whitespace for string comparisons in tests.
     * @example{{{
     *     "My string with     whitespace" should equal ("Mystring   with whitespace") (after being whiteSpaceRemoved)
