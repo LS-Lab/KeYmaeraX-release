@@ -145,6 +145,24 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       sequentProofData.prune($scope.userId, $scope.proofId, topParent);
     };
 
+    $scope.exportSubgoal = function() {
+        var proofId = $routeParams.proofId;
+        var userId = $cookies.get('userId');
+        var nodeId = sequentProofData.agenda.selectedId();
+
+        var uri = 'proofs/user/export/' + userId + '/' + proofId + '/' + nodeId
+
+        $http.get(uri)
+            .then(function(response) {
+                if(response.data.errorThrown) {
+                    showCaughtErrorMessage($uibModal, response.data.message, response.data)
+                }
+                else {
+                    showVerbatimMessage($uibModal, "Exported Subgoal", response.data.sequent);
+                }
+            })
+    }
+
     $scope.doTactic = function(formulaId, tacticId) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
