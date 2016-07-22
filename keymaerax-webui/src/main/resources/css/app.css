@@ -527,3 +527,7 @@ table .btn{
 .error {
   boder-color: #FF0000;
 }
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
