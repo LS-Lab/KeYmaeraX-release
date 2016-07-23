@@ -6,6 +6,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, PropositionalTactics, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.core.SeqPos
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -27,9 +28,9 @@ class EquivalenceTests extends TacticTestBase {
     result shouldBe 'proved
   }
 
-  it should "prove by a built-in tactic" in {
+  "Instantiated Equiv Rewriting" should "prove by a built-in tactic" in {
     val f = "((A()<->B()) & B()) -> false".asFormula
-    val t = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & PropositionalTactics.equivRewriting(-1, -2)
+    val t = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & PropositionalTactics.equivRewriting(SeqPos(-1), SeqPos(-2))
     val result = proveBy(f,t)
     result.subgoals.length shouldBe 1
     result.subgoals(0).ante.length shouldBe 2
@@ -38,11 +39,34 @@ class EquivalenceTests extends TacticTestBase {
 
   it should "prove by a built-in tactic succ" in {
     val f = "(A()<->B()) -> A()".asFormula
-    val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(-1, 1)
+    val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1), SeqPos(1))
     val result = proveBy(f,t)
     println(result.prettyString)
     result.subgoals.length shouldBe 1
     result.subgoals(0).succ.length shouldBe 1
     result.subgoals(0).succ.last shouldBe "B()".asFormula
+  }
+
+  it should "work for \\forall x p(x) <-> q() |- q()" in {
+    val f = "(\\forall x (p(x) <-> q())) -> q()".asFormula
+    val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
+    val result = proveBy(f,t)
+    loneSucc(result) shouldBe "p(x)".asFormula
+  }
+
+  it should "work for \\forall x p(x) <-> q(x) |- p(z)" in {
+    val f = "(\\forall x (p(x) <-> q(x))) -> p(z)".asFormula
+    val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
+    val result = proveBy(f,t)
+    println(result.prettyString)
+    loneSucc(result) shouldBe "q(z)".asFormula
+  }
+
+  it should "work for \\forall x p(x) <-> q(x) |- q(z)" in {
+    val f = "(\\forall x (p(x) <-> q(x))) -> q(z)".asFormula
+    val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
+    val result = proveBy(f,t)
+    println(result.prettyString)
+    loneSucc(result) shouldBe "p(z)".asFormula
   }
 }
