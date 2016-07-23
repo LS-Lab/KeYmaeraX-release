@@ -654,6 +654,13 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
     , List(FormulaArg("r(x)")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
     , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
+    new InputPositionTacticInfo("DA"
+      , RuleDisplayInfo("DA"
+        , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+        , /* premises */ List((List("&Gamma;"), List("p(x)", "&Delta;"), false),
+          (List("&Gamma;"), List("r → [{x′ = f(x), y′ = a() y + b() & q(x)}]r","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
+      , List(FormulaArg("r"), VariableArg("y"), TermArg("a()"), TermArg("b()"))
+      , {case () => (y: Variable, a: Term, b: Term, r: Formula) => TactixLibrary.DA(y, a, b, r)}),
     new PositionTacticInfo("diffSolve",
       RuleDisplayInfo("[′]R",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
