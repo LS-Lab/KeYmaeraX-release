@@ -76,7 +76,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
           }
         }
-        case positionTactic@AppliedTwoPositionTactic(_, posOne, posTwo) => v match {
+        case positionTactic@AppliedBuiltinTwoPositionTactic(_, posOne, posTwo) => v match {
           case BelleProvable(pr, _) => try {
             BelleProvable(positionTactic.computeResult(pr))
           } catch {
@@ -269,6 +269,14 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             .headOption.getOrElse(throw new BelleError("USubst Pattern Incomplete -- could not find a unifier for any option").inContext(t, ""))
 
           apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
+        }
+
+        case AppliedDependentTwoPositionTactic(t, p1, p2) => {
+          val provable = v match {
+            case BelleProvable(p,_) => p
+            case _ => throw new BelleError("two position tactics can only be run on provable values.")
+          }
+          apply(t.computeExpr(p1, p2).computeExpr(provable), v)
         }
       }
       listeners.foreach(l => l.end(v, expr, Left(result)))

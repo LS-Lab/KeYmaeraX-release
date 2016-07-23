@@ -34,15 +34,17 @@ object ReflectiveExpressionBuilder {
       // someone is going to plug in the arguments later
       case (expr:BelleExpr, Nil, _) => expr
       case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) => AppliedPositionTactic(expr, arg)
+      case (expr:DependentTwoPositionTactic, Fixed(arg1: Position, _, _) :: Fixed(arg2: Position, _, _) :: Nil, 2) =>
+        AppliedDependentTwoPositionTactic(expr, arg1, arg2)
       case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, arg)
       case (expr:BuiltInTwoPositionTactic, Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) =>
-        AppliedTwoPositionTactic(expr, arg1, arg2)
+        AppliedBuiltinTwoPositionTactic(expr, arg1, arg2)
       case (expr: (Position => DependentPositionTactic), Fixed(arg1: Position, _, _)::arg2::Nil, 2) =>
         new AppliedDependentPositionTactic(expr(arg1), arg2)
       case (expr: ((Position, Position) => BelleExpr), Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) => expr(arg1, arg2)
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
-          throw new ReflectiveExpressionBuilderExn("Expected either " + num + " or 0 position arguments, got " + pArgs.length)
+          throw new ReflectiveExpressionBuilderExn("Expected either " + num + s" or 0 position arguments for ${expr.getClass} (${expr}), got " + pArgs.length)
         } else {
           throw new ReflectiveExpressionBuilderExn("Tactics with " + num + " arguments cannot have type " + expr.getClass.getSimpleName)
         }
