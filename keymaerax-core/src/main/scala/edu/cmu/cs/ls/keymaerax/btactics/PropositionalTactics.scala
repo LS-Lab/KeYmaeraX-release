@@ -260,16 +260,20 @@ object PropositionalTactics {
       val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming
       if(renaming.isEmpty) None
       else Some(new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming)
+    } catch {
+      case _:Throwable => None
     } finally {
-      None
+      None //Maybe we actually should not catch quite everything here?
     }
 
     val rightRenaming: Option[RenUSubst] = try {
       val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.right, target).renaming
       if(renaming.isEmpty) None
       else Some(renaming)
+    } catch {
+      case _:Throwable => None
     } finally {
-      None
+      None //Maybe we actually should not catch quite everything here?
     }
 
     //First try to left-unify, then try to right-unify. I.e., default to left-rewriting when bot hare available.
