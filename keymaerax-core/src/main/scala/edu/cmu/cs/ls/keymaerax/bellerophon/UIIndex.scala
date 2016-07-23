@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.annotation.tailrec
+
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
   * @author aplatzer
@@ -206,12 +208,20 @@ object UIIndex {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
-      case (_, _: AntePosition, Some(_: Equiv), Some(_: Formula)) => "equivRewriting" :: Nil //@note for applying function definitions.
+      case (_: AntePosition, _, Some(fa: Forall), Some(_:Formula)) if(bodyIsEquiv(fa)) => "equivRewriting" :: Nil
+      case (_: AntePosition, _, Some(_: Equiv), Some(_: Formula)) => "instantiatedEquivRewriting" :: Nil //@note for applying function definitions.
       case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
       case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
       case _ => Nil
       //@todo more drag-and-drop support
     }
+  }
+
+  @tailrec
+  private def bodyIsEquiv(x: Forall): Boolean = x.child match {
+    case Forall(_, child:Forall) => bodyIsEquiv(child)
+    case Equiv(_,_) => true
+    case _ => false
   }
 
   def comfortOf(stepName: String): Option[String] = stepName match {
