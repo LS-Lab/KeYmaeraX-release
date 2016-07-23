@@ -161,6 +161,11 @@ class CreatedIdResponse(id : String) extends Response {
   def getJson = JsObject("id" -> JsString(id))
 }
 
+class PossibleAttackResponse(val msg: String) extends Response {
+  println(s"POSSIBLE ATTACK: ${msg}")
+  override def getJson: JsValue = new ErrorResponse(msg).getJson
+}
+
 class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response {
   lazy val writer = new StringWriter
   lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
@@ -169,6 +174,10 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
     "errorThrown" -> JsString(stacktrace),
     "type" -> JsString("error")
   )
+}
+
+class KvpResponse(val key: String, val value: String) extends Response {
+  override def getJson: JsValue = JsObject(key -> JsString(value))
 }
 
 class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends ErrorResponse(msg, exn) {

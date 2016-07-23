@@ -278,6 +278,20 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
   override def prettyString = name
 }
 
+
+abstract case class DependentTwoPositionTactic(name: String) extends BelleExpr {
+  override def prettyString: String = s"UnappliedTwoPositionTactic of name ${name}" //@todo
+
+  def computeExpr(p1: Position, p2: Position): DependentTactic
+
+  def apply(p1: Position, p2: Position) = AppliedDependentTwoPositionTactic(this, p1, p2)
+}
+
+case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: Position, p2: Position) extends BelleExpr {
+  /** pretty-printed form of this Bellerophon tactic expression */
+  override def prettyString: String = t.prettyString + "(" + p1 + "," + p2 + ")"
+}
+
 /**
   * Stores the position tactic and position at which the tactic was applied.
   * Useful for storing execution traces.
@@ -345,18 +359,18 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   def computeResult(provable : Provable, posOne: Position, posTwo: Position) : Provable
 
   /** Returns an explicit representation of the application of this tactic to the provided positions. */
-  final def apply(posOne: Position, posTwo: Position): AppliedTwoPositionTactic = AppliedTwoPositionTactic(this, posOne, posTwo)
+  final def apply(posOne: Position, posTwo: Position): AppliedBuiltinTwoPositionTactic = AppliedBuiltinTwoPositionTactic(this, posOne, posTwo)
   /** Returns an explicit representation of the application of this tactic to the provided positions.
     *
     * @note Convenience wrapper
     */
-  final def apply(posOne: Int, posTwo: Int): AppliedTwoPositionTactic = apply(Position(posOne), Position(posTwo))
+  final def apply(posOne: Int, posTwo: Int): AppliedBuiltinTwoPositionTactic = apply(Position(posOne), Position(posTwo))
 
   override def prettyString = name
 }
 
 /** Motivation is similar to [[AppliedPositionTactic]], but for [[BuiltInTwoPositionTactic]] */
-case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
+case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
   final def computeResult(provable: Provable) : Provable = try {
     positionTactic.computeResult(provable, posOne, posTwo)
   } catch {

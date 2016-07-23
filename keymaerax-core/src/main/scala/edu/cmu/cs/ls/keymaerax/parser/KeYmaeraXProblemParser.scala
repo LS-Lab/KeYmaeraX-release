@@ -273,16 +273,16 @@ object KeYmaeraXDeclarationsParser {
       "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head, splitAtRparen._2.head.loc, "parsing function domain sorts")
     val remainder = splitAtRparen._2.tail
 
-    val domain = domainElements.foldLeft(List[Sort]())((list, token) =>
+    val domain = domainElements.foldLeft(List[Sort]())((list: List[Sort], token: Token) =>
       if(token.tok.equals(COMMA)) list
-      else list :+ parseSort(token, of))
+      else list :+ parseSort(token, of)) //@todo clean up code and also support explicit association e.g. F((B, R), B)
 
     if(domain.isEmpty) {
       (Unit, remainder)
     }
     else {
       val fstArgSort = domain.head
-      val domainSort = domain.tail.foldLeft(fstArgSort)( (tuple, next) => Tuple(tuple, next) )
+      val domainSort = domain.tail.foldRight(fstArgSort)( (next, tuple) => Tuple(next, tuple) )
       (domainSort, remainder)
     }
   }

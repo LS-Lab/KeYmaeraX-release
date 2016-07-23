@@ -23,7 +23,7 @@ object ProofRuleTactics {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: Provable) =
-    if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
+    if(provable.subgoals.length != 1) throw new BelleError(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}")
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: Provable): Provable = {

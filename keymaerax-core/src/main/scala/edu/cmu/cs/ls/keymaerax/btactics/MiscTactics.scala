@@ -194,6 +194,12 @@ object TacticFactory {
     /** Creates a named tactic */
     def by(t: BelleExpr): BelleExpr = new NamedTactic(name, t)
 
+    def byTactic(t: ((Provable, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
+      override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {
+        override def computeExpr(p: Provable) = t(p, p1, p2)
+      }
+    }
+
     /** Creates a dependent position tactic without inspecting the formula at that position */
     def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {

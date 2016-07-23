@@ -26,7 +26,7 @@ import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, MathematicaComputationAbortedException, SimulationTool, Tool}
+import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.collection.immutable
 import scala.io.Source
@@ -36,6 +36,8 @@ import java.io.{File, FileInputStream, FileOutputStream}
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+
+import scala.collection.immutable.List
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -686,6 +688,47 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
   def resultingResponses(): List[Response] = {
     val info = (DerivationInfo(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo(_))) :: Nil
     new ApplicableAxiomsResponse(info, None) :: Nil
+  }
+}
+
+class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
+      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+    }
+    else {
+      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+      tree.findNode(nodeId) match {
+        case Some(node) => {
+          val provable = Provable.startProof(node.sequent)
+          val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
+          new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
+        }
+        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
+      }
+    }
+  }
+}
+
+class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
+      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+    }
+    else {
+      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+      tree.findNode(nodeId) match {
+        case Some(node) => {
+          try {
+            val formula = node.sequent(SeqPos(formulaId.toInt))
+            new KvpResponse("formula", formula.prettyString) :: Nil
+          } finally {
+            new ErrorResponse(s"Could not find formula with formulaId ${formulaId} in node ${nodeId}")
+          }
+        }
+        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
+      }
+    }
   }
 }
 

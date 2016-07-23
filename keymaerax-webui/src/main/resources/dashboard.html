@@ -62,7 +62,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="index_bootstrap.html">KeYmaera X</a>
+            <a class="navbar-brand" href="/dashboard.html">KeYmaera X</a>
         </div>
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -113,7 +113,7 @@
     </div>
 </div>
 
-<div class="container" ng-if="!mathematicaIsConfigured">
+<div class="container" ng-if="!mathematicaIsConfigured" ng-cloak>
     <div class="alert alert-warning" role="alert" id="mathematicaConfigurationAlert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
         <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Mathematica is not configured.

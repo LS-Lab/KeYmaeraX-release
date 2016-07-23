@@ -57,4 +57,70 @@ class DeclsTests extends FlatSpec with Matchers {
     println(solution)
   }
 
+  "function domain" should "parse correctly" in {
+    val input =
+      """
+        |Functions.
+        |  B Cimpl(R, R, R).
+        |End.
+        |Problem.
+        |  Cimpl(0,1,2) <-> true
+        |End.
+      """.stripMargin
+
+    val problem = KeYmaeraXProblemParser(input)
+  }
+
+  it should "fail to parse when the function application has the wrong assoc" in {
+    val input =
+      """
+        |Functions.
+        |  B Cimpl(R, R, R).
+        |End.
+        |Problem.
+        |  Cimpl((0,1),2) <-> true
+        |End.
+      """.stripMargin
+
+    a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
+  }
+
+  it should "fail to parse when the function def'n has the wrong assoc" in {
+    val input =
+      """
+        |Functions.
+        |  B Cimpl((R, R), R).
+        |End.
+        |Problem.
+        |  Cimpl(0,1,2) <-> true
+        |End.
+      """.stripMargin
+
+    a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
+  }
+
+  it should "parse correctly when fully explicit" ignore {
+    val input =
+      """
+        |Functions.
+        |  B Cimpl((R, R), R).
+        |End.
+        |Problem.
+        |  Cimpl((0,1),2) <-> true
+        |End.
+      """.stripMargin
+
+    val input2 =
+      """
+        |Functions.
+        |  B Cimpl(R, (R, R)).
+        |End.
+        |Problem.
+        |  Cimpl(0,(1,2)) <-> true
+        |End.
+      """.stripMargin
+
+    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input2)
+  }
 }

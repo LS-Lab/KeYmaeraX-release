@@ -77,6 +77,9 @@ object RenUSubst {
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
   */
 sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
+  /** Returns true if there is no specified substitution. */
+  def isEmpty = subsDefsInput.isEmpty
+
   /** automatically filter out identity substitution no-ops */
   protected final val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
   protected final val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
@@ -157,7 +160,6 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
         throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
   }
-
 }
 
 /**
