@@ -531,6 +531,16 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }
 
+
+  val logoff = (t: SessionToken) => path("user" / "logoff") { pathEnd { get {
+    t match {
+      case UsedToken(token, username) => SessionManager.remove(token)
+      case NewlyExpiredToken(token) => //Well, that was convienant.
+      case _ => //that works too.
+    }
+    complete("[]")
+  }}}
+
   val kyxConfig = path("kyxConfig") {
     pathEnd {
       get {
@@ -716,6 +726,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     dashInfo              ::
     exportSequent         ::
     exportFormula         ::
+    logoff                ::
     Nil
 
   val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
