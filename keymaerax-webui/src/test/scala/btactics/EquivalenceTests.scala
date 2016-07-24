@@ -77,6 +77,7 @@ class EquivalenceTests extends TacticTestBase {
 
     val t =  TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
     val result = proveBy(f,t)
-    println(result.prettyString) //@todo loneSucc(result) shouldBe "Cimpl((rt,(h,hoDot)))<->\forall t \forall rt \forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp)".asFormula I think.
+    println(result.prettyString)
+    loneSucc(result) shouldBe "\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp)".asFormula
   }
 }
