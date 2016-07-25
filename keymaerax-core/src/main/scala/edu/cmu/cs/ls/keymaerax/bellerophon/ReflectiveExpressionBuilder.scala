@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, Generator}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term, Variable}
 
 /**
   * Constructs a [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]] from a tactic name
@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
   */
 object ReflectiveExpressionBuilder {
   def build(info: DerivationInfo, args: List[Either[Seq[Expression], PositionLocator]], generator: Option[Generator[Formula]]): BelleExpr = {
-    val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown."))}
+    val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown.")))
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
@@ -20,12 +20,13 @@ object ReflectiveExpressionBuilder {
       } else {
         info.belleExpr
       }
-    val expressionArgs = args.filter{case arg => arg.isLeft}.map{case arg => arg.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown."))}
-    val applied:Any = expressionArgs.foldLeft(withGenerator) {
+    val expressionArgs = args.filter(_.isLeft).map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown.")))
+    val applied: Any = expressionArgs.foldLeft(withGenerator) {
       case (expr: (Formula => Any), (fml: Formula) :: Nil) => expr(fml)
+      case (expr: (Variable => Any), (y: Variable) :: Nil) => expr(y)
       case (expr: (Term => Any), (term: Term) :: Nil) => expr(term)
       case (expr: (Seq[Formula] => Any), fmls: Seq[Formula]) => expr(fmls)
-      case (expr: (Any), fml) =>
+      case (expr, fml) =>
         throw new Exception("Expected type Formula => Any , got " + expr.getClass.getSimpleName)
     }
 
