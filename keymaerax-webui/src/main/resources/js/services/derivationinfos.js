@@ -60,6 +60,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
         return {
           ante: serviceDef.convertToInput(premise.ante, tactic),
           succ: serviceDef.convertToInput(premise.succ, tactic),
+          numInputs: tactic.derivation.input.length,
           isClosed: premise.isClosed
         };
       });

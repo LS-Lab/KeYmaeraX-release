@@ -7,10 +7,10 @@
                     <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() === undefined">{{antePart.placeholder}}</span>
-                    <input type="text" name="{{antePart.text}}"
+                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2}" type="text" name="{{antePart.text}}"
                            placeholder="{{antePart.placeholder}}"
                            ng-model="antePart.value" ng-model-options="{getterSetter: true}"
-                           ng-if="!premise.isClosed && antePart.isInput" required></input>
+                           ng-if="!premise.isClosed && antePart.isInput" required/>
                 </span>
                 {{$last ? '' : ','}}
             </span>
@@ -22,10 +22,10 @@
                     <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() === undefined">{{succPart.placeholder}}</span>
-                    <input type="text" name="{{succPart.text}}"
+                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2}" type="text" name="{{succPart.text}}"
                            placeholder="{{succPart.placeholder}}"
                            ng-model="succPart.value" ng-model-options="{getterSetter: true}"
-                           ng-if="!premise.isClosed && succPart.isInput" required></input>
+                           ng-if="!premise.isClosed && succPart.isInput" required/>
                 </span>
                 {{$last ? '' : ','}}
             </span>

@@ -182,6 +182,10 @@ table .btn{
   width: 700px; /* @todo solve tactic popover layout problem for real */
 }
 
+.k4-narrowinput {
+  max-width: 30px;
+}
+
 .k4-sequentRulePremise {
   border-style: none;
 }
