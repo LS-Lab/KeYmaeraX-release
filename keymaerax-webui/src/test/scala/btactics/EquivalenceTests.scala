@@ -6,7 +6,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, PropositionalTactics, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{Imply, SeqPos}
+import edu.cmu.cs.ls.keymaerax.core.{And, Imply, Not, SeqPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -80,4 +80,16 @@ class EquivalenceTests extends TacticTestBase {
     println(result.prettyString)
     loneSucc(result) shouldBe "\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp)".asFormula
   }
+
+  it should "work on ACAS X Cimpl example 2" in {
+    val equiv = "\\forall rt \\forall h \\forall hoDot (Cimpl((rt,(h,hoDot)))<->\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp))".asFormula
+    val fnApp = "Cimpl((rt,(h,hoDot)))".asFormula
+    val f = Not(And(equiv, fnApp))
+
+    val t =  TactixLibrary.notR(1) & TactixLibrary.andL(-1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(-2))
+    val result = proveBy(f,t)
+    println(result.prettyString)
+    result.subgoals(0).ante.last shouldBe "\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp)".asFormula
+  }
+
 }
