@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.core
 
+import scala.annotation.tailrec
 import scala.language.postfixOps
 
 /**
@@ -242,7 +243,7 @@ object PropositionalTactics {
 
           //3: input is postCut and output is instantiatedEquivalence
           val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e:BelleExpr,x:Variable) => {
-            cutExpr & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
+            e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
           })
 
           //4 & 5
@@ -260,16 +261,20 @@ object PropositionalTactics {
       val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming
       if(renaming.isEmpty) None
       else Some(new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming)
+    } catch {
+      case _:Throwable => None
     } finally {
-      None
+      None //Maybe we actually should not catch quite everything here?
     }
 
     val rightRenaming: Option[RenUSubst] = try {
       val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.right, target).renaming
       if(renaming.isEmpty) None
       else Some(renaming)
+    } catch {
+      case _:Throwable => None
     } finally {
-      None
+      None //Maybe we actually should not catch quite everything here?
     }
 
     //First try to left-unify, then try to right-unify. I.e., default to left-rewriting when bot hare available.
@@ -280,11 +285,12 @@ object PropositionalTactics {
       case _ => RenUSubst(Nil) //Try to go ahead with an empty renaming since it will work more often than not.
     }
   }
-  private def vars(fa: Forall): Seq[Variable] = fa match {
-    case Forall(xs, Forall(ys, child)) => xs ++ ys
-    case Forall(xs, e:Equiv)           => xs
-    case Forall(_, child)              => throw new Exception(s"Expected a universally quantified equivalence but found ${fa.child.getClass}")
-  }
+  private def vars(fa: Forall): Seq[Variable] = fa.vars ++ (fa.child match {
+    case child: Forall => vars(child)
+    case e:Equiv => Nil
+    case _ => throw new Exception("Expted equiv.")
+  })
+  @tailrec
   private def bodyOf(fa: Forall): Equiv = fa.child match {
     case child:Forall => bodyOf(child)
     case child:Equiv  => child
@@ -320,7 +326,10 @@ object PropositionalTactics {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
 
     //@note equivalence == target <-> other.
-    val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte).asInstanceOf[Equiv]
+    val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte) match {
+      case e:Equiv => e
+      case f:Formula => throw new Exception(s"Expected an Equiv but found ${f.prettyString}")
+    }
     val targetValue : Formula = p.subgoals.head(targetPos.top)
     val otherValue : Formula = if(equivalence.left == targetValue) equivalence.right else equivalence.left
 
@@ -387,6 +396,7 @@ object PropositionalTactics {
     }
   }
   val instantiatedEquivRewriting = "instantiatedEquivRewriting" by ((p: Provable, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
+  /** @todo explain why this exists and maybe find a better name. */
   private def builtInEquivRewriting(equivPos: Position, targetPos: Position) = new BuiltInTactic("") {
     override def result(p:Provable) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)
   }

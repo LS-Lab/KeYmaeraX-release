@@ -6,7 +6,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, PropositionalTactics, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.SeqPos
+import edu.cmu.cs.ls.keymaerax.core.{Imply, SeqPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -68,5 +68,16 @@ class EquivalenceTests extends TacticTestBase {
     val result = proveBy(f,t)
     println(result.prettyString)
     loneSucc(result) shouldBe "p(z)".asFormula
+  }
+
+  it should "work on ACAS X Cimpl example" in {
+    val equiv = "\\forall rt \\forall h \\forall hoDot (Cimpl((rt,(h,hoDot)))<->\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp))".asFormula
+    val fnApp = "Cimpl((rt,(h,hoDot)))".asFormula
+    val f = Imply(equiv, fnApp)
+
+    val t =  TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
+    val result = proveBy(f,t)
+    println(result.prettyString)
+    loneSucc(result) shouldBe "\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp)".asFormula
   }
 }

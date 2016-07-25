@@ -62,6 +62,11 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
       $http.get("/shutdown");
   };
 
+  $scope.logoff = function() {
+      $http.get("/user/logoff");
+      document.location.href = "/index_bootstrap.html";
+  }
+
   $scope.extractdb = function() {
       $http.post('/extractdb')
           .success(function(data) {
