@@ -13,9 +13,6 @@
                 <li><a href="" ng-click="onTactic(f.id,'Hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
             <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
-            <!-- TODO drag&drop only works with formula2.js (significantly slower than formula.js) -->
-                 <!--data-jqyoui-options="{revert: 'invalid', helper: 'clone'}"-->
-                 <!--jqyoui-draggable="{placeholder:'keep'}" data-drag="true" ng-model="f">-->
                 <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" formula="f.formula"
                             on-tactic="onTactic(formulaId, tacticId)" highlight="true"></k4-formula>
             </div>
@@ -65,9 +62,6 @@
                 <li><a href="" ng-click="onTactic(f.id,'Hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
             <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">
-                    <!-- TODO drag&drop only works with formula2.js (significantly slower than formula.js) -->
-                     <!--data-jqyoui-options="{revert: 'invalid', helper: 'clone'}"-->
-                     <!--jqyoui-draggable="{placeholder:'keep'}" data-drag="true" ng-model="f">-->
                 <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" formula="f.formula"
                             on-tactic="onTactic(formulaId, tacticId)" highlight="true"></k4-formula>
             </div>
