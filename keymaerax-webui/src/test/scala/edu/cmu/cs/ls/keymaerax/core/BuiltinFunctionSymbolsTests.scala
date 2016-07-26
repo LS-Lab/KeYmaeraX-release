@@ -20,4 +20,12 @@ class BuiltinFunctionSymbolsTests extends TacticTestBase {
     val t = TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
   })}
+
+  it should "work in counter-example generation" in { withMathematica(implicit qeTool => {
+    val f = "max(a, 0) = a".asFormula
+//    val counterExample = qeTool.findCounterExample(f)
+    val counterExample = new Z3().findCounterExample(f)
+    counterExample shouldBe 'nonEmpty
+    println(counterExample.last("a".asVariable))
+  })}
 }
