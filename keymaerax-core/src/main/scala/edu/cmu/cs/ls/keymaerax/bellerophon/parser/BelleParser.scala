@@ -454,20 +454,21 @@ object BelleParser extends (String => BelleExpr) {
     *
     * @see [[parseArgumentToken]] */
   def parseAbsolutePosition(s : String, location: Location) : PositionLocator = {
-    if(!s.contains(".")) Fixed(Position(parseNonZeroInt(s, location)))
+    if(!s.contains(".")) Fixed(Position(parseInt(s, location)))
     else {
-      val subPositions = s.split('.').map(x => parseNonZeroInt(x, location))
-      Fixed(Position(subPositions.head, subPositions.tail.toList))
+      val subPositionStrings = s.split('.')
+      val subPositions = subPositionStrings.tail.map(x => parseInt(x, location, nonZero=false))
+      Fixed(Position(parseInt(subPositionStrings.head, location), subPositions.toList))
     }
   }
 
   /** Parses s to a non-zero integer or else throws a ParseException pointing to location.
     *
     * @see [[parseAbsolutePosition]] */
-  private def parseNonZeroInt(s: String, location: Location) =
+  private def parseInt(s: String, location: Location, nonZero: Boolean = true) =
     try {
       val pos = Integer.parseInt(s)
-      if(pos == 0) throw ParseException("0 is not a valid absolute (sub)position -- must be (-inf, -1] \\cup [1, inf)", location)
+      if (nonZero && pos == 0) throw ParseException("0 is not a valid absolute (sub)position -- must be (-inf, -1] \\cup [1, inf)", location)
       else pos
     }
     catch {
