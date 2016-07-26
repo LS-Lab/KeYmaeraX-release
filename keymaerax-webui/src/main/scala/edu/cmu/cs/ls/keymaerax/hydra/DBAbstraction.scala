@@ -287,7 +287,8 @@ trait DBAbstraction {
   /** Return the sequence of steps that led to the current state of the proof. */
   def getExecutionTrace(proofID: Int): ExecutionTrace
 
-  /** Return a list of execution steps of the specified status associated with the proof, in no particular order */
+  /** Return a list of execution steps of the specified status associated with the proof, **in no particular order**
+    * @todo the type should document this by being an unordered structure. */
   def getExecutionSteps(executionId: Int, status: Option[ExecutionStepStatus]) : List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
