@@ -490,14 +490,14 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
-    * @see "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 2+1."
+    * @see Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183 Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
   def apply(subst: USubst): Provable =
     try {
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
-      //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 2."
-      //@note case isProved is covered by "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 1." and Theorem 2 without subgoals having same effect as Theorem 1. There is no difference between locally sound and globally sound if isProved so no subgoals.
+      //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183. Theorem 27."
+      //@note case isProved is covered by "Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183. Theorem 26." and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
       insist(subst.freeVars.isEmpty || isProved || Rule.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
       new Provable(subst(conclusion), subgoals.map(s => subst(s)))
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
