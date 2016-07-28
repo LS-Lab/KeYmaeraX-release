@@ -71,4 +71,9 @@ object KeYmaeraXTestTags {
 
   /** Tests that are added for coverage analysis and not critically used. */
   object CoverageTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.CoverageTest")
+
+  /**
+    * An advocatus diavoli test that's sceptical about soundness.
+    */
+  object AdvocatusTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest")
 }

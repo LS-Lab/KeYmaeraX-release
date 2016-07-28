@@ -1,9 +1,9 @@
 KeYmaera X
 ==========
 
-KeYmaera X is a theorem prover for differential dynamic logic (dL), a logic for specifying and verifying properties of hybrid systems with mixed discrete and continuous dynamics. Reasoning about complicated hybrid systems requires support for sophisticated proof techniques, efficient computation, and a user interface that crystallizes salient properties of the system. KeYmaera X allows users to specify custom proof search techniques as tactics, execute tactics in parallel, and interface with partial proofs via an extensible user interface.
+KeYmaera X is a theorem prover for differential dynamic logic (dL), a logic for specifying and verifying properties of hybrid systems with mixed discrete and continuous dynamics. Reasoning about complicated hybrid systems models requires support for sophisticated proof techniques, efficient computation, and a user interface that crystallizes salient properties of the system. KeYmaera X allows users to specify custom proof search techniques as tactics, execute these tactics in parallel, and interface with partial proofs via an extensible user interface.
 
-KeYmaera X is built up from a small trusted core. The core contains a finite list of locally sound dL axioms that are instantiated using a uniform substitution proof rule. Isolating all soundness-critical reasoning in this axiomatic core obviates the otherwise intractable task of ensuring that proof search algorithms are implemented correctly. This enables advanced proof search features---such as aggressive, speculative proof search and user-defined tactics built using a flexible tactic language---without correctness concerns that could undermine the usefulness of automated analysis.
+Advanced proof search features---and user-defined tactics in particular---are difficult to check for soundness. To admit extension and experimentation in proof search without reducing trust in the prover, KeYmaera X is built up from a small trusted kernel. The prover kernel contains a list of sound dL axioms that are instantiated using a uniform substitution proof rule. Isolating all soundness-critical reasoning to this prover kernel obviates the intractable task of ensuring that each new proof search algorithm is implemented correctly. Experiments suggest that a single layer of tactics on top of the prover kernel provides a rich language for implementing novel and sophisticated proof search techniques.
 
   http://keymaeraX.org/
 
@@ -22,7 +22,7 @@ Dependencies
 - [Scala Build Tool sbt](http://www.scala-sbt.org)
   (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
 - [Scala 2.11.7](http://www.scala-lang.org)
-  (sbt will download scala this automatically)
+  (sbt will download this automatically)
 
 Installation
 ============
@@ -162,7 +162,7 @@ Front End
 The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
-    java -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -ui
+    java -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar
     open http://localhost:8090/
 
 The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
@@ -305,11 +305,12 @@ http://www.scalatest.org/user_guide
 Specification
 =============
 
-The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness ensurance by way of a small trusted LCF-style core while still being amenable to automatic theorem proving.
+The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness assurance by way of a small trusted LCF-style core while still being amenable to automatic theorem proving.
 Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
 
 1. André Platzer. 
-[A complete uniform substitution calculus for differential dynamic logic](ttp://arxiv.org/abs/1601.06183). 
+[A complete uniform substitution calculus for differential dynamic logic](http://symbolaris.com/pub/usubst-complete.pdf). 
+Journal of Automated Reasoning, 2016.
 [arXiv 1601.06183](http://arxiv.org/abs/1601.06183)
 
 2. André Platzer. 
@@ -348,7 +349,7 @@ Logical Methods in Computer Science, 8(4), pages 1-38, 2012.
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems, which, along with its proof calculus, are described and specified in
 
 9. André Platzer. 
-[Differential game logic](http://arxiv.org/abs/1408.1980). 
+[Differential game logic](http://dx.doi.org/10.1145/2817824). 
 ACM Trans. Comput. Log., 17(1), 2015.
 [arXiv:1408.1980](http://arxiv.org/abs/1408.1980)
 

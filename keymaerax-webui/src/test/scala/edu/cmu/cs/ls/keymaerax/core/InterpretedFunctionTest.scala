@@ -8,11 +8,13 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase, TactixLibrary}
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 
 /**
  * Interpreted functions / defined functions substitution tests.
  * @author Andre Platzer
  */
+@AdvocatusTest
 class InterpretedFunctionTest extends TacticTestBase {
   import TactixLibrary._
 

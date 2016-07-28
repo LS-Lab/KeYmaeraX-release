@@ -93,6 +93,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /* Test teardown */
   override def afterEach() = {
+    //@todo is there a way of avoiding duplicate shutdowns, in case they are problematic?
     if (DerivedAxioms.qeTool != null) {
       DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
       DerivedAxioms.qeTool = null
