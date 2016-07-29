@@ -130,12 +130,12 @@ object SMTConverter {
         //@todo code review: maxlong?
         //@ran todo-resolved: also checks if negative value is in range, see comment below
         //@todo this is incorrect, because 2th-complement integer arithmetic is nonsymmetric.
+        //@todo-resolved: avoids conversion to double, uses 'signum' to determine sign and builtin negate function
         // smt form of -5 is (- 5)
-        if (n.toDouble < 0) {
-          /* negative number should also be in range */
-          assert((0-n).isDecimalDouble || (0-n).isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
-          "(- " + (0-n).underlying().toString + ")"
-        } else n.underlying().toString
+        if (n.signum < 0) {
+          assert((-n).isDecimalDouble || (-n).isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+          "(- " + (-n).toString() + ")"
+        } else n.toString()
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) => nameIdentifier(fn) match {

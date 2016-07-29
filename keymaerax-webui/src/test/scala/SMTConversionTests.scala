@@ -29,12 +29,12 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     SMTConverter("-9223372036854775807 < 1".asFormula, "Polya")  should be("(assert (not (< (- 9223372036854775807) 1)))")
   }
 
-  it should "thorw exception in converting illegal big positive numbers" in {
+  it should "throw exception in converting illegal big positive numbers" in {
     a [SMTConversionException] should be thrownBy SMTConverter("9223372036854775808 > 1".asFormula, "Z3")
     a [SMTConversionException] should be thrownBy SMTConverter("9223372036854775808 > 1".asFormula, "Polya")
   }
 
-  it should "thorw exception in converting illegal big negative numbers" in {
+  it should "throw exception in converting illegal big negative numbers" in {
     a [SMTConversionException] should be thrownBy SMTConverter("-9223372036854775808 < 1".asFormula, "Z3")
     a [SMTConversionException] should be thrownBy SMTConverter("-9223372036854775808 < 1".asFormula, "Polya")
   }
