@@ -82,7 +82,7 @@ object KeYmaeraX {
     println("KeYmaera X Prover " + VERSION + "\n" +
       "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
-    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
+    else if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       //@note 'commandLine is only passed in to preserve evidence of what generated the output.
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
