@@ -1,0 +1,36 @@
+/* 
+ * Proof sketch: 
+ * Perform loop induction with given IH.
+ *    The base case is merely propositional reasoning.
+ *
+ *    The use case (IH -> safety) requires instantiating the IH @ 0,0,0. 
+ *    Resulting real arithmetic is tractable.
+ *
+ *    In the inductive step, decompose by control choices and then 
+ *    axiomatically solve ODEs. Resulting real arithmetic is tractable.
+ */
+implyR(1) & 
+loop({`(w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)`}, 1) <(
+  /* Base case */
+  normalize, 
+
+  /* Use case */
+  andR(1) <(
+    andL('L)* & allL({`0`}, 'L)* & QE, 
+    andL('L)* & closeId(-6, 1)
+  ), 
+
+  /* Inductive step */
+  composeb(1) & choiceb(1) & andR(1) <(
+    /* Case 1 could probably just be auto? */
+    testb(1) & implyR(1) & composeb(1) & randomb(1) & allR(1) & axiomaticSolve(1) & allR(1) & implyR(1) & implyR(1) & assignb(1) & normalize,
+
+    /* Case 2 and 3... */
+    composeb(1) & randomb(1) & allR(1) & composeb(1) & choiceb(1) & andR(1) <(
+      /* w = -1 case */
+      assignb(1) & testb(1) & implyR(1) & composeb(1) & randomb(1) & allR(1) & axiomaticSolve(1) & master,
+      /* w = 1 case */
+      assignb(1) & testb(1) & implyR(1) & composeb(1) & randomb(1) & allR(1) & axiomaticSolve(1) & master
+    )
+  )
+)
