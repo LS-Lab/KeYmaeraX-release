@@ -685,6 +685,8 @@ object DerivationInfo {
     // DLBySubst
     new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
 
+    new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
+
     // Derived axiomatic rules
     new DerivedRuleInfo("all generalization"
       , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall p_(??)"::Nil), SequentDisplay(Nil, "p_(??)"::Nil)::Nil)
