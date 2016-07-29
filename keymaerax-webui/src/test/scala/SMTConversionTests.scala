@@ -86,58 +86,58 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   it should "convert complex qutifiers" in {
     SMTConverter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (* x x) (* y y)) (* z z))))))")
+      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (^ x 2) (^ y 2)) (^ z 2))))))")
     SMTConverter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (* x x) (* y y)) (* z z))))))")
+      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (^ x 2) (^ y 2)) (^ z 2))))))")
   }
 
   "Exponentials" should "convert positive" in {
-    SMTConverter("3^3 > 1".asFormula, "Z3") should be  ("(assert (not (> (* 3 3 3) 1)))")
-    SMTConverter("3^3 > 1".asFormula, "Polya") should be  ("(assert (not (> (* 3 3 3) 1)))")
+    SMTConverter("3^3 > 1".asFormula, "Z3") should be  ("(assert (not (> (^ 3 3) 1)))")
+    SMTConverter("3^3 > 1".asFormula, "Polya") should be  ("(assert (not (> (^ 3 3) 1)))")
   }
 
   it should "convert negative" in {
-    SMTConverter("3^-2 < 1".asFormula, "Z3") should be ("(assert (not (< (/ 1 (* 3 3)) 1)))")
-    SMTConverter("3^-2 < 1".asFormula, "Polya") should be ("(assert (not (< (/ 1 (* 3 3)) 1)))")
+    SMTConverter("3^-2 < 1".asFormula, "Z3") should be ("(assert (not (< (^ 3 (- 2)) 1)))")
+    SMTConverter("3^-2 < 1".asFormula, "Polya") should be ("(assert (not (< (^ 3 (- 2)) 1)))")
   }
 
   it should "convert index 0" in {
-    SMTConverter("(x+y-z)^(1-1) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= 1 1)))")
-    SMTConverter("(x+y-z)^(1-1) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= 1 1)))")
+    SMTConverter("(x+y-z)^(1-1) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= (^ (- (+ x y) z) (- 1 1)) 1)))")
+    SMTConverter("(x+y-z)^(1-1) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= (^ (- (+ x y) z) (- 1 1)) 1)))")
   }
 
   it should "convert base 0" in {
-    SMTConverter("(0+0)^(x+y-1) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= 0 1)))")
-    SMTConverter("(0+0)^(x+y-1) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= 0 1)))")
+    SMTConverter("(0+0)^(x+y-1) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ x y) 1)) 1)))")
+    SMTConverter("(0+0)^(x+y-1) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ x y) 1)) 1)))")
   }
 
-  it should "cause exception when converting fraction" in {
-    a [SMTConversionException] should be thrownBy SMTConverter("3^(-0.5) < 1".asFormula, "Z3")
-    a [SMTConversionException] should be thrownBy SMTConverter("3^(-0.5) < 1".asFormula, "Polya")
+  it should "convert fractions" in {
+    SMTConverter("3^(-0.5) < 1".asFormula, "Z3") shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))"
+    SMTConverter("3^(-0.5) < 1".asFormula, "Polya") shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))"
   }
 
   it should "convert complex" in {
     // Z3 and Polya gives different conversion results, both are sound
     SMTConverter("(x+y-z)^3 = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (- (+ x y) z) (- (+ x y) z) (- (+ x y) z)) 1)))")
+      + "(assert (not (= (^ (- (+ x y) z) 3) 1)))")
     SMTConverter("(x+y-z)^3 = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z))) 1)))")
+      + "(assert (not (= (^ (- (+ x y) z) 3) 1)))")
   }
 
   it should "convert complex 2" in {
     // Z3 and Polya gives different conversion results, both are sound, Polya is better
     SMTConverter("(x+x+x)^3 = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n"
-      + "(assert (not (= (* (+ (+ x x) x) (+ (+ x x) x) (+ (+ x x) x)) 1)))")
+      + "(assert (not (= (^ (+ (+ x x) x) 3) 1)))")
     SMTConverter("(x+x+x)^3 = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n"
-      + "(assert (not (= (* (* 3 x) (* 3 x) (* 3 x)) 1)))")
+      + "(assert (not (= (^ (+ (+ x x) x) 3) 1)))")
   }
 
-  it should "convert complex simplify index" in {
+  it should "convert complex 3" in {
     // Z3 and Polya gives different conversion results, both are sound
     SMTConverter("(x+y-z)^(y*2-y-y+3) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (- (+ x y) z) (- (+ x y) z) (- (+ x y) z)) 1)))")
+      + "(assert (not (= (^ (- (+ x y) z) (+ (- (- (* y 2) y) y) 3)) 1)))")
     SMTConverter("(x+y-z)^(y*2-y-y+3) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z))) 1)))")
+      + "(assert (not (= (^ (- (+ x y) z) (+ (- (- (* y 2) y) y) 3)) 1)))")
   }
 
   // complex

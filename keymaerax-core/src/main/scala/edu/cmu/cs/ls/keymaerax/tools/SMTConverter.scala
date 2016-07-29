@@ -47,8 +47,7 @@ object SMTConverter {
     val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
     require(!(names.contains(SMT_MIN)||names.contains(SMT_MAX)||names.contains(SMT_ABS)), "Variable and function names are not expected to be " + SMT_MIN + ", " +  SMT_MAX + "or " + SMT_ABS)
-    var varDec = allSymbols.map(
-      s => s match {
+    var varDec = allSymbols.map({
         case x: Variable =>
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")"
@@ -119,7 +118,7 @@ object SMTConverter {
       case Minus(l, r)  => "(- " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Times(l, r)  => "(* " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case Power(l, r)  => convertExp(l, r, toolId)
+      case Power(l, r)  => "(^ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Number(n) =>
         //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
         //@ran todo-resolved: double checked and see notes below
@@ -148,41 +147,6 @@ object SMTConverter {
       //@note: disassociate the arguments
       case Pair(l, r)  => convertTerm(l, toolId) + " " + convertTerm(r, toolId)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
-    }
-  }
-
-  //@todo get rid of this function and have a tactic depower that gets rid of all powers by proof steps
-  /** Convert power to SMT notation 
-   * @todo use axiom x^(c()+1) = x*(x^c()) <- c()>=0
-   */
-  private def convertExp(l: Term, r: Term, toolId: String) : String = {
-    val base = simplifyTerm(l, toolId)
-    val exp = simplifyTerm(r, toolId)
-    if(base.equals(Number(0))) {
-      //@todo Code Review: 0-power conversion can't know value of r even after simplification. This is inconsistent for cases like x=0 -> 0^x=1 which will prove depending on what's replaced where
-      println("[warning] converting 0^0 to SMT")
-      if(exp.equals(Number(0))) "1" // 0^0 =1
-      else "0" // 0^x = 0
-    } else {
-      exp match {
-        case Number(n) =>
-          if(n.isValidInt) {
-            // index is integer
-            if(n.intValue() == 0) {
-              //@todo Code Review: check consistency with 0^x=0
-              "1"
-            } else if(n.intValue() > 0 ) {
-              val ba : String = convertTerm(base, toolId)
-              //@todo code review: check (* a)
-              //@ran todo-resolved: double checked that (* a) = a
-              //@note: (* a) = a, (* a a a) = a*a*a
-              //@note: to is inclusive
-              "(* " + (1 to n.intValue()).map(i => ba).mkString(" ") + ")"
-            } else "(/ 1 " + convertExp(base, Number(n.underlying().negate()), toolId) + ")"
-          } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
-        case Neg(Number(n)) => "(/ 1 " + convertExp(base, Number(n), toolId) + ")"
-        case _ => throw new SMTConversionException("Conversion of exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " is not defined")
-      }
     }
   }
 
@@ -216,17 +180,5 @@ object SMTConverter {
       case Exists(nextVs, nextF) =>  collectVarsExists(vsSoFar ++ nextVs, nextF)
       case _ => (vsSoFar, candidate)
     }
-  }
-
-  /** Call Z3 or Polya to simplify a KeYmaera X term */
-  private def simplifyTerm(t: Term, toolId: String) : Term = {
-    //@todo This code is poor man's reflection. If retained then pass Tool, not tool name.
-    if (toolId == "Z3") {
-      val z3 = new Z3Solver
-      z3.simplify(t)
-    } else if (toolId == "Polya") {
-      val polya = new PolyaSolver
-      polya.simplify(t)
-    } else throw new SMTConversionException("Cannot simplify term with: " + toolId)
   }
 }
