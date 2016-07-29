@@ -84,75 +84,15 @@ object KeYmaeraX {
     if (args.length == 0) launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
-      def makeVariables(varNames: Array[String]): Array[Variable] = {
-        varNames.map(vn => KeYmaeraXParser(vn) match {
-          case v: Variable => v
-          case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
-        })
-      }
-
-      def nextOption(map: OptionMap, list: List[String]): OptionMap = {
-        list match {
-          case Nil => map
-          case "-help" :: _ => {println(usage); exit(1)}
-          case "-license" :: _ => {println(license); exit(1)}
-          // actions
-          case "-parse" :: value :: tail =>
-            parseProblemFile(value); ???
-          case "-bparse" :: value :: tail =>
-            parseBelleTactic(value); ???
-          case "-prove" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
-            else optionErrorReporter("-prove")
-          case "-modelplex" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
-            else optionErrorReporter("-modelPlex")
-          case "-codegen" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
-            else optionErrorReporter("-codegen")
-          case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
-          // action options
-          case "-out" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
-            else optionErrorReporter("-out")
-          case "-vars" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
-            else optionErrorReporter("-vars")
-          case "-tactic" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
-            else optionErrorReporter("-tactic")
-          case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
-          // aditional options
-          case "-mathkernel" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
-            else optionErrorReporter("-mathkernel")
-          case "-jlink" :: value :: tail =>
-            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
-            else optionErrorReporter("-jlink")
-          case "-verify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> true), tail)
-          case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
-          case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
-          case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
-          case "-cse" :: tail => require(!map.contains('cse)); nextOption(map ++ Map('cse -> true), tail)
-          case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
-          // global options
-          case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
-          case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
-          case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
-          case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
-          case "-security" :: tail => activateSecurity(); nextOption(map, tail)
-          case "-launch" :: tail => launched(); nextOption(map, tail)
-          case option :: tail => optionErrorReporter(option)
-        }
-      }
-
-
       //@note 'commandLine is only passed in to preserve evidence of what generated the output.
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
-      require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
-      if (options.get('mode).contains("codegen"))
-        //@note no MathKernel initialization needed for C generation
+      if(!options.contains('mode)) {
+        //@note this should be a bad state but apparently it happens.
+        launchUI(args)
+      }
+      else if (options.get('mode).contains("codegen"))
+      //@note no MathKernel initialization needed for C generation
         codegen(options)
       else if (!options.get('mode).contains("ui") ) {
         try {
@@ -169,6 +109,68 @@ object KeYmaeraX {
           shutdownProver()
         }
       }
+    }
+  }
+
+  private def makeVariables(varNames: Array[String]): Array[Variable] = {
+    varNames.map(vn => KeYmaeraXParser(vn) match {
+      case v: Variable => v
+      case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
+    })
+  }
+
+  private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+    list match {
+      case Nil => map
+      case "-help" :: _ => {println(usage); exit(1)}
+      case "-license" :: _ => {println(license); exit(1)}
+      // actions
+      case "-parse" :: value :: tail =>
+        parseProblemFile(value); ???
+      case "-bparse" :: value :: tail =>
+        parseBelleTactic(value); ???
+      case "-prove" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
+        else optionErrorReporter("-prove")
+      case "-modelplex" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
+        else optionErrorReporter("-modelPlex")
+      case "-codegen" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
+        else optionErrorReporter("-codegen")
+      case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
+      // action options
+      case "-out" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
+        else optionErrorReporter("-out")
+      case "-vars" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+        else optionErrorReporter("-vars")
+      case "-tactic" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
+        else optionErrorReporter("-tactic")
+      case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
+      // aditional options
+      case "-mathkernel" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
+        else optionErrorReporter("-mathkernel")
+      case "-jlink" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
+        else optionErrorReporter("-jlink")
+      case "-verify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> true), tail)
+      case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
+      case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
+      case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
+      case "-cse" :: tail => require(!map.contains('cse)); nextOption(map ++ Map('cse -> true), tail)
+      case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
+      // global options
+      case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
+      case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
+      case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
+      case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
+      case "-security" :: tail => activateSecurity(); nextOption(map, tail)
+      case "-launch" :: tail => launched(); nextOption(map, tail)
+      case option :: tail => optionErrorReporter(option)
     }
   }
 

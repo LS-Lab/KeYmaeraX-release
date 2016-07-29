@@ -56,7 +56,7 @@ object Main {
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-launch"  :: "-ui" :: Nil) ++ args.toList)
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
     }
     else {
       exitIfDeprecated()
