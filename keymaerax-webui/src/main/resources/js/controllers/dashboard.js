@@ -16,15 +16,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
     }
 }]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl.IndexCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
-    $scope.isLocal = false;
-    $http.get('/isLocal')
-        .success(function(data) {
-            if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Could not determine if the KeYmaera X server is running locally")
-            $scope.isLocal = data.success;
-        });
-}]);
-
 angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
   // Set the view for menu active class
   $scope.$on('routeLoaded', function (event, args) {

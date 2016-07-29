@@ -20,6 +20,16 @@ angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', 
           }
       });
 
+    $scope.isLocal = true;
+    $http.get('/isLocal')
+        .success(function(data) {
+            if(data.errorThrown) {
+                $scope.isLocal = false;
+                showCaughtErrorMessage($uibModal, data, "Could not determine if the KeYmaera X server is running locally")
+            }
+            $scope.isLocal = data.success;
+        });
+
   $scope.$emit('routeLoaded', {theview: 'dashboard'});
 }]);
 

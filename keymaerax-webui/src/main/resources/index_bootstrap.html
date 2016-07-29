@@ -79,7 +79,7 @@
             </p>
             <p>
             </p>
-            <p style="color: red;" ng-if="!isLocal" ng-controller="DashboardCtrl.IndexCtrl">
+            <p style="color: red;" ng-show="!isLocal" ng-controller="ServerInfoCtrl" id="remoteOnlyWarning">
                 This publicly hosted instance of KeYmaera X is for <b>demonstration purposes only</b>.
                 Use a fresh password when creating an account and do not upload anything to this server that is sensitive in nature.
             </p>
