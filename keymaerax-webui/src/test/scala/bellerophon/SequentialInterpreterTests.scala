@@ -197,8 +197,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
     val tactic = andR(SuccPos(0)) < (
-      andR(SuccPos(0)),
-      implyR(SuccPos(0)) & close
+      andR(SuccPos(0)) & DebuggingTactics.assertProved,
+      implyR(SuccPos(0)) & close & DebuggingTactics.assertProved
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleError] shouldBe thrownBy(
