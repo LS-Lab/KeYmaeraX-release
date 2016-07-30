@@ -89,7 +89,7 @@ class Z3Solver extends SMTSolver {
 
   /** Return Z3 QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
-    val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
+    val smtCode = SMTConverter(f) + "\n(check-sat)\n"
     if (DEBUG) println("[Solving with Z3...] \n" + smtCode)
     val smtFile = File.createTempFile("z3qe", ".smt2")
     val writer = new FileWriter(smtFile)
@@ -135,7 +135,7 @@ class Z3Solver extends SMTSolver {
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
   def simplify(t: Term) : Term = {
-    val smtCode = SMTConverter.generateSimplify(t, "Z3")
+    val smtCode = SMTConverter.generateSimplify(t)
     if (DEBUG) println("[Simplifying with Z3 ...] \n" + smtCode)
     val smtFile = File.createTempFile("z3simplify", ".smt2")
     val writer = new FileWriter(smtFile)

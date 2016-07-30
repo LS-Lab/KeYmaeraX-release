@@ -87,7 +87,7 @@ class PolyaSolver extends SMTSolver {
 
   /** Return Polya QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
-    val smtCode = SMTConverter(f, "Polya") + "\n(check-sat)\n"
+    val smtCode = SMTConverter(f) + "\n(check-sat)\n"
     if (DEBUG) println("[Solving with Polya...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaQe", ".smt2")
     val writer = new FileWriter(smtFile)
@@ -116,7 +116,7 @@ class PolyaSolver extends SMTSolver {
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
   def simplify(t: Term) : Term = {
-    val smtCode = SMTConverter.generateSimplify(t, "Polya")
+    val smtCode = SMTConverter.generateSimplify(t)
     if (DEBUG) println("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaSimplify", ".smt2")
     val writer = new FileWriter(smtFile)

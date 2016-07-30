@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 import scala.collection.immutable.Seq
 
@@ -17,8 +17,7 @@ import scala.collection.immutable.Seq
  * @author Ran Ji
  */
 object SMTConverter {
-  def apply(expr: Formula): String = generateAssertNegation(expr, "Z3")
-  def apply(expr: Formula, toolId: String) = generateAssertNegation(expr, toolId)
+  def apply(expr: Formula): String = generateAssertNegation(expr)
 
   private val SMT_ABS = "absolute"
   private val SMT_MIN = "minimum"
@@ -30,19 +29,19 @@ object SMTConverter {
     *   unsatisfied => original KeYmaera X formula is valid
     *   satisfiable => original KeYmaera X formula is not valid
     */
-  private def generateAssertNegation(expr: Formula, toolId: String): String = {
-    val (varDec, smtFormula) = generateSMT(expr, toolId)
+  private def generateAssertNegation(expr: Formula): String = {
+    val (varDec, smtFormula) = generateSMT(expr)
     varDec + "(assert (not " + smtFormula + "))"
   }
 
   /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
-  def generateSimplify(expr: Term, toolId: String): String = {
-    val (varDec, smtFormula) = generateSMT(expr, toolId)
+  def generateSimplify(expr: Term): String = {
+    val (varDec, smtFormula) = generateSMT(expr)
     varDec + "(simplify " + smtFormula + ")"
   }
 
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
-  private def generateSMT(expr: Expression, toolId: String): (String, String) = {
+  private def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
     val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
@@ -62,7 +61,7 @@ object SMTConverter {
           }
       }
     ).mkString("\n")
-    val smtFormula = convertToSMT(expr, toolId)
+    val smtFormula = convertToSMT(expr)
     if(varDec.nonEmpty) varDec += "\n"
     (varDec, smtFormula)
   }
@@ -82,43 +81,43 @@ object SMTConverter {
     if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
   }
 
-  private def convertToSMT(expr: Expression, toolId: String) : String = expr match {
-    case t: Term  => convertTerm(t, toolId)
-    case f: Formula => convertFormula(f, toolId)
+  private def convertToSMT(expr: Expression) : String = expr match {
+    case t: Term  => convertTerm(t)
+    case f: Formula => convertFormula(f)
     case _ => throw new SMTConversionException("The input expression: \n" + KeYmaeraXPrettyPrinter(expr) + "\nis expected to be formula.")
   }
 
   /** Convert KeYmaera X formula to string in SMT notation */
-  private def convertFormula(f: Formula, toolId: String) : String = {
+  private def convertFormula(f: Formula) : String = {
     f match {
-      case Not(ff)        => "(not " + convertFormula(ff, toolId) + ")"
-      case And(l, r)      => "(and " + convertFormula(l, toolId) + " " + convertFormula(r, toolId) + ")"
-      case Or(l, r)       => "(or " + convertFormula(l, toolId) + " " + convertFormula(r, toolId) + ")"
-      case Imply(l, r)    => "(=> " + convertFormula(l, toolId) + " " + convertFormula(r, toolId) + ")"
-      case Equiv(l, r)    => "(equiv " + convertFormula(l, toolId) + " " + convertFormula(r, toolId) + ")"
-      case Equal(l, r)    => "(= " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case NotEqual(l, r) => convertFormula(Not(Equal(l, r)), toolId)
-      case Greater(l,r)   => "(> " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case GreaterEqual(l,r) => "(>= " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case Less(l,r)      => "(< " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case LessEqual(l,r) => "(<= " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
+      case Not(ff)        => "(not " + convertFormula(ff) + ")"
+      case And(l, r)      => "(and " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Or(l, r)       => "(or " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Imply(l, r)    => "(=> " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Equiv(l, r)    => "(equiv " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Equal(l, r)    => "(= " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case NotEqual(l, r) => convertFormula(Not(Equal(l, r)))
+      case Greater(l,r)   => "(> " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case GreaterEqual(l,r) => "(>= " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Less(l,r)      => "(< " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case LessEqual(l,r) => "(<= " + convertTerm(l) + " " + convertTerm(r) + ")"
       case True => "true"
       case False => "false"
-      case Forall(vs, ff) => convertForall(vs, ff, toolId)
-      case Exists(vs, ff) => convertExists(vs, ff, toolId)
+      case Forall(vs, ff) => convertForall(vs, ff)
+      case Exists(vs, ff) => convertExists(vs, ff)
     }
   }
 
   /** Convert KeYmaera X term to string in SMT notation */
-  private def convertTerm(t: Term, toolId: String) : String = {
+  private def convertTerm(t: Term) : String = {
     require(t.sort == Real || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
     t match {
-      case Neg(c)       => "(- " + convertTerm(c, toolId) + ")"
-      case Plus(l, r)   => "(+ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case Minus(l, r)  => "(- " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case Times(l, r)  => "(* " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case Power(l, r)  => "(^ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
+      case Neg(c)       => "(- " + convertTerm(c) + ")"
+      case Plus(l, r)   => "(+ " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Minus(l, r)  => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Times(l, r)  => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
         //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
         //@ran todo-resolved: double checked and see notes below
@@ -139,24 +138,24 @@ object SMTConverter {
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) => nameIdentifier(fn) match {
-        case "min" => "(" + SMT_MIN + " " + convertTerm(child, toolId) + ")"
-        case "max" => "(" + SMT_MAX + " " + convertTerm(child, toolId) + ")"
-        case "abs" => "(" + SMT_ABS + " " + convertTerm(child, toolId) + ")"
-        case _ => "(" + nameIdentifier(fn) + " " + convertTerm(child, toolId) + ")"
+        case "min" => "(" + SMT_MIN + " " + convertTerm(child) + ")"
+        case "max" => "(" + SMT_MAX + " " + convertTerm(child) + ")"
+        case "abs" => "(" + SMT_ABS + " " + convertTerm(child) + ")"
+        case _ => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
       }
       //@note: disassociate the arguments
-      case Pair(l, r)  => convertTerm(l, toolId) + " " + convertTerm(r, toolId)
+      case Pair(l, r)  => convertTerm(l) + " " + convertTerm(r)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
   }
 
   /** Convert possibly nested forall KeYmaera X expression to SMT */
-  private def convertForall(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
+  private def convertForall(vs: Seq[NamedSymbol], f: Formula) : String = {
     val (vars, formula) = collectVarsForall(vs, f)
     //@todo code review: assert sort==real and use sort
     //@ran todo-resolved: changed as suggested
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
+    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested forall expression */
@@ -168,10 +167,10 @@ object SMTConverter {
   }
 
   /** Convert possibly nested exists KeYmaera X expression to SMT */
-  private def convertExists(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
+  private def convertExists(vs: Seq[NamedSymbol], f: Formula) : String = {
     val (vars, formula) = collectVarsExists(vs, f)
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
+    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested exists expression */
