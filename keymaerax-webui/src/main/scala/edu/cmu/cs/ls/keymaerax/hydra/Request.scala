@@ -837,7 +837,16 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
-      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).lastOption)
+      val latestExecutionStep = db.getExecutionSteps(proofId.toInt, None).sortBy(s => s.stepId).lastOption
+      //@note below is the conceptually correct implementation of latestExecutionStep, but getExecutionTrace doesn't work
+      //when there's not yet an associated profableId for the step (which is the case here since we are mid-step and the
+      //provable isn't computed yet).
+//      db.getExecutionTrace(proofId.toInt).lastStepId match {
+//        case Some(id) => db.getExecutionSteps(proofId.toInt, None).find(p => p.stepId == id)
+//        case None => None
+//      }
+
+      (!executor.contains(taskId) || executor.isDone(taskId), latestExecutionStep)
     }
     new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }

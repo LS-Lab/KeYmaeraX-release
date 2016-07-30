@@ -28,7 +28,7 @@ import scala.language.postfixOps
  *
  * @author Andre Platzer
  * @author Stefan Mitsch
- * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+ * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[HilbertCalculus]]
  * @see [[SequentCalculus]]
@@ -97,7 +97,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         | ((must(normalize) partial)
         | ((loop(gen)('L) partial)
         | ((loop(gen)('R) partial)
-        | ((diffSolve(None)('R) partial)
+        | ((AxiomaticODESolver(qeTool)('R) partial)
         | ((diffInd partial)
         | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType() & ?(OnAll(QE))
   }

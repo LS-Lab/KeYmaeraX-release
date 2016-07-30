@@ -75,7 +75,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "failover to right whenever a non-closing and non-partial tactic is provided on the left" in {
-    val tactic = implyR(1) | skip
+    val tactic = implyR(1)& DebuggingTactics.assertProved  | skip& DebuggingTactics.assertProved
 
     shouldResultIn(
       tactic,
@@ -85,7 +85,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
-    val tactic = implyR(1) | (skip & skip)
+    val tactic = implyR(1) & DebuggingTactics.assertProved | (skip & skip) & DebuggingTactics.assertProved
     val f = "1=2 -> 1=2".asFormula
     a[BelleError] should be thrownBy theInterpreter(tactic, BelleProvable(Provable.startProof(f))
     )
@@ -197,8 +197,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
     val tactic = andR(SuccPos(0)) < (
-      andR(SuccPos(0)),
-      implyR(SuccPos(0)) & close
+      andR(SuccPos(0)) & DebuggingTactics.assertProved,
+      implyR(SuccPos(0)) & close & DebuggingTactics.assertProved
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleError] shouldBe thrownBy(

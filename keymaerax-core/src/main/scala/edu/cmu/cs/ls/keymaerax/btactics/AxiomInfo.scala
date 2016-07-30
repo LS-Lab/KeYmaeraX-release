@@ -174,6 +174,8 @@ object DerivationInfo {
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
 
+    new PositionTacticInfo("axiomaticSolve", "axiomaticSolve", {case () => AxiomaticODESolver.apply(qeTool)}, needsTool = true),
+    
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn"
       , AxiomDisplayInfo(("c()'", "c()′"), "(c)′=0")
@@ -663,6 +665,11 @@ object DerivationInfo {
           (List("&Gamma;"), List("r → [{x′ = f(x), y′ = a() y + b() & q(x)}]r","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
       , List(FormulaArg("r"), VariableArg("y"), TermArg("a()"), TermArg("b()"))
       , {case () => (r: Formula) => (y: Variable) => (a: Term) => (b: Term) => TactixLibrary.DA(y, a, b, r)}), //@note: for now, has to be in the order provided by web UI
+    new PositionTacticInfo("AxiomaticODESolver",
+      RuleDisplayInfo("AxiomaticODESolver",
+        (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+        List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
+      {case () => AxiomaticODESolver.apply}, needsTool = true),
     new PositionTacticInfo("diffSolve",
       RuleDisplayInfo("[′]R",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
@@ -677,6 +684,8 @@ object DerivationInfo {
 
     // DLBySubst
     new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+
+    new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
 
     // Derived axiomatic rules
     new DerivedRuleInfo("all generalization"

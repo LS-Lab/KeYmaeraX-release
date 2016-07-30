@@ -273,12 +273,11 @@ End.
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
-  /* @NOTE In systems, f(x) cannot have ' by data structure invariant */
   [{x_'=f(x_)&q(x_)}]p(??) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(??)
 End.
 
 Axiom "DE differential effect (system)".
-  /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
+  /* @NOTE Soundness: f(??) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
   /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
   [{x_'=f(??),c&H(??)}]p(??) <-> [{c,x_'=f(??)&H(??)}][x_':=f(??);]p(??)
 End.

@@ -229,7 +229,7 @@ object PropositionalTactics {
          *   2. Cut in a new quantified equivalence
          *   3. Perform instantiations on this new quantified equivalence.
          *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
-         *   5. Hide the instantiated equivalence
+         *   5. Hide the instantiated equivalence OR the original assumption.
          */
           //1
           val instantiation = computeInstantiation(fa, target)
@@ -246,8 +246,11 @@ object PropositionalTactics {
             e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
           })
 
+          //step 5.
+          val hidingTactic = if(targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
+
           //4 & 5
-          instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & TactixLibrary.hideL(cutPos)
+          instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
         }
       }
     })
