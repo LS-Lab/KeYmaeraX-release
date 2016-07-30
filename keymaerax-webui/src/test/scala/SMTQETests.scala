@@ -42,7 +42,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "QE" should "prove reals" in {
     z3.qeEvidence("3^0 = 1".asFormula)._1 should be ("true".asFormula)
-    polya.qeEvidence("3^0 = 1".asFormula)._1 should be ("true".asFormula)
+    an [SMTConversionException] should be thrownBy polya.qeEvidence("3^0 = 1".asFormula)
   }
 
   it should "prove constant function" in {
@@ -90,17 +90,17 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove complex quantifiers" in {
     a [SMTQeException] should be thrownBy z3.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
-    a [SMTQeException] should be thrownBy polya.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
+    an [SMTConversionException] should be thrownBy polya.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
   }
 
   it should "prove complex" in {
     z3.qeEvidence("(x+y-z)^3 = 1 -> true".asFormula)._1 should be("true".asFormula)
-    polya.qeEvidence("(x+y-z)^3 = 1 -> true".asFormula)._1 should be("true".asFormula)
+    an [SMTConversionException] should be thrownBy polya.qeEvidence("(x+y-z)^3 = 1 -> true".asFormula)
   }
 
   it should "prove complex 1" in {
     a [SMTQeException] should be thrownBy z3.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
-    a [SMTQeException] should be thrownBy polya.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
+    an [SMTConversionException] should be thrownBy polya.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
   }
 
   it should "prove complex 2" in {
@@ -111,7 +111,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove complex 3" in {
     z3.qeEvidence("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & h>=0 & kxtime_4()=0 & 0>=0 -> v=(0*2-1*0)/2^2*(-1*0^2*g()+2*h+2*0*v)+1/2*((-0*0^2+-1*(2*0^1*(0*0+1)))*g()+-1*0^2*0+(0*h+2*0)+((0*0+2*(0*0+1))*v+2*0*0))".asFormula)._1 should be ("true".asFormula)
-    polya.qeEvidence("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & h>=0 & kxtime_4()=0 & 0>=0 -> v=(0*2-1*0)/2^2*(-1*0^2*g()+2*h+2*0*v)+1/2*((-0*0^2+-1*(2*0^1*(0*0+1)))*g()+-1*0^2*0+(0*h+2*0)+((0*0+2*(0*0+1))*v+2*0*0))".asFormula)._1 should be ("true".asFormula)
+    an [SMTConversionException] should be thrownBy polya.qeEvidence("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & h>=0 & kxtime_4()=0 & 0>=0 -> v=(0*2-1*0)/2^2*(-1*0^2*g()+2*h+2*0*v)+1/2*((-0*0^2+-1*(2*0^1*(0*0+1)))*g()+-1*0^2*0+(0*h+2*0)+((0*0+2*(0*0+1))*v+2*0*0))".asFormula)
   }
 
   // ---------------------------

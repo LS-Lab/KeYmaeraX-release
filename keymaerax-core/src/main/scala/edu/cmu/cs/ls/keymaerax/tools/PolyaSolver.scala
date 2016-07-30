@@ -20,6 +20,8 @@ import scala.sys.process._
 class PolyaSolver extends SMTSolver {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
+  private val converter = new SMTConverter() {}
+
   /** Get the absolute path to Polya jar */
   private val pathToPolya : String = {
     val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
@@ -87,7 +89,7 @@ class PolyaSolver extends SMTSolver {
 
   /** Return Polya QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
-    val smtCode = SMTConverter(f) + "\n(check-sat)\n"
+    val smtCode = converter(f) + "\n(check-sat)\n"
     if (DEBUG) println("[Solving with Polya...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaQe", ".smt2")
     val writer = new FileWriter(smtFile)
@@ -105,7 +107,7 @@ class PolyaSolver extends SMTSolver {
       * Polya does not have other possible result for (check-sat)
       */
     if (polyaResult.equals("-1")) throw new SMTQeException("QE with Polya gives -1 (POSSIBLY SAT). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
-    else if(polyaResult.equals("1")) (True, new ToolEvidence(immutable.List("input" -> smtCode, "output" -> polyaOutput)))
+    else if(polyaResult.equals("1")) (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> polyaOutput)))
     else if(polyaResult.equals("0")) throw new SMTQeException("QE with Polya gives 0 (FAILED). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
     else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
   }
@@ -116,7 +118,7 @@ class PolyaSolver extends SMTSolver {
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
   def simplify(t: Term) : Term = {
-    val smtCode = SMTConverter.generateSimplify(t)
+    val smtCode = converter.generateSimplify(t)
     if (DEBUG) println("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaSimplify", ".smt2")
     val writer = new FileWriter(smtFile)

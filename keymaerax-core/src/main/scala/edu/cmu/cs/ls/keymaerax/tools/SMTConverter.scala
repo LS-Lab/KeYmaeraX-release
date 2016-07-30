@@ -13,10 +13,11 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import scala.collection.immutable.Seq
 
 /**
- * Created by ran on 8/24/15.
- * @author Ran Ji
- */
-object SMTConverter {
+  * Base class for SMT converters with conversion per SMTLib specification.
+  * Created by ran on 8/24/15.
+  * @author Ran Ji
+  */
+abstract class SMTConverter {
   def apply(expr: Formula): String = generateAssertNegation(expr)
 
   private val SMT_ABS = "absolute"
@@ -88,7 +89,7 @@ object SMTConverter {
   }
 
   /** Convert KeYmaera X formula to string in SMT notation */
-  private def convertFormula(f: Formula) : String = {
+  protected def convertFormula(f: Formula) : String = {
     f match {
       case Not(ff)        => "(not " + convertFormula(ff) + ")"
       case And(l, r)      => "(and " + convertFormula(l) + " " + convertFormula(r) + ")"
@@ -109,7 +110,7 @@ object SMTConverter {
   }
 
   /** Convert KeYmaera X term to string in SMT notation */
-  private def convertTerm(t: Term) : String = {
+  protected def convertTerm(t: Term) : String = {
     require(t.sort == Real || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
     t match {
       case Neg(c)       => "(- " + convertTerm(c) + ")"
@@ -117,7 +118,6 @@ object SMTConverter {
       case Minus(l, r)  => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Times(l, r)  => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
         //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
         //@ran todo-resolved: double checked and see notes below

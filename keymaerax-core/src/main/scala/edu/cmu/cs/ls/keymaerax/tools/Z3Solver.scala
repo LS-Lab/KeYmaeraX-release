@@ -17,12 +17,22 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, 
 import scala.collection.immutable
 import scala.sys.process._
 
+/** Z3 converter: convert exponentials (not part of SMTLib specification, but understood by Z3). */
+class Z3SMTConverter extends SMTConverter {
+  override protected def convertTerm(t: Term): String = t match {
+    case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
+    case _ => super.convertTerm(t)
+  }
+}
+
 /**
  * Created by ran on 3/27/15.
  * @author Ran Ji
  */
 class Z3Solver extends SMTSolver {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+
+  private val converter = new Z3SMTConverter
 
   /** Get the absolute path to Z3 jar */
   private val pathToZ3 : String = {
@@ -89,7 +99,7 @@ class Z3Solver extends SMTSolver {
 
   /** Return Z3 QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
-    val smtCode = SMTConverter(f) + "\n(check-sat)\n"
+    val smtCode = converter(f) + "\n(check-sat)\n"
     if (DEBUG) println("[Solving with Z3...] \n" + smtCode)
     val smtFile = File.createTempFile("z3qe", ".smt2")
     val writer = new FileWriter(smtFile)
@@ -111,7 +121,7 @@ class Z3Solver extends SMTSolver {
     //@todo investigate Z3 binding for Scala
     //@todo Code Review startsWith is not a robust way of reading off answers from Z3
     //@ran todo-resolved: changed to equals
-    if (z3Output.equals("unsat\n")) (True, new ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
+    if (z3Output.equals("unsat\n")) (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
     //@todo Code Review this is unsound, because not all formulas whose negations are satisfiable are equivalent to false.
     //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
     //@ran todo-resolved: If it returns sat, throw an exception
@@ -135,7 +145,7 @@ class Z3Solver extends SMTSolver {
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
   def simplify(t: Term) : Term = {
-    val smtCode = SMTConverter.generateSimplify(t)
+    val smtCode = converter.generateSimplify(t)
     if (DEBUG) println("[Simplifying with Z3 ...] \n" + smtCode)
     val smtFile = File.createTempFile("z3simplify", ".smt2")
     val writer = new FileWriter(smtFile)
