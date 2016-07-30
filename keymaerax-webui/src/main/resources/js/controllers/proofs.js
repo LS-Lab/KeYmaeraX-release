@@ -6,10 +6,8 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
    * Creates a new proof using a default name, so that the user doesn't have to enter new input.
    */
   $scope.createDefaultProofForModel = function(modelId) {
-      var proofName        = "Untitled Proof"
-      var proofDescription = ""
       var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createProof'
-      var dataObj          = {proofName : proofName, proofDescription : proofDescription}
+      var dataObj          = {proofName: "", proofDescription: ""}
 
       $http.post(uri, dataObj).
           success(function(data) {

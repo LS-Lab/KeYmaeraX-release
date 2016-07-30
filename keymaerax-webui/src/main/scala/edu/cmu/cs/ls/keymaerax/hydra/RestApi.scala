@@ -227,8 +227,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     post {
       entity(as[String]) { x => {
         val obj = x.parseJson
-        val proofName        = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
+        val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
+        val proofName = if (submittedProofName == "") {
+          val model = database.getModel(modelId)
+          model.name + ": Proof " + (model.numProofs + 1)
+        } else submittedProofName
         val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
+
         val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
         completeRequest(request, t)
       }}
