@@ -591,6 +591,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("[{x:=x+1;}*@invariant(x>=1)]x>=0", "[{x:=x+1;}*@invariant(x>=1)](x>=0)"),
     ("[x:=0;](f())=16", "[x:=0;](((f()))=16)"),
 
+    ("[x:=*;]x^2>=0","[x := * ;] x^2>=0"),  // issue #171 space within random assignments
+
     ("001", "1"),
     ("00", "0")
   )

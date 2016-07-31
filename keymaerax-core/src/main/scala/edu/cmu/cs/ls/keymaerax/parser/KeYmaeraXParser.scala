@@ -289,6 +289,8 @@ object KeYmaeraXParser extends Parser {
 
   // parsing
 
+  //@todo the style of this parser should probably be rewritten to a more functional style close to the grammar with more inline shifting/reducing for improved clarity and speed
+
   private def parseStep(st: ParseState): ParseState = {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
@@ -296,6 +298,9 @@ object KeYmaeraXParser extends Parser {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
       case r :+ Token(ASSIGN,loc1) :+ Token(STAR,loc2) =>
         reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
+      // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
+      case r :+ Token(ASSIGN,loc1) if la==STAR =>
+        shift(st)
 
       // nonproductive: special notation for annotations
       case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1) :+ Token(RPAREN,_) if isAnnotable(p) =>
