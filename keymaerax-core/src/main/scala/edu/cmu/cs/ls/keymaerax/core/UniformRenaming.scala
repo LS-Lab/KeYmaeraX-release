@@ -31,7 +31,7 @@ final case class URename(what: Variable, repl: Variable) extends Renaming {
 }
 
 /**
-  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
+  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa, but clash for program constants etc.
   * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
   * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
   * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
@@ -43,12 +43,12 @@ final case class URename(what: Variable, repl: Variable) extends Renaming {
   */
 final case class SyntacticURename(what: Variable, repl: Variable) extends Renaming {
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  //@note for bound renaming purposes this absolutely has to be false
+  //@note for bound renaming purposes semanticRenaming absolutely has to be false
   private[core] override val semanticRenaming: Boolean = false
 }
 
 /**
-  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
+  * Base version for uniformly renaming all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
   * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
   * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
   * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
