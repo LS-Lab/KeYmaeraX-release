@@ -10,14 +10,16 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable._
 
 /**
   * Base class for SMT converters with conversion per SMTLib specification.
   * Created by ran on 8/24/15.
   * @author Ran Ji
+  * @author Stefan Mitsch
   */
-abstract class SMTConverter {
+abstract class SMTConverter extends (Formula=>String) {
+  /** Convert given formula to an SMTLib specification that, if checked to be unsatisfiable implies that `expr` is valid. */
   def apply(expr: Formula): String = generateAssertNegation(expr)
 
   private val SMT_ABS = "absolute"
