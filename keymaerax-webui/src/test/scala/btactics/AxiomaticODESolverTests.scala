@@ -5,12 +5,14 @@
 
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, ProveAs, SuccPosition, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
-import edu.cmu.cs.ls.keymaerax.core.{ODESystem, Provable, SeqPos, SuccPos}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 
 /**
   * @author Nathan Fulton
@@ -99,4 +101,32 @@ class AxiomaticODESolverTests extends TacticTestBase {
   }
   //endregion
 
+  "ODE Solver" should "not exploit soundness bugs" in {withMathematica(implicit qet => {
+    try {
+      val model = """Functions.
+                    |  R b.
+                    |  R m.
+                    |End.
+                    |
+                    |ProgramVariables.
+                    |  R x.
+                    |  R v.
+                    |  R a.
+                    |End.
+                    |
+                    |Problem.
+                    |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+                    |End.
+                    |""".stripMargin
+      val problem: Formula = KeYmaeraXProblemParser(model)
+
+      import TactixLibrary.{implyR, composeb, assignb, allR, QE}
+      val t: BelleExpr = implyR(1) & composeb(1) & assignb(1) & AxiomaticODESolver.axiomaticSolve(qet)(1) & allR(1) & implyR(1) & implyR(1) & assignb(1) & QE
+
+      val result : Provable = proveBy(problem, t)
+      result.isProved shouldBe false
+    } catch {
+      case _ : Throwable => //ok.
+    }
+  })}
 }

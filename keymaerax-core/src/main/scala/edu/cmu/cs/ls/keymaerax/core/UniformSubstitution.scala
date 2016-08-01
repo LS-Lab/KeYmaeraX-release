@@ -77,7 +77,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case _: Formula => StaticSemantics.freeVars(repl)
     }
     case replp: Program => what match {
-      case _: ProgramConst | _: DifferentialProgramConst => bottom // program constants are always admissible, since their meaning doesn't depend on state
+      //@note DifferentialProgramConst are handled in analogy to functions on right-hand sides of differential equation
+      case _: DifferentialProgramConst => StaticSemantics.freeVars(replp)
+      case _: ProgramConst => bottom // program constants are always admissible, since their meaning doesn't depend on state
       case _ => assert(false, "already disallowed by insist(matchKey)"); throw new CoreException("Disallowed substitution shape " + this)
     }
   }
@@ -332,6 +334,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val FuncOf(wf, wArg) = subs.what
         assert(wf == of, "match on same function heads")
         assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing || wArg == Anything)
+        if (wArg==Anything && theta!=Anything) throw new SubstitutionClashException(this.toString, Anything.toString, term.toString, term.toString, Anything.toString, "Substitutions of f(??) only apply to f(??).")
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Term])
@@ -373,6 +376,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val PredOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
         assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing || wArg == Anything)
+        if (wArg==Anything && theta!=Anything) throw new SubstitutionClashException(this.toString, Anything.toString, formula.toString, formula.toString, Anything.toString, "Substitutions of p(??) only apply to p(??).")
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])

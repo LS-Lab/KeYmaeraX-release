@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 
 /**
- * Test when substituting systems instead of single differential equations.
+ * Advocatus Test when substituting systems instead of single differential equations.
  * @author Andre Platzer
  */
 @AdvocatusTest
@@ -22,22 +22,24 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{x_'=f(??),c&H(??)}]p(??) <-> [{c,x_'=f(??)&H(??)}][x_':=f(??);]p(??)
     val pr = Provable.axioms("DE differential effect (system)")
     pr shouldBe 'proved
-    a [CoreException] shouldBe thrownBy {pr(USubst(SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), "y'+1".asTerm) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+    a [CoreException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), "y'+1".asTerm) ::
+      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
       SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "x'=3".asFormula) ::
+      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x'=3".asFormula) ::
       Nil))}
   }
 
-  it should "not allow ghosts in postconditions of DG differential ghost" in {
+  "System postconditions" should "not allow ghosts in postconditions of DG differential ghost" in {
     // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
       SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=0".asFormula) ::
+      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
       Nil))}
   }
 
@@ -45,23 +47,135 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(0)) ::
+      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
       SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=0".asFormula) ::
+      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
       Nil))}
   }
 
-  it should "not allow ghosts in postconditions of DG++ System" in {
-    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
-    val pr = Provable.axioms("DG++ System")
+  it should "not allow ghosts in postconditions of DG inverse differential ghost for y_=9 -> [{y_'=5,x_'=3}]y_=9" in {
+    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
+    val pr = Provable.axioms("DG inverse differential ghost")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(0)) ::
-      SubstitutionPair(FuncOf(Function("g",None,Real,Real),DotTerm), Number(0)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(3)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
+        Nil))}
+    //@note this is a mistyped substitution so near no-op would be acceptable
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(3)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=9".asFormula) ::
+        Nil))}
+    //@todo should not prove
+  }
+
+  it should "not allow ghosts in postconditions of DG inverse differential ghost system" in {
+    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    val pr = Provable.axioms("DG inverse differential ghost system")
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(0)) ::
+      SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(0)) ::
+      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
       SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=0".asFormula) ::
+      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
       Nil))}
   }
 
+  it should "not allow ghosts in postconditions of DG inverse differential ghost system for y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9" in {
+    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    val pr = Provable.axioms("DG inverse differential ghost system")
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(3)) ::
+      SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=9".asFormula) ::
+      Nil))}
+    //@todo should not prove y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9 by using such a DG inverse differential ghost system
+  }
+
+  it should "not allow ghosts in postconditions of DG inverse differential ghost system System for y_<=m() -> [{y_'=x_,x_'=-b(),t'=1}]y_<=m()" in {
+    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    val pr = Provable.axioms("DG inverse differential ghost system")
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), "-b()".asTerm) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Variable("x_",None,Real)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+        SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_<=m()".asFormula) ::
+        Nil))}
+    //@todo should not prove this formula by using such a DG inverse differential ghost system
+  }
+
+
+  "System ODEs" should "not allow ghosts in ODEs of DG differential ghost" in {
+    // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
+    val pr = Provable.axioms("DG differential ghost")
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
+      SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(-1)) ::
+      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x<=10".asFormula) ::
+      Nil))}
+    //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DG("y_'=-1")
+  }
+
+  it should "not allow ghosts in ODEs of DG differential ghost constant" in {
+    // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
+    val pr = Provable.axioms("DG differential ghost constant")
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+        SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x<=10".asFormula) ::
+        Nil))}
+    //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DGconstant("y_'=-1")
+  }
+
+  it should "not allow ghosts in ODEs of DG inverse differential ghost for y_>=0 -> \\forall y_ [{y_'=5,x_'=y_}]x_>=0" in {
+    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
+    val pr = Provable.axioms("DG inverse differential ghost")
+    println(pr)
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
+        Nil))}
+    //@note this is a mistyped substitution so near no-op would be acceptable
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Variable("y_",None,Real)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x_>=0".asFormula) ::
+        Nil))}
+    //@todo should not prove
+  }
+
+  it should "not allow ghosts in ODEs of DG inverse differential ghost system for y_>=0 -> \\forall y_ [{y_'=5,x_'=y_,t'=1}]x_>=0" in {
+    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    val pr = Provable.axioms("DG inverse differential ghost system")
+    pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Variable("y_",None,Real)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+        SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x_>=0".asFormula) ::
+        Nil))}
+    //@todo should not prove
+  }
 }
