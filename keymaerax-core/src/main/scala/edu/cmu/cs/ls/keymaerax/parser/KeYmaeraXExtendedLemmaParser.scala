@@ -4,9 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Evidence}
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 import scala.collection.immutable
 
@@ -126,7 +126,6 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     */
   def parseAllEvidence(input: TokenStream, prevEvidence: List[Evidence] = Nil): (List[Evidence], TokenStream) = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
-    require(input.head.tok.equals(TOOL_BEGIN), "expected Tool block but found " + input.head)
     val (evidence, remainder) = parseNextEvidence(input)
     (evidence, remainder)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
@@ -136,18 +135,27 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
   }
 
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
-    require(input.head.tok.equals(TOOL_BEGIN), "expected to begin with Tool block.")
+    val beginEvidenceTokens = Set(TOOL_BEGIN, HASH_BEGIN)
+    require(beginEvidenceTokens.contains(input.head.tok), "expected to find a begin evidence block.")
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
       input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
 
-    val evidence = parseToolEvidenceLines(toolTokens)
+    val evidenceLines = parseEvidenceLines(toolTokens)
 
-    (ToolEvidence(evidence), remainderTokens.tail)
+    val evidence = input.head.tok match {
+      case TOOL_BEGIN => ToolEvidence(evidenceLines)
+      case HASH_BEGIN => {
+        assert(evidenceLines.head._1 == "hash")
+        HashEvidence(evidenceLines.head._2)
+      }
+    }
+
+    (evidence, remainderTokens.tail)
   }
 
-  def parseToolEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
+  def parseEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
     require(input.head.tok match { case IDENT(_, _) => true case _ => false }, "expected to begin with key.")
     require(input.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false }, "expected actual value.")
 
