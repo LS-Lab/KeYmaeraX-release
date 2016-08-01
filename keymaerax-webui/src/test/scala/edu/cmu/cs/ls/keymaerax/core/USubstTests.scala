@@ -336,6 +336,19 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(IndexedSeq(), IndexedSeq(conc)))
   }
 
+
+  it should "not allow Anything substitutions on something terms" in {
+    val pr = Provable.axioms("V vacuous")(USubst(
+      SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
+        SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+    pr shouldBe 'proved
+    pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula)))
+    // this should not prove x=0->[x:=5;]x=0
+    a [SubstitutionClashException] should be thrownBy {
+      pr(USubst(SubstitutionPair(PredOf(Function("q",None,Real,Bool), Anything), "x=0".asFormula) :: Nil))
+    }
+  }
+
   it should "refuse to accept ill-kinded substitutions outright" in {
     a[CoreException] should be thrownBy SubstitutionPair(FuncOf(Function("a", None, Unit, Real), Nothing), Greater(Variable("x"), Number(5)))
     a[CoreException] should be thrownBy SubstitutionPair(FuncOf(Function("a", None, Real, Real), DotTerm), Greater(Variable("x"), Number(5)))
