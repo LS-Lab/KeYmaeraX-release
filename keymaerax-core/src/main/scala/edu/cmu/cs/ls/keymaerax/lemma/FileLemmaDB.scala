@@ -12,6 +12,7 @@ import java.io.{File, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
 
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
@@ -75,24 +76,24 @@ class FileLemmaDB extends LemmaDB {
 
   private def saveProof(file: File, lemma: Lemma, id: String): Unit = {
     //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-    val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
+    val parse = KeYmaeraXExtendedLemmaParser(addRequiredEvidence(lemma).toString)
     assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
     assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals }should be identical to original lemma ${parse._2}")
-    //@todo Code Review: failed. All evidence needs to be preserved, not just the first evidence
-    assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
+
+    val lemmaToAdd = addRequiredEvidence(lemma)
 
     val pw = new PrintWriter(file)
     pw.write("/** KeYmaera X " + edu.cmu.cs.ls.keymaerax.core.VERSION + " */")
-    pw.write(lemma.toString)
+    pw.write(lemmaToAdd.toString)
     pw.close()
 
     val lemmaFromDB = get(id)
-    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
+    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemmaToAdd) {
       file.delete()
       throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted for lemma " + id)
     }
     // assertion duplicates condition and throw statement
-    assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
+    assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemmaToAdd, "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
   override def deleteDatabase(): Unit = {

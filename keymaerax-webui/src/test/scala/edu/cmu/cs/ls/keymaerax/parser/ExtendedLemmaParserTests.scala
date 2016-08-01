@@ -1,10 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Lemma, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.hydra.SQLite
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper}
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
 
 import scala.collection.immutable.IndexedSeq
 /**
@@ -186,6 +188,40 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
     parseResult._3.head.asInstanceOf[HashEvidence].h shouldBe HashEvidenceHelper.md5("asdf")
+  }
+
+  it should "add a lemma" in {
+    addTo(LemmaDBFactory.lemmaDB, true)
+  }
+
+  it should "add a sql lemma" in {
+    addTo(new SQLite.SQLiteLemmaDB(SQLite.TestDB), false /*@todo b/c .remove currently unsupported for sql lemma db*/)
+  }
+
+
+  private def addTo(db:LemmaDB, remove:Boolean=true) = {
+    var name = "111111"
+    while(db.contains(name)) {
+      name = name + "1"
+    }
+
+    val p = Provable.startProof("1=1".asFormula)
+
+    try {
+      db.add(new Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name)))
+      val reloadedLemma = db.get(name)
+      reloadedLemma.get.evidence.find(_.isInstanceOf[HashEvidence]) match {
+        case Some(HashEvidence(h)) => h == HashEvidenceHelper.hashSequentList(p.conclusion :: Nil)
+        case None => throw new Exception(s"Expected some hash evidence in ${db.get(name).get.toString}")
+      }
+      if(remove) db.remove(name)
+    }
+    catch {
+      case e: Throwable => {
+        if(remove) db.remove(name)
+        throw e //stil fail but don't leave clutter around.
+      }
+    }
   }
 
 }

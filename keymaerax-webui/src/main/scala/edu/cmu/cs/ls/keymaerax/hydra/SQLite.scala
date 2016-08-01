@@ -79,24 +79,25 @@ object SQLite {
     private def saveLemma(lemma:Lemma, id:Int): Unit = {
       if (REDUNDANT_CHECKS) {
         //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-        val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
+        val parse = KeYmaeraXExtendedLemmaParser(addRequiredEvidence(lemma).toString)
         assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
         assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
         assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
       }
 
-      val lemmaString = lemma.toString
+      val lemmaToAdd = addRequiredEvidence(lemma)
+      val lemmaString = lemmaToAdd.toString
 
       db.updateLemma(id, lemmaString)
-      cachedLemmas = cachedLemmas.+((id, lemma))
+      cachedLemmas = cachedLemmas.+((id, lemmaToAdd))
       val lemmaFromDB = get(id.toString)
-      if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
+      if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemmaToAdd) {
         db.deleteLemma(id)
         cachedLemmas = cachedLemmas.-(id)
         throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
       }
       // assertion duplicates condition and throw statement
-      assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
+      assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemmaToAdd, "Lemma stored in DB should be identical to lemma in memory " + lemma)
     }
 
     private def isUniqueLemmaId(id: Int) = db.getLemmas(List(id)).isEmpty
