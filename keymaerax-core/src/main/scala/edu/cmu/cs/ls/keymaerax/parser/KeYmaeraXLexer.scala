@@ -240,6 +240,9 @@ private object LEMMA_BEGIN extends Terminal("Lemma") {
 private object TOOL_BEGIN extends Terminal("Tool") {
   override def regexp = """Tool""".r
 }
+private object HASH_BEGIN extends Terminal("Hash") {
+  override def regexp = """Hash""".r
+}
 private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
   override def regexp = TOOL_VALUE_PAT.regexp
 }
@@ -398,6 +401,10 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
       case TOOL_BEGIN.startPattern(_*) => mode match {
         case LemmaFileMode => consumeTerminalLength(TOOL_BEGIN, loc)
+        case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
+      }
+      case HASH_BEGIN.startPattern(_*) => mode match {
+        case LemmaFileMode => consumeTerminalLength(HASH_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
       }
       case SEQUENT_BEGIN.startPattern(_*) => mode match {
