@@ -90,6 +90,7 @@ class CpsWeekTutorial extends TacticTestBase {
   "Example 2" should "have expected open goal and a counter example" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/02_robo2-justbrakenaive.kyx"))
     val result = proveBy(s, master())
+    result.isProved shouldBe false
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0<=m".asFormula, "b>0".asFormula, "t__0=0".asFormula,
       "v_0>=0".asFormula, "x=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)".asFormula, "v=-1*b*t_+v_0".asFormula, "v>=0".asFormula,
