@@ -333,7 +333,7 @@ object AxiomaticODESolver {
 
         f match {
           case Box(_,_) => {
-            val axiomName = if(atomicOdes(ode).length > 2) "DG++ System" else "DG++"
+            val axiomName = if(atomicOdes(ode).length > 2) "DG inverse differential ghost system" else "DG inverse differential ghost"
             TactixLibrary.cut(Forall(y_.xp.x::Nil, f)) <(
               HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved,
               TactixLibrary.hide(pos) & HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos)
