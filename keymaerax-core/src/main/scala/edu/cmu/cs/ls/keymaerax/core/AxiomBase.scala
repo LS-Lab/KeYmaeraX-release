@@ -373,6 +373,14 @@ Axiom "^' derive power".
 	((f(??)^(c()))' = (c()*(f(??)^(c()-1)))*(f(??)')) <- (c() != 0)
 End.
 
+Axiom "derive sine".
+  (sin(h())' = cos(h())
+End.
+
+Axiom "derive cosine".
+  (cos(h())' = -sin(h())
+End.
+
 /**
  * DIFFERENTIAL FOR FORMULAS
  */
