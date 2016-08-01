@@ -20,7 +20,7 @@ import scala.sys.process._
 class PolyaSolver extends SMTSolver {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
-  private val converter = new SMTConverter() {}
+  private val converter = DefaultSMTConverter
 
   /** Get the absolute path to Polya jar */
   private val pathToPolya : String = {

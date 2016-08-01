@@ -13,7 +13,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
-  val converter = new SMTConverter {}
+  val converter = DefaultSMTConverter
 
   "Numbers" should "convert numbers" in {
     converter("1 > 2".asFormula) should be("(assert (not (> 1 2)))")
@@ -69,45 +69,41 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Quantifiers with Z3 converter" should "convert complex quantifiers" in {
-    new Z3SMTConverter()("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+    converter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
       + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (^ x 2) (^ y 2)) (^ z 2))))))")
   }
 
-  "Exponentials with default converter" should "fail" in {
-    an [SMTConversionException] should be thrownBy converter("3^2 > 1".asFormula)
-  }
-
-  "Exponentials with Z3 converter" should "convert positive" in {
-    new Z3SMTConverter()("3^3 > 1".asFormula) should be  ("(assert (not (> (^ 3 3) 1)))")
+  "Exponentials" should "convert positive" in {
+    converter("3^3 > 1".asFormula) should be  ("(assert (not (> (^ 3 3) 1)))")
   }
 
   it should "convert negative" in {
-    new Z3SMTConverter()("3^-2 < 1".asFormula) should be ("(assert (not (< (^ 3 (- 2)) 1)))")
+    converter("3^-2 < 1".asFormula) should be ("(assert (not (< (^ 3 (- 2)) 1)))")
   }
 
   it should "convert index 0" in {
-    new Z3SMTConverter()("(x+y-z)^(1-1) = 1".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= (^ (- (+ x y) z) (- 1 1)) 1)))")
+    converter("(x+y-z)^(1-1) = 1".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= (^ (- (+ x y) z) (- 1 1)) 1)))")
   }
 
   it should "convert base 0" in {
-    new Z3SMTConverter()("(0+0)^(x+y-1) = 1".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ x y) 1)) 1)))")
+    converter("(0+0)^(x+y-1) = 1".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ x y) 1)) 1)))")
   }
 
   it should "convert fractions" in {
-    new Z3SMTConverter()("3^(-0.5) < 1".asFormula) shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))"
+    converter("3^(-0.5) < 1".asFormula) shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))"
   }
 
   it should "convert complex" in {
-    new Z3SMTConverter()("(x+y-z)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+    converter("(x+y-z)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
       + "(assert (not (= (^ (- (+ x y) z) 3) 1)))")
   }
 
   it should "convert complex 2" in {
-    new Z3SMTConverter()("(x+x+x)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n(assert (not (= (^ (+ (+ x x) x) 3) 1)))")
+    converter("(x+x+x)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n(assert (not (= (^ (+ (+ x x) x) 3) 1)))")
   }
 
   it should "convert complex 3" in {
-    new Z3SMTConverter()("(x+y-z)^(y*2-y-y+3) = 1".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+    converter("(x+y-z)^(y*2-y-y+3) = 1".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
       + "(assert (not (= (^ (- (+ x y) z) (+ (- (- (* y 2) y) y) 3)) 1)))")
   }
 

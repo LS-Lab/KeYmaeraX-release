@@ -12,6 +12,9 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 import scala.collection.immutable._
 
+/** A default SMT converter with output as preferred by KeYmaera X. */
+object DefaultSMTConverter extends SMTConverter {}
+
 /**
   * Base class for SMT converters with conversion per SMTLib specification.
   * Created by ran on 8/24/15.
@@ -120,6 +123,7 @@ abstract class SMTConverter extends (Formula=>String) {
       case Minus(l, r)  => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Times(l, r)  => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
         //@todo code review: check decimaldouble/long/double. Also binary versus base 10 representations don't have to match
         //@ran todo-resolved: double checked and see notes below

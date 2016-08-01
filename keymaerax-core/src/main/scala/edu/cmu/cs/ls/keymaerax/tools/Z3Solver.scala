@@ -17,14 +17,6 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, 
 import scala.collection.immutable
 import scala.sys.process._
 
-/** Z3 converter: convert exponentials (not part of SMTLib specification, but understood by Z3). */
-class Z3SMTConverter extends SMTConverter {
-  override protected def convertTerm(t: Term): String = t match {
-    case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
-    case _ => super.convertTerm(t)
-  }
-}
-
 /**
  * Created by ran on 3/27/15.
  * @author Ran Ji
@@ -32,7 +24,7 @@ class Z3SMTConverter extends SMTConverter {
 class Z3Solver extends SMTSolver {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
-  private val converter = new Z3SMTConverter
+  private val converter = DefaultSMTConverter
 
   /** Get the absolute path to Z3 jar */
   private val pathToZ3 : String = {
