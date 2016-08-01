@@ -136,7 +136,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
 
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
     val beginEvidenceTokens = Set(TOOL_BEGIN, HASH_BEGIN)
-    require(beginEvidenceTokens.contains(input.head.tok), "expected to find a begin evidence block.")
+    require(beginEvidenceTokens.contains(input.head.tok), s"expected to find a begin evidence block but found ${input.head.tok}")
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
