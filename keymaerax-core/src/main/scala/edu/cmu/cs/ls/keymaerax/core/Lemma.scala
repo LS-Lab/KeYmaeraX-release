@@ -8,7 +8,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXExtendedLemmaParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
 
@@ -16,6 +17,9 @@ import scala.collection.immutable
 import scala.collection.immutable._
 
 object Lemma {
+  //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
+  val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
+
   /**
    * Parses a lemma from its string representation.
    * @param lemma The lemma in string form.
@@ -24,7 +28,20 @@ object Lemma {
    * @see [[Lemma.toString]]
    */
   def fromString(lemma: String): Lemma = {
-    fromStringInternal(lemma)
+    val internalLemma = fromStringInternal(lemma)
+
+    //Check that the resulting lemma has
+    internalLemma.evidence.find(_.isInstanceOf[HashEvidence]) match {
+      case Some(HashEvidence(hash)) =>
+        assert(hash == HashEvidenceHelper.hashSequentList((internalLemma.fact.conclusion +: internalLemma.fact.subgoals).toList),
+          "Expected hashed evidence to match hash of conclusion + subgoals.")
+      case None => {
+        if(LEMMA_COMPAT_MODE) println(s"WARNING: ${internalLemma.name.getOrElse("An unnamed lemma")} was reloaded without a hash confirmation.")
+        else throw new CoreException("Cannot reload a lemma without some Hash evidence.")
+      }
+    }
+
+    internalLemma
   } ensuring(r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
 
   /* This contract turns out to be a huge bottleneck when loading proofs on the UI, so it worth checking the contract
