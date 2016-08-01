@@ -374,11 +374,11 @@ Axiom "^' derive power".
 End.
 
 Axiom "derive sine".
-  (sin(h())' = cos(h())
+  (sin(h()))' = cos(h())
 End.
 
 Axiom "derive cosine".
-  (cos(h())' = -sin(h())
+  (cos(h()))' = -sin(h())
 End.
 
 /**
