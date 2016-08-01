@@ -164,13 +164,14 @@ object KeYmaeraXDeclarationsParser {
     }) &&
     StaticSemantics.vars(expr).symbols.forall(x => x match {
       case x: Variable =>
-        val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
-          case Some((None,d,token)) => (d, token)
+        val (declaredDomain, declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
+          case Some((None,sort,token)) => (None, sort, token)
+          case Some((Some(domain), sort, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
         if(x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort ${declaredSort} but used where a ${x.sort} was expected.", declarationToken.loc)
         x.sort == declaredSort
-      case _ => true
+      case _ => false //@todo this used to be true, but why?
     })
   }
 
@@ -198,8 +199,8 @@ object KeYmaeraXDeclarationsParser {
       val funSymbolsSection = funSymbolsTokens.tail
       (processDeclarations(funSymbolsSection, Map()), remainder.tail)
     }
-    else (Map(), tokens)
-  }
+    else (Map[(String, Option[Int]), (Option[Sort], Sort, Token)](), tokens)
+  } ensuring(r => r._1.forall(x => x._2._1.isDefined), "All function symbols should have a domain type.")
 
   def processVariables(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
     if(tokens.head.tok.equals(VARIABLES_BLOCK)) {

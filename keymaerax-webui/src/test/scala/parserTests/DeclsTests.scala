@@ -1,6 +1,8 @@
 package parserTests
 
 import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.core._
+
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -122,5 +124,43 @@ class DeclsTests extends FlatSpec with Matchers {
 
     KeYmaeraXProblemParser(input)
     KeYmaeraXProblemParser(input2)
+  }
+
+  "Declarations type analysis" should "not allow use of functions as variables" in {
+    val model = """Functions.
+                  |  R b().
+                  |  R m().
+                  |End.
+                  |
+                  |ProgramVariables.
+                  |  R x.
+                  |  R v.
+                  |  R a.
+                  |End.
+                  |
+                  |Problem.
+                  |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+                  |End.
+                  |""".stripMargin
+    a[ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(model))
+  }
+
+  it should "succeed when ()'s are used." in {
+    val model = """Functions.
+                  |  R b().
+                  |  R m().
+                  |End.
+                  |
+                  |ProgramVariables.
+                  |  R x.
+                  |  R v.
+                  |  R a.
+                  |End.
+                  |
+                  |Problem.
+                  |  x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()
+                  |End.
+                  |""".stripMargin
+    KeYmaeraXProblemParser(model)
   }
 }
