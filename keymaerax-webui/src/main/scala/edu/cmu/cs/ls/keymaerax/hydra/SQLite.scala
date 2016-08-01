@@ -46,7 +46,10 @@ object SQLite {
     * can take seconds), parsing operations are cached internally. All accesses to the lemma table must use this class
     * in order for the cache to always be up to date. */
   class SQLiteLemmaDB (db: SQLiteDB) extends LemmaDB {
-    override def contains(id: LemmaID): Boolean = { true }
+    override def contains(id: LemmaID): Boolean = get(id) match {
+      case Some(x) => true
+      case _ => false
+    }
 
     private var cachedLemmas: Map[Int, Lemma] = Map.empty
 
