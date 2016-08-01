@@ -298,21 +298,6 @@ Axiom "DG differential ghost constant".
   [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
 End.
 
-
-/* DG differential ghost, general Lipschitz case */
-/*Axiom "DG differential Lipschitz ghost".
-  ([x_'=f(x_)&q(x_);]p(x_) <-> \exists y_ [{x_'=f(x_),y_'=g(x_,y_)&q(x_)}]p(x_))
-  <- (\exists L_ \forall x_ \forall y_ \forall z_ (abs(g(x_,y_)-g(x_,z_)) <= L_*abs(y_-z_)))
-End.*/
-
-/* DG differential ghost, general Lipschitz case, system case */
-Axiom "DG differential Lipschitz ghost system".
-  /* @see "DG differential Lipschitz ghost" THEORY */
-  ([{c&H(??)}]p(??) <-> (\exists y_ [{y_'=g(??),c&H(??)}]p(??)))
-  <- (\exists L_ [{c&H(??)}] (\forall a_ \forall b_ \forall u_ \forall v_ (a_>=b_ -> [y_:=a_;u_:=g(??);y_:=b_;v_:=g(??);] (-L_*(a_-b_) <= u_-v_ & u_-v_ <= L_*(a_-b_)))))
-  /* <- (\exists L_ [{c&H(??)}] (\forall a_ \forall b_ \forall u_ \forall v_ ([y_:=a_;u_:=g(??);y_:=b_;v_:=g(??);] (abs(u_-v_) <= L_*abs(a_-b_))))) */
-End.
-
 Axiom "DG++ System".
   ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
 End.
