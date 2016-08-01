@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
 
 /**
   * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
@@ -66,4 +67,31 @@ trait LemmaDB {
   def remove(name: String): Boolean
 
   def deleteDatabase(): Unit
+
+  /** Adds version and hash information ot the lemma evidence list.*/
+  protected def addRequiredEvidence(lemma: Lemma) = {
+    val versionEvidence = {
+      val hasVersionEvidence = lemma.evidence.exists(x => x match {
+        case ToolEvidence(infos) => infos.map(_._1).equals("kyxversion")
+        case _ => false
+      })
+      if(!hasVersionEvidence) Some(ToolEvidence(("KyXversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
+      else None
+    }
+
+    val hashEvidence = {
+      val hasHashEvidence = lemma.evidence.exists(_.isInstanceOf[HashEvidence])
+      if (!hasHashEvidence) Some(HashEvidence(HashEvidenceHelper.hashSequentList((lemma.fact.conclusion +: lemma.fact.subgoals).toList)))
+      else None
+    }
+
+    val newEvidence = (versionEvidence, hashEvidence) match {
+      case (Some(l), Some(r)) => lemma.evidence :+ l :+ r
+      case (Some(l), None) => lemma.evidence :+ l
+      case (None, Some(r)) => lemma.evidence :+ r
+      case _ => lemma.evidence
+    }
+
+    Lemma(lemma.fact, newEvidence, lemma.name)
+  }
 }
