@@ -302,7 +302,7 @@ Axiom "DG inverse differential ghost system".
   ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
 End.
 
-Axiom "DG inverse differential ghost system".
+Axiom "DG inverse differential ghost".
   ([{x_'=f(??)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??)&H(??)}]p(??))
 End.
 
