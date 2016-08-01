@@ -34,14 +34,14 @@ object Lemma {
   * contain comments, the first check needs not succeed. */
   private def matchesInput(result: Lemma, input:String):Boolean = {
     val str = result.toStringInternal
-    str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence.head)
+    str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
   }
 
   private def fromStringInternal(lemma: String): Lemma = {
     //@note should ensure that string was indeed produced by KeYmaera X
     val (name, sequents, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
-    Lemma(fact, evidence :: Nil, name)
+    Lemma(fact, evidence, name)
   }
 }
 

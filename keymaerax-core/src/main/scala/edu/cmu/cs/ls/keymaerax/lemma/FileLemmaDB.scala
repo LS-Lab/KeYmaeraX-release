@@ -79,7 +79,7 @@ class FileLemmaDB extends LemmaDB {
     assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
     assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals }should be identical to original lemma ${parse._2}")
     //@todo Code Review: failed. All evidence needs to be preserved, not just the first evidence
-    assert(parse._3 == lemma.evidence.head, "reparse of printed lemma's evidence should be identical to original lemma")
+    assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
 
     val pw = new PrintWriter(file)
     pw.write("/** KeYmaera X " + edu.cmu.cs.ls.keymaerax.core.VERSION + " */")
