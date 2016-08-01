@@ -11,14 +11,30 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import scala.collection.immutable
 
 /**
+  * Lemma format is as follows:
+  * {{{
+  *   Sequent.
+  *     Formula: <<formula>>
+  *     ...
+  *     ==>
+  *     Formula: <<formula>>
+  *     ...
+  *   Sequent.
+  *     ...
+  *   End.
+  *   Tool.
+  *     <<key>> """"<<value>>""""
+  *     ...
+  *   End.
+  * }}}
   * Created by smitsch on 7/03/15.
   * Modified by nfulton on 12/16/15 -- Lemmas are now more general.
   * @author Stefan Mitsch
   * @author Nathan Fulton
   */
-object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Sequent], Evidence)) {
+object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Sequent], List[Evidence])) {
   /** the lemma name, the lemma conclusion, and the supporting evidence */
-  private type Lemma = (Option[String], List[Sequent], Evidence)
+  private type Lemma = (Option[String], List[Sequent], List[Evidence])
 
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
@@ -54,7 +70,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
       throw new IllegalArgumentException("Expected only one lemma")
   }
 
-  def parseNextLemma(input: TokenStream): (Option[String], List[Sequent], Evidence, TokenStream) = {
+  def parseNextLemma(input: TokenStream): (Option[String], List[Sequent], List[Evidence], TokenStream) = {
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block.")
     require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
 
@@ -73,9 +89,9 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     val sequents = sequentTokens.map(sequentTokenParser)
     assert(sequents.nonEmpty, "Lemma should at least have a conclusion.")
 
-    val (evidence, remainder) = parseEvidence(remainderTokens.tail)
+    val (allEvidence, remainder) = parseAllEvidence(remainderTokens.tail)
 
-    (name, sequents, evidence, remainder)
+    (name, sequents, allEvidence, remainder)
   }
 
   private def splitAtTerminal(splitTerminal: Terminal, tokens: TokenStream): List[TokenStream] =
@@ -108,14 +124,15 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @param input Token string for the lemma file.
     * @return A list of evidence (tool input/output).
     */
-  def parseEvidence(input: TokenStream): (Evidence, TokenStream) = {
+  def parseAllEvidence(input: TokenStream, prevEvidence: List[Evidence] = Nil): (List[Evidence], TokenStream) = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(input.head.tok.equals(TOOL_BEGIN), "expected Tool block but found " + input.head)
     val (evidence, remainder) = parseNextEvidence(input)
+    (evidence, remainder)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
-      (evidence, remainder)
+      (prevEvidence :+ evidence, remainder)
     else
-      throw new IllegalArgumentException("Expected only one tool evidence")
+      parseAllEvidence(remainder, prevEvidence :+ evidence)
   }
 
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {

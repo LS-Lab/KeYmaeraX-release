@@ -9,7 +9,7 @@ import scala.collection.immutable.IndexedSeq
   * Created by nfulton on 12/16/15.
   */
 class ExtendedLemmaParserTests extends FlatSpec with Matchers {
-  "Extended Lemma Parser" should "work, hopefully" in {
+  "Extended Lemma Parser" should "work" in {
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
     val lemmaFile =
       s"""Lemma "MyLemma".
@@ -126,4 +126,38 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
 
     Lemma.fromString(lemmaFile)
   }
+
+  it should "parse multi-evidence lemma correctly" in {
+    val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
+    val lemmaFile =
+      s"""Lemma "MyLemma".
+          |Sequent.
+          |Formula: 1=1
+          |Formula: 2=2
+          |==>
+          |Formula: 3=3
+          |Formula: 4=4
+          |Sequent.
+          |Formula: 5=5
+          |==>
+          |Formula: 6=6
+          |Sequent.
+          |Formula: 7=7
+          |==>
+          |End.
+          |Tool.
+          |${tool}
+          |End.
+          |Tool.
+          |${tool}
+          |End.
+      """.stripMargin
+
+    val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
+
+    parseResult._1 shouldBe Some("MyLemma")
+    parseResult._2.length shouldBe 3
+    parseResult._3.length shouldBe 2
+  }
+
 }
