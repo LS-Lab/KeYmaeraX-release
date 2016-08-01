@@ -357,7 +357,7 @@ class USubstTests extends FlatSpec with Matchers {
     pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula)))
     // this should not prove x=0->[x:=5;]x=0
     a [SubstitutionClashException] should be thrownBy {
-      pr(USubst(SubstitutionPair(FuncOf(Function("f",None,Real,Real), Anything), "x".asFormula) :: Nil))
+      pr(USubst(SubstitutionPair(FuncOf(Function("f",None,Real,Real), Anything), "x".asTerm) :: Nil))
     }
   }
 

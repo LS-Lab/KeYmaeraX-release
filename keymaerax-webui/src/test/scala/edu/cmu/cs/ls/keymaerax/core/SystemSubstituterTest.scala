@@ -56,9 +56,16 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost for y_=9 -> [{y_'=5,x_'=3}]y_=9" in {
-    // ([{x_'=f(??)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??)&H(??)}]p(??))
+    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
     val pr = Provable.axioms("DG inverse differential ghost")
     pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(3)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
+        Nil))}
+    //@note this is a mistyped substitution so near no-op would be acceptable
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(3)) ::
         SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
@@ -138,9 +145,17 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in ODEs of DG inverse differential ghost for y_>=0 -> \\forall y_ [{y_'=5,x_'=y_}]x_>=0" in {
-    // ([{x_'=f(??)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??)&H(??)}]p(??))
+    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
     val pr = Provable.axioms("DG inverse differential ghost")
+    println(pr)
     pr shouldBe 'proved
+    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
+        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
+        Nil))}
+    //@note this is a mistyped substitution so near no-op would be acceptable
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Variable("y_",None,Real)) ::
         SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
