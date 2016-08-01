@@ -101,23 +101,22 @@ class AxiomaticODESolverTests extends TacticTestBase {
   }
   //endregion
 
-  @AdvocatusTest
   "ODE Solver" should "not exploit soundness bugs" in {withMathematica(implicit qet => {
     val model = """Functions.
                   |  R b.
                   |  R m.
-                  |End.
-                  |
-                  |ProgramVariables.
-                  |  R x.
-                  |  R v.
-                  |  R a.
-                  |End.
-                  |
-                  |Problem.
-                  |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
-                  |End.
-                  |""".stripMargin
+                    |End.
+                    |
+                    |ProgramVariables.
+                    |  R x.
+                    |  R v.
+                    |  R a.
+                    |End.
+                    |
+                    |Problem.
+                    |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+                    |End.
+                    |""".stripMargin
     val problem: Formula = KeYmaeraXProblemParser(model)
 
     import TactixLibrary.{implyR, composeb, assignb, allR, QE}
