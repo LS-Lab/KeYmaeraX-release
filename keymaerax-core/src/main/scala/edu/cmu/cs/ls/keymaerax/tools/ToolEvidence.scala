@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.Evidence
+import java.security.MessageDigest
+
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
@@ -21,4 +23,15 @@ case class ToolEvidence(info: immutable.List[(String,String)]) extends Evidence 
   }
 
   override def hashCode: Int = info.map({ case (k,v) => (k, KeYmaeraXLexer.normalizeNewlines(v))}).hashCode()
+}
+
+case class HashEvidence(h: String) extends Evidence {
+  override def toString = "Hash.\n  hash \"\"\"\"" + h + "\"\"\"\"\nEnd."
+}
+
+/** Helper methods for hash evidence. */
+object HashEvidenceHelper {
+  def hashSequentList(ss: List[Sequent]) = md5(sequentsToString(ss))
+  def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
+  def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
 }
