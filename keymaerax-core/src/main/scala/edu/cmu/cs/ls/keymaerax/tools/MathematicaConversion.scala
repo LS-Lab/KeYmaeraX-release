@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 import KMComparator._
+import edu.cmu.cs.ls.keymaerax.core.{Function, Real, Tuple}
 
 /**
   * Conversion types.
@@ -19,6 +20,13 @@ object MathematicaConversion {
 
   /** Reads a result from e using the specified conversion, disposes e. */
   def safeResult[T](e: MExpr, conversion: MExpr => T): T = try { conversion(e) } finally { e.dispose() }
+
+  /** Interpreted symbols. */
+  val interpretedSymbols: Map[Function, MExpr] = Map(
+    Function("abs", None, Real, Real, interpreted=true) -> new MExpr(com.wolfram.jlink.Expr.SYMBOL, "Abs"),
+    Function("max", None, Tuple(Real, Real), Real, interpreted=true) -> new MExpr(com.wolfram.jlink.Expr.SYMBOL, "Max"),
+    Function("min", None, Tuple(Real, Real), Real, interpreted=true) -> new MExpr(com.wolfram.jlink.Expr.SYMBOL, "Min")
+  )
 }
 
 /**
@@ -30,6 +38,9 @@ trait M2KConverter[T] extends (MExpr => T) {
 
   /** Convert without contract checking */
   def convert(e: MExpr): T
+
+  /** Interpreted symbols. */
+  def interpretedSymbols: Map[MExpr, Function] = MathematicaConversion.interpretedSymbols.map(_.swap)
 }
 
 trait BaseM2KConverter[T] extends M2KConverter[T] {
@@ -48,6 +59,9 @@ trait K2MConverter[T] extends (T => MExpr) {
 
   /** Convert without contract checking */
   def convert(e: T): MExpr
+
+  /** Interpreted symbols. */
+  def interpretedSymbols: Map[Function, MExpr] = MathematicaConversion.interpretedSymbols
 }
 
 trait BaseK2MConverter[T] extends K2MConverter[T] {

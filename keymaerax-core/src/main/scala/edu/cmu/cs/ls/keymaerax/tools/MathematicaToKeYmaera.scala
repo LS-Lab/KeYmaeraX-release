@@ -88,15 +88,7 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
     else throw mathExn(e)
-  } ensuring(r => StaticSemantics.symbols(r).
-    map(s => (s.name.toLowerCase, s)).
-    filter({ case (n, s) => (n == "abs" || n == "min" || n == "max") && s.index.isEmpty }). //@note e.g., abs_idx is ok
-    forall({ case (_, s) => s match {
-      case Function("abs", None, Real, Real,true) => true
-      case Function("max", None, Tuple(Real, Real), Real,true) => true
-      case Function("min", None, Tuple(Real, Real), Real,true) => true
-      case _ => false
-    }}), "Special functions must have expected domain and sort for conversion of " + e)
+  } ensuring(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, true) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
 
   private def convertUnary[T<:Expression](e : MExpr, op: T=>T): T = {
     val subformula = convert(e.args().head).asInstanceOf[T]
@@ -149,12 +141,22 @@ class MathematicaToKeYmaera extends BaseM2KConverter[KExpr] {
     } else throw new ConversionException("Expected a list, but got " + e)
   }
 
-  protected def convertAtomicTerm(e: MExpr): KExpr = MathematicaNameConversion.toKeYmaera(e) match {
-    case fn: Function =>
-      assert(e.args().length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + e.args())
-      val arguments = e.args().map(convert).map(_.asInstanceOf[Term])
-      FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
-    case result: Variable => result
+  protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.get(e.head) match {
+    case Some(fn) => convertFunction(fn, e.args())
+    case None =>
+      MathematicaNameConversion.toKeYmaera(e) match {
+        case fn: Function =>
+          insist(!fn.interpreted, "Expected uninterpreted function symbol, but got interpreted " + fn)
+          convertFunction(fn, e.args())
+        case result: Variable => result
+    }
+  }
+
+  /** Convert the arguments of a function and combine with fn into a FuncOf */
+  private def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
+    assert(args.length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + args)
+    val arguments = args.map(convert).map(_.asInstanceOf[Term])
+    FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
   }
 
   //@todo could streamline this implementation
