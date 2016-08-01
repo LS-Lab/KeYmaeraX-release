@@ -298,11 +298,11 @@ Axiom "DG differential ghost constant".
   [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
 End.
 
-Axiom "DG++ System".
+Axiom "DG inverse differential ghost system".
   ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
 End.
 
-Axiom "DG++".
+Axiom "DG inverse differential ghost".
   ([{x_'=f(??)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??)&H(??)}]p(??))
 End.
 

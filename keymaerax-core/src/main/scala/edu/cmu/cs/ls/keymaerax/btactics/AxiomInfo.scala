@@ -169,8 +169,8 @@ object DerivationInfo {
       , "DGC", {case () => (x:Variable) => (t:Term) => HilbertCalculus.DGC(x, t)},
       List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
     new CoreAxiomInfo("DG differential Lipschitz ghost system", "DG", "DGs", {case () => ???}),
-    new CoreAxiomInfo("DG++ System", "DG++", "DGpps", {case () => ???}),
-    new CoreAxiomInfo("DG++", "DG++", "DGpp", {case () => ???}),
+    new CoreAxiomInfo("DG inverse differential ghost system", "DG inverse differential ghost system", "DGpps", {case () => ???}),
+    new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
 
