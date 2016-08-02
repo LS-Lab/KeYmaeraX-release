@@ -200,7 +200,7 @@ object KeYmaeraXDeclarationsParser {
       (processDeclarations(funSymbolsSection, Map()), remainder.tail)
     }
     else (Map[(String, Option[Int]), (Option[Sort], Sort, Token)](), tokens)
-  } ensuring(r => r._1.forall(x => x._2._1.isDefined), "All function symbols should have a domain type.")
+  }
 
   def processVariables(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
     if(tokens.head.tok.equals(VARIABLES_BLOCK)) {
