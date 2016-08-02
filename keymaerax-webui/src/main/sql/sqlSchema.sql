@@ -101,16 +101,7 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 
 CREATE TABLE IF NOT EXISTS `executables` (
   `_id`  INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `scalaTacticId` INTEGER REFERENCES `scalaTactics` (`_id`),
   `belleExpr`     TEXT
-    CHECK (`scalaTacticId` ISNULL OR
-           `belleExpr` ISNULL) -- each executable is either a bellerophon expression (a.k.a. custom tactic) or a built-in scala tactic.
-);
-
-CREATE TABLE IF NOT EXISTS `scalaTactics` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `location`      TEXT,
-  `name`          TEXT
 );
 
 CREATE TABLE `executableParameter` (

@@ -44,7 +44,8 @@ class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
 /**
  * Data object for models.
- * @param modelId Identifies the model.
+  *
+  * @param modelId Identifies the model.
  * @param userId Identifies the user.
  * @param name The name of the model.
  * @param date The creation date.
@@ -57,7 +58,8 @@ class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:St
 
 /**
  * Data object for proofs. A proof
- * @param proofId Identifies the proof.
+  *
+  * @param proofId Identifies the proof.
  * @param modelId Identifies the model.
  * @param name The proof name.
  * @param description A proof description.
@@ -139,19 +141,7 @@ case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequ
   def lastProvable:Provable = steps.lastOption.flatMap(_.output).getOrElse(Provable.startProof(conclusion))
 }
 
-case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
-  require(scalaTacticId.isEmpty != belleExpr.isEmpty)
-}
-
-/*
-CREATE TABLE IF NOT EXISTS `scalaTactics` (
-  `scalaTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `location`      TEXT,
-  `name`          TEXT
-);
-*/
-case class ScalaTacticPOJO(scalaTacticId: Int, location: String, name: String)
-
+case class ExecutablePOJO(executableId: Int, belleExpr:String)
 
 case class ParameterPOJO(parameterId: Int, executableID: Int, idx: Int, valueType: ParameterValueType, value: String)
 
@@ -277,6 +267,7 @@ trait DBAbstraction {
 
   /**
     * Adds an execution step to an existing execution
+    *
     * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
     */
   def addExecutionStep(step: ExecutionStepPOJO): Int
@@ -288,6 +279,7 @@ trait DBAbstraction {
   def getExecutionTrace(proofID: Int): ExecutionTrace
 
   /** Return a list of execution steps of the specified status associated with the proof, **in no particular order**
+    *
     * @todo the type should document this by being an unordered structure. */
   def getExecutionSteps(executionId: Int, status: Option[ExecutionStepStatus]) : List[ExecutionStepPOJO]
 
@@ -300,9 +292,6 @@ trait DBAbstraction {
   /////////////////////
   /** Adds a bellerophon expression as an executable and returns the new executableId */
   def addBelleExpr(expr: BelleExpr): Int
-
-  /** Adds a built-in tactic application using a set of parameters */
-  def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int
 
   /** Returns the executable with ID executableId */
   def getExecutable(executableId: Int): ExecutablePOJO

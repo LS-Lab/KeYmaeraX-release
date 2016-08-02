@@ -582,9 +582,9 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         val executableMap =
-          Executables.map(exe => (exe._Id.get, exe.scalatacticid, exe.belleexpr))
+          Executables.map(exe => (exe._Id.get, exe.belleexpr.get))
           .list
-          .map{case (id, tacticid, expr) => (id, ExecutablePOJO(id, tacticid, expr))}
+          .map{case (id, expr) => (id, ExecutablePOJO(id, expr))}
           .foldLeft(Map.empty[Int,ExecutablePOJO]){case (acc, (id, exe)) => acc.+((id, exe))}
 
         try {
@@ -621,7 +621,7 @@ object SQLite {
         SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
           case BelleProvable(pr, _) => pr
         }
-      def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr.get).get
+      def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr).get
       trace.steps.foldLeft(initialProvable)({case (provable, currStep) =>
           run(provable, loadTactic(currStep.executableId))
         })
@@ -668,23 +668,6 @@ object SQLite {
           .list
           .map({case item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get)})
           .headOption
-      })
-    }
-
-    /** Adds a built-in tactic application using a set of parameters */
-    override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
-      synchronizedTransaction({
-        val executableId =
-          (Executables.map({ case exe => ( exe.scalatacticid, exe.belleexpr)})
-            returning Executables.map(_._Id.get))
-            .insert(Some(scalaTacticId), None)
-        val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
-          param.valuetype.get, param.value.get)
-        })
-        for (i <- params.indices) {
-          paramTable.insert((executableId, i, params(i).valueType.toString, params(i).value))
-        }
-        executableId
       })
     }
 
