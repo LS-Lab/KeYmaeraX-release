@@ -203,6 +203,7 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   *         }}}
   */
 sealed case class Projection(t: Term, proj: List[Int]) extends Expression with AtomicTerm {
+  insist(proj.forall(i => 0<=i&&i<=1), "lists of left or right projections only " + proj)
   /** Projection of `t` onto position `proj` */
   private def project(t: Term, proj: List[Int]): Term = proj match {
     case Nil => t

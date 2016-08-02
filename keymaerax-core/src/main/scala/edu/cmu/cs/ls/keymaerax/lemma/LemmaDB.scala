@@ -1,11 +1,12 @@
 /**
   * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
   * See LICENSE.txt for the conditions of this license.
+  * @note Code Review 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 /**
   * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
@@ -64,24 +65,25 @@ trait LemmaDB {
   def add(lemma: Lemma): LemmaID
 
   /** Should return true if removed and false if not. Should not throw errors on failure to remove. */
-  def remove(name: String): Boolean
+  def remove(name: LemmaID): Boolean
 
+  /** Delete the whole lemma database */
   def deleteDatabase(): Unit
 
-  /** Adds version and hash information ot the lemma evidence list.*/
+  /** Adds version and hash information ot the lemma evidence list. */
   protected def addRequiredEvidence(lemma: Lemma) = {
     val versionEvidence = {
       val hasVersionEvidence = lemma.evidence.exists(x => x match {
-        case ToolEvidence(infos) => infos.map(_._1).equals("kyxversion")
+        case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
         case _ => false
       })
-      if(!hasVersionEvidence) Some(ToolEvidence(("KyXversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
+      if(!hasVersionEvidence) Some(ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
       else None
     }
 
     val hashEvidence = {
       val hasHashEvidence = lemma.evidence.exists(_.isInstanceOf[HashEvidence])
-      if (!hasHashEvidence) Some(HashEvidence(HashEvidenceHelper.hashSequentList((lemma.fact.conclusion +: lemma.fact.subgoals).toList)))
+      if (!hasHashEvidence) Some(HashEvidence(lemma.checksum))
       else None
     }
 

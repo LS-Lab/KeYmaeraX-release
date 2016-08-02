@@ -7,7 +7,7 @@
   *
   * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @note Code Review 2015-08-24
+ * @note Code Review 2016-08-02
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -109,14 +109,8 @@ object FullPrettyPrinter extends BasePrettyPrinter {
 
   private def pp(term: Term): String = term match {
     case Anything|Nothing=> op(term).opcode
-    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
-    case Projection(t, proj) =>
-      def toNumber(p: List[Int]): Int = p match {
-        case Nil => 0
-        case head::tail => head + 2*toNumber(tail)
-      }
-      //@note will parse as Projection(Pair(t, Pair(size,number)))
-      op(term).opcode + "(" + pp(t) + "," + proj.size + "," + toNumber(proj.reverse) + ")"
+    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case Projection(t, proj) => op(term).opcode + "(" + pp(t) + "," + proj.mkString("") + ")"
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
@@ -223,20 +217,16 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   //@todo could add contract that TermAugmentor(original)(q) == term
   private def pp(q: PosInExpr, term: Term): String = emit(q, term match {
     case Anything|Nothing=> op(term).opcode
-    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
-    case Projection(t, proj) =>
-      def toNumber(p: List[Int]): Int = p match {
-        case Nil => 0
-        case head::tail => head + 2*toNumber(tail)
-      }
-      //@note will parse as Projection(Pair(t, Pair(size,number)))
-      op(term).opcode + "(" + pp(q, t) + "," + proj.size + "," + toNumber(proj.reverse) + ")"
+    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case Projection(t, proj) => op(term).opcode + "(" + pp(q+0, t) + "," + proj.mkString("") + ")"
     case x: Variable            => x.asString
-    case DifferentialSymbol(x)  => pp(q+0, x) + op(term).opcode
+    case DifferentialSymbol(x)  => x.asString + op(term).opcode
     case Differential(t)        => "(" + pp(q+0, t) + ")" + op(term).opcode
       // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
-    case Number(n)              => if (negativeBrackets) {if (OpSpec.negativeNumber) "(" + n.toString() + ")"
-      else assert(n>=0 || OpSpec.negativeNumber); n.toString()} else n.toString()
+    case Number(n)              => if (negativeBrackets) {
+      if (OpSpec.negativeNumber) "(" + n.toString() + ")"
+      else assert(n>=0 || OpSpec.negativeNumber); n.toString()
+    } else n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(q+0, c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(q+0, l) + op(term).opcode + pp(q+1, r) + ")"
@@ -292,7 +282,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(q+0, xp) + op(program).opcode + pp(q+1, e)
     case t: DifferentialProduct =>
-      pwrapLeft(t, ppODE(q+0, t.left)) + op(t).opcode + pwrapRight(t, ppODE(q+1, t.right))
+      assert(op(t).assoc==RightAssociative && !t.left.isInstanceOf[DifferentialProduct], "differential products are always right-associative")
+      ppODE(q+0, t.left) + op(t).opcode + ppODE(q+1, t.right)
   })
 
 
@@ -333,6 +324,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 // additional pretty printers
 
 
+/** Fully parenthesized pretty printer that is functionally equivalent to [[FullPrettyPrinter]] */
 object FullPrettyPrinter0 extends KeYmaeraXPrinter {
   //@note no contract to avoid recursive checking of contracts in error messages of KeYmaeraXPrinter.apply
   override def apply(expr: Expression): String = stringify(expr)
