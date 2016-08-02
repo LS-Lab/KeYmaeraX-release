@@ -14,7 +14,6 @@ import java.io.FileOutputStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import edu.cmu.cs.ls.keymaerax.hydra.ParameterValueType.ParameterValueType
 
 import scala.collection.immutable.Nil
 import scala.io.Source
@@ -142,25 +141,6 @@ case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequ
 }
 
 case class ExecutablePOJO(executableId: Int, belleExpr:String)
-
-case class ParameterPOJO(parameterId: Int, executableID: Int, idx: Int, valueType: ParameterValueType, value: String)
-
-
-case class USubstPatternParameterPOJO(patternId: Int, executableId: Int,
-                                      index: Int, patternFormulaStr: String, resultingExecutableId: Int)
-
-object ParameterValueType extends Enumeration {
-  type ParameterValueType = Value
-  val String, Position, Formula, Provable = Value
-
-  def fromString(s : String) = s match {
-    case "0" => String
-    case "1" => Position
-    case "2" => Formula
-    case "3" => Provable
-    case _ => throw new Exception("ParameterValueType " + s + " not in enum.")
-  }
-}
 
 /**
  * Proof database

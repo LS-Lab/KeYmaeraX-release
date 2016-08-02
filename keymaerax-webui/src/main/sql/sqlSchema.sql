@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `proofs` (
   `name` TEXT,
   `description` TEXT,
   `date` TEXT,
-  `closed` INTEGER -- ?
+  `closed` BOOLEAN
 );
 
 CREATE TABLE IF NOT EXISTS `agendaItems`(
@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 
   -- Rows that identify whether this is a tactic execution, or some other form of user interaction (e.g., interruption)
   `status`           TEXT,
+    CHECK (`status` IN ('Prepared', 'Running', 'Finished', 'Aborted', 'Error', 'DependsOnChildren'))
   `executableId`     INTEGER REFERENCES `executables` (`_id`),
 
   -- Rows that identify input and output of the tactic
@@ -85,11 +86,10 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 
   -- Indicates whether this tactic was *directly* executed by the user.
   `userExecuted`     BOOLEAN,
-
   -- Indicates whether all children of this execution step are present in the database yet. By default children are not
   -- saved in the database because they take a lot of space
   `childrenRecorded` BOOLEAN,
-
+  --
   -- In theory this can be recovered from the belleExpr, but life is easier this way
   `ruleName` STRING
 );
@@ -102,21 +102,4 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 CREATE TABLE IF NOT EXISTS `executables` (
   `_id`  INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `belleExpr`     TEXT
-);
-
-CREATE TABLE `executableParameter` (
-  `_id`  INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `executableId` INTEGER REFERENCES `executables` (`_id`),
-  `idx`          INT,
-  `valueType`  TEXT,
-  `value`        TEXT
-);
-
--- Specific table for serializing USubstPatternTactics.
-CREATE TABLE `patterns` (
-  `_id`           INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `executableId`        INTEGER REFERENCES `executables` (`_id`),
-  `idx`                 INT,
-  `patternFormula`      TEXT,
-  `resultingExecutable` INTEGER REFERENCES `executables` (`_id`)
 );
