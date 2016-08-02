@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags
 import testHelper.CustomAssertions.withSafeClue
+import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Seq
@@ -337,7 +338,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
 
-  it should "not allow Anything-escalated substitutions on predicates of something" in {
+  it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
         SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
@@ -349,7 +350,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "not allow Anything-escalated substitutions on functions of something" in {
+  it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
         SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
