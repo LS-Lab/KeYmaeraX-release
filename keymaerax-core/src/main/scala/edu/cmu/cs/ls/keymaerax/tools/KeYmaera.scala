@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-06-01
+  * @note Code Review: 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
@@ -28,5 +28,7 @@ object KeYmaera extends ToolBase("KeYmaera") {
 
   override def restart() = {}
 
-  override def shutdown() = {}
+  override def shutdown() = {
+    initialized = false
+  }
 }

@@ -1,6 +1,8 @@
 /**
   * Copyright (c) Carnegie Mellon University.
   * See LICENSE.txt for the conditions of this license.
+  */
+/**
   * @note Code Review 2016-08-02 LemmaDB aspects only
   */
 package edu.cmu.cs.ls.keymaerax.hydra

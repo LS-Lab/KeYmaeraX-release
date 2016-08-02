@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-06-01
+  * @note Code Review: 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
@@ -32,6 +32,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     val linkName = config.get("linkName") match {
       case Some(l) => l
       case None => throw new IllegalArgumentException("Mathematica not configured. Configure Mathematica and restart KeYmaera X.\nMissing configuration parameter 'linkName'\n")
+        //@todo More helpful error messages about how to solve configuration issues again.
 //        "You should configure settings in the UI and restart KeYmaera X." +
 //        "Or specify the paths explicitly from command line by running\n" +
 //        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
@@ -48,6 +49,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     mSim.shutdown()
     //@note last, because we want to shut down all executors (tool threads) before shutting down the JLink interface
     link.shutdown()
+    initialized = false
   }
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
