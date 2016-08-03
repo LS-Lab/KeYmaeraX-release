@@ -40,7 +40,7 @@ object Context {
   /** Placeholder for programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
   val DotProgram = ProgramConst("DotProgram")
   /** Placeholder for differential programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
-  val DotDiffProgram = DifferentialProgramConst("DotDiffProgram")
+  val DotDiffProgram = DifferentialProgramConst("DotDiffProgram",AnyArg)
 
   /** Subexpression of `t` at the indicated position `pos` or exception if ill-defined position.
     * @ensures sub(t,pos) == at(t,pos)._2
@@ -467,7 +467,7 @@ object Context {
     case _ => throw new IllegalArgumentException("split position " + pos + " of program " + program + " may not be defined")
   }} ensuring(r => r._1==noContext || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
 
-  private val noContextD = DifferentialProgramConst("noctxD")
+  private val noContextD = DifferentialProgramConst("noctxD",AnyArg)
   private def splitODE(program: DifferentialProgram, pos: PosInExpr): (DifferentialProgram, Expression) = if (pos==HereP) (DotDiffProgram, program) else {program match {
     case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => (noContextD, xp)
     case AtomicODE(xp,t)          if pos.head==1 => val sp = split(t, pos.child); (AtomicODE(xp,sp._1), sp._2)
