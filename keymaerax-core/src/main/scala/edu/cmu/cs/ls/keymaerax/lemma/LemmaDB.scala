@@ -42,9 +42,11 @@ trait LemmaDB {
    * Indicates whether or not this lemma DB contains a lemma with the specified ID.
  *
    * @param lemmaID Identifies the lemma.
+    *
+    *
    * @return True, if this lemma DB contains a lemma with the specified ID; false otherwise.
    */
-  def contains(lemmaID: LemmaID): Boolean
+  def contains(lemmaID: LemmaID): Boolean = get(lemmaID).isDefined
 
   /**
    * Returns the lemma with the given name or None if non-existent.
@@ -54,7 +56,9 @@ trait LemmaDB {
    * @ensures contains(lemmaID) && \result==Some(l) && l.name == lemmaID
    *         || !contains(lemmaID) && \result==None
    */
-  def get(lemmaID: LemmaID): Option[Lemma]
+  def get(lemmaID: LemmaID): Option[Lemma] = get(List(lemmaID)).flatMap(_.headOption)
+
+  def get(lemmaIDs: List[LemmaID]):Option[List[Lemma]]
 
   /**
    * Adds a new lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
@@ -72,6 +76,9 @@ trait LemmaDB {
   /** Delete the whole lemma database */
   def deleteDatabase(): Unit
 
+  /* @todo BUG adding extra evidence during storage breaks the intuitive property that lemmas before you
+  * store them are equal to lemmas retrieved from the database. This is expected, e.g. in DerivedAxioms.
+  * Decide whether to override equality or fix this some other way. */
   /** Adds version and hash information ot the lemma evidence list. */
   protected def addRequiredEvidence(lemma: Lemma) = {
     val versionEvidence = {
@@ -98,4 +105,12 @@ trait LemmaDB {
 
     Lemma(lemma.fact, newEvidence, lemma.name)
   }
+
+
+  /** For convenience when implementing bulk get() from individual get() */
+  protected def flatOpt[T](L:List[Option[T]]):Option[List[T]] =
+    L.foldRight[Option[List[T]]](Some(Nil)){
+      case (Some(x),Some(xs)) => Some(x::xs)
+      case _ => None
+    }
 }
