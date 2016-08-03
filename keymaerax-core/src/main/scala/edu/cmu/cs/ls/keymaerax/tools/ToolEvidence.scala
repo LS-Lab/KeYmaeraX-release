@@ -29,9 +29,3 @@ case class HashEvidence(h: String) extends Evidence {
   override def toString = "Hash.\n  hash \"\"\"\"" + h + "\"\"\"\"\nEnd."
 }
 
-/** Helper methods for hash evidence. */
-object HashEvidenceHelper {
-  def hashSequentList(ss: List[Sequent]) = md5(sequentsToString(ss))
-  def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
-  def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
-}

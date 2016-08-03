@@ -2,6 +2,9 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+/**
+  * @note Code Review: 2016-08-02
+  */
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Term, _}
@@ -10,7 +13,6 @@ import scala.collection.immutable.Map
 
 /**
  * Polya quantifier elimination tool.
- * Still need Mathematica to do diffSolve and CounterExample
  *
  * Created by smitsch on 4/27/15.
  * @author Ran Ji
@@ -23,10 +25,14 @@ class Polya extends ToolBase("Polya") with QETool {
     initialized = true
   }
 
-  //def qe(formula: Formula): Formula = polya.qe(formula)
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = polya.qeEvidence(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+    require(isInitialized, "Polya needs to be initialized before use")
+    polya.qeEvidence(formula)
+  }
 
   override def restart() = ???
 
-  override def shutdown() = {}
+  override def shutdown() = {
+    initialized = false
+  }
 }

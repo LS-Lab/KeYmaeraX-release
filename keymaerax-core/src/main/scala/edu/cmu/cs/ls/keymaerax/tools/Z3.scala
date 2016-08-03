@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-06-01
+  * @note Code Review: 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
@@ -13,7 +13,6 @@ import scala.collection.immutable.Map
 
 /**
  * Z3 quantifier elimination tool.
- * Still need Mathematica to do diffSolve and CounterExample
  *
  * Created by smitsch on 4/27/15.
  * @author Ran Ji
@@ -26,7 +25,10 @@ class Z3 extends ToolBase("Z3") with QETool with DiffSolutionTool with CounterEx
     initialized = true
   }
 
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = z3.qeEvidence(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+    require(isInitialized, "Z3 needs to be initialized before use")
+    z3.qeEvidence(formula)
+  }
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
                        iv: Predef.Map[Variable, Variable]): Option[Formula] = {
@@ -34,7 +36,7 @@ class Z3 extends ToolBase("Z3") with QETool with DiffSolutionTool with CounterEx
   }
 
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = {
-    throw new Exception("Counterexample generation not implemented with Z3")
+    throw new Exception("Counterexample generation not yet implemented with Z3")
   }
 
   override def restart() = ???

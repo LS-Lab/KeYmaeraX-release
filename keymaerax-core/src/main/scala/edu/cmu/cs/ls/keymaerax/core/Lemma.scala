@@ -8,8 +8,10 @@
  */
 package edu.cmu.cs.ls.keymaerax.core
 
+import java.security.MessageDigest
+
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.HashEvidence
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
 
@@ -33,7 +35,7 @@ object Lemma {
     //Check that the resulting lemma has
     internalLemma.evidence.find(_.isInstanceOf[HashEvidence]) match {
       case Some(HashEvidence(hash)) =>
-        assert(hash == HashEvidenceHelper.hashSequentList((internalLemma.fact.conclusion +: internalLemma.fact.subgoals).toList),
+        assert(hash == internalLemma.checksum,
           "Expected hashed evidence to match hash of conclusion + subgoals.")
       case None => {
         if(LEMMA_COMPAT_MODE) println(s"WARNING: ${internalLemma.name.getOrElse("An unnamed lemma")} was reloaded without a hash confirmation.")
@@ -109,6 +111,11 @@ final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name:
     (if (Lemma.fromStringInternal(toStringInternal).evidence == evidence) " same evidence " else " different evidence " + Lemma.fromStringInternal(toStringInternal).evidence.mkString("\n\n")) +
     (if (Lemma.fromStringInternal(toStringInternal).name == name) " same name " else " different name ")
   )
+
+  /** Compute the checksum of this lemma, which provides some protection against accidental changes. */
+  final def checksum: String = md5(sequentsToString(fact.conclusion +: fact.subgoals.toList))
+  private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
+  private[core] def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
 
   private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +

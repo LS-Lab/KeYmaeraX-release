@@ -1,7 +1,10 @@
 /**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * @note Code Review 2016-08-02 LemmaDB aspects only
+  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.io.{File, FileOutputStream}
@@ -46,6 +49,7 @@ object SQLite {
     * can take seconds), parsing operations are cached internally. All accesses to the lemma table must use this class
     * in order for the cache to always be up to date. */
   class SQLiteLemmaDB (db: SQLiteDB) extends LemmaDB {
+    //@todo: split off CachedLemmaDB
     override def contains(id: LemmaID): Boolean = get(id) match {
       case Some(x) => true
       case _ => false
@@ -80,15 +84,15 @@ object SQLite {
     private val REDUNDANT_CHECKS = false
 
     private def saveLemma(lemma:Lemma, id:Int): Unit = {
+      val lemmaToAdd = addRequiredEvidence(lemma)
       if (REDUNDANT_CHECKS) {
         //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-        val parse = KeYmaeraXExtendedLemmaParser(addRequiredEvidence(lemma).toString)
+        val parse = KeYmaeraXExtendedLemmaParser(lemmaToAdd.toString)
         assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
         assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
         assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
       }
 
-      val lemmaToAdd = addRequiredEvidence(lemma)
       val lemmaString = lemmaToAdd.toString
 
       db.updateLemma(id, lemmaString)
@@ -100,7 +104,7 @@ object SQLite {
         throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
       }
       // assertion duplicates condition and throw statement
-      assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemmaToAdd, "Lemma stored in DB should be identical to lemma in memory " + lemma)
+      assert(lemmaFromDB == Some(lemmaToAdd), "Lemma stored in DB should be identical to lemma in memory " + lemmaToAdd)
     }
 
     private def isUniqueLemmaId(id: Int) = db.getLemmas(List(id)).isEmpty
@@ -110,7 +114,7 @@ object SQLite {
         // synchronize to make sure concurrent uses use new rows
         lemma.name match {
           case Some(n) =>
-            require(isUniqueLemmaId(n.toInt) || lemma == get(n).orNull,
+            require(isUniqueLemmaId(n.toInt) || get(n) == Some(lemma),
             "Lemma name '" + n + ".alp' must be unique, or file content must be the lemma: \n" + lemma)
             n.toInt
           case None =>  db.createLemma()
@@ -120,6 +124,7 @@ object SQLite {
       id.toString
     }
 
+    // @todo: implement?
     override def remove(name: String): Boolean = {
       ???
     }
@@ -523,11 +528,7 @@ object SQLite {
     /** Allow retrieving lemmas in bulk to reduce the number of database queries */
     private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
       synchronizedTransaction({
-        val allLemmas = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list
-        /** Build a map from the lemmas to avoid an O(m*n) search. Since this map contains the unparsed lemmas, it does
-          * not incur the overhead of parsing every lemma in the database. */
-        val lemmaMap =
-          allLemmas.foldLeft(Map.empty[Int, String]){case (map, (id, lemma)) => map.+((id, lemma))}
+        val lemmaMap = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list.toMap
         try {
           Some(lemmaIds.map(lemmaMap(_)))
         } catch {
@@ -551,6 +552,7 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def createProvable(p: Provable): Int = {
       synchronizedTransaction({
+        //@todo: add version number
         val lemma = Lemma(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true"))))
         lemmaDB.add(lemma).toInt
       })

@@ -6,7 +6,7 @@
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @note Code Review 2015-08-24
+ * @note Code Review 2016-08-02
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -179,27 +179,14 @@ object OpSpec {
   val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
   val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(func(name, None, e.sort, Real), e))
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME,0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
-  val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,     5, PostfixFormat, unterm, Differential.apply _)
-  val sNeg          = UnaryOpSpec[Term] (MINUS,    59/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
+  val sNeg          = UnaryOpSpec[Term] (MINUS,    59/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPlus         = BinaryOpSpec[Term](PLUS,     60, LeftAssociative, binterm, Plus.apply _)
   val sMinus        = BinaryOpSpec[Term](MINUS,    60, LeftAssociative/*!*/, binterm, Minus.apply _)
-  val sProjection   = UnaryOpSpec[Term](PROJ,       0, PrefixFormat, unterm, (e:Term) => {
-    def toList(d: Int, n: Int): List[Int] = n match {
-      case 0 if d==1 => 0::Nil
-      case 1 if d==1 => 1::Nil
-      case _ => (n%2)::toList(d-1, n/2)
-    }
-    val (term, depth, value) = e match {
-      case Pair(t, Pair(Number(d), Number(v))) => (t, d.intValue(),v.intValue())
-      case _ => ???
-    }
-    Projection(term, toList(depth, value).reverse)
-  })
-
+  val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
 
   // formulas
   private val unfml = (FormulaKind)
@@ -240,8 +227,7 @@ object OpSpec {
   private val untermprog = unterm
   private val unfmlprog = (FormulaKind)
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
-  /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
-  val sNoneDone     = UnitOpSpec  (PSEUDO, Int.MinValue, _ => throw new AssertionError("Cannot construct NONE"))
+
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
@@ -257,14 +243,17 @@ object OpSpec {
   val sLoop         = UnaryOpSpec[Program](STAR,      220, PostfixFormat, unprog, Loop.apply _)
   val sDual         = UnaryOpSpec[Program](DUAL,      220, PostfixFormat, unprog, Dual.apply _)
   val sCompose      = BinaryOpSpec[Program](SEMI,     230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
-  //valp: Compose     => OpNotation("",    230, RightAssociative)
   val sChoice       = BinaryOpSpec[Program](CHOICE,   250, RightAssociative, binprog, Choice.apply _)
+
+  // pseudo tokens
 
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
-  val sNoneUnfinished = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
+  val sNoneUnfinished = UnitOpSpec(PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
   val sNone         = sNoneUnfinished
+  /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
+  val sNoneDone     = UnitOpSpec  (PSEUDO, Int.MinValue, _ => throw new AssertionError("Cannot construct NONE"))
 
 
   /** The operator notation of the top-level operator of ``expr`` with opcode, precedence and associativity  */
@@ -272,7 +261,7 @@ object OpSpec {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
       //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
     // terms
-    case DotTerm         => sDotTerm
+    case DotTerm(_)      => sDotTerm
     case Nothing         => sNothing
     case Anything        => sAnything
     case t: Variable     => sVariable
@@ -287,7 +276,6 @@ object OpSpec {
     case t: Divide       => sDivide
     case t: Plus         => sPlus
     case t: Minus        => sMinus
-    case t: Projection   => sProjection
 
     // formulas
     case DotFormula      => sDotFormula

@@ -4,7 +4,7 @@
 */
 /**
  * @author Stefan Mitsch
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2016-08-02
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
@@ -12,7 +12,6 @@ import java.io.{File, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
 
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
@@ -47,15 +46,17 @@ class FileLemmaDB extends LemmaDB {
       // synchronize to make sure concurrent uses use new file names
       lemma.name match {
         case Some(n) =>
-          require(isUniqueLemmaName(n) || lemma == get(n).orNull,
-            "Lemma name '" + n + ".alp' must be unique, or file content must be the lemma: \n" + lemma)
-          (n, new File(lemmadbpath, n + ".alp"))
+          require(isUniqueLemmaName(n) || get(n) == Some(lemma),
+            "Lemma name '" + n + ".alp' must be unique, or file content must be the identical lemma: \n" + lemma)
+          val file = new File(lemmadbpath, n + ".alp")
+          if (get(n) != Some(lemma)) file.createNewFile()
+          (n, file)
         case None =>
-          val (newId, newFile) = getUniqueLemmaFile()
-          newFile.createNewFile
+          val (newId, newFile) = getUniqueLemmaFile
+          newFile.createNewFile()
           (newId, newFile)
       }
-    }
+    } ensuring(r => r._2.exists(), "the file to be stored in exists now and cannot be claimed concurrently again")
     saveProof(file, lemma, id)
     id
   }
@@ -67,33 +68,30 @@ class FileLemmaDB extends LemmaDB {
   private def isUniqueLemmaName(name: String): Boolean =
     !new File(lemmadbpath, name + ".alp").exists()
 
-  private def getUniqueLemmaFile(idx: Int = 0): (String, File) = {
-    val id = "QE" + idx.toString
-    val f = new File(lemmadbpath, id + ".alp")
-    if (f.exists()) getUniqueLemmaFile(idx + 1)
-    else (id, f)
+  private def getUniqueLemmaFile: (String, File) = {
+    val f = File.createTempFile("lemma",".alp",lemmadbpath)
+    (f.getName.substring(0, f.getName.length-".alp".length), f)
   }
 
   private def saveProof(file: File, lemma: Lemma, id: String): Unit = {
     //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-    val parse = KeYmaeraXExtendedLemmaParser(addRequiredEvidence(lemma).toString)
+    val lemmaToAdd = addRequiredEvidence(lemma)
+
+    val parse = KeYmaeraXExtendedLemmaParser(lemmaToAdd.toString)
     assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
     assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals }should be identical to original lemma ${parse._2}")
 
-    val lemmaToAdd = addRequiredEvidence(lemma)
-
     val pw = new PrintWriter(file)
-    pw.write("/** KeYmaera X " + edu.cmu.cs.ls.keymaerax.core.VERSION + " */")
     pw.write(lemmaToAdd.toString)
     pw.close()
 
     val lemmaFromDB = get(id)
-    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemmaToAdd) {
+    if (lemmaFromDB != Some(lemmaToAdd)) {
       file.delete()
       throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted for lemma " + id)
     }
     // assertion duplicates condition and throw statement
-    assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemmaToAdd, "Lemma stored in DB should be identical to lemma in memory " + lemma)
+    assert(lemmaFromDB == Some(lemmaToAdd), "Lemma stored in DB should be identical to lemma in memory " + lemmaToAdd)
   }
 
   override def deleteDatabase(): Unit = {

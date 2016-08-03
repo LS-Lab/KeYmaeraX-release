@@ -2,6 +2,9 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+/**
+  * @note Code Review: 2016-08-02 postponed since Polya output processing needs to be made more robust
+  */
 package edu.cmu.cs.ls.keymaerax.tools
 
 import java.io.{FileWriter, FileOutputStream, File, InputStream}
@@ -56,10 +59,11 @@ class PolyaSolver extends SMTSolver {
       // Copy file to temporary directory
       polyaDest.getChannel.transferFrom(polyaSource, 0, Long.MaxValue)
       val polyaAbsPath = polyaTemp.getAbsolutePath
+      //@note this is a non-windows solution but there's no windows version currently
       Runtime.getRuntime.exec("chmod u+x " + polyaAbsPath)
       polyaSource.close()
       polyaDest.close()
-      assert(new File(polyaAbsPath).exists())
+      assert(new File(polyaAbsPath).exists(), "Polya has been unpacked successfully")
       polyaAbsPath
     }
   }
@@ -77,6 +81,13 @@ class PolyaSolver extends SMTSolver {
    *                  result
    *
    * @return result
+    * @todo Code Review: this is not a trustworthy way of getting reliable decisions from Polya. Example broken output would be {{{
+    *       I am about to multiply
+    *       x*5+2*x*x*y+
+    *       1
+    *    }}}
+    *    stop, which will be incorrectly interpreted as True
+    * @todo Consider direct Java->Python link instead of misparsing
    */
   private def getTruncatedResult(output: String) : String = {
     var reversedOutput = output.reverse
@@ -89,7 +100,7 @@ class PolyaSolver extends SMTSolver {
 
   /** Return Polya QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
-    val smtCode = converter(f) + "\n(check-sat)\n"
+    val smtCode = converter(f)
     if (DEBUG) println("[Solving with Polya...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaQe", ".smt2")
     val writer = new FileWriter(smtFile)

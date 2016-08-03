@@ -270,7 +270,7 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
   }
 }
 
-object SimulationM2KConverter extends BaseM2KConverter[Simulation] {
+object SimulationM2KConverter extends M2KConverter[Simulation] {
 
   //@note unchecked, because in back-translation we don't know whether end-of-world 'false' was present in original or not
   def k2m: K2MConverter[Simulation] = null
@@ -295,7 +295,7 @@ object SimulationM2KConverter extends BaseM2KConverter[Simulation] {
   }
 }
 
-object SimulationK2MConverter extends BaseK2MConverter[Simulation] {
+object SimulationK2MConverter extends K2MConverter[Simulation] {
 
   //@note unchecked, because don't know whether end-of-world 'false' was present in original or not
   def m2k = null
