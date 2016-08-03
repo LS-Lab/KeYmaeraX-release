@@ -38,7 +38,7 @@ object DifferentialHelper {
 
   def atomicOdes(system: ODESystem): List[AtomicODE] = atomicOdes(system.ode)
   def atomicOdes(dp: DifferentialProgram): List[AtomicODE] = dp match {
-    case DifferentialProgramConst(c) => ???
+    case DifferentialProgramConst(c, _) => ???
     case DifferentialProduct(x,y) => atomicOdes(x) ++ atomicOdes(y)
     case ode: AtomicODE => ode :: Nil
   }
