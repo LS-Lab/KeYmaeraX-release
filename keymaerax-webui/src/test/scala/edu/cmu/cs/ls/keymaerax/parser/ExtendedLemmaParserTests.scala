@@ -13,6 +13,7 @@ import scala.collection.immutable.IndexedSeq
   */
 class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   private val md5Generator = PrivateMethod[String]('md5)
+  private val sequentsToString = PrivateMethod[String]('sequentsToString)
 
   "Extended Lemma Parser" should "work" in {
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
@@ -210,11 +211,10 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
     val p = Provable.startProof("1=1".asFormula)
 
     try {
-      val lemma = Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name))
-      db.add(lemma)
+      db.add(new Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name)))
       val reloadedLemma = db.get(name)
       reloadedLemma.get.evidence.find(_.isInstanceOf[HashEvidence]) match {
-        case Some(HashEvidence(h)) => h == lemma.checksum //@todo is this the correct fix?
+        case Some(HashEvidence(h)) => h == (reloadedLemma.get invokePrivate md5Generator(reloadedLemma.get invokePrivate sequentsToString(p.conclusion :: Nil)))
         case None => throw new Exception(s"Expected some hash evidence in ${db.get(name).get.toString}")
       }
       if(remove) db.remove(name)

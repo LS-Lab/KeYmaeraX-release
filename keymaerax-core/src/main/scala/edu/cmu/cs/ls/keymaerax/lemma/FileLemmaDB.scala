@@ -12,7 +12,6 @@ import java.io.{File, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
@@ -49,9 +48,9 @@ class FileLemmaDB extends LemmaDB {
         case Some(n) =>
           require(isUniqueLemmaName(n) || get(n) == Some(lemma),
             "Lemma name '" + n + ".alp' must be unique, or file content must be the identical lemma: \n" + lemma)
-          val newFile = new File(lemmadbpath, n + ".alp")
-          newFile.createNewFile()
-          (n, newFile)
+          val file = new File(lemmadbpath, n + ".alp")
+          if (get(n) != Some(lemma)) file.createNewFile()
+          (n, file)
         case None =>
           val (newId, newFile) = getUniqueLemmaFile
           newFile.createNewFile()

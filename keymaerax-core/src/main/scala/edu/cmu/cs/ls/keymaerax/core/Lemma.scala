@@ -114,8 +114,8 @@ final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name:
 
   /** Compute the checksum of this lemma, which provides some protection against accidental changes. */
   final def checksum: String = md5(sequentsToString(fact.conclusion +: fact.subgoals.toList))
-  private def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
-  private def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
+  private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
+  private[core] def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
 
   private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +
