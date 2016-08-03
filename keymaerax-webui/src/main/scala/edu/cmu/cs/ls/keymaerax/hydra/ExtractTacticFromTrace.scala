@@ -21,7 +21,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   //@todo deprecate this approach and prefer [[apply(tree)(node).prettyString]]
   def extractTextWithoutParsing(tree : ProofTree)(node: TreeNode) : String = {
     val thisTactic = node.endStep match {
-      case Some(step) => db.getExecutable(step.executableId).belleExpr.getOrElse(throw TacticExtractionError("Tactic extraction does not currently support non-Bellerophon tactic extraction"))
+      case Some(step) => db.getExecutable(step.executableId).belleExpr
       case None =>  "nil" //why is this correct behavior? //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
     }
 
@@ -53,12 +53,10 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 
   private def tacticAt(node: TreeNode) : BelleExpr = node.endStep match {
     case Some(step) => try {
-      db.getExecutable(step.executableId).belleExpr match {
-        case Some(exprString) => BTacticParser(exprString) match {
+      val exprString = db.getExecutable(step.executableId).belleExpr
+      BTacticParser(exprString) match {
           case Some(expr) => expr
           case None => throw new BParserException(s"Could not parse Bellerophon expression ${exprString}")
-        }
-        case None => throw TacticExtractionError("Tactic extraction does not currently support non-Bellerophon tactic extraction")
       }
     } catch {
       case e : BParserException => throw TacticExtractionError(e.getMessage, e)

@@ -96,7 +96,7 @@ object DifferentialTactics {
             //construct substitution
             val aF = FuncOf(Function("f", None, Real, Real), Anything)
             val aH = PredOf(Function("H", None, Real, Bool), Anything)
-            val aC = DifferentialProgramConst("c")
+            val aC = DifferentialProgramConst("c", ???)
             val aP = PredOf(Function("p", None, Real, Bool), Anything)
             val aX = Variable("x_")
 
@@ -129,7 +129,7 @@ object DifferentialTactics {
             //construct substitution
             val aF = FuncOf(Function("f", None, Real, Real), Anything)
             val aH = PredOf(Function("H", None, Real, Bool), Anything)
-            val aC = DifferentialProgramConst("c")
+            val aC = DifferentialProgramConst("c", ???)
             val aP = PredOf(Function("p", None, Real, Bool), Anything)
             val aX = Variable("x_", None, Real)
 

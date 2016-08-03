@@ -129,4 +129,14 @@ class AxiomaticODESolverTests extends TacticTestBase {
       case _ : Throwable => //ok.
     }
   })}
+
+  //We're just looking for now errors during the diffGhost steps. This test is here to help isolate when both implementations are having troubles ghosting.
+  "Original diff solve" should "work" in {withMathematica(implicit qet => {
+    val model = "[{x'=v,v'=a}]1=1".asFormula
+
+    val t: BelleExpr = DifferentialTactics.diffSolve(None)(qet)(1)
+
+    val result = proveBy(model, t)
+    println(result)
+  })}
 }

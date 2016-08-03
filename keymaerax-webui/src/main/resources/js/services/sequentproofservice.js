@@ -75,11 +75,24 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       }
     },
 
+    /** The tactic model */
+    tactic: {
+      tacticText: "",
+
+      fetch: function(userId, proofId) {
+        var theTactic = this;
+        $http.get('proofs/user/' + userId + '/' + proofId + '/extract').then(function (response) {
+          theTactic.tacticText = response.data.tacticText;
+        });
+      }
+    },
+
     /** Prunes the proof tree at the specified goal */
     prune: function(userId, proofId, nodeId) {
       //@note make model available in closure of function success
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
+      var theTactic = this.tactic;
 
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').success(function(data) {
         // prune proof tree
@@ -117,6 +130,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
         // select new top item (@todo does not work with step back)
         theAgenda.select(data.agendaItem);
+
+        // refresh tactic
+        theTactic.fetch(userId, proofId);
       });
     },
 
@@ -125,6 +141,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
       spinnerService.show('proofLoadingSpinner');
+      this.tactic.fetch(userId, proofId);
       $http.get('proofs/user/' + userId + "/" + proofId + '/agendaawesome')
         .then(function(response) {
           theAgenda.itemsMap = response.data.agendaItems;

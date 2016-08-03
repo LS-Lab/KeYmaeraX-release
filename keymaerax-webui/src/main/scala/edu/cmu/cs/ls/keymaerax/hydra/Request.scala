@@ -662,14 +662,17 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
       return new ApplicableAxiomsResponse(Nil, None) :: Nil
     val proof = db.getProofInfo(proofId)
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    val subFormula = sequent.sub(pos).get
-    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
-      map{case axiom => (
-        DerivationInfo(axiom),
-        UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
-    val suggestedInput = generator(sequent, pos)
-    new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+    sequent.sub(pos) match {
+      case Some(subFormula) =>
+        val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
+          map{axiom => (
+            DerivationInfo(axiom),
+            UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
+        val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+        val suggestedInput = generator(sequent, pos)
+        new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+      case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
+    }
   }
 }
 
@@ -837,7 +840,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
-      val latestExecutionStep = db.getExecutionSteps(proofId.toInt, None).sortBy(s => s.stepId).lastOption
+      val latestExecutionStep = db.getExecutionSteps(proofId.toInt).sortBy(s => s.stepId).lastOption
       //@note below is the conceptually correct implementation of latestExecutionStep, but getExecutionTrace doesn't work
       //when there's not yet an associated profableId for the step (which is the case here since we are mid-step and the
       //provable isn't computed yet).
