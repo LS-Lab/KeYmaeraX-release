@@ -38,7 +38,7 @@ import scala.collection.immutable
  *   // determine all symbols occurring in the above formula
  *   println("Symbols         " + StaticSemantics.symbols(fml))
  * }}}
- * @see [[edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools]]
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools]]
  */
 object StaticSemantics {
 
@@ -113,6 +113,7 @@ object StaticSemantics {
     case Nothing      => bottom
     // Anything represents the list of all variables, which are, thus, free
     case Anything     => topVarsDiffVars()
+    case f:UnitFunctional => spaceVars(f.space)
   }
 
   /**
@@ -176,8 +177,10 @@ object StaticSemantics {
 
     case PredOf(p, arg)     => VCF(fv = freeVars(arg), bv = bottom)
     case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
-    //@note DotFormula is like a reserved zero-parameter Predicational
+    //@note DotFormula is like a reserved zero-parameter Predicational. Its bound variables are debatable since it has no child.
     case DotFormula         => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
+    //@note UnitPredicational is a zero-parameter Predicational. Its bound variables are debatable since it has no child.
+    case f:UnitPredicational=> VCF(fv = spaceVars(f.space), bv = spaceVars(f.space))
 
     //@note except for DifferentialFormula, the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeFormula => fmlVars(f.left) ++ fmlVars(f.right)
@@ -215,7 +218,7 @@ object StaticSemantics {
     program match {
       // base cases
       case a: ProgramConst             => VCP(fv = topVarsDiffVars(), bv = topVarsDiffVars(), mbv = bottom)
-      case a: DifferentialProgramConst => VCP(fv = topVarsDiffVars(), bv = topVarsDiffVars(), mbv = bottom)
+      case a: DifferentialProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case DiffAssign(xp, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
       case Test(f) => VCP(fv = StaticSemantics(f).fv, bv = bottom, mbv = bottom)
@@ -262,7 +265,7 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a term, i.e., set of (non-logical) function symbols occurring in it.
+   * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it.
    * Disregarding number literals.
    */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
@@ -288,10 +291,11 @@ object StaticSemantics {
     case Nothing => Set.empty
     // Anything is the list of all variables, no function symbols
     case Anything => Set.empty
+    case f: UnitFunctional => Set(f)
   }
 
   /**
-   * The signature of a formula, i.e., set of (non-logical) function, predicate, and atomic program
+   * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
    * symbols occurring in it.
    */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
@@ -300,6 +304,7 @@ object StaticSemantics {
     case PredOf(p, arg) => Set(p) ++ signature(arg)
     case PredicationalOf(p, arg) => Set(p) ++ signature(arg)
     case DotFormula => Set(DotFormula)
+    case p: UnitPredicational => Set(p)
     //@note the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeFormula => signature(f.left) ++ signature(f.right)
     // pseudo-homomorphic cases
@@ -407,4 +412,13 @@ object StaticSemantics {
    */
   def symbols(s: Sequent): immutable.Set[NamedSymbol] =
     (s.ante ++ s.succ).foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b))
+
+
+  // helpers
+  /** The variables and differential symbols that are in the given state space. */
+  private def spaceVars(space: Space): SetLattice[NamedSymbol] = space match {
+    case AnyArg => SetLattice.topVarsDiffVars()
+    case Except(taboo) => SetLattice.except(taboo)
+  }
+
 }

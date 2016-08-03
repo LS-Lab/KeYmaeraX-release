@@ -66,6 +66,13 @@ table .btn{
   max-width: none;
 }
 
+.k4-tacticeditor {
+  font-family:monospace;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .k4-drag {
   border-bottom: 1px dashed #000;
   padding-bottom: 3px;

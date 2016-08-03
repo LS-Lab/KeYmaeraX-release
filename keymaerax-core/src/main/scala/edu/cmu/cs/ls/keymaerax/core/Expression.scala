@@ -20,7 +20,7 @@ import scala.math._
 /**
   * Kinds of expressions (term, formula, program).
   */
-sealed abstract class Kind
+sealed trait Kind
 /** All expressions that are neither terms nor formulas nor programs nor functions are of kind ExpressionKind */
 object ExpressionKind extends Kind { override def toString = "Expression" }
 /** All terms are of kind TermKind */
@@ -37,7 +37,7 @@ object FunctionKind extends Kind { override def toString = "Function" }
 /**
  * Sorts
  */
-sealed abstract class Sort
+sealed trait Sort
 /** Unit type of [[edu.cmu.cs.ls.keymaerax.core.Nothing Nothing]] */
 object Unit extends Sort { override def toString = "Unit" }
 /** Sort of booleans: [[edu.cmu.cs.ls.keymaerax.core.True True]], [[edu.cmu.cs.ls.keymaerax.core.False False]]. */
@@ -50,6 +50,13 @@ object Trafo extends Sort { override def toString = "Trafo" }
 case class Tuple(left: Sort, right: Sort) extends Sort { override def toString = "(" + left + "," + right + ")" }
 /** User-defined object sort */
 case class ObjectSort(name : String) extends Sort { override def toString = name }
+
+/** Sorts of state spaces for state-dependent operators */
+sealed trait Space
+/** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
+object AnyArg extends Space { override def toString: String = "!!" }
+/** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
+case class Except(taboo: Variable) extends Space { override def toString: String = "!" + taboo + "!" }
 
 
 /**
@@ -93,12 +100,19 @@ sealed trait BinaryComposite extends Composite {
 }
 
 /** Function/predicate/predicational application */
-sealed trait ApplicationOf extends Expression {
+sealed trait ApplicationOf extends Composite {
   insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
   insist(sort == func.sort, "sort of application is the sort of the function")
   def func : Function
   def child : Expression
 }
+
+/** Expressions limited to a given state-space. */
+sealed trait SpaceDependent extends Expression {
+  /** The space that this expression lives on. */
+  def space: Space
+}
+
 
 /**
  * A named symbol such as a variable or function symbol or predicate symbol.
@@ -217,10 +231,16 @@ object Anything extends NamedSymbol with AtomicTerm with RTerm {
 }
 
 /** Function symbol applied to argument child func(child) */
-case class FuncOf(func: Function, child: Term) extends AtomicTerm with ApplicationOf {
+case class FuncOf(func: Function, child: Term) extends CompositeTerm with ApplicationOf {
   /** The sort of an ApplicationOf is the sort of func */
   def sort: Sort = func.sort
 }
+
+/** Arity 0 functional symbol `name:sort`, limited to the given state space. */
+case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol {
+  val index: Option[Int] = None
+}
+
 
 /** Composite terms */
 sealed trait CompositeTerm extends Term with Composite
@@ -358,12 +378,20 @@ case class PredOf(func: Function, child: Term) extends AtomicFormula with Applic
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
 }
-/** Predicational or quantifier symbol applied to argument formula child */
+
+/** Predicational or quantifier symbol applied to argument formula child. */
 case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
   insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
+  insist(!func.interpreted, "only uninterpreted predicationals are currently supported: " + this)
 }
+
+/** Arity 0 predicational symbol `name:bool`, limited to the given state space. */
+case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol {
+  val index: Option[Int] = None
+}
+
 
 /** Composite formulas */
 sealed trait CompositeFormula extends Formula with Composite
@@ -521,6 +549,7 @@ case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = co
   require(false, "Hybrid games are currently disabled")
 }
 
+
 /**
  * Differential programs
  * @author Andre Platzer
@@ -537,9 +566,9 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   extends Program {
   override def kind: Kind = ProgramKind
 }
-/** Uninterpreted differential program constant */
-sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with AtomicDifferentialProgram {
-  def index: Option[Int] = None
+/** Uninterpreted differential program constant, limited to the given state space. */
+sealed case class DifferentialProgramConst(name: String, space: Space) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
+  val index: Option[Int] = None
 }
 /** x'=e atomic differential equation */
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {

@@ -63,9 +63,19 @@ http://dx.doi.org/10.1145/2817824
 ------------------------------------------------------------------
 The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
 A log of all major code reviews and the findings are reported here:
+Extended Code Review: 2016-08-02 but not core code review
+  Verdict: Significant improvement of reliability of tool handling.
+  TODO Add lemma evidence directly in LemmaDB.toString
+  TODO Could refactor lemmadb to have a single caching layer and just separate storage layers.
+  TODO Remove Projection from data structures and turn them into an axiomatic treatment.
+  TODO Mathematica conversion needs separate Forall,Exists because of Scala
+  TODO Check number format standard in SMTLIB
+  TODO Polya result parsing needs to become more reliable
+  
 Extended Code Review: KeYmaera X Core: 2016-06-01
   TODO Clean handling of assumptions about interpreted functions. For example unproved premises that are substituted in with *formula* definitions in the end.
   TODO FileLemmaDB needs to check all evidence not just the first.
+
   TODO SMTSolvers cannot return False on satisfiable negations, because formulas other than false have satisfiable negations.
   TODO Mathematica name clashes
   TODO Confirm converse contract checking for translations

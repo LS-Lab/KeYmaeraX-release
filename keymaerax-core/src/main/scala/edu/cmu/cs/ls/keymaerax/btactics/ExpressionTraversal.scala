@@ -240,7 +240,7 @@ object ExpressionTraversal {
 
         // Programs
         case ProgramConst(_) => matchZero(p, f, e)
-        case DifferentialProgramConst(_) => matchZero(p, f, e)
+        case DifferentialProgramConst(_,_) => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case AssignAny(a) => matchOne(p, AssignAny.apply, f, a)
         case DiffAssign(a, b) => matchTwo(p, DiffAssign.apply, f, a, b)

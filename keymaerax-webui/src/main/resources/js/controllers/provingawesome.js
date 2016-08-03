@@ -58,6 +58,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               if (response.data.type === 'taskresult') {
                 if ($scope.runningTask.nodeId === response.data.parent.id) {
                   sequentProofData.updateAgendaAndTree(response.data);
+                  sequentProofData.tactic.fetch(userId, proofId);
                 } else {
                   showMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
                     $scope.runningTask.nodeId + " but got " + response.data.parent.id);
@@ -70,6 +71,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               $rootScope.$emit('proof.message', err.data.textStatus);
             })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/extract')
+            .then(function (data) {
+              sequentProofData.tacticText = data.tacticText;
+            })
         },
         /* future rejected */ function(reason) {
           if (reason !== 'stopped') showMessage($uibModal, reason);
@@ -286,23 +291,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           userId: function() { return $cookies.get('userId'); },
           nodeId: function() { return sequentProofData.agenda.selectedId(); }
         }
-      })
-    }
-
-    $scope.extractTactic = function() {
-      var proofId = $routeParams.proofId;
-      var userId = $cookies.get('userId');
-      $http.get('proofs/user/' + userId + '/' + proofId + '/extract').success(function (data) {
-        $uibModal.open({
-          templateUrl: 'templates/tacticExtracted.html',
-          controller: 'TacticExtractionCtrl',
-          size: 'lg',
-          resolve: {
-            tacticText: function () {
-              return data.tacticText;
-            }
-          }
-        })
       })
     }
 
