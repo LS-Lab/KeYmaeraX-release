@@ -2,7 +2,7 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', function($compile, $http, $sce, $q, derivationInfos) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', 'sequentProofData', function($compile, $http, $sce, $q, derivationInfos, sequentProofData) {
     return {
         restrict: 'AE',
         scope: {
@@ -19,9 +19,9 @@ angular.module('formula')
         link: function(scope, element, attrs) {
             var span = function(id, content, depth) {
                 if (scope.highlight && (content.type === 'formula' || content.type === 'derivative' || content.type === 'symbol')) {
-                    return '<span class="hl" id="' + id + '"' +
-                             'onmouseover="$(event.target).addClass(\'hlhover\');"' +
-                             'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
+                    return '<span ng-class="{\'hl\':true, \'hlhover\':isFormulaHighlighted(\'' + id + '\')}" id="' + id + '"' +
+                             'ng-mouseover="$event.stopPropagation();highlightFormula(\'' + id + '\')"' +
+                             'ng-mouseleave="$event.stopPropagation();highlightFormula(undefined)"' +
                              'k4-droppable on-drop="dndSink(\'' + id + '\').formulaDrop(dragData)"' +
                              'on-drag-enter="dndSink(\'' + id + '\').formulaDragEnter(dragData)"' +
                              'on-drag-leave="dndSink(\'' + id + '\').formulaDragLeave(dragData)"' +
@@ -486,6 +486,14 @@ angular.module('formula')
                 }
               }
               return dndSinks[sinkFormulaId];
+            }
+
+            scope.highlightFormula = function(formulaId) {
+              sequentProofData.formulas.highlighted = formulaId;
+            }
+
+            scope.isFormulaHighlighted = function(formulaId) {
+              return sequentProofData.formulas.highlighted == formulaId;
             }
 
             var fmlMarkup = parseFormulaHelper(scope.formula, 0, scope.collapsed);

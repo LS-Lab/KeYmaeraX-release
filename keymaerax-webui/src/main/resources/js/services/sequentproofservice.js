@@ -87,6 +87,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       }
     },
 
+    formulas: {
+      highlighted: undefined
+    },
+
     /** Prunes the proof tree at the specified goal */
     prune: function(userId, proofId, nodeId) {
       //@note make model available in closure of function success
