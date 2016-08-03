@@ -49,7 +49,9 @@ class FileLemmaDB extends LemmaDB {
         case Some(n) =>
           require(isUniqueLemmaName(n) || get(n) == Some(lemma),
             "Lemma name '" + n + ".alp' must be unique, or file content must be the identical lemma: \n" + lemma)
-          (n, new File(lemmadbpath, n + ".alp"))
+          val file = new File(lemmadbpath, n + ".alp")
+          if(get(n) != Some(lemma)) file.createNewFile()
+          (n, file)
         case None =>
           val (newId, newFile) = getUniqueLemmaFile()
           newFile.createNewFile
