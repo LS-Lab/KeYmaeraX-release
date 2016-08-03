@@ -15,14 +15,15 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleProvable, SequentialInterpreter, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleExpr, BelleProvable, SequentialInterpreter}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
-import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXExtendedLemmaParser, ProofEvidence, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.lemma._
+import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXParser, KeYmaeraXProblemParser, ProofEvidence}
 import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.LemmaID
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent, SuccPos}
 
 import scala.collection.immutable.Nil
 
@@ -42,103 +43,32 @@ object SQLite {
   /** Use this for all unit tests that work with the database, so tests don't infect the production database */
   val TestDB: SQLiteDB = new SQLiteDB(DBAbstractionObj.testLocation)
 
-  /** LemmaDB using SQLite for storage. All provables that truly need to be persistent should be stored here, as this will
-    * survive .keymaerax/cache being deleted.
-    *
-    * Because parsing lemmas is a relatively expensive operation (a page load can request dozens of provables, which
-    * can take seconds), parsing operations are cached internally. All accesses to the lemma table must use this class
-    * in order for the cache to always be up to date. */
-  class SQLiteLemmaDB (db: SQLiteDB) extends LemmaDB {
-    //@todo: split off CachedLemmaDB
-    override def contains(id: LemmaID): Boolean = get(id) match {
-      case Some(x) => true
-      case _ => false
+  /** Stores lemmas in the Lemma table of the given database. */
+  class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
+    def readLemmas(ids: List[LemmaID]):Option[List[String]] = {
+      db.getLemmas(ids.map(_.toInt))
     }
 
-    private var cachedLemmas: Map[Int, Lemma] = Map.empty
-
-    override def get(id: LemmaID): Option[Lemma] = {
-      get(List(id.toInt)).map(_.head)
+    def writeLemma(id: LemmaID, lemma:String) = {
+      db.updateLemma(id.toInt, lemma)
     }
 
-    def get(ids: List[Int]): Option[List[Lemma]] = {
-      val lemmaOptions =
-        ids.map{case id =>
-          cachedLemmas.get(id) match {
-            case Some(lemma) => Some(lemma)
-            case None =>
-              db.getLemma(id).map(Lemma.fromString) match {
-                case Some(lemma) =>
-                  cachedLemmas = cachedLemmas.+((id, lemma))
-                  Some(lemma)
-                case None => None
-              }
-          }
-        }
-      if(lemmaOptions.forall(_.isDefined))
-        Some(lemmaOptions.map(_.get))
-      else
-        None
-    }
+    def createLemma():LemmaID = db.createLemma().toString
 
-    private val REDUNDANT_CHECKS = false
-
-    private def saveLemma(lemma:Lemma, id:Int): Unit = {
-      val lemmaToAdd = addRequiredEvidence(lemma)
-      if (REDUNDANT_CHECKS) {
-        //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-        val parse = KeYmaeraXExtendedLemmaParser(lemmaToAdd.toString)
-        assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
-        assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
-        assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
-      }
-
-      val lemmaString = lemmaToAdd.toString
-
-      db.updateLemma(id, lemmaString)
-      cachedLemmas = cachedLemmas.+((id, lemmaToAdd))
-      val lemmaFromDB = get(id.toString)
-      if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemmaToAdd) {
-        db.deleteLemma(id)
-        cachedLemmas = cachedLemmas.-(id)
-        throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
-      }
-      // assertion duplicates condition and throw statement
-      assert(lemmaFromDB == Some(lemmaToAdd), "Lemma stored in DB should be identical to lemma in memory " + lemmaToAdd)
-    }
-
-    private def isUniqueLemmaId(id: Int) = db.getLemmas(List(id)).isEmpty
-
-    override def add(lemma: Lemma): LemmaID = {
-      val id = this.synchronized {
-        // synchronize to make sure concurrent uses use new rows
-        lemma.name match {
-          case Some(n) =>
-            require(isUniqueLemmaId(n.toInt) || get(n) == Some(lemma),
-            "Lemma name '" + n + ".alp' must be unique, or file content must be the lemma: \n" + lemma)
-            n.toInt
-          case None =>  db.createLemma()
-        }
-      }
-      saveLemma(lemma, id)
-      id.toString
-    }
-
-    // @todo: implement?
     override def remove(name: String): Boolean = {
-      ???
+      db.deleteLemma(name.toInt)
     }
 
     override def deleteDatabase(): Unit = {
       db.deleteAllLemmas()
-      cachedLemmas = Map.empty
     }
   }
 
+  def SQLiteLemmaDB (db: SQLiteDB) = new CachedLemmaDB(new UncachedSQLiteLemmaDB(db))
 
   class SQLiteDB(val dblocation: String) extends DBAbstraction {
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
-    val lemmaDB = new SQLiteLemmaDB(this)
+    val lemmaDB = SQLiteLemmaDB(this)
     private var currentSession:Session = null
     /* Statistics on the number of SQL operations performed in this session, useful for profiling. */
     private var nUpdates = 0
@@ -173,6 +103,50 @@ object SQLite {
     def synchronizedTransaction[T](f: => T)(implicit session:Session): T =
       synchronized {
         session.withTransaction(f)
+    }
+
+    private[SQLite] def createLemma(): Int = {
+      synchronizedTransaction({
+        (Lemmas.map(_.lemma) returning Lemmas.map(_._Id.get))
+          .insert(None)
+      })
+    }
+
+    private[SQLite] def updateLemma(lemmaId: Int, lemma:String): Unit = {
+      synchronizedTransaction({
+        Lemmas.filter(_._Id === lemmaId).map(_.lemma).update(Some(lemma))
+      })
+    }
+
+    private[SQLite] def getLemma(lemmaId: Int): Option[String] = {
+      getLemmas(List(lemmaId)) match {
+        case Some(lemmas) => lemmas.headOption
+        case None => None
+      }
+    }
+
+    /** Allow retrieving lemmas in bulk to reduce the number of database queries */
+    private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
+      synchronizedTransaction({
+        val lemmaMap = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list.toMap
+        try {
+          Some(lemmaIds.map(lemmaMap(_)))
+        } catch {
+          case _:Exception => None
+        }
+      })
+    }
+
+    private[SQLite] def deleteLemma(lemmaId: Int): Boolean = {
+      synchronizedTransaction({
+        Lemmas.filter(_._Id === lemmaId).delete == 1
+      })
+    }
+
+    private[SQLite] def deleteAllLemmas(): Unit = {
+      synchronizedTransaction({
+        Lemmas.delete
+      })
     }
 
     override def syncDatabase():Unit = {
@@ -505,50 +479,6 @@ object SQLite {
         executableId
       })
 
-    private[SQLite] def createLemma(): Int = {
-      synchronizedTransaction({
-        (Lemmas.map(_.lemma) returning Lemmas.map(_._Id.get))
-          .insert(None)
-      })
-    }
-
-    private[SQLite] def updateLemma(lemmaId: Int, lemma:String): Unit = {
-      synchronizedTransaction({
-        Lemmas.filter(_._Id === lemmaId).map(_.lemma).update(Some(lemma))
-      })
-    }
-
-    private[SQLite] def getLemma(lemmaId: Int): Option[String] = {
-      getLemmas(List(lemmaId)) match {
-        case Some(lemmas) => lemmas.headOption
-        case None => None
-      }
-    }
-
-    /** Allow retrieving lemmas in bulk to reduce the number of database queries */
-    private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
-      synchronizedTransaction({
-        val lemmaMap = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list.toMap
-        try {
-          Some(lemmaIds.map(lemmaMap(_)))
-        } catch {
-          case _:Exception => None
-        }
-      })
-    }
-
-    private[SQLite] def deleteLemma(lemmaId: Int): Unit = {
-      synchronizedTransaction({
-        Lemmas.filter(_._Id === lemmaId).delete
-      })
-    }
-
-    private[SQLite] def deleteAllLemmas(): Unit = {
-      synchronizedTransaction({
-        Lemmas.delete
-      })
-    }
-
     /** Stores a Provable in the database and returns its ID */
     override def createProvable(p: Provable): Int = {
       synchronizedTransaction({
@@ -586,7 +516,7 @@ object SQLite {
     }
 
     def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = {
-      lemmaDB.get(lemmaIds) match {
+      lemmaDB.get(lemmaIds.map(_.toString)) match {
         case None => throw new Exception (" No lemma for one of these IDs: " + lemmaIds)
         case Some(lemmas) => lemmas.zipWithIndex.map{case (lemma, id) => new ProvablePOJO(id, lemma.fact)}
       }

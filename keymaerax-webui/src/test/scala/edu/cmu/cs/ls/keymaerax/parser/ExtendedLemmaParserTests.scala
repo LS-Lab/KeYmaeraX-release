@@ -198,7 +198,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
   }
 
   it should "add a sql lemma" in {
-    addTo(new SQLite.SQLiteLemmaDB(SQLite.TestDB), false /*@todo b/c .remove currently unsupported for sql lemma db*/)
+    addTo(SQLite.SQLiteLemmaDB(SQLite.TestDB), true)
   }
 
 

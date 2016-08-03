@@ -55,6 +55,8 @@ object DerivedAxioms {
     if (!AUTO_INSERT) {
       lemma
     } else {
+      /* @todo BUG does not work at the moment because lemmaDB adds some evidence to the lemmas and thus equality
+      * (and thus contains) no longer means what this code thinks it means. */
       // first check whether the lemma DB already contains identical lemma name
       val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
         // identical lemma contents with identical name, so reuse ID

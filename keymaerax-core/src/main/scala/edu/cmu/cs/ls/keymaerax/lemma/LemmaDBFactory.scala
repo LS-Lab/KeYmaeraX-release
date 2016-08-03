@@ -20,7 +20,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 object LemmaDBFactory {
 
   /** mutable state for switching out default implementation */
-  private var lemmaDBInstance: LemmaDB = new FileLemmaDB
+  private var lemmaDBInstance: LemmaDB = new CachedLemmaDB(new FileLemmaDB())
 
   /** Returns the lemma DB */
   def lemmaDB: LemmaDB = lemmaDBInstance
