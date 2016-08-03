@@ -18,14 +18,18 @@ import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 class SystemSubstituterTest extends TacticTestBase {
   import TactixLibrary._
 
+  private val cAnyArg = DifferentialProgramConst("c", AnyArg)
+
+
   "Substituting into systems" should "not allow primes in ODEs for DE" in {
     // [{x_'=f(??),c&H(??)}]p(??) <-> [{c,x_'=f(??)&H(??)}][x_':=f(??);]p(??)
     val pr = Provable.axioms("DE differential effect (system)")
+
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), "y'+1".asTerm) ::
       SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
+      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
       SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x'=3".asFormula) ::
       Nil))}
   }
@@ -38,7 +42,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
       Nil))}
   }
@@ -50,7 +54,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
       Nil))}
   }
@@ -83,7 +87,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(0)) ::
       SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(0)) ::
       SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
       Nil))}
   }
@@ -96,7 +100,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(3)) ::
       SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
       SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=9".asFormula) ::
       Nil))}
     //@todo should not prove y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9 by using such a DG inverse differential ghost system
@@ -110,7 +114,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), "-b()".asTerm) ::
         SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Variable("x_",None,Real)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-        SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+        SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_<=m()".asFormula) ::
         Nil))}
     //@todo should not prove this formula by using such a DG inverse differential ghost system
@@ -125,7 +129,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(-1)) ::
       SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-      SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+      SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
       SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x<=10".asFormula) ::
       Nil))}
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DG("y_'=-1")
@@ -138,7 +142,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-        SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x<=10".asFormula) ::
         Nil))}
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DGconstant("y_'=-1")
@@ -173,7 +177,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Variable("y_",None,Real)) ::
         SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-        SubstitutionPair(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x_>=0".asFormula) ::
         Nil))}
     //@todo should not prove
