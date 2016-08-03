@@ -493,9 +493,9 @@ object SQLite {
     override def addBelleExpr(expr: BelleExpr): Int =
       synchronizedTransaction({
         val executableId =
-          (Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
+          (Executables.map({case exe => (exe.belleexpr) })
             returning Executables.map(_._Id.get))
-          .insert((None, Some(expr.prettyString)))
+          .insert(Some(expr.prettyString))
         nInserts = nInserts + 1
         executableId
       })
