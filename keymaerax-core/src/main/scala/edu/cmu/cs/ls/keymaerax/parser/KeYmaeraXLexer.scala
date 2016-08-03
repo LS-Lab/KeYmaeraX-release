@@ -362,6 +362,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
      * @return Return value of findNextToken
      */
     def consumeColumns(cols: Int, terminal: Terminal, location: Location) = {
+    def consumeColumns(cols: Int, terminal: Terminal, location: Location) : Option[(String, Token, Location)] = {
       assert(cols > 0, "Cannot move cursor less than 1 columns.")
       Some((
         s.substring(cols),
@@ -370,6 +371,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     }
 
     def consumeTerminalLength(terminal: Terminal, location: Location) =
+    def consumeTerminalLength(terminal: Terminal, location: Location): Option[(String, Token, Location)] =
       consumeColumns(terminal.img.length, terminal, location)
 
     s match {
