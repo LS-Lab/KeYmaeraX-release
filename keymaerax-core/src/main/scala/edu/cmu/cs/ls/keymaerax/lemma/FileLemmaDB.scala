@@ -32,10 +32,13 @@ class FileLemmaDB extends LemmaDB {
     file
   }
 
-  override def contains(lemmaID: LemmaID): Boolean = new File(lemmadbpath, lemmaID + ".alp").exists()
+  /** Get the file in which lemmaID is supposed to be stored */
+  private def fileFor(lemmaID: LemmaID): File = new File(lemmadbpath, lemmaID + ".alp")
+
+  override def contains(lemmaID: LemmaID): Boolean = fileFor(lemmaID).exists()
 
   override def get(lemmaID: LemmaID): Option[Lemma] = {
-    val file = new File(lemmadbpath, lemmaID + ".alp")
+    val file = fileFor(lemmaID)
     if (file.exists()) {
       Some(Lemma.fromString(scala.io.Source.fromFile(file).mkString))
     } else None
@@ -49,7 +52,7 @@ class FileLemmaDB extends LemmaDB {
           require(isUniqueLemmaName(n) || get(n) == Some(lemma),
             "Lemma name '" + n + ".alp' must be unique, or file content must be the identical lemma: \n" + lemma)
           val file = new File(lemmadbpath, n + ".alp")
-          if (get(n) != Some(lemma)) file.createNewFile()
+          if (isUniqueLemmaName(n)) file.createNewFile()
           (n, file)
         case None =>
           val (newId, newFile) = getUniqueLemmaFile
@@ -61,12 +64,13 @@ class FileLemmaDB extends LemmaDB {
     id
   }
 
-  override def remove(lemmaName: String): Boolean =
-    try {new File(lemmadbpath, lemmaName + ".alp").delete()}
+  override def remove(lemmaName: LemmaID): Boolean =
+    try {fileFor(lemmaName).delete()}
+    //@todo return value seems wrong
     finally {false}
 
-  private def isUniqueLemmaName(name: String): Boolean =
-    !new File(lemmadbpath, name + ".alp").exists()
+  private def isUniqueLemmaName(name: LemmaID): Boolean =
+    !fileFor(name).exists()
 
   private def getUniqueLemmaFile: (String, File) = {
     val f = File.createTempFile("lemma",".alp",lemmadbpath)
