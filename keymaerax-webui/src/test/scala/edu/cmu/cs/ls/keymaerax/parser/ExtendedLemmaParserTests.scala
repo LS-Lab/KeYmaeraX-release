@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.parser
+package edu.cmu.cs.ls.keymaerax.core //for access to private[core] methods.
 
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite
@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 import scala.collection.immutable.IndexedSeq
 /**
@@ -164,32 +164,6 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
     parseResult._3.length shouldBe 2
   }
 
-  it should "parse a lemma with a hash" in {
-    val tool: String = "hash \"\"\"\"" + HashEvidenceHelper.md5("asdf") + "\"\"\"\"\n"
-    val lemmaFile =
-      s"""Lemma "MyLemma".
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 2=2
-          |==>
-          |Formula: 3=3
-          |Formula: 4=4
-          |Sequent.
-          |Formula: 5=5
-          |==>
-          |Formula: 6=6
-          |Sequent.
-          |Formula: 7=7
-          |==>
-          |End.
-          |Hash.
-          |${tool}
-          |End.
-      """.stripMargin
-    val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
-    parseResult._3.head.asInstanceOf[HashEvidence].h shouldBe HashEvidenceHelper.md5("asdf")
-  }
-
   it should "add a lemma" in {
     addTo(LemmaDBFactory.lemmaDB, true)
   }
@@ -211,7 +185,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
       db.add(new Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name)))
       val reloadedLemma = db.get(name)
       reloadedLemma.get.evidence.find(_.isInstanceOf[HashEvidence]) match {
-        case Some(HashEvidence(h)) => h == HashEvidenceHelper.hashSequentList(p.conclusion :: Nil)
+        case Some(HashEvidence(h)) => h == reloadedLemma.get.md5(reloadedLemma.get.sequentsToString(p.conclusion :: Nil))
         case None => throw new Exception(s"Expected some hash evidence in ${db.get(name).get.toString}")
       }
       if(remove) db.remove(name)
