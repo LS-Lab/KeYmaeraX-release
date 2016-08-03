@@ -169,7 +169,7 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
+  ignore should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
     val tactic = implyR('R) & andL('L)*@TheType() &
