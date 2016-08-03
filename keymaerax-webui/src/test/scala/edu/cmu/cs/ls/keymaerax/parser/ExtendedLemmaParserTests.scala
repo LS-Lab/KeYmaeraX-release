@@ -3,16 +3,17 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, HashEvidenceHelper, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 import scala.collection.immutable.IndexedSeq
 /**
   * Created by nfulton on 12/16/15.
   */
-class ExtendedLemmaParserTests extends FlatSpec with Matchers {
+class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethodTester {
+  private val md5Generator = PrivateMethod[String]('md5)
+
   "Extended Lemma Parser" should "work" in {
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
     val lemmaFile =
@@ -165,7 +166,8 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
   }
 
   it should "parse a lemma with a hash" in {
-    val tool: String = "hash \"\"\"\"" + HashEvidenceHelper.md5("asdf") + "\"\"\"\"\n"
+    val md5 = Lemma(null, null) invokePrivate md5Generator("asdf")
+    val tool: String = "hash \"\"\"\"" + md5 + "\"\"\"\"\n"
     val lemmaFile =
       s"""Lemma "MyLemma".
           |Sequent.
@@ -187,7 +189,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
           |End.
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
-    parseResult._3.head.asInstanceOf[HashEvidence].h shouldBe HashEvidenceHelper.md5("asdf")
+    parseResult._3.head.asInstanceOf[HashEvidence].h shouldBe md5
   }
 
   it should "add a lemma" in {
@@ -208,10 +210,11 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers {
     val p = Provable.startProof("1=1".asFormula)
 
     try {
-      db.add(new Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name)))
+      val lemma = Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name))
+      db.add(lemma)
       val reloadedLemma = db.get(name)
       reloadedLemma.get.evidence.find(_.isInstanceOf[HashEvidence]) match {
-        case Some(HashEvidence(h)) => h == HashEvidenceHelper.hashSequentList(p.conclusion :: Nil)
+        case Some(HashEvidence(h)) => h == lemma.checksum //@todo is this the correct fix?
         case None => throw new Exception(s"Expected some hash evidence in ${db.get(name).get.toString}")
       }
       if(remove) db.remove(name)
