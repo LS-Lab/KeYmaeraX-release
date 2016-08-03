@@ -320,8 +320,15 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     while (!remaining.isEmpty) {
       findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
-          //if (DEBUG) print(token)
-          output.append(token)
+          if(token.tok == ANYTHING) {
+            if(DEBUG) print("Syntax hack: replacing ANYTHING token by LBANANA and RBANANA tokens. ANYTHING is deprecated in favor of EXCEPT(nothing) i.e. ?? is replaced with (!!)")
+            output.append(Token(LBANANA, token.loc))
+            output.append(Token(RBANANA, token.loc))
+          }
+          else {
+            output.append(token)
+          }
+
           remaining = nextInput
           loc = nextLoc
         case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
@@ -358,7 +365,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
      * @param location Current location.
      * @return Return value of findNextToken
      */
-    def consumeColumns(cols: Int, terminal: Terminal, location: Location) = {
+    def consumeColumns(cols: Int, terminal: Terminal, location: Location) : Option[(String, Token, Location)] = {
       assert(cols > 0, "Cannot move cursor less than 1 columns.")
       Some((
         s.substring(cols),
@@ -366,7 +373,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
         suffixOf(loc, cols)))
     }
 
-    def consumeTerminalLength(terminal: Terminal, location: Location) =
+    def consumeTerminalLength(terminal: Terminal, location: Location): Option[(String, Token, Location)] =
       consumeColumns(terminal.img.length, terminal, location)
 
     s match {
@@ -538,7 +545,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
       case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
 
-      case ANYTHING.startPattern(_*) => consumeTerminalLength(ANYTHING, loc)
+      case ANYTHING.startPattern(_*) => consumeTerminalLength(ANYTHING, loc) //@note this token is stripped out and replaced with (! !) in [[fin`dNextToken]].
 
       case ASSIGNANY.startPattern(_*) => consumeTerminalLength(ASSIGNANY, loc)
       case ASSIGN.startPattern(_*) => consumeTerminalLength(ASSIGN, loc)
