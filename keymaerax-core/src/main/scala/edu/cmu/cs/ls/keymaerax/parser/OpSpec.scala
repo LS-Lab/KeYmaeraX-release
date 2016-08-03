@@ -177,6 +177,7 @@ object OpSpec {
   val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
   val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
   val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
+  val sUnitFunctional= UnitOpSpec(none,     0, name => UnitFunctional(name,AnyArg,Real))
   val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(func(name, None, e.sort, Real), e))
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME,0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
   val sDifferential = UnaryOpSpec[Term] (PRIME,     5, PostfixFormat, unterm, Differential.apply _)
@@ -200,6 +201,7 @@ object OpSpec {
   val sFalse        = UnitOpSpec(FALSE,                 0, False)
   val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(func(name, None, e.sort, Bool), e.asInstanceOf[Term]))
   val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(func(name, None, e.sort, Bool), e.asInstanceOf[Formula]))
+  val sUnitPredicational= UnitOpSpec(none,              0, name => UnitPredicational(name,AnyArg))
   val sDifferentialFormula = UnaryOpSpec[Formula](PRIME,80, PostfixFormat, unfml, DifferentialFormula.apply _)
   val sEqual        = lBinaryOpSpec(EQ,                90, AtomicBinaryFormat, bintermfml, Equal.apply _)
   assert(sEqual>sMinus, "formulas bind weaker than their constituent terms")
@@ -276,6 +278,7 @@ object OpSpec {
     case t: Divide       => sDivide
     case t: Plus         => sPlus
     case t: Minus        => sMinus
+    case t: UnitFunctional => sUnitFunctional
 
     // formulas
     case DotFormula      => sDotFormula
@@ -299,6 +302,7 @@ object OpSpec {
     case f: Or           => sOr
     case f: Imply        => sImply
     case f: Equiv        => sEquiv
+    case f: UnitPredicational => sUnitPredicational
 
     // programs
     case p: ProgramConst => sProgramConst

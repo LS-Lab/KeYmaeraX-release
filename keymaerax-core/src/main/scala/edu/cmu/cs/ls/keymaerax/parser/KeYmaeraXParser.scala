@@ -79,6 +79,7 @@ private object FOLLOWSFORMULA extends ExpectNonterminal("<FollowsFormula>")
 private object FOLLOWSPROGRAM extends ExpectNonterminal("<FollowsProgram>")
 private object FOLLOWSEXPRESSION extends ExpectNonterminal("<FollowsExpression>")
 private object FOLLOWSIDENT extends ExpectNonterminal("<FollowsIdentifier>")
+private object ANYIDENT extends ExpectNonterminal("<Identifier>")
 /** Pseudo-nonterminal encoding that there's other possible expectations beyond what's listed */
 private object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
 
@@ -243,6 +244,12 @@ object KeYmaeraXParser extends Parser {
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
     // lift differential equations without evolution domain constraints to ODESystems
     case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => assert(!ode.isInstanceOf[ODESystem], "wrong kind"); Some(ODESystem(ode))
+
+    // space-dependent elaborations
+    case UnitPredicational(name, space)    if kind==TermKind => Some(UnitFunctional(name,space,Real))
+    case UnitFunctional(name, space, Real) if kind==FormulaKind => Some(UnitPredicational(name,space))
+    case UnitPredicational(name, space)    if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
+    case UnitFunctional(name, space, Real) if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
     case _ => None
   }
 
@@ -351,17 +358,34 @@ object KeYmaeraXParser extends Parser {
       // ordinary identifiers outside quantifiers disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name,idx),_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN || la==LBRACE || la==PRIME) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
+        if (la==LPAREN || la==LBRACE || la==PRIME || la==LBANANA) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
 
       // function/predicate symbols arity 0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 3, tok, Nothing, r)
 
-      // function/predicate symbols of argument ANYTHING
+
+      // nullary functional/predicational symbols of argument ANYTHING
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduceFuncOrPredOf(st, 4, tok, Anything, r)
+        reduceUnitFuncOrPredOf(st, 4, tok, AnyArg, r)
+
+      // nullary functional/predicational symbols of argument AnyArg
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Token(RBANANA,_)  =>
+        reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r)
+      // nullary functional/predicational symbols of argument Taboo
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
+        reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
+      case r :+ Token(tok:IDENT,_) if la==LBANANA =>
+        shift(st)
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) =>
+        if (la==RBANANA || la.isInstanceOf[IDENT]) shift(st)
+        else error(st, List(RBANANA, ANYIDENT))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_:Variable) =>
+        if (la==RBANANA) shift(st)
+        else error(st, List(RBANANA))
+
 
       // function/predicate symbols arity>0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
@@ -751,6 +775,28 @@ object KeYmaeraXParser extends Parser {
         else if (la == RPAREN) shift(st)
         else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
     }
+  }
+
+  private def reduceUnitFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Space, remainder: Stack[Item]): ParseState = {
+    val ParseState(s, input@(Token(la, _) :: rest)) = st
+    require(name.index==None, "no index supported for unit functional or unit predicational")
+    if (termBinOp(la) || isTerm(st) && followsTerm(la))
+      reduce(st, consuming, UnitFunctional(name.name, arg, Real), remainder)
+    else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
+      reduce(st, consuming, UnitPredicational(name.name, arg), remainder)
+    else if (followsFormula(la) && !followsTerm(la))
+      reduce(st, consuming, UnitPredicational(name.name, arg), remainder)
+    else if (followsTerm(la) && !followsFormula(la))
+      reduce(st, consuming, UnitFunctional(name.name, arg, Real), remainder)
+    //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
+    //    else if (followsFormula(la))
+    //      reduce(st, consuming, PredOf(predFunc(name.name, name.index, arg.sort, Bool), arg), remainder)
+    else if (followsTerm(la))
+      reduce(st, consuming, UnitFunctional(name.name, arg, Real), remainder)
+    else if (followsFormula(la))
+      reduce(st, consuming, UnitPredicational(name.name, arg), remainder)
+    else if (la == RPAREN) shift(st)
+    else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
   }
 
   /** Top terminal token from stack or EOF if the top item is not a token or the stack is empty. */

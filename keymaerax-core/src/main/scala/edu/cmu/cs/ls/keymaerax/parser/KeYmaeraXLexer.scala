@@ -80,6 +80,12 @@ private object LPAREN  extends Terminal("(") {
 private object RPAREN  extends Terminal(")") {
   override def regexp = """\)""".r
 }
+private object LBANANA  extends Terminal("(|") {
+  override def regexp = """\(\|""".r
+}
+private object RBANANA  extends Terminal("|)") {
+  override def regexp = """\|\)""".r
+}
 private object LBRACE  extends Terminal("{") {
   override def regexp = """\{""".r
 }
@@ -496,6 +502,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
       case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
 
+      case LBANANA.startPattern(_*) => consumeTerminalLength(LBANANA, loc)
+      case RBANANA.startPattern(_*) => consumeTerminalLength(RBANANA, loc)
       case LPAREN.startPattern(_*) => consumeTerminalLength(LPAREN, loc)
       case RPAREN.startPattern(_*) => consumeTerminalLength(RPAREN, loc)
       case LBOX.startPattern(_*) => consumeTerminalLength(LBOX, loc)
