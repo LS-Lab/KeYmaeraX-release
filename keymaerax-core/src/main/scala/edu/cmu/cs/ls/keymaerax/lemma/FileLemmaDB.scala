@@ -49,10 +49,12 @@ class FileLemmaDB extends LemmaDB {
         case Some(n) =>
           require(isUniqueLemmaName(n) || get(n) == Some(lemma),
             "Lemma name '" + n + ".alp' must be unique, or file content must be the identical lemma: \n" + lemma)
-          (n, new File(lemmadbpath, n + ".alp"))
+          val newFile = new File(lemmadbpath, n + ".alp")
+          newFile.createNewFile()
+          (n, newFile)
         case None =>
-          val (newId, newFile) = getUniqueLemmaFile()
-          newFile.createNewFile
+          val (newId, newFile) = getUniqueLemmaFile
+          newFile.createNewFile()
           (newId, newFile)
       }
     } ensuring(r => r._2.exists(), "the file to be stored in exists now and cannot be claimed concurrently again")
@@ -67,7 +69,7 @@ class FileLemmaDB extends LemmaDB {
   private def isUniqueLemmaName(name: String): Boolean =
     !new File(lemmadbpath, name + ".alp").exists()
 
-  private def getUniqueLemmaFile(): (String, File) = {
+  private def getUniqueLemmaFile: (String, File) = {
     val f = File.createTempFile("lemma",".alp",lemmadbpath)
     (f.getName.substring(0, f.getName.length-".alp".length), f)
   }
