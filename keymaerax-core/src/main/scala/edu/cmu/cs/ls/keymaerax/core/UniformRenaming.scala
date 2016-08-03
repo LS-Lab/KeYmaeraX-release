@@ -179,6 +179,7 @@ sealed trait Renaming extends (Expression => Expression) {
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
+    //@todo check if Taboo is what or repl
     case c: DifferentialProgramConst => if (semanticRenaming) c else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)      // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
   }
