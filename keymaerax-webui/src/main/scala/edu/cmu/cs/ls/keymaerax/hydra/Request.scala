@@ -662,14 +662,17 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
       return new ApplicableAxiomsResponse(Nil, None) :: Nil
     val proof = db.getProofInfo(proofId)
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    val subFormula = sequent.sub(pos).get
-    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
-      map{case axiom => (
-        DerivationInfo(axiom),
-        UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
-    val suggestedInput = generator(sequent, pos)
-    new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+    sequent.sub(pos) match {
+      case Some(subFormula) =>
+        val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
+          map{axiom => (
+            DerivationInfo(axiom),
+            UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
+        val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+        val suggestedInput = generator(sequent, pos)
+        new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+      case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
+    }
   }
 }
 
