@@ -217,7 +217,7 @@ object KeYmaeraXParser extends Parser {
     // lift misclassified defaulted predicate application to function application when required by context type.
     case PredOf(f, t) if kind==TermKind => Some(FuncOf(func(f.name,f.index,f.domain,Real), t))
     // lift misclassified defaulted differential program constant
-    case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
+    case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name, AnyArg))
     // lift misclassified defaulted program constant
     case x: Variable if kind==ProgramKind && x.index==None => Some(ProgramConst(x.name))
     // lift misclassified defaulted term (p(x))' to formula as needed.

@@ -45,6 +45,23 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case _: Program => repl.isInstanceOf[Program]
   }, "(redundant test) substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
   insist(noException(matchKey), "substitutable expression expected " + this) // matchKey will throw exception if requirement("Substitutable expression required, found " + what + " in " + this) failed
+  insist(what match {
+    case sp: SpaceDependent => sp.space match {
+      case AnyArg        => true
+      case Except(taboo) =>
+        val taboos = SetLattice(Set[NamedSymbol](taboo, DifferentialSymbol(taboo)))
+        sp match {
+          //@note by previous insists, repl has to be a DifferentialProgram
+          case _: DifferentialProgramConst => val vc = StaticSemantics(repl.asInstanceOf[DifferentialProgram])
+            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
+          case _ => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
+      }
+    }
+    // only space-dependents have space-compatibility requirements
+    case _ => true
+  },
+    "space-compatible replacement expected " + this
+  )
 
   /**
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
@@ -56,30 +73,33 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case FuncOf(f: Function, Anything) => bottom // Anything locally binds all variables
       case FuncOf(f: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
-        assert(!StaticSemantics.freeVars(replt).contains(d)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
-        assert(!(StaticSemantics.freeVars(replt) -- Set(d)).contains(d), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(d)) + " leading to unnecessary clashes")
-        assert(StaticSemantics.freeVars(replt) -- Set(d) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+//        assert(!StaticSemantics.freeVars(replt).contains(d)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
+//        assert(!(StaticSemantics.freeVars(replt) -- Set(d)).contains(d), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(d)) + " leading to unnecessary clashes")
+//        assert(StaticSemantics.freeVars(replt) -- Set(d) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
         StaticSemantics.freeVars(repl)
+      // unit functionals are like Predicationals
+      case UnitFunctional(name, space, sort) => bottom
       case _: Term => StaticSemantics.freeVars(repl)
     }
     case replf: Formula => what match {
       case PredOf(p: Function, Anything) => bottom // Anything locally binds all variables
       case PredOf(p: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
-        assert(!StaticSemantics.freeVars(replf).contains(d) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
-        assert(!(StaticSemantics.freeVars(replf) -- Set(d)).contains(d), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(d)) + " leading to unnecessary clashes")
-        assert(StaticSemantics.freeVars(replf) -- Set(d) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+//        assert(!StaticSemantics.freeVars(replf).contains(d) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
+//        assert(!(StaticSemantics.freeVars(replf) -- Set(d)).contains(d), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(d)) + " leading to unnecessary clashes")
+//        assert(StaticSemantics.freeVars(replf) -- Set(d) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
         StaticSemantics.freeVars(repl)
       // predicationals are not function nor predicate symbols
       case PredicationalOf(ctx: Function, DotFormula) => bottom
       // DotFormula is a nullary Predicational
       case DotFormula => bottom
+      // unit predicationals are nullary Predicationals
+      case UnitPredicational(name, space) => bottom
       case _: Formula => StaticSemantics.freeVars(repl)
     }
     case replp: Program => what match {
-      //@note DifferentialProgramConst are handled in analogy to functions on right-hand sides of differential equation
-      case _: DifferentialProgramConst => StaticSemantics.freeVars(replp)
-      case _: ProgramConst => bottom // program constants are always admissible, since their meaning doesn't depend on state
+      //@note DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
+      case _: ProgramConst | DifferentialProgramConst(_,_) => bottom // program constants are always admissible, since their meaning doesn't depend on state
       case _ => assert(false, "already disallowed by insist(matchKey)"); throw new CoreException("Disallowed substitution shape " + this)
     }
   }
@@ -118,6 +138,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case a: ProgramConst             => a
     case DotFormula                  => DotFormula
     case PredicationalOf(p: Function, DotFormula) if !p.interpreted => p
+    case p: UnitPredicational => p
+    case f: UnitFunctional => f
     case _ => throw new CoreException("Nonsubstitutable expression " + this)
   }
 
@@ -362,12 +384,16 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         Differential(usubst(e))
       // unofficial
       case Pair(l, r) => Pair(usubst(l), usubst(r))
+      case f: UnitFunctional =>
+        subsDefs.find(sp => sp.what==f).getOrElse(SubstitutionPair(f,f)).repl.asInstanceOf[Term]
     }
   } ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
   private[core] def usubst(formula: Formula): Formula = {
     formula match {
+      case p: UnitPredicational =>
+        subsDefs.find(sp => sp.what==p).getOrElse(SubstitutionPair(p,p)).repl.asInstanceOf[Formula]
       case app@PredOf(op, theta) if matchHead(app) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
         val PredOf(wp, wArg) = subs.what

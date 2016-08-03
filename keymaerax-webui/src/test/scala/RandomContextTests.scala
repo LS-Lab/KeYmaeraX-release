@@ -64,7 +64,7 @@ class RandomContextTests extends FlatSpec with Matchers {
 
   //@todo DotProgram would in a sense be the appropriate context
   private val noContext = ProgramConst("noctx")
-  private val noContextD = DifferentialProgramConst("noctxD")
+  private val noContextD = DifferentialProgramConst("noctxD",AnyArg)
 
 
   //@note these tests sometimes fails for too courageous DotTerm occurrences in the wrong places caused by random positioning. For example left of assignment ...
