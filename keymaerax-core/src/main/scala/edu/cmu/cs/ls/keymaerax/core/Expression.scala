@@ -54,9 +54,9 @@ case class ObjectSort(name : String) extends Sort { override def toString = name
 /** Sorts of state spaces for state-dependent operators */
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
-object AnyArg extends Space { override def toString: String = "!!" }
+object AnyArg extends Space { override def toString: String = "||" }
 /** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
-case class Except(taboo: Variable) extends Space { override def toString: String = "!" + taboo + "!" }
+case class Except(taboo: Variable) extends Space { override def toString: String = "|" + taboo.asString + "|" }
 
 
 /**
@@ -111,6 +111,7 @@ sealed trait ApplicationOf extends Composite {
 sealed trait SpaceDependent extends Expression {
   /** The space that this expression lives on. */
   def space: Space
+  final def index: Option[Int] = None
 }
 
 
@@ -223,6 +224,7 @@ object Nothing extends NamedSymbol with AtomicTerm {
 }
 
 /** The list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
+@deprecated("Replaced by AnyArg space")
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\anything"
   def index: Option[Int] = None
@@ -237,9 +239,7 @@ case class FuncOf(func: Function, child: Term) extends CompositeTerm with Applic
 }
 
 /** Arity 0 functional symbol `name:sort`, limited to the given state space. */
-case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol {
-  val index: Option[Int] = None
-}
+case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol
 
 
 /** Composite terms */
@@ -388,9 +388,7 @@ case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula
 }
 
 /** Arity 0 predicational symbol `name:bool`, limited to the given state space. */
-case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol {
-  val index: Option[Int] = None
-}
+case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol
 
 
 /** Composite formulas */
@@ -568,8 +566,9 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
 }
 /** Uninterpreted differential program constant, limited to the given state space. */
 sealed case class DifferentialProgramConst(name: String, space: Space) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
-  val index: Option[Int] = None
+  override def asString: String = if (space == AnyArg) super.asString else super.asString + "(" + space + ")"
 }
+
 /** x'=e atomic differential equation */
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {
   insist(e.sort == Real, "expected argument sort real " + this)

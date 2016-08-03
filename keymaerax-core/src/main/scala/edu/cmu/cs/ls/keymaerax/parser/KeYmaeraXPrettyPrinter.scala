@@ -118,6 +118,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
+    case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + "(" + pp(t.child) + ")"
     case t: BinaryCompositeTerm =>
       "(" + pp(t.left) + ")" + op(t).opcode + "(" + pp(t.right) + ")"
@@ -133,6 +134,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + " " + "(" + pp(f.child) + ")"
     case f: Box                 => "[" + pp(f.program) + "]" + "(" + pp(f.child) + ")"
     case f: Diamond             => "<" + pp(f.program) + ">" + "(" + pp(f.child) + ")"
+    case UnitPredicational(name,space) => name + "(" + space + ")"
     case t: UnaryCompositeFormula=> op(t).opcode + "(" + pp(t.child) + ")"
     case t: BinaryCompositeFormula=>
       "(" + pp(t.left) + ")" + op(t).opcode + "(" + pp(t.right) + ")"
@@ -228,6 +230,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case FuncOf(f, c)           => f.asString + "(" + pp(q+0, c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(q+0, l) + op(term).opcode + pp(q+1, r) + ")"
+    case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => op(t).opcode + "(" + pp(q+0, Number(n)) + ")"
     // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
@@ -250,6 +253,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp(q,_)).mkString(",") + " " + wrapChild(f, pp(q+0, f.child))
     case f: Box                 => "[" + pp(q+0, f.program) + "]" + wrapChild(f, pp(q+1, f.child))
     case f: Diamond             => "<" + pp(q+0, f.program) + ">" + wrapChild(f, pp(q+1, f.child))
+    case UnitPredicational(name,space) => name + "(" + space + ")"
     case t: UnaryCompositeFormula=> op(t).opcode + wrapChild(t, pp(q+0, t.child))
     case t: BinaryCompositeFormula=>
       wrapLeft(t, pp(q+0, t.left)) + op(t).opcode + wrapRight(t, pp(q+1, t.right))
