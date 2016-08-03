@@ -516,7 +516,7 @@ class HilbertTests extends TacticTestBase {
 
   "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in {
     useFor("DX diamond differential skip", PosInExpr(0::Nil),
-      (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c", ???), KeYmaeraXParser.differentialProgramParser("x'=2"))))
+      (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c"), KeYmaeraXParser.differentialProgramParser("x'=2"))))
     )(SuccPosition(1, Nil)) (
       Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(true&x=y)".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y".asFormula))

@@ -143,7 +143,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     case ODESystem(ode, h) => ODESystem(reapplied(ode).asInstanceOf[DifferentialProgram], reapplied(h))
     case AtomicODE(xp, t)  => AtomicODE(reapplied(xp).asInstanceOf[DifferentialSymbol], reapplied(t))
     case DifferentialProduct(a, b)  => DifferentialProduct(reapplied(a).asInstanceOf[DifferentialProgram], reapplied(b).asInstanceOf[DifferentialProgram])
-    case DifferentialProgramConst(a, s) => DifferentialProgramConst(a, s)
+    case DifferentialProgramConst(a) => DifferentialProgramConst(a)
 
     // homomorphic cases
     case f:UnaryCompositeProgram  => f.reapply(reapplied(f.child))
