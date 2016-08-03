@@ -553,7 +553,8 @@ case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExp
 trait BelleValue {
   def prettyString: String = toString
 }
-case class BelleProvable(p : Provable, label: Option[BelleLabel] = None) extends BelleExpr with BelleValue {
+case class BelleProvable(p : Provable, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
+  if(label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
 }
