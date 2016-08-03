@@ -798,8 +798,8 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse [x:=q(??);]f(??)->r(??)+c(x)>0" in {
     parser("[x:=q(??);]f(??)->r(??)+c(x)>0") shouldBe (Imply(
-      Box(Assign(x, FuncOf(Function("q",None,Real,Real),Anything)), PredOf(Function("f",None,Real,Bool),Anything)),
-      Greater(Plus(FuncOf(Function("r",None,Real,Real),Anything), FuncOf(Function("c",None,Real,Real),x)), Number(0))))
+      Box(Assign(x, UnitFunctional("q", AnyArg, Real)), UnitPredicational("f", AnyArg)),
+      Greater(Plus(UnitFunctional("r", AnyArg, Real), FuncOf(Function("c",None,Real,Real),x)), Number(0))))
   }
 
   it should "parse [x:=q();]f()->g()" in {
@@ -816,8 +816,8 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse [x:=q(??);]f(??)->g(??)" in {
     parser("[x:=q(??);]f(??)->g(??)") shouldBe (Imply(
-      Box(Assign(x, FuncOf(Function("q",None,Real,Real),Anything)), PredOf(Function("f",None,Real,Bool),Anything)),
-      PredOf(Function("g",None,Real,Bool),Anything)))
+      Box(Assign(x, UnitFunctional("q", AnyArg, Real)), UnitPredicational("f", AnyArg)),
+      UnitPredicational("g", AnyArg)))
   }
 
   it should "parse \\forall x(y()) not as a function application" in {

@@ -174,7 +174,6 @@ object OpSpec {
   private val binterm = (TermKind,TermKind)
   val sDotTerm      = UnaryOpSpec[Term](DOT,       0, PrefixFormat, unterm, (e:Term) => DotTerm(e.sort))
   val sNothing      = UnitOpSpec (NOTHING,  0, Nothing)
-  val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
   val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
   val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
   val sUnitFunctional= UnitOpSpec(none,     0, name => UnitFunctional(name,AnyArg,Real))
@@ -265,7 +264,6 @@ object OpSpec {
     // terms
     case DotTerm(_)      => sDotTerm
     case Nothing         => sNothing
-    case Anything        => sAnything
     case t: Variable     => sVariable
     case t: Number       => sNumber
     case t: FuncOf       => sFuncOf

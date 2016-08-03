@@ -152,7 +152,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
+    (us:Subst)=>us++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`. */
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE

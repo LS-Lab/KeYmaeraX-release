@@ -111,8 +111,6 @@ object StaticSemantics {
     // unofficial
     case Pair(l, r)   => freeVars(l) ++ freeVars(r)
     case Nothing      => bottom
-    // Anything represents the list of all variables, which are, thus, free
-    case Anything     => topVarsDiffVars()
     case f:UnitFunctional => spaceVars(f.space)
   }
 
@@ -289,8 +287,6 @@ object StaticSemantics {
     case Pair(l, r) => signature(l) ++ signature(r)
     // special
     case Nothing => Set.empty
-    // Anything is the list of all variables, no function symbols
-    case Anything => Set.empty
     case f: UnitFunctional => Set(f)
   }
 

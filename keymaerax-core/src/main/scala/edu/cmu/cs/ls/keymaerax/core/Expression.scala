@@ -223,15 +223,6 @@ object Nothing extends NamedSymbol with AtomicTerm {
   def index: Option[Int] = None
 }
 
-/** The list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
-@deprecated("Replaced by AnyArg space")
-object Anything extends NamedSymbol with AtomicTerm with RTerm {
-  def name: String = "\\anything"
-  def index: Option[Int] = None
-  //@note Direct prettyString implementation bypasses pretty printer contracts, which fail since Anything can't be parsed standalone.
-  override def prettyString: String = "??"
-}
-
 /** Function symbol applied to argument child func(child) */
 case class FuncOf(func: Function, child: Term) extends CompositeTerm with ApplicationOf {
   /** The sort of an ApplicationOf is the sort of func */

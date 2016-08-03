@@ -41,7 +41,6 @@ object JSONConverter {
           case Number(_) => /* Nothing to do here */
           case Variable(_, _, _) => /* Nothing to do here */
           case Nothing => /* Nothing to do here */
-          case Anything => /* Nothing to do here */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -89,7 +88,6 @@ object JSONConverter {
           case Number(i) => JsObject(("name" -> JsString(i.toString())) +: cf)
           case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
           case Nothing => JsObject(("name" -> JsString("Nothing")) +: cf)
-          case Anything => JsObject(("name" -> JsString("Anything")) +: cf)
           case FuncOf(a, b) => JsObject(("name" -> JsString("apply")) :: ("fnName" -> convertNamedSymbol(a)) :: ("sort" -> JsString(a.sort.toString)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Differential(a) => JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case DifferentialSymbol(a) => JsObject(("name" -> JsString("differentialsymbol")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)

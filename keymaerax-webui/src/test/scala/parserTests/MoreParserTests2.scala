@@ -143,7 +143,7 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   }
 
   it should "term parse f(??) as f(Anything)" in {
-    parser.termParser("f(??)") shouldBe FuncOf(Function("f",None,Real,Real), Anything)
+    parser.termParser("f(??)") shouldBe UnitFunctional("f", AnyArg, Real)
   }
 
   it should "formula parse p() as p(Nothing)" in {
@@ -151,7 +151,7 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   }
 
   it should "formula parse p(??) as p(Anything)" in {
-    parser.formulaParser("p(??)") shouldBe PredOf(Function("p",None,Real,Bool), Anything)
+    parser.formulaParser("p(??)") shouldBe UnitPredicational("p", AnyArg)
   }
 
   it should "round trip term parse f() as f(Nothing)" in {
@@ -159,7 +159,7 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   }
 
   it should "round trip term parse f(??) as f(Anything)" in {
-    parser.termParser(parser.termParser("f(??)").prettyString) shouldBe FuncOf(Function("f",None,Real,Real), Anything)
+    parser.termParser(parser.termParser("f(??)").prettyString) shouldBe UnitFunctional("f", AnyArg, Real)
   }
 
   it should "round trip formula parse p() as p(Nothing)" in {
@@ -167,7 +167,7 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   }
 
   it should "round trip formula parse p(??) as p(Anything)" in {
-    parser.formulaParser(parser.formulaParser("p(??)").prettyString) shouldBe PredOf(Function("p",None,Real,Bool), Anything)
+    parser.formulaParser(parser.formulaParser("p(??)").prettyString) shouldBe UnitPredicational("p", AnyArg)
   }
 
   it should "round trip parse dot terms" in {

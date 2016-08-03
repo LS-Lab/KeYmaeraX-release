@@ -108,11 +108,11 @@ object DerivedAxioms {
 
   private val x = Variable("x_", None, Real)
   private val px = PredOf(Function("p_", None, Real, Bool), x)
-  private val pany = PredOf(Function("p_", None, Real, Bool), Anything)
+  private val pany = UnitPredicational("p_", AnyArg)
   private val qx = PredOf(Function("q_", None, Real, Bool), x)
-  private val qany = PredOf(Function("q_", None, Real, Bool), Anything)
-  private val fany = FuncOf(Function("f_", None, Real, Real), Anything)
-  private val gany = FuncOf(Function("g_", None, Real, Real), Anything)
+  private val qany = UnitPredicational("q_", AnyArg)
+  private val fany = UnitFunctional("f_", AnyArg, Real)
+  private val gany = UnitFunctional("g_", AnyArg, Real)
   private val ctxt = Function("ctx_", None, Real, Real) // function symbol
   private val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
@@ -194,8 +194,8 @@ object DerivedAxioms {
     useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
       by("<> monotone", USubst(
-        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
-          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
+        SubstitutionPair(UnitPredicational("p_", AnyArg), Not(UnitPredicational("q_", AnyArg))) ::
+          SubstitutionPair(UnitPredicational("q_", AnyArg), Not(UnitPredicational("p_", AnyArg))) :: Nil)) &
       notL(-1) & notR(1)
       partial
   )

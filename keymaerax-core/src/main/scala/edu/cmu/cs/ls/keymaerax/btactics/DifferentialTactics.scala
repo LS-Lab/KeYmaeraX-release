@@ -94,10 +94,10 @@ object DifferentialTactics {
             )
 
             //construct substitution
-            val aF = FuncOf(Function("f", None, Real, Real), Anything)
-            val aH = PredOf(Function("H", None, Real, Bool), Anything)
+            val aF = UnitFunctional("f", AnyArg, Real)
+            val aH = UnitPredicational("H", AnyArg)
             val aC = DifferentialProgramConst("c", AnyArg)
-            val aP = PredOf(Function("p", None, Real, Bool), Anything)
+            val aP = UnitPredicational("p", AnyArg)
             val aX = Variable("x_")
 
             val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
@@ -127,10 +127,10 @@ object DifferentialTactics {
             )
 
             //construct substitution
-            val aF = FuncOf(Function("f", None, Real, Real), Anything)
-            val aH = PredOf(Function("H", None, Real, Bool), Anything)
+            val aF = UnitFunctional("f", AnyArg, Real)
+            val aH = UnitPredicational("H", AnyArg)
             val aC = DifferentialProgramConst("c", AnyArg)
-            val aP = PredOf(Function("p", None, Real, Bool), Anything)
+            val aP = UnitPredicational("p", AnyArg)
             val aX = Variable("x_", None, Real)
 
             val uren = URename(x, aX)
@@ -154,9 +154,9 @@ object DifferentialTactics {
             )
 
             //construct substitution
-            val aF = FuncOf(Function("f", None, Real, Real), Anything)
-            val aQ = PredOf(Function("q", None, Real, Bool), Anything)
-            val aP = PredOf(Function("p", None, Real, Bool), Anything)
+            val aF = UnitFunctional("f", AnyArg, Real)
+            val aQ = UnitPredicational("q", AnyArg)
+            val aP = UnitPredicational("p", AnyArg)
             val aX = Variable("x_", None, Real)
 
             val uren = URename(x, aX)

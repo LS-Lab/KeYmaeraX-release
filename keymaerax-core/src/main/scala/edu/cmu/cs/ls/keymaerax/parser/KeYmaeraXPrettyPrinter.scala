@@ -108,7 +108,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   private val LEXSPACE: String = " "
 
   private def pp(term: Term): String = term match {
-    case Anything|Nothing=> op(term).opcode
+    case Nothing       => op(term).opcode
     case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
@@ -217,7 +217,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   //@todo could add contract that TermAugmentor(original)(q) == term
   private def pp(q: PosInExpr, term: Term): String = emit(q, term match {
-    case Anything|Nothing=> op(term).opcode
+    case Nothing       => op(term).opcode
     case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => x.asString + op(term).opcode

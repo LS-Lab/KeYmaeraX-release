@@ -530,8 +530,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     */
   def CQ(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
-    private val f_ = FuncOf(Function("f_", None, Real, Real), Anything)
-    private val g_ = FuncOf(Function("g_", None, Real, Real), Anything)
+    private val f_ = UnitFunctional("f_", AnyArg, Real)
+    private val g_ = UnitFunctional("g_", AnyArg, Real)
     private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
 
     override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -578,8 +578,8 @@ trait UnifyUSCalculus {
     * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
     */
   def CE(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CE congruence") {
-    private val p_ = PredOf(Function("p_", None, Real, Bool), Anything)
-    private val q_ = PredOf(Function("q_", None, Real, Bool), Anything)
+    private val p_ = UnitPredicational("p_", AnyArg)
+    private val q_ = UnitPredicational("q_", AnyArg)
     private val c_ = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
 
     override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -814,8 +814,8 @@ trait UnifyUSCalculus {
         equiv(
           Provable.rules("CE congruence")(
             USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
-              SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), left) ::
-              SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), right) ::
+              SubstitutionPair(UnitPredicational("p_", AnyArg), left) ::
+              SubstitutionPair(UnitPredicational("q_", AnyArg), right) ::
               Nil))
         )
       case Equal(left,right) =>
@@ -823,8 +823,8 @@ trait UnifyUSCalculus {
         equiv(
           Provable.rules("CQ equation congruence")(
             USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
-              SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), left) ::
-              SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), right) ::
+              SubstitutionPair(UnitFunctional("f_", AnyArg, Real), left) ::
+              SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
               Nil))
         )
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv.conclusion)
@@ -993,8 +993,8 @@ trait UnifyUSCalculus {
             (Provable.startProof(Sequent(ante, succ))
             (DerivedRuleInfo("[] monotone").provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(bleft))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(bright))
+                :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
+                :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))
                 :: Nil
             )
             ), 0)
@@ -1008,8 +1008,8 @@ trait UnifyUSCalculus {
             (Provable.startProof(Sequent(ante, succ))
             (Provable.rules("<> monotone")(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(dleft))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(dright))
+                :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(dleft))
+                :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(dright))
                 :: Nil
             )
             ), 0)

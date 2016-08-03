@@ -217,10 +217,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "work when cascaded" in {
     val s = create(SubstitutionPair(ProgramConst("a"), "x:=2;".asProgram),
       SubstitutionPair(ProgramConst("b"), "y:=3;".asProgram))
-    val t = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "x*y>5".asFormula))
+    val t = create(SubstitutionPair(UnitPredicational("p", AnyArg), "x*y>5".asFormula))
 
     t(s(Box(Choice(ProgramConst("a"), ProgramConst("b")),
-        PredOf(Function("p", None, Real, Bool), Anything)))) should be (
+        UnitPredicational("p", AnyArg)))) should be (
       "[x:=2; ++ y:=3;]x*y>5".asFormula
     )
   }
@@ -892,7 +892,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Substitution of wildcard predicate p(?)" should "work" in {
-    val p = PredOf(Function("p", None, Real, Bool), Anything)
+    val p = UnitPredicational("p", AnyArg)
 
     val s = create(SubstitutionPair(p, "x>0".asFormula))
 
@@ -929,7 +929,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Substitution of wildcard function f(?)" should "work" in {
-    val f = FuncOf(Function("f", None, Real, Real), Anything)
+    val f = UnitFunctional("f", AnyArg, Real)
 
     val s = create(SubstitutionPair(f, "x+2".asTerm))
 
@@ -1067,7 +1067,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Substitution of choice axiom" should "work" in {
     val ca = ProgramConst("a")
     val cb = ProgramConst("b")
-    val p = PredOf(Function("p", None, Real, Bool), Anything)
+    val p = UnitPredicational("p", AnyArg)
     val f = Equiv(Box(Choice(ca, cb), p), And(Box(ca, p), Box(cb, p)))
 
     val s = create(SubstitutionPair(ca, "x:=0;".asProgram), SubstitutionPair(cb, "y:=1;".asProgram),
@@ -1082,7 +1082,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Substitution of sequence axiom" should "work" in {
     val ca = ProgramConst("a")
     val cb = ProgramConst("b")
-    val p = PredOf(Function("p", None, Real, Bool), Anything)
+    val p = UnitPredicational("p", AnyArg)
     val f = Equiv(Box(Compose(ca, cb), p), Box(ca, Box(cb, p)))
 
     val u = create(SubstitutionPair(ca, "x:=x+1; ++ y:=0;".asProgram), SubstitutionPair(cb, "y:=y+1;".asProgram),
@@ -1091,8 +1091,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Substitution of primed terms" should "work" in {
-    val f = FuncOf(Function("f", None, Real, Real), Anything)
-    val g = FuncOf(Function("g", None, Real, Real), Anything)
+    val f = UnitFunctional("f", AnyArg, Real)
+    val g = UnitFunctional("g", AnyArg, Real)
     val h = Equal(Differential(Times(f, g)),
       Plus(Times(Differential(f), g), Times(f, Differential(g))))
 
@@ -1111,8 +1111,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Substitution of primed formulas" should "work" in {
-    val f = FuncOf(Function("p", None, Real, Real), Anything)
-    val g = FuncOf(Function("q", None, Real, Real), Anything)
+    val f = UnitFunctional("p", AnyArg, Real)
+    val g = UnitFunctional("q", AnyArg, Real)
     val h = Equiv(DifferentialFormula(Equal(f, g)),
       Equal(Differential(f), Differential(g)))
 
@@ -1257,12 +1257,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   
   // uniform substitution of rules
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
-    val p = Function("p_", None, Real, Bool)
-    val a = ProgramConst("a_")
     val conc = Sequent(IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
-      SubstitutionPair(PredOf(p, Anything), "(-x)^2>=0".asFormula) ::
-      SubstitutionPair(a, "x:=x-1;".asProgram) :: Nil)
+      SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=0".asFormula) ::
+      SubstitutionPair(ProgramConst("a_"), "x:=x-1;".asProgram) :: Nil)
     val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe conc
     pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))

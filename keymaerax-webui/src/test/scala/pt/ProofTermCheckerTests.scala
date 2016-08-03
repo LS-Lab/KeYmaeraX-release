@@ -110,10 +110,8 @@ class ProofTermCheckerTests extends TacticTestBase {
 
     val c = Function("ctx_", None, Real, Real)
     val cApp = FuncOf(c, DotTerm)
-    val f = Function("f_", None, Real, Real)
-    val fApp = FuncOf(f, Anything)
-    val g = Function("g_", None, Real, Real)
-    val gApp = FuncOf(g, Anything)
+    val fApp = UnitFunctional("f_", AnyArg, Real)
+    val gApp = UnitFunctional("g_", AnyArg, Real)
 
     val usubst = USubst(
       SubstitutionPair(fApp, "1+1".asTerm) ::

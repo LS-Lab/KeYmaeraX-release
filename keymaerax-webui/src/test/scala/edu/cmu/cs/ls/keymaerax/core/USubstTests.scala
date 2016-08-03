@@ -348,7 +348,7 @@ class USubstTests extends FlatSpec with Matchers {
     pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula)))
     // this should not prove x=0->[x:=5;]x=0
     a [SubstitutionClashException] should be thrownBy {
-      pr(USubst(SubstitutionPair(PredOf(Function("q",None,Real,Bool), Anything), "x=0".asFormula) :: Nil))
+      pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
     }
   }
 
@@ -360,7 +360,7 @@ class USubstTests extends FlatSpec with Matchers {
     pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula)))
     // this should not prove x=0->[x:=5;]x=0
     a [SubstitutionClashException] should be thrownBy {
-      pr(USubst(SubstitutionPair(FuncOf(Function("f",None,Real,Real), Anything), "x".asTerm) :: Nil))
+      pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
     }
   }
 
@@ -428,7 +428,7 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = GreaterEqual(Power(Neg(x), Number(2)), Number(0))
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
-    val s = USubst(Seq(SubstitutionPair(PredOf(p1_, Anything), fml),
+    val s = USubst(Seq(SubstitutionPair(UnitPredicational("p_", AnyArg), fml),
       SubstitutionPair(ap_, prog)))
     val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -439,7 +439,7 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
     val s = USubst(
-      SubstitutionPair(PredOf(p1_, Anything), fml) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), fml) ::
       SubstitutionPair(ap_, prog) :: Nil)
     val pr = Provable.rules("Goedel")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Box(prog, fml)))
@@ -455,8 +455,8 @@ class USubstTests extends FlatSpec with Matchers {
     val ctx_ = Function("ctx_", None, Bool, Bool)
     val s = USubst(
       SubstitutionPair(ap_, prog) ::
-      SubstitutionPair(PredOf(pn_, Anything), "(-x)^2>=y".asFormula) ::
-      SubstitutionPair(PredOf(q_, Anything), "x^2>=y".asFormula) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=y".asFormula) ::
+      SubstitutionPair(UnitPredicational("q_", AnyArg), "x^2>=y".asFormula) ::
       SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box("{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram, DotFormula)) :: Nil)
     val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -484,8 +484,8 @@ class USubstTests extends FlatSpec with Matchers {
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(PredOf(pn_, Anything), prem1),
-          SubstitutionPair(PredOf(q_, Anything), prem2)
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2)
         ))
         val pr = DerivedRuleInfo("[] monotone").provable(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
@@ -515,8 +515,8 @@ class USubstTests extends FlatSpec with Matchers {
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(PredOf(pn_, Anything), prem1),
-          SubstitutionPair(PredOf(q_, Anything), prem2)
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2)
         ))
         val pr = DerivedRuleInfo("[] monotone").provable(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
@@ -545,8 +545,8 @@ class USubstTests extends FlatSpec with Matchers {
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(SubstitutionPair(ap_, prog) ::
-          SubstitutionPair(PredOf(pn_, Anything), prem1) ::
-          SubstitutionPair(PredOf(q_, Anything), prem2) ::
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
           SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
         val pr = Provable.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -568,8 +568,8 @@ class USubstTests extends FlatSpec with Matchers {
     val ctx_ = Function("ctx_", None, Bool, Bool)
 
     val s = USubst(SubstitutionPair(ap_, prog) ::
-      SubstitutionPair(PredOf(pn_, Anything), prem1) ::
-      SubstitutionPair(PredOf(q_, Anything), prem2) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
+      SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
       SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
     val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -597,8 +597,8 @@ class USubstTests extends FlatSpec with Matchers {
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(SubstitutionPair(ap_, prog) ::
-          SubstitutionPair(PredOf(pn_, Anything), prem1) ::
-          SubstitutionPair(PredOf(q_, Anything), prem2) ::
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
           SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
         val pr = Provable.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -634,8 +634,8 @@ class USubstTests extends FlatSpec with Matchers {
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(SubstitutionPair(ap_, prog) ::
-          SubstitutionPair(PredOf(pn_, Anything), prem1) ::
-          SubstitutionPair(PredOf(q_, Anything), prem2) ::
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
           SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
         val pr = Provable.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -663,8 +663,8 @@ class USubstTests extends FlatSpec with Matchers {
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(PredOf(pn_, Anything), prem1),
-          SubstitutionPair(PredOf(q_, Anything), prem2)
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2)
         ))
         val pr = Provable.rules("<> monotone")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
@@ -689,7 +689,7 @@ class USubstTests extends FlatSpec with Matchers {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(PredOf(pn_, Anything), prem)
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem)
         ))
         val pr = Provable.rules("Goedel")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
@@ -703,8 +703,8 @@ class USubstTests extends FlatSpec with Matchers {
       val term2 = "z+y".asTerm
       val fml = Equal(term1, term2)
       val s = USubst(
-        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+        SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+        SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
         SubstitutionPair(FuncOf(ctxt, DotTerm), Minus(DotTerm, Number(5))) :: Nil)
       val pr = DerivedRuleInfo("CT term congruence").provable(s)
       pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equal(Minus(term1, Number(5)),
@@ -717,8 +717,8 @@ class USubstTests extends FlatSpec with Matchers {
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
     val pr = Provable.rules("CT term congruence")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
@@ -743,8 +743,8 @@ class USubstTests extends FlatSpec with Matchers {
       withSafeClue("Random context " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+            SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
         val pr = Provable.rules("CT term congruence")(s)
         pr.conclusion shouldBe
@@ -770,8 +770,8 @@ class USubstTests extends FlatSpec with Matchers {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+            SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
         val pr = Provable.rules("CT term congruence")(s)
         pr.conclusion shouldBe
@@ -797,8 +797,8 @@ class USubstTests extends FlatSpec with Matchers {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+            SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
         val pr = Provable.rules("CT term congruence")(s)
         pr.conclusion shouldBe
@@ -814,8 +814,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val y = Variable("y", None, Real)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), And(Greater(y, Number(1)), LessEqual(DotTerm, Number(5)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -831,8 +831,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val y = Variable("x", None, Real)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -848,8 +848,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val y = Variable("y", None, Real)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -865,8 +865,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val prog = "x:=x-1;".asProgram
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -882,8 +882,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val prog = "y:=y-1;".asProgram
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -898,8 +898,8 @@ class USubstTests extends FlatSpec with Matchers {
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
     val pr = Provable.rules("CT term congruence")(s)
     pr.conclusion shouldBe
@@ -915,8 +915,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val y = Variable("y", None, Real)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y), GreaterEqual(DotTerm, Number(0)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -932,8 +932,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equal(term1, term2)
     val prog = "y:=y-1;".asProgram
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -949,8 +949,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     val context = Forall(Seq(x), DotFormula)
     val s = USubst(
-      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
+      SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe
@@ -964,8 +964,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     val context = Forall(Seq(x), DotFormula)
     val s = USubst(
-      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
+      SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe
@@ -980,8 +980,8 @@ class USubstTests extends FlatSpec with Matchers {
     val prog = "x:=5;".asProgram
     val context = Box(prog, DotFormula)
     val s = USubst(
-      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
+      SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe
@@ -996,8 +996,8 @@ class USubstTests extends FlatSpec with Matchers {
     val prog = "{x'=5}".asProgram  //ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)
     val context = Box(prog, DotFormula)
     val s = USubst(
-      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
+      SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     val pr = Provable.rules("CE congruence")(s)
     pr.conclusion shouldBe
@@ -1013,8 +1013,8 @@ class USubstTests extends FlatSpec with Matchers {
     val prog = "y:=y-1;{z:=-z+2++z:=0}".asProgram
     val u = Variable("u", None, Real)
     val s = USubst(
-      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+      SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(u), Box(prog, GreaterEqual(DotTerm, u)))) :: Nil)
     val pr = Provable.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1040,8 +1040,8 @@ class USubstTests extends FlatSpec with Matchers {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
-          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
-            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
+            SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
         val pr = Provable.rules("CQ equation congruence")(s)
         pr.conclusion shouldBe
@@ -1067,8 +1067,8 @@ class USubstTests extends FlatSpec with Matchers {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random context " + context.prettyString)
         val s = USubst(
-          SubstitutionPair(PredOf(pn_, Anything), fml1) ::
-            SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+          SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
+            SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
             SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
         val pr = Provable.rules("CE congruence")(s)
         pr.conclusion shouldBe

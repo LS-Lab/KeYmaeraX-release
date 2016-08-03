@@ -44,7 +44,6 @@ object RenUSubst {
    */
   private[bellerophon] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
     case DotTerm => DotTerm
-    case Anything => Anything
     //case Nothing => {assert(sp._2 == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing} // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst             => a

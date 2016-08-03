@@ -25,9 +25,8 @@ import SetLattice.topVarsDiffVars
  *
  * @param what the expression to be replaced. what can have one of the following forms:
  *          - DotTerm
- *          - Anything
- *          - PredOf(p:Function, DotTerm/Nothing/Anything)
- *          - FuncOf(f:Function, DotTerm/Nothing/Anything)
+ *          - PredOf(p:Function, DotTerm/Nothing)
+ *          - FuncOf(f:Function, DotTerm/Nothing)
  *          - ProgramConstant/DifferentialProgramConstant
  *          - Derivative(...)
  *          - PredicationalOf(p:Function, DotFormula)
@@ -66,11 +65,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   /**
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
    * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
-   * @return essentially freeVars(repl) except for special handling of Anything arguments.
+   * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
    */
   def freeVars: SetLattice[NamedSymbol] = repl match {
     case replt: Term => what match {
-      case FuncOf(f: Function, Anything) => bottom // Anything locally binds all variables
       case FuncOf(f: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
 //        assert(!StaticSemantics.freeVars(replt).contains(d)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
@@ -82,7 +80,6 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case _: Term => StaticSemantics.freeVars(repl)
     }
     case replf: Formula => what match {
-      case PredOf(p: Function, Anything) => bottom // Anything locally binds all variables
       case PredOf(p: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
 //        assert(!StaticSemantics.freeVars(replf).contains(d) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
@@ -130,9 +127,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   private[core] def matchKey: NamedSymbol = what match {
     case d: DotTerm => d
-    case FuncOf(f: Function, DotTerm(_) | Nothing | Anything) if !f.interpreted => f
-    case PredOf(p: Function, DotTerm(_) | Nothing | Anything) if !p.interpreted => p
-    case Anything => Anything
+    case FuncOf(f: Function, DotTerm(_) | Nothing) if !f.interpreted => f
+    case PredOf(p: Function, DotTerm(_) | Nothing) if !p.interpreted => p
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst             => a
@@ -149,10 +145,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   private[core] def sameHead(other: Expression): Boolean = what match {
     case FuncOf(lf, arg) =>
-      assert(arg match { case DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      assert(arg match { case DotTerm(_) | Nothing => true case _ => false }, "Only DotTerm/Nothing allowed as argument")
       other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, arg) =>
-      assert(arg match { case DotTerm(_) | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      assert(arg match { case DotTerm(_) | Nothing => true case _ => false }, "Only DotTerm/Nothing allowed as argument")
       other match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, arg) =>
       assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
@@ -355,15 +351,11 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app))
         val FuncOf(wf, wArg) = subs.what
         assert(wf == of, "match on same function heads")
-        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing || wArg == Anything)
-        if (wArg==Anything && theta!=Anything) throw new SubstitutionClashException(this.toString, Anything.toString, term.toString, term.toString, Anything.toString, "Substitutions of f(??) only apply to f(??).")
+        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Term])
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
-      case Anything =>
-        assert(!subsDefs.exists(_.what == Anything), "Substitution of anything not supported " + this)
-        Anything
       case Nothing =>
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
         Nothing
@@ -398,8 +390,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
         val PredOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
-        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing || wArg == Anything)
-        if (wArg==Anything && theta!=Anything) throw new SubstitutionClashException(this.toString, Anything.toString, formula.toString, formula.toString, Anything.toString, "Substitutions of p(??) only apply to p(??).")
+        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])

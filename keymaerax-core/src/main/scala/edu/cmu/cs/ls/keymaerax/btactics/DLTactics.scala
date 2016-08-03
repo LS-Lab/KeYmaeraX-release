@@ -28,12 +28,9 @@ object DLTactics {
         sequent.ante.head match {
           case Box(a, p) => sequent.succ.head match {
             case Box(b, q) if a == b =>
-              val aX = ProgramConst("a_")
-              val pX = Function("p_", None, Real, Bool)
-              val qX = Function("q_", None, Real, Bool)
-              val s = USubst(SubstitutionPair(aX, a) ::
-                SubstitutionPair(PredOf(pX, Anything), p) ::
-                SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
+              val s = USubst(SubstitutionPair(ProgramConst("a_"), a) ::
+                SubstitutionPair(UnitPredicational("p_", AnyArg), p) ::
+                SubstitutionPair(UnitPredicational("q_", AnyArg), q) :: Nil)
               TactixLibrary.by("[] monotone", s)
             case Box(b, q) if a != b => throw new BelleError("Expected sole box property [a]q in succedent, matching [a]p from antecedent, but " +
               "got program " + a + " in antecedent and non-matching program " + b + " in succedent")
@@ -64,12 +61,9 @@ object DLTactics {
         sequent.ante.head match {
           case Diamond(a, p) => sequent.succ.head match {
             case Diamond(b, q) if a == b =>
-              val aX = ProgramConst("a_")
-              val pX = Function("p_", None, Real, Bool)
-              val qX = Function("q_", None, Real, Bool)
-              val s = USubst(SubstitutionPair(aX, a) ::
-                SubstitutionPair(PredOf(pX, Anything), p) ::
-                SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
+              val s = USubst(SubstitutionPair(ProgramConst("a_"), a) ::
+                SubstitutionPair(UnitPredicational("p_", AnyArg), p) ::
+                SubstitutionPair(UnitPredicational("q_", AnyArg), q) :: Nil)
               TactixLibrary.by("<> monotone", s)
             case Diamond(b, q) if a != b => throw new BelleError("Expected sole diamond property <a>q in succedent, matching <a>p from antecedent, but " +
               "got program " + a + " in antecedent and non-matching program " + b + " in succedent")

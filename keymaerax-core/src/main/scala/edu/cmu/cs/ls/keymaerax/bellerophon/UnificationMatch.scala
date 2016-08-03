@@ -244,7 +244,6 @@ class UnificationMatchBase extends BaseMatcher {
     case xp: DifferentialSymbol           => unifyVar(xp,e2)
     case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
     case f: UnitFunctional                => if (e1==e2) id else unifier(e1, e2)
-    case FuncOf(f:Function, Anything)     => if (e1==e2) id else unifier(e1, e2)
     case FuncOf(f:Function, Nothing)      => if (e1==e2) id else unifier(e1, e2)
     case FuncOf(f:Function, t)            => e2 match {
       case FuncOf(g, t2) if f==g => unify(t,t2) /*case DotTerm => List(SubstRepl(DotTerm, t1))*/
@@ -252,7 +251,6 @@ class UnificationMatchBase extends BaseMatcher {
       case _ =>
         unifier(FuncOf(f, DotTerm(f.domain)), replaceFree(e2)(t, DotTerm(f.domain)))
     }
-    case Anything                         => if (e1==e2) id else unifier(Anything, e2)  //@todo where does this happen?
     case Nothing                          => if (e1==e2) id else ununifiable(e1,e2)
     case _: DotTerm                       => if (e1==e2) id else unifier(e1, e2)
     //@note case o1:UnaryCompositeTerm  => e2 match {case o2:UnaryCompositeTerm  if o1.reapply==o2.reapply => unify(o1.child,o2.child) case _ => ununifiable(e1,e2)}
@@ -272,7 +270,6 @@ class UnificationMatchBase extends BaseMatcher {
 
   protected def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
     case p: UnitPredicational             => if (e1==e2) id else unifier(e1, e2)
-    case PredOf(f:Function, Anything)     => if (e1==e2) id else unifier(e1, e2)
     case PredOf(f:Function, Nothing)      => if (e1==e2) id else unifier(e1, e2)
     case PredOf(f:Function, t)            => e2 match {
       case PredOf(g, t2) if f == g => unify(t, t2)

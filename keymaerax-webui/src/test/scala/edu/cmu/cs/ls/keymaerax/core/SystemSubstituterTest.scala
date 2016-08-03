@@ -27,10 +27,10 @@ class SystemSubstituterTest extends TacticTestBase {
 
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), "y'+1".asTerm) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), "y'+1".asTerm) ::
+      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
       SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x'=3".asFormula) ::
+      SubstitutionPair(UnitPredicational("p",AnyArg), "x'=3".asFormula) ::
       Nil))}
   }
 
@@ -41,9 +41,9 @@ class SystemSubstituterTest extends TacticTestBase {
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
       SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
+      SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
       Nil))}
   }
 
@@ -53,9 +53,9 @@ class SystemSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
       SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
+      SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
       Nil))}
   }
 
@@ -65,16 +65,16 @@ class SystemSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(3)) ::
-        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
         Nil))}
     //@note this is a mistyped substitution so near no-op would be acceptable
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(3)) ::
-        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=9".asFormula) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
+        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
         Nil))}
     //@todo should not prove
   }
@@ -84,11 +84,11 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(0)) ::
-      SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(0)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(0)) ::
+      SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(0)) ::
+      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
       SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=0".asFormula) ::
+      SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
       Nil))}
   }
 
@@ -97,11 +97,11 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Number(3)) ::
-      SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
+      SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
+      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
       SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_=9".asFormula) ::
+      SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
       Nil))}
     //@todo should not prove y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9 by using such a DG inverse differential ghost system
   }
@@ -111,11 +111,11 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), "-b()".asTerm) ::
-        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Variable("x_",None,Real)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), "-b()".asTerm) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Variable("x_",None,Real)) ::
+        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
         SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "y_<=m()".asFormula) ::
+        SubstitutionPair(UnitPredicational("p",AnyArg), "y_<=m()".asFormula) ::
         Nil))}
     //@todo should not prove this formula by using such a DG inverse differential ghost system
   }
@@ -128,9 +128,9 @@ class SystemSubstituterTest extends TacticTestBase {
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(-1)) ::
-      SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
       SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
-      SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x<=10".asFormula) ::
+      SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
       Nil))}
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DG("y_'=-1")
   }
@@ -141,9 +141,9 @@ class SystemSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
         SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x<=10".asFormula) ::
+        SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
         Nil))}
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DGconstant("y_'=-1")
   }
@@ -155,16 +155,16 @@ class SystemSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
-        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
         Nil))}
     //@note this is a mistyped substitution so near no-op would be acceptable
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Variable("y_",None,Real)) ::
-        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x_>=0".asFormula) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
+        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
         Nil))}
     //@todo should not prove
   }
@@ -174,11 +174,11 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),Anything), Variable("y_",None,Real)) ::
-        SubstitutionPair(FuncOf(Function("g",None,Real,Real),Anything), Number(5)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),Anything), True) ::
+      SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
+        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
         SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),Anything), "x_>=0".asFormula) ::
+        SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
         Nil))}
     //@todo should not prove
   }

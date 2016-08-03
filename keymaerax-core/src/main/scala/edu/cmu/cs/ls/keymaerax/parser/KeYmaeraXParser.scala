@@ -1009,7 +1009,6 @@ object KeYmaeraXParser extends Parser {
       // terms
       case sDotTerm.op => sDotTerm
       case sNothing.op => sNothing
-      case sAnything.op => sAnything
       case s:IDENT/*sVariable.op*/ => sVariable //@todo could also be FuncOf/PredOf if la==LPAREN but does not really change precedence
       case s:NUMBER/*sNumber.op*/ => sNumber
       //case t: FuncOf => sFuncOf

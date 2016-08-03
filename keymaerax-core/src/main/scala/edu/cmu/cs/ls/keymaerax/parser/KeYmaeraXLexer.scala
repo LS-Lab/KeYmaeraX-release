@@ -10,8 +10,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.Anything
-
 import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.util.matching.Regex
@@ -176,8 +174,7 @@ private object DCHOICE  extends OPERATOR("--") {
 private object NOTHING extends Terminal("")
 private object DOT     extends OPERATOR("•") //(".")
 private object PLACE   extends OPERATOR("⎵") //("_")
-private object ANYTHING extends OPERATOR(Anything.prettyString) {
-  assert(Anything.prettyString=="??")
+private object ANYTHING extends OPERATOR("??") {
   override def regexp = """\?\?""".r
 }
 private object PSEUDO  extends Terminal("<pseudo>")
