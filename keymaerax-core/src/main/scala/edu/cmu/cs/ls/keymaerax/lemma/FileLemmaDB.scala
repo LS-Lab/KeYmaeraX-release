@@ -12,7 +12,6 @@ import java.io.{File, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
@@ -33,10 +32,13 @@ class FileLemmaDB extends LemmaDB {
     file
   }
 
-  override def contains(lemmaID: LemmaID): Boolean = new File(lemmadbpath, lemmaID + ".alp").exists()
+  /** Get the file in which lemmaID is supposed to be stored */
+  private def fileFor(lemmaID: LemmaID): File = new File(lemmadbpath, lemmaID + ".alp")
+
+  override def contains(lemmaID: LemmaID): Boolean = fileFor(lemmaID).exists()
 
   override def get(lemmaID: LemmaID): Option[Lemma] = {
-    val file = new File(lemmadbpath, lemmaID + ".alp")
+    val file = fileFor(lemmaID)
     if (file.exists()) {
       Some(Lemma.fromString(scala.io.Source.fromFile(file).mkString))
     } else None
@@ -49,10 +51,12 @@ class FileLemmaDB extends LemmaDB {
         case Some(n) =>
           require(isUniqueLemmaName(n) || get(n) == Some(lemma),
             "Lemma name '" + n + ".alp' must be unique, or file content must be the identical lemma: \n" + lemma)
-          (n, new File(lemmadbpath, n + ".alp"))
+          val file = new File(lemmadbpath, n + ".alp")
+          if (isUniqueLemmaName(n)) file.createNewFile()
+          (n, file)
         case None =>
-          val (newId, newFile) = getUniqueLemmaFile()
-          newFile.createNewFile
+          val (newId, newFile) = getUniqueLemmaFile
+          newFile.createNewFile()
           (newId, newFile)
       }
     } ensuring(r => r._2.exists(), "the file to be stored in exists now and cannot be claimed concurrently again")
@@ -60,14 +64,15 @@ class FileLemmaDB extends LemmaDB {
     id
   }
 
-  override def remove(lemmaName: String): Boolean =
-    try {new File(lemmadbpath, lemmaName + ".alp").delete()}
+  override def remove(lemmaName: LemmaID): Boolean =
+    try {fileFor(lemmaName).delete()}
+    //@todo return value seems wrong
     finally {false}
 
-  private def isUniqueLemmaName(name: String): Boolean =
-    !new File(lemmadbpath, name + ".alp").exists()
+  private def isUniqueLemmaName(name: LemmaID): Boolean =
+    !fileFor(name).exists()
 
-  private def getUniqueLemmaFile(): (String, File) = {
+  private def getUniqueLemmaFile: (String, File) = {
     val f = File.createTempFile("lemma",".alp",lemmadbpath)
     (f.getName.substring(0, f.getName.length-".alp".length), f)
   }

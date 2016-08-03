@@ -169,7 +169,6 @@ private object DCHOICE  extends OPERATOR("--") {
 // pseudos: could probably demote so that some are not OPERATOR
 private object NOTHING extends Terminal("")
 private object DOT     extends OPERATOR("•") //(".")
-private object PROJ    extends OPERATOR("π")
 private object PLACE   extends OPERATOR("⎵") //("_")
 private object ANYTHING extends OPERATOR(Anything.prettyString) {
   assert(Anything.prettyString=="??")
@@ -543,7 +542,6 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
 
       case DOT.startPattern(_*) => consumeTerminalLength(DOT, loc)
-      case PROJ.startPattern(_*) => consumeTerminalLength(PROJ, loc)
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 

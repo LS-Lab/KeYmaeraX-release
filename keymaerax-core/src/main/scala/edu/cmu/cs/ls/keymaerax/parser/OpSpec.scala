@@ -187,16 +187,6 @@ object OpSpec {
   val sPlus         = BinaryOpSpec[Term](PLUS,     60, LeftAssociative, binterm, Plus.apply _)
   val sMinus        = BinaryOpSpec[Term](MINUS,    60, LeftAssociative/*!*/, binterm, Minus.apply _)
   val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
-  val sProjection   = UnaryOpSpec[Term](PROJ,       0, PrefixFormat, unterm, (e:Term) => {
-    e match {
-      case Pair(term, Number(n)) => Projection(term, n.toString().map({
-        case '0' => 0
-        case '1' => 1
-        case _ => throw new ParseException("Binary number expected for projection " + e, UnknownLocation, n.toString(), "binary number literal", term.toString, "unknown")
-      }).toList)
-    }
-  })
-
 
   // formulas
   private val unfml = (FormulaKind)
@@ -286,7 +276,6 @@ object OpSpec {
     case t: Divide       => sDivide
     case t: Plus         => sPlus
     case t: Minus        => sMinus
-    case t: Projection   => sProjection
 
     // formulas
     case DotFormula      => sDotFormula

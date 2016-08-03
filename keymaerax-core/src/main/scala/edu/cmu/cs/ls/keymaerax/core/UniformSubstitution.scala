@@ -345,9 +345,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case Nothing =>
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
         Nothing
-      case p@Projection(DotTerm(_), _) if subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
-        p.project(subsDefs.find(_.what.isInstanceOf[DotTerm]).get.repl.asInstanceOf[Term])
-      case Projection(DotTerm(_), _) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term
       case DotTerm(_) if  subsDefs.exists(_.what.isInstanceOf[DotTerm]) =>
         subsDefs.find(_.what.isInstanceOf[DotTerm]).get.repl.asInstanceOf[Term]
       case DotTerm(_) if !subsDefs.exists(_.what.isInstanceOf[DotTerm]) => term
