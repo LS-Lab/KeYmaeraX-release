@@ -54,6 +54,8 @@ object RenUSubst {
     case FuncOf(f: Function, _) => f
     case PredOf(p: Function, _) => p
     case x: Variable => x
+    case p: UnitPredicational => p
+    case f: UnitFunctional => f
     case _ => throw new ProverException("Nonsubstitutable expression " + sp)
   }
   /**

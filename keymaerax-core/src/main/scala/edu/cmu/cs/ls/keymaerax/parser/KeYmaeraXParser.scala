@@ -385,6 +385,8 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_:Variable) =>
         if (la==RBANANA) shift(st)
         else error(st, List(RBANANA))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_) =>
+        errormsg(st, "Identifier expected after state-dependent predicational/functional/DiffProgramConst")
 
 
       // function/predicate symbols arity>0

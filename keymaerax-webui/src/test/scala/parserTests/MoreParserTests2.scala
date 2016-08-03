@@ -244,5 +244,17 @@ class MoreParserTests2 extends FlatSpec with Matchers {
     parser.formulaParser("p(|x|)") shouldBe (UnitPredicational("p",Except(Variable("x"))))
     parser("5<=f(|x|)") shouldBe (LessEqual(Number(5),UnitFunctional("f",Except(Variable("x")),Real)))
     parser.termParser("f(|x|)") shouldBe (UnitFunctional("f",Except(Variable("x")),Real))
+    parser("[{x'=5,c(|x|)}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(5)),
+      DifferentialProgramConst("c",Except(Variable("x")))), True),
+      Greater(Variable("x"),Number(2)))
+    parser("[{z'=5,d(|y|)}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("z")),Number(5)),
+      DifferentialProgramConst("d",Except(Variable("y")))), True),
+      Greater(Variable("x"),Number(2)))
+    parser("<{x'=5,c(|x|)}>x>2") shouldBe Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(5)),
+      DifferentialProgramConst("c",Except(Variable("x")))), True),
+      Greater(Variable("x"),Number(2)))
+    parser("<{z'=5,d(|y|)}>x>2") shouldBe Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("z")),Number(5)),
+      DifferentialProgramConst("d",Except(Variable("y")))), True),
+      Greater(Variable("x"),Number(2)))
   }
 }

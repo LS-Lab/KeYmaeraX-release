@@ -324,7 +324,7 @@ object AxiomaticODESolver {
               "g(??)".asTerm ~> y_.e ::
               "f(??)".asTerm ~> x_.e ::
               "H(??)".asFormula ~> r("H(??)".asFormula) ::
-              DifferentialProgramConst("c", ???) ~> r(DifferentialProgramConst("c", ???)) ::
+              DifferentialProgramConst("c", AnyArg) ~> r(DifferentialProgramConst("c", AnyArg)) ::
               "p(??)".asFormula ~> r("p(??)".asFormula) ::
               Nil)) ++
           RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++

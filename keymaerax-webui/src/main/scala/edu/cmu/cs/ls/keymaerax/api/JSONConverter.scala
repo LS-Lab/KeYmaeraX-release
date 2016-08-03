@@ -50,7 +50,7 @@ object JSONConverter {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         e match {
           case ProgramConst(_) => /* Nothing to do */
-          case DifferentialProgramConst(_, _) => /* Nothing to do */
+          case DifferentialProgramConst(_, _) => /* Nothing to do @todo would it make sense to look at the Space? */
           case _ => jsonStack.push(List())
         }
         Left(None)

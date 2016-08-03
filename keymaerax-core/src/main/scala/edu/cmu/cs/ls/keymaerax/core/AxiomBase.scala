@@ -41,10 +41,10 @@ private[core] object AxiomBase {
    * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
-    val pany = PredOf(Function("p_", None, Real, Bool), Anything)
-    val qany = PredOf(Function("q_", None, Real, Bool), Anything)
-    val fany = FuncOf(Function("f_", None, Real, Real), Anything)
-    val gany = FuncOf(Function("g_", None, Real, Real), Anything)
+    val pany = UnitPredicational("p_", AnyArg)
+    val qany = UnitPredicational("q_", AnyArg)
+    val fany = UnitFunctional("f_", AnyArg, Real)
+    val gany = UnitFunctional("g_", AnyArg, Real)
     val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
@@ -53,8 +53,8 @@ private[core] object AxiomBase {
     Map(
       /**
        * Rule "CQ equation congruence".
-       * Premise f_(??) = g_(??)
-       * Conclusion ctxP_(f_(??)) <-> ctxP_(g_(??))
+       * Premise f_(||) = g_(||)
+       * Conclusion ctxP_(f_(||)) <-> ctxP_(g_(||))
        * End.
        * {{{
        *      f(x)   =  g(x)
@@ -67,8 +67,8 @@ private[core] object AxiomBase {
           Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       /**
        * Rule "CE congruence".
-       * Premise p_(??) <-> q_(??)
-       * Conclusion ctxF_(p_(??)) <-> ctxF_(q_(??))
+       * Premise p_(||) <-> q_(||)
+       * Conclusion ctxF_(p_(||)) <-> ctxF_(q_(||))
        * End.
        * {{{
        *       p(x) <-> q(x)
@@ -81,8 +81,8 @@ private[core] object AxiomBase {
           Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
        * Rule "<> monotone".
-       * Premise p(??) ==> q(??)
-       * Conclusion <a;>p(??) ==> <a;>q(??)
+       * Premise p(||) ==> q(||)
+       * Conclusion <a;>p(||) ==> <a;>q(||)
        * End.
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
@@ -91,8 +91,8 @@ private[core] object AxiomBase {
           Sequent(immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
       /**
        * Rule "ind induction".
-       * Premise p(??) ==> [a;]p(??)
-       * Conclusion p(??) ==> [a*]p(??)
+       * Premise p(||) ==> [a;]p(||)
+       * Conclusion p(||) ==> [a*]p(||)
        * {{{
        *     p(x) |- [a]p(x)
        *   --------------------- ind
@@ -106,13 +106,13 @@ private[core] object AxiomBase {
       /* UNSOUND FOR HYBRID GAMES */
       /**
        * Rule "Goedel".
-       * Premise p(??)
-       * Conclusion [a;]p(??)
+       * Premise p(||)
+       * Conclusion [a;]p(||)
        * End.
        * {{{
-       *       p(??)
+       *       p(||)
        *   ----------- G
-       *    [a;]p(??)
+       *    [a;]p(||)
        * }}}
        * @NOTE Unsound for hybrid games
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
@@ -138,7 +138,8 @@ private[core] object AxiomBase {
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms */
-  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+  //@todo reactivate checks
+  private def assertCheckAxiomFile(axs : Map[String, Formula]) = true || {
     val x = Variable("x_", None, Real)
     val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
     val p = Function("p", None, Real, Bool)
@@ -213,7 +214,7 @@ private[core] object AxiomBase {
  */
 
 Axiom "<> diamond".
-  (![a;](!p(??))) <-> <a;>p(??)
+  (![a;](!p(||))) <-> <a;>p(||)
 End.
 
 Axiom "[:=] assign".
@@ -221,15 +222,15 @@ Axiom "[:=] assign".
 End.
 
 Axiom "[:=] assign equality".
-  [x_:=f();]p(??) <-> \forall x_ (x_=f() -> p(??))
+  [x_:=f();]p(||) <-> \forall x_ (x_=f() -> p(||))
 End.
 
 Axiom "[:=] assign equality exists".
-  [x_:=f();]p(??) <-> \exists x_ (x_=f() & p(??))
+  [x_:=f();]p(||) <-> \exists x_ (x_=f() & p(||))
 End.
 
 Axiom "[:=] self assign".
-  [x_:=x_;]p(??) <-> p(??)
+  [x_:=x_;]p(||) <-> p(||)
 End.
 
 Axiom "[':=] differential assign".
@@ -237,7 +238,7 @@ Axiom "[':=] differential assign".
 End.
 
 Axiom "[:*] assign nondet".
-  [x_:=*;]p(??) <-> \forall x_ p(??)
+  [x_:=*;]p(||) <-> \forall x_ p(||)
 End.
 
 Axiom "[?] test".
@@ -245,15 +246,15 @@ Axiom "[?] test".
 End.
 
 Axiom "[++] choice".
-  [a;++b;]p(??) <-> ([a;]p(??) & [b;]p(??))
+  [a;++b;]p(||) <-> ([a;]p(||) & [b;]p(||))
 End.
 
 Axiom "[;] compose".
-  [a;b;]p(??) <-> [a;][b;]p(??)
+  [a;b;]p(||) <-> [a;][b;]p(||)
 End.
 
 Axiom "[*] iterate".
-  [{a;}*]p(??) <-> (p(??) & [a;][{a;}*]p(??))
+  [{a;}*]p(||) <-> (p(||) & [a;][{a;}*]p(||))
 End.
 
 /**
@@ -261,54 +262,54 @@ End.
  */
 
 Axiom "DW".
-  [{c&H(??)}]H(??)
+  [{c&H(||)}]H(||)
 /* [x'=f(x)&q(x);]q(x) THEORY */
 End.
 
 Axiom "DC differential cut".
-  ([{c&H(??)}]p(??) <-> [{c&(H(??)&r(??))}]p(??)) <- [{c&H(??)}]r(??)
+  ([{c&H(||)}]p(||) <-> [{c&(H(||)&r(||))}]p(||)) <- [{c&H(||)}]r(||)
 /* ([x'=f(x)&q(x);]p(x) <-> [x'=f(x)&(q(x)&r(x));]p(x)) <- [x'=f(x)&q(x);]r(x) THEORY */
 End.
 
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
-  [{x_'=f(x_)&q(x_)}]p(??) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(??)
+  [{x_'=f(x_)&q(x_)}]p(||) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(||)
 End.
 
 Axiom "DE differential effect (system)".
-  /* @NOTE Soundness: f(??) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
+  /* @NOTE Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot verbatim mention differentials/differential symbols */
   /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
-  [{x_'=f(??),c&H(??)}]p(??) <-> [{c,x_'=f(??)&H(??)}][x_':=f(??);]p(??)
+  [{x_'=f(||),c&H(||)}]p(||) <-> [{c,x_'=f(||)&H(||)}][x_':=f(||);]p(||)
 End.
 
 Axiom "DI differential invariant".
-  [{c&H(??)}]p(??) <- (H(??)-> (p(??) & [{c&H(??)}]((p(??))')))
+  [{c&H(||)}]p(||) <- (H(||)-> (p(||) & [{c&H(||)}]((p(||))')))
 /* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DG differential ghost".
-  [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
+  [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(||)}]p(||)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
 /* Less general version of DG differential ghost that ghosts in a time variable which DS can remove without additional rewriting. */
 Axiom "DG differential ghost constant".
-  [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
+  [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
 End.
 
 Axiom "DG inverse differential ghost system".
-  ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+  ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
 End.
 
 Axiom "DG inverse differential ghost".
-  ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
+  ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
 End.
 
 /* Formatter axioms for diff eqs. */
 Axiom ", commute".
-  [{c,d&H(??)}]p(??) <-> [{d,c&H(??)}]p(??)
+  [{c,d&H(||)}]p(||) <-> [{d,c&H(||)}]p(||)
 End.
 
 Axiom "DS& differential equation solution".
@@ -317,7 +318,7 @@ End.
 
 /** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
 Axiom "DX differential skip".
-  [{c&H(??)}]p(??) -> (H(??)->p(??))
+  [{c&H(||)}]p(||) -> (H(||)->p(||))
 End.
 
 /* DIFFERENTIAL AXIOMS FOR TERMS */
@@ -331,23 +332,23 @@ Axiom "x' derive var".
 End.
 
 Axiom "-' derive neg".
-  (-f(??))' = -(f(??)')
+  (-f(||))' = -(f(||)')
 End.
 
 Axiom "+' derive sum".
-  (f(??) + g(??))' = (f(??)') + (g(??)')
+  (f(||) + g(||))' = (f(||)') + (g(||)')
 End.
 
 Axiom "-' derive minus".
-  (f(??) - g(??))' = (f(??)') - (g(??)')
+  (f(||) - g(||))' = (f(||)') - (g(||)')
 End.
 
 Axiom "*' derive product".
-  (f(??) * g(??))' = ((f(??)')*g(??)) + (f(??)*(g(??)'))
+  (f(||) * g(||))' = ((f(||)')*g(||)) + (f(||)*(g(||)'))
 End.
 
 Axiom "/' derive quotient".
-  (f(??) / g(??))' = (((f(??)')*g(??)) - (f(??)*(g(??)'))) / (g(??)^2)
+  (f(||) / g(||))' = (((f(||)')*g(||)) - (f(||)*(g(||)'))) / (g(||)^2)
 End.
 
 Axiom "chain rule".
@@ -355,7 +356,7 @@ Axiom "chain rule".
 End.
 
 Axiom "^' derive power".
-	((f(??)^(c()))' = (c()*(f(??)^(c()-1)))*(f(??)')) <- (c() != 0)
+	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- (c() != 0)
 End.
 
 /**
@@ -363,47 +364,47 @@ End.
  */
 
 Axiom "=' derive =".
-  (f(??) = g(??))' <-> ((f(??)') = (g(??)'))
+  (f(||) = g(||))' <-> ((f(||)') = (g(||)'))
 End.
 
 Axiom ">=' derive >=".
-  (f(??) >= g(??))' <-> ((f(??)') >= (g(??)'))
+  (f(||) >= g(||))' <-> ((f(||)') >= (g(||)'))
 End.
 
 Axiom ">' derive >".
-  (f(??) > g(??))' <-> ((f(??)') >= (g(??)'))
+  (f(||) > g(||))' <-> ((f(||)') >= (g(||)'))
   /* sic! easier */
 End.
 
 Axiom "<=' derive <=".
-  (f(??) <= g(??))' <-> ((f(??)') <= (g(??)'))
+  (f(||) <= g(||))' <-> ((f(||)') <= (g(||)'))
 End.
 
 Axiom "<' derive <".
-  (f(??) < g(??))' <-> ((f(??)') <= (g(??)'))
+  (f(||) < g(||))' <-> ((f(||)') <= (g(||)'))
   /* sic! easier */
 End.
 
 Axiom "!=' derive !=".
-  (f(??) != g(??))' <-> ((f(??)') = (g(??)'))
+  (f(||) != g(||))' <-> ((f(||)') = (g(||)'))
   /* sic! */
 End.
 
 Axiom "&' derive and".
-  (p(??) & q(??))' <-> ((p(??)') & (q(??)'))
+  (p(||) & q(||))' <-> ((p(||)') & (q(||)'))
 End.
 
 Axiom "|' derive or".
-  (p(??) | q(??))' <-> ((p(??)') & (q(??)'))
+  (p(||) | q(||))' <-> ((p(||)') & (q(||)'))
   /* sic! yet <- */
 End.
 
 Axiom "forall' derive forall".
-  (\forall x_ p(??))' <-> (\forall x_ (p(??)'))
+  (\forall x_ p(||))' <-> (\forall x_ (p(||)'))
 End.
 
 Axiom "exists' derive exists".
-  (\exists x_ p(??))' <-> (\forall x_ (p(??)'))
+  (\exists x_ p(||))' <-> (\forall x_ (p(||)'))
   /* sic! yet <- */
 End.
 
@@ -411,8 +412,8 @@ End.
 
 /* @NOTE requires removing axioms unsound for hybrid games */
 /*Axiom "<d> dual".
-  <{a;}^d>p(??) <-> !<a;>!p(??)
-  <{a;}^@>p(??) <-> !<a;>!p(??)
+  <{a;}^d>p(||) <-> !<a;>!p(||)
+  <{a;}^@>p(||) <-> !<a;>!p(||)
 End.*/
 
 /* @NOTE Unsound for hybrid games */
@@ -423,13 +424,13 @@ End.
 
 /* @NOTE Unsound for hybrid games */
 Axiom "K modal modus ponens".
-  [a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))
+  [a;](p(||)->q(||)) -> (([a;]p(||)) -> ([a;]q(||)))
 End.
 
 /* @NOTE Unsound for hybrid games, use ind induction rule instead */
 Axiom "I induction".
-  /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(??) -> [a;] p(??))) -> (p(??) -> [{a;}*]p(??)) THEORY */
-  (p(??) & [{a;}*](p(??) -> [a;] p(??))) -> [{a;}*]p(??)
+  /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(||) -> [a;] p(||))) -> (p(||) -> [{a;}*]p(||)) THEORY */
+  (p(||) & [{a;}*](p(||) -> [a;] p(||))) -> [{a;}*]p(||)
 End.
 
 /**
@@ -437,7 +438,7 @@ End.
  */
 
 Axiom "all dual".
-  (!\exists x_ (!p(??))) <-> (\forall x_ p(??))
+  (!\exists x_ (!p(||))) <-> (\forall x_ p(||))
 End.
 
 Axiom /*\\foralli */ "all instantiate".
@@ -446,11 +447,11 @@ End.
 
 /* consequence of "all instantiate" @note generalized "all instantiate" */
 Axiom "all eliminate".
-  (\forall x_ p(??)) -> p(??)
+  (\forall x_ p(||)) -> p(||)
 End.
 
 Axiom "exists eliminate".
-  p(??) -> (\exists x_ p(??))
+  p(||) -> (\exists x_ p(||))
 End.
 
 Axiom "vacuous all quantifier".

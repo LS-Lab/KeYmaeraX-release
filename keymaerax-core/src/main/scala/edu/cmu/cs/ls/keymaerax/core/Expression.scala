@@ -54,9 +54,9 @@ case class ObjectSort(name : String) extends Sort { override def toString = name
 /** Sorts of state spaces for state-dependent operators */
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
-object AnyArg extends Space { override def toString: String = "!!" }
+object AnyArg extends Space { override def toString: String = "||" }
 /** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
-case class Except(taboo: Variable) extends Space { override def toString: String = "!" + taboo + "!" }
+case class Except(taboo: Variable) extends Space { override def toString: String = "|" + taboo.asString + "|" }
 
 
 /**
@@ -565,7 +565,9 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   override def kind: Kind = ProgramKind
 }
 /** Uninterpreted differential program constant, limited to the given state space. */
-sealed case class DifferentialProgramConst(name: String, space: Space) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol
+sealed case class DifferentialProgramConst(name: String, space: Space) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
+  override def asString: String = if (space == AnyArg) super.asString else super.asString + "(" + space + ")"
+}
 
 /** x'=e atomic differential equation */
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {

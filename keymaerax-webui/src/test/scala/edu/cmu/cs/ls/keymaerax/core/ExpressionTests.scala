@@ -22,7 +22,7 @@ class ExpressionTests extends FlatSpec with Matchers {
     a [CoreException] shouldBe thrownBy(new Variable("",None,Real))
     a [CoreException] shouldBe thrownBy(new Function("",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst(""))
-    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("", ???))
+    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("", AnyArg))
   }
 
   it should "refuse names with primes" in {
@@ -30,7 +30,7 @@ class ExpressionTests extends FlatSpec with Matchers {
     a [CoreException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x'",None,Real)))
     a [CoreException] shouldBe thrownBy(new Function("x'",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst("x'"))
-    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x'", ???))
+    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x'", AnyArg))
   }
 
   it should "refuse names with inner underscores to avoid confusion with name.index" in {
@@ -38,7 +38,7 @@ class ExpressionTests extends FlatSpec with Matchers {
     a [CoreException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x_1",None,Real)))
     a [CoreException] shouldBe thrownBy(new Function("x_1",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst("x_1"))
-    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x_1", ???))
+    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x_1", AnyArg))
   }
 
   it should "refuse names with middle inner underscores to avoid confusion with name.index" in {
@@ -46,7 +46,7 @@ class ExpressionTests extends FlatSpec with Matchers {
     a [CoreException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x_a",None,Real)))
     a [CoreException] shouldBe thrownBy(new Function("x_a",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst("x_a"))
-    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x_a", ???))
+    a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x_a", AnyArg))
   }
 
   it should "refuse names with negative index" in {
