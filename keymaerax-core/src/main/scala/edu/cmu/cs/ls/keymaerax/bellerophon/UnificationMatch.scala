@@ -249,11 +249,7 @@ class UnificationMatchBase extends BaseMatcher {
       case FuncOf(g, t2) if f==g => unify(t,t2) /*case DotTerm => List(SubstRepl(DotTerm, t1))*/
       // otherwise DotTerm abstraction of all occurrences of the argument
       case _ =>
-        def withProjection(outer: Term, term: Term, proj: List[Int]): Term = replaceFree(term match {
-          case Pair(lt, rt) => withProjection(withProjection(outer, lt, proj :+ 0), rt, proj :+ 1)
-          case _ => outer
-        })(term, if (proj == Nil) DotTerm(f.domain) else Projection(DotTerm(f.domain), proj))
-        unifier(FuncOf(f,DotTerm(f.domain)), withProjection(e2, t, Nil))
+        unifier(FuncOf(f, DotTerm(f.domain)), replaceFree(e2)(t, DotTerm(f.domain)))
     }
     case Anything                         => if (e1==e2) id else unifier(Anything, e2)  //@todo where does this happen?
     case Nothing                          => if (e1==e2) id else ununifiable(e1,e2)
@@ -281,11 +277,7 @@ class UnificationMatchBase extends BaseMatcher {
       // otherwise DotTerm abstraction of all occurrences of the argument
         //@todo stutter  if not free
       case _ => if (DEBUGALOT) println("unify " + e1 + "\nwith  " + e2 + "\ngives " + unifier(PredOf(f,DotTerm(f.domain)), replaceFree(e2)(t,DotTerm(f.domain))))
-        def withProjection(fml: Formula, term: Term, proj: List[Int]): Formula = replaceFree(term match {
-          case Pair(lt, rt) => withProjection(withProjection(fml, lt, proj :+ 0), rt, proj :+ 1)
-          case _ => fml
-        })(term, if (proj == Nil) DotTerm(f.domain) else Projection(DotTerm(f.domain), proj))
-        unifier(PredOf(f,DotTerm(f.domain)), withProjection(e2, t, Nil))
+        unifier(PredOf(f, DotTerm(f.domain)), replaceFree(e2)(t, DotTerm(f.domain)))
         //@todo heuristic: for p(f()) simply pass since f() must occur somewhere else in isolation to match on it. In general may have to remember p(subst(f())) = e2 constraint regardless and post-unify.
     }
     case PredicationalOf(f:Function, DotFormula) => if (e1==e2) id else unifier(e1, e2)

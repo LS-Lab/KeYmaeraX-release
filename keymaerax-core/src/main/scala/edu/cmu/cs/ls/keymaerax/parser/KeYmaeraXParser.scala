@@ -387,20 +387,6 @@ object KeYmaeraXParser extends Parser {
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduce(st, 4, DotTerm(t1.sort), r)
 
-      // Projection
-      case r :+ Token(PROJ,_) :+ (optok@Token(LPAREN,_)) :+ Expr(t1:Pair) :+ Token(RPAREN,_) =>
-        def toList(d: Int, n: Int): List[Int] = n match {
-          case 0 if d==1 => 0::Nil
-          case 1 if d==1 => 1::Nil
-          case _ => (n%2)::toList(d-1, n/2)
-        }
-        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        val (depth, value) = t1.right match {
-          case Pair(Number(d), Number(v)) => (d.intValue(),v.intValue())
-          case _ => ???
-        }
-        reduce(st, 4, if (depth >= 1) Projection(t1.left, toList(depth, value).reverse) else t1.left, r)
-
       // predicational symbols arity>0
       case r :+ Token(IDENT(name,idx),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), f1), r)
@@ -778,7 +764,7 @@ object KeYmaeraXParser extends Parser {
 
   /** First(Term): Is la the beginning of a new term? */
   private def firstTerm(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
-    la==MINUS || la==LPAREN || la==DOT || la==PROJ ||
+    la==MINUS || la==LPAREN || la==DOT ||
     la==PERIOD      // from DotTerm
 
   /** First(Formula): Is la the beginning of a new formula? */
@@ -987,7 +973,6 @@ object KeYmaeraXParser extends Parser {
       case sTimes.op => if (kinds==List(ProgramKind) || kinds==List(ExpressionKind))/*if (isProgram(st))*/ sLoop else sTimes
       case sDivide.op => sDivide
       case sPlus.op => sPlus
-      case sProjection.op => sProjection
 
       // formulas
       case sDotFormula.op => sDotFormula

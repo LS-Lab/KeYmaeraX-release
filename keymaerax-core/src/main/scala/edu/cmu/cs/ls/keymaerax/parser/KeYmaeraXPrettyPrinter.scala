@@ -110,7 +110,6 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   private def pp(term: Term): String = term match {
     case Anything|Nothing=> op(term).opcode
     case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
-    case Projection(t, proj) => op(term).opcode + "(" + pp(t) + "," + proj.mkString("") + ")"
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
@@ -218,7 +217,6 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   private def pp(q: PosInExpr, term: Term): String = emit(q, term match {
     case Anything|Nothing=> op(term).opcode
     case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
-    case Projection(t, proj) => op(term).opcode + "(" + pp(q+0, t) + "," + proj.mkString("") + ")"
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => x.asString + op(term).opcode
     case Differential(t)        => "(" + pp(q+0, t) + ")" + op(term).opcode
