@@ -44,7 +44,7 @@ class TraceRecordingListener(db: DBAbstraction,
 
     def getLocalProvableId:Option[Int] = {
       if (local != null && localProvableId.isEmpty)
-        localProvableId = Some(db.serializeProvable(local))
+        localProvableId = Some(db.createProvable(local))
       localProvableId
     }
 
@@ -84,7 +84,7 @@ class TraceRecordingListener(db: DBAbstraction,
         parent.status = ExecutionStepStatus.DependsOnChildren
         parent.reverseChildren = node :: parent.reverseChildren
         if (recursive) {
-          db.updateExecutionStatus(parent.stepId.get, parent.status)
+          db.updateExecutionStep(parent.stepId.get, parent.asPOJO)
         }
       }
       if (parent == null || recursive) {
@@ -107,7 +107,7 @@ class TraceRecordingListener(db: DBAbstraction,
           case Right(_) => ExecutionStepStatus.Error
         }
       if (node != null && !recursive) return
-      db.updateExecutionStatus(current.stepId.get, current.status)
+      db.updateExecutionStep(current.stepId.get, current.asPOJO)
       if (node == null) {
         result match {
           // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
@@ -117,7 +117,7 @@ class TraceRecordingListener(db: DBAbstraction,
           case _ =>
         }
         if (current.output != null) {
-          db.updateResultProvables(current.stepId.get, None, current.getLocalProvableId)
+          db.updateExecutionStep(current.stepId.get, current.asPOJO)
           if (current.output.isProved) {
             val p = db.getProofInfo(proofId)
             val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount, closed = true)
@@ -137,7 +137,10 @@ class TraceRecordingListener(db: DBAbstraction,
   def kill(): Unit = {
     synchronized {
       isDead = true
-      nodesWritten.foreach(_.stepId.foreach{case id => db.updateExecutionStatus(id, ExecutionStepStatus.Aborted)})
+      nodesWritten.foreach(node =>
+      node.stepId.foreach{case id =>
+        node.status = ExecutionStepStatus.Aborted
+        db.updateExecutionStep(id, node.asPOJO)})
     }
   }
 }

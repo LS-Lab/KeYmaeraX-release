@@ -234,6 +234,7 @@ object SQLite {
     /**
       * Poorly named -- either update the config, or else insert an existing key.
       * But in Mongo it was just update, because of the nested documents thing.
+      *
       * @param config
       */
     override def updateConfiguration(config: ConfigurationPOJO): Unit =
@@ -260,7 +261,7 @@ object SQLite {
     //Proofs and Proof Nodes
     override def getProofInfo(proofId: Int): ProofPOJO =
       synchronizedTransaction({
-        val stepCount = describeProofSteps(proofId).size
+        val stepCount = nSteps(proofId)
         nSelects = nSelects + 1
         val list = Proofs.filter(_._Id === proofId)
           .list
@@ -306,24 +307,9 @@ object SQLite {
         nUpdates = nUpdates + 1
       })
 
-    override def updateProofName(proofId: Int, newName: String): Unit = {
-      synchronizedTransaction({
-        nSelects = nSelects + 1
-        Proofs.filter(_._Id === proofId).map(_.name).update(Some(newName))
-        nUpdates = nUpdates + 1
-      })
-    }
-
     private def proofPojoToRow(p: ProofPOJO): ProofsRow =
       new ProofsRow(_Id = Some(p.proofId), modelid = Some(p.modelId), name = Some(p.name)
         , description = Some(p.description), date =Some(p.date), closed = Some(if (p.closed) 1 else 0))
-
-
-    override def openProofs(userId: String): List[ProofPOJO] =
-      synchronizedTransaction({
-        nSelects = nSelects + 1
-        getProofsForUser(userId).map(_._1).filter(!_.closed)
-      })
 
     private def sqliteBoolToBoolean(x: Int) = if (x == 0) false else if (x == 1) true else throw new Exception()
 
@@ -332,7 +318,7 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
-          val stepCount = describeProofSteps(p._Id.get).size
+          val stepCount = nSteps(p._Id.get)
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
         })
@@ -398,9 +384,6 @@ object SQLite {
         true
       })
 
-    override def getUsername(uid: String): String =
-      uid
-
     private def optToString[T](o: Option[T]) = o match {
       case Some(x) => Some(x.toString)
       case None => None
@@ -442,14 +425,15 @@ object SQLite {
       })
 
     /** Deletes a provable and all associated sequents / formulas */
-    override def deleteProvable(provableId: Int): Unit = ???
+    override def deleteProvable(provableId: Int): Boolean = ???
 
     /**
       * Adds an execution step to an existing execution
+      *
       * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
       */
     override def addExecutionStep(step: ExecutionStepPOJO): Int = {
-      val (branchOrder: Int, branchLabel) = (step.branchOrder, step.branchLabel) match {
+      val (branchOrder:Int, branchLabel) = (step.branchOrder, step.branchLabel) match {
         case (None, None) => (null, null)
         case (Some(order), None) => (order, null)
         case (None, Some(label)) => (null, label)
@@ -485,7 +469,7 @@ object SQLite {
         if (steps.nonEmpty) {
           val thisStep = steps.head
           val thisPOJO = get(thisStep.stepId)
-          val localProvable = loadProvable(thisPOJO.localprovableid.get)
+          val localProvable = getProvable(thisPOJO.localprovableid.get).provable
           val outputProvable = globalProvable(localProvable, thisStep.branch)
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
@@ -500,7 +484,7 @@ object SQLite {
         val localConclusion = inputProvable.subgoals(0)
         // Generate a no-op local provable whose conclusion matches with the current state of the proof.
         val localProvable = Provable.startProof(localConclusion)
-        val newLocalProvableID = serializeProvable(localProvable)
+        val newLocalProvableID = createProvable(localProvable)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid,
           oldStep.inputprovableid, Some(newLocalProvableID), false, "nil")
@@ -514,9 +498,9 @@ object SQLite {
     override def addBelleExpr(expr: BelleExpr): Int =
       synchronizedTransaction({
         val executableId =
-          (Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
+          (Executables.map({case exe => (exe.belleexpr) })
             returning Executables.map(_._Id.get))
-          .insert((None, Some(expr.prettyString)))
+          .insert(Some(expr.prettyString))
         nInserts = nInserts + 1
         executableId
       })
@@ -566,7 +550,7 @@ object SQLite {
     }
 
     /** Stores a Provable in the database and returns its ID */
-    override def serializeProvable(p: Provable): Int = {
+    override def createProvable(p: Provable): Int = {
       synchronizedTransaction({
         //@todo: add version number
         val lemma = Lemma(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true"))))
@@ -584,9 +568,9 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         val executableMap =
-          Executables.map(exe => (exe._Id.get, exe.scalatacticid, exe.belleexpr))
+          Executables.map(exe => (exe._Id.get, exe.belleexpr.get))
           .list
-          .map{case (id, tacticid, expr) => (id, ExecutablePOJO(id, tacticid, expr))}
+          .map{case (id, expr) => (id, ExecutablePOJO(id, expr))}
           .foldLeft(Map.empty[Int,ExecutablePOJO]){case (acc, (id, exe)) => acc.+((id, exe))}
 
         try {
@@ -597,14 +581,14 @@ object SQLite {
       })
 
     /** Use escape hatch in prover core to create a new Provable */
-    override def loadProvable(lemmaId: Int): Provable = {
+    override def getProvable(lemmaId: Int): ProvablePOJO = {
       loadProvables(List(lemmaId)).head
     }
 
-    def loadProvables(lemmaIds: List[Int]): List[Provable] = {
+    def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = {
       lemmaDB.get(lemmaIds) match {
         case None => throw new Exception (" No lemma for one of these IDs: " + lemmaIds)
-        case Some(lemmas) => lemmas.map(_.fact)
+        case Some(lemmas) => lemmas.zipWithIndex.map{case (lemma, id) => new ProvablePOJO(id, lemma.fact)}
       }
     }
 
@@ -623,20 +607,17 @@ object SQLite {
         SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
           case BelleProvable(pr, _) => pr
         }
-      def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr.get).get
+      def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr).get
       trace.steps.foldLeft(initialProvable)({case (provable, currStep) =>
           run(provable, loadTactic(currStep.executableId))
         })
       initialProvable
     }
 
-    /** Return a string describing each step in the current state of the proof.
-      * As of this writing, callers only use the length of the list and not the
-      * individual strings, thus the exact representation is currently unspecified. */
-    private def describeProofSteps(proofId: Int): List[String] = {
+    private def nSteps(proofId: Int): Int = {
       getTacticExecution(proofId) match {
-        case Some(execution) => proofSteps(execution).map(_.toString)
-        case None => List.empty
+        case Some(execution) => proofSteps(execution).size
+        case None => 0
       }
     }
 
@@ -673,42 +654,20 @@ object SQLite {
       })
     }
 
-    /** Adds a built-in tactic application using a set of parameters */
-    override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
+    /** Updates an executable step */
+    override def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = {
       synchronizedTransaction({
-        val executableId =
-          (Executables.map({ case exe => ( exe.scalatacticid, exe.belleexpr)})
-            returning Executables.map(_._Id.get))
-            .insert(Some(scalaTacticId), None)
-        val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
-          param.valuetype.get, param.value.get)
+        nSelects = nSelects + 1
+        nUpdates = nUpdates + 1
+        Executionsteps.filter(_._Id === executionStepId)
+        .map({case dbstep => (dbstep.executionid.get, dbstep.previousstep, dbstep.parentstep,
+          dbstep.branchorder, dbstep.branchlabel, dbstep.alternativeorder.get, dbstep.status.get, dbstep.executableid.get,
+          dbstep.inputprovableid, dbstep.resultprovableid, dbstep.localprovableid, dbstep.userexecuted.get, dbstep.childrenrecorded.get,
+          dbstep.rulename.get)
         })
-        for (i <- params.indices) {
-          paramTable.insert((executableId, i, params(i).valueType.toString, params(i).value))
-        }
-        executableId
-      })
-    }
-
-    /** Updates an executable step's status. @note should not be transitive */
-    override def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit = {
-      val newStatus = ExecutionStepStatus.toString(status)
-      synchronizedTransaction({
-        nSelects = nSelects + 1
-        nUpdates = nUpdates + 1
-        Executionsteps.filter(_._Id === executionStepId).map(_.status).update(Some(newStatus))
-      })
-    }
-
-
-    def updateResultProvables(executionStepId: Int, provableId: Option[Int], localProvableId: Option[Int]): Unit = {
-      synchronizedTransaction({
-        nSelects = nSelects + 1
-        nUpdates = nUpdates + 1
-        Executionsteps
-          .filter(_._Id === executionStepId)
-          .map({row => (row.resultprovableid, row.localprovableid)})
-          .update((provableId, localProvableId))
+        .update((step.executionId, step.previousStep, step.parentStep, step.branchOrder, step.branchLabel,
+          step.alternativeOrder, ExecutionStepStatus.toString(step.status), step.executableId, step.inputProvableId, step.resultProvableId,
+          step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName))
       })
     }
 
@@ -719,22 +678,14 @@ object SQLite {
       sorted.map({ case formula => formula.formulaStr.asFormula })
     }
 
-    /** Gets the conclusion of a provable */
-    override def getConclusion(provableId: Int): Sequent = {
-      loadProvable(provableId).conclusion
-    }
-
     def printStats(): Unit = {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
     }
 
-    def proofSteps(executionId: Int, status: Option[ExecutionStepStatus] = Some(ExecutionStepStatus.Finished)): List[ExecutionStepPOJO] = {
+    def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
       synchronizedTransaction({
-        def statusFilter(row: Executionsteps): Column[Option[Boolean]] = status match {
-          case Some(s) => row.status === ExecutionStepStatus.toString(s)
-          case None => Some(true)
-        }
-        var steps = Executionsteps.filter({case row => row.executionid === executionId && statusFilter(row)}).list
+        var steps = Executionsteps.filter({case row => row.executionid === executionId &&
+          row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)}).list
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
         /* The Executionsteps table may contain many alternate histories for the same execution. In order to reconstruct
@@ -788,7 +739,7 @@ object SQLite {
       }
     }
 
-    override def getExecutionSteps(executionId: Int, status: Option[ExecutionStepStatus]): List[ExecutionStepPOJO] = proofSteps(executionId, status)
+    override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
 
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
@@ -802,7 +753,7 @@ object SQLite {
           } else {
             val provableIds = steps.map { case step => step.localProvableId.get }
             val executableIds = steps.map { case step => step.executableId }
-            val provables = loadProvables(provableIds)
+            val provables = loadProvables(provableIds).map(_.provable)
             val conclusion = provables.head.conclusion
             val initProvable = Provable.startProof(conclusion)
             val executables = getExecutables(executableIds)
