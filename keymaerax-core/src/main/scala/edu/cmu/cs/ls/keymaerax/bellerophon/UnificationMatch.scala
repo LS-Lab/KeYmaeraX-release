@@ -243,6 +243,7 @@ class UnificationMatchBase extends BaseMatcher {
     case x: Variable                      => unifyVar(x,e2)
     case xp: DifferentialSymbol           => unifyVar(xp,e2)
     case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
+    case f: UnitFunctional                => if (e1==e2) id else unifier(e1, e2)
     case FuncOf(f:Function, Anything)     => if (e1==e2) id else unifier(e1, e2)
     case FuncOf(f:Function, Nothing)      => if (e1==e2) id else unifier(e1, e2)
     case FuncOf(f:Function, t)            => e2 match {
@@ -270,6 +271,7 @@ class UnificationMatchBase extends BaseMatcher {
   }
 
   protected def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
+    case p: UnitPredicational             => if (e1==e2) id else unifier(e1, e2)
     case PredOf(f:Function, Anything)     => if (e1==e2) id else unifier(e1, e2)
     case PredOf(f:Function, Nothing)      => if (e1==e2) id else unifier(e1, e2)
     case PredOf(f:Function, t)            => e2 match {
