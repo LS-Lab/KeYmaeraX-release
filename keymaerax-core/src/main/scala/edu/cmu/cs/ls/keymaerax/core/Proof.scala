@@ -1231,7 +1231,7 @@ object RCF {
     //@note soundness-critical
     val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-    Lemma(fact, evidence :: Nil)
+    Lemma(fact, Lemma.requiredEvidence(fact, evidence :: Nil), None)
   }
 }
 
