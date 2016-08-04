@@ -322,19 +322,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream = {
     var remaining: String = input
     var loc: Location = inputLocation
-    val output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
+    var output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
     while (!remaining.isEmpty) {
       findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
-          if(token.tok == ANYTHING) {
-            if(DEBUG) print("Syntax hack: replacing ANYTHING token by LBANANA and RBANANA tokens. ANYTHING is deprecated in favor of EXCEPT(nothing) i.e. ?? is replaced with (!!)")
-            output.append(Token(LBANANA, token.loc))
-            output.append(Token(RBANANA, token.loc))
-          }
-          else {
-            output.append(token)
-          }
-
+          output.append(token)
           remaining = nextInput
           loc = nextLoc
         case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
@@ -343,6 +335,15 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
     }
     output.append(Token(EOF, loc))
+
+    //Replace all instances of LPAREN,ANYTHING,RPAREN with LBANANA,RBANANA.
+    var anything = output.find(x => x.tok == ANYTHING)
+    while(anything.nonEmpty) {
+      val pos = output.indexOf(anything.get)
+      assert(output(pos).tok == ANYTHING)
+      output = output.patch(pos-1, Token(LBANANA, anything.get.loc) :: Token(RBANANA, anything.get.loc) :: Nil, 3)
+      anything = output.find(x => x.tok == ANYTHING)
+    }
     output.to
   }
 

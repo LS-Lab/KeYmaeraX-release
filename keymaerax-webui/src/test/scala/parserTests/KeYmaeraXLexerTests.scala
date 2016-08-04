@@ -95,11 +95,12 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
     KeYmaeraXLexer(n).head.tok shouldBe(LPAREN)
   }
 
-  it should "lex ?? as (! !)" in {
-    val lex = KeYmaeraXLexer("??")
-    lex.length shouldBe 3
-    lex(0).tok shouldBe LBANANA
-    lex(1).tok shouldBe RBANANA
-    lex(2).tok shouldBe EOF
+  it should "lex f(??) as f(!!)" in {
+    println("start");
+    val lex = KeYmaeraXLexer("f(??)")
+    lex.length shouldBe 4
+    lex(1).tok shouldBe LBANANA
+    lex(2).tok shouldBe RBANANA
+    lex(3).tok shouldBe EOF
   }
 }
