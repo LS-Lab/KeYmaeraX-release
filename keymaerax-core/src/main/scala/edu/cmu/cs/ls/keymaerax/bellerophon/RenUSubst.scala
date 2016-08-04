@@ -93,7 +93,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts: List[Expression] = subsDefsInput.map(_._1).toList
-    if (lefts.distinct.size != lefts.size) throw new ProverException("conflict: no duplicate substitutions for the same substitutee\n" + this)
+    if (lefts.distinct.size != lefts.size) throw new ProverException("conflict: no duplicate substitutions for the same substitutee\n" + "RenUSubst(" + subsDefsInput + ")\n" + this + "\nreplaces: " + lefts)
   }
 
   /**

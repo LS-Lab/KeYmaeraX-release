@@ -28,6 +28,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   private def matchDirect(axiom: String, instance: Formula): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
     val u = unify(ax, instance)
+    println(u)
     u(ax) shouldBe instance
     true
   }
@@ -51,6 +52,9 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   }
   it should "instantiate [:=] assign 3" in {
     matchDirect("[:=] assign", "[x:=x+1;]x^2>=9 <-> (x+1)^2>=9".asFormula)
+  }
+  it should "instantiate [:=] assign equality" in {
+    matchDirect("[:=] assign equality", "[y:=22*x+y0;]x>=y <-> \\forall y (y=22*x+y0 -> x>=y)".asFormula)
   }
   it should "instantiate [++]" in {
     matchDirect("[++] choice", "[x:=x+1;++{x:=0;{y'=-2}}]x>=y <-> [x:=x+1;]x>=y & [x:=0;{y'=-2}]x>=y".asFormula)

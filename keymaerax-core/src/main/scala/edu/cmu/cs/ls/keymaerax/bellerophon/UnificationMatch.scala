@@ -89,7 +89,10 @@ trait InsistentMatcher extends Matcher {
   */
 trait BaseMatcher extends Matcher {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+
+  //@todo import a debug flag as in Tactics.DEBUG
+  private[bellerophon] val DEBUGALOT = System.getProperty("DEBUG", "true")=="true"
 
   def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
     e1 match {
@@ -169,9 +172,6 @@ trait BaseMatcher extends Matcher {
   * @author Andre Platzer
   */
 abstract class SchematicUnificationMatch extends BaseMatcher {
-
-  //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
 
   /** Composition of renaming substitution representations: compose(after, before) gives the representation of `after` performed after `before`. */
   protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl]
@@ -379,9 +379,6 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   */
 class UnificationMatchBase extends SchematicUnificationMatch {
 
-  //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
-
   /** Composition of renaming substitution representations: Compose renaming substitution `after` after renaming substitution `before` */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
     if (after.isEmpty) before else if (before.isEmpty) after else {
@@ -410,16 +407,31 @@ class UnificationMatchBase extends SchematicUnificationMatch {
   */
 class FreshUnificationMatch extends SchematicUnificationMatch {
 
-  //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
-
+  private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._2.isInstanceOf[Variable])
+  private def renameIfNeedBe(repl: List[SubstRepl], e: Expression): Expression = {
+    val ren = renamingPart(repl)
+    if (ren.isEmpty)
+      e
+    else
+      Subst(ren.distinct)(e)
+  }
+  private def renameAllIfNeedBe(repl: List[SubstRepl], input: List[SubstRepl]): List[SubstRepl] = {
+    val ren = renamingPart(repl)
+    if (ren.isEmpty)
+      input
+    else {
+      val ur = Subst(ren)
+      input.map(sp => (sp._1, ur(sp._2))).filter(sp => sp._1 != sp._2)
+    }
+  }
   /**
     * Quickly compose patterns coming from fresh shapes by just concatenating them.
     * If indeed the shape used fresh names that did not occur in the input, this fash composition is fine.
     * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
-    before ++ after
+  after ++ renameAllIfNeedBe(after, before)
+    //before ++ renameAllIfNeedBe(before, after)
 }
 
 /**
