@@ -109,9 +109,18 @@ object Augmentors {
           }, fml) match {
             case Some(f) => f
           }
-        case fml: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+
+        case afml: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
           override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
             if (f == what) Right(fml)
+            else Left(None)
+        }, fml) match {
+          case Some(f) => f
+        }
+
+        case prg: Program => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preP(q: PosInExpr, a: Program): Either[Option[StopTraversal], Program] =
+            if (a == what) Right(prg)
             else Left(None)
         }, fml) match {
           case Some(f) => f

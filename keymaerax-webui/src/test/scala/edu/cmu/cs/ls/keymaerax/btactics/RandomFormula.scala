@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
 import scala.collection.immutable._
+import Augmentors.FormulaAugmentor
 
 /**
  * Random formula generator and random term generator and random program generator
@@ -70,6 +71,23 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random proof of a random tautological sequents */
   def nextProvable(size: Int): Provable = nextPr(nextNames("z", size / 3 + 1), size)
+
+  /** Generate a random schematic instance of the given Formula */
+  def nextSchematicInstance(fml: Formula, size: Int): Formula = {
+    val symbols = StaticSemantics.signature(fml)
+    val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
+      case p: UnitPredicational => p->nextFormula(size)
+      case p: UnitFunctional => p->nextTerm(size)
+      case a: ProgramConst => a->nextProgram(size)
+      case a: DifferentialProgramConst => a->nextDifferentialProgram(size)
+      case ow => ow->ow
+    })
+    def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
+      if (repl._1==repl._2) f else FormulaAugmentor(f).replaceAll(repl._1, repl._2)
+    println("Replace all " + repls.mkString(", "))
+    // do all replacements repl to fml
+    repls.foldRight(fml) ((repl, f) => doRepl(f,repl))
+  }
 
   /** Generate a random (propositionally) provable formula */
   //def nextProved(size: Int): Sequent = nextProvable(size).conclusion
