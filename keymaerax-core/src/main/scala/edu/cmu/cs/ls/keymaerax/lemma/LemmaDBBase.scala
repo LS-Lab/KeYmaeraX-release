@@ -20,24 +20,23 @@ abstract class LemmaDBBase extends LemmaDB {
 
   private val REDUNDANT_CHECKS = false
   private def saveLemma(lemma:Lemma, id:LemmaID): Unit = {
-    val lemmaToAdd = addRequiredEvidence(lemma)
     if (REDUNDANT_CHECKS) {
       //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-      val parse = KeYmaeraXExtendedLemmaParser(lemmaToAdd.toString)
+      val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
       assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
       assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
       assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
     }
 
-    val lemmaString = lemmaToAdd.toString
+    val lemmaString = lemma.toString
     writeLemma(id, lemmaString)
     val lemmaFromDB = get(id)
-    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemmaToAdd) {
+    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
       remove(id)
       throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
     }
     // assertion duplicates condition and throw statement
-    assert(lemmaFromDB == Some(lemmaToAdd), "Lemma stored in DB should be identical to lemma in memory " + lemmaToAdd)
+    assert(lemmaFromDB == Some(lemma), "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
   override def add(lemma: Lemma): LemmaID = {

@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import java.security.MessageDigest
 
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tools.HashEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
 
@@ -62,6 +62,37 @@ object Lemma {
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
     Lemma(fact, evidence, name)
   }
+
+  /** Compute the checksum of this lemma, which provides some protection against accidental changes. */
+  final def checksum(fact: Provable): String = md5(sequentsToString(fact.conclusion +: fact.subgoals.toList))
+  private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
+  private[core] def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
+
+  def requiredEvidence(fact: Provable, evidence: List[Evidence] = Nil): List[Evidence] = {
+    val versionEvidence = {
+      val hasVersionEvidence = evidence.exists(x => x match {
+        case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
+        case _ => false
+      })
+      if(!hasVersionEvidence) Some(ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
+      else None
+    }
+
+    val hashEvidence = {
+      val hasHashEvidence = evidence.exists(_.isInstanceOf[HashEvidence])
+      if (!hasHashEvidence) Some(HashEvidence(checksum(fact)))
+      else None
+    }
+
+    val newEvidence = (versionEvidence, hashEvidence) match {
+      case (Some(l), Some(r)) => evidence :+ l :+ r
+      case (Some(l), None) => evidence :+ l
+      case (None, Some(r)) => evidence :+ r
+      case _ => evidence
+    }
+
+    newEvidence
+  }
 }
 
 /**
@@ -94,6 +125,17 @@ object Lemma {
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name: Option[String] = None) {
+  assert({
+    val hasVersionEvidence = evidence.exists(x => x match {
+      case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
+      case _ => false
+    })
+    val hasHashEvidence = evidence.exists(_.isInstanceOf[HashEvidence])
+    hasVersionEvidence && hasHashEvidence
+  }, "Lemma should have a kyxversion and a hash")
+
+  final def checksum = Lemma.checksum(fact)
+
   //@todo name is alphabetical and not "\".\n false"
   //@note Now allowing more general forms of lemmas. @todo check for soundness.
 //  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
@@ -111,11 +153,6 @@ final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name:
     (if (Lemma.fromStringInternal(toStringInternal).evidence == evidence) " same evidence " else " different evidence " + Lemma.fromStringInternal(toStringInternal).evidence.mkString("\n\n")) +
     (if (Lemma.fromStringInternal(toStringInternal).name == name) " same name " else " different name ")
   )
-
-  /** Compute the checksum of this lemma, which provides some protection against accidental changes. */
-  final def checksum: String = md5(sequentsToString(fact.conclusion +: fact.subgoals.toList))
-  private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
-  private[core] def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
 
   private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +

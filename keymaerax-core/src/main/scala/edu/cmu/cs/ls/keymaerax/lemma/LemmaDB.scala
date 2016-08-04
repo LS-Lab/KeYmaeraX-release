@@ -76,37 +76,6 @@ trait LemmaDB {
   /** Delete the whole lemma database */
   def deleteDatabase(): Unit
 
-  /* @todo BUG adding extra evidence during storage breaks the intuitive property that lemmas before you
-  * store them are equal to lemmas retrieved from the database. This is expected, e.g. in DerivedAxioms.
-  * Decide whether to override equality or fix this some other way. */
-  /** Adds version and hash information ot the lemma evidence list. */
-  protected def addRequiredEvidence(lemma: Lemma) = {
-    val versionEvidence = {
-      val hasVersionEvidence = lemma.evidence.exists(x => x match {
-        case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
-        case _ => false
-      })
-      if(!hasVersionEvidence) Some(ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
-      else None
-    }
-
-    val hashEvidence = {
-      val hasHashEvidence = lemma.evidence.exists(_.isInstanceOf[HashEvidence])
-      if (!hasHashEvidence) Some(HashEvidence(lemma.checksum))
-      else None
-    }
-
-    val newEvidence = (versionEvidence, hashEvidence) match {
-      case (Some(l), Some(r)) => lemma.evidence :+ l :+ r
-      case (Some(l), None) => lemma.evidence :+ l
-      case (None, Some(r)) => lemma.evidence :+ r
-      case _ => lemma.evidence
-    }
-
-    Lemma(lemma.fact, newEvidence, lemma.name)
-  }
-
-
   /** For convenience when implementing bulk get() from individual get() */
   protected def flatOpt[T](L:List[Option[T]]):Option[List[T]] =
     L.foldRight[Option[List[T]]](Some(Nil)){
