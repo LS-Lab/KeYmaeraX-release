@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest}
 
 /**
   * @author Nathan Fulton
@@ -24,7 +24,7 @@ class AxiomaticODESolverTests extends TacticTestBase {
 
   //region integration tests
 
-  "axiomatic ode solver" should "work!" in withMathematica(implicit qeTool => {
+  "axiomatic ode solver" should "work!" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & apply(qeTool)(1)
     val result = proveBy(f, t)
@@ -129,6 +129,19 @@ class AxiomaticODESolverTests extends TacticTestBase {
       case _ : Throwable => //ok.
     }
   })}
+
+  //region Additional unit tests for new core
+  //Tests DifferentialTactics that the ODE solver relies on using sample inputs that the ODE solver will probably see.
+  //@note these tests are largely redundant with the integration tests and are mostly just for bug localization.
+
+  "DGC" should "work" taggedAs(IgnoreInBuildTest) in {
+    val f = "[{x' = v}]1=1".asFormula
+    val t = HilbertCalculus.DGC(Variable("timeVar", None), Number(1))(1)
+    println(proveBy(f,t))
+    loneSucc(proveBy(f,t)) shouldBe "\\exists timeVar [{x'=v,timeVar'=1&true}]1=1".asFormula
+  }
+
+  //endregion
 
   //We're just looking for now errors during the diffGhost steps. This test is here to help isolate when both implementations are having troubles ghosting.
   "Original diff solve" should "work" in {withMathematica(implicit qet => {
