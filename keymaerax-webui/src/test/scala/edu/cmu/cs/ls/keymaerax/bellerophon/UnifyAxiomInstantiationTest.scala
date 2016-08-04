@@ -105,7 +105,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   it should "instantiate full schematic axioms to random schematic instantiations" in {
     for (ax <- schematicAxioms) {
       println("Axiom " + ax)
-      for (i <- 1 to randomTrials/100) {
+      for (i <- 1 to randomTrials/5) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
