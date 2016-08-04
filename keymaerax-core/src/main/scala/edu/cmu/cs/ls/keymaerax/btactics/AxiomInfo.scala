@@ -154,10 +154,10 @@ object DerivationInfo {
     new CoreAxiomInfo("DE differential effect (system)"
       , AxiomDisplayInfo("DE", "[{x′=F,c&H}]P↔[{c,x′=F&H}][x′:=f(x)]P")
       , "DEs", {case () => HilbertCalculus.DE}),
-    new DerivedAxiomInfo("DI differential invariance"
+    new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "([{x′=f(x)&q(x)}]p(x)↔[?q(x)]p(x))←(q(x)→[{x′=f(x)&q(x)}](p(x))′)")
       , "DIequiv", {case () => ???}),
-    new CoreAxiomInfo("DI differential invariant"
+    new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "[{x′=f(x)&q(x)}]p(x)←(q(x)→p(x)∧[{x′=f(x)&q(x)}](p(x))′)")
       , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"

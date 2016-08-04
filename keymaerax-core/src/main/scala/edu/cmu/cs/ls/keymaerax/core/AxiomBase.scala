@@ -295,9 +295,9 @@ Axiom "DE differential effect (system)".
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
-Axiom "DI differential invariant".
-  [{c&q(||)}]p(||) <- (q(||)-> (p(||) & [{c&q(||)}](p(||))'))
-/* [x'=f(x)&q(x);]p(x) <- (q(x) -> p(x) & [x'=f(x)&q(x);]((p(x))')) THEORY */
+Axiom "DI differential invariance".
+  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
+/* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
