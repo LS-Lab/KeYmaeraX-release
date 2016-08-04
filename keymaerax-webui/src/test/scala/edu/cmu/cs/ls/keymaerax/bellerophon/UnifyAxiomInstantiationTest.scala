@@ -66,6 +66,14 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("[:=] assign exists", "[y:=22*x+y;]x>=y -> \\exists y x>=y".asFormula)
   }
 
+  it should "DG differential ghost constant" in {
+    matchDirect("DG differential ghost constant", "[{q' = 2*55}]x>=z <-> \\exists y_ [{q'=2*55,y_'=1&true}]x>=z".asFormula)
+  }
+  
+  it should "DG differential ghost" in {
+    matchDirect("DG differential ghost", "[{x'=v*22+5}]x>=52 <-> \\exists y_ [{x'=v*22+5,y_'=100*y_+-22&true}]x>=52".asFormula)
+  }
+
   "Unification" should "instantiate some schematic axioms" in {
   }
 
