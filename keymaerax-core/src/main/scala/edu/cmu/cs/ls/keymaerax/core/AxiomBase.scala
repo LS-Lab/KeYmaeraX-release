@@ -178,12 +178,42 @@ private[core] object AxiomBase {
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(DiffAssign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))
     ), "DE differential effect")
+    //@note in analogy to DE
+    // [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
+    assert(axs("DE differential effect (system)") == Equiv(
+      Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),fany),ode), qany), pany),
+      Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(DiffAssign(DifferentialSymbol(x), fany), pany))
+    ), "DE differential effect (system)")
+    assert(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
+      Equiv(Box(ODESystem(ode,qany),pany), Box(Test(qany),pany))), "DI differential invariance")
     assert(axs("DG differential ghost") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
         AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
       ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
     ), "DG differential ghost")
+    //@note in analogy to DG
+    assert(axs("DG differential ghost constant") == Equiv(
+      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
+      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
+        AtomicODE(DifferentialSymbol(y), gany)
+      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
+    ), "DG differential ghost constant")
+    //@note in analogy to remark in proof of soundness of DG
+    assert(axs("DG inverse differential ghost system") == Imply(
+      Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)),DifferentialProgramConst("c",Except(y))), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
+      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), UnitFunctional("g",Except(y),Real)),
+        DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)),DifferentialProgramConst("c",Except(y))
+        )), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
+    ), "DG inverse differential ghost system")
+    //@note in analogy to remark in proof of soundness of DG
+    // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
+    assert(axs("DG inverse differential ghost") == Imply(
+      Box(ODESystem(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
+      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), gany),
+        AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real))
+      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
+    ), "DG inverse differential ghost")
 
     assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
     assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
@@ -308,11 +338,11 @@ End.
 
 /* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
 Axiom "DG differential ghost constant".
-  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(y_)&q(|y_|)}]p(|y_|)
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(|y_|)&q(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost system".
-  [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(|y_|),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
+  [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost".
