@@ -1290,7 +1290,9 @@ object DerivedAxioms {
     *
     * @Derived
    */
-  lazy val zeroTimes = derivedAxiom("0*", Sequent(IndexedSeq(), IndexedSeq("(0*f()) = 0".asFormula)), QE)
+  lazy val zeroTimes = derivedAxiom("0*", Sequent(IndexedSeq(), IndexedSeq("(0*f_()) = 0".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (0*x = 0)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "*0".
@@ -1300,9 +1302,9 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val timesZero = derivedAxiom("*0", Sequent(IndexedSeq(), IndexedSeq("(f()*0) = 0".asFormula)),
+  lazy val timesZero = derivedAxiom("*0", Sequent(IndexedSeq(), IndexedSeq("(f_()*0) = 0".asFormula)),
     if (false) useAt(timesCommutative)(1, 0::Nil) & byUS(zeroTimes)
-    else QE
+    else allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (x*0 = 0)".asFormula, TactixLibrary.RCF))
   )
 
   /**
@@ -1313,7 +1315,8 @@ object DerivedAxioms {
     *
     * @Derived
    */
-  lazy val zeroPlus = derivedAxiom("0+", Sequent(IndexedSeq(), IndexedSeq("(0+f()) = f()".asFormula)), QE)
+  lazy val zeroPlus = derivedAxiom("0+", Sequent(IndexedSeq(), IndexedSeq("(0+f_()) = f_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (0+x = x)".asFormula, TactixLibrary.RCF)))
 
   /**
     * {{{Axiom "+0".
@@ -1323,9 +1326,9 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val plusZero = derivedAxiom("+0", Sequent(IndexedSeq(), IndexedSeq("(f()+0) = f()".asFormula)),
+  lazy val plusZero = derivedAxiom("+0", Sequent(IndexedSeq(), IndexedSeq("(f_()+0) = f_()".asFormula)),
     if (false) useAt(plusCommutative)(1, 0::Nil) & byUS(zeroPlus)
-    else QE
+    else allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (x+0 = x)".asFormula, TactixLibrary.RCF))
   )
 
   // differential equations
