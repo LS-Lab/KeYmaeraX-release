@@ -90,6 +90,12 @@ private object LBRACE  extends Terminal("{") {
 private object RBRACE  extends Terminal("}") {
   override def regexp = """\}""".r
 }
+private object LBARB   extends Terminal("{|") {
+  override def regexp = """\{\|""".r
+}
+private object RBARB   extends Terminal("|}") {
+  override def regexp = """\|\}""".r
+}
 private object LBOX    extends Terminal("[") {
   override def regexp = """\[""".r
 }
@@ -512,6 +518,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case RPAREN.startPattern(_*) => consumeTerminalLength(RPAREN, loc)
       case LBOX.startPattern(_*) => consumeTerminalLength(LBOX, loc)
       case RBOX.startPattern(_*) => consumeTerminalLength(RBOX, loc)
+      case LBARB.startPattern(_*) => consumeTerminalLength(LBARB, loc)
+      case RBARB.startPattern(_*) => consumeTerminalLength(RBARB, loc)
       case LBRACE.startPattern(_*) => consumeTerminalLength(LBRACE, loc)
       case RBRACE.startPattern(_*) => consumeTerminalLength(RBRACE, loc)
 

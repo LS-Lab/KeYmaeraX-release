@@ -248,8 +248,8 @@ object KeYmaeraXParser extends Parser {
     // space-dependent elaborations
     case UnitPredicational(name, space)    if kind==TermKind => Some(UnitFunctional(name,space,Real))
     case UnitFunctional(name, space, Real) if kind==FormulaKind => Some(UnitPredicational(name,space))
-    case UnitPredicational(name, space)    if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
-    case UnitFunctional(name, space, Real) if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
+//    case UnitPredicational(name, space)    if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
+//    case UnitFunctional(name, space, Real) if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
     case _ => None
   }
 
@@ -358,7 +358,7 @@ object KeYmaeraXParser extends Parser {
       // ordinary identifiers outside quantifiers disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name,idx),_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN || la==LBRACE || la==PRIME || la==LBANANA) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
+        if (la==LPAREN || la==LBRACE || la==PRIME || la==LBANANA || la==LBARB) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
 
       // function/predicate symbols arity 0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
@@ -377,7 +377,7 @@ object KeYmaeraXParser extends Parser {
       // nullary functional/predicational symbols of argument Taboo
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
         reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
-      case r :+ Token(tok:IDENT,_) if la==LBANANA =>
+      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
         shift(st)
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) =>
         if (la==RBANANA || la.isInstanceOf[IDENT]) shift(st)
@@ -386,8 +386,24 @@ object KeYmaeraXParser extends Parser {
         if (la==RBANANA) shift(st)
         else error(st, List(RBANANA))
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_) =>
-        errormsg(st, "Identifier expected after state-dependent predicational/functional/DiffProgramConst")
+        errormsg(st, "Identifier expected after state-dependent predicational/functional")
 
+      // DifferentialProgramConst symbols of argument AnyArg
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Token(RBARB,_)  =>
+        require(tok.index==None, "no index supported for DifferentialProgramConst")
+        reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r)
+      // DifferentialProgramConst symbols of argument Taboo
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(x:Variable) :+ Token(RBARB,_)  =>
+        require(tok.index==None, "no index supported for DifferentialProgramConst")
+        reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r)
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) =>
+        if (la==RBARB || la.isInstanceOf[IDENT]) shift(st)
+        else error(st, List(RBARB, ANYIDENT))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(_:Variable) =>
+        if (la==RBARB) shift(st)
+        else error(st, List(RBARB))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(_) =>
+        errormsg(st, "Identifier expected after state-dependent DiffProgramConst")
 
       // function/predicate symbols arity>0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
@@ -877,7 +893,8 @@ object KeYmaeraXParser extends Parser {
   /** Follow(Identifier): Can la follow after an identifier? */
   private def followsIdentifier(la: Terminal): Boolean = followsTerm(la) ||
     la==LPAREN || la==PRIME ||
-    la==ASSIGN || la==ASSIGNANY || la==EOF || firstFormula(la) /* from \exists x ... */
+    la==ASSIGN || la==ASSIGNANY || la==EOF || firstFormula(la) /* from \exists x ... */ ||
+    la==LBANANA || la==LBARB
 
 
   // parser actions

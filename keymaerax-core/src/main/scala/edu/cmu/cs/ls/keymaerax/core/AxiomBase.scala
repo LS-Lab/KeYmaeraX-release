@@ -140,6 +140,7 @@ private[core] object AxiomBase {
   /** Redundant code checking expected form of axioms */
   private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x_", None, Real)
+    val y = Variable("y_", None, Real)
     val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
     val p = Function("p", None, Real, Bool)
     val pany = UnitPredicational("p", AnyArg)
@@ -171,6 +172,12 @@ private[core] object AxiomBase {
    /* assert(axs("DC differential cut") == Imply(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(r,x)),
       Equiv(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(p,x)),
         Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), And(PredOf(q,x), PredOf(r,x))), PredOf(p,x)))), "DC differential cut") */
+    assert(axs("DG differential ghost") == Equiv(
+      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("H",Except(y))), UnitPredicational("p",Except(y))),
+      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
+        AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
+      ), UnitPredicational("H",Except(y))), UnitPredicational("p",Except(y))))
+    ), "DG differential ghost")
 
     assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
     assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
@@ -289,17 +296,17 @@ End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DG differential ghost".
-  [{c(|y_|)&H(|y_|)}]p(|y_|) <-> \exists y_ [{c(|y_|),y_'=(a(|y_|)*y_)+b(|y_|)&H(|y_|)}]p(|y_|)
+  [{c{|y_|}&H(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&H(|y_|)}]p(|y_|)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
 /* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
 Axiom "DG differential ghost constant".
-  [{c(|y_|)&H(|y_|)}]p(|y_|) <-> \exists y_ [{c(|y_|),y_'=g(y_)&H(|y_|)}]p(|y_|)
+  [{c{|y_|}&H(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(y_)&H(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost system".
-  [{x_'=f(|y_|),c(|y_|)&H(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(|y_|),x_'=f(|y_|),c(|y_|)&H(|y_|)}]p(|y_|)
+  [{x_'=f(|y_|),c{|y_|}&H(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(|y_|),x_'=f(|y_|),c{|y_|}&H(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost".

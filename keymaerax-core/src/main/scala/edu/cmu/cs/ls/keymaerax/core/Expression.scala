@@ -557,7 +557,7 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
 }
 /** Uninterpreted differential program constant, limited to the given state space. */
 sealed case class DifferentialProgramConst(name: String, space: Space) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
-  override def asString: String = if (space == AnyArg) super.asString else super.asString + "(" + space + ")"
+  override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
 }
 
 /** x'=e atomic differential equation */
