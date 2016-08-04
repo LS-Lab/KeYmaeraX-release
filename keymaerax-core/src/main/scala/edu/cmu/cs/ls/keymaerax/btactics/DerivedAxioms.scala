@@ -1485,14 +1485,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "DG differential pre-ghost".
-    *    [{c&q(||)}]p(||) <-> \exists y [{y'=(t()*y)+s(),c&q(||)}]p(||)
+    *    [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
     *    // [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY
     * End.
     * }}}
     * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
     */
   lazy val DGpreghost = derivedAxiom("DG differential pre-ghost",
-    Sequent(IndexedSeq(), IndexedSeq("[{c&q(||)}]p(||) <-> \\exists y_ [{y_'=(t()*y_)+s(),c&q(||)}]p(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \\exists y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)".asFormula)),
     useAt("DG differential ghost")(1, 0::Nil) &
       useAt(", commute")(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
