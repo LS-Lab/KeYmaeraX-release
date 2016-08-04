@@ -134,7 +134,20 @@ object DerivedAxioms {
     //@note lazy vals have a "hidden" getter method that does the initialization
     val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
-    fieldMirrors.foreach(_()) //@note accessing the lazy getters adds lemmas to DB as side effect
+
+    var failures = 0
+    Range(0, fieldMirrors.length-1).map(idx => {
+      try{
+        fieldMirrors(idx)()
+      } catch {
+        case e: Throwable => {
+          failures = failures + 1
+          println("WARNING: Failed to add derived lemma.");
+          e.printStackTrace()
+        }
+      }
+    })
+    throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedLemmas deatabase.")
   }
 
   // derived rules
