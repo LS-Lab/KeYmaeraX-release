@@ -39,7 +39,7 @@ object DerivedAxioms {
   /** A Provable proving the derived axiom/rule named id (convenience) */
   def derivedAxiomOrRule(name: String): Provable = {
     val lemmaName = DerivationInfo(name).codeName
-    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
+    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.")
     derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
   }
 
