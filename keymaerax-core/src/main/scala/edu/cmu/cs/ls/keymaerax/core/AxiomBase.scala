@@ -138,8 +138,7 @@ private[core] object AxiomBase {
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms */
-  //@todo reactivate checks
-  private def assertCheckAxiomFile(axs : Map[String, Formula]) = true || {
+  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x_", None, Real)
     val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
     val p = Function("p", None, Real, Bool)
