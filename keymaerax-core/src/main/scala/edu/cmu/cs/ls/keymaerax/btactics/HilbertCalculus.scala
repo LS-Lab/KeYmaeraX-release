@@ -167,8 +167,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
   def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
       (Variable("y_",None,Real), y),
-      (FuncOf(Function("t",None,Unit,Real),Nothing), a),
-      (FuncOf(Function("s",None,Unit,Real),Nothing), b)))
+      (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
+      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+    ))
   )
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */

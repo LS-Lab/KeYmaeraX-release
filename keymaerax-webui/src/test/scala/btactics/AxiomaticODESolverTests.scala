@@ -134,11 +134,17 @@ class AxiomaticODESolverTests extends TacticTestBase {
   //Tests DifferentialTactics that the ODE solver relies on using sample inputs that the ODE solver will probably see.
   //@note these tests are largely redundant with the integration tests and are mostly just for bug localization.
 
-  "DGC" should "work" taggedAs(IgnoreInBuildTest) in {
+  "DifferentialTactics" should "DGC" taggedAs(IgnoreInBuildTest) in {
     val f = "[{x' = v}]1=1".asFormula
     val t = HilbertCalculus.DGC(Variable("timeVar", None), Number(1))(1)
-    println(proveBy(f,t))
     loneSucc(proveBy(f,t)) shouldBe "\\exists timeVar [{x'=v,timeVar'=1&true}]1=1".asFormula
+  }
+
+  /** @note there's a more robust version of this test in [[DifferentialTests]] */
+  it should "DG" taggedAs(IgnoreInBuildTest) in {
+    val f = "[{x'=v}]1=1".asFormula
+    val t = HilbertCalculus.DG(Variable("zz", None), Number(22), Number(99))(1)
+    loneSucc(proveBy(f,t)) shouldBe "\\exists zz [{x'=v,zz'=22*zz+99&true}]1=1".asFormula
   }
 
   //endregion
