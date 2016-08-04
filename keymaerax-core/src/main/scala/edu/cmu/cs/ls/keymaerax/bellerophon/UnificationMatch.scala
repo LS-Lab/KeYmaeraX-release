@@ -413,8 +413,13 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
 
+  /**
+    * Quickly compose patterns coming from fresh shapes by just concatenating them.
+    * If indeed the shape used fresh names that did not occur in the input, this fash composition is fine.
+    * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
+    */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
-    (before ++ after).distinct
+    before ++ after
 }
 
 /**

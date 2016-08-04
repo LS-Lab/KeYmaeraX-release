@@ -74,12 +74,14 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random schematic instance of the given Formula */
   def nextSchematicInstance(fml: Formula, size: Int): Formula = {
+    val vars = nextNames("z", size / 3 + 1)
     val symbols = StaticSemantics.signature(fml)
     val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
-      case p: UnitPredicational => p->nextFormula(size)
-      case p: UnitFunctional => p->nextTerm(size)
-      case a: ProgramConst => a->nextProgram(size)
-      case a: DifferentialProgramConst => a->nextDifferentialProgram(size)
+      case p: UnitPredicational => p->nextF(vars,size)
+      //@todo need to teach the term some manners such as no diffs if occurs in ODE
+      case p: UnitFunctional => p->nextT(vars,size,dots=false,diffs=false,funcs=true)
+      case a: ProgramConst => a->nextP(vars,size)
+      case a: DifferentialProgramConst => a->nextDP(vars,size)
       case ow => ow->ow
     })
     def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
@@ -151,8 +153,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   // random generator implementations
 
-  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = nextT(vars, n, false)
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean) : Term = nextT(vars, n, dots, !dots, true)
+  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = nextT(vars, n, dots=false)
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean) : Term = nextT(vars, n, dots, !dots, funcs=true)
 
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean, funcs: Boolean) : Term = {
     require(n>=0)
@@ -172,7 +174,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         //@todo avoid 0^0
       case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs, funcs), Number(BigDecimal(rand.nextInt(6))))
       case it if (60 until 70 contains it) && diffs => DifferentialSymbol(vars(rand.nextInt(vars.length)))
-      case it if (70 until 80 contains it) && diffs => Differential(nextT(vars, n-1, dots, false, funcs))
+      case it if (70 until 80 contains it) && diffs => Differential(nextT(vars, n-1, dots, diffs=false, funcs))
       case it if (80 until 84 contains it) && funcs => FuncOf(Function("gg",None,Unit,Real),Nothing)
       case it if (84 until 88 contains it) && funcs => FuncOf(Function("ff",None,Real,Real), nextT(vars, n-1, dots, diffs, funcs))
       case it if 88 until 200 contains it => assert(dots); DotTerm
@@ -247,7 +249,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     }
   }
 
-  private def nextDP(vars: IndexedSeq[Variable], n: Int): DifferentialProgram = nextDP(vars, n, false)
+  private def nextDP(vars: IndexedSeq[Variable], n: Int): DifferentialProgram = nextDP(vars, n, dotTs=false)
   private def nextDP(vars: IndexedSeq[Variable], n: Int, dotTs: Boolean): DifferentialProgram =
     nextODE(vars, n, 0, vars.length, dotTs)
 
@@ -261,14 +263,14 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     val funcs = true
     require(n>=0)
     require(0<=lower && lower<upper && upper<=vars.length)
-    if (lower == upper-1) return AtomicODE(DifferentialSymbol(vars(lower)), nextT(vars, 0, dotTs, false, funcs))
+    if (lower == upper-1) return AtomicODE(DifferentialSymbol(vars(lower)), nextT(vars, 0, dotTs, diffs=false, funcs))
     val v = lower + rand.nextInt(upper-lower)
     assert(lower <= v && v < upper)
     if (n == 0 || rand.nextFloat()<=shortProbability
-      || lower==v || v == upper-1) return AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, 0, dotTs, false, funcs))
+      || lower==v || v == upper-1) return AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, 0, dotTs, diffs=false, funcs))
     val r = rand.nextInt(20)
     r match {
-      case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, n-1, dotTs, false, funcs))
+      case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, n-1, dotTs, diffs=false, funcs))
       case it if 10 until 20 contains it =>
         DifferentialProduct(nextODE(vars, n-1, lower, v, dotTs), nextODE(vars, n-1, v, upper, dotTs))
       case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
