@@ -87,6 +87,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
           }
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+            println("match instance: " + inst)
             matchKey(ax, inst)
           }
         }
@@ -106,6 +107,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
         }
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+          println("match instance: " + inst)
           matchDirect(ax, inst)
         }
       }
