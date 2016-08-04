@@ -156,11 +156,14 @@ private[core] object AxiomBase {
 
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
+    /**
+     * HYBRID PROGRAM MODALITY AXIOMS
+     */
     // Figure 2
     assert(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
     assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0)), "[:=] assign")
-    assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0))
-      || axs("[?] test") == Equiv(Box(Test(H0), p0), Imply(H0, p0)), "[?] test")
+    assert(axs("[:=] assign equality") == Equiv(Box(Assign(x,f0), pany), Forall(Seq(x), Imply(Equal(x,f0), pany))), "[:=] assign equality")
+    assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0)), "[?] test")
     assert(axs("[++] choice") == Equiv(Box(Choice(a,b), pany), And(Box(a, pany), Box(b, pany))), "[++] choice")
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
@@ -169,17 +172,21 @@ private[core] object AxiomBase {
     //@note could also have accepted axiom I for hybrid systems but not for hybrid games
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
+    /**
+     * DIFFERENTIAL EQUATION AXIOMS
+     */
     // Figure 3
     assert(axs("DW") == Box(ODESystem(ode, qany), qany), "DW")
     assert(axs("DC differential cut") == Imply(Box(ODESystem(ode, qany), UnitPredicational("r",AnyArg)),
       Equiv(Box(ODESystem(ode, qany), pany),
         Box(ODESystem(ode, And(qany,UnitPredicational("r",AnyArg))), pany))), "DC differential cut")
+    /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
     assert(axs("DE differential effect") == Equiv(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(DiffAssign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))
     ), "DE differential effect")
     //@note in analogy to DE
-    // [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
+    /* @note Completeness: reassociate needed in DifferentialProduct data structures */
     assert(axs("DE differential effect (system)") == Equiv(
       Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),fany),ode), qany), pany),
       Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(DiffAssign(DifferentialSymbol(x), fany), pany))
@@ -196,18 +203,17 @@ private[core] object AxiomBase {
     assert(axs("DG differential ghost constant") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
-        AtomicODE(DifferentialSymbol(y), gany)
+        AtomicODE(DifferentialSymbol(y), UnitFunctional("g",Except(y),Real))
       ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
     ), "DG differential ghost constant")
     //@note in analogy to remark in proof of soundness of DG
     assert(axs("DG inverse differential ghost system") == Imply(
       Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)),DifferentialProgramConst("c",Except(y))), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), UnitFunctional("g",Except(y),Real)),
+      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), gany),
         DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)),DifferentialProgramConst("c",Except(y))
         )), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
     ), "DG inverse differential ghost system")
     //@note in analogy to remark in proof of soundness of DG
-    // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
     assert(axs("DG inverse differential ghost") == Imply(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), gany),
@@ -215,15 +221,17 @@ private[core] object AxiomBase {
       ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
     ), "DG inverse differential ghost")
 
+    /* DIFFERENTIAL AXIOMS FOR TERMS */
+
     assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
     assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
     assert(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
     assert(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
+    /** DIFFERENTIAL FOR FORMULAS */
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
     assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
     assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
     assert(axs("x' derive var") == Equal(Differential(x), DifferentialSymbol(x)), "x' derive var")
-    //assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
     // soundness-critical that these are for p() not for p(x) or p(||)
@@ -251,10 +259,6 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxiomString() : String =
 """
-/**
- * HYBRID PROGRAM MODALITY AXIOMS
- */
-
 Axiom "<> diamond".
   ![a;]!p(||) <-> <a;>p(||)
 End.
@@ -299,9 +303,6 @@ Axiom "[*] iterate".
   [{a;}*]p(||) <-> (p(||) & [a;][{a;}*]p(||))
 End.
 
-/**
- * DIFFERENTIAL EQUATION AXIOMS
- */
 
 Axiom "DW".
   [{c&q(||)}]q(||)
@@ -315,13 +316,11 @@ End.
 
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
-  /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
   [{x_'=f(x_)&q(x_)}]p(||) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(||)
 End.
 
 Axiom "DE differential effect (system)".
   /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
-  /* @note Completeness: reassociate needed in DifferentialProduct data structures */
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
@@ -364,7 +363,6 @@ Axiom "DX differential skip".
   [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
 
-/* DIFFERENTIAL AXIOMS FOR TERMS */
 
 Axiom "c()' derive constant fn".
   c()' = 0
@@ -401,10 +399,6 @@ End.
 Axiom "^' derive power".
 	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- (c() != 0)
 End.
-
-/**
- * DIFFERENTIAL FOR FORMULAS
- */
 
 Axiom "=' derive =".
   (f(||) = g(||))' <-> ((f(||)') = (g(||)'))
