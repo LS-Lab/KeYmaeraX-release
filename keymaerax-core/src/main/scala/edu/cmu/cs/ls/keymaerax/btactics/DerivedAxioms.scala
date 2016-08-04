@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
@@ -13,10 +13,8 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.collection.immutable
 import scala.collection.immutable._
-
 import scala.language.postfixOps
-
-import scala.reflect.runtime.{universe=>ru}
+import scala.reflect.runtime.{universe => ru}
 
 /**
  * Derived Axioms.
@@ -1571,7 +1569,11 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val equalReflex = derivedAxiom("= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() = s_()".asFormula)), QE)
+  lazy val equalReflex = derivedAxiom("= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() = s_()".asFormula)),
+    //@todo unification does not yet get it right
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "s_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".=.".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall x x=x".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "= commute".
@@ -1579,7 +1581,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val equalCommute = derivedAxiom("= commute", Sequent(IndexedSeq(), IndexedSeq("(f_()=g_()) <-> (g_()=f_())".asFormula)), QE)
+  lazy val equalCommute = derivedAxiom("= commute", Sequent(IndexedSeq(), IndexedSeq("(f_()=g_()) <-> (g_()=f_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".=g_() <-> g_()=.".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x=. <-> .=x)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x=y <-> y=x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "* commute".
@@ -1587,7 +1593,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val timesCommute = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq("(f_()*g_()) = (g_()*f_())".asFormula)), QE)
+  lazy val timesCommute = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq("(f_()*g_()) = (g_()*f_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".*g_() = g_()*.".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x*. = .*x)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x*y = y*x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "<=".
@@ -1595,7 +1605,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val lessEqual = derivedAxiom("<=", Sequent(IndexedSeq(), IndexedSeq("(f_()<=g_()) <-> ((f_()<g_()) | (f_()=g_()))".asFormula)), QE)
+  lazy val lessEqual = derivedAxiom("<=", Sequent(IndexedSeq(), IndexedSeq("(f_()<=g_()) <-> ((f_()<g_()) | (f_()=g_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".<=g_() <-> ((.<g_()) | (.=g_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x<=. <-> ((x<.) | (x=.)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x<=y <-> (x<y | x=y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "! !=".
@@ -1603,7 +1617,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val notNotEqual = derivedAxiom("! !=", Sequent(IndexedSeq(), IndexedSeq("(!(f_() != g_())) <-> (f_() = g_())".asFormula)), QE)
+  lazy val notNotEqual = derivedAxiom("! !=", Sequent(IndexedSeq(), IndexedSeq("(!(f_() != g_())) <-> (f_() = g_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(!(. != g_())) <-> (. = g_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((!(x != .)) <-> (x = .))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((!(x != y)) <-> (x = y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "! =".
@@ -1611,7 +1629,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val notEqual = derivedAxiom("! =", Sequent(IndexedSeq(), IndexedSeq("(!(f() = g())) <-> (f() != g())".asFormula)), QE)
+  lazy val notEqual = derivedAxiom("! =", Sequent(IndexedSeq(), IndexedSeq("(!(f() = g())) <-> (f() != g())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(!(. = g())) <-> (. != g())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((!(x = .)) <-> (x != .))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((!(x = y)) <-> (x != y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "! >".
@@ -1619,27 +1641,31 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val notGreater = derivedAxiom("! >", Sequent(IndexedSeq(), IndexedSeq("(!(f() > g())) <-> (f() <= g())".asFormula)), QE)
+  lazy val notGreater = derivedAxiom("! >", Sequent(IndexedSeq(), IndexedSeq("(!(f() > g())) <-> (f() <= g())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(!(. > g())) <-> (. <= g())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((!(x > .)) <-> (x <= .))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((!(x > y)) <-> (x <= y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "! <".
     *   (!(f() < g())) <-> (f() >= g())
     * End.
     * }}}
-    *
-    * @todo derive more efficiently via flip
     */
-  lazy val notLess = derivedAxiom("! <", Sequent(IndexedSeq(), IndexedSeq("(!(f() < g())) <-> (f() >= g())".asFormula)), QE)
+  lazy val notLess = derivedAxiom("! <", Sequent(IndexedSeq(), IndexedSeq("(!(f_() < g_())) <-> (f_() >= g_())".asFormula)),
+    useAt(">= flip")(1, 1::Nil) & useAt("< negate")(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
 
   /**
     * {{{Axiom "! <=".
     *   (!(f() <= g())) <-> (f() > g())
     * End.
     * }}}
-    *
-    * @todo derive more efficiently via flip
     */
-  lazy val notLessEqual = derivedAxiom("! <=", Sequent(IndexedSeq(), IndexedSeq("(!(f() <= g())) <-> (f() > g())".asFormula)), QE)
+  lazy val notLessEqual = derivedAxiom("! <=", Sequent(IndexedSeq(), IndexedSeq("(!(f_() <= g_())) <-> (f_() > g_())".asFormula)),
+    useAt("> flip")(1, 1::Nil) & useAt("< negate")(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
 
   /**
     * {{{Axiom "< negate".
@@ -1647,7 +1673,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val notGreaterEqual = derivedAxiom("< negate", Sequent(IndexedSeq(), IndexedSeq("(!(f() >= g())) <-> (f() < g())".asFormula)), QE)
+  lazy val notGreaterEqual = derivedAxiom("< negate", Sequent(IndexedSeq(), IndexedSeq("(!(f_() >= g_())) <-> (f_() < g_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(!(. >= g_())) <-> (. < g_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((!(x >= .)) <-> (x < .))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((!(x >= y)) <-> (x < y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom ">= flip".
@@ -1655,14 +1685,22 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val flipGreaterEqual = derivedAxiom(">= flip", Sequent(IndexedSeq(), IndexedSeq("(f_() >= g_()) <-> (g_() <= f_())".asFormula)), QE)
+  lazy val flipGreaterEqual = derivedAxiom(">= flip", Sequent(IndexedSeq(), IndexedSeq("(f_() >= g_()) <-> (g_() <= f_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(. >= g_()) <-> (g_() <= .)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x >= .) <-> (. <= x))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x >= y) <-> (y <= x))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "> flip".
     *   (f() > g()) <-> (g() < f())
     * End.
     * */
-  lazy val flipGreater = derivedAxiom("> flip", Sequent(IndexedSeq(), IndexedSeq("(f_() > g_()) <-> (g_() < f_())".asFormula)), QE)
+  lazy val flipGreater = derivedAxiom("> flip", Sequent(IndexedSeq(), IndexedSeq("(f_() > g_()) <-> (g_() < f_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(. > g_()) <-> (g_() < .)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x > .) <-> (. < x))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x > y) <-> (y < x))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "+ associative".
@@ -1670,7 +1708,12 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val plusAssociative = derivedAxiom("+ associative", Sequent(IndexedSeq(), IndexedSeq("(f_() + g_()) + h_() = f_() + (g_() + h_())".asFormula)), QE)
+  lazy val plusAssociative = derivedAxiom("+ associative", Sequent(IndexedSeq(), IndexedSeq("(f_() + g_()) + h_() = f_() + (g_() + h_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(. + g_()) + h_() = . + (g_() + h_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x + .) + h_() = x + (. + h_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x ((x + y) + . = x + (y + .))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x ((x + y) + z = x + (y + z))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "* associative".
@@ -1678,7 +1721,12 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val timesAssociative = derivedAxiom("* associative", Sequent(IndexedSeq(), IndexedSeq("(f_() * g_()) * h_() = f_() * (g_() * h_())".asFormula)), QE)
+  lazy val timesAssociative = derivedAxiom("* associative", Sequent(IndexedSeq(), IndexedSeq("(f_() * g_()) * h_() = f_() * (g_() * h_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(. * g_()) * h_() = . * (g_() * h_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x * .) * h_() = x * (. * h_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x ((x * y) * . = x * (y * .))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x ((x * y) * z = x * (y * z))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "+ commute".
@@ -1686,7 +1734,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val plusCommutative = derivedAxiom("+ commute", Sequent(IndexedSeq(), IndexedSeq("f_()+g_() = g_()+f_()".asFormula)), QE)
+  lazy val plusCommutative = derivedAxiom("+ commute", Sequent(IndexedSeq(), IndexedSeq("f_()+g_() = g_()+f_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".+g_() = g_()+.".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x+. = .+x)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x+y = y+x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "* commute".
@@ -1694,7 +1746,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val timesCommutative = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq("f_()*g_() = g_()*f_()".asFormula)), QE)
+  lazy val timesCommutative = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq("f_()*g_() = g_()*f_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".*g_() = g_()*.".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x*. = .*x)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x*y = y*x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "distributive".
@@ -1702,7 +1758,12 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val distributive = derivedAxiom("distributive", Sequent(IndexedSeq(), IndexedSeq("f_()*(g_()+h_()) = f_()*g_() + f_()*h_()".asFormula)), QE)
+  lazy val distributive = derivedAxiom("distributive", Sequent(IndexedSeq(), IndexedSeq("f_()*(g_()+h_()) = f_()*g_() + f_()*h_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".*(g_()+h_()) = .*g_() + .*h_()".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x*(.+h_()) = x*. + x*h_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (x*(y+.) = x*y + x*.)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x (x*(y+z) = x*y + x*z)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "+ identity".
@@ -1718,7 +1779,10 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val timesIdentity = derivedAxiom("* identity", Sequent(IndexedSeq(), IndexedSeq("f_()*1 = f_()".asFormula)), QE)
+  lazy val timesIdentity = derivedAxiom("* identity", Sequent(IndexedSeq(), IndexedSeq("f_()*1 = f_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".*1 = .".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall x (x*1 = x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "+ inverse".
@@ -1726,7 +1790,10 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val plusInverse = derivedAxiom("+ inverse", Sequent(IndexedSeq(), IndexedSeq("f_() + (-f_()) = 0".asFormula)), QE)
+  lazy val plusInverse = derivedAxiom("+ inverse", Sequent(IndexedSeq(), IndexedSeq("f_() + (-f_()) = 0".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ". + (-.) = 0".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall x (x + (-x) = 0)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "* inverse".
@@ -1734,7 +1801,10 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val timesInverse = derivedAxiom("* inverse", Sequent(IndexedSeq(), IndexedSeq("f_() != 0 -> f_()*(f_()^-1) = 1".asFormula)), QE)
+  lazy val timesInverse = derivedAxiom("* inverse", Sequent(IndexedSeq(), IndexedSeq("f_() != 0 -> f_()*(f_()^-1) = 1".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ". != 0 -> .*(.^-1) = 1".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall x (x != 0 -> x*(x^-1) = 1)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "positivity".
@@ -1742,7 +1812,10 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val positivity = derivedAxiom("positivity", Sequent(IndexedSeq(), IndexedSeq("f_() < 0 | f_() = 0 | 0 < f_()".asFormula)), QE)
+  lazy val positivity = derivedAxiom("positivity", Sequent(IndexedSeq(), IndexedSeq("f_() < 0 | f_() = 0 | 0 < f_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ". < 0 | . = 0 | 0 < .".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall x (x < 0 | x = 0 | 0 < x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "+ closed".
@@ -1750,7 +1823,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val plusClosed = derivedAxiom("+ closed", Sequent(IndexedSeq(), IndexedSeq("0 < f_() & 0 < g_() -> 0 < f_()+g_()".asFormula)), QE)
+  lazy val plusClosed = derivedAxiom("+ closed", Sequent(IndexedSeq(), IndexedSeq("0 < f_() & 0 < g_() -> 0 < f_()+g_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "0 < . & 0 < g_() -> 0 < .+g_()".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (0 < x & 0 < . -> 0 < x+.)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (0 < x & 0 < y -> 0 < x+y)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "* closed".
@@ -1758,7 +1835,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val timesClosed = derivedAxiom("* closed", Sequent(IndexedSeq(), IndexedSeq("0 < f_() & 0 < g_() -> 0 < f_()*g_()".asFormula)), QE)
+  lazy val timesClosed = derivedAxiom("* closed", Sequent(IndexedSeq(), IndexedSeq("0 < f_() & 0 < g_() -> 0 < f_()*g_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "0 < . & 0 < g_() -> 0 < .*g_()".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (0 < x & 0 < . -> 0 < x*.)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (0 < x & 0 < y -> 0 < x*y)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "<".
@@ -1766,7 +1847,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val less = derivedAxiom("<", Sequent(IndexedSeq(), IndexedSeq("f_() < g_() <-> 0 < g_()-f_()".asFormula)), QE)
+  lazy val less = derivedAxiom("<", Sequent(IndexedSeq(), IndexedSeq("f_() < g_() <-> 0 < g_()-f_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ". < g_() <-> 0 < g_()-.".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x < . <-> 0 < .-x)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x < y <-> 0 < y-x)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom ">".
@@ -1774,7 +1859,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val greater = derivedAxiom(">", Sequent(IndexedSeq(), IndexedSeq("f_() > g_() <-> g_() < f_()".asFormula)), QE)
+  lazy val greater = derivedAxiom(">", Sequent(IndexedSeq(), IndexedSeq("f_() > g_() <-> g_() < f_()".asFormula)), byUS(flipGreater))
 
   // built-in arithmetic
 
@@ -1785,7 +1870,11 @@ object DerivedAxioms {
     * }}}
     * @see André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
     */
-  lazy val notEqualElim = derivedAxiom("!= elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()!=g_()) <-> \\exists z_ ((f_()-g_())*z_=1)".asFormula)), QE)
+  lazy val notEqualElim = derivedAxiom("!= elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()!=g_()) <-> \\exists z_ ((f_()-g_())*z_=1)".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(.!=g_()) <-> \\exists z_ ((.-g_())*z_=1)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x!=.) <-> \\exists z_ ((x-.)*z_=1))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x!=y) <-> \\exists z_ ((x-y)*z_=1))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom ">= elimination".
@@ -1794,7 +1883,11 @@ object DerivedAxioms {
     * }}}
     * @see André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
     */
-  lazy val greaterEqualElim = derivedAxiom(">= elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()>=g_()) <-> \\exists z_ (f_()-g_()=z_^2)".asFormula)), QE)
+  lazy val greaterEqualElim = derivedAxiom(">= elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()>=g_()) <-> \\exists z_ (f_()-g_()=z_^2)".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(.>=g_()) <-> \\exists z_ (.-g_()=z_^2)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x>=.) <-> \\exists z_ (x-.=z_^2))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x>=y) <-> \\exists z_ (x-y=z_^2))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "> elimination".
@@ -1803,7 +1896,11 @@ object DerivedAxioms {
     * }}}
     * @see André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
     */
-  lazy val greaterElim = derivedAxiom("> elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()>g_()) <-> \\exists z_ ((f_()-g_())*z_^2=1)".asFormula)), QE)
+  lazy val greaterElim = derivedAxiom("> elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()>g_()) <-> \\exists z_ ((f_()-g_())*z_^2=1)".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(.>g_()) <-> \\exists z_ ((.-g_())*z_^2=1)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((x>.) <-> \\exists z_ ((x-.)*z_^2=1))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x>y) <-> \\exists z_ ((x-y)*z_^2=1))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "1>0".
@@ -1811,7 +1908,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val oneGreaterZero = derivedAxiom("1>0", Sequent(IndexedSeq(), IndexedSeq("1>0".asFormula)), QE)
+  lazy val oneGreaterZero = derivedAxiom("1>0", Sequent(IndexedSeq(), IndexedSeq("1>0".asFormula)), TactixLibrary.RCF)
 
   /**
     * {{{Axiom "nonnegative squares".
@@ -1819,7 +1916,10 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val nonnegativeSquares = derivedAxiom("nonnegative squares", Sequent(IndexedSeq(), IndexedSeq("f_()^2>=0".asFormula)), QE)
+  lazy val nonnegativeSquares = derivedAxiom("nonnegative squares", Sequent(IndexedSeq(), IndexedSeq("f_()^2>=0".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".^2>=0".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall x (x^2>=0)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom ">2!=".
@@ -1827,7 +1927,11 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val greaterImpliesNotEqual = derivedAxiom(">2!=", Sequent(IndexedSeq(), IndexedSeq("f_()>g_() -> f_()!=g_()".asFormula)), QE)
+  lazy val greaterImpliesNotEqual = derivedAxiom(">2!=", Sequent(IndexedSeq(), IndexedSeq("f_()>g_() -> f_()!=g_()".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".>g_() -> .!=g_()".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x>. -> x!=.)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x (x>y -> x!=y)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "> monotone".
@@ -1835,7 +1939,12 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val greaterMonotone = derivedAxiom("> monotone", Sequent(IndexedSeq(), IndexedSeq("f_()+h_()>g_() <- f_()>g_() & h_()>=0".asFormula)), QE)
+  lazy val greaterMonotone = derivedAxiom("> monotone", Sequent(IndexedSeq(), IndexedSeq("f_()+h_()>g_() <- f_()>g_() & h_()>=0".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".+h_()>g_() <- .>g_() & h_()>=0".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x+h_()>. <- x>. & h_()>=0)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (x+.>y <- x>y & .>=0)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x (x+z>y <- x>y & z>=0)".asFormula, TactixLibrary.RCF))
+  )
 
   // stuff
 
@@ -1847,7 +1956,11 @@ object DerivedAxioms {
     *
     * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
     */
-  lazy val absDef = derivedAxiom("abs", Sequent(IndexedSeq(), IndexedSeq("(abs(s_()) = t_()) <->  ((s_()>=0 & t_()=s_()) | (s_()<0 & t_()=-s_()))".asFormula)), QE)
+  lazy val absDef = derivedAxiom("abs", Sequent(IndexedSeq(), IndexedSeq("(abs(s_()) = t_()) <->  ((s_()>=0 & t_()=s_()) | (s_()<0 & t_()=-s_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "s_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(abs(.) = t_()) <->  ((.>=0 & t_()=.) | (.<0 & t_()=-.))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "t_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((abs(x) = .) <->  ((x>=0 & .=x) | (x<0 & .=-x)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall y \\forall x ((abs(x) = y) <->  ((x>=0 & y=x) | (x<0 & y=-x)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "min".
@@ -1857,7 +1970,12 @@ object DerivedAxioms {
     *
     * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
     */
-  lazy val minDef = derivedAxiom("min", Sequent(IndexedSeq(), IndexedSeq("(min(f_(), g_()) = h_()) <-> ((f_()<=g_() & h_()=f_()) | (f_()>g_() & h_()=g_()))".asFormula)), QE)
+  lazy val minDef = derivedAxiom("min", Sequent(IndexedSeq(), IndexedSeq("(min(f_(), g_()) = h_()) <-> ((f_()<=g_() & h_()=f_()) | (f_()>g_() & h_()=g_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(min(., g_()) = h_()) <-> ((.<=g_() & h_()=.) | (.>g_() & h_()=g_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((min(x, .) = h_()) <-> ((x<=. & h_()=x) | (x>. & h_()=.)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x ((min(x, y) = .) <-> ((x<=y & .=x) | (x>y & .=y)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x ((min(x, y) = z) <-> ((x<=y & z=x) | (x>y & z=y)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "max".
@@ -1867,7 +1985,12 @@ object DerivedAxioms {
     *
     * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
     */
-  lazy val maxDef = derivedAxiom("max", Sequent(IndexedSeq(), IndexedSeq("(max(f_(), g_()) = h_()) <-> ((f_()>=g_() & h_()=f_()) | (f_()<g_() & h_()=g_()))".asFormula)), QE)
+  lazy val maxDef = derivedAxiom("max", Sequent(IndexedSeq(), IndexedSeq("(max(f_(), g_()) = h_()) <-> ((f_()>=g_() & h_()=f_()) | (f_()<g_() & h_()=g_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "(max(., g_()) = h_()) <-> ((.>=g_() & h_()=.) | (.<g_() & h_()=g_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x ((max(x, .) = h_()) <-> ((x>=. & h_()=x) | (x<. & h_()=.)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x ((max(x, y) = .) <-> ((x>=y & .=x) | (x<y & .=y)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x ((max(x, y) = z) <-> ((x>=y & z=x) | (x<y & z=y)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
     * {{{Axiom "<*> stuck".
@@ -1903,7 +2026,14 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalUpPlus = derivedAxiom("+<= up", Sequent(IndexedSeq(), IndexedSeq("f_()+g_()<=h_() <- ((f_()<=F_() & g_()<=G_()) & F_()+G_()<=h_())".asFormula)), QE)
+  lazy val intervalUpPlus = derivedAxiom("+<= up", Sequent(IndexedSeq(), IndexedSeq("f_()+g_()<=h_() <- ((f_()<=F_() & g_()<=G_()) & F_()+G_()<=h_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".+g_()<=h_() <- ((.<=F_() & g_()<=G_()) & F_()+G_()<=h_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x+.<=h_() <- ((x<=F_() & .<=G_()) & F_()+G_()<=h_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (x+y<=. <- ((x<=F_() & y<=G_()) & F_()+G_()<=.))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall z \\forall y \\forall x (x+y<=z <- ((x<=. & y<=G_()) & .+G_()<=z))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "G_()".asTerm)::("x_".asTerm, "Y".asTerm)::("p(.)".asFormula, "\\forall X \\forall z \\forall y \\forall x (x+y<=z <- ((x<=X & y<=.) & X+.<=z))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall Y \\forall X \\forall z \\forall y \\forall x (x+y<=z <- ((x<=X & y<=Y) & X+Y<=z))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "-<= up".
@@ -1911,7 +2041,14 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalUpMinus = derivedAxiom("-<= up", Sequent(IndexedSeq(), IndexedSeq("f_()-g_()<=h_() <- ((f_()<=F_() & G_()<=g_()) & F_()-G_()<=h_())".asFormula)), QE)
+  lazy val intervalUpMinus = derivedAxiom("-<= up", Sequent(IndexedSeq(), IndexedSeq("f_()-g_()<=h_() <- ((f_()<=F_() & G_()<=g_()) & F_()-G_()<=h_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".-g_()<=h_() <- ((.<=F_() & G_()<=g_()) & F_()-G_()<=h_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x-.<=h_() <- ((x<=F_() & G_()<=.) & F_()-G_()<=h_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (x-y<=. <- ((x<=F_() & G_()<=y) & F_()-G_()<=.))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall z \\forall y \\forall x (x-y<=z <- ((x<=. & G_()<=y) & .-G_()<=z))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "G_()".asTerm)::("x_".asTerm, "Y".asTerm)::("p(.)".asFormula, "\\forall X \\forall z \\forall y \\forall x (x-y<=z <- ((x<=X & .<=y) & X-.<=z))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall Y \\forall X \\forall z \\forall y \\forall x (x-y<=z <- ((x<=X & Y<=y) & X-Y<=z))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "*<= up".
@@ -1919,7 +2056,16 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalUpTimes = derivedAxiom("*<= up", Sequent(IndexedSeq(), IndexedSeq("f_()*g_()<=h_() <- ((ff_()<=f_() & f_()<=F_() & gg_()<=g_() & g_()<=G_()) & (ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_()))".asFormula)), QE)
+  lazy val intervalUpTimes = derivedAxiom("*<= up", Sequent(IndexedSeq(), IndexedSeq("f_()*g_()<=h_() <- ((ff_()<=f_() & f_()<=F_() & gg_()<=g_() & g_()<=G_()) & (ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, ".*g_()<=h_() <- ((ff_()<=. & .<=F_() & gg_()<=g_() & g_()<=G_()) & (ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x*.<=h_() <- ((ff_()<=x & x<=F_() & gg_()<=. & .<=G_()) & (ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_())))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (x*y<=. <- ((ff_()<=x & x<=F_() & gg_()<=y & y<=G_()) & (ff_()*gg_()<=. & ff_()*G_()<=. & F_()*gg_()<=. & F_()*G_()<=.)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall z \\forall y \\forall x (x*y<=z <- ((ff_()<=x & x<=. & gg_()<=y & y<=G_()) & (ff_()*gg_()<=z & ff_()*G_()<=z & .*gg_()<=z & .*G_()<=z)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "G_()".asTerm)::("x_".asTerm, "Y".asTerm)::("p(.)".asFormula, "\\forall X \\forall z \\forall y \\forall x (x*y<=z <- ((ff_()<=x & x<=X & gg_()<=y & y<=.) & (ff_()*gg_()<=z & ff_()*.<=z & X*gg_()<=z & X*.<=z)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "ff_()".asTerm)::("x_".asTerm, "xx".asTerm)::("p(.)".asFormula, "\\forall Y \\forall X \\forall z \\forall y \\forall x (x*y<=z <- ((.<=x & x<=X & gg_()<=y & y<=Y) & (.*gg_()<=z & .*Y<=z & X*gg_()<=z & X*Y<=z)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "gg_()".asTerm)::("x_".asTerm, "yy".asTerm)::("p(.)".asFormula, "\\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x*y<=z <- ((xx<=x & x<=X & .<=y & y<=Y) & (xx*.<=z & xx*Y<=z & X*.<=z & X*Y<=z)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x*y<=z <- ((xx<=x & x<=X & yy<=y & y<=Y) & (xx*yy<=z & xx*Y<=z & X*yy<=z & X*Y<=z)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "1Div<= up".
@@ -1927,7 +2073,12 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalUp1Divide = derivedAxiom("1Div<= up", Sequent(IndexedSeq(), IndexedSeq("1/f_()<=h_() <- ((F_()<=f_() & F_()*f_()>0) & (1/F_()<=h_()))".asFormula)), QE)
+  lazy val intervalUp1Divide = derivedAxiom("1Div<= up", Sequent(IndexedSeq(), IndexedSeq("1/f_()<=h_() <- ((F_()<=f_() & F_()*f_()>0) & (1/F_()<=h_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "1/.<=h_() <- ((F_()<=. & F_()*.>0) & (1/F_()<=h_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (1/x<=. <- ((F_()<=x & F_()*x>0) & (1/F_()<=.)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (1/x<=y <- ((.<=x & .*x>0) & (1/.<=y)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall X \\forall y \\forall x (1/x<=y <- ((X<=x & X*x>0) & (1/X<=y)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "Div<= up".
@@ -1935,7 +2086,12 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalUpDivide = derivedAxiom("Div<= up", Sequent(IndexedSeq(), IndexedSeq("f_()/g_()<=h_() <- (f_()*(1/g_())<=h_()) & g_()!=0".asFormula)), QE)
+  lazy val intervalUpDivide = derivedAxiom("Div<= up", Sequent(IndexedSeq(), IndexedSeq("f_()/g_()<=h_() <- (f_()*(1/g_())<=h_()) & g_()!=0".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "./g_()<=h_() <- (.*(1/g_())<=h_()) & g_()!=0".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (x/.<=h_() <- (x*(1/.)<=h_()) & .!=0)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (x/y<=. <- (x*(1/y)<=.) & y!=0)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x (x/y<=z <- (x*(1/y)<=z) & y!=0)".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "<=+ down".
@@ -1943,7 +2099,14 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalDownPlus = derivedAxiom("<=+ down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()+g_() <- ((F_()<=f_() & G_()<=g_()) & h_()<=F_()+G_())".asFormula)), QE)
+  lazy val intervalDownPlus = derivedAxiom("<=+ down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()+g_() <- ((F_()<=f_() & G_()<=g_()) & h_()<=F_()+G_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "h_()<=.+g_() <- ((F_()<=. & G_()<=g_()) & h_()<=F_()+G_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (h_()<=x+. <- ((F_()<=x & G_()<=.) & h_()<=F_()+G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (.<=x+y <- ((F_()<=x & G_()<=y) & .<=F_()+G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall z \\forall y \\forall x (z<=x+y <- ((.<=x & G_()<=y) & z<=.+G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "G_()".asTerm)::("x_".asTerm, "Y".asTerm)::("p(.)".asFormula, "\\forall X \\forall z \\forall y \\forall x (z<=x+y <- ((X<=x & .<=y) & z<=X+.))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x+y <- ((X<=x & Y<=y) & z<=X+Y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "<=- down".
@@ -1951,7 +2114,14 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalDownMinus = derivedAxiom("<=- down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()-g_() <- ((F_()<=f_() & g_()<=G_()) & h_()<=F_()-G_())".asFormula)), QE)
+  lazy val intervalDownMinus = derivedAxiom("<=- down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()-g_() <- ((F_()<=f_() & g_()<=G_()) & h_()<=F_()-G_())".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "h_()<=.-g_() <- ((F_()<=. & g_()<=G_()) & h_()<=F_()-G_())".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (h_()<=x-. <- ((F_()<=x & .<=G_()) & h_()<=F_()-G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (.<=x-y <- ((F_()<=x & y<=G_()) & .<=F_()-G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall z \\forall y \\forall x (z<=x-y <- ((.<=x & y<=G_()) & z<=.-G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "G_()".asTerm)::("x_".asTerm, "Y".asTerm)::("p(.)".asFormula, "\\forall X \\forall z \\forall y \\forall x (z<=x-y <- ((X<=x & y<=.) & z<=X-.))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x-y <- ((X<=x & y<=Y) & z<=X-Y))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "<=* down".
@@ -1959,7 +2129,16 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalDownTimes = derivedAxiom("<=* down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()*g_()<- ((ff_()<=f_() & f_()<=F_() & gg_()<=g_() & g_()<=G_()) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_()))".asFormula)), QE)
+  lazy val intervalDownTimes = derivedAxiom("<=* down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()*g_()<- ((ff_()<=f_() & f_()<=F_() & gg_()<=g_() & g_()<=G_()) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "h_()<=.*g_()<- ((ff_()<=. & .<=F_() & gg_()<=g_() & g_()<=G_()) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (h_()<=x*.<- ((ff_()<=x & x<=F_() & gg_()<=. & .<=G_()) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_())))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (.<=x*y<- ((ff_()<=x & x<=F_() & gg_()<=y & y<=G_()) & (.<=ff_()*gg_() & .<=ff_()*G_() & .<=F_()*gg_() & .<=F_()*G_())))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall z \\forall y \\forall x (z<=x*y<- ((ff_()<=x & x<=. & gg_()<=y & y<=G_()) & (z<=ff_()*gg_() & z<=ff_()*G_() & z<=.*gg_() & z<=.*G_())))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "G_()".asTerm)::("x_".asTerm, "Y".asTerm)::("p(.)".asFormula, "\\forall X \\forall z \\forall y \\forall x (z<=x*y<- ((ff_()<=x & x<=X & gg_()<=y & y<=.) & (z<=ff_()*gg_() & z<=ff_()*. & z<=X*gg_() & z<=X*.)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "ff_()".asTerm)::("x_".asTerm, "xx".asTerm)::("p(.)".asFormula, "\\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x*y<- ((.<=x & x<=X & gg_()<=y & y<=Y) & (z<=.*gg_() & z<=.*Y & z<=X*gg_() & z<=X*Y)))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "gg_()".asTerm)::("x_".asTerm, "yy".asTerm)::("p(.)".asFormula, "\\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x*y<- ((xx<=x & x<=X & .<=y & y<=Y) & (z<=xx*. & z<=xx*Y & z<=X*. & z<=X*Y)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x*y<- ((xx<=x & x<=X & yy<=y & y<=Y) & (z<=xx*yy & z<=xx*Y & z<=X*yy & z<=X*Y)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "<=1Div down".
@@ -1967,7 +2146,12 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalDown1Divide = derivedAxiom("<=1Div down", Sequent(IndexedSeq(), IndexedSeq("h_()<=1/f_() <- ((f_()<=F_() & F_()*f_()>0) & (h_()<=1/F_()))".asFormula)), QE)
+  lazy val intervalDown1Divide = derivedAxiom("<=1Div down", Sequent(IndexedSeq(), IndexedSeq("h_()<=1/f_() <- ((f_()<=F_() & F_()*f_()>0) & (h_()<=1/F_()))".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "h_()<=1/. <- ((.<=F_() & F_()*.>0) & (h_()<=1/F_()))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (.<=1/x <- ((x<=F_() & F_()*x>0) & (.<=1/F_())))".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "F_()".asTerm)::("x_".asTerm, "X".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (y<=1/x <- ((x<=. & .*x>0) & (y<=1/.)))".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall X \\forall y \\forall x (y<=1/x <- ((x<=X & X*x>0) & (y<=1/X)))".asFormula, TactixLibrary.RCF))
+  )
 
   /**
    * {{{Axiom "<=Div down".
@@ -1975,5 +2159,10 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val intervalDownDivide = derivedAxiom("<=Div down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()/g_() <- h_()<=f_()*(1/g_()) & g_()!=0".asFormula)), QE)
+  lazy val intervalDownDivide = derivedAxiom("<=Div down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()/g_() <- h_()<=f_()*(1/g_()) & g_()!=0".asFormula)),
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "f_()".asTerm)::("x_".asTerm, "x".asTerm)::("p(.)".asFormula, "h_()<=./g_() <- h_()<=.*(1/g_()) & g_()!=0".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "g_()".asTerm)::("x_".asTerm, "y".asTerm)::("p(.)".asFormula, "\\forall x (h_()<=x/. <- h_()<=x*(1/.) & .!=0)".asFormula)::Nil))(1) &
+    useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("f()".asTerm, "h_()".asTerm)::("x_".asTerm, "z".asTerm)::("p(.)".asFormula, "\\forall y \\forall x (.<=x/y <- .<=x*(1/y) & y!=0)".asFormula)::Nil))(1) &
+    byUS(proveBy("\\forall z \\forall y \\forall x (z<=x/y <- z<=x*(1/y) & y!=0)".asFormula, TactixLibrary.RCF))
+  )
 }
