@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomIndex, Context, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomIndex, AxiomInfo, Context, RandomFormula}
 import testHelper.CustomAssertions._
 
 /**
@@ -26,14 +26,14 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
 
 
   private def matchDirect(axiom: String, instance: Formula): Boolean = {
-    val ax: Formula = Provable.axiom(axiom)
+    val ax: Formula = AxiomInfo(axiom).formula
     val u = unify(ax, instance)
     u(ax) shouldBe instance
     true
   }
 
   private def matchKey(axiom: String, instance: Formula): Boolean = {
-    val ax: Formula = Provable.axiom(axiom)
+    val ax: Formula = AxiomInfo(axiom).formula
     val (keyCtx:Context[_],keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
     val u = unify(keyPart, instance)
     u(keyPart) shouldBe instance
@@ -49,6 +49,9 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   it should "instantiate [:=] assign 2" in {
     matchDirect("[:=] assign", "[x:=2*x+1;]x^3>=9*x <-> (2*x+1)^3>=9*(2*x+1)".asFormula)
   }
+  it should "instantiate [:=] assign 3" in {
+    matchDirect("[:=] assign", "[x:=x+1;]x^2>=9 <-> (x+1)^2>=9".asFormula)
+  }
   it should "instantiate [++]" in {
     matchDirect("[++] choice", "[x:=x+1;++{x:=0;{y'=-2}}]x>=y <-> [x:=x+1;]x>=y & [x:=0;{y'=-2}]x>=y".asFormula)
   }
@@ -57,6 +60,10 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   }
   it should "instantiate [*]" in {
     matchDirect("[*] iterate", "[{x:=x+1;{x:=0;{y'=-2}}}*]x>=y <-> x>=y & [x:=x+1;{x:=0;{y'=-2}}][{x:=x+1;{x:=0;{y'=-2}}}*]x>=y".asFormula)
+  }
+
+  it should "instantiate [:=] assign exists" in {
+    matchDirect("[:=] assign exists", "[y:=22*x+y;]x>=y -> \\exists y x>=y".asFormula)
   }
 
   "Unification" should "instantiate some schematic axioms" in {
@@ -81,7 +88,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-        if (Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
+        if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
           val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
             rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
           }
@@ -103,7 +110,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
         val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-          rand.nextSchematicInstance(Provable.axiom(ax), randomComplexity)
+          rand.nextSchematicInstance(AxiomInfo(ax).formula, randomComplexity)
         }
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
