@@ -198,18 +198,18 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove max" in withMathematica { implicit qeTool => check(maxDef)}
 
   "Derived Rule" should "prove allG" in withMathematica { implicit qeTool => allGeneralize.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(??)".asFormula))
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
   it should "prove CT" in withMathematica { implicit qeTool => CTtermCongruence.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(??) = g_(??)".asFormula))
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
   it should "prove [] monotone" in withMathematica { implicit qeTool => boxMonotone.fact.subgoals shouldBe List(
-      Sequent(immutable.IndexedSeq("p_(??)".asFormula), immutable.IndexedSeq("q_(??)".asFormula))
+      Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 
   it should "prove [] monotone 2" in withMathematica { implicit qeTool => boxMonotone2.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq("q_(??)".asFormula), immutable.IndexedSeq("p_(??)".asFormula))
+    Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 }
