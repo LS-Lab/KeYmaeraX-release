@@ -183,7 +183,7 @@ private[core] object AxiomBase {
     //assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
-    // soundness-critical that these are for p() not for p(x) or p(??)
+    // soundness-critical that these are for p() not for p(x) or p(||)
     assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
     true
