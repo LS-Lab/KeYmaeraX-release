@@ -38,7 +38,7 @@ object DerivedAxioms {
   /** A Provable proving the derived axiom/rule named id (convenience) */
   def derivedAxiomOrRule(name: String): Provable = {
     val lemmaName = DerivationInfo(name).codeName
-    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
+    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.")
     derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
   }
 
@@ -50,7 +50,7 @@ object DerivedAxioms {
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = AxiomInfo(name).codeName
-    val lemma = Lemma(fact, evidence, Some(lemmaName))
+    val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
     } else {
@@ -72,7 +72,7 @@ object DerivedAxioms {
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = DerivedRuleInfo(name).codeName
-    val lemma = Lemma(fact, evidence, Some(lemmaName))
+    val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
     } else {
@@ -133,7 +133,20 @@ object DerivedAxioms {
     //@note lazy vals have a "hidden" getter method that does the initialization
     val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
-    fieldMirrors.foreach(_()) //@note accessing the lazy getters adds lemmas to DB as side effect
+
+    var failures = 0
+    Range(0, fieldMirrors.length-1).map(idx => {
+      try{
+        fieldMirrors(idx)()
+      } catch {
+        case e: Throwable => {
+          failures = failures + 1
+          println("WARNING: Failed to add derived lemma.");
+          e.printStackTrace()
+        }
+      }
+    })
+    throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedLemmas deatabase.")
   }
 
   // derived rules

@@ -290,6 +290,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     val correctedInput = normalizeNewlines(input)
     if (DEBUG) println("LEX: " + correctedInput)
     val output = lex(correctedInput, SuffixRegion(1,1), mode)
+    require(!output.exists(x => x.tok == ANYTHING), "output should not contain ??")
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
     output
   }
@@ -331,20 +332,21 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
           loc = nextLoc
         case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
           output.append(Token(EOF, loc))
-          return output.to
+          return replaceAnything(output).to
       }
     }
     output.append(Token(EOF, loc))
+    replaceAnything(output).to
+  }
 
-    //Replace all instances of LPAREN,ANYTHING,RPAREN with LBANANA,RBANANA.
-    var anything = output.find(x => x.tok == ANYTHING)
-    while(anything.nonEmpty) {
-      val pos = output.indexOf(anything.get)
-      assert(output(pos).tok == ANYTHING)
-      output = output.patch(pos-1, Token(LBANANA, anything.get.loc) :: Token(RBANANA, anything.get.loc) :: Nil, 3)
-      anything = output.find(x => x.tok == ANYTHING)
+  /** Replace all instances of LPAREN,ANYTHING,RPAREN with LBANANA,RBANANA. */
+  private def replaceAnything(output: scala.collection.mutable.ListBuffer[Token]): scala.collection.mutable.ListBuffer[Token] = {
+    output.find(x => x.tok == ANYTHING) match {
+      case None => output
+      case Some(anyTok) =>
+        val pos = output.indexOf(anyTok)
+        replaceAnything(output.patch(pos-1, Token(LBANANA, anyTok.loc) :: Token(RBANANA, anyTok.loc) :: Nil, 3))
     }
-    output.to
   }
 
   /**
