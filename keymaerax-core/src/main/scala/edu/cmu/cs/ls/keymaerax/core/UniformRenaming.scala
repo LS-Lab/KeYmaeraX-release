@@ -112,6 +112,7 @@ sealed trait Renaming extends (Expression => Expression) {
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
     case Nothing | DotTerm                => term
+    case _: UnitFunctional => term
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))
@@ -131,6 +132,7 @@ sealed trait Renaming extends (Expression => Expression) {
     case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case DotFormula         => if (semanticRenaming) DotFormula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case True | False       => formula
+    case _: UnitPredicational => formula
 
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeFormula => f.reapply(rename(f.left), rename(f.right))
