@@ -358,8 +358,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           partial)
         partial)
       partial)
-  /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
-  def RCF: BelleExpr = QE
+
+  /** Real-closed field arithmetic on a single formula */
+  def RCF: BelleExpr = ToolTactics.rcf
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
   //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -369,7 +370,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       //@todo eqLeft|eqRight for equality rewriting directionally toward easy
       //| (la(TacticLibrary.eqThenHideIfChanged)*)
       | betaRule)*@TheType())
-      | RCF)
+      | QE)
 
 
   // Global Utility Functions

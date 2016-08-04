@@ -26,7 +26,7 @@ object ToolTactics {
       alphaRule*@TheType() &
       varExhaustiveEqL2R('L)*@TheType() &
       tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
-      Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool)) &
+      Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
       DebuggingTactics.assertProved
   )}
   def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
@@ -37,9 +37,24 @@ object ToolTactics {
   def partialQE(implicit qeTool: QETool) = {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
-      toSingleFormula & qeSuccedentHd(qeTool)
+      toSingleFormula & rcf(qeTool)
     )
   }
+
+  /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
+  def rcf(implicit qeTool: QETool) = "RCF" by ((sequent: Sequent) => {
+    assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
+    require(sequent.succ.head.isFOL, "QE only on FOL formulas")
+
+    //Run QE and extract the resulting provable and equivalence
+    val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
+    val Equiv(_, result) = qeFact.conclusion.succ.head
+
+    ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
+      (close | skip) partial,
+      equivifyR(1) & commuteEquivR(1) & by(qeFact)
+      )
+  })
 
   /**
    * Transforms the FOL formula at position 'pos' into the formula 'to'. Uses QE to prove the transformation correct.
@@ -106,21 +121,4 @@ object ToolTactics {
   private def tryClosePredicate: DependentPositionTactic = "Try close predicate" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(p@PredOf(_, _)) => closeId | (hide(pos) partial)
   })
-
-  /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  private def qeSuccedentHd(qeTool : QETool) = new SingleGoalDependentTactic("QE") {
-    override def computeExpr(sequent: Sequent): BelleExpr  = {
-      assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
-      require(sequent.succ.head.isFOL, "QE only on FOL formulas")
-
-      //Run QE and extract the resulting provable and equivalence
-      val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
-      val Equiv(_, result) = qeFact.conclusion.succ.head
-
-      ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
-        (close | skip) partial,
-        equivifyR(1) & commuteEquivR(1) & by(qeFact)
-      )
-    }
-  }
 }
