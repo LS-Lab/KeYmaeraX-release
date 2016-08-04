@@ -810,14 +810,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "<?> test".
-    *    <?H();>p() <-> (H() & p())
+    *    <?q();>p() <-> (q() & p())
     * End.
     * }}}
     *
     * @Derived
     */
   lazy val testdAxiom = derivedAxiom("<?> test",
-    Sequent(IndexedSeq(), IndexedSeq("<?H_();>p_() <-> (H_() & p_())".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<?q_();>p_() <-> (q_() & p_())".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[?] test")(1, 0::0::Nil) &
       prop
@@ -1320,7 +1320,7 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "DW differential weakening".
-    *    [{c&H(||)}]p(||) <-> ([{c&H(||)}](H(||)->p(||)))
+    *    [{c&q(||)}]p(||) <-> ([{c&q(||)}](q(||)->p(||)))
     *    /* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
     * End.
     * }}}
@@ -1328,10 +1328,10 @@ object DerivedAxioms {
     * @see footnote 3 in "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
     */
   lazy val DWeakening = derivedAxiom("DW differential weakening",
-    Sequent(IndexedSeq(), IndexedSeq("[{c_&H_(||)}]p_(||) <-> ([{c_&H_(||)}](H_(||)->p_(||)))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[{c_&q_(||)}]p_(||) <-> ([{c_&q_(||)}](q_(||)->p_(||)))".asFormula)),
     equivR(1) <(
       /* equiv left */
-      cut("[{c_&H_(||)}](p_(||)->(H_(||)->p_(||)))".asFormula) <(
+      cut("[{c_&q_(||)}](p_(||)->(q_(||)->p_(||)))".asFormula) <(
         /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(close, close),
         /* show */ cohide(2) & G & prop
         ),
@@ -1342,14 +1342,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "DI differential invariance".
-    *  ([{c&H(||)}]p(||) <-> [?H(||);]p(||)) <- (H(||) -> [{c&H(||)}]((p(||))'))
+    *  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
     *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY
     * End.
     * }}}
     *
     * @Derived
     */
-  private lazy val DIinvarianceF = "([{c&H(||)}]p(||) <-> [?H(||);]p(||)) <- (H(||) -> [{c&H(||)}]((p(||))'))".asFormula
+  private lazy val DIinvarianceF = "([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))".asFormula
   lazy val DIinvariance = derivedAxiom("DI differential invariance",
     Sequent(IndexedSeq(), IndexedSeq(DIinvarianceF)),
     implyR(1) & equivR(1) <(
@@ -1365,7 +1365,7 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "DI differential invariant".
-    *    [{c&H(||)}]p(||) <- (H(||)-> (p(||) & [{c&H(||)}]((p(||))')))
+    *    [{c&q(||)}]p(||) <- (q(||)-> (p(||) & [{c&q(||)}]((p(||))')))
     *    // [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY
     * End.
     * }}}
@@ -1373,7 +1373,7 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val DIinvariant = derivedAxiom("DI differential invariant",
-    Sequent(IndexedSeq(), IndexedSeq("[{c&H(||)}]p(||) <- (H(||)-> (p(||) & [{c&H(||)}]((p(||))')))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[{c&q(||)}]p(||) <- (q(||)-> (p(||) & [{c&q(||)}]((p(||))')))".asFormula)),
     implyR(1) & useAt(implyDistAndAxiom, PosInExpr(0::Nil))(-1) & andL(-1) &
       useAt("[?] test", PosInExpr(1::Nil))(-1) &
       cut(DIinvarianceF) <(
@@ -1385,14 +1385,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "DX diamond differential skip".
-    *    <{c&H(||)}>p(||) <- H(||)&p(||)
+    *    <{c&q(||)}>p(||) <- q(||)&p(||)
     * End.
     * }}}
     *
     * @Derived
     */
   lazy val Dskipd = derivedAxiom("DX diamond differential skip",
-    Sequent(IndexedSeq(), IndexedSeq("<{c&H(||)}>p(||) <- H(||)&p(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<{c&q(||)}>p(||) <- q(||)&p(||)".asFormula)),
     useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(notAnd)(1, 0::0::Nil) &
       useAt(implyExpand, PosInExpr(1::Nil))(1, 0::0::Nil) &
@@ -1470,14 +1470,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "DG differential pre-ghost".
-    *    [{c&H(||)}]p(||) <-> \exists y [{y'=(t()*y)+s(),c&H(||)}]p(||)
+    *    [{c&q(||)}]p(||) <-> \exists y [{y'=(t()*y)+s(),c&q(||)}]p(||)
     *    // [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY
     * End.
     * }}}
     * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
     */
   lazy val DGpreghost = derivedAxiom("DG differential pre-ghost",
-    Sequent(IndexedSeq(), IndexedSeq("[{c&H(||)}]p(||) <-> \\exists y_ [{y_'=(t()*y_)+s(),c&H(||)}]p(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[{c&q(||)}]p(||) <-> \\exists y_ [{y_'=(t()*y_)+s(),c&q(||)}]p(||)".asFormula)),
     useAt("DG differential ghost")(1, 0::Nil) &
       useAt(", commute")(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
@@ -1885,7 +1885,7 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "<'> stuck".
-    *    <{c&H(||)}>p(||) <-> <{c&H(||)}>p(||)
+    *    <{c&q(||)}>p(||) <-> <{c&q(||)}>p(||)
     * End.
     * }}}
     *
@@ -1893,7 +1893,7 @@ object DerivedAxioms {
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
   lazy val odeStuck = derivedAxiom("<'> stuck",
-    Sequent(IndexedSeq(), IndexedSeq("<{c_&H_(||)}>p_(||) <-> <{c_&H_(||)}>p_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<{c_&q_(||)}>p_(||) <-> <{c_&q_(||)}>p_(||)".asFormula)),
     byUS(equivReflexiveAxiom)
   )
 
