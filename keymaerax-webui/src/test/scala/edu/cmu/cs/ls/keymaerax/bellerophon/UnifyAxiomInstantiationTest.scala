@@ -18,8 +18,8 @@ import testHelper.CustomAssertions._
 class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
-  val randomTrials = 10
-  val randomComplexity = 8
+  val randomTrials = 100
+  val randomComplexity = 4
   val rand = new RandomFormula()
 
   val unify = UnificationMatch
@@ -62,6 +62,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   "Unification" should "instantiate some schematic axioms" in {
   }
 
+  // random schematic instantiations
 
   private val schematicAxioms = "<> diamond" :: "[++] choice" :: "[;] compose" :: "[*] iterate" ::
     "DW" :: "DC differential cut" :: "DE differential effect (system)" :: "DI differential invariance" ::
@@ -73,9 +74,30 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     "all dual" :: "all eliminate" :: "exists eliminate" ::
     Nil
 
-  "Unification" should "instantiate schematic axioms to random schematic instantiations" in {
+  "Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
     for (ax <- schematicAxioms) {
+      println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
+        val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
+          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+        if (Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
+          val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
+            rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
+          }
+
+          withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+            matchKey(ax, inst)
+          }
+        }
+      }
+    }
+  }
+
+  it should "instantiate full schematic axioms to random schematic instantiations" in {
+    for (ax <- schematicAxioms) {
+      println("Axiom " + ax)
+      for (i <- 1 to randomTrials/100) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
@@ -89,5 +111,4 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
       }
     }
   }
-
 }
