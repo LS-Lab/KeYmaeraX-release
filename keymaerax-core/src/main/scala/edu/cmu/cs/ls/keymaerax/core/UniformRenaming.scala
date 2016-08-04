@@ -15,22 +15,6 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 
 /**
-  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
-  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
-  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
-  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
-  * @param what What variable to replace (along with its associated DifferentialSymbol).
-  * @param repl The target variable to replace `what` with and vice versa.
-  * @author Andre Platzer
-  * @author smitsch
-  * @see [[UniformRenaming]]
-  */
-final case class URename(what: Variable, repl: Variable) extends Renaming {
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  private[core] override val semanticRenaming: Boolean = true
-}
-
-/**
   * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa, but clash for program constants etc.
   * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
   * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
@@ -39,31 +23,12 @@ final case class URename(what: Variable, repl: Variable) extends Renaming {
   * @param repl The target variable to replace `what` with and vice versa.
   * @author Andre Platzer
   * @author smitsch
+  * @see [[UniformRenaming]]
   * @see [[BoundRenaming]]
   */
-final case class SyntacticURename(what: Variable, repl: Variable) extends Renaming {
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  //@note for bound renaming purposes semanticRenaming absolutely has to be false
-  private[core] override val semanticRenaming: Boolean = false
-}
-
-/**
-  * Base version for uniformly renaming all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
-  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
-  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
-  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
-  * @author Andre Platzer
-  * @author smitsch
- */
-sealed trait Renaming extends (Expression => Expression) {
+final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
   insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
-  /** What variable to replace (along with its associated DifferentialSymbol). */
-  val what: Variable
-  /** The target variable to replace `what` with and vice versa */
-  val repl: Variable
 
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  private[core] val semanticRenaming: Boolean
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
   private[core] val TRANSPOSITION: Boolean = true
 
@@ -112,7 +77,7 @@ sealed trait Renaming extends (Expression => Expression) {
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
     case Nothing | DotTerm                => term
-    case _: UnitFunctional => term
+    case _: UnitFunctional                => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))
@@ -130,9 +95,9 @@ sealed trait Renaming extends (Expression => Expression) {
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
     case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
-    case DotFormula         => if (semanticRenaming) DotFormula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case DotFormula         => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case _: UnitPredicational => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case True | False       => formula
-    case _: UnitPredicational => formula
 
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeFormula => f.reapply(rename(f.left), rename(f.right))
@@ -163,7 +128,7 @@ sealed trait Renaming extends (Expression => Expression) {
   }
 
   private def rename(program: Program): Program = program match {
-    case a: ProgramConst             => if (semanticRenaming) a else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
+    case a: ProgramConst             => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
     case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
@@ -181,8 +146,8 @@ sealed trait Renaming extends (Expression => Expression) {
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
-    //@todo check if Taboo is what or repl
-    case c: DifferentialProgramConst => if (semanticRenaming) c else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)      // homomorphic cases
+    case c: DifferentialProgramConst => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)
+    // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
   }
 }

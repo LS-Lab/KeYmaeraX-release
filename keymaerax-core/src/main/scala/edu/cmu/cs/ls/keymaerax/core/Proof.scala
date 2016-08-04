@@ -1100,6 +1100,7 @@ object UniformRenaming {
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
+  //@note soundness-critical: For uniform renaming purposes semantic renaming would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   private[this] val renaming: URename = URename(what, repl)
 
   override def toString: String = renaming.toString
@@ -1123,7 +1124,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   val name: String = "Bound Renaming"
 
   //@note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
-  private[this] val renaming = SyntacticURename(what, repl)
+  private[this] val renaming = URename(what, repl)
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
