@@ -41,7 +41,20 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     true
   }
 
-  "Unification instantiation sample" should "instantiate <>" in {
+  "Unification key instantiation sample" should "instantiate <>" in {
+    matchKey("<> diamond", "![x:=x+1;{x'=55}]!x>=99".asFormula)
+  }
+
+  it should "instantiate [:=] assign 1" in {
+    matchKey("[:=] assign", "[x:=z;]x^2>=9".asFormula)
+  }
+
+  it should "instantiate [++]" in {
+    matchKey("[++] choice", "[x:=x+1;++{x:=0;{y'=-2}}]x>=y".asFormula)
+  }
+
+
+  "Unification full instantiation sample" should "instantiate <>" in {
     matchDirect("<> diamond", "![x:=x+1;{x'=55}]!x>=99 <-> <x:=x+1;{x'=55}>x>=99".asFormula)
   }
   it should "instantiate [:=] assign 1" in {
