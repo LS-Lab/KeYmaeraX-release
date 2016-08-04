@@ -213,7 +213,7 @@ private[core] object AxiomBase {
  */
 
 Axiom "<> diamond".
-  (![a;](!p(||))) <-> <a;>p(||)
+  ![a;]!p(||) <-> <a;>p(||)
 End.
 
 Axiom "[:=] assign".
@@ -272,38 +272,39 @@ End.
 
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
-  /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
+  /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
   [{x_'=f(x_)&q(x_)}]p(||) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(||)
 End.
 
 Axiom "DE differential effect (system)".
-  /* @NOTE Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot verbatim mention differentials/differential symbols */
-  /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
+  /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
+  /* @note Completeness: reassociate needed in DifferentialProduct data structures */
   [{x_'=f(||),c&H(||)}]p(||) <-> [{c,x_'=f(||)&H(||)}][x_':=f(||);]p(||)
 End.
 
 Axiom "DI differential invariant".
-  [{c&H(||)}]p(||) <- (H(||)-> (p(||) & [{c&H(||)}]((p(||))')))
-/* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY */
+  [{c&H(||)}]p(||) <- (H(||)-> (p(||) & [{c&H(||)}](p(||))'))
+/* [x'=f(x)&q(x);]p(x) <- (q(x) -> p(x) & [x'=f(x)&q(x);]((p(x))')) THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DG differential ghost".
-  [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(||)}]p(||)
+  [{c(|y_|)&H(|y_|)}]p(|y_|) <-> \exists y_ [{c(|y_|),y_'=(a(|y_|)*y_)+b(|y_|)&H(|y_|)}]p(|y_|)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
-/* Less general version of DG differential ghost that ghosts in a time variable which DS can remove without additional rewriting. */
+/* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
 Axiom "DG differential ghost constant".
-  [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
+  [{c(|y_|)&H(|y_|)}]p(|y_|) <-> \exists y_ [{c(|y_|),y_'=g(y_)&H(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost system".
-  ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
+  [{x_'=f(|y_|),c(|y_|)&H(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(|y_|),x_'=f(|y_|),c(|y_|)&H(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost".
-  ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
+  /* [{x_'=f(x_)&H(x_)}]p(x_)  ->  \forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_) */
+  [{x_'=f(|y_|)&H(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&H(|y_|)}]p(|y_|)
 End.
 
 /* Formatter axioms for diff eqs. */
@@ -331,31 +332,31 @@ Axiom "x' derive var".
 End.
 
 Axiom "-' derive neg".
-  (-f(||))' = -(f(||)')
+  (-f(||))' = -((f(||))')
 End.
 
 Axiom "+' derive sum".
-  (f(||) + g(||))' = (f(||)') + (g(||)')
+  (f(||) + g(||))' = ((f(||))') + ((g(||))')
 End.
 
 Axiom "-' derive minus".
-  (f(||) - g(||))' = (f(||)') - (g(||)')
+  (f(||) - g(||))' = ((f(||))') - ((g(||))')
 End.
 
 Axiom "*' derive product".
-  (f(||) * g(||))' = ((f(||)')*g(||)) + (f(||)*(g(||)'))
+  (f(||) * g(||))' = (((f(||))')*g(||)) + (f(||)*((g(||))'))
 End.
 
 Axiom "/' derive quotient".
-  (f(||) / g(||))' = (((f(||)')*g(||)) - (f(||)*(g(||)'))) / (g(||)^2)
+  (f(||) / g(||))' = ((((f(||))')*g(||)) - (f(||)*((g(||))'))) / (g(||)^2)
 End.
 
 Axiom "chain rule".
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_)') * (g(x_)') )
+	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = ((f(y_))') * ((g(x_))') )
 End.
 
 Axiom "^' derive power".
-	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- (c() != 0)
+	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- (c() != 0)
 End.
 
 /**
@@ -437,7 +438,7 @@ End.
  */
 
 Axiom "all dual".
-  (!\exists x_ (!p(||))) <-> (\forall x_ p(||))
+  (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
 Axiom /*\\foralli */ "all instantiate".
@@ -450,7 +451,7 @@ Axiom "all eliminate".
 End.
 
 Axiom "exists eliminate".
-  p(||) -> (\exists x_ p(||))
+  p(||) -> \exists x_ p(||)
 End.
 
 Axiom "vacuous all quantifier".
