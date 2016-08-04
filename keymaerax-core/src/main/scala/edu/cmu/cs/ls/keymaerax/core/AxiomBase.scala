@@ -152,6 +152,7 @@ private[core] object AxiomBase {
     val gany = UnitFunctional("g", AnyArg, Real)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
+    val ode = DifferentialProgramConst("c", AnyArg)
 
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
@@ -169,9 +170,14 @@ private[core] object AxiomBase {
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
     // Figure 3
-   /* assert(axs("DC differential cut") == Imply(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(r,x)),
-      Equiv(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(p,x)),
-        Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), And(PredOf(q,x), PredOf(r,x))), PredOf(p,x)))), "DC differential cut") */
+    assert(axs("DW") == Box(ODESystem(ode, qany), qany), "DW")
+    assert(axs("DC differential cut") == Imply(Box(ODESystem(ode, qany), UnitPredicational("r",AnyArg)),
+      Equiv(Box(ODESystem(ode, qany), pany),
+        Box(ODESystem(ode, And(qany,UnitPredicational("r",AnyArg))), pany))), "DC differential cut")
+    assert(axs("DE differential effect") == Equiv(
+      Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
+      Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(DiffAssign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))
+    ), "DE differential effect")
     assert(axs("DG differential ghost") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
@@ -289,9 +295,9 @@ Axiom "DE differential effect (system)".
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
-Axiom "DI differential invariant".
-  [{c&q(||)}]p(||) <- (q(||)-> (p(||) & [{c&q(||)}](p(||))'))
-/* [x'=f(x)&q(x);]p(x) <- (q(x) -> p(x) & [x'=f(x)&q(x);]((p(x))')) THEORY */
+Axiom "DI differential invariance".
+  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
+/* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */

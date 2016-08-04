@@ -556,7 +556,7 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   override def kind: Kind = ProgramKind
 }
 /** Uninterpreted differential program constant, limited to the given state space. */
-sealed case class DifferentialProgramConst(name: String, space: Space) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
+sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
 }
 
