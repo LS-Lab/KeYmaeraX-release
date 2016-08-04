@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
@@ -25,6 +26,16 @@ object FOQuantifierTactics {
           } else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
     }
   }
+
+  /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
+  def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = "all instantiate inverse" by ((pos: Position, sequent: Sequent) => {
+    def allInstI(t: Term, v: Variable): DependentPositionTactic = "all instantiate inverse single" by ((pos: Position, sequent: Sequent) => {
+      val fml = sequent.sub(pos) match { case Some(fml: Formula) => fml }
+      useAt("all instantiate", PosInExpr(1::Nil),
+        (us: Subst) => RenUSubst(("f()".asTerm, t)::("x_".asTerm, v)::("p(.)".asFormula, fml.replaceFree(t, DotTerm))::Nil))(pos)
+    })
+    what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+  })
 
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     new DependentPositionTactic("all instantiate") {
