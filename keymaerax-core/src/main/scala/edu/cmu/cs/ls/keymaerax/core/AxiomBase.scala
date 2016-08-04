@@ -173,10 +173,10 @@ private[core] object AxiomBase {
       Equiv(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(p,x)),
         Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), And(PredOf(q,x), PredOf(r,x))), PredOf(p,x)))), "DC differential cut") */
     assert(axs("DG differential ghost") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("H",Except(y))), UnitPredicational("p",Except(y))),
+      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
         AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
-      ), UnitPredicational("H",Except(y))), UnitPredicational("p",Except(y))))
+      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
     ), "DG differential ghost")
 
     assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
@@ -268,12 +268,12 @@ End.
  */
 
 Axiom "DW".
-  [{c&H(||)}]H(||)
+  [{c&q(||)}]q(||)
 /* [x'=f(x)&q(x);]q(x) THEORY */
 End.
 
 Axiom "DC differential cut".
-  ([{c&H(||)}]p(||) <-> [{c&(H(||)&r(||))}]p(||)) <- [{c&H(||)}]r(||)
+  ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)
 /* ([x'=f(x)&q(x);]p(x) <-> [x'=f(x)&(q(x)&r(x));]p(x)) <- [x'=f(x)&q(x);]r(x) THEORY */
 End.
 
@@ -286,37 +286,37 @@ End.
 Axiom "DE differential effect (system)".
   /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
   /* @note Completeness: reassociate needed in DifferentialProduct data structures */
-  [{x_'=f(||),c&H(||)}]p(||) <-> [{c,x_'=f(||)&H(||)}][x_':=f(||);]p(||)
+  [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
 Axiom "DI differential invariant".
-  [{c&H(||)}]p(||) <- (H(||)-> (p(||) & [{c&H(||)}](p(||))'))
+  [{c&q(||)}]p(||) <- (q(||)-> (p(||) & [{c&q(||)}](p(||))'))
 /* [x'=f(x)&q(x);]p(x) <- (q(x) -> p(x) & [x'=f(x)&q(x);]((p(x))')) THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DG differential ghost".
-  [{c{|y_|}&H(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&H(|y_|)}]p(|y_|)
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}]p(|y_|)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
 /* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
 Axiom "DG differential ghost constant".
-  [{c{|y_|}&H(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(y_)&H(|y_|)}]p(|y_|)
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(y_)&q(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost system".
-  [{x_'=f(|y_|),c{|y_|}&H(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(|y_|),x_'=f(|y_|),c{|y_|}&H(|y_|)}]p(|y_|)
+  [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(|y_|),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost".
-  /* [{x_'=f(x_)&H(x_)}]p(x_)  ->  \forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_) */
-  [{x_'=f(|y_|)&H(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&H(|y_|)}]p(|y_|)
+  /* [{x_'=f(x_)&q(x_)}]p(x_)  ->  \forall y_ [{y_'=g(||),x_'=f(x_)&q(x_)}]p(x_) */
+  [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
 End.
 
 /* Formatter axioms for diff eqs. */
 Axiom ", commute".
-  [{c,d&H(||)}]p(||) <-> [{d,c&H(||)}]p(||)
+  [{c,d&q(||)}]p(||) <-> [{d,c&q(||)}]p(||)
 End.
 
 Axiom "DS& differential equation solution".
@@ -325,7 +325,7 @@ End.
 
 /** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
 Axiom "DX differential skip".
-  [{c&H(||)}]p(||) -> (H(||)->p(||))
+  [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
 
 /* DIFFERENTIAL AXIOMS FOR TERMS */
