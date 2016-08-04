@@ -149,7 +149,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
 
   private def shouldMatch(e1: Expression, e2: Expression, us: RenUSubst): Unit = shouldMatch(e1, e2, Some(us))
 
-  private val semanticRenaming = UnificationMatch("quark(??)".asFormula, "quarks=6".asFormula).isInstanceOf[URenAboveUSubst]
+  private val semanticRenaming = UnificationMatch("quark(||)".asFormula, "quarks=6".asFormula).isInstanceOf[URenAboveUSubst]
 
 
   "New unification match" should "unify renaming and instance 3*f(x)>2 and 5*x>2" in {
@@ -311,8 +311,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
         (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) :: Nil))
   }
 
-  it should "unify renaming and instance [y:=y;]p(??) and [y_0:=y_0;](y_0>77&true)" in {
-    shouldMatch("[y:=y;]p(??)".asFormula,
+  it should "unify renaming and instance [y:=y;]p(||) and [y_0:=y_0;](y_0>77&true)" in {
+    shouldMatch("[y:=y;]p(||)".asFormula,
       "[y_0:=y_0;](y_0>77&true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "(y>77&true)").asFormula) ::
@@ -320,8 +320,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]p(??)<->p(??) and [y_0:=y_0;](true)<->(true)" in {
-    shouldMatch("[y:=y;]p(??)<->p(??)".asFormula,
+  it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](true)<->(true)" in {
+    shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
       "[y_0:=y_0;](true)<->(true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), "(true)".asFormula) ::
@@ -376,8 +376,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0=1)<->[y_0:=y_0;](y_0=1)" ignore {
-    shouldMatch("p(??)<->[y:=y;]p(??)".asFormula,
+  it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0=1)<->[y_0:=y_0;](y_0=1)" ignore {
+    shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
       "(y_0=1)<->[y_0:=y_0;](y_0=1)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0=1)" else "y=1").asFormula) ::
@@ -385,8 +385,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]p(??)<->p(??) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
-    shouldMatch("[y:=y;]p(??)<->p(??)".asFormula,
+  it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
+    shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
       "[y_0:=y_0;](y_0=0)<->(y_0=0)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0=0)" else "y=0").asFormula) ::
@@ -394,8 +394,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (true)<->[y_0:=y_0;](true)" in {
-    shouldMatch("p(??)<->[y:=y;]p(??)".asFormula,
+  it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (true)<->[y_0:=y_0;](true)" in {
+    shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
       "(true)<->[y_0:=y_0;](true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), "(true)".asFormula) ::
@@ -403,8 +403,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
-    shouldMatch("p(??)<->[y:=y;]p(??)".asFormula,
+  it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
+    shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
       "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "y>77&true").asFormula) ::
@@ -412,8 +412,8 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]p(??)<->p(??) and [y_0:=y_0;](y_0>77&true)<->(y_0>77&true)" in {
-    shouldMatch("[y:=y;]p(??)<->p(??)".asFormula,
+  it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0>77&true)<->(y_0>77&true)" in {
+    shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
       "[y_0:=y_0;](y_0>77&true)<->(y_0>77&true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "y>77&true").asFormula) ::
@@ -422,7 +422,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "unify renaming and long instance" in {
-    shouldMatch("[x_:=x_;]p(??)<->p(??)".asFormula,
+    shouldMatch("[x_:=x_;]p(||)<->p(||)".asFormula,
       "[x_0:=x_0;](((x_0>0&true)&true)&true->(2>=0|false)|false)<->((x_0>0&true)&true)&true->(2>=0|false)|false".asFormula, RenUSubst(
       (Variable("x_"), Variable("x",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(((x_0>0&true)&true)&true->(2>=0|false)|false)" else "(((x_>0&true)&true)&true->(2>=0|false)|false)").asFormula) ::
@@ -431,7 +431,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "match abstract loop against loopy single ODE" in {
-    shouldMatch("[{a;}*]p(??)".asFormula,
+    shouldMatch("[{a;}*]p(||)".asFormula,
       "[{{x'=v}}*](v>=0&true)".asFormula, RenUSubst(
         (ProgramConst("a"), "{x'=v}".asProgram) ::
           (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
@@ -439,7 +439,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "match abstract loop against loopy ODE system " in {
-    shouldMatch("[{a;}*]p(??)".asFormula,
+    shouldMatch("[{a;}*]p(||)".asFormula,
       "[{{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
       (ProgramConst("a"), "{x'=v,v'=A}".asProgram) ::
         (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
@@ -447,7 +447,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "match abstract loop against loopy ODE system with domain" in {
-    shouldMatch("[{a;}*]p(??)".asFormula,
+    shouldMatch("[{a;}*]p(||)".asFormula,
       "[{{x'=v,v'=A&v<=5}}*](v>=0&true)".asFormula, RenUSubst(
         (ProgramConst("a"), "{x'=v,v'=A&v<=5}".asProgram) ::
           (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
@@ -455,7 +455,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "match abstract loop against loopy initialized ODE" in {
-    shouldMatch("[{a;}*]p(??)".asFormula,
+    shouldMatch("[{a;}*]p(||)".asFormula,
       "[{v:=5;{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
         (ProgramConst("a"), "v:=5;{x'=v,v'=A}".asProgram) ::
           (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
@@ -463,7 +463,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "match derived powers" in {
-    shouldMatch("(f(??)^(c()))'".asTerm,
+    shouldMatch("(f(||)^(c()))'".asTerm,
       "(x^2)'".asTerm, RenUSubst(
         (UnitFunctional("f", AnyArg, Real), "x".asTerm) ::
           (FuncOf(Function("c", None, Unit, Real), Nothing), "2".asTerm) :: Nil

@@ -92,7 +92,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers {
 
   "Power" should "give useful location information" in {
     //@note imbalanced parentheses, should still not forget where EOF is
-    val ex = the [ParseException] thrownBy "((f(??)^(c()))'".asTerm
+    val ex = the [ParseException] thrownBy "((f(||)^(c()))'".asTerm
     ex.getMessage should include ("unmatched: :LPAREN$ at 1:1")
     ex.getMessage should include ("Found:    EOF$ at 1:16")
   }

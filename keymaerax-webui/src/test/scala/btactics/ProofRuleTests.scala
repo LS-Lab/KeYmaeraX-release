@@ -13,11 +13,11 @@ class ProofRuleTests extends TacticTestBase {
 
   "Axiomatic" should "support axiomatic rules" in {
     val result = proveBy(
-      Sequent(immutable.IndexedSeq("[a_;]p_(??)".asFormula), immutable.IndexedSeq("[a_;]q_(??)".asFormula)),
+      Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
       TactixLibrary.by("[] monotone", USubst(Nil)))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "p_(??)".asFormula
-    result.subgoals.head.succ should contain only "q_(??)".asFormula
+    result.subgoals.head.ante should contain only "p_(||)".asFormula
+    result.subgoals.head.succ should contain only "q_(||)".asFormula
   }
 
   it should "use the provided substitution for axiomatic rules" in {
@@ -26,8 +26,8 @@ class ProofRuleTests extends TacticTestBase {
       TactixLibrary.by("[] monotone",
         USubst(
           SubstitutionPair(ProgramConst("a_"), Test("x>5".asFormula))::
-          SubstitutionPair("p_(??)".asFormula, "x>2".asFormula)::
-          SubstitutionPair("q_(??)".asFormula, "x>0".asFormula)::Nil)))
+          SubstitutionPair("p_(||)".asFormula, "x>2".asFormula)::
+          SubstitutionPair("q_(||)".asFormula, "x>0".asFormula)::Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>2".asFormula
     result.subgoals.head.succ should contain only "x>0".asFormula

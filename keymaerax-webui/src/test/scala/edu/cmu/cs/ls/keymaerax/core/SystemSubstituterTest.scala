@@ -22,7 +22,7 @@ class SystemSubstituterTest extends TacticTestBase {
 
 
   "Substituting into systems" should "not allow primes in ODEs for DE" in {
-    // [{x_'=f(??),c&H(??)}]p(??) <-> [{c,x_'=f(??)&H(??)}][x_':=f(??);]p(??)
+    // [{x_'=f(||),c&H(||)}]p(||) <-> [{c,x_'=f(||)&H(||)}][x_':=f(||);]p(||)
     val pr = Provable.axioms("DE differential effect (system)")
 
     pr shouldBe 'proved
@@ -35,7 +35,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   "System postconditions" should "not allow ghosts in postconditions of DG differential ghost" in {
-    // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
+    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -48,7 +48,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG differential ghost constant" in {
-    // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
+    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -60,7 +60,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost for y_=9 -> [{y_'=5,x_'=3}]y_=9" in {
-    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
+    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
     val pr = Provable.axioms("DG inverse differential ghost")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -80,7 +80,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost system" in {
-    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -93,7 +93,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost system for y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9" in {
-    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -107,7 +107,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost system System for y_<=m() -> [{y_'=x_,x_'=-b(),t'=1}]y_<=m()" in {
-    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -122,7 +122,7 @@ class SystemSubstituterTest extends TacticTestBase {
 
 
   "System ODEs" should "not allow ghosts in ODEs of DG differential ghost" in {
-    // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
+    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -136,7 +136,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in ODEs of DG differential ghost constant" in {
-    // [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=g()&H(??)}]p(??)
+    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
@@ -149,7 +149,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in ODEs of DG inverse differential ghost for y_>=0 -> \\forall y_ [{y_'=5,x_'=y_}]x_>=0" in {
-    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(x_)}]p(x_))
+    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
     val pr = Provable.axioms("DG inverse differential ghost")
     println(pr)
     pr shouldBe 'proved
@@ -170,7 +170,7 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in ODEs of DG inverse differential ghost system for y_>=0 -> \\forall y_ [{y_'=5,x_'=y_,t'=1}]x_>=0" in {
-    // ([{x_'=f(??),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(??),c&H(??)}]p(??))
+    // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
