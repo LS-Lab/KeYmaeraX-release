@@ -18,7 +18,8 @@ import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 class SystemSubstituterTest extends TacticTestBase {
   import TactixLibrary._
 
-  private val cAnyArg = DifferentialProgramConst("c", AnyArg)
+  private val ode = DifferentialProgramConst("c", AnyArg)
+  private val y = Variable("y_",None,Real)
 
 
   "Substituting into systems" should "not allow primes in ODEs for DE" in {
@@ -29,33 +30,31 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), "y'+1".asTerm) ::
       SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
+      SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "x'=3".asFormula) ::
       Nil))}
   }
 
   "System postconditions" should "not allow ghosts in postconditions of DG differential ghost" in {
-    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
+      SubstitutionPair(UnitFunctional("a",Except(y),Real), Number(0)) ::
+      SubstitutionPair(UnitFunctional("a",Except(y),Real), Number(0)) ::
+      SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
+      SubstitutionPair(DifferentialProgramConst("c",Except(y)), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(UnitPredicational("p",Except(y)), "y_=0".asFormula) ::
       Nil))}
   }
 
   it should "not allow ghosts in postconditions of DG differential ghost constant" in {
-    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
     a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(0)) ::
-      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
-      SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
+      SubstitutionPair(UnitFunctional("g",Except(y),Real), Number(0)) ::
+      SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
+      SubstitutionPair(DifferentialProgramConst("c",Except(y)), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(UnitPredicational("p",Except(y)), "y_=0".asFormula) ::
       Nil))}
   }
 
@@ -87,7 +86,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(0)) ::
       SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(0)) ::
       SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
       Nil))}
   }
@@ -100,7 +99,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
       SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
       SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-      SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+      SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
       Nil))}
     //@todo should not prove y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9 by using such a DG inverse differential ghost system
@@ -114,7 +113,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), "-b()".asTerm) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Variable("x_",None,Real)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-        SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
+        SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "y_<=m()".asFormula) ::
         Nil))}
     //@todo should not prove this formula by using such a DG inverse differential ghost system
@@ -177,7 +176,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
-        SubstitutionPair(cAnyArg, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
         Nil))}
     //@todo should not prove
