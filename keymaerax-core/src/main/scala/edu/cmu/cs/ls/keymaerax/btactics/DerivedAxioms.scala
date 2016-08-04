@@ -51,7 +51,7 @@ object DerivedAxioms {
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = AxiomInfo(name).codeName
-    val lemma = Lemma(fact, evidence, Some(lemmaName))
+    val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
     } else {
@@ -73,7 +73,7 @@ object DerivedAxioms {
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = DerivedRuleInfo(name).codeName
-    val lemma = Lemma(fact, evidence, Some(lemmaName))
+    val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
     } else {
