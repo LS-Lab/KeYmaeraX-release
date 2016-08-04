@@ -116,7 +116,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *
   * it is enough to point to the highlighted position
   * using the "<> diamond" axiom fact
-  * `  ![a;]!p(??) <-> __⟨a;⟩p(??)__ `
+  * `  ![a;]!p(||) <-> __⟨a;⟩p(||)__ `
   * at the highlighted position to reduce the proof to a proof of
   *
   * `  !__[v:=2*v+1;]!(v!=0)__ <-> 2*v+1!=0 `
@@ -218,7 +218,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * `  x>5 |- !(__[x:=x+1; ++ x:=0;]x>=6__) | x<2 `
   *
   * and using the "[++] choice" axiom fact
-  * `  __[a;++b;]p(??)__ <-> [a;]p(??) & [b;]p(??) `
+  * `  __[a;++b;]p(||)__ <-> [a;]p(||) & [b;]p(||) `
   * to reduce the proof to a proof of
   *
   * `  x>5 |- !([x:=x+1;]x>6 & [x:=0;]x>=6) | x<2 `

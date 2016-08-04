@@ -40,9 +40,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** G: Gödel generalization rule reduces a proof of `|- [a]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
-    *       p(??)
+    *       p(||)
     *   ----------- G
-    *    [a]p(??)
+    *    [a]p(||)
     * }}}
     * The more flexible and more general rule [[monb]] with p(x)=True gives `G` using [[boxTrue]].
     * @note Unsound for hybrid games

@@ -28,16 +28,16 @@ object DLBySubst {
 
   /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
-    *       p(??)
+    *       p(||)
     *   ----------- G
-    *    [a;]p(??)
+    *    [a;]p(||)
     * }}}
     *
     * @see [[monb]] with p(x)=True
     * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
     */
   lazy val G: BelleExpr = {
-    val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
+    val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(||)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
     if (isGame)
       USubstPatternTactic(
@@ -110,7 +110,7 @@ object DLBySubst {
   }
 
   /**
-   * Introduces a self assignment [x:=x;]p(??) in front of p(??).
+   * Introduces a self assignment [x:=x;]p(||) in front of p(||).
     *
     * @param x The self-assigned variable.
    * @return The tactic.
@@ -184,7 +184,7 @@ object DLBySubst {
 
   /**
    * Box assignment by substitution assignment [v:=t();]p(v) <-> p(t()) (preferred),
-   * or by equality assignment [x:=f();]p(??) <-> \forall x (x=f() -> p(??)) as a fallback.
+   * or by equality assignment [x:=f();]p(||) <-> \forall x (x=f() -> p(||)) as a fallback.
    * Universal quantifiers are skolemized if applied at top-level in the succedent; they remain unhandled in the
    * antecedent and in non-top-level context.
     *
@@ -489,7 +489,7 @@ object DLBySubst {
     */
   def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(??)")
+    require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
     val alast = AntePosition(sequent.ante.length)
     cutR(invariant)(pos.checkSucc.top) <(
       ident partial(BelleLabels.initCase)

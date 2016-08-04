@@ -318,14 +318,14 @@ object AxiomaticODESolver {
         val y_ = firstODE(ode)
         val x_ = secondODE(ode)
 
-        /* Note: Constructing our own substitution because the default substitution seems to get at least g(??) wrong. */
+        /* Note: Constructing our own substitution because the default substitution seems to get at least g(||) wrong. */
         def subst(r: RenUSubst) = {
           RenUSubst(USubst(
-              "g(??)".asTerm ~> y_.e ::
-              "f(??)".asTerm ~> x_.e ::
-              "H(??)".asFormula ~> r("H(??)".asFormula) ::
+              "g(||)".asTerm ~> y_.e ::
+              "f(||)".asTerm ~> x_.e ::
+              "H(||)".asFormula ~> r("H(||)".asFormula) ::
               DifferentialProgramConst("c", AnyArg) ~> r(DifferentialProgramConst("c", AnyArg)) ::
-              "p(??)".asFormula ~> r("p(??)".asFormula) ::
+              "p(||)".asFormula ~> r("p(||)".asFormula) ::
               Nil)) ++
           RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++
           RenUSubst(URename("x_".asTerm.asInstanceOf[Variable], x_.xp.x))
