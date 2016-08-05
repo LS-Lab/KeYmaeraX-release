@@ -16,10 +16,15 @@ import scala.collection.immutable._
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
   * where the Variable~>Variable replacements are by uniform renaming,
   * and the other replacements are by uniform substitution, simultaneously.
+  *
+  * @note This implementation performs semantic renaming.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+  * @see [[MultiRename]]
   */
+//@todo admissibility needs to be augmented with renamed variables too for soundness.
+//@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.
 final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   insist(subsDefsInput.forall(sp => sp._1.kind == sp._2.kind), "Substitution renaming only to expressions of the same kind: " + this)
   insist(subsDefsInput.forall(sp => sp._1.sort == sp._2.sort), "Substitution renaming only to expressions of the same sort: " + this)

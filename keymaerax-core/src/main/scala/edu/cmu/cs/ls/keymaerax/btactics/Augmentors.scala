@@ -70,7 +70,8 @@ object Augmentors {
       pos
     }
 
-    def ~>(other: Term) = SubstitutionPair(term, other)
+    /** The substitution pair `this~>other`. */
+    def ~>(other: Term): SubstitutionPair = SubstitutionPair(term, other)
   }
 
   /**
@@ -173,7 +174,8 @@ object Augmentors {
       result
     }
 
-    def ~>(repl: Formula) = SubstitutionPair(fml,repl)
+    /** The substitution pair `this~>other`. */
+    def ~>(repl: Formula): SubstitutionPair = SubstitutionPair(fml,repl)
   }
 
   /**
@@ -190,7 +192,8 @@ object Augmentors {
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
 
-    def ~>(repl: Program) = SubstitutionPair(prog,repl)
+    /** The substitution pair `this~>other`. */
+    def ~>(repl: Program): SubstitutionPair = SubstitutionPair(prog,repl)
   }
 
   /**
