@@ -33,7 +33,7 @@ object UnificationMatch extends FreshUnificationMatch
   */
 trait Matcher extends ((Expression,Expression) => RenUSubst) {
   /** Check result of unification for being a valid unifier/matcher */
-  private[bellerophon] val REVERIFY = false
+  private[bellerophon] val REVERIFY = BelleExpr.RECHECK
 
   //  type Subst = USubst
   //  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
@@ -41,7 +41,7 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) {
   //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
 
   type Subst = RenUSubst
-  //@todo .distinct may slow things down. Necessary all the time?
+  //@todo performance .distinct may slow things down. Necessary all the time?
   protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
   type SubstRepl = Tuple2[Expression,Expression]
   protected def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
@@ -444,7 +444,7 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
   */
 private final object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
-  override private[keymaerax] val REVERIFY = false
+  override private[keymaerax] val REVERIFY = BelleExpr.RECHECK
   // Always skip unifiers except variables, which are handled by unifyVar
   override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id ensuring (r => !e1.isInstanceOf[Variable])
   // Create unifiers for variables even if all others are skipped above
@@ -464,7 +464,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   */
 class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
   require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")
-  override private[bellerophon] val REVERIFY = false
+  override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
   // pass 1
   private val renUMatcher = RenUnificationMatch
   // pass 2
@@ -499,7 +499,7 @@ class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
 
 class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   require(!RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming NO semantic renaming")
-  override private[bellerophon] val REVERIFY = false
+  override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
   // pass 1
   private val usubstUMatcher = new UnificationMatchBase {
     // partial so can't REVERIFY
