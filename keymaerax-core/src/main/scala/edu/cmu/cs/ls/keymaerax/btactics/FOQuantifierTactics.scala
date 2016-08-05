@@ -31,7 +31,10 @@ object FOQuantifierTactics {
   def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = "all instantiate inverse" by ((pos: Position, sequent: Sequent) => {
     def allInstI(t: Term, v: Variable): DependentPositionTactic = "all instantiate inverse single" by ((pos: Position, sequent: Sequent) => {
       val fml = sequent.sub(pos) match { case Some(fml: Formula) => fml }
-      useAt("all instantiate")(pos)
+      useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(
+        ("x_".asTerm, v) ::
+        ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
+        ("p(.)".asFormula, fml.replaceFree(t, DotTerm)) :: Nil))(pos)
     })
     what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
