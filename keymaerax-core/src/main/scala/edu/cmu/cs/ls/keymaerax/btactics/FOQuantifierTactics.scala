@@ -17,15 +17,15 @@ import scala.language.postfixOps
 object FOQuantifierTactics {
   /** Proves exists by duality from universal base tactic */
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
-      new DependentPositionTactic("existsByDuality") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(provable: Provable): BelleExpr =
-        useAt("exists dual", PosInExpr(1::Nil))(pos) &
+    "existsByDuality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(Exists(vars, p)) =>
+        require(vars.size == 1, "Exists by duality does not support block quantifiers")
+        val v = vars.head
+        useAt("exists dual", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("x_".asTerm, v)::(UnitPredicational("p_", AnyArg), p.replaceAll(v, "x_".asTerm))::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
           } else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
-    }
-  }
+    })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
   def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = "all instantiate inverse" by ((pos: Position, sequent: Sequent) => {
