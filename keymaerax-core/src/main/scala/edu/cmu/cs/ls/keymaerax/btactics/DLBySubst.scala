@@ -121,9 +121,7 @@ object DLBySubst {
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
         cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) &
-          byUS("[:=] self assign", (us: Subst) => RenUSubst(
-            ("x_".asTerm, x) ::
-            (UnitPredicational("p", AnyArg), f.replaceAll(x, "x_".asVariable)) :: Nil))
+          byUS("[:=] self assign")
       )
   })
 
@@ -222,18 +220,11 @@ object DLBySubst {
     "[:=] assign" by ((pos: Position) => (assign(pos) partial) | (assignSelf(pos) partial) | (assignEquational(pos) partial))
 
   lazy val assignSelf = "[:=] assign self" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Box(Assign(x, t), p)) if x == t =>
-      useAt("[:=] self assign", (us: Subst) => RenUSubst(
-        ("x_".asTerm, x) ::
-        (UnitPredicational("p", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
+    case Some(Box(Assign(x, t), p)) if x == t => useAt("[:=] self assign")(pos)
   })
 
   lazy val assign = "[:=] assign" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(fml@Box(Assign(x, t), p)) =>
-      useAt("[:=] assign", (us: Subst) => RenUSubst(
-        ("x_".asTerm, x) ::
-        ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) ::
-        ("p(.)".asFormula, p.replaceFree(x, DotTerm).replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
+    case Some(fml@Box(Assign(x, t), p)) => useAt("[:=] assign")(pos)
   })
 
   lazy val assignEquational = assignEquality
@@ -265,10 +256,7 @@ object DLBySubst {
   lazy val assignEquality: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     // [x:=f(x)]P(x)
     case Some(fml@Box(Assign(x, t), p)) =>
-      useAt("[:=] assign equality", (us: Subst) => RenUSubst(
-        ("x_".asTerm, x) ::
-        ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) ::
-        (UnitPredicational("p", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))(pos) &
+      useAt("[:=] assign equality")(pos) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
 
       //@note standalone version without contextual bound renaming
@@ -511,10 +499,7 @@ object DLBySubst {
           val ghost = ghostV(f)
           cutLR(ctx(Box(Assign(ghost, t), f.replaceFree(t, ghost))))(pos.topLevel) <(
             /* use */ ident,
-            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign", (us: Subst) => RenUSubst(
-              ("x_".asTerm, ghost) ::
-              ("f()".asTerm, t.replaceFree(ghost, "x_".asTerm)) ::
-              ("p(.)".asFormula, f.replaceFree(t, DotTerm).replaceAll(ghost, "x_".asTerm)) :: Nil))
+            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
             )
       }
     }
@@ -545,10 +530,7 @@ object DLBySubst {
       val x = vars.head
       cutR(Box(Assign(x, f), p))(pos.checkSucc.top) <(
         skip,
-        cohide(pos.top) & byUS("[:=] assign exists", (us: Subst) => RenUSubst(
-          ("x_".asTerm, x) ::
-          ("f_()".asTerm, f.replaceFree(x, "x_".asTerm)) ::
-          (UnitPredicational("p_", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))
+        cohide(pos.top) & byUS("[:=] assign exists")
         )
   })
 }
