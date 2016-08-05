@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 
 object BelleExpr {
   private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private[keymaerax] val RECHECK = System.getProperty("DEBUG", "true")=="true"
 }
 
 /**

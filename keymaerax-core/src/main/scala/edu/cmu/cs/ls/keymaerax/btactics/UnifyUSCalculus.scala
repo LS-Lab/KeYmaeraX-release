@@ -328,12 +328,13 @@ trait UnifyUSCalculus {
         val (ctx,expr) = sequent.at(pos)
         val subst = inst(UnificationMatch(keyPart, expr))
         if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
-        Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  which is " + keyPart + " instantiated by " + subst)
+        Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
       }
     }
-    private[this] val RECHECK = true
+    //@note performance impact
+    private[this] val RECHECK = BelleExpr.RECHECK
 
     /**
       * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
