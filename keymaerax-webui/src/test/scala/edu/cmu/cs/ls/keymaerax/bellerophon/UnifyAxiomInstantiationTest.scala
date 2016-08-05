@@ -100,7 +100,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   }
 
   it should "[:=] assign 2" in {
-    matchDirect("[:=] assign", "[y:=1;][y:=2+y;]y>0 <-> [y:=2+y;]y>0".asFormula)
+    matchDirect("[:=] assign", "[y:=1;][y:=2+y;]y>0 <-> [y:=2+1;]y>0".asFormula)
   }
 
   it should "[:=] assign 3" in {
