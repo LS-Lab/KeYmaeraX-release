@@ -17,7 +17,7 @@ import scala.collection.immutable._
   *
   * Performs semantic renaming, i.e. leaves program constants etc. unmodified.
   * @author Andre Platzer
-  * @see [[URename]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   */
 final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (Expression => Expression) {
   insist(rens.forall(sp => sp._1.sort == sp._2.sort), "Uniform renaming only to variables of the same sort: " + this)
