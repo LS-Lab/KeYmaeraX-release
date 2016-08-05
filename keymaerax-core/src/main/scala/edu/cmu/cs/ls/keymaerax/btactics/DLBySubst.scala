@@ -145,7 +145,7 @@ object DLBySubst {
             val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
                   DebuggingTactics.print("Foo") & selfAssign(x0)(pos) & DebuggingTactics.print("Bar") & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
-                    eqR2L(-1)(pos.topLevel) & assignSelf(pos.topLevel) & hide(-1)
+                    eqR2L(-1)(pos.topLevel) & useAt("[:=] self assign")(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
 
@@ -214,20 +214,10 @@ object DLBySubst {
    *    -----------------------------------------------------------------assignb(1, 1::Nil)
    *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
    * }}}
-   * @see [[assignEquational]]
+   * @see [[assignEquality]]
    */
   lazy val assignb: DependentPositionTactic =
-    "[:=] assign" by ((pos: Position) => (assign(pos) partial) | (assignSelf(pos) partial) | (assignEquational(pos) partial))
-
-  lazy val assignSelf = "[:=] assign self" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Box(Assign(x, t), p)) if x == t => useAt("[:=] self assign")(pos)
-  })
-
-  lazy val assign = "[:=] assign" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(fml@Box(Assign(x, t), p)) => useAt("[:=] assign")(pos)
-  })
-
-  lazy val assignEquational = assignEquality
+    "[:=] assign" by ((pos: Position) => (useAt("[:=] assign")(pos) partial) | (useAt("[:=] self assign")(pos) partial) | (assignEquality(pos) partial))
 
   /**
     * Equality assignment to a fresh variable.
@@ -258,28 +248,6 @@ object DLBySubst {
     case Some(fml@Box(Assign(x, t), p)) =>
       useAt("[:=] assign equality")(pos) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
-
-      //@note standalone version without contextual bound renaming
-//      // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
-//      val brenL = core.BoundRenaming(x, y, AntePos(0))
-//      val brenR = core.BoundRenaming(x, y, SuccPos(0))
-//      val mod = brenR(fml) ensuring(r => r==brenL(fml), "bound renaming for formula is independent of position")
-//      // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
-//      val side: Provable = useFor("[:=] assign equality")(Position(1, 0::Nil)) (Provable.startProof(Equiv(mod, fml))
-//        // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
-//      (EquivRight(SuccPos(0)), 0)
-//        // right branch  [x:=f(x)]P(x) |- [y:=f(x)]P(y)
-//        (brenL, 1)
-//        // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
-//        (Close(AntePos(0), SuccPos(0)), 1)
-//        // left branch  [y:=f(x)]P(y) |- [x:=f(x)]P(x)
-//        (brenR, 0)
-//        // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
-//        (Close(AntePos(0), SuccPos(0)), 0)
-//      )
-//      //@todo optimize? It might perhaps maybe be possible to optimize this at pos.isTopLevel but needs care not to ruin the context
-//      TactixLibrary.CEat(side)(pos) &
-//      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
   })
 
   /**

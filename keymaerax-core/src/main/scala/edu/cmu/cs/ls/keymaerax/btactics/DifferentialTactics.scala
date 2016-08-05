@@ -283,7 +283,7 @@ object DifferentialTactics {
         val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
           val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
           (old -> ghost,
-            discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquational(pos))
+            discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
         })
         ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
       }
@@ -412,7 +412,7 @@ object DifferentialTactics {
   def diffGhost(y: Variable, a: Term, b: Term, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
     DG(y,a,b)(pos) &
     DLBySubst.assignbExists(initialValue)(pos) &
-    DLBySubst.assignEquational(pos)
+    DLBySubst.assignEquality(pos)
   })
 
   def DG(ghost: Program, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
@@ -423,7 +423,7 @@ object DifferentialTactics {
 
     DG(y, a, b)(pos) &
         DLBySubst.assignbExists(iv)(pos) &
-        DLBySubst.assignEquational(pos)
+        DLBySubst.assignEquality(pos)
   })
 
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
@@ -548,12 +548,12 @@ object DifferentialTactics {
       val introTime =
           DG(time, "0".asTerm, "1".asTerm)(pos) &
             DLBySubst.assignbExists("0".asTerm)(pos) &
-            DLBySubst.assignEquational(pos)
+            DLBySubst.assignEquality(pos)
 
       def createTactic(ode: ODESystem, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                        diffEqPos: SeqPos): BelleExpr = {
         val initialGhosts = (primedSymbols(ode.ode) + time).foldLeft(skip)((a, b) =>
-          a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
+          a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquality(diffEqPos)))
 
         // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
         val flatSolution = flattenConjunctions(solution).
