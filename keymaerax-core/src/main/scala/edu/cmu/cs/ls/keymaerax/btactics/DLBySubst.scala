@@ -552,9 +552,13 @@ object DLBySubst {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
         case (ctx, f: Formula) =>
           //def g(f: Formula) = Equiv(Box(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f))), f)
-          cutLR(ctx(Box(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f)))))(pos.topLevel) <(
+          val ghost = ghostV(f)
+          cutLR(ctx(Box(Assign(ghost, t), f.replaceFree(t, ghost))))(pos.topLevel) <(
             /* use */ ident,
-            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
+            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign", (us: Subst) => RenUSubst(
+              ("x_".asTerm, ghost) ::
+              ("f()".asTerm, t.replaceFree(ghost, "x_".asTerm)) ::
+              ("p(.)".asFormula, f.replaceFree(t, DotTerm).replaceAll(ghost, "x_".asTerm)) :: Nil))
             )
       }
     }
