@@ -38,6 +38,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     val (keyCtx:Context[_],keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
     val u = unify(keyPart, instance)
     u(keyPart) shouldBe instance
+    u.toCore(keyPart) shouldBe instance
     true
   }
 

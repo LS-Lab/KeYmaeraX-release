@@ -41,7 +41,7 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) {
   //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
 
   type Subst = RenUSubst
-  //@todo performance .distinct may slow things down. Necessary all the time?
+  //@todo .distinct may slow things down. Necessary all the time?
   protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
   type SubstRepl = Tuple2[Expression,Expression]
   protected def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)

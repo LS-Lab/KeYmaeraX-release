@@ -137,6 +137,9 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable
 
+  /** This RenUSubst implemented strictly from the core. */
+  def toCore: Expression => Expression
+
   /** The first step that will be performed first toward the bottom of the proof. */
   private[bellerophon] def firstFlush: RenUSubst
 
@@ -202,6 +205,8 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
+
+  def toCore = throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[bellerophon] def firstFlush: RenUSubst = renaming
 
@@ -273,6 +278,12 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
+  def toCore: Expression => Expression = e => {
+    val replaced = usubst(e)
+    // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
+    rens.foldLeft(replaced)((expr,sp)=>URename(sp._1,sp._2)(expr))
+  }
+
   private[bellerophon] def firstFlush: RenUSubst = renaming
 
   override def toString: String = super.toString + "DirectUSubstAboveRen"
@@ -321,6 +332,8 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
     /*UniformSubstitutionRule.UniformSubstitutionRuleForward*/
       (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }
+
+  def toCore = throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[bellerophon] def firstFlush: RenUSubst = substitution
 
