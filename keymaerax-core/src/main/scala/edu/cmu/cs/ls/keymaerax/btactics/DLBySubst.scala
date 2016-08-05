@@ -246,7 +246,10 @@ object DLBySubst {
   lazy val assignEquality: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     // [x:=f(x)]P(x)
     case Some(fml@Box(Assign(x, t), p)) =>
+      val y = TacticHelper.freshNamedSymbol(x, sequent)
+      ProofRuleTactics.boundRenaming(x, y)(pos) &
       useAt("[:=] assign equality")(pos) &
+      ProofRuleTactics.uniformRenaming(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
   })
 
