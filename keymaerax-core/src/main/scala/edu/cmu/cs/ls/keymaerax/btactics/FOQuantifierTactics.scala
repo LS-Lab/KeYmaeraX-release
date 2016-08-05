@@ -17,22 +17,21 @@ import scala.language.postfixOps
 object FOQuantifierTactics {
   /** Proves exists by duality from universal base tactic */
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
-      new DependentPositionTactic("existsByDuality") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(provable: Provable): BelleExpr =
+    "existsByDuality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(Exists(vars, p)) =>
+        require(vars.size == 1, "Exists by duality does not support block quantifiers")
+        val v = vars.head
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
           } else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
-    }
-  }
+    })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
   def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = "all instantiate inverse" by ((pos: Position, sequent: Sequent) => {
     def allInstI(t: Term, v: Variable): DependentPositionTactic = "all instantiate inverse single" by ((pos: Position, sequent: Sequent) => {
       val fml = sequent.sub(pos) match { case Some(fml: Formula) => fml }
-      useAt("all instantiate", PosInExpr(1::Nil),
-        (us: Subst) => RenUSubst(("f()".asTerm, t)::("x_".asTerm, v)::("p(.)".asFormula, fml.replaceFree(t, DotTerm))::Nil))(pos)
+      useAt("all instantiate")(pos)
     })
     what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
@@ -49,8 +48,10 @@ object FOQuantifierTactics {
             val t = inst(vars)
             val p = forall(qf)
 
+            val assign = Box(Assign(x, t), p)
+
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
-            ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
+            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos) partial,
               cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
               )

@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable}
+import edu.cmu.cs.ls.keymaerax.core.{AnyArg, Formula, Provable, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{FlatSpec, Matchers}
@@ -37,7 +37,11 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     val ax: Formula = AxiomInfo(axiom).formula
     val (keyCtx:Context[_],keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
     val u = unify(keyPart, instance)
+    println("unify1:  " + keyPart)
+    println("unify2:  " + instance)
+    println("unifier: " + u)
     u(keyPart) shouldBe instance
+    u.toCore(keyPart) shouldBe instance
     true
   }
 
@@ -51,6 +55,16 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
 
   it should "instantiate [:=] assign equality 1" in {
     matchKey("[:=] assign equality", "[x:=1;][x:=2;]x>0".asFormula)
+  }
+
+  it should "instantiate [:=] assign equality 2" in {
+    matchKey("[:=] assign equality", "[x:=1;][{x:=x+1;}*]x>0".asFormula)
+    // it should prepare for renaming transposition
+    unify("[x_:=f();]p(||)".asFormula, "[x:=1;][{x:=x+1;}*]x>0".asFormula) shouldBe RenUSubst(
+      ("x_".asTerm, "x".asVariable) ::
+      ("f()".asTerm, "1".asTerm) ::
+      (UnitPredicational("p", AnyArg), "[{x_:=x_+1;}*]x_>0".asFormula) :: Nil
+    )
   }
 
   it should "instantiate [++]" in {
@@ -69,8 +83,11 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   it should "instantiate [:=] assign 3" in {
     matchDirect("[:=] assign", "[x:=x+1;]x^2>=9 <-> (x+1)^2>=9".asFormula)
   }
-  it should "instantiate [:=] assign equality" in {
+  it should "instantiate [:=] assign equality 1" in {
     matchDirect("[:=] assign equality", "[y:=22*x+y0;]x>=y <-> \\forall y (y=22*x+y0 -> x>=y)".asFormula)
+  }
+  it should "instantiate [:=] assign equality 2" in {
+    matchDirect("[:=] assign equality", "[x:=1;][{x:=x+1;}*]x>0 <-> \\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula)
   }
   it should "instantiate [++]" in {
     matchDirect("[++] choice", "[x:=x+1;++{x:=0;{y'=-2}}]x>=y <-> [x:=x+1;]x>=y & [x:=0;{y'=-2}]x>=y".asFormula)

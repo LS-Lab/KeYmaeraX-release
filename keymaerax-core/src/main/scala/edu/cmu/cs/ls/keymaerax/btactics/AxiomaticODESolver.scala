@@ -125,7 +125,7 @@ object AxiomaticODESolver {
       case Box(_,_) => {
         HilbertCalculus.DGC(t, Number(1))(modalityPos) &
         DLBySubst.assignbExists(Number(0))(modalityPos) &
-        DLBySubst.assignEquational(modalityPos)
+        DLBySubst.assignEquality(modalityPos)
       }
       case Diamond(_,_) => throw noDiamondsForNowExn
     }

@@ -33,7 +33,7 @@ object UnificationMatch extends FreshUnificationMatch
   */
 trait Matcher extends ((Expression,Expression) => RenUSubst) {
   /** Check result of unification for being a valid unifier/matcher */
-  private[bellerophon] val REVERIFY = false
+  private[bellerophon] val REVERIFY = BelleExpr.RECHECK
 
   //  type Subst = USubst
   //  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
@@ -104,33 +104,44 @@ trait BaseMatcher extends Matcher {
 
   //@note To circumvent shortcomings of renaming-unaware unification algorithm, the following code unifies for renaming, renames, and then reunifies the renamed outcomes for substitution
   def apply(e1: Term, e2: Term): Subst = {try {
-    unified(e1, e2, Subst(unify(e1, e2)))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Formula, e2: Formula): Subst = {try {
-    unified(e1, e2, Subst(unify(e1, e2)))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Program, e2: Program): Subst = {try {
-    unified(e1, e2, Subst(unify(e1, e2)))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = {try {
-    unified(e1, e2, Subst(unifyODE(e1, e2)))
+    unifier(e1, e2, unifyODE(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
-    Subst(unify(e1, e2))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString     + "\n   with  " + e2.toString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
-  /** Optionally log result to console */
-  protected def unified(e1: Expression, e2: Expression, us: Subst): Subst =
-  {if (DEBUG) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + us); us}
+  /** Create the unifier `us` for e1 and e2. */
+  protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
+    val s = Subst(us)
+    if (DEBUG) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    s
+  }
+
+  /** Create the unifier `us` for e1 and e2. */
+  protected def unifier(e1: Sequent, e2: Sequent, us: List[SubstRepl]): Subst = {
+    val s = Subst(us)
+    if (DEBUG) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    s
+  }
+
 
   protected def unify(shape: Term, input: Term): List[SubstRepl]
   protected def unify(shape: Formula, input: Formula): List[SubstRepl]
@@ -407,7 +418,7 @@ class UnificationMatchBase extends SchematicUnificationMatch {
   */
 class FreshUnificationMatch extends SchematicUnificationMatch {
 
-  private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._2.isInstanceOf[Variable])
+  private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._1.isInstanceOf[Variable] && sp._2.isInstanceOf[Variable])
   private def renameIfNeedBe(repl: List[SubstRepl], e: Expression): Expression = {
     val ren = renamingPart(repl)
     if (ren.isEmpty)
@@ -416,7 +427,7 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
       Subst(ren.distinct)(e)
   }
   private def renameAllIfNeedBe(repl: List[SubstRepl], input: List[SubstRepl]): List[SubstRepl] = {
-    val ren = renamingPart(repl)
+    val ren = renamingPart(repl).map({ case (a, b) => (b, a)}) //@note converse renaming to prepare for renaming transposition
     if (ren.isEmpty)
       input
     else {
@@ -430,9 +441,25 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
     * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
-  after ++ renameAllIfNeedBe(after, before)
-    //before ++ renameAllIfNeedBe(before, after)
+  //  after ++ renameAllIfNeedBe(after, before)
+  before ++ renameAllIfNeedBe(before, after)
+
+  protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
+    if (true)
+      Subst(us)
+    else {
+      val ren = MultiRename(RenUSubst.renamingPartOnly(us))
+      Subst(us.map(sp =>
+        if (sp._1.isInstanceOf[UnitPredicational] || sp._1.isInstanceOf[UnitFunctional] ||
+          sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf])
+          (sp._1, ren(sp._2))
+        else
+          sp
+      ))
+    }
+  }
 }
+
 
 /**
   * Unification/matching algorithm for tactics, respecting only renamings.
@@ -444,7 +471,7 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
   */
 private final object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
-  override private[keymaerax] val REVERIFY = false
+  override private[keymaerax] val REVERIFY = BelleExpr.RECHECK
   // Always skip unifiers except variables, which are handled by unifyVar
   override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id ensuring (r => !e1.isInstanceOf[Variable])
   // Create unifiers for variables even if all others are skipped above
@@ -464,7 +491,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   */
 class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
   require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")
-  override private[bellerophon] val REVERIFY = false
+  override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
   // pass 1
   private val renUMatcher = RenUnificationMatch
   // pass 2
@@ -499,7 +526,7 @@ class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
 
 class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   require(!RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming NO semantic renaming")
-  override private[bellerophon] val REVERIFY = false
+  override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
   // pass 1
   private val usubstUMatcher = new UnificationMatchBase {
     // partial so can't REVERIFY

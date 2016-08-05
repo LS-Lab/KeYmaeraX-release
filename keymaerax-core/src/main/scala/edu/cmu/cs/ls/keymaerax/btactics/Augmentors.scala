@@ -70,7 +70,8 @@ object Augmentors {
       pos
     }
 
-    def ~>(other: Term) = SubstitutionPair(term, other)
+    /** The substitution pair `this~>other`. */
+    def ~>(other: Term): SubstitutionPair = SubstitutionPair(term, other)
   }
 
   /**
@@ -99,11 +100,23 @@ object Augmentors {
             override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
               // do not replace with invalid abbreviations in some obvious places
               case Forall(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
+              case Forall(x, q) if x.contains(what) && repl.isInstanceOf[Variable] =>
+                Right(Forall(x.map(v => if (v==what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
               case Exists(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
+              case Exists(x, q) if x.contains(what) && repl.isInstanceOf[Variable] =>
+                Right(Exists(x.map(v => if (v==what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
               case Box(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Box(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Box(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
               case Box(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Box(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Box(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
               case Diamond(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Diamond(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Diamond(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
               case Diamond(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Diamond(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Diamond(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
               case _ => Left(None)
             }
           }, fml) match {
@@ -173,7 +186,8 @@ object Augmentors {
       result
     }
 
-    def ~>(repl: Formula) = SubstitutionPair(fml,repl)
+    /** The substitution pair `this~>other`. */
+    def ~>(repl: Formula): SubstitutionPair = SubstitutionPair(fml,repl)
   }
 
   /**
@@ -190,7 +204,8 @@ object Augmentors {
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
 
-    def ~>(repl: Program) = SubstitutionPair(prog,repl)
+    /** The substitution pair `this~>other`. */
+    def ~>(repl: Program): SubstitutionPair = SubstitutionPair(prog,repl)
   }
 
   /**

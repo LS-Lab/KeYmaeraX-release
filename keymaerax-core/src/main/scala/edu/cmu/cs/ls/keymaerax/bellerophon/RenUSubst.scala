@@ -31,7 +31,7 @@ object RenUSubst {
       map(sp=>(sp.what,sp.repl)))
     def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
-  private def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
+  private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
         map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
           (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable])})
@@ -79,14 +79,12 @@ object RenUSubst {
   */
 sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   /** Returns true if there is no replacement. */
-  def isEmpty = subsDefsNonId.isEmpty
+  def isEmpty = subsDefsInput.isEmpty
 
-  /** Identity replaement no-ops filtered out. */
-  private[bellerophon] final val subsDefsNonId: immutable.Seq[(Expression,Expression)] = subsDefsInput.filter(sp => sp._1!=sp._2  )
   /** Renaming part, with identity renaming no-ops filtered out. */
-  protected final val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsNonId)
+  protected final val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
   /** Substitution part, with identity substitution no-ops filtered out. */
-  protected final val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsNonId.filterNot(sp => sp._1.isInstanceOf[Variable]).
+  protected final val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => try {SubstitutionPair(sp._1, sp._2)} catch {case ex: ProverException => throw ex.inContext("(" + sp._1 + "~>" + sp._2 + ")")})
   } catch {case ex: ProverException => throw ex.inContext("RenUSubst{" + subsDefsInput.mkString(", ") + "}")}
 
@@ -136,6 +134,9 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable
+
+  /** This RenUSubst implemented strictly from the core. */
+  def toCore: Expression => Expression
 
   /** The first step that will be performed first toward the bottom of the proof. */
   private[bellerophon] def firstFlush: RenUSubst
@@ -203,6 +204,8 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
+  def toCore = throw new UnsupportedOperationException("not yet implemented. @todo")
+
   private[bellerophon] def firstFlush: RenUSubst = renaming
 
   override def toString: String = super.toString + "USubstAboveRen"
@@ -258,7 +261,10 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
     * since the core substitution will be above the core renaming in the end. */
   protected val effective: USubstRen = try {
     USubstRen(rens ++
-      (subsDefs.map(sp => try {(sp.what, renall(sp.repl))} catch {case ex: ProverException => throw ex.inContext("(" + sp + ")")}))
+      (subsDefs.map(sp => try {
+        Predef.assert(!(sp.isInstanceOf[Variable]), "already filtered renaming part elsewhere")
+        (sp.what, renall(sp.repl))}
+      catch {case ex: ProverException => throw ex.inContext("(" + sp + ")")}))
     )
   } catch {case ex: ProverException => throw ex.inContext("DirectUSubstAboveURen{" + subsDefsInput.mkString(", ") + "}")}
 
@@ -269,8 +275,16 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
 
   def toForward: Provable => Provable = fact => {
     val replaced = fact(usubst)
+    Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+  }
+
+  def toCore: Expression => Expression = e => {
+    val replaced = usubst(e)
+    Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
+    // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
+    rens.foldLeft(replaced)((expr,sp)=>URename(sp._1,sp._2)(expr))
   }
 
   private[bellerophon] def firstFlush: RenUSubst = renaming
@@ -321,6 +335,8 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
     /*UniformSubstitutionRule.UniformSubstitutionRuleForward*/
       (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }
+
+  def toCore = throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[bellerophon] def firstFlush: RenUSubst = substitution
 

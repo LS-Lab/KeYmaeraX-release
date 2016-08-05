@@ -175,11 +175,16 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not touch other assignments flatly" in {
-    val result = proveBy(Sequent(IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), DLBySubst.assignEquationalOld(1))
+    val result = proveBy(Sequent(IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), DLBySubst.assignb(1))
     println(result)
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0=1".asFormula, "[x:=2;]x=2".asFormula, "x=3".asFormula)
-    result.subgoals.head.succ should contain only ("x>0".asFormula, "[x:=5;]x>6".asFormula, "x_0=7".asFormula)
+    result.subgoals.head.ante should contain only ("x=1".asFormula, "[x:=2;]x=2".asFormula)
+    result.subgoals.head.succ should contain only ("3>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)
+
+    val result2 = proveBy(Sequent(IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), DLBySubst.assignEquality(1))
+    result2.subgoals should have size 1
+    result2.subgoals.head.ante should contain only ("x_0=1".asFormula, "[x:=2;]x=2".asFormula, "x=3".asFormula)
+    result2.subgoals.head.succ should contain only ("x>0".asFormula, "[x:=5;]x>6".asFormula, "x_0=7".asFormula)
   }
 
   it should "not touch other assignments" in {
@@ -202,14 +207,14 @@ class DLTests extends TacticTestBase {
   it should "work in front of a loop in the antecedent" in {
     val result = proveBy(Sequent(IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula), IndexedSeq()), assignb(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x=1".asFormula, "[{x:=x+1;}*]x>0".asFormula)
+    result.subgoals.head.ante should contain only "\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "work in front of a loop in context" in {
     val result = proveBy(Sequent(IndexedSeq("x=2".asFormula), IndexedSeq("[y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula)), assignb(1, 1::Nil))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=2".asFormula
+    result.subgoals.head.ante should contain only "x=2".asFormula
     result.subgoals.head.succ should contain only "[y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
   }
 
@@ -217,7 +222,7 @@ class DLTests extends TacticTestBase {
     val result = proveBy("[x:=3;][y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula, assignb(1, 1::1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[x_0:=3;][y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
+    result.subgoals.head.succ should contain only "[x:=3;][y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
   }
 
   it should "work in front of an ODE, even if it is not top-level" in {
@@ -260,6 +265,13 @@ class DLTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[y:=y_0;{x:=z;y:=y+1; ++ x:=z-1;}]x<=y".asFormula
+  }
+
+  it should "handle use self-assign in assignb" in {
+    val result = proveBy("[x:=x;][x':=2;](x>0)'".asFormula, assignb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x':=2;](x>0)'".asFormula
   }
 
   "generalize" should "introduce intermediate condition" in {

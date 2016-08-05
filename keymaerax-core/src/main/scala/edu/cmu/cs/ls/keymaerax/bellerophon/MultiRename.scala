@@ -95,7 +95,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
-    case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case PredicationalOf(c, fml) => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case DotFormula         => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case _: UnitPredicational => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case True | False       => formula
