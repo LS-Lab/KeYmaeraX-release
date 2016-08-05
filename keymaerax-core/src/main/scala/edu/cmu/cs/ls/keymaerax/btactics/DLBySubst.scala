@@ -229,7 +229,7 @@ object DLBySubst {
         ("p(.)".asFormula, p.replaceFree(x, DotTerm).replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
   })
 
-  lazy val assignEquational = if (true) assignEquality else assignEquationalOld
+  lazy val assignEquational = assignEquality
 
   /**
     * Equality assignment to a fresh variable.
@@ -285,59 +285,6 @@ object DLBySubst {
 //      //@todo optimize? It might perhaps maybe be possible to optimize this at pos.isTopLevel but needs care not to ruin the context
 //      TactixLibrary.CEat(side)(pos) &
 //      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
-  })
-
-  /**
-    * Equational assignment: always introduces universal quantifier, which is skolemized if applied at top-level in the
-    * succedent; it remains unhandled in the antecedent and in non-top-level context.
-    *
-    * @example{{{
-    *    x=1 |- [{x:=x+1;}*]x>0
-    *    ----------------------------------assignEquational(1)
-    *        |- [x:=1;][{x:=x+1;}*]x>0
-    * }}}
-    * @example{{{
-    *    \\forall x (x=1 -> [{x:=x+1;}*]x>0) |-
-    *    ---------------------------------------assignEquational(-1)
-    *                 [x:=1;][{x:=x+1;}*]x>0 |-
-    * }}}
-    * @example Other free uses of the variable in the context will be renamed uniformly.
-    * {{{
-    *    x_0=2 |- [y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)
-    *    ----------------------------------------------------assignEquational(1, 1::Nil)
-    *    x=2   |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
-    * }}}
-    * @author Stefan Mitsch
-    * @author Andre Platzer
-    */
-  @deprecated("Use assignEquality instead")
-  lazy val assignEquationalOld: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(fml@Box(Assign(x, _), _)) =>
-      val y = TacticHelper.freshNamedSymbol(x, sequent)
-      // rename other top-level bound variables [x:=g(x)]Q(x) in the context also to [y:=g(x)]Q(y)
-      // so that uniform renaming y~>x will rename them back to [x:=g(x)]Q(x)
-      val filt = (ante:Boolean) => (pi:(Formula,Int)) => !(ante==pos.isAnte && pi._2==pos.index0) &&
-        (pi._1 match {
-        case Box(Assign(z, _), _) if z==x => true
-        case Diamond(Assign(z, _), _) if z==x => true
-        case _ => false
-      })
-      //@note modify index since Skolemization et all shift index around since dropping formula and stashing toward the end ....
-      val modIdx = (ante:Boolean) => (i:Int) => if (ante==pos.isAnte && i>pos.index0) i-1 else i
-      val brename = ProofRuleTactics.boundRenaming(x, y)
-      val keepContextAssigns: IndexedSeq[BelleExpr] =
-      //@todo such a zipWithPositions thing for both Ante+Succ should go into SequentAugmentor
-        sequent.ante.zipWithIndex.filter(filt(true)).map { case (f, i) => brename(AntePosition.base0(modIdx(true)(i))) } ++
-        sequent.succ.zipWithIndex.filter(filt(false)).map { case (f, i) => brename(SuccPosition.base0(modIdx(false)(i))) }
-      if (BelleExpr.DEBUG) println("assignEquationalOld on " + fml + " at " + pos + " on\n" + sequent.prettyString + "\nwill work wonders with " + brename + " for " + x.prettyString + "~>" + y.prettyString + " fresh to retain\n" + keepContextAssigns.mkString("    \n"))
-      // rename bound variable in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
-      debugAt("assignEquationalOld")(pos) & ProofRuleTactics.boundRenaming(x, y)(pos) &
-        debugAt("BR")(pos) & (if (pos.isAnte) useAt("[:=] assign equality exists")(pos) else useAt("[:=] assign equality")(pos)) &
-        debugAt("[:=]=")(pos) & (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos) else ident) &
-        debugAt("all/exists")(pos) & keepContextAssigns.fold[BelleExpr](Idioms.ident)(_ & _) &
-      // TODO derived axiom for equality with exists left for ante
-        debugAt("BR others")(pos) & ProofRuleTactics.uniformRenaming(y, x) &
-      debugAt("UR")(pos)
   })
 
   /**
