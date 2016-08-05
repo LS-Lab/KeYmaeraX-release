@@ -137,6 +137,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     "all dual" :: "all eliminate" :: "exists eliminate" ::
     Nil
 
+  //@todo not all arity 1 predicationals will be supported during unification
   "Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
     for (ax <- schematicAxioms) {
       println("Axiom " + ax)
@@ -158,6 +159,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     }
   }
 
+  //@todo not all arity 1 predicationals will be supported during unification
   it should "instantiate full schematic axioms to random schematic instantiations" in {
     for (ax <- schematicAxioms) {
       println("Axiom " + ax)

@@ -359,14 +359,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "!all".
-    *   (!\forall x (p(x))) <-> \exists x (!p(x))
+    *   (!\forall x (p(||))) <-> \exists x (!p(||))
     * End.
     * }}}
     *
     * @Derived
     */
   lazy val notAll = derivedAxiom("!all",
-    Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (p_(x_))) <-> \\exists x_ (!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (p_(||))) <-> \\exists x_ (!p_(||))".asFormula)),
     useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
       useAt(existsDualAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
