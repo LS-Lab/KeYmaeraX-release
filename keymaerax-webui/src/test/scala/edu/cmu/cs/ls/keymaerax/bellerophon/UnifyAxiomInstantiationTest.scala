@@ -91,6 +91,30 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("DG differential ghost", "[{x'=v*22+5}]x>=52 <-> \\exists y_ [{x'=v*22+5,y_'=100*y_+-22&true}]x>=52".asFormula)
   }
 
+  it should "[:=] self assign" in {
+    matchDirect("[:=] self assign", "[x:=x;]x>0 <-> x>0".asFormula)
+  }
+
+  it should "[:=] assign 1" in {
+    matchDirect("[:=] assign", "[y:=1;][y:=2;]y>0 <-> [y:=2;]y>0".asFormula)
+  }
+
+  it should "[:=] assign 2" in {
+    matchDirect("[:=] assign", "[y:=1;][y:=2+y;]y>0 <-> [y:=2+y;]y>0".asFormula)
+  }
+
+  it should "[:=] assign 3" in {
+    matchDirect("[:=] assign", "[y:=y+1;]y>0 <-> y+1>0".asFormula)
+  }
+
+  it should "[:=] assign 4" in {
+    matchDirect("[:=] assign", "[x:=1;](y>2 -> \\forall x [{x'=1}]x>0) <-> (y>2 -> \\forall x [{x'=1}]x>0)".asFormula)
+  }
+
+  it should "[:=] assign equality" in {
+    matchDirect("[:=] assign equality", "[x:=1;][{x:=x+1;}*]x>0 <-> \\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula)
+  }
+
   "Unification" should "instantiate some schematic axioms" in {
   }
 
