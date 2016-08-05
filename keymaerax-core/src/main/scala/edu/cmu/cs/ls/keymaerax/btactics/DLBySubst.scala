@@ -121,7 +121,9 @@ object DLBySubst {
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
         cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) &
-          byUS("[:=] self assign", (us: Subst) => RenUSubst(("x_".asTerm, x)::(UnitPredicational("p", AnyArg), f.replaceFree(x, "x_".asVariable))::Nil))
+          byUS("[:=] self assign", (us: Subst) => RenUSubst(
+            ("x_".asTerm, x) ::
+            (UnitPredicational("p", AnyArg), f.replaceAll(x, "x_".asVariable)) :: Nil))
       )
   })
 

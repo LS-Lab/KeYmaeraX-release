@@ -49,10 +49,15 @@ object FOQuantifierTactics {
             val t = inst(vars)
             val p = forall(qf)
 
+            val assign = Box(Assign(x, t), p)
+
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
-            ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
+            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
+              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate", (us: Subst) => RenUSubst(
+                ("x_".asTerm, x) ::
+                ("p(.)".asFormula, assign.replaceFree(t, DotTerm).replaceAll(x, "x_".asTerm)) ::
+                ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) :: Nil))
               )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
