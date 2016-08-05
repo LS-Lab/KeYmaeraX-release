@@ -107,13 +107,13 @@ object Augmentors {
                 Right(Exists(x.map(v => if (v==what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
               case Box(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
               case Box(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
-                Right(Box(Assign(repl.asInstanceOf[Variable], t), q.replaceAll(what, repl)))
+                Right(Box(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
               case Box(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
               case Box(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
                 Right(Box(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
               case Diamond(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
               case Diamond(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
-                Right(Diamond(Assign(repl.asInstanceOf[Variable], t), q.replaceAll(what, repl)))
+                Right(Diamond(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
               case Diamond(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
               case Diamond(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
                 Right(Diamond(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
