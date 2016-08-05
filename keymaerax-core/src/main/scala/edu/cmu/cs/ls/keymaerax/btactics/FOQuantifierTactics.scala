@@ -21,7 +21,7 @@ object FOQuantifierTactics {
       case Some(Exists(vars, p)) =>
         require(vars.size == 1, "Exists by duality does not support block quantifiers")
         val v = vars.head
-        useAt("exists dual", PosInExpr(1::Nil), (us: Subst) => RenUSubst(("x_".asTerm, v)::(UnitPredicational("p_", AnyArg), p.replaceAll(v, "x_".asTerm))::Nil))(pos) &
+        useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
           } else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
@@ -31,8 +31,7 @@ object FOQuantifierTactics {
   def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = "all instantiate inverse" by ((pos: Position, sequent: Sequent) => {
     def allInstI(t: Term, v: Variable): DependentPositionTactic = "all instantiate inverse single" by ((pos: Position, sequent: Sequent) => {
       val fml = sequent.sub(pos) match { case Some(fml: Formula) => fml }
-      useAt("all instantiate", PosInExpr(1::Nil),
-        (us: Subst) => RenUSubst(("f()".asTerm, t)::("x_".asTerm, v)::("p(.)".asFormula, fml.replaceFree(t, DotTerm))::Nil))(pos)
+      useAt("all instantiate")(pos)
     })
     what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
@@ -54,10 +53,7 @@ object FOQuantifierTactics {
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate", (us: Subst) => RenUSubst(
-                ("x_".asTerm, x) ::
-                ("p(.)".asFormula, assign.replaceFree(t, DotTerm).replaceAll(x, "x_".asTerm)) ::
-                ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) :: Nil))
+              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
               )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)

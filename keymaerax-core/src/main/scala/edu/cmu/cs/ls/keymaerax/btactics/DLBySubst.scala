@@ -121,9 +121,7 @@ object DLBySubst {
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
         cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) &
-          byUS("[:=] self assign", (us: Subst) => RenUSubst(
-            ("x_".asTerm, x) ::
-            (UnitPredicational("p", AnyArg), f.replaceAll(x, "x_".asVariable)) :: Nil))
+          byUS("[:=] self assign")
       )
   })
 
@@ -147,7 +145,7 @@ object DLBySubst {
             val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
                   DebuggingTactics.print("Foo") & selfAssign(x0)(pos) & DebuggingTactics.print("Bar") & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
-                    eqR2L(-1)(pos.topLevel) & assignSelf(pos.topLevel) & hide(-1)
+                    eqR2L(-1)(pos.topLevel) & useAt("[:=] self assign")(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
 
@@ -216,27 +214,10 @@ object DLBySubst {
    *    -----------------------------------------------------------------assignb(1, 1::Nil)
    *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
    * }}}
-   * @see [[assignEquational]]
+   * @see [[assignEquality]]
    */
   lazy val assignb: DependentPositionTactic =
-    "[:=] assign" by ((pos: Position) => (assign(pos) partial) | (assignSelf(pos) partial) | (assignEquational(pos) partial))
-
-  lazy val assignSelf = "[:=] assign self" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Box(Assign(x, t), p)) if x == t =>
-      useAt("[:=] self assign", (us: Subst) => RenUSubst(
-        ("x_".asTerm, x) ::
-        (UnitPredicational("p", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
-  })
-
-  lazy val assign = "[:=] assign" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(fml@Box(Assign(x, t), p)) =>
-      useAt("[:=] assign", (us: Subst) => RenUSubst(
-        ("x_".asTerm, x) ::
-        ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) ::
-        ("p(.)".asFormula, p.replaceFree(x, DotTerm).replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
-  })
-
-  lazy val assignEquational = assignEquality
+    "[:=] assign" by ((pos: Position) => (useAt("[:=] assign")(pos) partial) | (useAt("[:=] self assign")(pos) partial) | (assignEquality(pos) partial))
 
   /**
     * Equality assignment to a fresh variable.
@@ -265,33 +246,8 @@ object DLBySubst {
   lazy val assignEquality: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     // [x:=f(x)]P(x)
     case Some(fml@Box(Assign(x, t), p)) =>
-      useAt("[:=] assign equality", (us: Subst) => RenUSubst(
-        ("x_".asTerm, x) ::
-        ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) ::
-        (UnitPredicational("p", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))(pos) &
+      useAt("[:=] assign equality")(pos) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
-
-      //@note standalone version without contextual bound renaming
-//      // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
-//      val brenL = core.BoundRenaming(x, y, AntePos(0))
-//      val brenR = core.BoundRenaming(x, y, SuccPos(0))
-//      val mod = brenR(fml) ensuring(r => r==brenL(fml), "bound renaming for formula is independent of position")
-//      // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
-//      val side: Provable = useFor("[:=] assign equality")(Position(1, 0::Nil)) (Provable.startProof(Equiv(mod, fml))
-//        // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
-//      (EquivRight(SuccPos(0)), 0)
-//        // right branch  [x:=f(x)]P(x) |- [y:=f(x)]P(y)
-//        (brenL, 1)
-//        // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
-//        (Close(AntePos(0), SuccPos(0)), 1)
-//        // left branch  [y:=f(x)]P(y) |- [x:=f(x)]P(x)
-//        (brenR, 0)
-//        // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
-//        (Close(AntePos(0), SuccPos(0)), 0)
-//      )
-//      //@todo optimize? It might perhaps maybe be possible to optimize this at pos.isTopLevel but needs care not to ruin the context
-//      TactixLibrary.CEat(side)(pos) &
-//      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
   })
 
   /**
@@ -511,10 +467,7 @@ object DLBySubst {
           val ghost = ghostV(f)
           cutLR(ctx(Box(Assign(ghost, t), f.replaceFree(t, ghost))))(pos.topLevel) <(
             /* use */ ident,
-            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign", (us: Subst) => RenUSubst(
-              ("x_".asTerm, ghost) ::
-              ("f()".asTerm, t.replaceFree(ghost, "x_".asTerm)) ::
-              ("p(.)".asFormula, f.replaceFree(t, DotTerm).replaceAll(ghost, "x_".asTerm)) :: Nil))
+            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
             )
       }
     }
@@ -545,10 +498,7 @@ object DLBySubst {
       val x = vars.head
       cutR(Box(Assign(x, f), p))(pos.checkSucc.top) <(
         skip,
-        cohide(pos.top) & byUS("[:=] assign exists", (us: Subst) => RenUSubst(
-          ("x_".asTerm, x) ::
-          ("f_()".asTerm, f.replaceFree(x, "x_".asTerm)) ::
-          (UnitPredicational("p_", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))
+        cohide(pos.top) & byUS("[:=] assign exists")
         )
   })
 }

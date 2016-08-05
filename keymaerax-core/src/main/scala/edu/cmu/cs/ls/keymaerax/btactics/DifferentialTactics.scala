@@ -115,66 +115,15 @@ object DifferentialTactics {
       }
     }
 
-    /** A single step of DE system (@todo replace with useAt when unification for this example works) */
+    /** A single step of DE system */
     // !semanticRenaming
     private lazy val DESystemStep_NoSemRen: DependentPositionTactic = new DependentPositionTactic("DE system step") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
-            val g = Box(
-              ODESystem(DifferentialProduct(c, AtomicODE(xp, t)), h),
-              Box(DiffAssign(xp, t), p)
-            )
-
-            //construct substitution
-            val aF = UnitFunctional("f", AnyArg, Real)
-            val aH = UnitPredicational("H", AnyArg)
-            val aC = DifferentialProgramConst("c", AnyArg)
-            val aP = UnitPredicational("p", AnyArg)
-            val aX = Variable("x_", None, Real)
-
-            val uren = URename(x, aX)
-
-            val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, uren(c)) :: SubstitutionPair(aP, uren(p)) ::
-              SubstitutionPair(aH, uren(h)) :: Nil)
-            //            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${xp.prettyString}=f(||),c&H(||)}]p(||) <-> [{c,${xp.prettyString}=f(||)&H(||)}][${xp.prettyString}:=f(||);]p(||)".asFormula))
-            val origin = Sequent(IndexedSeq(), IndexedSeq(Provable.axiom("DE differential effect (system)")))
-
-            if (true || DEBUG) println("DE: manual " + subst + " above " + uren + " to prove " + sequent.prettyString)
-
-            cutLR(g)(pos) <(
-              /* use */ skip,
-              /* show */ cohide('Rlast) & equivifyR(1) & (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) &
-              ProofRuleTactics.uniformRenaming(x, aX) & US(subst, "DE differential effect (system)"))
-
+            useAt("DE differential effect (system)")(pos)
           case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
-            val g = Box(
-              ODESystem(AtomicODE(xp, t), h),
-              Box(DiffAssign(xp, t), p)
-            )
-
-            //construct substitution
-            val aF = UnitFunctional("f", AnyArg, Real)
-            val aQ = UnitPredicational("q", AnyArg)
-            val aP = UnitPredicational("p", AnyArg)
-            val aX = Variable("x_", None, Real)
-
-            val uren = URename(x, aX)
-
-            val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aP, uren(p)) ::
-              SubstitutionPair(aQ, uren(h)) :: Nil
-            val origin = Sequent(IndexedSeq(), IndexedSeq(Provable.axiom("DE differential effect")))
-
-            if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
-
-            /** byVerbatim(axiom)  uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
-            def byVerbatim(axiom: String) : BelleExpr = TactixLibrary.by(AxiomInfo(axiom).provable)
-
-            cutLR(g)(pos) <(
-              /* use */ skip,
-              /* show */ cohide('Rlast) & equivifyR(1) & (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) &
-              ProofRuleTactics.uniformRenaming(x, aX) & ??? /*@todo US(USubst(subst), origin)*/ & byVerbatim("DE differential effect"))
-
+            useAt("DE differential effect")(pos)
         }
       }
     }
@@ -334,7 +283,7 @@ object DifferentialTactics {
         val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
           val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
           (old -> ghost,
-            discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquational(pos))
+            discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
         })
         ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
       }
@@ -463,7 +412,7 @@ object DifferentialTactics {
   def diffGhost(y: Variable, a: Term, b: Term, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
     DG(y,a,b)(pos) &
     DLBySubst.assignbExists(initialValue)(pos) &
-    DLBySubst.assignEquational(pos)
+    DLBySubst.assignEquality(pos)
   })
 
   def DG(ghost: Program, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
@@ -474,7 +423,7 @@ object DifferentialTactics {
 
     DG(y, a, b)(pos) &
         DLBySubst.assignbExists(iv)(pos) &
-        DLBySubst.assignEquational(pos)
+        DLBySubst.assignEquality(pos)
   })
 
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
@@ -599,12 +548,12 @@ object DifferentialTactics {
       val introTime =
           DG(time, "0".asTerm, "1".asTerm)(pos) &
             DLBySubst.assignbExists("0".asTerm)(pos) &
-            DLBySubst.assignEquational(pos)
+            DLBySubst.assignEquality(pos)
 
       def createTactic(ode: ODESystem, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                        diffEqPos: SeqPos): BelleExpr = {
         val initialGhosts = (primedSymbols(ode.ode) + time).foldLeft(skip)((a, b) =>
-          a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
+          a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquality(diffEqPos)))
 
         // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
         val flatSolution = flattenConjunctions(solution).
