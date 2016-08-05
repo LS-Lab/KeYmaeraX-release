@@ -24,8 +24,10 @@ object RenUSubst {
   def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = if (semanticRenaming)
       new URenAboveUSubst(subsDefsInput)
     else
-      new USubstAboveURen(subsDefsInput)
-    def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.
+      new DirectUSubstAboveURen(subsDefsInput)
+    //  new USubstAboveURen(subsDefsInput)
+
+  def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.
       map(sp=>(sp.what,sp.repl)))
     def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
@@ -80,7 +82,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def isEmpty = subsDefsNonId.isEmpty
 
   /** Identity replaement no-ops filtered out. */
-  private final val subsDefsNonId: immutable.Seq[(Expression,Expression)] = subsDefsInput.filter(sp => sp._1!=sp._2  )
+  private[bellerophon] final val subsDefsNonId: immutable.Seq[(Expression,Expression)] = subsDefsInput.filter(sp => sp._1!=sp._2  )
   /** Renaming part, with identity renaming no-ops filtered out. */
   protected final val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsNonId)
   /** Substitution part, with identity substitution no-ops filtered out. */
@@ -225,6 +227,13 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
   *      G  |- D
   * }}}
   * Semantic renaming may be supported if need be.
+  *
+  * DirectUSubstAboveURen is a direct implementation in tactics land of a joint renaming and substitution algorithm.
+  * It uses a single direct fast [[USubstRen]] for internal applications via [[DirectUSubstAboveURen.apply()]]
+  * but schedules separate uniform substitutions and uniform renamings to the core when asked.
+  * The first fast pass supports semantic renaming, which is useful during unification to "apply" renamings already to predicationals without clash.
+  * The final core pass does not support semantic renaming, but is only needed for the final unifier.
+  *
   * @param subsDefsInput
   * @note reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent uniform renaming no longer has nonrenamable program constants since no semantic renaming.
   */
@@ -245,9 +254,12 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
 
   /** All renamings at once */
   private val renall = MultiRename(rens)
-  /** Renamed substitution part, i.e. ren(subsDefs). */
-  protected final val subsDefsRenamed: immutable.Seq[SubstitutionPair] = try {subsDefs.
-    map(sp => try {SubstitutionPair(sp.what, renall(sp.repl))} catch {case ex: ProverException => throw ex.inContext("(" + sp + ")")})
+  /** The effective USubstRen consisting of the renaming and the renamed substitution,
+    * since the core substitution will be above the core renaming in the end. */
+  protected val effective: USubstRen = try {
+    USubstRen(rens ++
+      (subsDefs.map(sp => try {(sp.what, renall(sp.repl))} catch {case ex: ProverException => throw ex.inContext("(" + sp + ")")}))
+    )
   } catch {case ex: ProverException => throw ex.inContext("DirectUSubstAboveURen{" + subsDefsInput.mkString(", ") + "}")}
 
 
@@ -266,13 +278,13 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
   override def toString: String = super.toString + "DirectUSubstAboveRen"
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
-  def apply(t: Term): Term = try {rens.foldLeft(usubst(t))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(t.prettyString, "with " + this)}
+  def apply(t: Term): Term = effective(t)
 
-  def apply(f: Formula): Formula = try {rens.foldLeft(usubst(f))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(f.prettyString, "with " + this)}
+  def apply(f: Formula): Formula = effective(f)
 
-  def apply(p: Program): Program = try {rens.foldLeft(usubst(p))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(p.prettyString, "with " + this)}
+  def apply(p: Program): Program = effective(p)
 
-  def apply(p: DifferentialProgram): DifferentialProgram = try {rens.foldLeft(usubst(p))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(p.prettyString, "with " + this)}
+  def apply(p: DifferentialProgram): DifferentialProgram = effective(p)
 }
 
 
