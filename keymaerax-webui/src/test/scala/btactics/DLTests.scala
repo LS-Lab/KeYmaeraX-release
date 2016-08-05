@@ -648,4 +648,11 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "[x:=2;][x:=x;]x>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
+
+  "assign any" should "work in a simple example" in {
+    val result = proveBy("[x:=*;]x>0".asFormula, randomb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\forall x x>0".asFormula
+  }
 }
