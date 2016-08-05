@@ -535,9 +535,13 @@ object DLBySubst {
   def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
-      cutR(Box(Assign(vars.head, f), p))(pos.checkSucc.top) <(
+      val x = vars.head
+      cutR(Box(Assign(x, f), p))(pos.checkSucc.top) <(
         skip,
-        cohide(pos.top) & byUS("[:=] assign exists")
+        cohide(pos.top) & byUS("[:=] assign exists", (us: Subst) => RenUSubst(
+          ("x_".asTerm, x) ::
+          ("f_()".asTerm, f.replaceFree(x, "x_".asTerm)) ::
+          (UnitPredicational("p_", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))
         )
   })
 }
