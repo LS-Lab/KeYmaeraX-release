@@ -115,12 +115,13 @@ object DLBySubst {
     * @param x The self-assigned variable.
    * @return The tactic.
    */
-  def selfAssign(x: Variable): DependentPositionTactic = "[:=] self assign inverse" by ((pos, sequent) => sequent.at(pos) match {
+  def selfAssign(x: Variable): DependentPositionTactic = "[:=] self assign inverse" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, f: Formula) =>
       val commute = if (pos.isAnte) commuteEquivR(1) else skip
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
-        cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) & byUS("[:=] self assign")
+        cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) &
+          byUS("[:=] self assign", (us: Subst) => RenUSubst(("x_".asTerm, x)::(UnitPredicational("p", AnyArg), f.replaceFree(x, "x_".asVariable))::Nil))
       )
   })
 
@@ -141,14 +142,14 @@ object DLBySubst {
 
             val qPhi = if (vars.isEmpty) phi else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
 
-            val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos, sequent) => sequent(AntePos(0)) match {
+            val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
                   selfAssign(x0)(pos) & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) &
                     eqR2L(-1)(pos.topLevel) & useAt("[:=] self assign")(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
 
-            val diffRename: DependentPositionTactic = "diffRename" by ((pos, sequent) => {
+            val diffRename: DependentPositionTactic = "diffRename" by ((pos: Position, sequent: Sequent) => {
               //@note allL may introduce equations of the form x=x_0, but not necessarily for all variables
               if (sequent.ante.size == 1 && sequent.succ.size == 1 && sequent.ante.head == sequent.succ.head) ident
               else if (sequent.ante.size <= 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
@@ -216,9 +217,17 @@ object DLBySubst {
    * @see [[assignEquational]]
    */
   lazy val assignb: DependentPositionTactic =
-    "[:=] assign" by (pos => (useAt("[:=] assign")(pos) partial) | (assignEquational(pos) partial))
+    "[:=] assign" by ((pos: Position) => (assign(pos) partial) | (assignEquational(pos) partial))
 
-  lazy val assignEquational = if (false) assignEquality else assignEquationalOld
+  lazy val assign = "[:=] assign" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(fml@Box(Assign(x, t), p)) =>
+      useAt("[:=] assign", (us: Subst) => RenUSubst(
+        ("x_".asTerm, x) ::
+        ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) ::
+        ("p(.)".asFormula, p.replaceFree(x, DotTerm).replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
+  })
+
+  lazy val assignEquational = if (true) assignEquality else assignEquationalOld
 
   /**
     * Equality assignment to a fresh variable.
@@ -244,13 +253,14 @@ object DLBySubst {
     * @author Andre Platzer
     * @incontext
     */
-  lazy val assignEquality: DependentPositionTactic = "[:=] assign equality" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val assignEquality: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     // [x:=f(x)]P(x)
-    case Some(fml@Box(Assign(x, _), _)) =>
-      val y = TacticHelper.freshNamedSymbol(x, sequent)
-      ProofRuleTactics.boundRenaming(x, y)(pos) &
-        useAt("[:=] assign equality")(pos) &
-        (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
+    case Some(fml@Box(Assign(x, t), p)) =>
+      useAt("[:=] assign equality", (us: Subst) => RenUSubst(
+        ("x_".asTerm, x) ::
+        ("f()".asTerm, t.replaceFree(x, "x_".asTerm)) ::
+        (UnitPredicational("p", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))(pos) &
+      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
 
       //@note standalone version without contextual bound renaming
 //      // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
@@ -299,7 +309,7 @@ object DLBySubst {
     * @author Andre Platzer
     */
   @deprecated("Use assignEquality instead")
-  lazy val assignEquationalOld: DependentPositionTactic = "[:=] assign equality" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val assignEquationalOld: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Box(Assign(x, _), _)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       // rename other top-level bound variables [x:=g(x)]Q(x) in the context also to [y:=g(x)]Q(y)
@@ -569,7 +579,7 @@ object DLBySubst {
    * @param f The right-hand side term of the assignment.
    * @return The tactic.
    */
-  def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" by ((pos, sequent) => sequent.sub(pos) match {
+  def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       cutR(Box(Assign(vars.head, f), p))(pos.checkSucc.top) <(
