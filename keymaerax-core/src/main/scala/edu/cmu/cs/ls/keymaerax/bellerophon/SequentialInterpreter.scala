@@ -54,7 +54,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             )) :: Nil
 
             //Save the lemma.
-            LemmaDBFactory.lemmaDB.add(Lemma(result, evidence, Some(lemmaName)))
+            LemmaDBFactory.lemmaDB.add(Lemma(result, Lemma.requiredEvidence(result, evidence), Some(lemmaName)))
           }
           v //nop on the original goal.
         }

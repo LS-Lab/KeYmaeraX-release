@@ -103,6 +103,14 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("[:=] assign exists", "[y:=22*x+y;]x>=y -> \\exists y x>=y".asFormula)
   }
 
+  it should "instantiate [:=] assign exists when post-condition binds quantified variable" in {
+    matchDirect("[:=] assign exists", "[y:=22*x+y;][{y'=v,v'=a}]x>=y -> \\exists y [{y'=v,v'=a}]x>=y".asFormula)
+  }
+
+  it should "work on example from ode solver" in {
+    matchDirect("[:=] assign exists", "[kyxtime:=0;][{x'=v,kyxtime'=1&true}]1=1->\\exists kyxtime [{x'=v,kyxtime'=1&true}]1=1".asFormula)
+  }
+
   it should "DG differential ghost constant" in {
     matchDirect("DG differential ghost constant", "[{q' = 2*55}]x>=z <-> \\exists y_ [{q'=2*55,y_'=1&true}]x>=z".asFormula)
   }
