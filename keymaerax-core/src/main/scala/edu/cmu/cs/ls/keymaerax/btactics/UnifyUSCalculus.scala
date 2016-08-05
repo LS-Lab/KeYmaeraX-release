@@ -327,7 +327,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val (ctx,expr) = sequent.at(pos)
         val subst = inst(UnificationMatch(keyPart, expr))
-        if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
+        if (DEBUG) println("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
@@ -388,6 +388,7 @@ trait UnifyUSCalculus {
 
       def implyStep(other: Expression): BelleExpr = {
         val cohide = p match {case p: SuccPosition => cohideR(p.top) case p: AntePosition => cohideR('Rlast)}
+        DebuggingTactics.debug("useAt implyStep") &
         cutLR(C(subst(other)))(p.topLevel) <(
           /* use */ ident partial,
           /* show */ cohide & CMon(p.inExpr) & by(subst.toForward(fact))
