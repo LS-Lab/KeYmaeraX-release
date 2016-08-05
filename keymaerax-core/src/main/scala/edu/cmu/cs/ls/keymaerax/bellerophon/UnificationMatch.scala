@@ -407,7 +407,7 @@ class UnificationMatchBase extends SchematicUnificationMatch {
   */
 class FreshUnificationMatch extends SchematicUnificationMatch {
 
-  private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._2.isInstanceOf[Variable])
+  private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._1.isInstanceOf[Variable] && sp._2.isInstanceOf[Variable])
   private def renameIfNeedBe(repl: List[SubstRepl], e: Expression): Expression = {
     val ren = renamingPart(repl)
     if (ren.isEmpty)
@@ -416,7 +416,7 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
       Subst(ren.distinct)(e)
   }
   private def renameAllIfNeedBe(repl: List[SubstRepl], input: List[SubstRepl]): List[SubstRepl] = {
-    val ren = renamingPart(repl)
+    val ren = renamingPart(repl).map({ case (a, b) => (b, a)}) //@note converse renaming to prepare for renaming transposition
     if (ren.isEmpty)
       input
     else {
@@ -430,8 +430,8 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
     * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
-  after ++ renameAllIfNeedBe(after, before)
-    //before ++ renameAllIfNeedBe(before, after)
+//  after ++ renameAllIfNeedBe(after, before)
+    before ++ renameAllIfNeedBe(before, after)
 }
 
 /**
