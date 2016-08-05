@@ -104,33 +104,44 @@ trait BaseMatcher extends Matcher {
 
   //@note To circumvent shortcomings of renaming-unaware unification algorithm, the following code unifies for renaming, renames, and then reunifies the renamed outcomes for substitution
   def apply(e1: Term, e2: Term): Subst = {try {
-    unified(e1, e2, Subst(unify(e1, e2)))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Formula, e2: Formula): Subst = {try {
-    unified(e1, e2, Subst(unify(e1, e2)))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Program, e2: Program): Subst = {try {
-    unified(e1, e2, Subst(unify(e1, e2)))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = {try {
-    unified(e1, e2, Subst(unifyODE(e1, e2)))
+    unifier(e1, e2, unifyODE(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
-    Subst(unify(e1, e2))
+    unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString     + "\n   with  " + e2.toString)}
   } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
-  /** Optionally log result to console */
-  protected def unified(e1: Expression, e2: Expression, us: Subst): Subst =
-  {if (DEBUG) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + us); us}
+  /** Create the unifier `us` for e1 and e2. */
+  protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
+    val s = Subst(us)
+    if (DEBUG) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    s
+  }
+
+  /** Create the unifier `us` for e1 and e2. */
+  protected def unifier(e1: Sequent, e2: Sequent, us: List[SubstRepl]): Subst = {
+    val s = Subst(us)
+    if (DEBUG) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    s
+  }
+
 
   protected def unify(shape: Term, input: Term): List[SubstRepl]
   protected def unify(shape: Formula, input: Formula): List[SubstRepl]
@@ -430,9 +441,25 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
     * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
-//  after ++ renameAllIfNeedBe(after, before)
-    before ++ renameAllIfNeedBe(before, after)
+  //  after ++ renameAllIfNeedBe(after, before)
+  before ++ renameAllIfNeedBe(before, after)
+
+  protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
+    if (true)
+      Subst(us)
+    else {
+      val ren = MultiRename(RenUSubst.renamingPartOnly(us))
+      Subst(us.map(sp =>
+        if (sp._1.isInstanceOf[UnitPredicational] || sp._1.isInstanceOf[UnitFunctional] ||
+          sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf])
+          (sp._1, ren(sp._2))
+        else
+          sp
+      ))
+    }
+  }
 }
+
 
 /**
   * Unification/matching algorithm for tactics, respecting only renamings.
