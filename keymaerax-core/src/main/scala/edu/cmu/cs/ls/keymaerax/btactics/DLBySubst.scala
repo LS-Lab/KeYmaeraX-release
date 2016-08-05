@@ -146,8 +146,8 @@ object DLBySubst {
 
             val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
-                  selfAssign(x0)(pos) & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) &
-                    eqR2L(-1)(pos.topLevel) & useAt("[:=] self assign")(pos.topLevel) & hide(-1)
+                  DebuggingTactics.print("Foo") & selfAssign(x0)(pos) & DebuggingTactics.print("Bar") & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
+                    eqR2L(-1)(pos.topLevel) & assignSelf(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
 
@@ -219,7 +219,14 @@ object DLBySubst {
    * @see [[assignEquational]]
    */
   lazy val assignb: DependentPositionTactic =
-    "[:=] assign" by ((pos: Position) => (assign(pos) partial) | (assignEquational(pos) partial))
+    "[:=] assign" by ((pos: Position) => (assign(pos) partial) | (assignSelf(pos) partial) | (assignEquational(pos) partial))
+
+  lazy val assignSelf = "[:=] assign self" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(Box(Assign(x, t), p)) if x == t =>
+      useAt("[:=] self assign", (us: Subst) => RenUSubst(
+        ("x_".asTerm, x) ::
+        (UnitPredicational("p", AnyArg), p.replaceAll(x, "x_".asTerm)) :: Nil))(pos) //@note transpose for subsequent renaming
+  })
 
   lazy val assign = "[:=] assign" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Box(Assign(x, t), p)) =>

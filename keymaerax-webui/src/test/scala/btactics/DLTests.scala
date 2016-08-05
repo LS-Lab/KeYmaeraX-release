@@ -267,6 +267,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[y:=y_0;{x:=z;y:=y+1; ++ x:=z-1;}]x<=y".asFormula
   }
 
+  it should "handle use self-assign in assignb" in {
+    val result = proveBy("[x:=x;][x':=2;](x>0)'".asFormula, assignb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x':=2;](x>0)'".asFormula
+  }
+
   "generalize" should "introduce intermediate condition" in {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1))
     result.subgoals should have size 2

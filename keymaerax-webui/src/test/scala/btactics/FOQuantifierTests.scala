@@ -253,7 +253,7 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
       existsInstantiate()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "y=y_0".asFormula
+    result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[{x'=2,y'=0*y+1&true}]x>0".asFormula
   }
 
