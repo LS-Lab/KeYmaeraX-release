@@ -32,6 +32,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     println("unify2:  " + instance)
     println("unifier: " + u)
     u(ax) shouldBe instance
+    //@todo this might fail when the instance requires semantic renaming
     u.toCore(ax) shouldBe instance
     true
   }
@@ -44,6 +45,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     println("unify2:  " + instance)
     println("unifier: " + u)
     u(keyPart) shouldBe instance
+    //@todo this might fail when the instance requires semantic renaming
     u.toCore(keyPart) shouldBe instance
     true
   }
@@ -265,6 +267,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
           println("unify2:  " + inst)
           println("unifier: " + u)
           u(fml) shouldBe inst
+          //@todo this might fail when the instance requires semantic renaming
           u.toCore(fml) shouldBe inst
         }
       }

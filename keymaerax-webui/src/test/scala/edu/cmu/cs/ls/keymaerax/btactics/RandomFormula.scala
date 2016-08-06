@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
+import scala.collection.immutable
 import scala.collection.immutable._
 import Augmentors.FormulaAugmentor
 
@@ -78,6 +79,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random schematic instance of the given Formula `fml` of complexity `size`. */
   def nextSchematicInstance(fml: Formula, size: Int): Formula = {
+    val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[Variable])
     val vars = nextNames("z", size / 3 + 1)
     val othervars = nextNames("y", size / 5 + 1)
     val symbols = StaticSemantics.signature(fml)
@@ -99,8 +101,18 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       if (repl._1==repl._2) f else FormulaAugmentor(f).replaceAll(repl._1, repl._2)
     println("Replace all " + repls.mkString(", "))
     // do all replacements repl to fml
-    repls.foldRight(fml) ((repl, f) => doRepl(f,repl))
-    //@todo add random renamings of variables
+    val inst = repls.foldRight(fml) ((repl, f) => doRepl(f,repl))
+    inst
+    val instvars = StaticSemantics.vars(inst).symbols
+    // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
+    // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
+    val allvars = instvars.filter(x => x.isInstanceOf[Variable] &&
+      !instvars.contains(DifferentialSymbol(x.asInstanceOf[Variable]))
+    ).toList
+    val renamings: immutable.Seq[(Variable,Variable)] = ownvars.map(x => (x.asInstanceOf[Variable],
+      (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[Variable])).to
+    val ren = MultiRename(renamings)
+    ren(inst)
   }
 
   /** Generate a random (propositionally) provable formula */
