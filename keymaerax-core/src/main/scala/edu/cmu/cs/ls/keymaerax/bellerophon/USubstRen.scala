@@ -31,16 +31,16 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   /** substitution part */
   private val subs: immutable.Map[Expression,Expression] = subsDefsInput.filter(sp => !sp._1.isInstanceOf[Variable]).toMap
   /** renaming part, augmented with transpositions */
-  private val rens: immutable.Map[Variable,Variable] = augmentTranspositions(subsDefsInput)
+  private val rens: immutable.Map[Variable,Variable] = augmentTranspositions(RenUSubst.renamingPartOnly(subsDefsInput))
   /** include transpositions for renamings if need be */
-  private def augmentTranspositions(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Map[Variable,Variable] = {
-    val rena = RenUSubst.renamingPartOnly(subsDefsInput).toMap
+  private def augmentTranspositions(rens: immutable.Seq[(Variable,Variable)]): immutable.Map[Variable,Variable] = {
+    val rena = rens.toMap
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
     if (TRANSPOSITION)
-      rena ++ rena.map(sp => (sp._2, sp._1))
+      rena ++ (rena.map(sp => (sp._2, sp._1)))
     else
       rena
-  }
+  } ensuring( r => !TRANSPOSITION || r.forall(sp => r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =
     subs.filter(sp => sp._1.isInstanceOf[ApplicationOf]).map(
@@ -57,7 +57,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
   private val TRANSPOSITION: Boolean = true
 
-  override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.toString + "~>" + sp._2).mkString(", ") + "}"
+  override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "}"
 
   /**
     * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
@@ -220,7 +220,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
       case a: ProgramConst   => subs.getOrElse(a, a).asInstanceOf[Program]
       case Assign(x, e)      => Assign(renameVar(x, program), usubst(e))
       case DiffAssign(xp, e) => DiffAssign(DifferentialSymbol(renameVar(xp.x, program)), usubst(e))
-      case a: AssignAny      => a
+      case AssignAny(x)      => AssignAny(renameVar(x, program))
       case Test(f)           => Test(usubst(f))
       case ODESystem(ode, h) =>
         //@note requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ...) would be sound just more permissive

@@ -308,7 +308,12 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {
     if (true || BelleExpr.RECHECK) try {
-      r == toCore(e)
+      if (r == toCore(e))
+        true
+      else {
+        Predef.print("fast result: " + r + "\ncore result: " + toCore(e) + "\nrenusubst:   " + this + "\neffective:   " + effective + "\napplied to:  " + e)
+        false
+      }
     } catch {
       // the core refuses semantic renaming so cannot compare
       case ignore: RenamingClashException => true
