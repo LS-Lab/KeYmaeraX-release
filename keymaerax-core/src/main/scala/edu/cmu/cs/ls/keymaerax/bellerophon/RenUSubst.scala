@@ -293,17 +293,17 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
   override def toString: String = super.toString + "DirectUSubstAboveRen"
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
-  def apply(t: Term): Term = { effective(t)
-  } ensuring (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
+  def apply(t: Term): Term = new Predef.Ensuring({ effective(t)
+  }) ensuring (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
 
-  def apply(f: Formula): Formula = { effective(f)
-  } ensuring (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
+  def apply(f: Formula): Formula = new Predef.Ensuring({ effective(f)
+  }) ensuring (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
 
-  def apply(p: Program): Program = { effective(p)
-  } ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+  def apply(p: Program): Program = new Predef.Ensuring({ effective(p)
+  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
 
-  def apply(p: DifferentialProgram): DifferentialProgram = { effective(p)
-  } ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+  def apply(p: DifferentialProgram): DifferentialProgram = new Predef.Ensuring({ effective(p)
+  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
 
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {
