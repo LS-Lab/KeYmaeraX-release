@@ -262,9 +262,9 @@ object DerivationInfo {
     new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
 
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => }),
+    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => }),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => }),
     new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
-
 
     // Derived axioms
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", {case () => HilbertCalculus.assignb}),

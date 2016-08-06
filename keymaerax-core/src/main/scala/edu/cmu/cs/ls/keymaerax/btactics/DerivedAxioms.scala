@@ -1458,7 +1458,8 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq("<{x_'=c()&q(x_)}>p(||) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) & <x_:=x_+(c()*t_);>p(||)))".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DS& differential equation solution")(1, 0::0::Nil) &
-      useAt(notAll)(1, 0::Nil) & //step(1, 0::Nil) &
+      useAt("all dual time", PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt("!! double negation")(1, 0::Nil) &
       useAt(notImply)(1, 0::0::Nil) &
       useAt(notImply)(1, 0::0::1::Nil) &
       useAt("<> diamond")(1, 0::0::1::1::Nil) &
