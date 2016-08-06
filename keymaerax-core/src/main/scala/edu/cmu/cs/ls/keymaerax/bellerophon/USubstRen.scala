@@ -11,6 +11,10 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.collection.immutable
 import scala.collection.immutable._
 
+object USubstRen {
+  /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
+  private val TRANSPOSITION: Boolean = URename(Variable("dummy"),Variable("ymmud"))(Variable("ymmud"))==Variable("dummy")
+}
 /**
   * Renaming Uniform Substitution, simultaneously combining URename and USubst.
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
@@ -37,11 +41,11 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   /** include transpositions for renamings if need be */
   private def augmentTranspositions(rena: immutable.Map[Variable,Variable]): immutable.Map[Variable,Variable] = {
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
-    if (TRANSPOSITION)
+    if (USubstRen.TRANSPOSITION)
       rena ++ (rena.map(sp => (sp._2, sp._1)))
     else
       rena
-  } ensuring( r => {print("AUG " + r); (!TRANSPOSITION || r.forall(sp => r.get(sp._2)==Some(sp._1)))}, "converse renamings are contained")
+  } ensuring( r => !USubstRen.TRANSPOSITION || r.forall(sp => r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
 
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =
@@ -50,15 +54,12 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         val app = sp._1.asInstanceOf[ApplicationOf]
         (app.func, (app, sp._2))
       }).toMap
-  println("DOING " + this + "  rens=" + rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(",") + "  subs=" + subs.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(",") + "  heads=" + matchHeads)
+  println("DOING " + this + "  with  rens=" + rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(",") + "  subs=" + subs.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(",") + "  heads=" + matchHeads)
 
   //@todo check for substitutable expressions like in USubst
 
   /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
   private val semanticRenaming: Boolean = true
-
-  /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
-  private val TRANSPOSITION: Boolean = true
 
   override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "}"
 
