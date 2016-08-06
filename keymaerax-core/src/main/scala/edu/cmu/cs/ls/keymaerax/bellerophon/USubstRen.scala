@@ -54,7 +54,8 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         val app = sp._1.asInstanceOf[ApplicationOf]
         (app.func, (app, sp._2))
       }).toMap
-  println("DOING " + this + "  with  rens=" + rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(",") + "  subs=" + subs.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(",") + "  heads=" + matchHeads)
+
+  //if (BelleExpr.DEBUG) println("DOING " + this + "  with  rens=" + rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(",") + "  subs=" + subs.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(",") + "  heads=" + matchHeads)
 
   //@todo check for substitutable expressions like in USubst
 
