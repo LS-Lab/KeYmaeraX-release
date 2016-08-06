@@ -18,7 +18,7 @@ import testHelper.CustomAssertions._
 class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
-  val randomTrials = 10
+  val randomTrials = 20
   val randomComplexity = 2
   val rand = new RandomFormula()
 
@@ -186,7 +186,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   }
 
   it should "exists eliminate" in {
-    matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 ".asFormula)
+    matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula)
   }
 
   "Unification" should "instantiate some schematic axioms" in {

@@ -114,7 +114,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       ).toList
       val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[Variable],
         (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[Variable])).to
-      val ren = MultiRename(renamings)
+      val noncycrenamings = renamings.filter(sp => !renamings.exists(p=>p._1 == sp._2))
+      val ren = MultiRename(noncycrenamings)
       val renamedInst = ren(inst)
       try {
         if (renamedInst == ren.toCore(inst))
