@@ -460,7 +460,7 @@ object DifferentialTactics {
           skip,
           implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
             DG(y, a, b)(pos) &
-            existsR(pos) & exhaustiveEqR2L(hide=true)('Llast) &
+            existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
             useAt(auxEquiv, PosInExpr(0::Nil))(pos + PosInExpr(1::Nil)) &
             existsR(pos + PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
           )
