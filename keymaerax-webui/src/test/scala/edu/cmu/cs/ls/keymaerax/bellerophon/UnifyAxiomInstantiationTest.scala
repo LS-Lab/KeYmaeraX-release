@@ -28,8 +28,11 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   private def matchDirect(axiom: String, instance: Formula): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
     val u = unify(ax, instance)
-    println(u)
+    println("unify1:  " + ax)
+    println("unify2:  " + instance)
+    println("unifier: " + u)
     u(ax) shouldBe instance
+    u.toCore(ax) shouldBe instance
     true
   }
 
@@ -70,6 +73,31 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   it should "instantiate [++]" in {
     matchKey("[++] choice", "[x:=x+1;++{x:=0;{y'=-2}}]x>=y".asFormula)
   }
+
+  it should "instantiate DI" in {
+    matchKey("DI differential invariance", "[{x'=5&x>9}]x>=10".asFormula)
+  }
+
+  it should "instantiate DC" in {
+    matchKey("DC differential cut", "[{x'=5&x>9}]x>=10".asFormula)
+  }
+
+  it should "instantiate DG" in {
+    matchKey("DG differential ghost", "[{x'=5&x>9}]x>=10".asFormula)
+  }
+
+  it should "instantiate DG crazy" in {
+    matchKey("DG differential ghost", "[{z2'=1&<z2:=z2+z1;{{?true;++?true;}++?true;?true;}>(\\forall z1 \\forall z1 true->\\forall z2 (true&true))}]true".asFormula)
+  }
+
+  it should "instantiate DG crazy 2" in {
+    matchKey("DG differential ghost", "[{z1'=1&<z2:=z1;>\\exists z1 [z1:=z2+1;]z1>=1}]<z1:=-64;>[?true;?true;++?true;]z2>=1+1".asFormula)
+  }
+
+  it should "instantiate DG crazy 3" in {
+    matchKey("DG differential ghost", "[{z1'=1&<z2:=z1;>\\exists z1 z1>=z2}]z1>=5".asFormula)
+  }
+
 
   "Unification full instantiation sample" should "instantiate <>" in {
     matchDirect("<> diamond", "![x:=x+1;{x'=55}]!x>=99 <-> <x:=x+1;{x'=55}>x>=99".asFormula)
@@ -150,21 +178,36 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   "Unification" should "instantiate some schematic axioms" in {
   }
 
+
   // random schematic instantiations
 
   private val schematicAxioms = "<> diamond" :: "[++] choice" :: "[;] compose" :: "[*] iterate" ::
     "DW" :: "DC differential cut" :: "DE differential effect (system)" :: "DI differential invariance" ::
     "DX differential skip" ::
+    //", commute" :: //@todo would need to avoid repeated ODEs
     "-' derive neg" :: "+' derive sum" :: "-' derive minus" :: "*' derive product" :: "/' derive quotient" ::
     "=' derive =" :: ">=' derive >=" :: ">' derive >" :: "<=' derive <=" :: "<' derive <" :: "!=' derive !=" ::
     "&' derive and" :: "|' derive or" :: "forall' derive forall" :: "exists' derive exists" ::
     "K modal modus ponens" :: "I induction" ::
     "all dual" :: "all eliminate" :: "exists eliminate" ::
     Nil
+  private val limitedSchematicAxioms = "[:=] assign equality" :: "[:=] assign" :: "[:=] assign equality exists" ::
+    "[:=] self assign" :: "[':=] differential assign" :: "[:*] assign nondet" :: "[?] test" ::
+    "DE differential effect" :: "DG differential ghost" :: "DG differential ghost constant" ::
+    "DG inverse differential ghost system" :: "DG inverse differential ghost" ::
+    "DS& differential equation solution" ::
+    //"c()' derive constant fn" :: //@todo would need to avoid all variables here
+    "x' derive var" ::
+    "V vacuous" :: "vacuous all quantifier" ::
+    "const congruence" :: "const formula congruence" ::
+    Nil
+
+
+  private val axiomNames = schematicAxioms ++ limitedSchematicAxioms
 
   //@todo not all arity 1 predicationals will be supported during unification
-  "Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
-    for (ax <- schematicAxioms) {
+  "Random Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
+    for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -186,7 +229,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
 
   //@todo not all arity 1 predicationals will be supported during unification
   it should "instantiate full schematic axioms to random schematic instantiations" in {
-    for (ax <- schematicAxioms) {
+    for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials/5) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -199,6 +242,30 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
           println("match instance: " + inst)
           matchDirect(ax, inst)
+        }
+      }
+    }
+  }
+
+  it should "instantiate random formulas to their random schematic instantiations" in {
+    for (k <- 1 to randomTrials) {
+      val fml = rand.nextFormula(randomComplexity)
+      for (i <- 1 to randomTrials) {
+        val randClue = "Instance produced for " + fml + " in\n\t " + i + "th run of " + randomTrials +
+          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+        val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
+          rand.nextSchematicInstance(fml, randomComplexity)
+        }
+
+        withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+          println("match instance: " + inst)
+          val u = unify(fml, inst)
+          println("unify1:  " + fml)
+          println("unify2:  " + inst)
+          println("unifier: " + u)
+          u(fml) shouldBe inst
+          u.toCore(fml) shouldBe inst
         }
       }
     }
