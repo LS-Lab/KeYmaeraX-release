@@ -284,7 +284,8 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
     val replaced = usubst(e)
     Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
-    rens.foldLeft(replaced)((expr,sp)=>URename(sp._1,sp._2)(expr))
+    //rens.foldLeft(replaced)((expr,sp)=>URename(sp._1,sp._2)(expr))
+    renall.toCore(replaced)
   }
 
   private[bellerophon] def firstFlush: RenUSubst = renaming
