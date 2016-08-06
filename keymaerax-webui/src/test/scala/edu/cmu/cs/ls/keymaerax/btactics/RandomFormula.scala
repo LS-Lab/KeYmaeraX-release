@@ -117,17 +117,19 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       val noncycrenamings = renamings.filter(sp => !renamings.exists(p=>p._1 == sp._2))
       val ren = MultiRename(noncycrenamings)
       val renamedInst = ren(inst)
-      try {
-        if (renamedInst == ren.toCore(inst))
-          renamedInst
-        else {
-          // strangely, both renamings disagree
-          println("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
-          inst
-        }
+      val other = try {
+        ren.toCore(inst)
       } catch {
         // exception can happen when MultiRename used semantic renaming
         case _ => inst
+      }
+      if (other == renamedInst)
+        renamedInst
+      else {
+        // strangely, both renamings disagree
+        println("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+        throw new IllegalStateException("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+        inst
       }
     }
   }

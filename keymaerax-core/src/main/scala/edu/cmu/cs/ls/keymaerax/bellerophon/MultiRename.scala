@@ -40,7 +40,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   /** This MultiRename implemented strictly from the core (but limited to no semantic renaming). */
   def toCore: Expression => Expression =
-    e => renaming.foldLeft(e)((expr,sp)=>URename(sp._1,sp._2)(expr))
+    e => rena.foldLeft(e)((expr,sp)=>URename(sp._1,sp._2)(expr))
 
 
   /** apply this uniform renaming everywhere in an expression, resulting in an expression of the same kind. */
