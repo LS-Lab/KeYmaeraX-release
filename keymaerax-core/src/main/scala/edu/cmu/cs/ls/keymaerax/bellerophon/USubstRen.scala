@@ -96,6 +96,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
+
   // implementation
 
   /**

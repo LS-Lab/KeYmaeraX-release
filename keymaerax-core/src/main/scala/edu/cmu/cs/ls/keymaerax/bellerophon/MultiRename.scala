@@ -52,16 +52,20 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   }
 
   /** apply this uniform renaming everywhere in a term */
-  def apply(t: Term): Term = try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
+  def apply(t: Term): Term = { try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
+  } ensuring (r => sameAsCore(t, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + t)
 
   /** apply this uniform renaming everywhere in a formula */
-  def apply(f: Formula): Formula = try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
+  def apply(f: Formula): Formula = { try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
+  } ensuring (r => sameAsCore(f, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + f)
 
   /** apply this uniform renaming everywhere in a program */
-  def apply(p: DifferentialProgram): DifferentialProgram = try renameODE(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
+  def apply(p: DifferentialProgram): DifferentialProgram = { try renameODE(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
+  } ensuring (r => sameAsCore(p, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p)
 
   /** apply this uniform renaming everywhere in a program */
-  def apply(p: Program): Program = try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
+  def apply(p: Program): Program = { try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
+} ensuring (r => sameAsCore(p, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p)
 
   /**
    * Apply uniform renaming everywhere in the sequent.
@@ -69,6 +73,17 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
+
+  /** Check that same result as from core if both defined */
+  private def sameAsCore(e: Expression, r: Expression): Boolean = {
+    if (true || BelleExpr.RECHECK) try {
+      r == toCore(e)
+    } catch {
+      // the core refuses semantic renaming so cannot compare
+      case ignore: RenamingClashException => true
+    }
+    else true
+  }
 
   // implementation
 
