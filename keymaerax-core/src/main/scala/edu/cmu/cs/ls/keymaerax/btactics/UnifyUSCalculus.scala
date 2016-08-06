@@ -361,8 +361,8 @@ trait UnifyUSCalculus {
       /** Equivalence rewriting step */
       def equivStep(other: Expression, fact: Provable): BelleExpr = {
         val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length)}
-        lazy val expect = if (p.isSucc) Imply(C(subst(other)), C(subst(keyPart))) else Imply(C(subst(keyPart)), C(subst(other)))
-        lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
+        lazy val expect = if (p.isSucc) Imply(C(subst.toCore(other)), C(subst.toCore(keyPart))) else Imply(C(subst.toCore(keyPart)), C(subst.toCore(other)))
+        lazy val expectEquiv = if (p.isSucc) Equiv(C(subst.toCore(other)), C(subst.toCore(keyPart))) else Equiv(C(subst.toCore(keyPart)), C(subst.toCore(other)))
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
         //@note cut instead of cutLR might be a quicker proof to avoid the equivify but changes positions which would be unfortunate.
@@ -1103,7 +1103,7 @@ trait UnifyUSCalculus {
       val subst = inst(UnificationMatch(keyPart, expr))
       if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
-      Predef.assert(expr == subst(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
+      Predef.assert(expr == subst.toCore(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst.toCore(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
 
       /** useFor(subst, K,k, p, C,c)
         *
@@ -1118,7 +1118,7 @@ trait UnifyUSCalculus {
         * @see [[useFor()]]
         */
       def useFor[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
-        Predef.assert(subst(k) == c, "correctly matched input")
+        Predef.assert(subst.toCore(k) == c, "correctly matched input")
         Predef.assert(fact.conclusion.succ.head==K(k), "correctly matched key in fact")
         Predef.assert(proof.conclusion(p.top)==C(c), "correctly matched occurrence in input proof")
         Predef.assert(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
@@ -1141,34 +1141,34 @@ trait UnifyUSCalculus {
           */
         def equivStep(o: Expression): Provable = {
           require(fact.isProved, "currently want proved facts as input only\n" + fact)
-          require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
+          require(proof.conclusion.updated(p.top, C(subst.toCore(k)))==proof.conclusion, "expected context split")
           // |- fact: k=o or k<->o, respectively
           val sideUS: Provable = subst.toForward(fact)
           // |- subst(fact): subst(k)=subst(o) or subst(k)<->subst(o) by US
           val sideCE: Provable = CE(C)(sideUS)
           //@todo could shortcut proof by using "CO one-sided congruence" instead of CE
           // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
-          val sideImply: Provable = sideCE(Sequent(IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
+          val sideImply: Provable = sideCE(Sequent(IndexedSeq(), IndexedSeq(Imply(C(subst.toCore(k)), C(subst.toCore(o))))),
             EquivifyRight(SuccPos(0)))
           // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
           //assert(C(subst(k)) == expr, "matched expression expected")
           val coside: Provable = sideImply(
-            proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(o)))),
+            proof.conclusion.updated(p.top, Imply(C(subst.toCore(k)), C(subst.toCore(o)))),
             CoHideRight(p.top.asInstanceOf[SuccPos])
           )
           // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
-          val proved = {Provable.startProof(proof.conclusion.updated(p.top, C(subst(o))))(
-            CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos]), 0
+          val proved = {Provable.startProof(proof.conclusion.updated(p.top, C(subst.toCore(o))))(
+            CutRight(C(subst.toCore(k)), p.top.asInstanceOf[SuccPos]), 0
           ) (coside, 1)
-          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
-            ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
+          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst.toCore(o))), "prolonged conclusion"
+            ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst.toCore(k)))), "expected premise if fact.isProved")
           //                           *
           //                        ------
           // G |- C{subst(k)}, D    coside
           // ------------------------------ CutRight
           // G |- C{subst(o)}, D
           proved(proof, 0)
-        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst.toCore(o))), "prolonged conclusion"
           ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
 
@@ -1207,12 +1207,12 @@ trait UnifyUSCalculus {
             // ante by using Imply(kk, oo) in succ
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             val (kk, oo) =
-              if (polarity < 0) (C(subst(k)), C(subst(o)))
-              else if (polarity > 0) (C(subst(o)), C(subst(k)))
+              if (polarity < 0) (C(subst.toCore(k)), C(subst.toCore(o)))
+              else if (polarity > 0) (C(subst.toCore(o)), C(subst.toCore(k)))
               else {
                 Predef.assert(polarity == 0)
                 val Ci = Context(FormulaTools.makePolarityAt(C.ctx, pos.inExpr, -1))
-                (Ci(subst(k)), Ci(subst(o)))
+                (Ci(subst.toCore(k)), Ci(subst.toCore(o)))
               }
 
             val sideImply = Cmon(Sequent(IndexedSeq(), IndexedSeq(Imply(kk, oo))), ImplyRight(SuccPos(0)))
@@ -1271,12 +1271,12 @@ trait UnifyUSCalculus {
             // ante by using Imply(kk, oo) in succ
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             val (kk, oo) =
-              if (polarity < 0) (C(subst(o)), C(subst(k)))
-              else if (polarity > 0) (C(subst(k)), C(subst(o)))
+              if (polarity < 0) (C(subst.toCore(o)), C(subst.toCore(k)))
+              else if (polarity > 0) (C(subst.toCore(k)), C(subst.toCore(o)))
               else {
                 Predef.assert(polarity == 0)
                 val Ci = Context(FormulaTools.makePolarityAt(C.ctx, pos.inExpr, 1))
-                (Ci(subst(k)), Ci(subst(o)))
+                (Ci(subst.toCore(k)), Ci(subst.toCore(o)))
               }
 
             val impl = Imply(kk, oo)
@@ -1332,13 +1332,13 @@ trait UnifyUSCalculus {
              */
 
             // |- subst(prereq)
-            val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
+            val prereqFact = TactixLibrary.proveBy(subst.toCore(prereq).asInstanceOf[Formula], TactixLibrary.master())
             require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
 
             // |- subst(remainder{k})
-            val remFact: Provable = (Provable.startProof(subst(Context(remainder)(k)))
+            val remFact: Provable = (Provable.startProof(subst.toCore(Context(remainder)(k)).asInstanceOf[Formula])
               // |- subst(prereq)      |- subst(prereq -> remainder)
-              (CutRight(subst(prereq), SuccPos(0)), 0)
+              (CutRight(subst.toCore(prereq).asInstanceOf[Formula], SuccPos(0)), 0)
               // prove right branch   |- subst(prereq -> remainder)
               // right branch  |- subst(prereq -> remainder)  byUS(fact)
               (subst.toForward(fact), 1)
@@ -1348,7 +1348,7 @@ trait UnifyUSCalculus {
             remFact ensuring(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
 
             val remKey: PosInExpr = key.child
-            require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
+            require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst.toCore(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
             UnifyUSCalculus.this.useFor(remFact, remKey, inst)(pos)(proof)
 
 
