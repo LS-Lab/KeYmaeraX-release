@@ -28,19 +28,21 @@ import scala.collection.immutable._
 final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   insist(subsDefsInput.forall(sp => sp._1.kind == sp._2.kind), "Substitution renaming only to expressions of the same kind: " + this)
   insist(subsDefsInput.forall(sp => sp._1.sort == sp._2.sort), "Substitution renaming only to expressions of the same sort: " + this)
+
   /** substitution part */
   private val subs: immutable.Map[Expression,Expression] = subsDefsInput.filter(sp => !sp._1.isInstanceOf[Variable]).toMap
   /** renaming part, augmented with transpositions */
-  private val rens: immutable.Map[Variable,Variable] = augmentTranspositions(RenUSubst.renamingPartOnly(subsDefsInput))
+  private val rens: immutable.Map[Variable,Variable] = augmentTranspositions(RenUSubst.renamingPartOnly(subsDefsInput).toMap)
+
   /** include transpositions for renamings if need be */
-  private def augmentTranspositions(rens: immutable.Seq[(Variable,Variable)]): immutable.Map[Variable,Variable] = {
-    val rena = rens.toMap
+  private def augmentTranspositions(rena: immutable.Map[Variable,Variable]): immutable.Map[Variable,Variable] = {
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
     if (TRANSPOSITION)
       rena ++ (rena.map(sp => (sp._2, sp._1)))
     else
       rena
-  } ensuring( r => !TRANSPOSITION || r.forall(sp => r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
+  } ensuring( r => {print("AUG " + r); (!TRANSPOSITION || r.forall(sp => r.get(sp._2)==Some(sp._1)))}, "converse renamings are contained")
+
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =
     subs.filter(sp => sp._1.isInstanceOf[ApplicationOf]).map(
@@ -48,6 +50,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         val app = sp._1.asInstanceOf[ApplicationOf]
         (app.func, (app, sp._2))
       }).toMap
+  println("DOING " + this + "  rens=" + rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(",") + "  subs=" + subs.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(",") + "  heads=" + matchHeads)
 
   //@todo check for substitutable expressions like in USubst
 
