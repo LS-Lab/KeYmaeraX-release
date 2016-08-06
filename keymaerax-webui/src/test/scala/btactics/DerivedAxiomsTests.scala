@@ -51,6 +51,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
+//  it should "prove !all2" in {check(notAll2)}
   it should "prove ![]" in {check(notBox)}
   it should "prove !<>" in {check(notDiamond)}
   ignore should "prove all distribute" in {check(allDistributeAxiom)}
@@ -136,7 +137,11 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove + closed" in withMathematica { implicit qeTool => check(plusClosed)}
   it should "prove * closed" in withMathematica { implicit qeTool => check(timesClosed)}
   it should "prove <" in withMathematica { implicit qeTool => check(less)}
+  it should "prove ! <" in withMathematica { implicit qeTool => check(notLess)}
+  it should "prove ! <=" in withMathematica { implicit qeTool => check(notLessEqual)}
   it should "prove >" in withMathematica { implicit qeTool => check(greater)}
+  it should "prove ! >" in withMathematica { implicit qeTool => check(notGreater)}
+  it should "prove ! >=" in withMathematica { implicit qeTool => check(notGreaterEqual)}
 
   it should "prove != elimination" in withMathematica { implicit qeTool => check(notEqualElim)}
   it should "prove >= elimination" in withMathematica { implicit qeTool => check(greaterEqualElim)}

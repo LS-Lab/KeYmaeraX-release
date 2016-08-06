@@ -135,18 +135,17 @@ object DerivedAxioms {
     val fieldMirrors = fields.map(im.reflectMethod)
 
     var failures = 0
-    Range(0, fieldMirrors.length-1).map(idx => {
-      try{
+    Range(0, fieldMirrors.length-1).foreach(idx => {
+      try {
         fieldMirrors(idx)()
       } catch {
-        case e: Throwable => {
+        case e: Throwable =>
           failures = failures + 1
-          println("WARNING: Failed to add derived lemma.");
+          println("WARNING: Failed to add derived lemma.")
           e.printStackTrace()
-        }
       }
     })
-    throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedLemmas deatabase.")
+    if (failures > 0) throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedLemmas deatabase.")
   }
 
   // derived rules
@@ -1641,7 +1640,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val notEqual = derivedAxiom("! =", Sequent(IndexedSeq(), IndexedSeq("(!(f() = g())) <-> (f() != g())".asFormula)),
+  lazy val notEqual = derivedAxiom("! =", Sequent(IndexedSeq(), IndexedSeq("(!(f_() = g_())) <-> (f_() != g_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x ((!(x = y)) <-> (x != y))".asFormula, TactixLibrary.RCF))
   )
@@ -1652,40 +1651,19 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val notGreater = derivedAxiom("! >", Sequent(IndexedSeq(), IndexedSeq("(!(f() > g())) <-> (f() <= g())".asFormula)),
+  lazy val notGreater = derivedAxiom("! >", Sequent(IndexedSeq(), IndexedSeq("(!(f_() > g_())) <-> (f_() <= g_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x ((!(x > y)) <-> (x <= y))".asFormula, TactixLibrary.RCF))
   )
 
   /**
-    * {{{Axiom "! <".
-    *   (!(f() < g())) <-> (f() >= g())
+    * {{{Axiom "> flip".
+    *   (f() > g()) <-> (g() < f())
     * End.
-    * }}}
-    */
-  lazy val notLess = derivedAxiom("! <", Sequent(IndexedSeq(), IndexedSeq("(!(f_() < g_())) <-> (f_() >= g_())".asFormula)),
-    useAt(">= flip")(1, 1::Nil) & useAt("< negate")(1, 1::Nil) & byUS(equivReflexiveAxiom)
-  )
-
-  /**
-    * {{{Axiom "! <=".
-    *   (!(f() <= g())) <-> (f() > g())
-    * End.
-    * }}}
-    */
-  lazy val notLessEqual = derivedAxiom("! <=", Sequent(IndexedSeq(), IndexedSeq("(!(f_() <= g_())) <-> (f_() > g_())".asFormula)),
-    useAt("> flip")(1, 1::Nil) & useAt("< negate")(1, 1::Nil) & byUS(equivReflexiveAxiom)
-  )
-
-  /**
-    * {{{Axiom "< negate".
-    *   (!(f() >= g())) <-> (f() < g())
-    * End.
-    * }}}
-    */
-  lazy val notGreaterEqual = derivedAxiom("< negate", Sequent(IndexedSeq(), IndexedSeq("(!(f_() >= g_())) <-> (f_() < g_())".asFormula)),
+    * */
+  lazy val flipGreater = derivedAxiom("> flip", Sequent(IndexedSeq(), IndexedSeq("(f_() > g_()) <-> (g_() < f_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
-    byUS(proveBy("\\forall y \\forall x ((!(x >= y)) <-> (x < y))".asFormula, TactixLibrary.RCF))
+    byUS(proveBy("\\forall y \\forall x ((x > y) <-> (y < x))".asFormula, TactixLibrary.RCF))
   )
 
   /**
@@ -1700,13 +1678,34 @@ object DerivedAxioms {
   )
 
   /**
-    * {{{Axiom "> flip".
-    *   (f() > g()) <-> (g() < f())
+    * {{{Axiom "! <".
+    *   (!(f() < g())) <-> (f() >= g())
     * End.
-    * */
-  lazy val flipGreater = derivedAxiom("> flip", Sequent(IndexedSeq(), IndexedSeq("(f_() > g_()) <-> (g_() < f_())".asFormula)),
+    * }}}
+    */
+  lazy val notLess = derivedAxiom("! <", Sequent(IndexedSeq(), IndexedSeq("(!(f_() < g_())) <-> (f_() >= g_())".asFormula)),
+    useAt(flipGreater, PosInExpr(1::Nil))(1, 0::0::Nil) & useAt(notGreater)(1, 0::Nil) & useAt(flipGreaterEqual)(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "! <=".
+    *   (!(f() <= g())) <-> (f() > g())
+    * End.
+    * }}}
+    */
+  lazy val notLessEqual = derivedAxiom("! <=", Sequent(IndexedSeq(), IndexedSeq("(!(f_() <= g_())) <-> (f_() > g_())".asFormula)),
+    useAt(flipGreaterEqual, PosInExpr(1::Nil))(1, 0::0::Nil) & useAt(notGreaterEqual)(1, 0::Nil) & useAt(flipGreater)(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "< negate".
+    *   (!(f() >= g())) <-> (f() < g())
+    * End.
+    * }}}
+    */
+  lazy val notGreaterEqual = derivedAxiom("< negate", Sequent(IndexedSeq(), IndexedSeq("(!(f_() >= g_())) <-> (f_() < g_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
-    byUS(proveBy("\\forall y \\forall x ((x > y) <-> (y < x))".asFormula, TactixLibrary.RCF))
+    byUS(proveBy("\\forall y \\forall x ((!(x >= y)) <-> (x < y))".asFormula, TactixLibrary.RCF))
   )
 
   /**
