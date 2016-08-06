@@ -478,6 +478,10 @@ Axiom "all dual".
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
+Axiom "all dual time".
+  (!\exists t_ !p(||)) <-> \forall t_ p(||)
+End.
+
 Axiom /*\\foralli */ "all instantiate".
   (\forall x_ p(x_)) -> p(f())
 End.
