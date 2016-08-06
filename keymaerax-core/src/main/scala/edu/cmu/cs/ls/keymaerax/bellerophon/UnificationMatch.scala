@@ -421,16 +421,16 @@ class UnificationMatchBase extends SchematicUnificationMatch {
   */
 class FreshUnificationMatch extends SchematicUnificationMatch {
 
-  private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._1.isInstanceOf[Variable] && sp._2.isInstanceOf[Variable])
+  //private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._1.isInstanceOf[Variable] && sp._2.isInstanceOf[Variable])
   private def renameIfNeedBe(repl: List[SubstRepl], e: Expression): Expression = {
-    val ren = renamingPart(repl)
+    val ren = RenUSubst.renamingPartOnly(repl)
     if (ren.isEmpty)
       e
     else
       Subst(ren.distinct)(e)
   }
   private def renameAllIfNeedBe(repl: List[SubstRepl], input: List[SubstRepl]): List[SubstRepl] = {
-    val ren = renamingPart(repl).map({ case (a, b) => (b, a)}) //@note converse renaming to prepare for renaming transposition
+    val ren = RenUSubst.renamingPartOnly(repl).map({ case (a, b) => (b, a)}) //@note converse renaming to prepare for renaming transposition
     if (ren.isEmpty)
       input
     else {
@@ -463,6 +463,17 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
   }
 }
 
+/**
+  * Unification/matching algorithm for fresh shapes (with built-in names such as those in axioms).
+  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
+  * Matcher leaves input alone and only substitutes into shape.
+  * Reasonably fast 1.5-pass matcher gathering uncomposed unifiers with a subsequent post-processing
+  * pass preparing for the after renaming.
+  *
+  * @note Expects shape to have fresh names that do not occur in the input.
+  *       Usually shape has all built-in names ending in underscore _ and no input is like that.
+  * @author Andre Platzer
+  */
 class FreshPostUnificationMatch extends SchematicUnificationMatch {
 
   /**
@@ -471,7 +482,7 @@ class FreshPostUnificationMatch extends SchematicUnificationMatch {
     * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
-  before ++ after
+    before ++ after
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     val ren = MultiRename(RenUSubst.renamingPartOnly(us))

@@ -35,6 +35,10 @@ object RenUSubst {
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
         map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
           (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable])})
+  private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.List[(Expression,Expression)]): immutable.List[(Variable,Variable)] =
+    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
+      map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
+        (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable])})
   private[bellerophon] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
     apply(renamingPartOnly(subsDefsInput))
 
