@@ -18,8 +18,8 @@ import testHelper.CustomAssertions._
 class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
-  val randomTrials = 100
-  val randomComplexity = 4
+  val randomTrials = 10
+  val randomComplexity = 2
   val rand = new RandomFormula()
 
   val unify = UnificationMatch
@@ -70,6 +70,14 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
       ("f()".asTerm, "1".asTerm) ::
       (UnitPredicational("p", AnyArg), "[{x_:=x_+1;}*]x_>0".asFormula) :: Nil
     )
+  }
+
+  it should "instantiate [:=] assign equality 3" in {
+    matchKey("[:=] assign equality", "[z1:=1;]<z1:=*;>1>=1".asFormula)
+  }
+
+  it should "instantiate [:=] assign equality 4" in {
+    matchKey("[:=] assign equality", "[z1:=98+1;][z1:=*;][?true;]true".asFormula)
   }
 
   it should "instantiate [++]" in {
@@ -177,6 +185,10 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("[:=] assign equality", "[x_0:=x;]x_0>0 <-> \\forall x_0 (x_0=x -> x_0>0)".asFormula)
   }
 
+  it should "exists eliminate" in {
+    matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 ".asFormula)
+  }
+
   "Unification" should "instantiate some schematic axioms" in {
   }
 
@@ -208,7 +220,73 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   private val axiomNames = schematicAxioms ++ limitedSchematicAxioms
 
   //@todo not all arity 1 predicationals will be supported during unification
-  "Random Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
+  "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
+    for (ax <- axiomNames) {
+      println("Axiom " + ax)
+      for (i <- 1 to randomTrials) {
+        val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
+          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+        if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
+          val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
+            rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity, false)
+          }
+
+          withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+            println("match instance: " + inst)
+            matchKey(ax, inst)
+          }
+        }
+      }
+    }
+  }
+
+  //@todo not all arity 1 predicationals will be supported during unification
+  it should "instantiate full schematic axioms to random schematic instantiations" in {
+    for (ax <- axiomNames) {
+      println("Axiom " + ax)
+      for (i <- 1 to randomTrials/5) {
+        val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
+          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+        val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
+          rand.nextSchematicInstance(AxiomInfo(ax).formula, randomComplexity, false)
+        }
+
+        withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+          println("match instance: " + inst)
+          matchDirect(ax, inst)
+        }
+      }
+    }
+  }
+
+  it should "instantiate random formulas to their random schematic instantiations" in {
+    for (k <- 1 to randomTrials) {
+      val fml = rand.nextFormula(randomComplexity)
+      for (i <- 1 to randomTrials) {
+        val randClue = "Instance produced for " + fml + " in\n\t " + i + "th run of " + randomTrials +
+          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+        val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
+          rand.nextSchematicInstance(fml, randomComplexity, false)
+        }
+
+        withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+          println("match instance: " + inst)
+          val u = unify(fml, inst)
+          println("unify1:  " + fml)
+          println("unify2:  " + inst)
+          println("unifier: " + u)
+          u(fml) shouldBe inst
+          //@todo this might fail when the instance requires semantic renaming
+          u.toCore(fml) shouldBe inst
+        }
+      }
+    }
+  }
+
+  "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
     for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
