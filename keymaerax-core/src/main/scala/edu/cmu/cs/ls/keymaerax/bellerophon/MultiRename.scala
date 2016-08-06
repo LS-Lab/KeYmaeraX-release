@@ -35,9 +35,6 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
   private val semanticRenaming: Boolean = true
 
-  /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
-  private val TRANSPOSITION: Boolean = true
-
   override def toString: String = "MultiRename{" + rens.map(sp => sp._1.toString + "~>" + sp._2).mkString(", ") + "}"
 
   /** This MultiRename implemented strictly from the core (but limited to no semantic renaming). */

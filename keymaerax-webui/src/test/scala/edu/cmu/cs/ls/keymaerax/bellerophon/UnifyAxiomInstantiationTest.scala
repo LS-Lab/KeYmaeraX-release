@@ -189,9 +189,6 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula)
   }
 
-  "Unification" should "instantiate some schematic axioms" in {
-  }
-
 
   // random schematic instantiations
 
