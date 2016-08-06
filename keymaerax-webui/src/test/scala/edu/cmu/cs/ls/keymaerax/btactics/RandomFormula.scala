@@ -78,7 +78,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextProvable(size: Int): Provable = nextPr(nextNames("z", size / 3 + 1), size)
 
   /** Generate a random schematic instance of the given Formula `fml` of complexity `size`. */
-  def nextSchematicInstance(fml: Formula, size: Int): Formula = {
+  def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true): Formula = {
     val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[Variable])
     val vars = nextNames("z", size / 3 + 1)
     val othervars = nextNames("y", size / 5 + 1)
@@ -103,16 +103,32 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     // do all replacements repl to fml
     val inst = repls.foldRight(fml) ((repl, f) => doRepl(f,repl))
     inst
-    val instvars = StaticSemantics.vars(inst).symbols
-    // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
-    // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
-    val allvars = instvars.filter(x => x.isInstanceOf[Variable] &&
-      !instvars.contains(DifferentialSymbol(x.asInstanceOf[Variable]))
-    ).toList
-    val renamings: immutable.Seq[(Variable,Variable)] = ownvars.map(x => (x.asInstanceOf[Variable],
-      (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[Variable])).to
-    val ren = MultiRename(renamings)
-    ren(inst)
+    if (!renamed)
+      inst
+    else {
+      val instvars = StaticSemantics.vars(inst).symbols
+      // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
+      // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
+      val allvars = instvars.filter(x => x.isInstanceOf[Variable] &&
+        !instvars.contains(DifferentialSymbol(x.asInstanceOf[Variable]))
+      ).toList
+      val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[Variable],
+        (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[Variable])).to
+      val ren = MultiRename(renamings)
+      val renamedInst = ren(inst)
+      try {
+        if (renamedInst == ren.toCore(inst))
+          renamedInst
+        else {
+          // strangely, both renamings disagree
+          println("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+          inst
+        }
+      } catch {
+        // exception can happen when MultiRename used semantic renaming
+        case _ => inst
+      }
+    }
   }
 
   /** Generate a random (propositionally) provable formula */
