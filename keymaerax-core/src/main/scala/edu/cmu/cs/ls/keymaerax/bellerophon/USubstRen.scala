@@ -13,7 +13,7 @@ import scala.collection.immutable._
 
 object USubstRen {
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
-  private val TRANSPOSITION: Boolean = URename(Variable("dummy"),Variable("ymmud"))(Variable("ymmud"))==Variable("dummy")
+  private[bellerophon] val TRANSPOSITION: Boolean = URename(Variable("dummy"),Variable("ymmud"))(Variable("ymmud"))==Variable("dummy")
 }
 /**
   * Renaming Uniform Substitution, simultaneously combining URename and USubst.
@@ -42,10 +42,10 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   private def augmentTranspositions(rena: immutable.Map[Variable,Variable]): immutable.Map[Variable,Variable] = {
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
     if (USubstRen.TRANSPOSITION)
-      rena ++ (rena.map(sp => (sp._2, sp._1)))
+      rena ++ (rena.map(sp => sp._2->sp._1))
     else
       rena
-  } ensuring( r => !USubstRen.TRANSPOSITION || r.forall(sp => r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
+  } ensuring( r => !USubstRen.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
 
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =

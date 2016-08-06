@@ -290,7 +290,7 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
 
   private[bellerophon] def firstFlush: RenUSubst = renaming
 
-  override def toString: String = super.toString + "DirectUSubstAboveRen"
+  override def toString: String = "DirectUSubstAboveRen{" + subsDefs.mkString(", ") + ";" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + "}"
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
   def apply(t: Term): Term = new Predef.Ensuring({ effective(t)

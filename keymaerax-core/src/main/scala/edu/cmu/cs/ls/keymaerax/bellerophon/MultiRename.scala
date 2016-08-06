@@ -25,10 +25,12 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   private val rena: immutable.Map[Variable,Variable] = rens.filter(sp => sp._1!=sp._2).toMap
   insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed yet again: " + this)
   /** including transpositions */
-  private val renaming: immutable.Map[Variable,Variable] = if (TRANSPOSITION)
-    rena ++ rena.map(sp => (sp._2,sp._1))
-  else
-    rena
+  private val renaming: immutable.Map[Variable,Variable] = {
+    if (USubstRen.TRANSPOSITION)
+      rena ++ (rena.map(sp => (sp._2,sp._1)))
+    else
+      rena
+  } ensuring( r => !USubstRen.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
 
   /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
   private val semanticRenaming: Boolean = true
@@ -40,6 +42,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   /** This MultiRename implemented strictly from the core (but limited to no semantic renaming). */
   def toCore: Expression => Expression =
+  //@note core renaming only uses without transposition augmentation
     e => rena.foldLeft(e)((expr,sp)=>URename(sp._1,sp._2)(expr))
 
 
@@ -77,7 +80,12 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {
     if (true || BelleExpr.RECHECK) try {
-      r == toCore(e)
+      if (r == toCore(e))
+        true
+      else {
+        Predef.print("fast result: " + r + "\ncore result: " + toCore(e) + "\nmultiren:   " + this + "\nrenaming:   " + renaming + "\napplied to:  " + e)
+        false
+      }
     } catch {
       // the core refuses semantic renaming so cannot compare
       case ignore: RenamingClashException => true
