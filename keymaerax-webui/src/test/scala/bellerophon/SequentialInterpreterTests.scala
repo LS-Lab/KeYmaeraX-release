@@ -76,11 +76,13 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "failover to right whenever a non-closing and non-partial tactic is provided on the left" in {
     val tactic = implyR(1)& DebuggingTactics.assertProved  | skip& DebuggingTactics.assertProved
-
-    shouldResultIn(
-      tactic,
-      "1=2 -> 1=2".asFormula,
-      Seq(Sequent(IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+    
+    a[Throwable] shouldBe thrownBy(
+      shouldResultIn(
+        tactic,
+        "1=2 -> 1=2".asFormula,
+        Seq(Sequent(IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+      )
     )
   }
 
