@@ -31,8 +31,8 @@ object CustomAssertions {
         case Some(p) => p.subgoals.size == 1 && p.subgoals.head == p.conclusion
         case None => true
       },
-      pr + " is noop",
-      pr + " is not noop"
+      pr + " is proved but shouldn't be",
+      pr + " is rightfully not proved"
     )
   }
 }
