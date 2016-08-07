@@ -398,7 +398,7 @@ object DifferentialTactics {
    * @param b The constant term in y'=a*y+b.
    * @return The tactic.
    */
-  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def DGTactic(y: Variable, a: Term, b: Term): DependentPositionTactic = "DGTactic" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
       cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) <(
@@ -410,7 +410,7 @@ object DifferentialTactics {
   })
 
   def diffGhost(y: Variable, a: Term, b: Term, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
-    DG(y,a,b)(pos) &
+    DGTactic(y,a,b)(pos) &
     DLBySubst.assignbExists(initialValue)(pos) &
     DLBySubst.assignEquality(pos)
   })
@@ -421,7 +421,7 @@ object DifferentialTactics {
       (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b()".asTerm))
     }
 
-    DG(y, a, b)(pos) &
+    DGTactic(y, a, b)(pos) &
         DLBySubst.assignbExists(iv)(pos) &
         DLBySubst.assignEquality(pos)
   })
@@ -459,7 +459,7 @@ object DifferentialTactics {
         cutR(p)(pos.checkSucc.top) <(
           skip,
           implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
-            DG(y, a, b)(pos) &
+            DGTactic(y, a, b)(pos) &
             existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
             useAt(auxEquiv, PosInExpr(0::Nil))(pos + PosInExpr(1::Nil)) &
             existsR(pos + PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
@@ -546,7 +546,7 @@ object DifferentialTactics {
 
       val time: Variable = TacticHelper.freshNamedSymbol(Variable("t_", None, Real), sequent)
       val introTime =
-          DG(time, "0".asTerm, "1".asTerm)(pos) &
+        DGTactic(time, "0".asTerm, "1".asTerm)(pos) &
             DLBySubst.assignbExists("0".asTerm)(pos) &
             DLBySubst.assignEquality(pos)
 

@@ -26,6 +26,9 @@ class BelleParserRegressionTest extends TacticTestBase {
   }
 
   "DG" should "parse" in {
-    BelleParser("diffGhost({`t`}, {`0`}, {`1`}, 1)") shouldBe DifferentialTactics.DG("t".asTerm.asInstanceOf[Variable], "0".asTerm, "1".asTerm)(1)
+    val parseResult = BelleParser("DGTactic({`t`}, {`0`}, {`1`}, 1)")
+    val expected = DifferentialTactics.DGTactic("t".asTerm.asInstanceOf[Variable], "0".asTerm, "1".asTerm)(1)
+
+    parseResult shouldBe expected
   }
 }
