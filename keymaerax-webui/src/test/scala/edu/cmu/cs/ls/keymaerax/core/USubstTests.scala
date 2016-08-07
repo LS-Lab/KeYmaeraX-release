@@ -373,7 +373,12 @@ class USubstTests extends FlatSpec with Matchers {
 //    )
     theDeductionOf {
       pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
-    } should throwOrNoop
+    } should throwOrNoop(p =>
+        p.conclusion.ante.isEmpty &&
+        p.conclusion.succ.size == 1 &&
+        (p.conclusion.succ.head match { case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty }))
+    // more specific phrasing (current behavior)
+    // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("q(x) -> [x:=5;]q(x)".asFormula)))
   }
 
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
@@ -385,7 +390,12 @@ class USubstTests extends FlatSpec with Matchers {
     // this should not prove x=0->[x:=5;]x=0
     theDeductionOf {
       pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
-    } should throwOrNoop
+    } should throwOrNoop(p =>
+        p.conclusion.ante.isEmpty &&
+        p.conclusion.succ.size == 1 &&
+        (p.conclusion.succ.head match { case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty }))
+    // more specific phrasing (current behavior)
+    // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("f(x)=0 -> [x:=5;]f(x)=0".asFormula)))
   }
 
   it should "refuse to accept ill-kinded substitutions outright" in {
