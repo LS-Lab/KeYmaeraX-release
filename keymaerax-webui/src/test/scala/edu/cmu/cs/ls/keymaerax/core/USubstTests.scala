@@ -14,10 +14,12 @@ import org.scalatest._
 import testHelper.KeYmaeraXTestTags
 import testHelper.CustomAssertions.withSafeClue
 import testHelper.KeYmaeraXTestTags.AdvocatusTest
+import testHelper.CustomAssertions._
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
+import scala.language.postfixOps
 
 /**
   * Uniform substitution clash test dummies.
@@ -339,31 +341,28 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(IndexedSeq(), IndexedSeq(conc)))
   }
 
-
-  //@todo augment such that either an exception or a no-op is acceptable
   it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
         SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
     pr shouldBe 'proved
-    pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula)))
+    pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula))
     // this should not prove x=0->[x:=5;]x=0
-    a [SubstitutionClashException] should be thrownBy {
+    theDeductionOf {
       pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
-    }
+    } should throwOrNoop
   }
 
-  //@todo augment such that either an exception or a no-op is acceptable
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
         SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
     pr shouldBe 'proved
-    pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula)))
+    pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
     // this should not prove x=0->[x:=5;]x=0
-    a [SubstitutionClashException] should be thrownBy {
+    theDeductionOf {
       pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
-    }
+    } should throwOrNoop
   }
 
   it should "refuse to accept ill-kinded substitutions outright" in {
