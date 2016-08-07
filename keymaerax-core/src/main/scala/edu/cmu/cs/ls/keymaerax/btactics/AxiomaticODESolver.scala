@@ -29,10 +29,13 @@ import scala.collection.parallel.immutable
   * @author Nathan Fulton
   */
 object AxiomaticODESolver {
+  private val ODE_DEBUGGER = false
+
   /** The name of the explicit time variables. */
   private val TIMEVAR : String = "kyxtime"
 
-  def tmpmsg(s:String) = println(s) //@todo before deployment, remove this method.
+  /** Temporary messages that aren't even necessarily useful to have in verbose ODE debugger mode. */
+  private def tmpmsg(s:String) = if(ODE_DEBUGGER) println(s)
 
   //region The main tactic
 
@@ -42,26 +45,24 @@ object AxiomaticODESolver {
     val odePos = subPosition(pos, 0::Nil)
     val ode = s(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
 
-    val odeDebugger = true;
-
     odeSolverPreconds(pos) &
-    DebuggingTactics.debug("AFTER precondition check", odeDebugger) &
+    DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
     addTimeVarIfNecessary(odePos) &
-    DebuggingTactics.debug("AFTER time var", odeDebugger) &
+    DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
     assertInitializedTimeVar(odePos) & //@note we leave t'=0*t+1 for now because it's easier to name the position after inverseDiffGhost steps.
-    (cutInSoln(qeTool)(pos) & DebuggingTactics.debug("Cut in a sol'n", odeDebugger)).*@(TheType()) &
-    DebuggingTactics.debug("AFTER cutting in all soln's", odeDebugger) &
+    (cutInSoln(qeTool)(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).*@(TheType()) &
+    DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     HilbertCalculus.DW(pos) &
-    DebuggingTactics.debug("AFTER DW", odeDebugger) &
+    DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
     simplifyPostCondition(qeTool)(pos) &
-    DebuggingTactics.debug("AFTER simplifying post-condition", odeDebugger) &
-    (inverseDiffCut(qeTool)(pos) & DebuggingTactics.debug("did an inverse diff cut", odeDebugger)).*@(TheType()) &
-    DebuggingTactics.debug("AFTER all inverse diff cuts", odeDebugger) &
+    DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
+    (inverseDiffCut(qeTool)(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).*@(TheType()) &
+    DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
     RepeatTactic(inverseDiffGhost(qeTool)(pos), odeSize(ode) - 1, TheType()) &
     DebuggingTactics.assert((s,p) => odeSize(s(p)) == 1, "ODE should only have time.")(pos) &
-    DebuggingTactics.debug("AFTER all inverse diff ghosts", odeDebugger) &
+    DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
-    DebuggingTactics.debug("AFTER DS&", odeDebugger)
+    DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER)
   })
 
   //endregion
@@ -179,7 +180,7 @@ object AxiomaticODESolver {
       case Box(ode, postcond) => {
         DifferentialTactics.diffCut(solnToCut)(pos) <(
           Idioms.nil,
-          DebuggingTactics.debug("Doing diffInd on ", true) & DifferentialTactics.diffInd(qeTool)(pos) & DebuggingTactics.assertProved
+          DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd(qeTool)(pos) & DebuggingTactics.assertProved
         )
       }
       case Diamond(ode, postcond) => throw noDiamondsForNowExn
@@ -332,38 +333,41 @@ object AxiomaticODESolver {
 
         /* Note: Constructing our own substitution because the default substitution seems to get at least g(||) wrong. */
         def subst(r: RenUSubst) = {
-
+          if(ODE_DEBUGGER) println("[inverseDiffGhost] input to subst:    " + r)
           val renaming =
             RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++
             RenUSubst(URename("x_".asTerm.asInstanceOf[Variable], x_.xp.x))
 
-          renaming ++
-          RenUSubst(USubst(
+            val result = renaming ++
+            RenUSubst(USubst(
               "g(||)".asTerm ~> renaming(y_.e) ::
               "f(|y_|)".asTerm ~> x_.e ::
               "q(|y_|)".asFormula ~> r.substitution("q(|y_|)".asFormula) ::
               DifferentialProgramConst("c", Except("y_".asVariable)) ~> r(DifferentialProgramConst("c", Except("y_".asVariable))) ::
               "p(|y_|)".asFormula ~> r.substitution("p(|y_|)".asFormula) ::
               Nil))
+
+          if(ODE_DEBUGGER) println("[inverseDiffGhost] output from subst: " + result);
+          result
         }
 
         f match {
           case Box(_,_) => {
             val axiomName = if(atomicOdes(ode).length > 2) "DG inverse differential ghost system" else "DG inverse differential ghost"
+
             TactixLibrary.cut(Forall(y_.xp.x::Nil, f)) <(
               HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved
               ,
               TactixLibrary.hide(pos) &
-              DebuggingTactics.debug(s"Trying to eliminate ${y_} from the ODE via an application of ${axiomName}.", true) &
+              DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate ${y_} from the ODE via an application of ${axiomName}.", ODE_DEBUGGER) &
               HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos)
             ) &
             DebuggingTactics.assertProvableSize(1) &
-            DebuggingTactics.debug(s"Finished trying to eliminate ${y_} from the ODE.", true) &
-            DebuggingTactics.assert((s,p) => odeSize(s(p)) == odeSize(ode)-1, "Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
+            DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate ${y_} from the ODE.", ODE_DEBUGGER) &
+            DebuggingTactics.assert((s,p) => odeSize(s(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
           }
           case Diamond(_,_) => throw noDiamondsForNowExn
         }
-
       }
       case _ => Idioms.nil
     }
