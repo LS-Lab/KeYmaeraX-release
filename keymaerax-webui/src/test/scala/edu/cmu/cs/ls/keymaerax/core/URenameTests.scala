@@ -62,18 +62,20 @@ class URenameTests extends FlatSpec with Matchers {
     a [RenamingClashException] shouldBe thrownBy {prem(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)),
       BoundRenaming(Variable("y"),Variable("x"), SuccPos(0))
     )}
-    // the following wouldBe possible if an exception ain't thrown
-    val clash = prem(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)),
-      BoundRenaming(Variable("y"),Variable("x"), SuccPos(0))
-    )
-    // wouldBe from now on
-    clash shouldBe 'proved
-    clash.conclusion should be (Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)))
-    val subst = clash(USubst(SubstitutionPair("p(||)".asFormula, "y>=0".asFormula)::Nil))
-    subst shouldBe 'proved
-    val unsound = conc(subst, 0)
-    unsound.conclusion should be (Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))
-    unsound shouldBe 'proved
+    a [RenamingClashException] shouldBe thrownBy {
+      // the following wouldBe possible if an exception ain't thrown
+      val clash = prem(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)),
+        BoundRenaming(Variable("y"), Variable("x"), SuccPos(0))
+      )
+      // wouldBe from now on
+      clash shouldBe 'proved
+      clash.conclusion should be(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)))
+      val subst = clash(USubst(SubstitutionPair("p(||)".asFormula, "y>=0".asFormula) :: Nil))
+      subst shouldBe 'proved
+      val unsound = conc(subst, 0)
+      unsound.conclusion should be(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))
+      unsound shouldBe 'proved
+    }
   }
 
   //@todo test similar unsound conclusions from other semantic renaming
@@ -95,16 +97,18 @@ class URenameTests extends FlatSpec with Matchers {
     a [RenamingClashException] shouldBe thrownBy {Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
       UniformRenaming(Variable("y"),Variable("x")), 0
     )}
-    val clash = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
-      UniformRenaming(Variable("y"),Variable("x")), 0
-    )
-    // wouldBe from now on
-    clash.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
-    clash.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))
-    val unsound = clash(USubst(SubstitutionPair("p(||)".asFormula, "x^2>=y".asFormula) :: Nil))
-    unsound.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall x x^2>=y".asFormula)))
-    unsound.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall y x^2>=y".asFormula)))
-    //@todo now an extra antecedent y>=0 would make the top provable but the bottom unsound
+    a [RenamingClashException] shouldBe thrownBy {Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+      val clash = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+        UniformRenaming(Variable("y"),Variable("x")), 0
+      )
+      // wouldBe from now on
+      clash.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
+      clash.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))
+      val unsound = clash(USubst(SubstitutionPair("p(||)".asFormula, "x^2>=y".asFormula) :: Nil))
+      unsound.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall x x^2>=y".asFormula)))
+      unsound.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall y x^2>=y".asFormula)))
+      //@todo now an extra antecedent y>=0 would make the top provable but the bottom unsound
+    }
   }
 
   //@todo test similar unsound conclusions from other semantic renaming

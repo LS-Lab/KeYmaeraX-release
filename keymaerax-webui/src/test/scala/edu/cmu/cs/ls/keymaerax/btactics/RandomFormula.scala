@@ -51,15 +51,15 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextDifferentialProgram(size : Int): DifferentialProgram = nextDP(nextNames("z", size / 3 + 1), size)
 
   // dot generators default to no diffs
-  def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, true)
+  def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, dots=false, diffs=false, funcs=false)
 
-  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, true, true, true)
+  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, modals=true, dotTs=true, dotFs=true, diffs=true, funcs=false)
 
-  def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, true, false)
+  def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, dotTs=true, dotFs=false, diffs=false, funcs=false)
 
   def nextFormulaContext(size : Int): Context[Formula] = {
     import Augmentors._
-    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, true, false, false, false, false)
+    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, modals=true, dotTs=false, dotFs=false, diffs=false, funcs=false)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)
       val pos = nextPosition(size).inExpr

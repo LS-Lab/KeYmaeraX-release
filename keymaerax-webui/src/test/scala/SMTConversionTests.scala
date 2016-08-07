@@ -16,15 +16,15 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   val converter = DefaultSMTConverter
 
   "Numbers" should "convert numbers" in {
-    converter("1 > 2".asFormula) should be("(assert (not (> 1 2)))")
+    converter("1 > 2".asFormula) should be("(assert (not (> 1 2)))\n(check-sat)\n")
   }
 
   it should "convert legal big positive numbers" in {
-    converter("9223372036854775807 > 1".asFormula) should be("(assert (not (> 9223372036854775807 1)))")
+    converter("9223372036854775807 > 1".asFormula) should be("(assert (not (> 9223372036854775807 1)))\n(check-sat)\n")
   }
 
   it should "convert legal big negative numbers" in {
-    converter("-9223372036854775807 < 1".asFormula) should be("(assert (not (< (- 9223372036854775807) 1)))")
+    converter("-9223372036854775807 < 1".asFormula) should be("(assert (not (< (- 9223372036854775807) 1)))\n(check-sat)\n")
   }
 
   it should "throw exception in converting illegal big positive numbers" in {
@@ -36,49 +36,49 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Variables" should "convert numbers" in {
-    converter("x > 2".asFormula) should be ("(declare-fun x () Real)\n(assert (not (> x 2)))")
+    converter("x > 2".asFormula) should be ("(declare-fun x () Real)\n(assert (not (> x 2)))\n(check-sat)\n")
   }
 
   it should "convert numbers complex" in {
     converter("x > 2 & y < 3".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (and (> x 2) (< y 3))))")
+      + "(assert (not (and (> x 2) (< y 3))))\n(check-sat)\n")
   }
 
   it should "convert numbers const" in {
     converter("x > a & y < x".asFormula) should be("(declare-fun a () Real)\n"
-      + "(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(assert (not (and (> x a) (< y x))))")
+      + "(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(assert (not (and (> x a) (< y x))))\n(check-sat)\n")
   }
 
   "Constant function" should "convert" in {
     converter("g() > 0".asFormula) should be ("(declare-fun g () Real)\n"
-      + "(assert (not (> g 0)))")
+      + "(assert (not (> g 0)))\n(check-sat)\n")
   }
 
   "Quantifiers" should "convert forall" in {
-    converter("\\forall x x>y()".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (forall ((x Real)) (> x y))))")
+    converter("\\forall x x>y()".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (forall ((x Real)) (> x y))))\n(check-sat)\n")
   }
 
   it should "convert exists" in {
     converter("\\exists x x>y()".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (exists ((x Real)) (> x y))))")
+      + "(assert (not (exists ((x Real)) (> x y))))\n(check-sat)\n")
   }
 
   it should "convert nested qutifiers" in {
     converter("\\forall x \\exists y x>y".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (forall ((x Real)) (exists ((y Real)) (> x y)))))")
+      + "(assert (not (forall ((x Real)) (exists ((y Real)) (> x y)))))\n(check-sat)\n")
   }
 
   "Quantifiers with Z3 converter" should "convert complex quantifiers" in {
     converter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (^ x 2) (^ y 2)) (^ z 2))))))")
+      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (^ x 2) (^ y 2)) (^ z 2))))))\n(check-sat)\n")
   }
 
   "Exponentials" should "convert positive" in {
-    converter("3^3 > 1".asFormula) should be  ("(assert (not (> (^ 3 3) 1)))")
+    converter("3^3 > 1".asFormula) should be  ("(assert (not (> (^ 3 3) 1)))\n(check-sat)\n")
   }
 
   it should "convert negative" in {
-    converter("3^-2 < 1".asFormula) should be ("(assert (not (< (^ 3 (- 2)) 1)))")
+    converter("3^-2 < 1".asFormula) should be ("(assert (not (< (^ 3 (- 2)) 1)))\n(check-sat)\n")
   }
 
   it should "convert index 0" in {
@@ -86,25 +86,25 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "convert base 0" in {
-    converter("(0+0)^(x+y-1) = 1".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ x y) 1)) 1)))")
+    converter("(0+0)^(x+y-1) = 1".asFormula) should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ x y) 1)) 1)))\n(check-sat)\n")
   }
 
   it should "convert fractions" in {
-    converter("3^(-0.5) < 1".asFormula) shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))"
+    converter("3^(-0.5) < 1".asFormula) shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))\n(check-sat)\n"
   }
 
   it should "convert complex" in {
     converter("(x+y-z)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (^ (- (+ x y) z) 3) 1)))")
+      + "(assert (not (= (^ (- (+ x y) z) 3) 1)))\n(check-sat)\n")
   }
 
   it should "convert complex 2" in {
-    converter("(x+x+x)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n(assert (not (= (^ (+ (+ x x) x) 3) 1)))")
+    converter("(x+x+x)^3 = 1".asFormula) should be ("(declare-fun x () Real)\n(assert (not (= (^ (+ (+ x x) x) 3) 1)))\n(check-sat)\n")
   }
 
   it should "convert complex 3" in {
     converter("(x+y-z)^(y*2-y-y+3) = 1".asFormula) should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (^ (- (+ x y) z) (+ (- (- (* y 2) y) y) 3)) 1)))")
+      + "(assert (not (= (^ (- (+ x y) z) (+ (- (- (* y 2) y) y) 3)) 1)))\n(check-sat)\n")
   }
 
   // complex

@@ -62,7 +62,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       SubstitutionPair("f(.)".asTerm, "(.)^2+y".asTerm) :: Nil))
   }
 
-  it should "unify 3+f(x,y) with 3+(x^2+y)" in {
+  it should "projection unify 3+f(x,y) with 3+(x^2+y)" in {
     //val dot = DotTerm(Tuple(Real, Real))
     shouldUnify("3+f(x,y)".asTerm,
       "3+(x^2+y)".asTerm, USubst(
@@ -74,7 +74,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "unify 3+f(x,y,z) with 3+(x^2+y)" in {
+  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" in {
     shouldUnify("3+f(x,y,z)".asTerm,
       "3+(x^y+z)".asTerm, USubst(
         SubstitutionPair(
@@ -166,7 +166,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "unify renaming and instance p(x,y) and x*y>5" in {
+  it should "projection unify renaming and instance p(x,y) and x*y>5" in {
     shouldMatch("p(x,y)".asFormula,
       "x*y>5".asFormula, RenUSubst(
         ("p(.(.,.))".asFormula,
@@ -174,7 +174,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "unify renaming and instance p(x,y,z) and x*y>z" in {
+  it should "projection unify renaming and instance p(x,y,z) and x*y>z" in {
     shouldMatch("p(x,y,z)".asFormula,
       "x*y>z".asFormula, RenUSubst(
         ("p(.(.,.,.))".asFormula,

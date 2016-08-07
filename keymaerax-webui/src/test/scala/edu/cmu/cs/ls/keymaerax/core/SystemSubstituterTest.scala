@@ -38,7 +38,7 @@ class SystemSubstituterTest extends TacticTestBase {
   "System postconditions" should "not allow ghosts in postconditions of DG differential ghost" in {
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("a",Except(y),Real), Number(0)) ::
       SubstitutionPair(UnitFunctional("a",Except(y),Real), Number(0)) ::
       SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
@@ -50,7 +50,7 @@ class SystemSubstituterTest extends TacticTestBase {
   it should "not allow ghosts in postconditions of DG differential ghost constant" in {
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("g",Except(y),Real), Number(0)) ::
       SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
       SubstitutionPair(DifferentialProgramConst("c",Except(y)), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
@@ -62,14 +62,14 @@ class SystemSubstituterTest extends TacticTestBase {
     // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
     val pr = Provable.axioms("DG inverse differential ghost")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
         Nil))}
     //@note this is a mistyped substitution so near no-op would be acceptable
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
@@ -82,7 +82,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(0)) ::
       SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(0)) ::
       SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
@@ -95,7 +95,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
       SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
       SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
@@ -109,7 +109,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), "-b()".asTerm) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Variable("x_",None,Real)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
@@ -124,7 +124,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(-1)) ::
       SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
@@ -138,7 +138,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
         SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
@@ -152,14 +152,14 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG inverse differential ghost")
     println(pr)
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
         Nil))}
     //@note this is a mistyped substitution so near no-op would be acceptable
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
@@ -172,7 +172,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
-    a [SubstitutionClashException] shouldBe thrownBy {pr(USubst(
+    a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::

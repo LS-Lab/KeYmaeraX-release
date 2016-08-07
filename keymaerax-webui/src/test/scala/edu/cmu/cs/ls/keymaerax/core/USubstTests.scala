@@ -340,6 +340,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
 
+  //@todo augment such that either an exception or a no-op is acceptable
   it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
@@ -352,6 +353,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
+  //@todo augment such that either an exception or a no-op is acceptable
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
