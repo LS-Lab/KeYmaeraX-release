@@ -159,29 +159,41 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in ODEs of DG differential ghost constant" in {
-    // [{c&H(||)}]p(||) <-> \exists y_ [{c,y_'=g()&H(||)}]p(||)
+    // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(|y_|)&q(|y_|)}]p(|y_|)
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(UnitFunctional("g",Except(y),Real), Number(-1)) ::
+        SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
+        SubstitutionPair(DifferentialProgramConst("c", Except(y)), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(UnitPredicational("p",Except(y)), "x<=10".asFormula) ::
+        Nil))}
+    theDeductionOf(pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
-        Nil))}
+        Nil))) should throwOrNoop
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DGconstant("y_'=-1")
   }
 
   it should "not allow ghosts in ODEs of DG inverse differential ghost for y_>=0 -> \\forall y_ [{y_'=5,x_'=y_}]x_>=0" in {
-    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
+    // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
     val pr = Provable.axioms("DG inverse differential ghost")
     println(pr)
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(UnitFunctional("f",Except(y),Real), Variable("y_",None,Real)) ::
+        SubstitutionPair(UnitFunctional("g",Except(y),Real), Number(5)) ::
+        SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
+        SubstitutionPair(UnitPredicational("p",Except(y)), ".>=0".asFormula) ::
+        Nil))}
+    theDeductionOf(pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
-        Nil))}
+        Nil))) should throwOrNoop
     //@note this is a mistyped substitution so near no-op would be acceptable
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
