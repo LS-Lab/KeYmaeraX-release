@@ -31,9 +31,12 @@ abstract class LemmaDBBase extends LemmaDB {
     val lemmaString = lemma.toString
     writeLemma(id, lemmaString)
     val lemmaFromDB = get(id)
-    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
+    if(lemmaFromDB isEmpty) {
+      throw new IllegalStateException("Lemma was not successfully inserted in database.")
+    }
+    else if (lemmaFromDB.get != lemma) {
       remove(id)
-      throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
+      throw new IllegalStateException(s"Lemma in DB differed from lemma in memory -> deleted\n\tOriginal: ${lemma.toString}\n\tReloaded: ${lemmaFromDB.toString}")
     }
     // assertion duplicates condition and throw statement
     assert(lemmaFromDB == Some(lemma), "Lemma stored in DB should be identical to lemma in memory " + lemma)
