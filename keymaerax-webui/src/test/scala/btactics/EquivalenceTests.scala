@@ -54,7 +54,7 @@ class EquivalenceTests extends TacticTestBase {
     loneSucc(result) shouldBe "p(x)".asFormula
   }
 
-  it should "work for \\forall x p(x) <-> q(x) |- p(z)" in {
+  ignore should "work for \\forall x p(x) <-> q(x) |- p(z)" in {
     val f = "(\\forall x (p(x) <-> q(x))) -> p(z)".asFormula
     val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
     val result = proveBy(f,t)
@@ -62,7 +62,7 @@ class EquivalenceTests extends TacticTestBase {
     loneSucc(result) shouldBe "q(z)".asFormula
   }
 
-  it should "work for \\forall x p(x) <-> q(x) |- q(z)" in {
+  ignore should "work for \\forall x p(x) <-> q(x) |- q(z)" in {
     val f = "(\\forall x (p(x) <-> q(x))) -> q(z)".asFormula
     val t = TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
     val result = proveBy(f,t)
