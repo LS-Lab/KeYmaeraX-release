@@ -33,6 +33,7 @@ object USubstRen {
 final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   insist(subsDefsInput.forall(sp => sp._1.kind == sp._2.kind), "Substitution renaming only to expressions of the same kind: " + this)
   insist(subsDefsInput.forall(sp => sp._1.sort == sp._2.sort), "Substitution renaming only to expressions of the same sort: " + this)
+  insist({val repls = subsDefsInput.map(sp=>sp._1).toList; repls.length == repls.distinct.length}, "No contradictory or duplicate substitutions/renamings: " + this)
 
   /** substitution part */
   private val subs: immutable.Map[Expression,Expression] = subsDefsInput.filter(sp => !sp._1.isInstanceOf[Variable]).toMap

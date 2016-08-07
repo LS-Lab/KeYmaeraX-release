@@ -21,6 +21,7 @@ import scala.collection.immutable._
   */
 final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (Expression => Expression) {
   insist(rens.forall(sp => sp._1.sort == sp._2.sort), "Uniform renaming only to variables of the same sort: " + this)
+  insist({val repls = rens.map(sp=>sp._1).toList; repls.length == repls.distinct.length}, "No contradictory or duplicate renamings: " + this)
   /** filtered without identity renaming */
   private val rena: immutable.Map[Variable,Variable] = rens.filter(sp => sp._1!=sp._2).toMap
   insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed yet again: " + this)
