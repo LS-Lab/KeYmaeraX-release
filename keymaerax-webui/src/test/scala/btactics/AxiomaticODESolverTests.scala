@@ -26,14 +26,14 @@ class AxiomaticODESolverTests extends TacticTestBase {
 
   "axiomatic ode solver" should "work!" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & apply(qeTool)(1)
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver(qeTool)(1)
     val result = proveBy(f, t)
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=kyxtime+1*t_;](a/2*kyxtime^2+2*kyxtime+1)^3>=1)".asFormula
   })
 
   it should "work using my own time" in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & apply(qeTool)(1)
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver(qeTool)(1)
     val result = proveBy(f, t)
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;](a/2*t^2+2*t+1)^3>=1)".asFormula
   })
