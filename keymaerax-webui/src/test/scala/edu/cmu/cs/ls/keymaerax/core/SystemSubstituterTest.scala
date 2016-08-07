@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase, TactixLibrary}
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import testHelper.CustomAssertions._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 
@@ -16,7 +17,6 @@ import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
  */
 @AdvocatusTest
 class SystemSubstituterTest extends TacticTestBase {
-  import TactixLibrary._
 
   private val ode = DifferentialProgramConst("c", AnyArg)
   private val y = Variable("y_",None,Real)
@@ -69,13 +69,12 @@ class SystemSubstituterTest extends TacticTestBase {
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
         Nil))}
     //@note this is a mistyped substitution so near no-op would be acceptable
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    theDeductionOf {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
-        Nil))}
-    //@todo should not prove
+        Nil))} should throwOrNoop
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost system" in {
