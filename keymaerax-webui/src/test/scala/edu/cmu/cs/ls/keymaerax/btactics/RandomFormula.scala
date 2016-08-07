@@ -77,9 +77,12 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   /** Generate a random proof of a random tautological sequents */
   def nextProvable(size: Int): Provable = nextPr(nextNames("z", size / 3 + 1), size)
 
-  /** Generate a random schematic instance of the given Formula `fml` of complexity `size`. */
-  def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true): Formula = {
-    val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[Variable])
+  /** Generate a random schematic instance of the given Formula `fml` of complexity `size`.
+    * @param renamed whether variables can have been renamed in the schematic instance generated.
+    * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.   */
+  def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false): Formula = {
+    val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[Variable]).
+      filter(x => builtins || !x.name.endsWith("_"))
     val vars = nextNames("z", size / 3 + 1)
     val othervars = nextNames("y", size / 5 + 1)
     val symbols = StaticSemantics.signature(fml)

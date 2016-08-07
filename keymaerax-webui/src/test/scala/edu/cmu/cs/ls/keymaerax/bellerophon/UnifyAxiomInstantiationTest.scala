@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomIndex, AxiomInfo, Context, RandomFormula}
 import testHelper.CustomAssertions._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 /**
   * Test whether unification algorithm can instantiate axioms correctly.
@@ -108,6 +109,15 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchKey("DG differential ghost", "[{z1'=1&<z2:=z1;>\\exists z1 z1>=z2}]z1>=5".asFormula)
   }
 
+  it should "instantiate DS&" in {
+    matchKey("DS& differential equation solution", "[{y1'=z0+31&q(y1)}]\\exists z1 z1>y1".asFormula)
+  }
+
+  it should "instantiate DS& crazy built-in clash" taggedAs(IgnoreInBuildTest) in {
+    matchKey("DS& differential equation solution", "[{y1'=x_+31&q(y1)}]\\exists z1 true".asFormula)
+  }
+
+  ////////
 
   "Unification full instantiation sample" should "instantiate <>" in {
     matchDirect("<> diamond", "![x:=x+1;{x'=55}]!x>=99 <-> <x:=x+1;{x'=55}>x>=99".asFormula)
@@ -199,6 +209,14 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
 
   it should "[:=] assign exists" in {
     matchDirect("[:=] assign exists", "[t:=0;][{x'=1,t'=1&true}]x>0->\\exists t [{x'=1,t'=1&true}]x>0".asFormula)
+  }
+
+  it should "all eliminate built-in clash crazy" taggedAs(IgnoreInBuildTest) in {
+    matchDirect("all eliminate", "\\forall z1 \\forall x_ (true<->true)->\\forall x_ (true<->true)".asFormula)
+  }
+
+  it should "exists eliminate built-in clash crazy" taggedAs(IgnoreInBuildTest) in {
+    matchDirect("exists eliminate", "\\forall x_ [?true;]true->\\exists z1 \\forall x_ [?true;]true".asFormula)
   }
 
 

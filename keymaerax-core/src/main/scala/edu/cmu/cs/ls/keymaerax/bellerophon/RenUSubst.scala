@@ -31,6 +31,7 @@ object RenUSubst {
       map(sp=>(sp.what,sp.repl)))
     def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
+  //@todo .distinct ? might depend on the use case
   private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
         map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
