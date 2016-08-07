@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import SequentCalculus.{cohide2, cohideR, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutL, cutLR, cutR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
@@ -1025,7 +1026,14 @@ trait UnifyUSCalculus {
             require(vars.size == 1, "Universal quantifier must not be block quantifier")
             //@note would also work with all distribute and all generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
-            val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x_"), vars.head)))
+            val rename = (us: RenUSubst) => (us match {
+              case usB4URen: DirectUSubstAboveURen =>
+                //@note transpose substitution since subsequent renaming does the same
+                usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
+                  sp.what,
+                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+              case _ => us
+            }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
             useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(SuccPos(0))
@@ -1040,7 +1048,14 @@ trait UnifyUSCalculus {
             require(vars.size == 1, "Existential quantifier must not be block quantifier")
             //@note would also work with exists distribute and exists generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
-            val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x_"), vars.head)))
+            val rename = (us: RenUSubst) => (us match {
+              case usB4URen: DirectUSubstAboveURen =>
+                //@note transpose substitution since subsequent renaming does the same
+                usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
+                  sp.what,
+                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+              case _ => us
+            }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
             useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(AntePos(0))
