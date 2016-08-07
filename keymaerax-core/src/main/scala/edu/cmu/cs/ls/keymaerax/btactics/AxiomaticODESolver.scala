@@ -341,9 +341,9 @@ object AxiomaticODESolver {
           RenUSubst(USubst(
               "g(||)".asTerm ~> renaming(y_.e) ::
               "f(|y_|)".asTerm ~> x_.e ::
-              "q(|y_|)".asFormula ~> r("q(|y_|)".asFormula) ::
+              "q(|y_|)".asFormula ~> r.substitution("q(|y_|)".asFormula) ::
               DifferentialProgramConst("c", Except("y_".asVariable)) ~> r(DifferentialProgramConst("c", Except("y_".asVariable))) ::
-              "p(|y_|)".asFormula ~> r("p(|y_|)".asFormula) ::
+              "p(|y_|)".asFormula ~> r.substitution("p(|y_|)".asFormula) ::
               Nil))
         }
 
