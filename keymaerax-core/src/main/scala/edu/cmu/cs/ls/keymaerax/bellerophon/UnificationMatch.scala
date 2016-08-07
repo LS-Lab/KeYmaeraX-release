@@ -24,10 +24,10 @@ import scala.collection.immutable.{List, Nil}
 // 2.5 pass for !semanticRenaming
 //object UnificationMatch extends UnificationMatchUSubstAboveURen
 // 1 pass for fresh cases of !semanticRenaming
-object UnificationMatch extends FreshUnificationMatch
+//object UnificationMatch extends FreshUnificationMatch
 
 // 1.5 pass for fresh cases of !semanticRenaming
-//object UnificationMatch extends FreshPostUnificationMatch
+object UnificationMatch extends FreshPostUnificationMatch
 
 /**
   * Matcher(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
@@ -485,8 +485,9 @@ class FreshPostUnificationMatch extends SchematicUnificationMatch {
     before ++ after
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
-    val ren = MultiRename(RenUSubst.renamingPartOnly(us))
-    Subst(us.map(sp =>
+    val uss = us.distinct
+    val ren = MultiRename(RenUSubst.renamingPartOnly(uss))
+    Subst(uss.map(sp =>
       if (sp._1.isInstanceOf[UnitPredicational] || sp._1.isInstanceOf[UnitFunctional] ||
         sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf] ||
         sp._1.isInstanceOf[ApplicationOf])
