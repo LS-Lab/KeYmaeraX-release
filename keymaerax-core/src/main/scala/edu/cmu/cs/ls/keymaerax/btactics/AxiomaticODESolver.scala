@@ -44,6 +44,7 @@ object AxiomaticODESolver {
   def axiomaticSolve(implicit qeTool: QETool) = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
     val ode = s(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
+    val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1
 
     odeSolverPreconds(pos) &
     DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
@@ -58,7 +59,7 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
     (inverseDiffCut(qeTool)(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).*@(TheType()) &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
-    RepeatTactic(inverseDiffGhost(qeTool)(pos), odeSize(ode) - 1, TheType()) &
+    RepeatTactic(inverseDiffGhost(qeTool)(pos), sizeOfTimeExplicitOde - 1, TheType()) &
     DebuggingTactics.assert((s,p) => odeSize(s(p)) == 1, "ODE should only have time.")(pos) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
