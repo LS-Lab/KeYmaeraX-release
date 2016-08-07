@@ -35,7 +35,7 @@ object CustomAssertions {
           val clazz = manifest.runtimeClass.asInstanceOf[Class[E]]
           clazz.isAssignableFrom(e.getClass)
       },
-      if (pr.isLeft && pr.left.get.isProved) pr + " is unexpectedly proved but shouldn't be"
+      if (pr.isLeft) pr + " is unexpectedly proved but shouldn't be"
       else /* pr.isRight */ pr + " resulted in unexpected exception, not in " + manifest.runtimeClass,
       pr + " is not proved, as expected"
     )
