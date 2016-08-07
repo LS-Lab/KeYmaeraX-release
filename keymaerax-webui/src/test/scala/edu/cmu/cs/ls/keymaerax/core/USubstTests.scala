@@ -35,6 +35,22 @@ class USubstTests extends FlatSpec with Matchers {
   val randomComplexity = 20
   val rand = new RandomFormula()
 
+  /** Test whether `operation(data)` is either a no-op returning `data` or throws an exception of type `E`. */
+  def throwOrNoOp[In,Out,E:Manifest](operation: In => Out, data: In) = {
+    var done = false
+    try {
+      // noop
+      done = (operation(data) == data)
+    }
+    catch {
+      case ignore : Throwable => done = false
+    }
+    if (!done) a [E] should be thrownBy {
+      operation(data)
+    }
+  }
+
+
   //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful
   @deprecated("Use Provable(USubst) rule instead")
   private def UniformSubstitutionRule(subst: USubst, origin: Sequent) : Sequent => immutable.List[Sequent] = conclusion =>
@@ -348,9 +364,13 @@ class USubstTests extends FlatSpec with Matchers {
     pr shouldBe 'proved
     pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula)))
     // this should not prove x=0->[x:=5;]x=0
-    a [SubstitutionClashException] should be thrownBy {
-      pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
-    }
+//    a [SubstitutionClashException] should be thrownBy {
+//      pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
+//    }
+    throwOrNoOp[Provable,Provable,SubstitutionClashException] (
+      pr => pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil)),
+      pr
+    )
   }
 
   //@todo augment such that either an exception or a no-op is acceptable
@@ -361,9 +381,13 @@ class USubstTests extends FlatSpec with Matchers {
     pr shouldBe 'proved
     pr.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula)))
     // this should not prove x=0->[x:=5;]x=0
-    a [SubstitutionClashException] should be thrownBy {
-      pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
-    }
+    throwOrNotOp[Provable,ProvableSubstitutionClashException](
+      pr=>pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil)),
+      pr
+    )
+//    a [SubstitutionClashException] should be thrownBy {
+//      pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
+//    }
   }
 
   it should "refuse to accept ill-kinded substitutions outright" in {
