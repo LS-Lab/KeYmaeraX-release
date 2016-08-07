@@ -92,6 +92,14 @@ object DebuggingTactics {
     }
   }
 
+  def assertProvableSize(provableSize: Int): BuiltInTactic = new BuiltInTactic(s"assertProvableSize(${provableSize})") {
+    override def result(provable: Provable): Provable = {
+      if (provable.subgoals.length != provableSize)
+        throw new BelleUserGeneratedError(s"Expected to have ${provableSize} open goals but found an open goal with ${provable.subgoals.size}");
+      provable
+    }
+  }
+
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition at position pos. */
   def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
     override def computeResult(provable: Provable, pos: Position): Provable = {

@@ -355,11 +355,11 @@ object AxiomaticODESolver {
               ,
               TactixLibrary.hide(pos) &
               DebuggingTactics.debug(s"Trying to eliminate ${y_} from the ODE via an application of ${axiomName}.", true) &
-              HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos) &
-              DebuggingTactics.debug(s"Finished trying to eliminate ${y_} from the ODE.", true) &
-              DebuggingTactics.assert((s,p) => odeSize(s(p)) == odeSize(ode)-1,
-                "Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
-            )
+              HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos)
+            ) &
+            DebuggingTactics.assertProvableSize(1) &
+            DebuggingTactics.debug(s"Finished trying to eliminate ${y_} from the ODE.", true) &
+            DebuggingTactics.assert((s,p) => odeSize(s(p)) == odeSize(ode)-1, "Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
           }
           case Diamond(_,_) => throw noDiamondsForNowExn
         }
