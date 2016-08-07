@@ -195,7 +195,17 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("[:=] assign equality", "[x_0:=x;]x_0>0 <-> \\forall x_0 (x_0=x -> x_0>0)".asFormula)
   }
 
-  //@todo FreshPostUnificationMatch solves this test but fails some tactics
+  it should "exists eliminate [with FreshPostUnificationMatch]" in {
+    val ax = AxiomInfo("exists eliminate").formula
+    val instance = "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula
+    val u = (new FreshPostUnificationMatch())(ax, instance)
+    println("unify1:  " + ax)
+    println("unify2:  " + instance)
+    println("unifier: " + u)
+    u(ax) shouldBe instance
+    u.toCore(ax) shouldBe instance
+  }
+  //@todo FreshPostUnificationMatch solves this test (see above) but fails some tactics
   it should "exists eliminate" in {
     matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula)
   }
