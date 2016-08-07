@@ -114,8 +114,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     TactixLibrary.invGenerator = new NoneGenerate()
   }
 
-  //@todo remove proveBy in favor of TactixLibrary.proveBy to avoid incompatibilities or meaingless tests if they do something else
-  /** Proves a formula using the specified tactic. Fails the test when tactic fails. */
+  /** Proves a formula using the specified tactic. Fails the test when tactic fails.
+    * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
+    */
   @deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(fml))
