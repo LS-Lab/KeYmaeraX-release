@@ -195,6 +195,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("[:=] assign equality", "[x_0:=x;]x_0>0 <-> \\forall x_0 (x_0=x -> x_0>0)".asFormula)
   }
 
+  //@todo FreshPostUnificationMatch solves this test but fails some tactics
   it should "exists eliminate" in {
     matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula)
   }

@@ -24,15 +24,16 @@ object CustomAssertions {
     * {{{theDeductionOf { proveBy(formula, tactic) } should throwOrNoop }}}*/
   def theDeductionOf[T <: Provable](f: => T): Option[T] = try { Some(f) } catch { case e: Throwable => None }
 
-  /** Checks that a provable, if present, has a sole subgoal equal to its conclusion. */
+  /** Checks that a provable, if present, has a sole subgoal equal to its own conclusion,
+    * so is equivalent to a single Provable.startProof. */
   val throwOrNoop = Matcher {
     (pr: Option[Provable]) => MatchResult(
       pr match {
         case Some(p) => p.subgoals.size == 1 && p.subgoals.head == p.conclusion
         case None => true
       },
-      pr + " is proved but shouldn't be",
-      pr + " is rightfully not proved"
+      pr + " is unexpectedly proved but shouldn't be",
+      pr + " is not proved, as expected"
     )
   }
 }

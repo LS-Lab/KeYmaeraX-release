@@ -75,6 +75,7 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  //@todo this test compared to upper indicates that master does not always perform QE correctly
   it should "generate and master prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
@@ -109,6 +110,7 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  //@todo this test compared to upper indicates that master does not always perform QE correctly
   it should "generate and master prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
       implyR(1) &
