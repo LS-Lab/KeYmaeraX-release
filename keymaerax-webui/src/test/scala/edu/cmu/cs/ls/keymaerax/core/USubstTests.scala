@@ -357,6 +357,22 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(IndexedSeq(), IndexedSeq(conc)))
   }
 
+  it should "not allow bound variables to occur free in V with assignment" taggedAs(AdvocatusTest) in {
+    a[SubstitutionClashException] shouldBe thrownBy {
+      Provable.axioms("V vacuous")(USubst(
+        SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
+          SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+    }
+  }
+
+  it should "not allow bound variables to occur free in V with ODE" taggedAs(AdvocatusTest) in {
+    a[SubstitutionClashException] shouldBe thrownBy {
+      Provable.axioms("V vacuous")(USubst(
+        SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
+          SubstitutionPair(ProgramConst("a"), "{x'=2}".asProgram) :: Nil))
+    }
+  }
+
   it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
     val pr = Provable.axioms("V vacuous")(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
@@ -371,6 +387,7 @@ class USubstTests extends FlatSpec with Matchers {
 //      pr => pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil)),
 //      pr
 //    )
+    //@todo deduction should throw or lead to something where free variable of postcondition doesn't intersect bound variables of program
     theDeductionOf {
       pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
     } should throwOrNoop(p =>
@@ -388,6 +405,7 @@ class USubstTests extends FlatSpec with Matchers {
     pr shouldBe 'proved
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
     // this should not prove x=0->[x:=5;]x=0
+    //@todo deduction should throw or lead to something where free variable of postcondition doesn't intersect bound variables of program
     theDeductionOf {
       pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
     } should throwOrNoop(p =>

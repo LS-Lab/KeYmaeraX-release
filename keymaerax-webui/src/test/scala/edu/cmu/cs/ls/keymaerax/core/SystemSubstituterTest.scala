@@ -29,7 +29,7 @@ class SystemSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), "y'+1".asTerm) ::
-      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+      SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
       SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("y",None,Real)), Number(2))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "x'=3".asFormula) ::
       Nil))}
@@ -59,20 +59,21 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost for y_=9 -> [{y_'=5,x_'=3}]y_=9" in {
-    // ([{x_'=f(x_)&H(x_)}]p(x_))  ->  (\forall y_ [{y_'=g(||),x_'=f(x_)&H(x_)}]p(x_))
+    // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
     val pr = Provable.axioms("DG inverse differential ghost")
     pr shouldBe 'proved
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    //@todo should throw or leave f,p,q untouched since they have different types
+    theDeductionOf(pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
-        Nil))}
+        Nil))) should throwOrNoop
     //@note this is a mistyped substitution so near no-op would be acceptable
     theDeductionOf {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
         Nil))} should throwOrNoop
   }
@@ -84,7 +85,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(0)) ::
       SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(0)) ::
-      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+      SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
       SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
       Nil))}
@@ -97,7 +98,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
       SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+      SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
       SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
       Nil))}
@@ -111,7 +112,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), "-b()".asTerm) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Variable("x_",None,Real)) ::
-        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "y_<=m()".asFormula) ::
         Nil))}
@@ -126,7 +127,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("t",None,Unit,Real),Nothing), Number(0)) ::
       SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), Number(-1)) ::
-      SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+      SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
       SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
       Nil))}
@@ -139,7 +140,7 @@ class SystemSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
-        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
         Nil))}
@@ -154,14 +155,14 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(PredOf(Function("H",None,Real,Bool),DotTerm), True) ::
+        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
         Nil))}
     //@note this is a mistyped substitution so near no-op would be acceptable
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
         Nil))}
     //@todo should not prove
@@ -174,7 +175,7 @@ class SystemSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(UnitPredicational("H",AnyArg), True) ::
+        SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
         Nil))}
