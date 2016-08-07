@@ -95,7 +95,7 @@ object DebuggingTactics {
   def assertProvableSize(provableSize: Int): BuiltInTactic = new BuiltInTactic(s"assertProvableSize(${provableSize})") {
     override def result(provable: Provable): Provable = {
       if (provable.subgoals.length != provableSize)
-        throw new BelleUserGeneratedError(s"Expected to have ${provableSize} open goals but found an open goal with ${provable.subgoals.size}");
+        throw new BelleUserGeneratedError(s"assertProvableSize failed: Expected to have ${provableSize} open goals but found an open goal with ${provable.subgoals.size}");
       provable
     }
   }
