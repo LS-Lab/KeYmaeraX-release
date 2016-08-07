@@ -387,10 +387,9 @@ class USubstTests extends FlatSpec with Matchers {
 //      pr => pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil)),
 //      pr
 //    )
-    //@todo deduction should throw or lead to something where free variable of postcondition doesn't intersect bound variables of program
     theDeductionOf {
       pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
-    } should throwOrNoop(p =>
+    } should throwOrNoop[SubstitutionClashException](p =>
         p.conclusion.ante.isEmpty &&
         p.conclusion.succ.size == 1 &&
         (p.conclusion.succ.head match { case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty }))
@@ -405,10 +404,9 @@ class USubstTests extends FlatSpec with Matchers {
     pr shouldBe 'proved
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
     // this should not prove x=0->[x:=5;]x=0
-    //@todo deduction should throw or lead to something where free variable of postcondition doesn't intersect bound variables of program
     theDeductionOf {
       pr(USubst(SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asTerm) :: Nil))
-    } should throwOrNoop(p =>
+    } should throwOrNoop[SubstitutionClashException](p =>
         p.conclusion.ante.isEmpty &&
         p.conclusion.succ.size == 1 &&
         (p.conclusion.succ.head match { case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty }))
