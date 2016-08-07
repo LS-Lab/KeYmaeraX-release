@@ -189,6 +189,18 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
     matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula)
   }
 
+  it should "[:=] self assign 1" in {
+    matchDirect("[:=] self assign", "[x:=x;]x>0<->x>0".asFormula)
+  }
+
+  it should "[:=] self assign diff" in {
+    matchDirect("[:=] self assign", "[x:=x;][x':=2;](x>0)'<->[x':=2;](x>0)'".asFormula)
+  }
+
+  it should "[:=] assign exists" in {
+    matchDirect("[:=] assign exists", "[t:=0;][{x'=1,t'=1&true}]x>0->\\exists t [{x'=1,t'=1&true}]x>0".asFormula)
+  }
+
 
   // random schematic instantiations
 
