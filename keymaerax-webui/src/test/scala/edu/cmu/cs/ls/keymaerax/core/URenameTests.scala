@@ -97,7 +97,7 @@ class URenameTests extends FlatSpec with Matchers {
     a [RenamingClashException] shouldBe thrownBy {Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
       UniformRenaming(Variable("y"),Variable("x")), 0
     )}
-    a [RenamingClashException] shouldBe thrownBy {Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+    a [RenamingClashException] shouldBe thrownBy {
       val clash = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
         UniformRenaming(Variable("y"),Variable("x")), 0
       )
