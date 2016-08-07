@@ -47,7 +47,7 @@ class ProofRuleTests extends TacticTestBase {
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asFormula)),
       TactixLibrary.by("!all",
-        USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::Nil)))
+        USubst(SubstitutionPair(UnitPredicational("p_", AnyArg), Greater(DotTerm, "0".asTerm))::Nil)))
     result shouldBe 'proved
   }
   import SequentCalculus._

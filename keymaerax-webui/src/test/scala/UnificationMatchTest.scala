@@ -7,11 +7,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
-import testHelper.KeYmaeraXTestTags.OptimisticTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest}
+
 import scala.collection.immutable._
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 
 /**
@@ -57,12 +58,12 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       SubstitutionPair("f()".asTerm, "x^2+y".asTerm) :: Nil))
   }
 
-  it should "unify 3+f(x) with 3+(x^2+y)" in {
+  it should "unify 3+f(x) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
     shouldUnify("3+f(x)".asTerm, "3+(x^2+y)".asTerm, USubst(
       SubstitutionPair("f(.)".asTerm, "(.)^2+y".asTerm) :: Nil))
   }
 
-  it should "projection unify 3+f(x,y) with 3+(x^2+y)" in {
+  it should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
     //val dot = DotTerm(Tuple(Real, Real))
     shouldUnify("3+f(x,y)".asTerm,
       "3+(x^2+y)".asTerm, USubst(
@@ -166,7 +167,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "projection unify renaming and instance p(x,y) and x*y>5" in {
+  it should "projection unify renaming and instance p(x,y) and x*y>5" taggedAs(IgnoreInBuildTest) in {
     shouldMatch("p(x,y)".asFormula,
       "x*y>5".asFormula, RenUSubst(
         ("p(.(.,.))".asFormula,
@@ -174,7 +175,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "projection unify renaming and instance p(x,y,z) and x*y>z" in {
+  it should "projection unify renaming and instance p(x,y,z) and x*y>z" taggedAs(IgnoreInBuildTest) in {
     shouldMatch("p(x,y,z)".asFormula,
       "x*y>z".asFormula, RenUSubst(
         ("p(.(.,.,.))".asFormula,
