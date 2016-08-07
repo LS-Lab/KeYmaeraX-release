@@ -75,7 +75,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       ))
   }
 
-  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" in {
+  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
     shouldUnify("3+f(x,y,z)".asTerm,
       "3+(x^y+z)".asTerm, USubst(
         SubstitutionPair(
