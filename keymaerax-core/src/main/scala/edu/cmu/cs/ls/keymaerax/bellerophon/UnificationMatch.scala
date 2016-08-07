@@ -24,10 +24,10 @@ import scala.collection.immutable.{List, Nil}
 // 2.5 pass for !semanticRenaming
 //object UnificationMatch extends UnificationMatchUSubstAboveURen
 // 1 pass for fresh cases of !semanticRenaming
-//object UnificationMatch extends FreshUnificationMatch
+object UnificationMatch extends FreshUnificationMatch
 
 // 1.5 pass for fresh cases of !semanticRenaming
-object UnificationMatch extends FreshPostUnificationMatch
+//object UnificationMatch extends FreshPostUnificationMatch
 
 /**
   * Matcher(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
