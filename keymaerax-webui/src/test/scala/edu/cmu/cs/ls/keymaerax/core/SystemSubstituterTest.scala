@@ -58,6 +58,18 @@ class SystemSubstituterTest extends TacticTestBase {
       Nil))}
   }
 
+  private val inverseDGconsideredHarmless: Provable => Boolean = pr =>
+    !pr.isProved || (pr.conclusion match {
+        //@note this test is conservative. Replacements of p by ppp would also still be possible without endangering soundness.
+      case Sequent(IndexedSeq(), IndexedSeq(Imply(
+      Box(ODESystem(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y1),Real)), UnitPredicational("q",Except(y2))), UnitPredicational("p",Except(y3))),
+      Forall(Seq(y4), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), _),
+      AtomicODE(DifferentialSymbol(x2),UnitFunctional("f",Except(y5),Real))
+      ), UnitPredicational("q",Except(y6))), UnitPredicational("p",Except(y7))))))) if
+      y1==y && y2==y && y3==y && y5==y && y6==y && x2==x => true
+      case _ => false
+    })
+
   it should "not allow ghosts in postconditions of DG inverse differential ghost for y_=9 -> [{y_'=5,x_'=3}]y_=9" in {
     // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
     val pr = Provable.axioms("DG inverse differential ghost")
@@ -74,15 +86,26 @@ class SystemSubstituterTest extends TacticTestBase {
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
-        Nil))) should throwOrNoop
+        Nil))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
     //@note this is a mistyped substitution so near no-op would be acceptable
     theDeductionOf {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "y_=9".asFormula) ::
-        Nil))} should throwOrNoop
+        Nil))} should throwOrNoop[CoreException](inverseDGconsideredHarmless)
   }
+
+  val inverseDGSystemconsideredHarmless: Provable => Boolean = pr =>
+    !pr.isProved || (pr.conclusion match {
+      case Sequent(IndexedSeq(), IndexedSeq(Imply(
+      Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y1),Real)),DifferentialProgramConst("c",Except(y2))), UnitPredicational("q",Except(y3))), UnitPredicational("p",Except(y4))),
+      Forall(Seq(y5), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y6), _),
+      DifferentialProduct(AtomicODE(DifferentialSymbol(x2),UnitFunctional("f",Except(y7),Real)),DifferentialProgramConst("c",Except(y8))
+      )), UnitPredicational("q",Except(y9))), UnitPredicational("p",Except(y10))))))) if
+      y1==y && y2==y && y3==y && y5==y && y6==y && y7==y && y8==y && y9==y && y10==y && x2==x => true
+      case _ => false
+    })
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost system" in {
     // [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
@@ -103,7 +126,7 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
       SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "y_=0".asFormula) ::
-      Nil))) should throwOrNoop
+      Nil))) should throwOrNoop[CoreException](inverseDGSystemconsideredHarmless)
   }
 
   it should "not allow ghosts in postconditions of DG inverse differential ghost system for y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9" in {
@@ -137,7 +160,18 @@ class SystemSubstituterTest extends TacticTestBase {
   }
 
 
-  "System ODEs" should "not allow ghosts in ODEs of DG differential ghost" in {
+  val DGconsideredHarmless: Provable => Boolean = pr =>
+    !pr.isProved || (pr.conclusion match {
+      case Sequent(IndexedSeq(), IndexedSeq(Equiv(
+      Box(ODESystem(DifferentialProgramConst("c",Except(y1)), UnitPredicational("q",Except(y2))), UnitPredicational("p",Except(y3))),
+      Exists(Seq(y4), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y5)),
+      AtomicODE(DifferentialSymbol(y6), Plus(Times(UnitFunctional("a",Except(y7),Real), y), UnitFunctional("b",Except(y8),Real)))
+      ), UnitPredicational("q",Except(y9))), UnitPredicational("p",Except(y10))))))) if
+        y1==y && y2==y && y3==y && y5==y && y6==y && y7==y && y8==y && y9==y && y10==y => true
+      case _ => false
+    })
+
+        "System ODEs" should "not allow ghosts in ODEs of DG differential ghost" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}]p(|y_|)
     val pr = Provable.axioms("DG differential ghost")
     pr shouldBe 'proved
@@ -154,9 +188,20 @@ class SystemSubstituterTest extends TacticTestBase {
       SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
       SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
       SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
-      Nil))) shouldBe throwOrNoop
+      Nil))) should throwOrNoop[CoreException](DGconsideredHarmless)
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DG("y_'=-1")
   }
+
+  val DGconstantconsideredHarmless: Provable => Boolean = pr =>
+    !pr.isProved || (pr.conclusion match {
+      case Sequent(IndexedSeq(), IndexedSeq(Equiv(
+      Box(ODESystem(DifferentialProgramConst("c", Except(y1)), UnitPredicational("q", Except(y2))), UnitPredicational("p", Except(y3))),
+      Exists(Seq(y4), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c", Except(y5)),
+      AtomicODE(DifferentialSymbol(y), UnitFunctional("g", Except(y6), Real))
+      ), UnitPredicational("q", Except(y7))), UnitPredicational("p", Except(y8))))))) if
+      y1 == y && y2 == y && y3 == y && y4==y && y5 == y && y6 == y && y7==y && y8==y => true
+      case _ => false
+    })
 
   it should "not allow ghosts in ODEs of DG differential ghost constant" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(|y_|)&q(|y_|)}]p(|y_|)
@@ -173,7 +218,7 @@ class SystemSubstituterTest extends TacticTestBase {
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
-        Nil))) should throwOrNoop
+        Nil))) should throwOrNoop[CoreException](DGconstantconsideredHarmless)
     //@todo should not prove "y_=1&x=0->[x'=y_]x<=10" by DGconstant("y_'=-1")
   }
 
@@ -193,14 +238,14 @@ class SystemSubstituterTest extends TacticTestBase {
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
         SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
-        Nil))) should throwOrNoop
+        Nil))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
     //@note this is a mistyped substitution so near no-op would be acceptable
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    theDeductionOf(pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
-        Nil))}
+        Nil))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
     //@todo should not prove
   }
 
@@ -209,12 +254,19 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG inverse differential ghost system")
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(UnitFunctional("f",Except(y),Real), Variable("y_",None,Real)) ::
+        SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
+        SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
+        SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
+        SubstitutionPair(UnitPredicational("p",Except(y)), "x_>=0".asFormula) ::
+        Nil))}
+    theDeductionOf(pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(ode, AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x_>=0".asFormula) ::
-        Nil))}
+        Nil))) should throwOrNoop(inverseDGSystemconsideredHarmless)
     //@todo should not prove
   }
 }

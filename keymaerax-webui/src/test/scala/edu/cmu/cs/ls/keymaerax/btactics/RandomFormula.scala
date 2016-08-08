@@ -90,6 +90,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false): Formula = {
     val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[Variable]).
       filter(x => builtins || !x.name.endsWith("_"))
+    // two different piles of variables to avoid accidental capture during the schematic instantiation
     val vars = nextNames("z", size / 3 + 1)
     val othervars = nextNames("y", size / 5 + 1)
     val symbols = StaticSemantics.signature(fml)
