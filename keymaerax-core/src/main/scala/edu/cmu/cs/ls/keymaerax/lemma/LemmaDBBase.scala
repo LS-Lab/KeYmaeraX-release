@@ -15,7 +15,7 @@ abstract class LemmaDBBase extends LemmaDB {
   def createLemma():LemmaID
 
   override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
-    readLemmas(ids).map(_.map(Lemma.fromString))
+    readLemmas(ids).map(_.map(Lemma.fromString)) //@todo This should be over-ridden in every implementation so maybe we should just leave it abstract.
   }
 
   private val REDUNDANT_CHECKS = false
