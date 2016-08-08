@@ -135,9 +135,8 @@ object SQLite {
     /** Allow retrieving lemmas in bulk to reduce the number of database queries */
     private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
       synchronizedTransaction({
-        if(Lemmas.length.run == 0) None
+        val lemmaMap = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list.toMap
         try {
-          val lemmaMap = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list.toMap
           Some(lemmaIds.map(lemmaMap(_)))
         } catch {
           case _:Exception => None
