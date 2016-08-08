@@ -776,19 +776,28 @@ trait UnifyUSCalculus {
   type ForwardTactic = (Provable => Provable)
   type ForwardPositionTactic = (Position => ForwardTactic)
   //@todo add the following def &() for composition and def | as implicit definitions to ForwardTactic
+  /** seqCompose(first,second) runs `first` followed by `second` (for forward tactics). */
   def seqCompose(first: ForwardTactic, second: ForwardTactic): ForwardTactic = first andThen second
+  /** either(left,right) runs `left` if successful and `right` otherwise (for forward tactics). */
   def either(left: ForwardTactic, right: ForwardTactic): ForwardTactic =
     pr => try {left(pr)} catch { case _: ProverException => right(pr) }
+  /** ifThenElse(cond,thenT,elseT) runs `thenT` if `cond` holds and `elseT` otherwise (for forward tactics). */
   def ifThenElse(cond: Provable=>Boolean, thenT: ForwardTactic, elseT: ForwardTactic): ForwardTactic =
     pr => if (cond(pr)) thenT(pr) else elseT(pr)
+  /** seqComposeP(first,second) runs `first` followed by `second` (for forward tactics). */
   def seqComposeP(first: ForwardPositionTactic, second: ForwardPositionTactic): ForwardPositionTactic = pos => seqCompose(first(pos), second(pos))
+  /** eitherP(left,right) runs `left` if successful and `right` otherwise (for forward tactics). */
   def eitherP(left: ForwardPositionTactic, right: ForwardPositionTactic): ForwardPositionTactic = pos => either(left(pos), right(pos))
+  /** ifThenElseP(cond,thenT,elseT) runs `thenT` if `cond` holds and `elseT` otherwise (for forward tactics). */
   def ifThenElseP(cond: Position=>(Provable=>Boolean), thenT: ForwardPositionTactic, elseT: ForwardPositionTactic): ForwardPositionTactic = pos => ifThenElse(cond(pos), thenT(pos), elseT(pos))
+  /** identity tactic skip that does not no anything (for forward tactics). */
   def iden: ForwardTactic = pr => pr
+  /** uniformRenameF(what,repl) renames `what` to `repl` uniformly (for forward tactics). */
   def uniformRenameF(what: Variable, repl: Variable): ForwardTactic = pr => pr(
     UniformRenaming(what, repl)(pr.conclusion).head,
     UniformRenaming(what, repl)
   )
+  /** commuteEquivFR commutes the equivalence at the given position (for forward tactics). */
   def commuteEquivFR: ForwardPositionTactic = pos => pr => pr(
     CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])(pr.conclusion).head,
     CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])
@@ -800,10 +809,12 @@ trait UnifyUSCalculus {
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(AxiomInfo(axiom).provable, key)
-  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
+  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
+    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
+    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(AxiomInfo(axiom).provable, key, inst)
 
-  /** useExpansionFor(axiom) uses the given axiom forward for the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
+  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
   /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
