@@ -42,7 +42,7 @@ abstract class LemmaDBBase extends LemmaDB {
     assert(lemmaFromDB == Some(lemma), "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
-  override def add(lemma: Lemma): LemmaID = {
+  override def  add(lemma: Lemma): LemmaID = {
     val id = this.synchronized {
       // synchronize to make sure concurrent calls use distinct ID's
       lemma.name match {

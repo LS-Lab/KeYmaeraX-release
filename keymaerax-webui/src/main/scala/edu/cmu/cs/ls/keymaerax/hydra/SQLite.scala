@@ -70,11 +70,12 @@ object SQLite {
     }
   }
 
-  def SQLiteLemmaDB (db: SQLiteDB) = new CachedLemmaDB(new UncachedSQLiteLemmaDB(db))
+  def SQLiteLemmaDB (db: UncachedSQLiteLemmaDB) = new CachedLemmaDB(db)
 
   class SQLiteDB(val dblocation: String) extends DBAbstraction {
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
-    val lemmaDB = SQLiteLemmaDB(this)
+    val uncachedLemmaDB : UncachedSQLiteLemmaDB = new UncachedSQLiteLemmaDB(this)
+    val lemmaDB = SQLiteLemmaDB(uncachedLemmaDB)
     private var currentSession:Session = null
     /* Statistics on the number of SQL operations performed in this session, useful for profiling. */
     private var nUpdates = 0
@@ -489,9 +490,8 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def createProvable(p: Provable): Int = {
       synchronizedTransaction({
-        //@todo: add version number
-        val lemma = Lemma(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true"))))
-        lemmaDB.add(lemma).toInt
+        val lemma = Lemma(p, Lemma.requiredEvidence(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true")))))
+        uncachedLemmaDB.add(lemma).toInt
       })
     }
 
