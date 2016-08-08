@@ -40,10 +40,17 @@ trait UnifyUSCalculus {
   /** Liberal context via replaceAt instead of Context substitutions (true) */
   private val LIBERAL = Context.GUARDED
 
-  /** @note must be initialized from outside; is var so that unit tests can setup/tear down.
+  /** Quantifier elimination tool
+    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
     * @see [[DerivedAxioms]] */
   implicit var qeTool: QETool = null
+  /** Differential equation solving oracle.
+    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
+    * @see [[DerivedAxioms]] */
   implicit var odeTool: DiffSolutionTool = null
+  /** Counterexample finding oracle.
+    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
+    * @see [[DerivedAxioms]] */
   implicit var cexTool: CounterExampleTool = null
 
   /**
@@ -89,7 +96,7 @@ trait UnifyUSCalculus {
     * close or proceed in proof by providing a Provable fact
     *******************************************************************/
 
-  /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved) */
+  /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved so far) */
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
     override def result(provable: Provable): Provable = {
@@ -195,22 +202,30 @@ trait UnifyUSCalculus {
   //    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
   //    useAt(fact.conclusion.succ.head, key, by(fact))
   //  }
-  /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
+  /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
+    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
+    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(lem.fact, key, inst)
   def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem.fact, key)
+  /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
 
-  /** Lazy use at of lemma by name. For use with ProveAs. */
+  /** Lazy useAt of a lemma by name. For use with ProveAs. */
   def lazyUseAt(lemmaName: String) : DependentPositionTactic =
     "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, PosInExpr(Nil))(pos))
   def lazyUseAt(lemmaName: String, key:PosInExpr) : DependentPositionTactic =
     "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, key)(pos))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
 
+  /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
+    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
+    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key, inst)
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key)
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
+  /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
+
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
   def useExpansionAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
