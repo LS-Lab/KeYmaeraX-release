@@ -222,7 +222,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
     parseResult._3.filter(x => x.isInstanceOf[ToolEvidence]).exists(x => x.asInstanceOf[ToolEvidence].info.exists(p => p._1 == "kyxversion"))
   }
 
-  it should "add to sql db" in {
+  ignore should "add to sql db" in {
     addTo(SQLite.SQLiteLemmaDB(SQLite.TestDB), true)
   }
 
