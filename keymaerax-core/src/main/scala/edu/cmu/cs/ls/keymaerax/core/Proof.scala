@@ -121,37 +121,29 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   /**
    * Retrieves the formula in sequent at a given position.
    *
-   * @param p the position of the formula
+   * @param pos the position of the formula
    * @return the formula at the given position either from the antecedent or the succedent
    */
-  def apply(p: SeqPos): Formula = {
-    if (p.isAnte) {
-      ante(p.getIndex)
-    } else {
-      assert (p.isSucc)
-      succ(p.getIndex)
-    }
+  def apply(pos: SeqPos): Formula = pos match {
+    case ap: AntePos => apply(ap)
+    case sp: SuccPos => apply(sp)
   }
 
   /**
    * Retrieves the formula in sequent at a given succedent position.
    * @param pos the succedent position of the formula
    * @return the formula at the given position from the succedent
-   * @note slightly faster version with the same result as #apply(SeqPos)
+   * @note slightly faster version with the same result as [[Sequent.apply(SeqPos)]]
    */
-  def apply(pos: AntePos): Formula = {
-    ante(pos.getIndex)
-  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+  def apply(pos: AntePos): Formula = ante(pos.getIndex)
 
   /**
    * Retrieves the formula in sequent at a given antecedent position.
    * @param pos the antecedent position of the formula
    * @return the formula at the given position from the antecedent
-   * @note slightly faster version with the same result as #apply(SeqPos)
+   * @note slightly faster version with the same result as [[Sequent.apply(SeqPos)]]
    */
-  def apply(pos: SuccPos): Formula = {
-    succ(pos.getIndex)
-  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+  def apply(pos: SuccPos): Formula = succ(pos.getIndex)
 
   // transformations giving copies of sequents
   
