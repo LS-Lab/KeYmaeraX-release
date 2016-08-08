@@ -385,7 +385,7 @@ object DLBySubst {
             cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
               /* c */ useAt("I induction")(pos) & andR(pos) <(
                 andR(pos) <(ident /* indInit */, ((andR(pos) <(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) partial(initCase),
-                cohide(pos) & G & implyR(1) & splitb(1) & andR(1) <(
+                cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
                   andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & ProofRuleTactics.trivialCloser) partial
               ) partial,

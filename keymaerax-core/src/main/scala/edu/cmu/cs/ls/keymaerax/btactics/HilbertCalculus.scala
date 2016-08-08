@@ -51,10 +51,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @todo should lift to a PositionTactic = cohideR(pos) & DLBySubst.G
     */
   lazy val G                  : BelleExpr         = DLBySubst.G
+  //@todo strange special case tactic? Only for UI purposes?
   lazy val hideG              : BelleExpr         = new DependentPositionTactic("hideG") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        SequentCalculus.cohideR(SuccPos(0)) & DLBySubst.G
+        SequentCalculus.cohideR(pos) & DLBySubst.G
       }
     }
   }
@@ -239,15 +240,16 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
-  //@todo rename to boxAnd? Does this replicate DerivedAxioms.boxAnd?
-  lazy val splitb             : DependentPositionTactic = namedUseAt("boxAnd", "[] split") //@todo correct codeName might be boxAnd.
+  lazy val boxAnd             : DependentPositionTactic = namedUseAt("boxAnd", "[] split") //@todo correct codeName might be boxAnd.
   /** splitd: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
-  lazy val splitd             : DependentPositionTactic = namedUseAt("splitd", "<> split")
+  lazy val diamondOr          : DependentPositionTactic = namedUseAt("splitd", "<> split")
 
   // def ind
 
   /** dualFree: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
   val dualFree                : PositionalTactic = ProofRuleTactics.dualFree
+  /** boxTre: proves `[a]true` as directly as possible.
+    * @see [[dualFree]] */
   //@todo could do boxTrue = dualFree | master
   val boxTrue                 : PositionalTactic = dualFree
 
@@ -260,8 +262,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val allV               : DependentPositionTactic = namedUseAt("allV", "vacuous all quantifier")
   /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
   lazy val existsV            : DependentPositionTactic = namedUseAt("existsV", "vacuous exists quantifier")
+  //@todo document and unclear what it really does depending on the index
   lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
 
+  //@todo document and unclear what it really does depending on the index
   lazy val existsE            : DependentPositionTactic = namedUseAt("existsE", "exists eliminate")
 
   //@todo make the other quantifier axioms accessible by useAt too
