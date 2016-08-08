@@ -125,14 +125,15 @@ object Lemma {
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name: Option[String] = None) {
-  assert({
     val hasVersionEvidence = evidence.exists(x => x match {
       case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
       case _ => false
     })
     val hasHashEvidence = evidence.exists(_.isInstanceOf[HashEvidence])
-    hasVersionEvidence && hasHashEvidence
-  }, "Lemma should have a kyxversion and a hash")
+    if((!hasVersionEvidence || !hasHashEvidence) && !Lemma.LEMMA_COMPAT_MODE) {
+      assert(false, "Lemma should have a kyxversion and a hash")
+    }
+
 
   final def checksum = Lemma.checksum(fact)
 
