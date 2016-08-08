@@ -1,18 +1,18 @@
+package edu.cmu.cs.ls.keymaerax.bellerophon
+
 /**
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest}
 
 import scala.collection.immutable._
-import org.scalatest.{FlatSpec, Matchers}
 
 
 /**
@@ -123,7 +123,6 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   //@todo split this test case
 
   // new unification matchers from now on
-  import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, UnificationMatch}
 
   private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
     if (us.isDefined) {
@@ -187,7 +186,6 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
     val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
-    import edu.cmu.cs.ls.keymaerax.btactics._
     //@todo not sure about the expected exception
     a[ProverException] shouldBe thrownBy(
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
