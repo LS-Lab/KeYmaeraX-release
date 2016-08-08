@@ -77,7 +77,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {
-    if (true || BelleExpr.RECHECK) try {
+    if (BelleExpr.RECHECK) try {
       if (r == toCore(e))
         true
       else {
