@@ -133,26 +133,25 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     }
   }
 
-  //@todo enable quicker apply(AntePos) and apply(SuccPos) after resolving ambiguous implicit conversion from tactics.Position.
-//  /**
-//   * Retrieves the formula in sequent at a given succedent position.
-//   * @param pos the succedent position of the formula
-//   * @return the formula at the given position from the succedent
-//   * @note slightly faster version with the same result as #apply(SeqPos)
-//   */
-//  def apply(pos: AntePos): Formula = {
-//    ante(pos.getIndex)
-//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
-//
-//  /**
-//   * Retrieves the formula in sequent at a given antecedent position.
-//   * @param pos the antecedent position of the formula
-//   * @return the formula at the given position from the antecedent
-//   * @note slightly faster version with the same result as #apply(SeqPos)
-//   */
-//  def apply(pos: SuccPos): Formula = {
-//    succ(pos.getIndex)
-//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+  /**
+   * Retrieves the formula in sequent at a given succedent position.
+   * @param pos the succedent position of the formula
+   * @return the formula at the given position from the succedent
+   * @note slightly faster version with the same result as #apply(SeqPos)
+   */
+  def apply(pos: AntePos): Formula = {
+    ante(pos.getIndex)
+  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+
+  /**
+   * Retrieves the formula in sequent at a given antecedent position.
+   * @param pos the antecedent position of the formula
+   * @return the formula at the given position from the antecedent
+   * @note slightly faster version with the same result as #apply(SeqPos)
+   */
+  def apply(pos: SuccPos): Formula = {
+    succ(pos.getIndex)
+  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
 
   // transformations giving copies of sequents
   

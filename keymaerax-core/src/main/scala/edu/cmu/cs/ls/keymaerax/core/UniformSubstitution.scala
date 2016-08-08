@@ -36,7 +36,6 @@ import SetLattice.topVarsDiffVars
  * @param repl the expression to be used in place of `what`.
  * @requires what.kind==repl.kind && what.sort==repl.sort
  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @todo rename to something like USubstRepl or so
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
   insist(what.kind == repl.kind, "Substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs): " + this + " substitutes " + what.kind + " ~> " + repl.kind)
