@@ -6,6 +6,7 @@
  * Uniform Substitution for KeYmaera X
  * @author Andre Platzer
  * @author smitsch
+ * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @note Code Review: 2016-03-09
@@ -21,45 +22,48 @@ import SetLattice.topVarsDiffVars
 
 
 /**
- * Representation of a substitution replacing what with repl uniformly.
+ * Representation of a substitution replacing `what` with `repl` uniformly, everywhere.
  *
- * @param what the expression to be replaced. what can have one of the following forms:
- *          - DotTerm
+ * @param what the expression to be replaced. `what` can have one of the following forms:
  *          - PredOf(p:Function, DotTerm/Nothing)
  *          - FuncOf(f:Function, DotTerm/Nothing)
  *          - ProgramConstant/DifferentialProgramConstant
- *          - Derivative(...)
+ *          - UnitPredicational
+ *          - UnitFunctional
  *          - PredicationalOf(p:Function, DotFormula)
+ *          - DotTerm
  *          - DotFormula
- * @param repl the expression to be used in place of what
+ * @param repl the expression to be used in place of `what`.
+ * @requires what.kind==repl.kind && what.sort==repl.sort
+ * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
  * @todo rename to something like USubstRepl or so
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
-  insist(what.kind == repl.kind,
-    "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
-  insist(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
+  insist(what.kind == repl.kind, "Substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs): " + this + " substitutes " + what.kind + " ~> " + repl.kind)
+  insist(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + this + " substitutes " + what.sort + " ~> " + repl.sort)
   assert(what match {
     case _: Term => repl.isInstanceOf[Term]
     case _: Formula => repl.isInstanceOf[Formula]
     case _: Program => repl.isInstanceOf[Program]
   }, "(redundant test) substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
-  insist(noException(matchKey), "substitutable expression expected " + this) // matchKey will throw exception if requirement("Substitutable expression required, found " + what + " in " + this) failed
+  insist(noException(matchKey), "Substitutable expression expected: " + this)
   insist(what match {
     case sp: SpaceDependent => sp.space match {
       case AnyArg        => true
       case Except(taboo) =>
+        //@note this assumes that only sort Real is ever used for taboos.
         val taboos = SetLattice(Set[NamedSymbol](taboo, DifferentialSymbol(taboo)))
         sp match {
           //@note by previous insists, repl has to be a DifferentialProgram
           case _: DifferentialProgramConst => val vc = StaticSemantics(repl.asInstanceOf[DifferentialProgram])
             vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
-          case _ => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
+          case _: UnitPredicational => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
+          case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
       }
     }
     // only space-dependents have space-compatibility requirements
     case _ => true
-  },
-    "space-compatible replacement expected " + this
+  }, "Space-compatible substitution expected: " + this
   )
 
   /**
@@ -69,6 +73,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   def freeVars: SetLattice[NamedSymbol] = repl match {
     case replt: Term => what match {
+      //@note could skip this case since it's the same as the default
       case FuncOf(f: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
 //        assert(!StaticSemantics.freeVars(replt).contains(d)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
@@ -80,6 +85,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case _: Term => StaticSemantics.freeVars(repl)
     }
     case replf: Formula => what match {
+      //@note could skip this case since it's the same as the default
       case PredOf(p: Function, d: DotTerm) =>
         //@note DotTerm is not a Variable so the following assertions are redundant
 //        assert(!StaticSemantics.freeVars(replf).contains(d) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
@@ -171,7 +177,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
  * @note Implements the "global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
  * Main ingredient of prover core.
+ * @note soundness-critical
  * @author Andre Platzer
+ * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -231,7 +239,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * }}}
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
-  /** automatically filter out identity substitution no-ops */
+  /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
   insist(noException(applicable()), "unique left-hand sides in substitutees " + this)
@@ -538,7 +546,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * @see arXiv:1503.01981 Definition 12.
    * @note not used often
    */
-  private def clashSet(U: SetLattice[NamedSymbol], e: Expression): SetLattice[NamedSymbol] = clashSet(U, StaticSemantics.signature(e))
+  private def clashSet(U: SetLattice[NamedSymbol], e: Expression): SetLattice[NamedSymbol] =
+    clashSet(U, StaticSemantics.signature(e))
 
   /**
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible
