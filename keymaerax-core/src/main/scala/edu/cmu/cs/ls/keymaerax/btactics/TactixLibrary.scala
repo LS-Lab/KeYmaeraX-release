@@ -68,7 +68,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     case _ => AxiomIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-    /** Normalize to sequent form, keeping branching factor down by precedence */
+  /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
       OnAll(?(
@@ -82,7 +82,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType()
     })
 
-  /** exhaust propositional logic */
+  /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   lazy val prop                    : BelleExpr = NamedTactic("prop", {
     OnAll(?(
       (close
@@ -132,7 +132,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def label(s: String): BelleExpr = ??? //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s
- *
+    *
     * @see [[label()]]
     */
   def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
@@ -142,11 +142,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** discreteGhost: introduces a ghost defined as term t; if ghost is None the tactic chooses a name by inspecting t */
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
 
-  /** abstraction: turns '[a]p' into \\forall BV(a) p */
+  /** abstractionb: turns '[a]p' into \\forall BV(a) p by universally quantifying over all variables modified in `a`. */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
   /** 'position' tactic t with universal abstraction at the same position afterwards
- *
+    *
     * @see [[abstractionb]] */
   def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic = new DependentPositionTactic("with abstraction") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -162,14 +162,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   }
 
   /**
-   * loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
- *
-   * @see [[DLBySubst.loop]]
-   */
+    * loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
+    *
+    * @see [[DLBySubst.loop]]
+    */
   def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
   def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
   /** loop=I: prove a property of a loop by induction, if the given generator finds a loop invariant
- *
+    *
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -259,7 +259,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // closing
 
-  /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
+  /** QE: Quantifier Elimination to decide real arithmetic (after simplifying logical transformations).
+    * Applies simplifying transformations to the real arithmetic questions before solving it.
+    * @param order the order of variables to use during quantifier elimination
+    * @see [[QE]] */
   def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)
   def QE: BelleExpr = QE()
 
@@ -333,11 +336,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x), see [[EqualityTactics.abs]] */
+  /** Expands abs using `abs(x)=y <-> (x>=0&y=x | x<=0&y=-x)`, see [[EqualityTactics.abs]] */
   lazy val abs: DependentPositionTactic = EqualityTactics.abs
-  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y), see [[EqualityTactics.minmax]] */
+  /** Expands min using `min(x,y)=z <-> (x<=y&z=x | x>=y&z=y)`, see [[EqualityTactics.minmax]] */
   lazy val min: DependentPositionTactic = EqualityTactics.minmax
-  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y), see [[EqualityTactics.minmax]] */
+  /** Expands max using `max(x,y)=z <-> (x>=y&z=x | x<=y&z=y)`, see [[EqualityTactics.minmax]] */
   lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
@@ -359,7 +362,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         partial)
       partial)
 
-  /** Real-closed field arithmetic on a single formula */
+  /** Real-closed field arithmetic on a single formula without any extra smarts.
+    * @see [[QE]] */
   def RCF: BelleExpr = ToolTactics.rcf
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
@@ -376,8 +380,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   // Global Utility Functions
 
   /**
-    * Prove the new Provable by the given tactic, returning the resulting Provable
- *
+    * Prove the new goal by the given tactic, returning the resulting Provable
+    *
     * @see [[SequentialInterpreter]]
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
@@ -393,20 +397,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
- *
+    *
    * @see [[SequentialInterpreter]]
    * @see [[TactixLibrary.by(Provable)]]
    * @see [[proveBy()]]
    * @example {{{
    *   import StringConverter._
    *   import TactixLibrary._
-   *   val proof = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
+   *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
    * }}}
    */
   def proveBy(goal: Sequent, tactic: BelleExpr): Provable = proveBy(Provable.startProof(goal), tactic)
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
- *
+    *
    * @see [[TactixLibrary.by(Provable)]]
    * @example {{{
    *   import StringConverter._
