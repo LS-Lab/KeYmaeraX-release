@@ -7,7 +7,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             userId: '=',
             proofId: '=',
             nodeId: '=',
-            onTactic: '&'     // onTactic(formulaId, tacticId)
+            onTactic: '&',     // onTactic(formulaId, tacticId)
+            onTacticScript: '&'
         },
         link: function(scope, elem, attr) {
           scope.tactic = sequentProofData.tactic;
@@ -66,6 +67,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             }
           });
         },
-        template: '<textarea class="k4-tacticeditor" ng-model="tactic.tacticText" type="text" rows="10"></textarea>'
+        template: '<div class="row k4-tacticeditor"><div class="col-md-12"><textarea class="k4-tacticeditor" ng-model="tactic.tacticText" type="text" rows="10"></textarea></div></div>' +
+                  '<div class="row"><div class="col-md-12"><button class="btn btn-default" data-ng-click="onTacticScript({tacticText: tactic.tacticText})">Run entire tactic</button></div></div>'
     };
   }]);

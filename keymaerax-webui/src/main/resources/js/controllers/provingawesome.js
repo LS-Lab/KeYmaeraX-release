@@ -226,11 +226,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
-    $scope.doCustomTactic = function() {
+    $scope.onTacticScript = function(tacticText) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
-      var tacticText = $scope.customTactic;
+      //@todo prune first when rerunning the entire script?
       spinnerService.show('tacticExecutionSpinner');
       $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doCustomTactic', tacticText)
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
