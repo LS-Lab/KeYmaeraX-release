@@ -72,16 +72,16 @@ object PosInExpr {
 // @note observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
 //object HereP extends PosInExpr
 
-/**
+/** Position at which formula and subexpresion ofa a sequent to apply a tactic.
   * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
   * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
   * @todo use AntePos and SuccPos directly instead of index etc.
   * @todo Position should essentially become a nice name for a pair of a SeqPos and a PosInExpr.
-  * @see [[SeqPos]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.SeqPos]]
   */
 sealed trait Position {
 
-  /** The position within formula */
+  /** The subexpression position within the formula */
   def inExpr: PosInExpr
 
 //  require (getIndex >= 0, "nonnegative index " + getIndex)
