@@ -25,16 +25,16 @@ import SetLattice.topVarsDiffVars
  * Representation of a substitution replacing `what` with `repl` uniformly, everywhere.
  *
  * @param what the expression to be replaced. `what` can have one of the following forms:
- *          - PredOf(p:Function, DotTerm/Nothing)
- *          - FuncOf(f:Function, DotTerm/Nothing)
- *          - ProgramConstant/DifferentialProgramConstant
- *          - UnitPredicational
- *          - UnitFunctional
- *          - PredicationalOf(p:Function, DotFormula)
- *          - DotTerm
- *          - DotFormula
+ *          - [[PredOf]](p:[[Function]], [[DotTerm]]/[[Nothing]])
+ *          - [[FuncOf]](f:[[Function]], [[DotTerm]]/[[Nothing]])
+ *          - [[ProgramConst]] or [[DifferentialProgramConst]]
+ *          - [[UnitPredicational]]
+ *          - [[UnitFunctional]]
+ *          - [[PredicationalOf]](p:[[Function]], [[DotFormula]])
+ *          - [[DotTerm]]
+ *          - [[DotFormula]]
  * @param repl the expression to be used in place of `what`.
- * @requires what.kind==repl.kind && what.sort==repl.sort
+ * @requires what.kind==repl.kind && what.sort==repl.sort && what has an acceptable shpe
  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {

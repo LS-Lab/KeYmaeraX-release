@@ -30,9 +30,12 @@ import scala.collection.immutable
   */
 
 /**
- * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
+ * Position of a formula in a sequent, i.e. antecedent or succedent positions.
  *
  * @see [[SeqPos.apply()]]
+ * @see [[Sequent.apply()]]
+ * @see [[AntePos]]
+ * @see [[SuccPos]]
  */
 sealed trait SeqPos {
   /** Whether this position is in the antecedent on the left of the sequent arrow */
@@ -50,6 +53,7 @@ sealed trait SeqPos {
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
+   * @see [[SeqPos.apply()]]
    */
   final def getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
 
@@ -57,7 +61,7 @@ sealed trait SeqPos {
 }
 
 /**
- * Antecedent Positions of formulas in a sequent.
+ * Antecedent Positions of formulas in a sequent, i.e. in the assumptions on the left of the sequent arrow.
  *
  * @param index the position 0-indexed in antecedent.
  */
@@ -68,7 +72,7 @@ case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
 }
 
 /**
- * Antecedent Positions of formulas in a sequent.
+ * Antecedent Positions of formulas in a sequent, i.e. on the right of the sequent arrow.
  *
  * @param index the position 0-indexed in succedent.
  */
@@ -86,12 +90,13 @@ object SeqPos {
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
-   * @see SeqPos#pos
+   * @see [[SeqPos.getPos]]
    */
   def apply(signedPos: Int): SeqPos =
     if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-(signedPos+1))}
 
 }
+
 
 /**
  * Sequent `ante |- succ` with antecedent ante and succedent succ.
@@ -115,7 +120,7 @@ object SeqPos {
  * @param ante The ordered list of antecedents of this sequent whose conjunction is assumed.
  * @param succ The orderd list of succedents of this sequent whose disjunction needs to be shown.
  * @author Andre Platzer
- * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
+ * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
  */
 final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.IndexedSeq[Formula]) {
   /**
@@ -185,8 +190,8 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
    * @param p the position of the replacement
    * @param s the sequent glued / concatenated to this sequent after dropping p.
    * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
-   * @see #updated(Position,Formula)
-   * @see #glue(Sequent)
+   * @see [[Sequent.updated(Position,Formula)]]
+   * @see [[Sequent.glue(Sequent)]]
    */
   def updated(p: SeqPos, s: Sequent): Sequent = {
     if (p.isAnte) {

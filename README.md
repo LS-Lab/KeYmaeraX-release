@@ -270,11 +270,11 @@ ScalaDoc is available at: http://keymaerax.org/scaladoc
 Test Cases
 ==========
 
-The full test suite can be run from command line by
+The full test suite can be run from command line, e.g., by
 
-    sbt test
+    sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest 
 
-Selectively running individual test cases within sbt:
+Selectively running individual test cases within the sbt interactive mode:
 
     sbt
     sbt>  test-only *USubst*

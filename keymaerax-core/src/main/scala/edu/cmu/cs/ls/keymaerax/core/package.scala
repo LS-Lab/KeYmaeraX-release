@@ -171,8 +171,8 @@ package object core {
   /** KeYmaera X core version number */
   val VERSION = "4.2b2"
 
-  /** Insist on requirement being true, throwing a [[CoreException]] if false.
-    *  This method is a require` coming from the prover core that cannot be disabled.
+  /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
+    *  This method is a `require` coming from the prover core that cannot be disabled.
     *  Blame is on the caller of the method
     *  for violating the contract.
     *
@@ -185,9 +185,9 @@ package object core {
       throw new CoreException("Core requirement failed: "+ message)
   }
 
-  /** Check that the given expression e does not throw an exception.
-    * @return `true` if e completed without raising any exceptions or errors.
-    *        `false` if e raised an exception or error.
+  /** Check that the given expression `e` does not throw an exception.
+    * @return `true` if `e` completed without raising any exceptions or errors.
+    *        `false` if `e` raised an exception or error.
     * @example {{{
     *  insist(noExeption(complicatedComputation), "The complicated computation should complete without throwing exceptions")
     * }}}
