@@ -20,11 +20,20 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
     val fromCache = cached.map{case (x,i) => (cachedLemmas(x), i)}
     val (uncachedIDs, uncachedIdxs) = uncached.unzip
     /* Use a single get() call for performance when getting uncached lemmas */
-    val fromDB = db.get(uncachedIDs).map(_.zip(uncachedIdxs))
-    fromDB.map{ case list =>
-      cachedLemmas.++= (fromCache.map{case (lemma, idx) => (lemmaIDs(idx), lemma)})
-      /* Preserve original order when combining cached vs. uncached lemmas*/
-      (list ::: fromCache).sortWith{case ((_,i), (_,j)) => i < j}.map(_._1)
+    try {
+      val fromDB = db.get(uncachedIDs).map(_.zip(uncachedIdxs))
+      fromDB.map{ case list =>
+        cachedLemmas.++= (fromCache.map{case (lemma, idx) => (lemmaIDs(idx), lemma)})
+        /* Preserve original order when combining cached vs. uncached lemmas*/
+        (list ::: fromCache).sortWith{case ((_,i), (_,j)) => i < j}.map(_._1)
+      }
+    }
+    catch {
+      case e:Throwable => {
+        println("Error while trying to retrieve lemma")
+        e.printStackTrace()
+        None
+      }
     }
   }
 
