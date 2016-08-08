@@ -1,4 +1,4 @@
-package parserTests
+package edu.cmu.cs.ls.keymaerax.parser
 
 /**
 * Copyright (c) Carnegie Mellon University.
