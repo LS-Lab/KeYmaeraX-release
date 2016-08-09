@@ -323,7 +323,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("!<>", ("¬<>","!<>"), "notDiamond", {case () => useAt(DerivedAxioms.notDiamond)}),
     new DerivedAxiomInfo("[] split"
       , AxiomDisplayInfo(("[]∧", "[]^"), "[a](P ∧ Q)↔[a]P ∧ [a]Q")
-      , "boxAnd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAnd)}),
+      , "boxAnd", {case () => HilbertCalculus.boxAnd}),
     new DerivedAxiomInfo("<> split"
       , AxiomDisplayInfo(("<>∨","<>|"), "<a>(P ∨ Q)↔<a>P ∨ <a>Q")
         , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
