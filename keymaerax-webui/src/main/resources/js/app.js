@@ -8,6 +8,7 @@
   'angularSpinners',
   'ui.tree',
   'cgBusy',
+  'diff-match-patch',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
   'ui.bootstrap.tooltip',

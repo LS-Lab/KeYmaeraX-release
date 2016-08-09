@@ -35,6 +35,23 @@ table .btn{
   margin-right: -3px;
 }
 
+.match,
+.textdiff span {
+  color: gray;
+}
+
+.ins,
+ins {
+  color: black;
+  /*background: #bbffbb;*/
+}
+
+.del,
+del {
+  color: black;
+  /*background: #ffbbbb;*/
+}
+
 .hl {background: transparent; }
 .hlhover {
     background-color:#7297A6;

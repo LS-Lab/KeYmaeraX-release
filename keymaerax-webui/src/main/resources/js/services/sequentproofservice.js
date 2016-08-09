@@ -78,11 +78,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     /** The tactic model */
     tactic: {
       tacticText: "",
+      lastExecutedTacticText: "",
+      currentSuggestions: undefined,
 
       fetch: function(userId, proofId) {
         var theTactic = this;
         $http.get('proofs/user/' + userId + '/' + proofId + '/extract').then(function (response) {
           theTactic.tacticText = response.data.tacticText;
+          theTactic.lastExecutedTacticText = theTactic.tacticText;
         });
       }
     },

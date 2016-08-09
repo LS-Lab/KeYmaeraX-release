@@ -1,6 +1,6 @@
-angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
-  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData',
-      function($http, derivationInfos, Textcomplete, sequentProofData) {
+angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'diff-match-patch'])
+  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData', '$window',
+      function($http, derivationInfos, Textcomplete, sequentProofData, $window) {
     return {
         restrict: 'AE',
         scope: {
@@ -12,6 +12,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
         },
         link: function(scope, elem, attr) {
           scope.tactic = sequentProofData.tactic;
+
+          var DiffMatchPatch = $window.diff_match_patch;
 
           var combinators = ['*', '|', '&', '<'];
           var ta = elem.find('textarea');
@@ -40,6 +42,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                   //console.log("Matched term " + term + ", searching for keyword " + keyword + "; position " + this.position);
                   $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/list')
                        .success(function(data) {
+                    sequentProofData.tactic.currentSuggestions = data;
                     callback($.map(data, function (element) {
                       return element.standardDerivation.id.indexOf(keyword) === 0 ? element.standardDerivation.id : null;
                     }));
@@ -47,13 +50,63 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 },
                 index: 2,
                 replace: function (element) {
+                  var di = $.grep(sequentProofData.tactic.currentSuggestions, function(e, i) { return e.standardDerivation.id === element })[0];
+                  sequentProofData.tactic.currentSuggestions = undefined;
                   sequentProofData.formulas.highlighted = undefined;
-                  scope.onTactic({formulaId: this.position, tacticId: element});
-                  //return ['<' + element + '>', '</' + element + '>'];
-                  return element + "(" + this.position + ")";
+
+                  if (di.standardDerivation.derivation.input == undefined || di.standardDerivation.derivation.input.length == 0) {
+                    // tactic without inputs -> execute right away
+                    //scope.onTactic({formulaId: this.position, tacticId: element});
+                    //return ['<' + element + '>', '</' + element + '>'];
+                    return element + "(" + this.position + ")";
+                  } else {
+                    // tactic with input -> postpone and wait for arguments
+                    var inputStrings = $.map(di.standardDerivation.derivation.input, function(e, i) {
+                      return "{`" + e.param + ":" + e.type + "`}";
+                    });
+                    var inputString = inputStrings[0];
+                    for (i = 1; i < inputStrings.length; i++) { inputString = inputString + ", " + inputStrings[i]; }
+                    return [ element + "(" + inputString, ", " + this.position + ")"];
+                  }
                 }
             }
           ]);
+
+          scope.executeTacticDiff = function() {
+            dmp = new DiffMatchPatch();
+            diffs = dmp.diff_main(scope.tactic.lastExecutedTacticText, scope.tactic.tacticText);
+            dmp.Diff_EditCost = scope.diffOptions.editCost;
+            dmp.diff_cleanupEfficiency(diffs);
+
+            var intros = $.grep(diffs, function(e, i) {
+              /* e is of the form Array[type,text], where type==0 means equal, type==1 means intro */
+              return e[0] == 1;
+            });
+
+            intros = $.map(intros, function(e, i) {
+              var trimmed = e[1].trim();
+              return trimmed.charAt(trimmed.length-1) == '&' ? trimmed.substring(0, trimmed.length-1) : trimmed;
+            })
+
+            //@todo what if more than 1 intro?
+            scope.onTacticScript({tacticText: intros[0]});
+          };
+
+          scope.diffOptions = {
+            editCost: 4,
+            attrs: {
+              insert: {
+                'data-attr': 'insert',
+                'class': 'insertion'
+              },
+              delete: {
+                'data-attr': 'delete'
+              },
+              equal: {
+                'data-attr': 'equal'
+              }
+            }
+          };
 
           $(textcomplete).on({
             'textComplete:select': function(e, value) {
@@ -69,7 +122,12 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             }
           });
         },
-        template: '<div class="row k4-tacticeditor"><div class="col-md-12"><textarea class="k4-tacticeditor" ng-model="tactic.tacticText" type="text" rows="10"></textarea></div></div>' +
-                  '<div class="row"><div class="col-md-12"><button class="btn btn-default" data-ng-click="onTacticScript({tacticText: tactic.tacticText})">Run entire tactic</button></div></div>'
+        template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
+                    '<textarea class="k4-tacticeditor" ng-model="tactic.tacticText" rows="10" ng-shift-enter="executeTacticDiff()"></textarea>' +
+                  '</div></div>' +
+                  '<div class="row k4-tacticeditor"><div class="col-md-12">' +
+                    '<pre class="textdiff" processing-diff left-obj="tactic.lastExecutedTacticText" right-obj="tactic.tacticText" options="diffOptions"></pre>' +
+                  '</div></div>' +
+                  '<div class="row"><div class="col-md-12"><button class="btn btn-default" ng-click="executeTacticDiff()">Run</button></div></div>'
     };
   }]);
