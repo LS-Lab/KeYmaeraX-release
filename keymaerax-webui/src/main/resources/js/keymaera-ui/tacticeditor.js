@@ -36,6 +36,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                   this.position = term.substring(0, dotPos);
                   // other code for some reason uses , as separator
                   var formulaId = this.position.replace(/\./g, ',');
+                  sequentProofData.formulas.highlighted = formulaId.indexOf(',') >= 0 ? formulaId : formulaId + ','; //@note top-level formula IDs end in ','
                   //console.log("Matched term " + term + ", searching for keyword " + keyword + "; position " + this.position);
                   $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/list')
                        .success(function(data) {
@@ -46,6 +47,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 },
                 index: 2,
                 replace: function (element) {
+                  sequentProofData.formulas.highlighted = undefined;
                   scope.onTactic({formulaId: this.position, tacticId: element});
                   //return ['<' + element + '>', '</' + element + '>'];
                   return element + "(" + this.position + ")";
@@ -54,15 +56,15 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           ]);
 
           $(textcomplete).on({
-            'textComplete:select': function (e, value) {
+            'textComplete:select': function(e, value) {
               scope.$apply(function() {
                 sequentProofData.tactic.tacticText = value
               })
             },
-            'textComplete:show': function (e) {
+            'textComplete:show': function(e) {
               $(this).data('autocompleting', true);
             },
-            'textComplete:hide': function (e) {
+            'textComplete:hide': function(e) {
               $(this).data('autocompleting', false);
             }
           });
