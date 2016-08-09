@@ -92,10 +92,10 @@ trait InsistentMatcher extends Matcher {
   */
 trait BaseMatcher extends Matcher {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   //@todo import a debug flag as in Tactics.DEBUG
-  private[bellerophon] val DEBUGALOT = System.getProperty("DEBUG", "true")=="true"
+  private[bellerophon] val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
 
   def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
     e1 match {
