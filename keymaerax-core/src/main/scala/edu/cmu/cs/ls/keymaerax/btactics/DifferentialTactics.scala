@@ -419,9 +419,12 @@ object DifferentialTactics {
     val (y: Variable, a: Term, b: Term) = {
       UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
         case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
-        case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
-          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
-          case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
+        case None => UnificationMatch.unifiable("{z'=a(|z|)*z".asDifferentialProgram, ghost) match {
+          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), "0".asTerm)
+          case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
+            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
+            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
+          }
         }
       }
     }
@@ -447,9 +450,12 @@ object DifferentialTactics {
       val (y: Variable, a: Term, b: Term) = {
         UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
           case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
-          case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
-            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
-            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
+          case None => UnificationMatch.unifiable("{z'=a(|z|)*z".asDifferentialProgram, ghost) match {
+            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), "0".asTerm)
+            case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
+              case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
+              case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
+            }
           }
         }
       }

@@ -913,12 +913,39 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1}]x>0".asFormula
   }
 
+  it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { qeTool =>
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+      QE
+      ,
+      diffInd(qeTool)(1, 1::Nil) & QE
+      ))
+    result shouldBe 'proved
+  }
+
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1)
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+      QE
+      ,
+      implyR(1) & diffInd(qeTool)(1) & QE
+      ))
+    result shouldBe 'proved
+  }
+
+  it should "do fancy unification for proving x>0->[{x'=-x}]x>0 twist" in withMathematica { qeTool =>
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+      QE
+      ,
+      implyR(1) & diffInd(qeTool)(1) & QE
+      ))
+    result shouldBe 'proved
+  }
+
+  it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { qeTool =>
+    val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(-1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1)
       <(
       QE
       ,
-      implyR(1) & diffInd(qeTool,'full)(1) & QE
+      implyR(1) & diffInd(qeTool)(1) & QE
       ))
     result shouldBe 'proved
   }

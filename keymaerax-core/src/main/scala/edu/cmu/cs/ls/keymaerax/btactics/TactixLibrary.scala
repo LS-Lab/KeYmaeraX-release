@@ -220,7 +220,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     */
-  def DA(ghost: DifferentialProgram, r: Formula): BelleExpr = DifferentialTactics.DA(ghost, r)
+  def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
     * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
@@ -290,8 +290,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   // Utility Tactics
   /** nil: skip is a no-op tactic that has no effect */
   lazy val nil : BelleExpr = Idioms.ident
-  /** nil: skip is a no-op tactic that has no effect */
+  /** nil: skip is a no-op tactic that has no effect
+    * @see [[done]] */
   lazy val skip : BelleExpr = nil
+  /** done: check that the current goal is proved and fail if it isn't.
+    * @see [[skip]] */
+  lazy val done : BelleExpr = DebuggingTactics.assertProved
+
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term ([[EqualityTactics.abbrv]]) */
   def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
