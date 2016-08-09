@@ -773,7 +773,9 @@ trait UnifyUSCalculus {
     * unification and matching based auto-tactics (forward Hilbert)
     *******************************************************************/
 
+  /** Forward-style tactic mapping provables to provables that follow from it. */
   type ForwardTactic = (Provable => Provable)
+  /** Forward-style position tactic mapping positions and provables to provables that follow from it. */
   type ForwardPositionTactic = (Position => ForwardTactic)
   //@todo add the following def &() for composition and def | as implicit definitions to ForwardTactic
   /** seqCompose(first,second) runs `first` followed by `second` (for forward tactics). */
