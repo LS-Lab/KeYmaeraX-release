@@ -220,7 +220,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     */
-  def DA(ghost: DifferentialProgram, r: Formula): BelleExpr = DifferentialTactics.DA(ghost, r)
+  def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
     * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
