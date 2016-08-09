@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, SingleGoalDependentTactic, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -907,7 +908,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do basic unification" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.DG("{t'=0*t+1}".asDifferentialProgram, "0".asTerm)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.diffGhost("{t'=0*t+1}".asDifferentialProgram, "0".asTerm)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "t=0".asFormula
     result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1}]x>0".asFormula
@@ -951,33 +952,20 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "not allow non-linear ghosts (1)" in {
-    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "y".asTerm, "1".asTerm)(1))
+    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=y*y+1}".asDifferentialProgram)(1))
   }
 
   it should "not allow non-linear ghosts (2)" in {
-    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "1".asTerm, "y".asTerm)(1))
+    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=1*y+y}".asDifferentialProgram)(1))
   }
 
   it should "not allow ghosts that are already present in the ODE" in {
-    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("x".asVariable, "0".asTerm, "1".asTerm)(1))
+    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{x'=0*x+1}".asDifferentialProgram)(1))
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { implicit tool =>
     val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1)
-    val result = proveBy(s, tactic)
-
-    result.subgoals should have size 2
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x>0".asFormula
-    result.subgoals.last.ante shouldBe empty
-    result.subgoals.last.succ should contain only "y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
-  }
-
-  it should "add y'=1 to [x'=2]x>0 when provided a provable explicitly" in withMathematica { implicit tool =>
-    val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val auxEquiv = TactixLibrary.proveBy("x>0 <-> \\exists y (y>0 & x*y>0)".asFormula, TactixLibrary.QE)
-    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, auxEquiv)(1)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 2

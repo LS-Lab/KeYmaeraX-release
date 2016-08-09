@@ -145,7 +145,7 @@ object DerivationInfo {
         )
       ),
       List(VariableArg("y"), TermArg("t()"), TermArg("s()"), TermArg("i()")),
-      {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(y, t1, t2, i)}
+      {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)}
     ),
     new InputPositionTacticInfo("DGTactic",
       RuleDisplayInfo(
@@ -156,7 +156,7 @@ object DerivationInfo {
         )
       ),
       List(VariableArg("y"), TermArg("f()"), TermArg("g()")),
-      {case () => (y: Variable) => (t1: Term) => (t2: Term) => DifferentialTactics.DGTactic(y, t1, t2)}
+      {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))}
     ),
 
     new CoreAxiomInfo("DE differential effect"
@@ -173,7 +173,7 @@ object DerivationInfo {
       , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=a(x)y+b(x)&q(x)}]p(x)")
-      , "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => HilbertCalculus.DG(x,t1,t2)},
+      , "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(x),Plus(Times(t1,x),t2)))},
       List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=g()&q(x)}]p(x)")

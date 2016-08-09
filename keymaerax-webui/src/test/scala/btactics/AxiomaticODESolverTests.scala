@@ -12,15 +12,19 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest}
 
 /**
   * @author Nathan Fulton
   */
-class AxiomaticODESolverTests extends TacticTestBase {
+class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   import DifferentialHelper._
   import Augmentors._
   import TacticFactory._
+
+  val dg = PrivateMethod[DependentPositionTactic]('DG)
+  val dgc = PrivateMethod[DependentPositionTactic]('DGC)
 
   //region integration tests
 
@@ -136,14 +140,14 @@ class AxiomaticODESolverTests extends TacticTestBase {
 
   "Tactic Library Dependencies" should "DGC" taggedAs(IgnoreInBuildTest) in {
     val f = "[{x' = v}]1=1".asFormula
-    val t = HilbertCalculus.DGC(Variable("timeVar", None), Number(1))(1)
+    val t = (HilbertCalculus invokePrivate dgc(Variable("timeVar", None), Number(1)))(1)
     loneSucc(proveBy(f,t)) shouldBe "\\exists timeVar [{x'=v,timeVar'=1&true}]1=1".asFormula
   }
 
   /** @note there's a more robust version of this test in [[DifferentialTests]] */
   it should "DG" taggedAs(IgnoreInBuildTest) in {
     val f = "[{x'=v}]1=1".asFormula
-    val t = HilbertCalculus.DG(Variable("zz", None), Number(22), Number(99))(1)
+    val t = (HilbertCalculus invokePrivate dg(Variable("zz", None), Number(22), Number(99)))(1)
     loneSucc(proveBy(f,t)) shouldBe "\\exists zz [{x'=v,zz'=22*zz+99&true}]1=1".asFormula
   }
 

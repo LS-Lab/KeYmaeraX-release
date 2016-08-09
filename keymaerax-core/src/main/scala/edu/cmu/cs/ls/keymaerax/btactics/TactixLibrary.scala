@@ -182,8 +182,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
-  @deprecated("Use DG(\"{y'a*y+b}\".asDifferentialProgram) instead")
-  private[btactics] override def DG(y:Variable, a:Term, b:Term): DependentPositionTactic = DifferentialTactics.DGTactic(y, a, b)
+  def DG(ghost: DifferentialProgram): DependentPositionTactic = DifferentialTactics.DG(ghost)
+
   /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
     * ghost of the form y'=a*y+b and postcondition replaced by r.
     * {{{
@@ -195,18 +195,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
-
-  /**
-   * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
-   * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
-    *
-   * @example{{{
-   *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
-   * }}}
-   * @see[[by]]
-   **/
-  @deprecated("This tactic might perhaps be phased out at some point in favor of a separate subgoal for r")
-  private[btactics] def DA(y: Variable, a: Term, b: Term, r: Provable): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
 
   // more
 

@@ -393,33 +393,27 @@ object DifferentialTactics {
    *         --------------------------------------------- DG("y".asVariable, "f()".asTerm, "g()".asTerm)(1)
    *         |- [{x'=2 & x>=0}]x>0
    * }}}
-   * @param y The differential ghost variable.
-   * @param a The linear term in y'=a*y+b.
-   * @param b The constant term in y'=a*y+b.
+   * @param ghost A differential program of the form y'=a*y+b.
    * @return The tactic.
    */
-  def DGTactic(y: Variable, a: Term, b: Term): DependentPositionTactic = "DGTactic" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
+  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" by ((pos: Position, sequent: Sequent) => {
+    val (y, a, b) = parseGhost(ghost)
+    sequent.sub(pos) match {
+      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
-      cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) <(
-        /* use */ skip,
-        /* show */ cohide(pos.top) &
+        cutR(Exists(y :: Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) < (
+          /* use */ skip,
+          /* show */ cohide(pos.top) &
           /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
           equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
-        )
+          )
+    }
   })
 
-  def diffGhost(y: Variable, a: Term, b: Term, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
-    DGTactic(y,a,b)(pos) &
+  def diffGhost(ghost: DifferentialProgram, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
+    DG(ghost)(pos) &
     DLBySubst.assignbExists(initialValue)(pos) &
     DLBySubst.assignEquality(pos)
-  })
-
-  def DG(ghost: DifferentialProgram, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
-    val (y,a,b) = parseGhost(ghost)
-    DGTactic(y, a, b)(pos) &
-        DLBySubst.assignbExists(iv)(pos) &
-        DLBySubst.assignEquality(pos)
   })
 
   /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
@@ -490,7 +484,7 @@ object DifferentialTactics {
         cutR(p)(pos.checkSucc.top) <(
           skip,
           implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
-            DGTactic(y, a, b)(pos) &
+            DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
             existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
             useAt(auxEquiv, PosInExpr(0::Nil))(pos + PosInExpr(1::Nil)) &
             existsR(pos + PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
@@ -577,7 +571,7 @@ object DifferentialTactics {
 
       val time: Variable = TacticHelper.freshNamedSymbol(Variable("t_", None, Real), sequent)
       val introTime =
-        DGTactic(time, "0".asTerm, "1".asTerm)(pos) &
+        DG(AtomicODE(DifferentialSymbol(time), Plus(Times("0".asTerm, time), "1".asTerm)))(pos) &
             DLBySubst.assignbExists("0".asTerm)(pos) &
             DLBySubst.assignEquality(pos)
 
