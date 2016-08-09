@@ -19,6 +19,7 @@
   'keymaerax.errorHandlers',
   'keymaerax.interceptors',
   'keymaerax.services',
+  'keymaerax.ui.keyevents',
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
   'keymaerax.ui.tacticeditor',
