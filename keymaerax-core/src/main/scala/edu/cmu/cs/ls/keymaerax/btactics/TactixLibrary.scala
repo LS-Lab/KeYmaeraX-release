@@ -200,10 +200,27 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
     DifferentialTactics.diffInvariant(qeTool, invariants:_*)
 
+  /** DG(ghost,iv): Differential Ghost add differential equations with extra variables ghost of the form `y'=a*y+b`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`
+    * where the initial value for ghost `y` is chosen to be `y:=iv`.
+    */
+  def DG(ghost: DifferentialProgram, iv: Term): DependentPositionTactic = DifferentialTactics.DG(ghost, iv)
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
   override def DG(y:Variable, a:Term, b:Term): DependentPositionTactic = DifferentialTactics.DGTactic(y, a, b)
+  /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
+    * ghost of the form y'=a*y+b and postcondition replaced by r.
+    * {{{
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    *
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    */
+  def DA(ghost: DifferentialProgram, r: Formula): BelleExpr = DifferentialTactics.DA(ghost, r)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
     * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)

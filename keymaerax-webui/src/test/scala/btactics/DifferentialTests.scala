@@ -907,10 +907,20 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do basic unification" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.DG("t'=1".asProgram, "0".asTerm)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.DG("{t'=1}".asDifferentialProgram, "0".asTerm)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "t=0".asFormula
     result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1}]x>0".asFormula
+  }
+
+  it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { qeTool =>
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1)
+      <(
+      QE
+      ,
+      implyR(1) & diffInd(qeTool,'full)(1) & QE
+      ))
+    result shouldBe 'proved
   }
 
   it should "not allow non-linear ghosts (1)" in {

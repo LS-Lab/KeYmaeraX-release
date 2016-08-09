@@ -415,16 +415,46 @@ object DifferentialTactics {
     DLBySubst.assignEquality(pos)
   })
 
-  def DG(ghost: Program, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
+  def DG(ghost: DifferentialProgram, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
     val (y: Variable, a: Term, b: Term) = {
-      val s = UnificationMatch("z'=b()".asProgram, ghost)
-      (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b()".asTerm))
+      UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
+        case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
+        case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
+          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
+          case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
+        }
+      }
     }
 
     DGTactic(y, a, b)(pos) &
         DLBySubst.assignbExists(iv)(pos) &
         DLBySubst.assignEquality(pos)
   })
+
+  /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
+    * ghost of the form y'=a*y+b and postcondition replaced by r.
+    * {{{
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    *
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    */
+  def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
+  //@todo this does not have to be a dependent tactic at all, just a position tactic
+    "DAeasy" by ((pos: Position, sequent: Sequent) => {
+      val (y: Variable, a: Term, b: Term) = {
+        UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
+          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
+          case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
+            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
+            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
+          }
+        }
+      }
+      DA(y, a, b, r)(pos)
+    })
 
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
@@ -440,6 +470,7 @@ object DifferentialTactics {
     "DA" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
     })
+
 
 
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.

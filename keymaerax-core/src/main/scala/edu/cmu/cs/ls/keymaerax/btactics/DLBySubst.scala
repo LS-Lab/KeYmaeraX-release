@@ -488,11 +488,11 @@ object DLBySubst {
    * Turns an existential quantifier into an assignment.
     *
     * @example{{{
-   *         |- [t:=0;][x:=t;]x>=0
-   *         -------------------------assignbExists("0".asTerm)(1)
+   *         |- [t:=f;][x:=t;]x>=0
+   *         -------------------------assignbExists(f)(1)
    *         |- \exists t [x:=t;]x>=0
    * }}}
-   * @param f The right-hand side term of the assignment.
+   * @param f The right-hand side term of the assignment chosen as a witness for the existential quantifier.
    * @return The tactic.
    */
   def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
