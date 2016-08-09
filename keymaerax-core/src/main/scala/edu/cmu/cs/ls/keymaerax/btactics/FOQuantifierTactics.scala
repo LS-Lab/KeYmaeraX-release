@@ -88,7 +88,7 @@ object FOQuantifierTactics {
    *     x>0   |- \forall x x^2>=0
    * }}}
    */
-  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allSkolemize") {
+  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc, "All skolemize only in succedent")
