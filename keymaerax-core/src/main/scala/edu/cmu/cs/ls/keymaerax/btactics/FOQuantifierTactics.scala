@@ -88,7 +88,7 @@ object FOQuantifierTactics {
    *     x>0   |- \forall x x^2>=0
    * }}}
    */
-  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("all skolemize") {
+  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allSkolemize") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc, "All skolemize only in succedent")
@@ -158,7 +158,7 @@ object FOQuantifierTactics {
    * @param where Points to the term to generalize.
    * @return The tactic.
    */
-  def existsGeneralize(x: Variable, where: List[PosInExpr]): DependentPositionTactic = new DependentPositionTactic("exists generalize") {
+  def existsGeneralize(x: Variable, where: List[PosInExpr]): DependentPositionTactic = new DependentPositionTactic("existsGeneralize") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(fml: Formula) =>
@@ -206,7 +206,7 @@ object FOQuantifierTactics {
    *            \forall x x^2 >= -(y+5)^2
    * }}}
    */
-  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = new DependentPositionTactic("all generalize") {
+  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = new DependentPositionTactic("allGeneralize") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isTopLevel, "all generalize only at top-level")
@@ -244,7 +244,7 @@ object FOQuantifierTactics {
    * @param order The order of quantifiers.
    * @return The tactic.
    */
-  def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = new DependentPositionTactic("Universal closure") {
+  def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = new DependentPositionTactic("universalClosure") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         // fetch non-bound variables and parameterless function symbols
