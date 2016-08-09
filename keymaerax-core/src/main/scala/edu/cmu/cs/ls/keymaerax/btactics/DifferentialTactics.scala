@@ -416,23 +416,28 @@ object DifferentialTactics {
   })
 
   def DG(ghost: DifferentialProgram, iv: Term): DependentPositionTactic = "dG" by ((pos: Position, sequent: Sequent) => {
-    val (y: Variable, a: Term, b: Term) = {
-      UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
-        case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
-        case None => UnificationMatch.unifiable("{z'=a(|z|)*z".asDifferentialProgram, ghost) match {
-          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), "0".asTerm)
-          case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
-            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
-            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
-          }
-        }
-      }
-    }
-
+    val (y,a,b) = parseGhost(ghost)
     DGTactic(y, a, b)(pos) &
         DLBySubst.assignbExists(iv)(pos) &
         DLBySubst.assignEquality(pos)
   })
+
+  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
+  private def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
+    UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
+      case None => UnificationMatch.unifiable("{z'=a(|z|)*z}".asDifferentialProgram, ghost) match {
+        case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), "0".asTerm)
+        case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
+          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
+          case None => UnificationMatch.unifiable("{z'=a(|z|)*z-b(|z|)}".asDifferentialProgram, ghost) match {
+            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), Neg(s("b(|z|)".asTerm)))
+            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b")
+          }
+        }
+      }
+    }
+  }
 
   /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
     * ghost of the form y'=a*y+b and postcondition replaced by r.
@@ -447,18 +452,7 @@ object DifferentialTactics {
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
   //@todo this does not have to be a dependent tactic at all, just a position tactic
     "DAeasy" by ((pos: Position, sequent: Sequent) => {
-      val (y: Variable, a: Term, b: Term) = {
-        UnificationMatch.unifiable("{z'=a(|z|)*z+b(|z|)}".asDifferentialProgram, ghost) match {
-          case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), s("b(|z|)".asTerm))
-          case None => UnificationMatch.unifiable("{z'=a(|z|)*z".asDifferentialProgram, ghost) match {
-            case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), "0".asTerm)
-            case None => UnificationMatch.unifiable("{z'=b(|z|)}".asDifferentialProgram, ghost) match {
-              case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
-              case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or of the form y'=b")
-            }
-          }
-        }
-      }
+      val (y,a,b) = parseGhost(ghost)
       DA(y, a, b, r)(pos)
     })
 

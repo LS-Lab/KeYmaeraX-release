@@ -47,27 +47,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
      else HilbertCalculus.stepAt(pos) partial)
     | (assignb(pos) partial))
 
-  /* Axiom and tactic index for stepAt */
-  private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
-    case (True, false) => Some("closeTrue")
-    case (False, true) => Some("closeFalse")
-    case (_: Not, true) => Some("notL")
-    case (_: Not, false) => Some("notR")
-    case (_: And, true) => Some("andL")
-    case (_: And, false) => Some("andR")
-    case (_: Or, true) => Some("orL")
-    case (_: Or, false) => Some("orR")
-    case (_: Imply, true) => Some("implyL")
-    case (_: Imply, false) => Some("implyR")
-    case (_: Equiv, true) => Some("equivL")
-    case (_: Equiv, false) => Some("equivR")
-    case (_: Forall, true) => Some("allL")
-    case (_: Forall, false) => Some("allR")
-    case (_: Exists, true) => Some("existsL")
-    case (_: Exists, false) => Some("existsR")
-    case _ => AxiomIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
-  }
-
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
@@ -209,7 +188,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
-  override def DG(y:Variable, a:Term, b:Term): DependentPositionTactic = DifferentialTactics.DGTactic(y, a, b)
+  @deprecated("Use DG(\"{y'a*y+b}\".asDifferentialProgram) instead")
+  private[btactics] override def DG(y:Variable, a:Term, b:Term): DependentPositionTactic = DifferentialTactics.DGTactic(y, a, b)
   /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
     * ghost of the form y'=a*y+b and postcondition replaced by r.
     * {{{
@@ -227,23 +207,23 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y)
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
- *
-    * @see[[DA(Variable, Term, Term, Provable)]]
+    *
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
     */
-  def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
+  @deprecated("Use DA(\"{y'a*y+b}\".asDifferentialProgram,r) instead")
+  private[btactics] def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
   /**
    * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
    * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
- *
+    *
    * @example{{{
    *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
    * }}}
-   * @see[[DA(Variable, Term, Term, Formula)]]
    * @see[[by]]
    **/
-  def DA(y: Variable, a: Term, b: Term, r: Provable): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
+  @deprecated("This tactic might perhaps be phased out at some point in favor of a separate subgoal for r")
+  private[btactics] def DA(y: Variable, a: Term, b: Term, r: Provable): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
 
   // more
 
@@ -441,5 +421,30 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * }}}
    */
   def proveBy(goal: Formula, tactic: BelleExpr): Provable = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+
+
+  ///
+
+  /* Axiom and tactic index for stepAt */
+  private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
+    case (True, false) => Some("closeTrue")
+    case (False, true) => Some("closeFalse")
+    case (_: Not, true) => Some("notL")
+    case (_: Not, false) => Some("notR")
+    case (_: And, true) => Some("andL")
+    case (_: And, false) => Some("andR")
+    case (_: Or, true) => Some("orL")
+    case (_: Or, false) => Some("orR")
+    case (_: Imply, true) => Some("implyL")
+    case (_: Imply, false) => Some("implyR")
+    case (_: Equiv, true) => Some("equivL")
+    case (_: Equiv, false) => Some("equivR")
+    case (_: Forall, true) => Some("allL")
+    case (_: Forall, false) => Some("allR")
+    case (_: Exists, true) => Some("existsL")
+    case (_: Exists, false) => Some("existsR")
+    case _ => AxiomIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
+  }
+
 
 }

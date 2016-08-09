@@ -165,7 +165,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
-  def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
+  private[btactics] def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
       (Variable("y_",None,Real), y),
       (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
@@ -174,7 +174,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   )
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
-  def DGC(y:Variable, a:Term) = useAt("DG differential ghost constant", PosInExpr(0::Nil),
+  private[btactics] def DGC(y:Variable, a:Term) = useAt("DG differential ghost constant", PosInExpr(0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
       (Variable("y_",None,Real), y),
       (UnitFunctional("g", Except(Variable("y_", None, Real)), Real), a)
