@@ -136,7 +136,6 @@ object SQLite {
     private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
       synchronizedTransaction({
         if(Lemmas.length.run == 0) None
-        //Note: We need to allow the lemma to
         val lemmaMap = Lemmas.map{case row => {
           val id = row._Id.getOrElse(throw new IllegalStateException("Did not expect lemma with null Id."))
           //Note: we allow the lemma text to be empty because of the Create / check we got ID / actually write lemma protocol assumed by CachedLemmaDB.
