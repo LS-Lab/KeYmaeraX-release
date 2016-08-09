@@ -907,14 +907,14 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do basic unification" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.DG("{t'=1}".asDifferentialProgram, "0".asTerm)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.DG("{t'=0*t+1}".asDifferentialProgram, "0".asTerm)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "t=0".asFormula
     result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1}]x>0".asFormula
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
       diffInd(qeTool)(1, 1::Nil) & QE
@@ -923,7 +923,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
       implyR(1) & diffInd(qeTool)(1) & QE
@@ -964,7 +964,7 @@ class DifferentialTests extends TacticTestBase {
 
   "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { implicit tool =>
     val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
+    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 2
@@ -989,7 +989,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "also cut in x>0 if already present in antecedent when adding y'=1 to [x'=2]x>0" in withMathematica { implicit tool =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
+    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 2
@@ -1001,7 +1001,7 @@ class DifferentialTests extends TacticTestBase {
 
   ignore should "work in a simple context" in withMathematica { implicit tool =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
-    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::Nil)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 2
@@ -1013,7 +1013,7 @@ class DifferentialTests extends TacticTestBase {
 
   ignore should "work in a complicated context" in {
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
-    val tactic = DA(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
+    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 2
@@ -1025,7 +1025,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "add y'=-a() to [x'=2]x>0" in withMathematica { implicit tool =>
     val s = Sequent(IndexedSeq("a()>0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DA(Variable("y"), "0".asTerm, "-a()".asTerm, "x>0 & y<0".asFormula)(1)
+    val tactic = DA("{y'=0*y+(-a())}".asDifferentialProgram, "x>0 & y<0".asFormula)(1)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 2
@@ -1038,7 +1038,7 @@ class DifferentialTests extends TacticTestBase {
   it should "solve x'=x" in withMathematica { implicit tool =>
     //val s = Sequent(IndexedSeq(), IndexedSeq("t=0 & x=1 -> [{x'=x, t'=1 & t<1}] x>0".asFormula))
     val s = Sequent(IndexedSeq(), IndexedSeq("x>0 -> [{x'=x}]x>0".asFormula))
-    val t = implyR(1) & andL('_)*@TheType() & DA("z".asVariable, "-1/2".asTerm, "0".asTerm, "x*z^2=1".asFormula)(1) <(
+    val t = implyR(1) & andL('_)*@TheType() & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) <(
       closeId, implyR(1) & diffInd(tool, 'full)(1))
     proveBy(s, t) shouldBe 'proved
   }

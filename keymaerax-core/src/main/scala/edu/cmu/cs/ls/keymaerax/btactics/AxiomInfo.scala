@@ -674,7 +674,7 @@ object DerivationInfo {
         , /* premises */ List((List("&Gamma;"), List("p(x)", "&Delta;"), false),
           (List("&Gamma;"), List("r → [{x′ = f(x), y′ = a() y + b() & q(x)}]r","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
       , List(FormulaArg("r"), VariableArg("y"), TermArg("a()"), TermArg("b()"))
-      , {case () => (r: Formula) => (y: Variable) => (a: Term) => (b: Term) => TactixLibrary.DA(y, a, b, r)}), //@note: for now, has to be in the order provided by web UI
+      , {case () => (r: Formula) => (y: Variable) => (a: Term) => (b: Term) => TactixLibrary.DA(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)), r)}), //@note: for now, has to be in the order provided by web UI
     new PositionTacticInfo("AxiomaticODESolver",
       RuleDisplayInfo("AxiomaticODESolver",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),

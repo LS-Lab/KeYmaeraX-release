@@ -200,12 +200,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
     DifferentialTactics.diffInvariant(qeTool, invariants:_*)
 
-  /** DG(ghost,iv): Differential Ghost add differential equations with extra variables ghost of the form `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`
-    * where the initial value for ghost `y` is chosen to be `y:=iv`.
-    */
-  def DG(ghost: DifferentialProgram, iv: Term): DependentPositionTactic = DifferentialTactics.DG(ghost, iv)
-
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
@@ -221,18 +215,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
-  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
-    * {{{
-    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y)
-    * G |- [x'=f(x)&q(x)]p(x), D
-    * }}}
- *
-    * @see[[DA(Variable, Term, Term, Provable)]]
-    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
-    * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
-    */
-  def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
+
   /**
    * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
    * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
@@ -240,7 +223,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * @example{{{
    *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
    * }}}
-   * @see[[DA(Variable, Term, Term, Formula)]]
+   * @see[[DA(DifferentialProgram, Formula)]]
    * @see[[by]]
    **/
   def DA(y: Variable, a: Term, b: Term, r: Provable): DependentPositionTactic = DifferentialTactics.DA(y, a, b, r)
