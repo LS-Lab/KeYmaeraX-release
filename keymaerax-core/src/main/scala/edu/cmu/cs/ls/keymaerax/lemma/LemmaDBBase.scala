@@ -28,18 +28,16 @@ abstract class LemmaDBBase extends LemmaDB {
       assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
     }
 
-    val lemmaString = lemma.toString
-    writeLemma(id, lemmaString)
+    writeLemma(id, lemma.toString)
     val lemmaFromDB = get(id)
-    if(lemmaFromDB isEmpty) {
-      throw new IllegalStateException("Lemma was not successfully inserted in database.")
+    get(id) match {
+      case None => throw new IllegalStateException("Lemma was not successfully inserted in database.")
+      case Some(got) =>
+        if (got != lemma) {
+          remove(id)
+          throw new IllegalStateException(s"Lemma in DB differed from lemma in memory -> deleted\n\tOriginal: ${lemma.toString}\n\tReloaded: ${got.toString}")
+        }
     }
-    else if (lemmaFromDB.get != lemma) {
-      remove(id)
-      throw new IllegalStateException(s"Lemma in DB differed from lemma in memory -> deleted\n\tOriginal: ${lemma.toString}\n\tReloaded: ${lemmaFromDB.toString}")
-    }
-    // assertion duplicates condition and throw statement
-    assert(lemmaFromDB == Some(lemma), "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
   override def  add(lemma: Lemma): LemmaID = {
