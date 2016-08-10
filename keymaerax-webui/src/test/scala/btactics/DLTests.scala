@@ -657,4 +657,18 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x x>0".asFormula
   }
+
+  "postcut" should "work" in {
+    val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[a:=5;](a>1->a>0) & [a:=5;]a>1".asFormula
+  }
+
+  it should "work with non-empty antecedent" in {
+    val result = proveBy(Sequent(IndexedSeq("x=2".asFormula), IndexedSeq("[a:=5;]a>0".asFormula)), postCut("a>1".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=2".asFormula
+    result.subgoals.head.succ should contain only "[a:=5;](a>1->a>0) & [a:=5;]a>1".asFormula
+  }
 }

@@ -314,36 +314,10 @@ object DLBySubst {
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
-  def postCut(C: Formula): DependentPositionTactic = new DependentPositionTactic("postCut") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      require(pos.isSucc, "postCut only in succedent")
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
-        case (ctx, Box(a, post)) =>
-          // [a](cut->post) and its position in assumptions
-          val conditioned = Box(a, Imply(C, post))
-          val conditional = AntePosition(sequent.ante.length + 1)
-          // [a]cut and its position in assumptions
-          val cutted = Box(a, C)
-          cutR(ctx(conditioned))(pos.checkSucc.top) <(
-            /* use */ assertE(conditioned, "[a](cut->post)")(pos) partial, //& label(BranchLabels.cutUseLbl)
-            /* show */
-            assertE(Imply(ctx(conditioned),ctx(Box(a,post))),"original implication")(pos.top) & CMon(pos.inExpr) &
-            implyR(pos.top) &
-            assertE(Box(a,post), "original postcondition expected")(pos.top) &
-            assertE(conditioned, "[a](cut->post)")(conditional) &
-            cutR(cutted)(pos.top.asInstanceOf[SuccPos]) <(
-              /* use */ assertE(cutted,"show [a]cut")(pos.top) & debug("showing post cut") &
-              hide(conditional, conditioned) partial /*& label(BranchLabels.cutShowLbl)*/,
-              /* show */
-              assertE(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(pos.top) &
-              debug("K reduction") & K(pos.top) &
-              assertE(Box(a, Imply(C,post)), "[a](cut->post)")(pos.top) & debug("closing by K assumption") &
-              closeIdWith(pos.top)
-            ) partial
-          )
-      }
-    }
-  }
+  def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
+    (us: Subst) => us ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
+
+
 
   /**
    * Loop induction. Wipes conditions that contain bound variables of the loop.
