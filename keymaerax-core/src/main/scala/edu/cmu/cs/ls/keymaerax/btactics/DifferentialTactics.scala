@@ -410,6 +410,18 @@ object DifferentialTactics {
     }
   })
 
+  //@todo might work instead of implementation above after some tweaking
+  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
+    */
+//  private[btactics] def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
+//    (us:Subst)=>us++RenUSubst(Seq(
+//      (Variable("y_",None,Real), y),
+//      (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
+//      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+//    ))
+//  )
+
   def diffGhost(ghost: DifferentialProgram, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
     DG(ghost)(pos) &
     DLBySubst.assignbExists(initialValue)(pos) &

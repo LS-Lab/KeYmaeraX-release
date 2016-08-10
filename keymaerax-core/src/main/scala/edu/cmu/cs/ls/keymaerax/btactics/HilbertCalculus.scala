@@ -88,9 +88,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
     }
   }
 
-  private def namedUseAt(name: String, axiomName: String) = new DependentPositionTactic(name) {
-    assert(DerivationInfo.hasCodeName(name), s"${name} is a tactic name but is not a DerivationInfo codeName.")
-    override def factory(pos: Position): DependentTactic = useAt(axiomName)(pos)
+  private def namedUseAt(name: String, axiomName: String, inst: (Subst=>Subst) = us=>us) = new DependentPositionTactic(name) {
+    assert(DerivationInfo.hasCodeName(name), s"$name is a tactic name but is not a DerivationInfo codeName.")
+    override def factory(pos: Position): DependentTactic = useAt(axiomName, inst)(pos)
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
@@ -119,21 +119,21 @@ trait HilbertCalculus extends UnifyUSCalculus {
   }
 
   /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
-  lazy val box                : DependentPositionTactic = useAt("[] box")
+  lazy val box                : DependentPositionTactic = namedUseAt("box", "[] box")
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
   lazy val randomd            : DependentPositionTactic = useAt("<:*> assign nondet")
   /** testd: <?> simplifies test `<?q;>p` to a conjunction `q&p` */
-  lazy val testd              : DependentPositionTactic = useAt("<?> test")
+  lazy val testd              : DependentPositionTactic = namedUseAt("testd", "<?> test")
   /** diffSolve: solve a differential equation `<x'=f>p(x)` to `\exists t>=0 <x:=solution(t)>p(x)` */
   //def diffSolved              : DependentPositionTactic = ???
   /** choiced: <++> handles both cases of a nondeterministic choice `⟨a++b⟩p(x)` separately `⟨a⟩p(x) | ⟨b⟩p(x)` */
-  lazy val choiced            : DependentPositionTactic = useAt("<++> choice")
+  lazy val choiced            : DependentPositionTactic = namedUseAt("choiced", "<++> choice")
   /** composed: <;> handle both parts of a sequential composition `⟨a;b⟩p(x)` one at a time `⟨a⟩⟨b⟩p(x)` */
-  lazy val composed           : DependentPositionTactic = useAt("<;> compose")
+  lazy val composed           : DependentPositionTactic = namedUseAt("composed", "<;> compose")
   /** iterated: <*> prove a property of a loop `⟨{a}*⟩p(x)` by unrolling it once `p(x) | ⟨a⟩⟨{a}*⟩p(x)` */
-  lazy val iterated           : DependentPositionTactic = useAt("<*> iterate")
+  lazy val iterated           : DependentPositionTactic = namedUseAt("iterated", "<*> iterate")
   /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
-  lazy val duald              : DependentPositionTactic = useAt("<d> dual")
+  lazy val duald              : DependentPositionTactic = namedUseAt("duald", "<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
@@ -150,9 +150,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
 //
 //  // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
+  lazy val DW                 : DependentPositionTactic = namedUseAt("DWeaken", "DW differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
+  def DC(invariant: Formula)  : DependentPositionTactic = namedUseAt("DCaxiom", "DC differential cut",
     (us:Subst)=>us++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`. */
@@ -160,18 +160,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
     * @see [[DifferentialTactics.diffInd()]] */
-  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant")
-
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
-    */
-  private[btactics] def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq(
-      (Variable("y_",None,Real), y),
-      (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
-      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
-    ))
-  )
+  lazy val DI                 : DependentPositionTactic = namedUseAt("DI", "DI differential invariant")
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGC(y:Variable, a:Term) = useAt("DG differential ghost constant", PosInExpr(0::Nil),
@@ -208,7 +197,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** Dvariable: x' derives a variable `(x)' = x'` */
   lazy val Dvar               : DependentPositionTactic = new DependentPositionTactic("Dvar") {
     /** Create the actual tactic to be applied at position pos */
-    override def factory(pos: Position): DependentTactic = (if (INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) else DifferentialTactics.Dvariable)(pos)
+    override def factory(pos: Position): DependentTactic = (if (INTERNAL) namedUseAt("Dvar", "x' derive var") else DifferentialTactics.Dvariable)(pos)
   }
 
   /** Dcompose: o' derives a function composition by chain rule */
