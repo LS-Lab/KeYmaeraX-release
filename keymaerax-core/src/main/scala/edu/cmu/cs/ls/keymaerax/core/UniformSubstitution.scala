@@ -521,6 +521,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
    * @param U taboo list of variables
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
+   * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
    * @see arXiv:1503.01981 Definition 12.
    */
   private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): Boolean =
@@ -530,6 +531,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
 
   /**
    * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.
+   * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
    * @see arXiv:1503.01981 Definition 12.
    */
   private def projection(affected: immutable.Set[NamedSymbol]): USubst = new USubst(
@@ -542,6 +544,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * @param U taboo list of variables
    * @param e the expression of interest.
    * @return FV(restrict this to occurrences) /\ U
+   * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
    * @see arXiv:1503.01981 Definition 12.
    * @note not used often
    */
@@ -554,6 +557,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * @param U taboo list of variables
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    * @return FV(restrict this to occurrences) /\ U
+   * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
    * @see arXiv:1503.01981 Definition 12.
    */
   private def clashSet(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): SetLattice[NamedSymbol] =
@@ -564,7 +568,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
    */
   private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
-    require(c.count(pred) == 1, "unique element expected in " + c.mkString)
-    c.filter(pred).head
+    //require(c.count(pred) == 1, "unique element expected in " + c.mkString)
+    val matching = c.filter(pred)
+    require(matching.tail.isEmpty, "unique elemented expected in " + c.mkString)
+    matching.head
   }
 }
