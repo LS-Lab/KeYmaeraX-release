@@ -32,15 +32,15 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse a built-in argument with an absolute non-top-level postion" in {
     val pos = BelleParser.parseAbsolutePosition("1.1", UnknownLocation)
-    BelleParser("boxAnd(1.1)") shouldBe HilbertCalculus.useAt(DerivedAxioms.boxAnd)(pos)
+    BelleParser("boxAnd(1.1)") shouldBe HilbertCalculus.boxAnd(pos)
   }
 
   it should "parse a built-in argument with a position locator" in {
-    BelleParser("boxAnd('L)") shouldBe HilbertCalculus.useAt(DerivedAxioms.boxAnd)(Find.FindL(0, None))
+    BelleParser("boxAnd('L)") shouldBe HilbertCalculus.boxAnd(Find.FindL(0, None))
   }
 
   it should "parse a built-in argument with a 'R position locator" in {
-    BelleParser("boxAnd('R)") shouldBe HilbertCalculus.useAt(DerivedAxioms.boxAnd)(Find.FindR(0, None))
+    BelleParser("boxAnd('R)") shouldBe HilbertCalculus.boxAnd(Find.FindR(0, None))
   }
 
 
