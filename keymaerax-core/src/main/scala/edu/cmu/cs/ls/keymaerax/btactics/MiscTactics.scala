@@ -209,6 +209,7 @@ object TacticFactory {
     }
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
+    //@todo why does this have to have a DependentPositionTactic instead of a PositionalTactic?
     def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: Provable): BelleExpr = t(pos)
