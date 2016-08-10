@@ -24,20 +24,19 @@ import scala.language.postfixOps
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.
-  * Provides a tactic framework for automatically applying axioms and axiomatic rules by matching inputs against them by unification
-  * according to their [[AxiomIndex]].
+  * Provides a tactic framework for automatically applying axioms and axiomatic rules
+  * by matching inputs against them by unification according to the axiom's [[AxiomIndex]].
   *
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch]]
   * @see [[AxiomIndex]]
   * @see Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
-  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
   */
 trait UnifyUSCalculus {
   import BelleExpr.DEBUG
 
-  /** Liberal context via replaceAt instead of Context substitutions (true) */
+  /** Whether to use a liberal context via replaceAt instead of proper Context substitutions */
   private val LIBERAL = Context.GUARDED
 
   /** Quantifier elimination tool
@@ -53,12 +52,7 @@ trait UnifyUSCalculus {
     * @see [[DerivedAxioms]] */
   implicit var cexTool: CounterExampleTool = null
 
-  /**
-    * Throw exception if there is more than one open subgoal on the provable.
-    */
-  private def requireOneSubgoal(provable: Provable) =
-    if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
-
+  /** The (generalized) substitutions used for unification */
   type Subst = UnificationMatch.Subst
 
   /*******************************************************************

@@ -17,7 +17,7 @@ object USubstRen {
 }
 
 /**
-  * Renaming Uniform Substitution, simultaneously combining URename and USubst.
+  * Renaming Uniform Substitution, simultaneously combining [[URename]] and [[USubst]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
   * where the Variable~>Variable replacements are by uniform renaming,
   * and the other replacements are by uniform substitution, simultaneously.
@@ -65,6 +65,16 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   private val semanticRenaming: Boolean = true
 
   override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "}"
+
+
+  /** This USubstRen implemented strictly from the core. */
+  def toCore: Expression => Expression = e => {
+    val renall = MultiRename(RenUSubst.renamingPartOnly(subsDefsInput))
+    // rename all substitutions (by transposition) since they'll be renamed back subsequently
+    val usubst = USubst(subs.toList.map(sp => SubstitutionPair(sp._1, renall(sp._2))))
+    val replaced = usubst(e)
+    renall.toCore(replaced)
+  }
 
   /**
     * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).

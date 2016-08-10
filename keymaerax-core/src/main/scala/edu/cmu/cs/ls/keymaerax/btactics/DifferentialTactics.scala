@@ -457,7 +457,7 @@ object DifferentialTactics {
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
   //@todo this does not have to be a dependent tactic at all, just a position tactic
-    "DAeasy" by ((pos: Position, sequent: Sequent) => {
+    "DAeasy" by ((pos: Position) => {
       val (y,a,b) = parseGhost(ghost)
       DA(y, a, b, r)(pos)
     })
