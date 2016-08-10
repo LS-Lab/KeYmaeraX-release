@@ -141,7 +141,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** K: modal modus ponens (hybrid systems) */
   @deprecated("Use with care since limited to hybrid systems. Use monb instead.")
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
-  /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p.
+  /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not changes values of postcondition `p()`.
     * @note Unsound for hybrid games
     * @see [[boxTrue]]
     */
@@ -224,7 +224,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val Dequal             : DependentPositionTactic = namedUseAt("Dequal", "=' derive =")
   /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
   lazy val Dnotequal          : DependentPositionTactic = namedUseAt("Dnotequal", "!=' derive !=")
-  /** Dless: <' derives less-than `(f(x)<g(x))'` to obtain `f(x)'<=g(x)'` */
+  /** Dless: <' derives less-than `(f(x)⟨g(x))'` to obtain `f(x)'<=g(x)'` */
   lazy val Dless              : DependentPositionTactic = namedUseAt("Dless", "<' derive <")
   /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
   lazy val Dlessequal         : DependentPositionTactic = namedUseAt("Dlessequal", "<=' derive <=")

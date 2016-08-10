@@ -121,7 +121,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** discreteGhost: introduces a ghost defined as term t; if ghost is None the tactic chooses a name by inspecting t */
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
 
-  /** abstractionb: turns '[a]p' into \\forall BV(a) p by universally quantifying over all variables modified in `a`. */
+  /** abstractionb: turns '[a]p' into \forall BV(a) p by universally quantifying over all variables modified in `a`. */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
   /** 'position' tactic t with universal abstraction at the same position afterwards
@@ -140,12 +140,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     }
   }
 
-  /**
-    * loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-    *
+  /** loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
     * @see [[DLBySubst.loop]]
     */
   def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
+  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
+    * @see [[DLBySubst.loop]]
+    */
   def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
   /** loop=I: prove a property of a loop by induction, if the given generator finds a loop invariant
     *
@@ -335,11 +336,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /** Expands abs using `abs(x)=y <-> (x>=0&y=x | x<=0&y=-x)`, see [[EqualityTactics.abs]] */
+  /** Expands absolute value using `abs(x)=y <-> (x>=0&y=x | x<=0&y=-x)`, see [[EqualityTactics.abs]] */
   lazy val abs: DependentPositionTactic = EqualityTactics.abs
-  /** Expands min using `min(x,y)=z <-> (x<=y&z=x | x>=y&z=y)`, see [[EqualityTactics.minmax]] */
+  /** Expands minimum function using `min(x,y)=z <-> (x<=y&z=x | x>=y&z=y)`, see [[EqualityTactics.minmax]] */
   lazy val min: DependentPositionTactic = EqualityTactics.minmax
-  /** Expands max using `max(x,y)=z <-> (x>=y&z=x | x<=y&z=y)`, see [[EqualityTactics.minmax]] */
+  /** Expands maximum function using `max(x,y)=z <-> (x>=y&z=x | x<=y&z=y)`, see [[EqualityTactics.minmax]] */
   lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */

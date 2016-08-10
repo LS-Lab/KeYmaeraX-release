@@ -229,11 +229,12 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
   /** US(subst, fact) reduces the proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
-    *
     * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
     */
   def US(subst: USubst, fact: Provable): BuiltInTactic = by(fact(subst))
+  /** US(subst, axiom) reduces the proof to the given axiom, whose uniform substitution instance under `subst` the current goal is. */
   def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, AxiomInfo(axiom).provable)
+  //@todo document
   def US(subst: USubst): BuiltInTactic = new BuiltInTactic("US") {
     override def result(provable : Provable): Provable = provable(subst)
   }

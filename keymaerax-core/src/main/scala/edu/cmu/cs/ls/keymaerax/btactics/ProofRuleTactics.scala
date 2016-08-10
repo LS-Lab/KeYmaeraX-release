@@ -75,6 +75,7 @@ object ProofRuleTactics {
 
 
   def hide = new DependentPositionTactic("Hide") {
+    //@todo this should not be a dependent tactic, just a by(Position=>Belle)
     override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {
         override def computeExpr(v: BelleValue): BelleExpr = hideL(p)
