@@ -915,7 +915,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & TactixLibrary.DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
       diffInd(qeTool)(1, 1::Nil) & QE

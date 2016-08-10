@@ -159,21 +159,32 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // differential equations
 
-  /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
+  /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
+    * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
   def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new DiffSolutionTool with QETool {
     override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = odeTool.diffSol(diffSys, diffArg, iv)
     override def qeEvidence(formula: Formula): (Formula, Evidence) = qeTool.qeEvidence(formula)
 })
 
-  /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
+  /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
   lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
-  /** DC: Differential Cut a new invariant, use old(.) to refer to initial values of variables.
- *
+  /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
+    * @param formulas the list of formulas that will be cut into the differential equation in that order.
+    *                 The formulas are typically shown to be differential invariants subsequently.
+    *                 They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
     * @see[[DC]]
     * @see[[DifferentialTactics.diffCut]]
+    * @see [[diffInvariant()]]
     */
   def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
-  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant) */
+  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
+    * @example
+    * {{{
+    * proveBy("x^2>=2->[{x'=x^3}]x^2>=2".asFormula, implyR(1) &
+    *   diffInd()(1) & QE
+    * )
+    * }}}
+    */
   def diffInd(implicit qeTool: QETool, auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(qeTool, auto)
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
@@ -181,11 +192,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
+    * @see [[DA()]]
     */
   def DG(ghost: DifferentialProgram): DependentPositionTactic = DifferentialTactics.DG(ghost)
 
   /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
-    * ghost of the form y'=a*y+b and postcondition replaced by r.
+    * ghost of the form y'=a*y+b and the postcondition replaced by r.
     * {{{
     * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
     * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
@@ -193,8 +205,21 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * }}}
     *
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    * @param ghost the extra differential equation for an extra variable y to ghost in of the form
+    *              y'=a*y+b or y'=a*y or y'=b or y'=a*y-b
+    * @param r the equivalent new postcondition to prove that can mention y.
+    * @example
+    * {{{
+    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
+    *   DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    *     QE,
+    *     diffInd()(1, 1::Nil) & QE
+    *   ))
+    * }}}
+    * @see [[DG()]]
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
+
 
   // more
 
@@ -272,7 +297,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
     else EqualityTactics.exhaustiveEqR2L
 
-  /** Transform an FOL formula into the formula 'to' [[ToolTactics.transform]] */
+  /** Transform an FOL formula into the formula 'to' [[ToolTactics.transform]].
+    * A proof why that tranformation is acceptable will be shown on demand. */
   def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
     override def qeEvidence(formula: Formula): (Formula, Evidence) = qeTool.qeEvidence(formula)
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = cexTool.findCounterExample(formula)

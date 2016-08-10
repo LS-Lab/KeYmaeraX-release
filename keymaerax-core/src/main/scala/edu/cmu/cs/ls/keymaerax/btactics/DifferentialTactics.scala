@@ -472,6 +472,7 @@ object DifferentialTactics {
     * @see[[DA(Variable, Term, Term, Provable)]]
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     */
+  @deprecated("Use DA(\"{y'=a*y+b}\".asDifferentialProgram, r) instead.")
   def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
     "DA" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
