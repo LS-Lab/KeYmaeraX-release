@@ -326,7 +326,7 @@ object DerivationInfo {
       , "boxAnd", {case () => HilbertCalculus.boxAnd}),
     new DerivedAxiomInfo("[] conditional split"
       , AxiomDisplayInfo(("[]→∧", "[]->^"), "[a](P→Q∧R) ↔ [a](P→Q) ∧ [a](P→R)")
-      , "boxImpliesAnd", {case () => useAt(DerivedAxioms.boxImpliesAnd)}),
+      , "boxImpliesAnd", {case () => HilbertCalculus.boxImpliesAnd}),
     new DerivedAxiomInfo("<> split"
       , AxiomDisplayInfo(("<>∨","<>|"), "<a>(P ∨ Q)↔<a>P ∨ <a>Q")
         , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),

@@ -228,10 +228,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
 
 
-  /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
-  lazy val boxAnd             : DependentPositionTactic = namedUseAt("boxAnd", "[] split") //@todo correct codeName might be boxAnd.
-  /** splitd: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
+  /** boxAnd: splits `[a](p&q)` into `[a]p & [a]q` */
+  lazy val boxAnd             : DependentPositionTactic = namedUseAt("boxAnd", "[] split")
+  /** diamondOr: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
   lazy val diamondOr          : DependentPositionTactic = namedUseAt("splitd", "<> split")
+  /** boxImpliesAnd: splits `[a](p->q&r)` into `[a](p->q) & [a](p->r)` */
+  lazy val boxImpliesAnd      : DependentPositionTactic = namedUseAt("boxImpliesAnd", "[] conditional split")
 
   // def ind
 
