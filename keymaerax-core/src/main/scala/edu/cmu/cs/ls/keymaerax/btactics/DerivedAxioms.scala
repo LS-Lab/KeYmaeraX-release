@@ -545,7 +545,7 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val andImplies = derivedAxiom("&->",
-    Sequent(IndexedSeq(), IndexedSeq("(A() & B() -> C()) <-> (A() -> B() -> C())".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(A_() & B_() -> C_()) <-> (A_() -> B_() -> C_())".asFormula)),
     prop)
 
   /**
@@ -563,6 +563,21 @@ object DerivedAxioms {
       useAt(K1, PosInExpr(1::Nil))(1) & close,
       useAt(K2, PosInExpr(1::Nil))(1) & close
       )
+  )
+
+  /**
+    * {{{Axiom "[] conditional split".
+    *    [a;](p(||)->q(||)&r(||)) <-> [a;](p(||)->q(||)) & [a;](p(||)->r(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val boxImpliesAnd = derivedAxiom("[] conditional split",
+    Sequent(IndexedSeq(), IndexedSeq("[a_;](P_(||)->Q_(||)&R_(||)) <-> [a_;](P_(||)->Q_(||)) & [a_;](P_(||)->R_(||))".asFormula)),
+    useAt(implyDistAndAxiom, PosInExpr(0::Nil))(1, 0::1::Nil) &
+    useAt(boxAnd, PosInExpr(0::Nil))(1, 0::Nil) &
+    byUS(equivReflexiveAxiom)
   )
 
   /**
