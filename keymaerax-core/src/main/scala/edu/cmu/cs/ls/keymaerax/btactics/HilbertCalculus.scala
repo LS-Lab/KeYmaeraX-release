@@ -162,17 +162,6 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[DifferentialTactics.diffInd()]] */
   lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant")
 
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
-    */
-  private[btactics] def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq(
-      (Variable("y_",None,Real), y),
-      (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
-      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
-    ))
-  )
-
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGC(y:Variable, a:Term) = useAt("DG differential ghost constant", PosInExpr(0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
