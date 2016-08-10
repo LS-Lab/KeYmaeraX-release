@@ -131,10 +131,11 @@ Project Setup
 - If the bundled version of sbt is not working for you, you can specify your own version here.
 
 Create a new run configuration of type Application for the KeYmaera X Web UI.
-- Main class: `edu.cmu.cs.ls.keymaerax.hydra.Boot`
+- Main class: `edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot`
 - Set the working directory to the project path
 - Use the classpath of your project module
 - Check "Single instance only"
+- Make sure the JVM option `-Xss20M` is included in the run configuration.
 
 Test Cases:
 - Right click on project folder `keymaerax-webui/src/test` to mark this directory as Test Sources Root.
