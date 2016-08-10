@@ -43,13 +43,17 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) {
   //  type SubstRepl = SubstitutionPair
   //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
 
+  /** The (generalized) substitutions used for unification */
   type Subst = RenUSubst
+  /** Create a (generalized) substitution from the given representation `subs`. */
   //@todo .distinct may slow things down. Necessary all the time?
   protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
+  /** A (generalized) substitution pair. */
   type SubstRepl = Tuple2[Expression,Expression]
+  /** Create a (generalized) substitution pair. */
   protected def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
 
-  /** Identity Subst */
+  /** Identity substitution that does not change anything */
   protected val id: List[SubstRepl] = Nil
 
 
