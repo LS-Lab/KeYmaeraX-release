@@ -457,7 +457,7 @@ object DifferentialTactics {
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
   //@todo this does not have to be a dependent tactic at all, just a position tactic
-    "DAeasy" by ((pos: Position) => {
+    "DA" by ((pos: Position) => {
       val (y,a,b) = parseGhost(ghost)
       DA(y, a, b, r)(pos)
     })
@@ -473,8 +473,8 @@ object DifferentialTactics {
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     */
   @deprecated("Use DA(\"{y'=a*y+b}\".asDifferentialProgram, r) instead.")
-  def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
-    "DA" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  private[btactics] def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
+    "DAinternal" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
     })
 
@@ -489,6 +489,7 @@ object DifferentialTactics {
     */
   def DA(y: Variable, a: Term, b: Term, auxEquiv: Provable): DependentPositionTactic =
     "DAbase" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+        //@todo not in AxiomInfo
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) => null
 
