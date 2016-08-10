@@ -164,6 +164,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <=* down" in withMathematica { implicit qeTool => check(intervalDownTimes)}
   it should "prove <=1Div down" in withMathematica { implicit qeTool => check(intervalDown1Divide)}
   it should "prove <=Div down" in withMathematica { implicit qeTool => check(intervalDownDivide)}
+  it should "prove K& down" in withMathematica { implicit qeTool => check(Kand)}
+  it should "prove &-> down" in withMathematica { implicit qeTool => check(andImplies)}
 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}

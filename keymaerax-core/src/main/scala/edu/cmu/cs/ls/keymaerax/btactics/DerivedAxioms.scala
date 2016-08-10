@@ -523,6 +523,32 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "K modal modus ponens &".
+    *    [a;](p_(||)->q_(||)) & [a;]p_(||) -> [a;]q_(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val Kand = derivedAxiom("K modal modus ponens &",
+    Sequent(IndexedSeq(), IndexedSeq("[a;](p_(||)->q_(||)) & [a;]p_(||) -> [a;]q_(||)".asFormula)),
+    TactixLibrary.useAt(andImplies, PosInExpr(0::Nil))(1) &
+    byUS("K modal modus ponens")
+  )
+
+  /**
+    * {{{Axiom "&->".
+    *    (A() & B() -> C()) <-> (A() -> B() -> C())
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val andImplies = derivedAxiom("&->",
+    Sequent(IndexedSeq(), IndexedSeq("(A() & B() -> C()) <-> (A() -> B() -> C())".asFormula)),
+    prop)
+
+  /**
     * {{{Axiom "[] split".
     *    [a;](p(||)&q(||)) <-> [a;]p(||)&[a;]q(||)
     * End.
