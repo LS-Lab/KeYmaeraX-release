@@ -71,17 +71,26 @@ object EqualityTactics {
   def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos:Position, sequent:Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
-        val condEquiv@Imply(_, Equiv(_, repl)) = sequent.sub(pos) match {
-          case Some(f: Formula) => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, SubstitutionHelper.replaceFree(f)(lhs, rhs)).asInstanceOf[Formula]))
-          case Some(t: Term) if t == lhs => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula]))
-          case Some(t: Term) if t != lhs => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, SubstitutionHelper.replaceFree(t)(lhs, rhs)).asInstanceOf[Formula]))
+        val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
+          case Some(f: Formula) =>
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
+              sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm)))
+          case Some(t: Term) if t == lhs =>
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula])),
+              sequent(pos.top).replaceAt(pos.inExpr, DotTerm))
+          case Some(t: Term) if t != lhs =>
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
+              sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, DotTerm)))
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
-        val (equivifyCommute, closeWhere) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos)) else (equivifyR('Rlast), new LastSucc(0))
+        val (equivifyCommute, closeWhere, inverseImply) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos), implyRi(eqPos.top, pos.checkSucc.top)) else (equivifyR('Rlast), LastSucc(0), implyRi(eqPos.top, SuccPos(sequent.succ.length-1)))
         cut(condEquiv) <(
           /* use */ (implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeIdWith(closeWhere)) partial) partial) partial,
-          /* show */ cohide('Rlast) & byUS("const formula congruence")
+          /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(
+            (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
+            (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
+            (PredOf(Function("ctxF_", None, Real, Bool), DotTerm), dottedRepl) :: Nil))
           )
     }
   })

@@ -77,8 +77,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "0*y=0".asFormula
   }
 
-  //@todo unification error
-  ignore should "rewrite only some of the symbols when asked to" in withMathematica { implicit qeTool =>
+  it should "rewrite only some of the symbols when asked to" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(IndexedSeq("y=x".asFormula), IndexedSeq("y=2&y+y+2>y+1".asFormula)),
       eqL2R(-1)(1, 0::0::Nil))
     result.subgoals should have size 1
