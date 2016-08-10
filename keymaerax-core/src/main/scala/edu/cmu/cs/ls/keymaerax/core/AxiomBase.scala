@@ -187,43 +187,37 @@ private[core] object AxiomBase {
     /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
     assert(axs("DE differential effect") == Equiv(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
-      Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(DiffAssign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))
-    ), "DE differential effect")
+      Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(DiffAssign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))), "DE differential effect")
     //@note in analogy to DE
     /* @note Completeness: reassociate needed in DifferentialProduct data structures */
     assert(axs("DE differential effect (system)") == Equiv(
       Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),fany),ode), qany), pany),
-      Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(DiffAssign(DifferentialSymbol(x), fany), pany))
-    ), "DE differential effect (system)")
+      Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(DiffAssign(DifferentialSymbol(x), fany), pany))), "DE differential effect (system)")
     assert(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
       Equiv(Box(ODESystem(ode,qany),pany), Box(Test(qany),pany))), "DI differential invariance")
     assert(axs("DG differential ghost") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
         AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
-    ), "DG differential ghost")
+      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost")
     //@note in analogy to DG
     assert(axs("DG differential ghost constant") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
         AtomicODE(DifferentialSymbol(y), UnitFunctional("g",Except(y),Real))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
-    ), "DG differential ghost constant")
+      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost constant")
     //@note in analogy to remark in proof of soundness of DG
     assert(axs("DG inverse differential ghost system") == Imply(
       Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)),DifferentialProgramConst("c",Except(y))), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), gany),
         DifferentialProduct(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)),DifferentialProgramConst("c",Except(y))
-        )), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
-    ), "DG inverse differential ghost system")
+        )), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG inverse differential ghost system")
     //@note in analogy to remark in proof of soundness of DG
     assert(axs("DG inverse differential ghost") == Imply(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), gany),
         AtomicODE(DifferentialSymbol(x),UnitFunctional("f",Except(y),Real))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))
-    ), "DG inverse differential ghost")
+      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG inverse differential ghost")
 
     /* DIFFERENTIAL AXIOMS FOR TERMS */
 
