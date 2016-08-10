@@ -97,7 +97,7 @@ object DerivationInfo {
       , AxiomDisplayInfo("[:*]", "[x:=*]p(x)↔∀x p(x)")
       , "randomb", {case () => HilbertCalculus.randomb}),
     new CoreAxiomInfo("[?] test"
-      , AxiomDisplayInfo("[?]", "[?q]p↔(q→p)")
+      , AxiomDisplayInfo("[?]", "[?Q]P↔(Q→P)")
       , "testb", {case () => HilbertCalculus.testb}),
     new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
     new CoreAxiomInfo("[++] choice"
@@ -126,14 +126,14 @@ object DerivationInfo {
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
     new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
-    , InputAxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)", List(FormulaArg("r(x)")))
+    , InputAxiomDisplayInfo("DC","([{x′=f(x)&Q}]P↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
     , "DCaxiom", {case () => (fml: Formula) => HilbertCalculus.DC(fml) }),
     new InputPositionTacticInfo("diffCut"
     , RuleDisplayInfo("DC"
-      , /* conclusion */ (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-      , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
-        (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(FormulaArg("r(x)")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
+      , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
+      , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
+        (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
+    , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , {case () => (fml: Formula) => TactixLibrary.diffCut(fml)}),
 
     new InputPositionTacticInfo("diffGhost",
@@ -141,44 +141,44 @@ object DerivationInfo {
         "diffGhost",
         ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
         List(
-          (List("&Gamma;", "y=i()"), List("[{c,y'=(t()*y)+s()&H}]P", "&Delta;"))
+          (List("&Gamma;", "y=i"), List("[{c,y'=a*y+b&Q}]P", "&Delta;"))
         )
       ),
-      List(VariableArg("y"), TermArg("t()"), TermArg("s()"), TermArg("i()")),
+      List(VariableArg("y"), TermArg("a"), TermArg("b"), TermArg("i")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)}
     ),
     new InputPositionTacticInfo("DGTactic",
       RuleDisplayInfo(
         "DGTactic",
-        ( List("&Gamma;"), List("∃y [{c, y'=f()y+g()&H}]P", "&Delta;") ),
+        ( List("&Gamma;"), List("∃y [{c, y'=a*y+b&Q}]P", "&Delta;") ),
         List(
-          (List("&Gamma;"), List("[{c&H}]P", "&Delta;"))
+          (List("&Gamma;"), List("[{c&Q}]P", "&Delta;"))
         )
       ),
-      List(VariableArg("y"), TermArg("f()"), TermArg("g()")),
+      List(VariableArg("y"), TermArg("a"), TermArg("b")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))}
     ),
 
     new CoreAxiomInfo("DE differential effect"
-      , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
+      , AxiomDisplayInfo("DE", "[{x′=f(x)&Q}]P↔[x′=f(x)&Q][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)"
-      , AxiomDisplayInfo("DE", "[{x′=F,c&H}]P↔[{c,x′=F&H}][x′:=f(x)]P")
+      , AxiomDisplayInfo("DE", "[{x′=F,c&Q}]P↔[{c,x′=F&Q}][x′:=f(x)]P")
       , "DEs", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariance"
-      , AxiomDisplayInfo("DI", "([{x′=f(x)&q(x)}]p(x)↔[?q(x)]p(x))←(q(x)→[{x′=f(x)&q(x)}](p(x))′)")
+      , AxiomDisplayInfo("DI", "([{x′=f(x)&Q}]P↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
       , "DIequiv", {case () => ???}),
     new DerivedAxiomInfo("DI differential invariant"
-      , AxiomDisplayInfo("DI", "[{x′=f(x)&q(x)}]p(x)←(q(x)→p(x)∧[{x′=f(x)&q(x)}](p(x))′)")
+      , AxiomDisplayInfo("DI", "[{x′=f(x)&Q}]P←(Q→P∧[{x′=f(x)&Q}](P)′)")
       , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
-      , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=a(x)y+b(x)&q(x)}]p(x)")
-      , "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(x),Plus(Times(t1,x),t2)))},
-      List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
+      , AxiomDisplayInfo("DG", "[{x′=f(x)&Q}]P↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
+      , "DG", {case () => (x:Variable) => (a:Term) => (b:Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(x),Plus(Times(a,x),b)))},
+      List(VariableArg("x"), TermArg("a"), TermArg("b"))),
     new CoreAxiomInfo("DG differential ghost constant"
-      , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=g()&q(x)}]p(x)")
-      , "DGC", {case () => (x:Variable) => (t:Term) => HilbertCalculus.DGC(x, t)},
-      List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
+      , AxiomDisplayInfo("DG", "[{x′=f(x)&Q}]P↔∃y [{x′=f(x),y′=g()&Q}]P")
+      , "DGC", {case () => (x:Variable) => (g:Term) => HilbertCalculus.DGC(x, g)},
+      List(VariableArg("x"), TermArg("g"))),
     new CoreAxiomInfo("DG inverse differential ghost system", "DG inverse differential ghost system", "DGpps", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
@@ -197,7 +197,7 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("x′","x'"), "(x)′=x′")
       , "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
     new DerivedAxiomInfo("x' derive var commuted"
-      ,  AxiomDisplayInfo(("x′+C","x'+C"), "x′=(x)′")
+      ,  AxiomDisplayInfo(("x′,C","x',C"), "x′=(x)′")
       , "DvariableCommutedAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
     new PositionTacticInfo("DvariableTactic"
       ,  AxiomDisplayInfo(("x′","x'"), "(x)′=x′")
@@ -243,13 +243,13 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("≠′","!='"), "(f(x)¬=g(x))′↔f(x)′=g(x)′")
       , "Dnotequal", {case () => HilbertCalculus.Dnotequal}),
     new CoreAxiomInfo("&' derive and"
-      ,  AxiomDisplayInfo(("∧′", "&'"),"(f(x)&g(x))′↔f(x)′∧g(x)′")
+      ,  AxiomDisplayInfo(("∧′", "&'"),"(P&Q)′↔P′∧Q′")
       , "Dand", {case () => HilbertCalculus.Dand}),
     new CoreAxiomInfo("|' derive or"
-      ,  AxiomDisplayInfo(("∨′", "|'"), "(f(x)|g(x))′↔f(x)′∧g(x)′")
+      ,  AxiomDisplayInfo(("∨′", "|'"), "(P|Q)′↔P′∧Q′")
       , "Dor", {case () => HilbertCalculus.Dor}),
     new DerivedAxiomInfo("->' derive imply"
-      ,  AxiomDisplayInfo(("→′","->'"), "(f(x)→g(x))′↔(¬f(x)∨g(x))′")
+      ,  AxiomDisplayInfo(("→′","->'"), "(P→Q)′↔(¬P∨Q)′")
       , "Dimply", {case () => HilbertCalculus.Dimply}),
     new CoreAxiomInfo("forall' derive forall"
       ,  AxiomDisplayInfo(("∀′","forall'"), "(∀x p(x))′↔∀x (p(x))′")
@@ -291,7 +291,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", {case () => useAt(DerivedAxioms.DSdnodomain)}),
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => useAt(DerivedAxioms.DGpreghost)}),
     new DerivedAxiomInfo("DW differential weakening"
-      , AxiomDisplayInfo("DW","[x′=f(x)&q(x)]p(x)↔[x′=f(x)&q(x)](q(x)→p(x))")
+      , AxiomDisplayInfo("DW","[x′=f(x)&Q]P↔[x′=f(x)&Q](Q→P)")
       , "DWeaken", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => useAt(DerivedAxioms.Dskipd)}),
 //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
@@ -322,13 +322,13 @@ object DerivationInfo {
     new DerivedAxiomInfo("![]", ("¬[]","![]"), "notBox", {case () => useAt(DerivedAxioms.notBox)}),
     new DerivedAxiomInfo("!<>", ("¬<>","!<>"), "notDiamond", {case () => useAt(DerivedAxioms.notDiamond)}),
     new DerivedAxiomInfo("[] split"
-      , AxiomDisplayInfo(("[]∧", "[]^"), "[a](P ∧ Q)↔[a]P ∧ [a]Q")
+      , AxiomDisplayInfo(("[]∧", "[]^"), "[a](P∧Q)↔[a]P ∧ [a]Q")
       , "boxAnd", {case () => HilbertCalculus.boxAnd}),
     new DerivedAxiomInfo("[] conditional split"
       , AxiomDisplayInfo(("[]→∧", "[]->^"), "[a](P→Q∧R) ↔ [a](P→Q) ∧ [a](P→R)")
       , "boxImpliesAnd", {case () => HilbertCalculus.boxImpliesAnd}),
     new DerivedAxiomInfo("<> split"
-      , AxiomDisplayInfo(("<>∨","<>|"), "<a>(P ∨ Q)↔<a>P ∨ <a>Q")
+      , AxiomDisplayInfo(("<>∨","<>|"), "<a>(P∨Q)↔<a>P ∨ <a>Q")
         , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
 //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
 //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
@@ -644,41 +644,41 @@ object DerivationInfo {
     // Differential tactics
     new PositionTacticInfo("DIRule",
       RuleDisplayInfo("DI",
-        (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
-        /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;")),
-          (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & q(x)}](p(x))′","&Delta;")))),
+        (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
+        /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
+          (List("&Gamma;", "Q"), List("[{x′ = f(x) & Q}](P)′","&Delta;")))),
       {case () => DifferentialTactics.DIRule}),
     new PositionTacticInfo("autoDIRule",
     RuleDisplayInfo("DI",
-      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
-      /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;"), true),
-        (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & q(x)}](p(x))′","&Delta;"), true))),
+      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
+      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
+        (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & Q}](P)′","&Delta;"), true))),
     {case () => DifferentialTactics.diffInd}, needsTool = true),
     new PositionTacticInfo("diffInd",
     RuleDisplayInfo("diffInd",
-      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
-      /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;")),
-        (List("q(x)"), List("[x′:=f(x)](p(x))′")))),
+      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
+      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
+        (List("Q"), List("[x′:=f(x)](P)′")))),
     {case () => DifferentialTactics.diffIndRule}),
     new PositionTacticInfo("autoDiffInd",
     RuleDisplayInfo("diffInd",
-      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
-      /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;"), true),
-        (List("q(x)"), List("[x′:=f(x)](p(x))′"), true))),
+      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
+      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
+        (List("Q"), List("[x′:=f(x)](P)′"), true))),
     {case () => DifferentialTactics.diffInd}),
     new InputPositionTacticInfo("diffInvariant"
     , RuleDisplayInfo("DC+DI"
-      , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-      , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;"), true),
-        (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(FormulaArg("r(x)")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
+      , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
+      , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & Q}]R", "&Delta;"), true),
+        (List("&Gamma;"), List("[{x′ = f(x) & (Q∧R)}]P","&Delta;"))))
+    , List(FormulaArg("R")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
     , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
     new InputPositionTacticInfo("DA"
       , RuleDisplayInfo("DA"
-        , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-        , /* premises */ List((List("&Gamma;"), List("p(x)", "&Delta;"), false),
-          (List("&Gamma;"), List("r → [{x′ = f(x), y′ = a() y + b() & q(x)}]r","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
-      , List(FormulaArg("r"), VariableArg("y"), TermArg("a()"), TermArg("b()"))
+        , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
+        , /* premises */ List((List("&Gamma;"), List("P", "&Delta;"), false),
+          (List("&Gamma;"), List("R → [{x′ = f(x), y′ = a*y+b & Q}]R","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
+      , List(FormulaArg("R"), VariableArg("y"), TermArg("a"), TermArg("b"))
       , {case () => (r: Formula) => (y: Variable) => (a: Term) => (b: Term) => TactixLibrary.DA(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)), r)}), //@note: for now, has to be in the order provided by web UI
     new PositionTacticInfo("AxiomaticODESolver",
       RuleDisplayInfo("AxiomaticODESolver",
