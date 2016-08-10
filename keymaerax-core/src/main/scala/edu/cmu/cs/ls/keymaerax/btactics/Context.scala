@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import PosInExpr.HereP
 
 import scala.collection.immutable._
@@ -28,15 +28,15 @@ import scala.collection.immutable._
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]
   */
 object Context {
-  /** Performance: `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts. */
-  private[btactics] val GUARDED = true // false
+  /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts */
+  private[btactics] val GUARDED = false
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
-  /** Performance: Whether to cross-check implementations */
-  private val CROSSCHECK = BelleExpr.RECHECK && false
-  /** Performance: Whether to check split results redundantly */
-  private val REDUNDANT = BelleExpr.RECHECK && false
+  /** Whether to cross-check implementations */
+  private val CROSSCHECK = false
+  /** Whether to check split results redundantly */
+  private val REDUNDANT = false
   /** Placeholder for programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
   val DotProgram = ProgramConst("DotProgram")
   /** Placeholder for differential programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
