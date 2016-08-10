@@ -915,7 +915,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & TactixLibrary.DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
       diffInd(qeTool)(1, 1::Nil) & QE
@@ -924,7 +924,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
       implyR(1) & diffInd(qeTool)(1) & QE
@@ -933,7 +933,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0 twist" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
       implyR(1) & diffInd(qeTool)(1) & QE
@@ -942,11 +942,38 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) & DifferentialTactics.DA("{y'=(-1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1)
+    val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) & DA("{y'=(-1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1)
       <(
       QE
       ,
       implyR(1) & diffInd(qeTool)(1) & QE
+      ))
+    result shouldBe 'proved
+  }
+
+  it should "prove x>0->[{x'=-x+1}]x>0 by ghosts" in withMathematica { qeTool =>
+    val result = proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
+      QE
+      ,
+      diffInd(qeTool)(1, 1::Nil) & QE
+      ))
+    result shouldBe 'proved
+  }
+
+  it should "prove x>0&a<0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { qeTool =>
+    val result = proveBy("x>0&a<0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) & DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
+      QE
+      ,
+      diffInd(qeTool)(1, 1::Nil) & QE
+      ))
+    result shouldBe 'proved
+  }
+
+  it should "prove x>0&a>0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { qeTool =>
+    val result = proveBy("x>0&a>0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) & DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
+      QE
+      ,
+      diffInd(qeTool)(1, 1::Nil) & QE
       ))
     result shouldBe 'proved
   }
