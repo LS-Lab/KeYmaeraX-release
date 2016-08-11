@@ -201,7 +201,7 @@ object TacticFactory {
   implicit class TacticForNameFactory(val name: String) {
     {
       try {
-        if (DerivationInfo.ofCodeName(name).codeName != name)
+        if (DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())
           println("WARNING: codeName should be changed to a consistent name: " + name)
       } catch {
         case _: IllegalArgumentException => println("WARNING: codeName should be changed to a consistent name: " + name)
