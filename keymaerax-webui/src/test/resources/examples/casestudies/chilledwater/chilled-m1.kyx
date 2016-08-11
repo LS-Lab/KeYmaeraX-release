@@ -1,0 +1,53 @@
+Functions.
+    R Tll().
+    R Tlu().
+    R a().
+    R e().
+    R h().
+    R r().
+End.	
+
+ProgramVariables.
+    R Tw.
+    R Tl.
+    R t.
+    R v.
+    R l.
+End.
+
+Problem.
+    Tll() < a() & a() < Tlu() &  /* Chilled water temp. is in bounds.                        */
+    Tll() < Tl & Tl < Tlu()   &  /* Load temp. starts in bounds.                             */
+    Tw = a()                  &  /* Water temp. starts at chilled temp.                      */
+    Tl > a()                 &  /* Load temp. is at least chilled water temp. (invariant)   */
+    l = 0 & v = 0             &  /* Load starts off; valve starts closed.                    */
+    h() > 0 & r() > 0         &  /* Constants k and r are positive (should be strengthened). */
+    e() = 1                   &  /* We update once per second.                               */
+    h() / r() + a() < Tlu()     /* Asymptotic condition for our upper bound */
+ ->
+  [
+  {
+    {
+      v:=1;Tw:=a(); ++    /* Open the valve.                         */
+      ?l=0;v:=0;    ++    /* If the load is off, close the valve.    */
+      ?l=1 & h()*e()<Tlu()-Tl; v:=0; ++ /* If the load is on with sufficient time left, allowed to close the valve */
+      ?v=1;l:=1;    ++    /* If the valve is open, turn on the load. */
+      l:=0;               /* Turn the load off.                      */
+    };
+    
+    t:=0;
+
+{
+      Tw' = -r()*(1-v)*(Tw-Tl),
+      Tl' = -r()*(Tl-Tw) + l*h(),
+      t'  = 1 & 0 <= t & t < e()
+    }
+  }* @invariant (
+    Tw < Tl &
+    (Tl < Tlu() &
+    a() <= Tw &                  /* Needed for DA in model branch v:=1;Tw:=a() */
+    (l=0 | l=1) &
+    (v=1 | v=0) &
+    (v=1 -> Tw=a()))
+	)] (Tll() < Tl & Tl < Tlu()) /* The temperature of the load stays in bounds. */
+End.

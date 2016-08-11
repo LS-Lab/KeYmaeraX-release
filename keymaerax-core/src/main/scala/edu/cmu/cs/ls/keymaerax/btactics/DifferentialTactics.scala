@@ -271,7 +271,7 @@ object DifferentialTactics {
         }), "openDiffInd only at ODE system in succedent with postcondition f>g or f<g, but got " + sequent.sub(pos))
         val greater = sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
-          case Some(Box(_: ODESystem, _: Less)) => true
+          case Some(Box(_: ODESystem, _: Less)) => false
         }
         if (pos.isTopLevel) {
           val t = (
