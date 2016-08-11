@@ -20,7 +20,10 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       //Prefer the code name if one exists for this tactic.
 //      println("Looking for a code name for " + e)
       val info = TacticInfo.apply(e.prettyString)
-      if(info.belleExpr.asInstanceOf[BelleExpr] != e) throw new Exception("")
+      // @todo: I don't understand why asInstanceOf is used to determeine whether the codeName is usable, but in any case,
+      // anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName directly
+      // for those.
+      if(!info.needsGenerator && info.belleExpr.asInstanceOf[BelleExpr] != e) throw new Exception("")
       else info.codeName
     }
     catch {
