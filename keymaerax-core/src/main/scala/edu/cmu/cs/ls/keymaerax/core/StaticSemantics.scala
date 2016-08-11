@@ -53,6 +53,7 @@ object StaticSemantics {
  *
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written)
+   * @note bv are not used in the core.
    */
   sealed case class VCF(fv: SetLattice[NamedSymbol],
                         bv: SetLattice[NamedSymbol]) {
