@@ -199,6 +199,15 @@ object TacticFactory {
    * @param name The tactic name.
    */
   implicit class TacticForNameFactory(val name: String) {
+    {
+      try {
+        if (DerivationInfo.ofCodeName(name).codeName != name)
+          println("WARNING: codeName should be changed to a consistent name: " + name)
+      } catch {
+        case _: IllegalArgumentException => println("WARNING: codeName should be changed to a consistent name: " + name)
+      }
+    }
+
     /** Creates a named tactic */
     def by(t: BelleExpr): BelleExpr = new NamedTactic(name, t)
 
