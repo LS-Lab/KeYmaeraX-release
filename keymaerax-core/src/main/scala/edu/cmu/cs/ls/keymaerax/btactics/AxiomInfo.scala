@@ -144,7 +144,7 @@ object DerivationInfo {
           (List("&Gamma;", "y=i"), List("[{c,y'=a*y+b&Q}]P", "&Delta;"))
         )
       ),
-      List(VariableArg("y"), TermArg("a"), TermArg("b"), TermArg("i")),
+      List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)}
     ),
     new InputPositionTacticInfo("DGTactic",
@@ -641,7 +641,7 @@ object DerivationInfo {
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
-    new PositionTacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
+    new TacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => ToolTactics.partialQE}, needsTool = true),
@@ -678,13 +678,14 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′ = f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
     , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
-    new InputPositionTacticInfo("DA"
+    new InputPositionTacticInfo("DA4"
       , RuleDisplayInfo("DA"
         , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("P", "&Delta;"), false),
-          (List("&Gamma;"), List("R → [{x′ = f(x), y′ = a*y+b & Q}]R","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
-      , List(FormulaArg("R"), VariableArg("y"), TermArg("a"), TermArg("b"))
-      , {case () => (r: Formula) => (y: Variable) => (a: Term) => (b: Term) => TactixLibrary.DA(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)), r)}), //@note: for now, has to be in the order provided by web UI
+          (List("&Gamma;"), List("R → [{x′ = f(x), y′ = a()*y+b & Q}]R","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
+      , List(FormulaArg("R"), VariableArg("y"), TermArg("a()"), TermArg("b"))
+      , {case () => (r:Formula) => (y:Variable) => (a:Term) => (b:Term) =>
+        DifferentialTactics.DA(y,a,b,r)}), //@note: for now, has to be in the order provided by web UI
     new PositionTacticInfo("AxiomaticODESolver",
       RuleDisplayInfo("AxiomaticODESolver",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),

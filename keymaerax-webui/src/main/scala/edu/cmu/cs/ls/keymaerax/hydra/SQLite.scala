@@ -674,7 +674,7 @@ object SQLite {
       (executionSteps, executables, localProvables) match {
         case (step::steps, exe:: exes, localProvable::moreProvables) =>
           val output = inputProvable(localProvable, step.branchOrder.get)
-          ExecutionStep(step.stepId.get, inputProvable, Some(localProvable), step.branchOrder.get, step.alternativeOrder, step.ruleName, step.executableId, step.userExecuted)  ::
+          ExecutionStep(step.stepId.get, step.executionId, inputProvable, Some(localProvable), step.branchOrder.get, step.alternativeOrder, step.ruleName, step.executableId, step.userExecuted)  ::
             zipTrace(steps, exes, output, moreProvables)
         case (Nil, Nil, Nil) => Nil
         case _ => throw new ProverException("Bug in zipTrace")
