@@ -271,7 +271,7 @@ object DifferentialTactics {
         }), "openDiffInd only at ODE system in succedent with postcondition f>g or f<g, but got " + sequent.sub(pos))
         val greater = sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
-          case Some(Box(_: ODESystem, _: Less)) => true
+          case Some(Box(_: ODESystem, _: Less)) => false
         }
         if (pos.isTopLevel) {
           val t = (
@@ -341,56 +341,53 @@ object DifferentialTactics {
    * @param formulas The formulas to cut in as evolution domain constraint.
    * @return The tactic.
    */
-  def diffCut(formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff cut") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = nestDCs(formulas.map(ghostDC(_, pos, sequent)))
-    }
+  def diffCut(formulas: Formula*): DependentPositionTactic =
+    "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {nestDCs(formulas.map(ghostDC(_, pos, sequent)))})
 
-    /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
-    private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
-      val ov = oldVars(f)
-      if (ov.isEmpty) {
-        DC(f)(pos)
-      } else {
-        val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
-          val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
-          (old -> ghost,
-            discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
-        })
-        ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
+  /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
+  private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
+    val ov = oldVars(f)
+    if (ov.isEmpty) {
+      DC(f)(pos)
+    } else {
+      val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
+        val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
+        (old -> ghost,
+          discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
+      })
+      ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
+    }
+  }
+
+  /** Turns a list of diff cuts (with possible 'old' ghost creation) tactics into nested DCs */
+  private def nestDCs(dcs: Seq[BelleExpr]): BelleExpr = {
+    dcs.head <(
+      /* use */ (if (dcs.tail.nonEmpty) nestDCs(dcs.tail) partial else skip) partial,
+      /* show */ skip
+      )
+  }
+
+  /** Returns a set of variables that are arguments to a special 'old' function */
+  private def oldVars(fml: Formula): Set[Variable] = {
+    var oldVars = Set[Variable]()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case FuncOf(Function("old", None, Real, Real, false), v: Variable) => oldVars += v; Left(None)
+        case _ => Left(None)
       }
-    }
+    }, fml)
+    oldVars
+  }
 
-    /** Turns a list of diff cuts (with possible 'old' ghost creation) tactics into nested DCs */
-    private def nestDCs(dcs: Seq[BelleExpr]): BelleExpr = {
-      dcs.head <(
-        /* use */ (if (dcs.tail.nonEmpty) nestDCs(dcs.tail) partial else skip) partial,
-        /* show */ skip
-        )
-    }
-
-    /** Returns a set of variables that are arguments to a special 'old' function */
-    private def oldVars(fml: Formula): Set[Variable] = {
-      var oldVars = Set[Variable]()
-      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
-        override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-          case FuncOf(Function("old", None, Real, Real, false), v: Variable) => oldVars += v; Left(None)
-          case _ => Left(None)
-        }
-      }, fml)
-      oldVars
-    }
-
-    /** Replaces any old(.) with . in formula fml */
-    private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, Variable]): Formula = {
-      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
-        override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-          case FuncOf(Function("old", None, Real, Real, false), v: Variable) => Right(ghostsByOld(v))
-          case _ => Left(None)
-        }
-      }, fml) match {
-        case Some(g) => g
+  /** Replaces any old(.) with . in formula fml */
+  private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, Variable]): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case FuncOf(Function("old", None, Real, Real, false), v: Variable) => Right(ghostsByOld(v))
+        case _ => Left(None)
       }
+    }, fml) match {
+      case Some(g) => g
     }
   }
 
@@ -419,15 +416,12 @@ object DifferentialTactics {
    * @see [[diffCut]]
    * @see [[diffInd]]
    */
-  def diffInvariant(qeTool: QETool, formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff invariant") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        //@note assumes that first subgoal is desired result, see diffCut
-        val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast))
-        diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
-      }
-    }
-  }
+  def diffInvariant(qeTool: QETool, formulas: Formula*): DependentPositionTactic =
+    "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
+      //@note assumes that first subgoal is desired result, see diffCut
+      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast))
+      diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
+    })
 
   /**
    * Turns things that are constant in ODEs into function symbols.
