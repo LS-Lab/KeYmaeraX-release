@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags
 import testHelper.CustomAssertions.withSafeClue
-import testHelper.KeYmaeraXTestTags.AdvocatusTest
+import testHelper.KeYmaeraXTestTags.{AdvocatusTest, CoverageTest}
 import testHelper.CustomAssertions._
 
 import scala.collection.immutable.List
@@ -1219,6 +1219,11 @@ class USubstTests extends FlatSpec with Matchers {
         s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
       }
     }
+  }
+
+  it should "have no effect on other predicationals" taggedAs(CoverageTest) in {
+    val fml = "true->P{true} | x>0".asFormula
+    USubst(SubstitutionPair(PredicationalOf(Function("q",None,Bool,Bool),"false".asFormula),True)::Nil)(fml) shouldBe fml
   }
 
   // apply given context to the given argument

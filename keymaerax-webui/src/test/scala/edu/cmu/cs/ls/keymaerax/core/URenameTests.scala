@@ -111,5 +111,40 @@ class URenameTests extends FlatSpec with Matchers {
     }
   }
 
+  "Disallowed semantic renaming" should "refuse UnitFunctionals" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(UnitFunctional("F",AnyArg,Real))}
+  }
+
+  it should "refuse UnitPredicationals" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(UnitPredicational("P",AnyArg))}
+  }
+
+  it should "refuse Predicationals" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(PredicationalOf(Function("P",None,Bool,Bool),True))}
+  }
+
+  it should "refuse ProgramConst" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(ProgramConst("a"))}
+  }
+
+  it should "refuse DifferentialProgramConst" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DifferentialProgramConst("a",AnyArg))}
+  }
+
+  it should "refuse {DifferentialProgramConst}" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(ODESystem(DifferentialProgramConst("a",AnyArg), True))}
+  }
+
+  it should "refuse [DifferentialProgramConst]false" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(Box(ODESystem(DifferentialProgramConst("a",AnyArg), True), False))}
+  }
+
+  it should "refuse DotFormula" in {
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DotFormula)}
+  }
+
+  it should "refuse DotTerm" in {
+    URename(Variable("x"),Variable("y"))(DotTerm) shouldBe DotTerm
+  }
   //@todo test similar unsound conclusions from other semantic renaming
 }

@@ -6,9 +6,9 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
-import scala.collection.immutable
+import testHelper.KeYmaeraXTestTags._
 
+import scala.collection.immutable
 import scala.collection.immutable._
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
@@ -58,5 +58,17 @@ class ExpressionTests extends FlatSpec with Matchers {
   it should "support reapplying pairs" in {
     Pair(Number(5),Number(7)).reapply(Number(5),Number(7)) shouldBe Pair(Number(5),Number(7))
     Pair(Number(5),Number(7)).reapply(Number(-2),Number(-7)) shouldBe Pair(Number(-2),Number(-7))
+  }
+
+  "Kinds" should "have expected strings" taggedAs(CoverageTest) in  {
+    (ExpressionKind :: TermKind :: FormulaKind :: ProgramKind :: DifferentialProgramKind :: FunctionKind :: Nil).
+      forall(k => k.toString + "Kind$" == k.getClass.getSimpleName) shouldBe true
+  }
+
+  "Sorts" should "have expected strings" taggedAs(CoverageTest) in  {
+    (Unit :: Bool :: Real :: Trafo :: Nil).
+      forall(k => k.toString + "$" == k.getClass.getSimpleName) shouldBe true
+    ObjectSort("lalalala").toString shouldBe "lalalala"
+    Tuple(Real,Bool).toString shouldBe "(Real,Bool)"
   }
 }
