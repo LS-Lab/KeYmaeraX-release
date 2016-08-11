@@ -419,15 +419,12 @@ object DifferentialTactics {
    * @see [[diffCut]]
    * @see [[diffInd]]
    */
-  def diffInvariant(qeTool: QETool, formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff invariant") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        //@note assumes that first subgoal is desired result, see diffCut
-        val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast))
-        diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
-      }
-    }
-  }
+  def diffInvariant(qeTool: QETool, formulas: Formula*): DependentPositionTactic =
+    "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
+      //@note assumes that first subgoal is desired result, see diffCut
+      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast))
+      diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
+    })
 
   /**
    * Turns things that are constant in ODEs into function symbols.
