@@ -1439,6 +1439,25 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DIo open differential invariance <".
+    *    ([{c&q(||)}]f(||)<g(||) <-> [?q(||);]f(||)<g(||)) <- (q(||) -> [{c&q(||)}](f(||)<g(||) -> (f(||)<g(||))'))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val DIOpeninvariantLess = derivedAxiom("DIo open differential invariance <",
+    Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<g(||) <-> [?q(||);]f(||)<g(||)) <- (q(||) -> [{c&q(||)}](f(||)<g(||) -> (f(||)<g(||))'))".asFormula)),
+    useAt(flipLess)(1, 1::0::1::Nil) &
+      useAt(flipLess)(1, 1::1::1::Nil) &
+      useAt(flipLess)(1, 0::1::1::0::Nil) &
+      HilbertCalculus.Dless(1, 0::1::1::1::Nil) &
+      useAt(flipLessEqual)(1, 0::1::1::1::Nil) &
+      useExpansionAt(">' derive >")(1, 0::1::1::1::Nil) &
+      byUS("DIo open differential invariance")
+  )
+
+  /**
     * {{{Axiom "DX diamond differential skip".
     *    <{c&q(||)}>p(||) <- q(||)&p(||)
     * End.
@@ -1717,6 +1736,27 @@ object DerivedAxioms {
   lazy val flipGreaterEqual = derivedAxiom(">= flip", Sequent(IndexedSeq(), IndexedSeq("(f_() >= g_()) <-> (g_() <= f_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x ((x >= y) <-> (y <= x))".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
+    * {{{Axiom "< flip".
+    *   (f() < g()) <-> (g() > f())
+    * End.
+    * */
+  lazy val flipLess = derivedAxiom("< flip", Sequent(IndexedSeq(), IndexedSeq("(f_() < g_()) <-> (g_() > f_())".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x < y) <-> (y > x))".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
+    * {{{Axiom "<= flip".
+    *   (f() <= g()) <-> (g() >= f())
+    * End.
+    * }}}
+    */
+  lazy val flipLessEqual = derivedAxiom("<= flip", Sequent(IndexedSeq(), IndexedSeq("(f_() <= g_()) <-> (g_() >= f_())".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
+    byUS(proveBy("\\forall y \\forall x ((x <= y) <-> (y >= x))".asFormula, TactixLibrary.RCF))
   )
 
   /**

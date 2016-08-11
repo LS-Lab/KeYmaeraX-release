@@ -104,6 +104,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   //it should "prove DI differential invariance from DI" in {check(DIinvariance)}
   it should "prove DI differential invariant from DI" in {check(DIinvariant)}
+  it should "prove DIo open differential invariance >" in {check(DIOpeninvariantLess)}
   it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
@@ -125,6 +126,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove < negate" in withMathematica { implicit qetool =>check(notGreaterEqual)}
   it should "prove >= flip" in withMathematica { implicit qetool =>check(flipGreaterEqual)}
   it should "prove > flip" in withMathematica { implicit qetool =>check(flipGreater)}
+  it should "prove <= flip" in withMathematica { implicit qetool =>check(flipLessEqual)}
+  it should "prove < flip" in withMathematica { implicit qetool =>check(flipLess)}
   it should "prove + associative" in withMathematica { implicit qeTool => check(plusAssociative)}
   it should "prove * associative" in withMathematica { implicit qeTool => check(timesAssociative)}
   it should "prove + commute" in withMathematica { implicit qeTool => check(plusCommutative)}

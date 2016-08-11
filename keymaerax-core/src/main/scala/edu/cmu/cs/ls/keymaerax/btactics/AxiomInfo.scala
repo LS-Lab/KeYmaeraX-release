@@ -183,6 +183,12 @@ object DerivationInfo {
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
+    new CoreAxiomInfo("DIo open differential invariance"
+      , AxiomDisplayInfo("DIo", "([{x′=f(x)&Q}]f(x)>g(x)↔[?Q]f(x)>g(x))←(f(x)>g(x)→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
+      , "DIogreater", {case () => ???}),
+    new DerivedAxiomInfo("DIo open differential invariance <"
+      , AxiomDisplayInfo("DIo", "([{x′=f(x)&Q}]f(x)<g(x)↔[?Q]f(x)<g(x))←(f(x)<g(x)→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
+      , "DIoless", {case () => ???}),
 
     new PositionTacticInfo("axiomaticSolve", "axiomaticSolve", {case () => AxiomaticODESolver.apply(qeTool)}, needsTool = true),
     
@@ -392,6 +398,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("< negate", ("¬≤","!<="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
     new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", {case () => useAt(DerivedAxioms.flipGreaterEqual)}),
     new DerivedAxiomInfo("> flip", ">F", "flipGreater", {case () => useAt(DerivedAxioms.flipGreater)}),
+    new DerivedAxiomInfo("<= flip", "<=F", "flipLessEqual", {case () => useAt(DerivedAxioms.flipLessEqual)}),
+    new DerivedAxiomInfo("< flip", "<F", "flipLess", {case () => useAt(DerivedAxioms.flipLess)}),
     new DerivedAxiomInfo("<", "<", "less", {case () => useAt(DerivedAxioms.less)}),
     new DerivedAxiomInfo(">", ">", "greater", {case () => useAt(DerivedAxioms.greater)}),
 
