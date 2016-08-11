@@ -123,9 +123,9 @@ object UIIndex {
           case ODESystem(ode, constraint) =>
             val tactics: List[String] = /*@todo diffSolve once done*/ "autoDiffSolve" :: "diffCut" :: "diffInd" :: "DIRule" ::  Nil
             if (constraint == True)
-              (tactics :+ "diffGhost" :+ "DA") ++ rules
+              (tactics :+ "diffGhost" :+ "DA4") ++ rules
             else
-              (tactics :+ "diffWeaken" :+ "diffGhost" :+ "DA") ++ rules
+              (tactics :+ "diffWeaken" :+ "diffGhost" :+ "DA4") ++ rules
           case _ => rules
         }
 

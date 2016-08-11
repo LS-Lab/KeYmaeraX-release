@@ -38,7 +38,9 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
           case e: RepeatTactic => "(" + pp(e.child, indent) + ")^" + e.times
           case adp: AppliedDependentPositionTactic => adp.pt match {
-            case e: DependentPositionWithAppliedInputTactic => e.name + "(" + argPrinter(Left(e.input)) + ", " + argPrinter(Right(adp.locator)) + ")"
+            case e: DependentPositionWithAppliedInputTactic =>
+              val eargs = e.inputs.map(input => argPrinter(Left(input))).mkString(", ")
+              e.name + "(" + eargs + ", " + argPrinter(Right(adp.locator)) + ")"
             case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
           }
           case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)

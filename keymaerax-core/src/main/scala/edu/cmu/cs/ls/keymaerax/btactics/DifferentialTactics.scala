@@ -457,7 +457,7 @@ object DifferentialTactics {
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
   //@todo this does not have to be a dependent tactic at all, just a position tactic
-    "DAeasy" by ((pos: Position) => {
+    "DA2" by ((pos: Position) => {
       val (y,a,b) = parseGhost(ghost)
       DA(y, a, b, r)(pos)
     })
@@ -474,7 +474,7 @@ object DifferentialTactics {
     */
   @deprecated("Use DA(\"{y'=a*y+b}\".asDifferentialProgram, r) instead.")
   def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
-    "DA" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    "DA4" byWithInputs(List(r,y,a,b),(pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
     })
 
