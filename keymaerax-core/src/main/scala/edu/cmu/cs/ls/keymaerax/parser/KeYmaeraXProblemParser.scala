@@ -145,33 +145,34 @@ object KeYmaeraXDeclarationsParser {
    * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
    */
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort, Token)], expr: Expression): Boolean = {
-    StaticSemantics.signature(expr).forall(f => f match {
+    StaticSemantics.symbols(expr).forall({
       case f:Function =>
         val (declaredDomain,declaredSort, declarationToken) = decls.get((f.name,f.index)) match {
           case Some(d) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
-        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${declaredSort} but used where sort ${f.sort} was expected.", declarationToken.loc)
+        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declarationToken.loc)
         else if (f.domain != declaredDomain.get) {
           (f.domain, declaredDomain) match {
-            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${r} but used where domain ${f.domain} was expected.", declarationToken.loc)
+            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", declarationToken.loc)
             case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", declarationToken.loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
         }
         else true
-      case _ => true
-    }) &&
-    StaticSemantics.vars(expr).symbols.forall(x => x match {
       case x: Variable =>
-        val (declaredDomain, declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
-          case Some((None,sort,token)) => (None, sort, token)
+        val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
+          case Some((None,sort,token)) => (sort, token)
           case Some((Some(domain), sort, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
-        if(x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort ${declaredSort} but used where a ${x.sort} was expected.", declarationToken.loc)
+        if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declarationToken.loc)
         x.sort == declaredSort
-      case _ => false //@todo this used to be true, but why?
+      case _: UnitPredicational => true //@note needs not be declared
+      case _: UnitFunctional => true //@note needs not be declared
+      case _: DotTerm => true //@note needs not be declared
+      case DifferentialSymbol(v) => decls.contains(v.name, v.index) //@note hence it is checked as variable already
+      case _ => false
     })
   }
 
