@@ -361,7 +361,7 @@ Axiom "DX differential skip".
   [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
 
-Axiom "DIo open differential invariance".
+Axiom "DIo open differential invariance >".
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
 

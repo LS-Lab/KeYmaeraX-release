@@ -472,6 +472,8 @@ trait UnifyUSCalculus {
             UnifyUSCalculus.this.useAt(remFact, remKey, inst)(p)
           } catch {
             case err: Throwable =>
+              //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
+
               // global proof of prereq unsuccessful, local proof needed
               /* {{{
                *                                                                                              fact

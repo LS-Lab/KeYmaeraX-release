@@ -60,15 +60,21 @@ object Augmentors {
       * @param condition the condition that the subexpression sought for has to satisfy.
       * @return The first position, or None if no subexpression satisfies `condition`.
       */
-    def find(condition: Term => Boolean): Option[PosInExpr] = {
-      var pos: Option[PosInExpr] = None
+    def find(condition: Term => Boolean): Option[(PosInExpr,Term)] = {
+      var pos: Option[(PosInExpr,Term)] = None
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-          if (condition(e.asInstanceOf[Term])) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+          if (condition(e.asInstanceOf[Term])) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
           else Left(None)
       }, term)
       pos
     }
+
+    /**
+      * Find the first (i.e., left-most) position of the given term `e`, if any.
+      * @return The first position, or None if `e` does not occur.
+      */
+    def find(e: Term): Option[PosInExpr] = find(t => e==t) match {case Some((pos,_))=>Some(pos) case None=>None}
 
     /** The substitution pair `this~>other`. */
     def ~>(other: Term): SubstitutionPair = SubstitutionPair(term, other)
@@ -158,6 +164,11 @@ object Augmentors {
       }, fml)
       pos
     }
+    /**
+      * Find the first (i.e., left-most) position of the given expression `e`, if any.
+      * @return The first position, or None if `e` does not occur.
+      */
+    def find(e: Term): Option[PosInExpr] = find(t => e==t) match {case Some((pos,_))=>Some(pos) case None=>None}
     /**
       * Find the first (i.e., left-most) position of a subformula satisfying `condition`, if any.
       * @param condition the condition that the subformula sought for has to satisfy.

@@ -35,6 +35,7 @@ import PosInExpr.HereP
  *   print(fml.sub(PosInExpr(1::0::1::Nil)))     // y:=0;
  *   print(fml.sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
  * }}}
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.positionOf()]]
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.at()]]
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.replaceAt()]]
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.splitPos()]]
