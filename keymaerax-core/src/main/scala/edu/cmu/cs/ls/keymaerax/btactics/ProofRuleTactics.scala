@@ -22,12 +22,12 @@ object ProofRuleTactics {
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
-  private[btactics] def requireOneSubgoal(provable: Provable) =
-    if(provable.subgoals.length != 1) throw new BelleError(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}")
+  private[btactics] def requireOneSubgoal(provable: Provable, msg: => String) =
+    if(provable.subgoals.length != 1) throw new BelleError(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: Provable): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, "apply " + rule)
       provable(rule, 0)
     }
   }
@@ -46,7 +46,7 @@ object ProofRuleTactics {
 
     override def computeExpr() = new BuiltInTactic(prettyString) {
       override def result(provable: Provable): Provable = {
-        requireOneSubgoal(provable)
+        requireOneSubgoal(provable, "cutL(" + f + ")")
         provable(core.CutLeft(f, pos), 0)
       }
     }
@@ -55,7 +55,7 @@ object ProofRuleTactics {
   def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula](SerializationNames.cutRName, f) {
     override def computeExpr() = new BuiltInTactic("CutR") {
       override def result(provable: Provable): Provable = {
-        requireOneSubgoal(provable)
+        requireOneSubgoal(provable, "cutR(" + f + ")")
         provable(core.CutRight(f, pos), 0)
       }
     }
@@ -66,7 +66,7 @@ object ProofRuleTactics {
   def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula](SerializationNames.cutLRName, f) {
     override def computeExpr() = new BuiltInTactic("CutLR") {
       override def result(provable: Provable): Provable = {
-        requireOneSubgoal(provable)
+        requireOneSubgoal(provable, "cutLR(" + f + ")")
         if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
         else provable(core.CutRight(f, pos.checkSucc.top), 0)
       }
@@ -124,7 +124,7 @@ object ProofRuleTactics {
     */
   def uniformRenaming(what: Variable, repl: Variable) = new BuiltInTactic("UniformRenaming") {
     override def result(provable: Provable): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
       provable(core.UniformRenaming(what, repl), 0)
     }
   }
@@ -170,7 +170,7 @@ object ProofRuleTactics {
 
   private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = new BuiltInPositionTactic("BoundRenaming") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
       require(pos.isTopLevel, "bound renaming rule only at top-level")
       provable(core.BoundRenaming(what, repl, pos.top), 0)
     }
@@ -225,7 +225,7 @@ object ProofRuleTactics {
 
   def skolemize = new BuiltInPositionTactic("Skolemize") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
     }
@@ -233,7 +233,7 @@ object ProofRuleTactics {
 
   def skolemizeR = new BuiltInRightTactic("Skolemize") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
     }
@@ -241,7 +241,7 @@ object ProofRuleTactics {
 
   def skolemizeL = new BuiltInLeftTactic("Skolemize") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
     }
@@ -249,7 +249,7 @@ object ProofRuleTactics {
 
   def dualFree = new BuiltInRightTactic("DualFree") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       provable(core.DualFree(pos.top), 0)
     }
   }
@@ -258,7 +258,7 @@ object ProofRuleTactics {
   @deprecated("Use SequentCalculus.close(0,0) instead")
   private[btactics] def trivialCloser = new BuiltInTactic("CloseTrivialForm") {
     override def result(provable: Provable) = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)
         throw new BelleError(s"${this.name} should only be applied to formulas of the form \\phi |- \\phi")
       provable(core.Close(AntePos(0), SuccPos(0)), 0)
@@ -269,7 +269,7 @@ object ProofRuleTactics {
   //@todo compare with SequentCalculus.close
   def close = new BuiltInTwoPositionTactic("Close") {
     override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       require(posOne.isAnte && posTwo.isSucc, "Position one should be in the Antecedent, position two in the Succedent.")
       provable(core.Close(posOne.checkAnte.top, posTwo.checkSucc.top), 0)
     }
@@ -277,14 +277,14 @@ object ProofRuleTactics {
 
   def closeTrue = new BuiltInRightTactic("CloseTrue") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       provable(core.CloseTrue(pos.top), 0)
     }
   }
 
   def closeFalse = new BuiltInLeftTactic("CloseFalse") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-      requireOneSubgoal(provable)
+      requireOneSubgoal(provable, name)
       provable(core.CloseFalse(pos.top), 0)
     }
   }

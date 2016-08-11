@@ -190,6 +190,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
     DifferentialTactics.diffInvariant(qeTool, invariants:_*)
+  /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
+    * @example
+    * {{{
+    * proveBy("x^2>9->[{x'=x^4}]x^2>9".asFormula, implyR(1) &
+    *   openDiffInd()(1)
+    * )
+    * }}}
+    */
+  def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = DifferentialTactics.openDiffInd(qeTool)
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.

@@ -247,7 +247,7 @@ object TacticFactory {
       */
     def by(t: (Provable, SuccPosition) => Provable): BuiltInRightTactic = new BuiltInRightTactic(name) {
       override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-        requireOneSubgoal(provable)
+        requireOneSubgoal(provable, name)
         t(provable, pos)
       }
     }
@@ -259,7 +259,7 @@ object TacticFactory {
       */
     def by(t: (Provable, AntePosition) => Provable): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
       override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
-        requireOneSubgoal(provable)
+        requireOneSubgoal(provable, name)
         t(provable, pos)
       }
     }
@@ -271,7 +271,7 @@ object TacticFactory {
       */
     def by(t: (Provable, Position, Position) => Provable): BuiltInTwoPositionTactic = new BuiltInTwoPositionTactic(name) {
       override def computeResult(provable: Provable, pos1: Position, pos2: Position): Provable = {
-        requireOneSubgoal(provable)
+        requireOneSubgoal(provable, name)
         t(provable, pos1, pos2)
       }
     }

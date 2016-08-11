@@ -126,7 +126,7 @@ trait SequentCalculus {
   def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     new BuiltInTactic("close") {
       override def result(provable: Provable) = {
-        ProofRuleTactics.requireOneSubgoal(provable)
+        ProofRuleTactics.requireOneSubgoal(provable, "close(" + a + "," + s + ")")
         provable(Close(a, s), 0)
       }
     }

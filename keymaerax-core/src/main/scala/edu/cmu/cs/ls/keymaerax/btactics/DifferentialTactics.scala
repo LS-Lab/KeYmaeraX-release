@@ -246,6 +246,78 @@ object DifferentialTactics {
   lazy val diffIndRule: DependentPositionTactic = diffInd(null, 'diffInd)
 
   /**
+    * openDiffInd: Open Differential Invariant proves an open formula to be an invariant of a differential equation (by DIo, DW, DE, QE)
+    *
+    * @param qeTool Quantifier elimination tool for final QE step of tactic.
+    * @example{{{
+    *         *
+    *    ---------------------openDiffInd(qeTool)(1)
+    *    x^2>5 |- [{x'=x^3+x^4}]x^2>5
+    * }}}
+    * @example{{{
+    *         *
+    *    ---------------------openDiffInd(qeTool)(1)
+    *    x^3>5 |- [{x'=x^3+x^4}]x^3>5
+    * }}}
+    * @incontext
+    */
+  def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isSucc && (sequent.sub(pos) match {
+          case Some(Box(_: ODESystem, _: Greater)) => true
+          case Some(Box(_: ODESystem, _: Less)) => true
+          case _ => false
+        }), "openDiffInd only at ODE system in succedent with postcondition f>g or f<g, but got " + sequent.sub(pos))
+        val greater = sequent.sub(pos) match {
+          case Some(Box(_: ODESystem, _: Greater)) => true
+          case Some(Box(_: ODESystem, _: Less)) => true
+        }
+        if (pos.isTopLevel) {
+          val t = (
+            if (greater)
+              HilbertCalculus.namedUseAt("DIogreater", "DIo open differential invariance >")
+            else
+              HilbertCalculus.namedUseAt("DIoless", "DIo open differential invariance <"))(pos)
+            <(
+              close | QE,
+              //@note derive before DE to keep positions easier
+              derive(pos + PosInExpr(1 :: Nil)) &
+                DE(pos) &
+                (Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent, pos) &
+                  //@note DW after DE to keep positions easier
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
+                  ) partial
+              )
+          Dconstify(t)(pos)
+        } else {
+          //@todo positional tactics need to be adapted
+          val t = (
+            if (greater)
+              HilbertCalculus.namedUseAt("DIogreater", "DIo open differential invariance >")
+            else
+              HilbertCalculus.namedUseAt("DIoless", "DIo open differential invariance <"))(pos) &
+              shift(PosInExpr(1 :: 1 :: Nil), new DependentPositionTactic("Shift") {
+                override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+                  override def computeExpr(sequent: Sequent): BelleExpr = {
+                    //@note derive before DE to keep positions easier
+                    shift(PosInExpr(1 :: Nil), derive)(pos) &
+                      DE(pos) &
+                      shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
+                      //@note DW after DE to keep positions easier
+                      (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                      abstractionb(pos)
+                  }
+                }
+              }
+              )(pos)
+          Dconstify(t)(pos)
+        }
+      }
+    }
+  }
+
+  /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
    * used in the evolution domain constraint.
     *
