@@ -23,7 +23,7 @@ import scala.language.postfixOps
 class ChilledWater extends TacticTestBase {
 
   "Model 0" should "be provable" in withMathematica { implicit qeTool =>
-    //val s = KeYmaeraXProblemParser(scala.io.Source.fromFile("/Users/smitsch/Downloads/chilled-m0.kyx").getLines().mkString)
+    //val s = KeYmaeraXProblemParser(scala.io.Source.fromFile("/path/to/file").getLines().mkString)
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
     val inv = """(Tw < Tl) &
                 |    (Tl < Tlu() &
@@ -42,57 +42,47 @@ class ChilledWater extends TacticTestBase {
       printIndexed(msg + "b4 diffInd") & diffInd(qeTool)(1, 1::Nil) & QE() & done
     )
 
-    def DAy(msg: String) = DifferentialTactics.Dconstify(
-      DA("{y'=(r()/2)*y+0}".asDifferentialProgram,
-        "y^2*(Tl - Tw) = 1".asFormula)(1)
-    )(1) & DAcleanup(msg) & done
+    def DAchilled(valve: Boolean, load: Boolean, diff: String) = ((valve, load) match {
+      case (true, _) =>
+        DA("{y'=(r()/2)*y+0}".asDifferentialProgram, s"($diff)*y^2>0".asFormula)(1)
+      case (false, false) =>
+        DA("{y'=r()*y+0}".asDifferentialProgram, s"($diff)*y^2>0".asFormula)(1)
+      // no other case expected to occur
+    }) & DAcleanup(s"After DA (load=$load, valve=$valve, diff=$diff)")
 
     val twLessTl = printIndexed("case split on l and v") <(
       /*v:=1;Tw:=a()*/ orL(FindL(0, Some("l=0|l=1".asFormula))) <(
-      /* l=0 */exhaustiveEqL2R(FindL(0, Some("l=0".asFormula))) & DAy("After DA (l=0)") & done
-      ,
-      /* l=1 */ exhaustiveEqL2R(FindL(0, Some("l=1".asFormula))) &
-      DA("{y'=(r()/2)*y+0}".asDifferentialProgram,
-        "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("After DA (l=1)") & done
+        /* l=0 */exhaustiveEqL2R(FindL(0, Some("l=0".asFormula))) & DAchilled(valve=true, load=false, "Tl-Tw") & done
+        ,
+        /* l=1 */ exhaustiveEqL2R(FindL(0, Some("l=1".asFormula))) & DAchilled(valve=true, load=true, "Tl-Tw") & done
       ),
-      /* l=0 */ exhaustiveEqL2R(FindL(0, Some("l=0".asFormula))) &
-      DA("{y'=r()*y+0}".asDifferentialProgram,
-        "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("After DA (l=0 and v=0)") & done,
-      /* v=1 */ exhaustiveEqL2R(FindL(0, Some("v=1".asFormula))) &
-      DA("{y'=(r()/2)*y+0}".asDifferentialProgram,
-        "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("After DA (v=1 and l=1)") & done,
-      // split v=0 | v=1 and use y'=r()/2*y DA in v=1 and y'=r()*y in v=0 case
+      /* l=0 */ exhaustiveEqL2R(FindL(0, Some("l=0".asFormula))) & DAchilled(valve=false, load=false, "Tl-Tw") & done,
+      /* v=1 */ exhaustiveEqL2R(FindL(0, Some("v=1".asFormula))) & DAchilled(valve=true, load=true, "Tl-Tw") & done,
+      /* l=0, split v=0 | v=1 and use y'=r()/2*y DA in v=1 and y'=r()*y in v=0 case */
       orL(FindL(0, Some("v=1|v=0".asFormula))) <(
-        DA("{y'=(r()/2)*y+0}".asDifferentialProgram,
-          "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("After DA (v=1 and l=1)") & done,
-        DA("{y'=r()*y+0}".asDifferentialProgram,
-          "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("After DA (l=0 and v=0)") & done
+        /* v=1 */ DAchilled(valve=true, load=false, "Tl-Tw") & done,
+        /* v=0 */ DAchilled(valve=false, load=false, "Tl-Tw") & done
         )
       )
 
     val tlLessTlu = chase(1) & specialNormalize <(
       /* v:=1;Tw:=a() */
-      diffInvariant("Tw=a()".asFormula)(1) &
-        DA("{y'=(r()/2)*y+0}".asDifferentialProgram, "(Tlu()-Tl)*y^2>0".asFormula)(1) & DAcleanup("Tl<Tlu After DA (v=1 and l=1)") & done,
+      diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=false /*don't know, but also don't care*/, "Tlu()-Tl") & done,
       /* ?l=0;v:=0; */
       diffCut("Tw<Tl".asFormula)(1) <(
         /* use cut */ diffInd(qeTool)(1) & done,
-        /* show cut */ DA("{y'=r()*y+0}".asDifferentialProgram,
-        "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("Tl<Tlu After DA (l=0 and v=0)") & done
+        /* show cut */ DAchilled(valve=false, load=false, "Tl-Tw") & done
         ),
       /* ?v=1;l:=0; */
-      diffInvariant("Tw=a()".asFormula)(1) &
-        DA("{y'=(r()/2)*y+0}".asDifferentialProgram, "(Tlu()-Tl)*y^2>0".asFormula)(1) & DAcleanup("Tl<Tlu After DA (v=1 and l=1)") & done,
+      diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=false, "Tlu()-Tl") & done,
       /* l:=0; */
       orL(FindL(0, Some("v=1|v=0".asFormula))) <(
         /* v=1 */
-        diffInvariant("Tw=a()".asFormula)(1) &
-          DA("{y'=(r()/2)*y+0}".asDifferentialProgram, "(Tlu()-Tl)*y^2>0".asFormula)(1) & DAcleanup("Tl<Tlu After DA (v=1 and l=1)") & done,
+        diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=false, "Tlu()-Tl") & done,
         /* v=0 */
         diffCut("Tw<Tl".asFormula)(1) <(
           /* use cut */ diffInd(qeTool)(1) & done,
-          /* show cut */ DA("{y'=r()*y+0}".asDifferentialProgram,
-          "(Tl-Tw)*y^2>0".asFormula)(1) & DAcleanup("Tl<Tlu After DA (l=0 and v=0)") & done
+          /* show cut */ DAchilled(valve=false, load=false, "Tl-Tw") & done
           )
         )
       )
