@@ -726,7 +726,7 @@ object DifferentialTactics {
   lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
-      cohide(pos.top) & DW(1) & G
+      cohide(pos.top) & DW(1) & G(1)
   })
 
   private def flattenConjunctions(f: Formula): List[Formula] = {

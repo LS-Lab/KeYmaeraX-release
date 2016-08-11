@@ -523,11 +523,8 @@ object DerivationInfo {
         List((List("&Gamma;"),List("P(&theta;)","&Delta;"))))
       , {case () => SequentCalculus.existsR}),
     new TacticInfo("G"
-      , RuleDisplayInfo("G", (List(""),List("[a]P")), List((List(),List("P"))))
-      , {case () => DLBySubst.G}),
-    new TacticInfo("hideG"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
-      , {case () => HilbertCalculus.hideG}),
+      , {case () => HilbertCalculus.G}),
     new PositionTacticInfo("abstractionb"
       , RuleDisplayInfo("V++", (List("&Gamma;", "[a]P"), List("&Delta;"))
       , List((List("&Gamma; \\ a", "P"), List("&Delta;"))))
