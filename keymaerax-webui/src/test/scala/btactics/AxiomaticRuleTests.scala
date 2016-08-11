@@ -35,7 +35,7 @@ class AxiomaticRuleTests extends TacticTestBase {
   }
 
   "G" should "work" in {
-    val result = proveBy("[x:=1;]x>0".asFormula, TactixLibrary.G)
+    val result = proveBy("[x:=1;]x>0".asFormula, TactixLibrary.G(1))
 
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty

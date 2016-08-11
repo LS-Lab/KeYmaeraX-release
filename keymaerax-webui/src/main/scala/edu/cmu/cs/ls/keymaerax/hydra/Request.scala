@@ -943,7 +943,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         } else {
           // @todo This is a messy mix of the old trace (ID, Provables) and new trace (branch numbers). Perhaps add a new
           // data structure to avoid the messiness.
-          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.executableId, step.isUserExecuted) :: acc)
+          (updatedGoals, ExecutionStep(step.stepId, step.executionId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.executableId, step.isUserExecuted) :: acc)
         }
       }
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)

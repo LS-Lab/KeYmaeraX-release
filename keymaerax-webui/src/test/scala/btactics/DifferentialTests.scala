@@ -749,13 +749,13 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove const [{x'=5}](x+c())'>=0" in withMathematica { implicit qeTool =>
     proveBy("[{x'=5}](x+c())'>=0".asFormula,
-      derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE) shouldBe 'proved
+      derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE) shouldBe 'proved
   }
 
   ignore should "let us prove variable [{x'=5}](x+y)'>=0" in withMathematica { implicit qeTool =>
     //@note proof waited too long. Should have gone constant before diffind
     proveBy("[{x'=5}](x+y)'>=0".asFormula,
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE)) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
   }
 
   it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0" in withMathematica { implicit qeTool =>
@@ -765,12 +765,12 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0 manual" in withMathematica { implicit qeTool =>
     proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
-      implyR(1) & diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & cohide(1) & G & Dassignb(1) & QE)) shouldBe 'proved
+      implyR(1) & diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0 manual" in withMathematica { implicit qeTool =>
     proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & cohide(1) & G & Dassignb(1) & QE))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE))) shouldBe 'proved
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0" in withMathematica { implicit qeTool =>
@@ -1264,6 +1264,10 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove x^2>5 -> [{x'=x^3+x^4}]x^2>5 incontext" taggedAs(IgnoreInBuildTest) in withMathematica { implicit qeTool =>
     proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, openDiffInd(qeTool)(1, 1::Nil))
+  }
+
+  it should "prove x^2<5 -> [{x'=x^3+x^4}]x^2<5" in withMathematica { implicit qeTool =>
+    proveBy("x^2<5 -> [{x'=x^3+x^4}]x^2<5".asFormula, implyR(1) & openDiffInd(qeTool)(1))
   }
 
   it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withMathematica { implicit qeTool =>

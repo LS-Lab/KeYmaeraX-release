@@ -317,7 +317,9 @@ object DLBySubst {
   def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
     (us: Subst) => us ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
-
+  private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
+    sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+  }
 
   /**
    * Loop induction. Wipes conditions that contain bound variables of the loop.
@@ -347,9 +349,8 @@ object DLBySubst {
    */
   def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
-    alphaRule*@TheType() & (new DependentPositionWithAppliedInputTactic("doLoop", invariant) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+    alphaRule*@TheType() & ("doLoop" byWithInput(invariant, (pos, sequent) => {
+       sequent.sub(pos) match {
           case Some(b@Box(Loop(a), p)) =>
             val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
             val q =
@@ -366,15 +367,7 @@ object DLBySubst {
               /* c -> d */ cohide(pos) & CMon(pos.inExpr+1) & implyR(1) &
                 (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)
             )
-        }
-
-        private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
-          sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
-        }
-      }
-    })(pos)
-  })
-
+        }}))(pos)})
   /**
     * Loop induction wiping all context.
     * {{{

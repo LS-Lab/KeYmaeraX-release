@@ -264,7 +264,7 @@ object DifferentialTactics {
   def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc && (sequent.sub(pos) match {
+        require(pos.isSucc && pos.isTopLevel && (sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false
@@ -510,7 +510,13 @@ object DifferentialTactics {
           case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
           case None => UnificationMatch.unifiable("{z'=a(|z|)*z-b(|z|)}".asDifferentialProgram, ghost) match {
             case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), Neg(s("b(|z|)".asTerm)))
-            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b")
+            case None => UnificationMatch.unifiable("{z'=z}".asDifferentialProgram, ghost) match {
+              case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
+              case None => UnificationMatch.unifiable("{z'=-z}".asDifferentialProgram, ghost) match {
+                case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
+                case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
+              }
+            }
           }
         }
       }
@@ -529,7 +535,7 @@ object DifferentialTactics {
     */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
   //@todo this does not have to be a dependent tactic at all, just a position tactic
-    "DAeasy" by ((pos: Position) => {
+    "DA2" by ((pos: Position) => {
       val (y,a,b) = parseGhost(ghost)
       DA(y, a, b, r)(pos)
     })
@@ -546,7 +552,7 @@ object DifferentialTactics {
     */
   @deprecated("Use DA(\"{y'=a*y+b}\".asDifferentialProgram, r) instead.")
   def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
-    "DA" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    "DA4" byWithInputs(List(r,y,a,b),(pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
     })
 
@@ -720,7 +726,7 @@ object DifferentialTactics {
   lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
-      cohide(pos.top) & DW(1) & G
+      cohide(pos.top) & DW(1) & G(1)
   })
 
   private def flattenConjunctions(f: Formula): List[Formula] = {

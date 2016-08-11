@@ -1388,7 +1388,7 @@ object DerivedAxioms {
       /* equiv left */
       cut("[{c_&q_(||)}](p_(||)->(q_(||)->p_(||)))".asFormula) <(
         /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(close, close),
-        /* show */ cohide(2) & G & prop
+        /* show */ G(2) & prop
         ),
       /* equiv right */
       useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW"), close)

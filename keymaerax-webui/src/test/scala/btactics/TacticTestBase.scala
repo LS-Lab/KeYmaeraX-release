@@ -117,7 +117,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Proves a formula using the specified tactic. Fails the test when tactic fails.
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
-  @deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
+  //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(fml))
     theInterpreter(tactic, v) match {
@@ -127,7 +127,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
-  @deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
+  //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(s))
     theInterpreter(tactic, v) match {
@@ -136,7 +136,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
 
-  @deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
+  //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(p: Provable, tactic: BelleExpr): Provable = {
     val v = BelleProvable(p)
     theInterpreter(tactic, v) match {

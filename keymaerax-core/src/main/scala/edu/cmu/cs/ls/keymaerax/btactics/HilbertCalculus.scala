@@ -32,6 +32,7 @@ object HilbertCalculus extends HilbertCalculus
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 trait HilbertCalculus extends UnifyUSCalculus {
+  import TacticFactory._
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private[btactics] val INTERNAL = false
@@ -40,25 +41,18 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** G: Gödel generalization rule reduces a proof of `|- [a]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
-    *       p(||)
-    *   ----------- G
-    *    [a]p(||)
+    *     |- p(||)
+    *   --------------- G
+    *   G |- [a]p(||), D
     * }}}
     * The more flexible and more general rule [[monb]] with p(x)=True gives `G` using [[boxTrue]].
     * @note Unsound for hybrid games
     * @see [[monb]] with p(x)=True
     * @see [[boxTrue]]
-    * @todo should lift to a PositionTactic = cohideR(pos) & DLBySubst.G
     */
-  lazy val G                  : BelleExpr         = DLBySubst.G
-  //@todo strange special case tactic? Only for UI purposes?
-  lazy val hideG              : BelleExpr         = new DependentPositionTactic("hideG") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = {
-        SequentCalculus.cohideR(pos) & DLBySubst.G
-      }
-    }
-  }
+  lazy val G            : DependentPositionTactic = "G" by ((pos:Position) =>
+    SequentCalculus.cohideR(pos) & DLBySubst.G
+    )
 
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
@@ -142,7 +136,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** K: modal modus ponens (hybrid systems) */
   @deprecated("Use with care since limited to hybrid systems. Use monb instead.")
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
-  /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not changes values of postcondition `p()`.
+  /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
     * @see [[boxTrue]]
     */

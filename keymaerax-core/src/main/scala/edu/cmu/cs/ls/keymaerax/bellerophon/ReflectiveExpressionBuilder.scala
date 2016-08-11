@@ -22,10 +22,14 @@ object ReflectiveExpressionBuilder {
       }
     val expressionArgs = args.filter(_.isLeft).map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown.")))
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
-      case (expr: (Formula => Any), (fml: Formula) :: Nil) => expr(fml)
-      case (expr: (Variable => Any), (y: Variable) :: Nil) => expr(y)
-      case (expr: (Term => Any), (term: Term) :: Nil) => expr(term)
-      case (expr: (Seq[Formula] => Any), fmls: Seq[Formula]) => expr(fmls)
+      case (expr: (Formula => Any), (fml: Formula) :: Nil) =>
+        expr(fml)
+      case (expr: (Variable => Any), (y: Variable) :: Nil) =>
+        expr(y)
+      case (expr: (Term => Any), (term: Term) :: Nil) =>
+        expr(term)
+      case (expr: (Seq[Expression] => Any), fmls: Seq[Expression]) =>
+        expr(fmls)
       case (expr, fml) =>
         throw new Exception("Expected type Formula => Any , got " + expr.getClass.getSimpleName)
     }
@@ -37,6 +41,7 @@ object ReflectiveExpressionBuilder {
       case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) => AppliedPositionTactic(expr, arg)
       case (expr:DependentTwoPositionTactic, Fixed(arg1: Position, _, _) :: Fixed(arg2: Position, _, _) :: Nil, 2) =>
         AppliedDependentTwoPositionTactic(expr, arg1, arg2)
+      case (expr:DependentPositionWithAppliedInputTactic, loc::Nil, 1) => new AppliedDependentPositionTacticWithAppliedInput(expr, loc)
       case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, arg)
       case (expr:BuiltInTwoPositionTactic, Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) =>
         AppliedBuiltinTwoPositionTactic(expr, arg1, arg2)

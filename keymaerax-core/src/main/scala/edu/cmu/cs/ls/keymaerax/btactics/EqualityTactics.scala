@@ -123,7 +123,7 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("Find Left and Replace Left with Right")
+  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("allL2R")
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
@@ -134,9 +134,9 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val exhaustiveEqR2L: DependentPositionTactic = "allL2R" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(lhs, rhs)) =>
-      useAt("= commute")(pos, fml) & exhaustiveEq("Find Right and Replace Right with Left")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
+      useAt("= commute")(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
   })
 
 
