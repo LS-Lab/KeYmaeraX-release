@@ -121,7 +121,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(stepId: Int, input:Provable, local:Option[Provable], branch:Int, alternativeOrder:Int, rule:String, executableId: Int, isUserExecuted: Boolean = true) {
+case class ExecutionStep(stepId: Int, executionId: Int, input:Provable, local:Option[Provable], branch:Int, alternativeOrder:Int, rule:String, executableId: Int, isUserExecuted: Boolean = true) {
   def output: Option[Provable] = local.map{case localProvable => input(localProvable, branch)}
 }
 
