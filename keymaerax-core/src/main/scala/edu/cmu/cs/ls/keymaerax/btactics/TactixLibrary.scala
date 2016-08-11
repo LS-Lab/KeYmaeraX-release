@@ -390,6 +390,27 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   // Global Utility Functions
 
   /**
+    * The position of `here()` in the formula `fml`.
+    * @return The term or formula position where `here()` occurs in `fml`.
+    * @throws IllegalArgumentException if `here()` does not occur in `fml`.
+    * @example {{{
+    *    positionOf("p() & x>2 -> here() | x=y^2".asFormula) == PosInExpr(1::0::Nil)
+    *    positionOf("p() & here() -> x=1 | x=y^2".asFormula) == PosInExpr(0::1::Nil)
+    *    positionOf("p() & x>2 -> x=1 | here()=y^2".asFormula) == PosInExpr(1::1::0::Nil)
+    *    positionOf("p() & x>2 -> x=1 | x=here()^2".asFormula) == PosInExpr(1::1::1::0::Nil)
+    *    positionOf("_ & here() -> _ | _".asFormula) == PosInExpr(0::1::Nil)
+    *    positionOf("_ & _ -> _ | .=here()^2".asFormula) == PosInExpr(1::1::1::0::Nil)
+    *    positionOf("_ & here() -> _".asFormula) == PosInExpr(0::1::Nil)
+    * }}}
+    */
+  def positionOf(fml: Formula): PosInExpr = fml.find(e =>
+    e==FuncOf(Function("here",None,Unit,Real),Nothing) || e==PredOf(Function("here",None,Unit,Bool),Nothing)
+  ) match {
+    case Some((pos,_)) => pos
+    case None => throw new IllegalArgumentException("here() locator does not occur in positionOf(" + fml + ")")
+  }
+
+  /**
     * Prove the new goal by the given tactic, returning the resulting Provable
     *
     * @see [[SequentialInterpreter]]
