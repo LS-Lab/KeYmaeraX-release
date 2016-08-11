@@ -2,7 +2,9 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import TacticExtractionErrors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.{Generator, ConfigurableGenerate, Idioms}
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
 class ExtractTacticFromTrace(db: DBAbstraction) {
@@ -43,24 +45,23 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val children = node.children
 //      .filter(_ != node) //@todo remove this line... seems like a bug in ProofTree.
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
-
-    val thisTactic = tacticAt(node)
+    val proof = db.getProofInfo(tree.proofId)
+    val inv = db.getInvariants(proof.modelId)
+    val gen = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+    val thisTactic = tacticAt(gen, node)
 
     if(children.length == 0) thisTactic
     else if(children.length == 1) thisTactic & apply(tree)(children.head)
     else thisTactic & BranchTactic(children.map(child => apply(tree)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
-  private def tacticAt(node: TreeNode) : BelleExpr = node.endStep match {
+  private def tacticAt(gen:Generator[Formula], node: TreeNode) : BelleExpr = node.endStep match {
     case Some(step) => try {
       val exprString = db.getExecutable(step.executableId).belleExpr
-      BTacticParser(exprString) match {
-          case Some(expr) => expr
-          case None => throw new BParserException(s"Could not parse Bellerophon expression ${exprString}")
-      }
+      BelleParser.parseWithInvGen(exprString,Some(gen))
     } catch {
       case e : BParserException => throw TacticExtractionError(e.getMessage, e)
-      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing", e)
+      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing:" + db.getExecutable(step.executableId).belleExpr, e)
       case t : Throwable => throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database", t)
     }
     case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
