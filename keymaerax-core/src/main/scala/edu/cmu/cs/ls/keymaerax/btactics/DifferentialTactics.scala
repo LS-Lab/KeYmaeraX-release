@@ -264,7 +264,7 @@ object DifferentialTactics {
   def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc && (sequent.sub(pos) match {
+        require(pos.isSucc && pos.isTopLevel && (sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false
@@ -510,7 +510,13 @@ object DifferentialTactics {
           case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|z|)".asTerm))
           case None => UnificationMatch.unifiable("{z'=a(|z|)*z-b(|z|)}".asDifferentialProgram, ghost) match {
             case Some(s) => (s("z".asVariable).asInstanceOf[Variable], s("a(|z|)".asTerm), Neg(s("b(|z|)".asTerm)))
-            case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b")
+            case None => UnificationMatch.unifiable("{z'=z}".asDifferentialProgram, ghost) match {
+              case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
+              case None => UnificationMatch.unifiable("{z'=-z}".asDifferentialProgram, ghost) match {
+                case Some(s) => (s("z".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
+                case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
+              }
+            }
           }
         }
       }
