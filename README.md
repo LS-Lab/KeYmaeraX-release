@@ -59,6 +59,11 @@ Detailed instructions are available at that website as well. Briefly, type
 
 to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries, including Scala itself. 
 
+After compilation (re-)initialize the lemma database by first deleting the KeYmaera X cache in your home directory, and then run the test suite initializing the lemma database as follows.
+
+    rm -rf ~/.keymaerax/cache
+    sbt "test-only edu.cmu.cs.ls.keymaerax.btactics.DerivedAxiomsTests"
+
 To run the regression test case suite, type, for example,
 
     sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest

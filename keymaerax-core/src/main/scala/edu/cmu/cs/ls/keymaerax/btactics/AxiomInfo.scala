@@ -183,7 +183,7 @@ object DerivationInfo {
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
-    new CoreAxiomInfo("DIo open differential invariance"
+    new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo", "([{x′=f(x)&Q}]f(x)>g(x)↔[?Q]f(x)>g(x))←(f(x)>g(x)→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
       , "DIogreater", {case () => ???}),
     new DerivedAxiomInfo("DIo open differential invariance <"

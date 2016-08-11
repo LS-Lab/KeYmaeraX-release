@@ -190,6 +190,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
     DifferentialTactics.diffInvariant(qeTool, invariants:_*)
+  /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
+    * @example
+    * {{{
+    * proveBy("x^2>9->[{x'=x^4}]x^2>9".asFormula, implyR(1) &
+    *   openDiffInd()(1)
+    * )
+    * }}}
+    */
+  def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = DifferentialTactics.openDiffInd(qeTool)
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
@@ -379,6 +388,27 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
 
   // Global Utility Functions
+
+  /**
+    * The position of `here()` in the formula `fml`.
+    * @return The term or formula position where `here()` occurs in `fml`.
+    * @throws IllegalArgumentException if `here()` does not occur in `fml`.
+    * @example {{{
+    *    positionOf("p() & x>2 -> here() | x=y^2".asFormula) == PosInExpr(1::0::Nil)
+    *    positionOf("p() & here() -> x=1 | x=y^2".asFormula) == PosInExpr(0::1::Nil)
+    *    positionOf("p() & x>2 -> x=1 | here()=y^2".asFormula) == PosInExpr(1::1::0::Nil)
+    *    positionOf("p() & x>2 -> x=1 | x=here()^2".asFormula) == PosInExpr(1::1::1::0::Nil)
+    *    positionOf("_ & here() -> _ | _".asFormula) == PosInExpr(0::1::Nil)
+    *    positionOf("_ & _ -> _ | .=here()^2".asFormula) == PosInExpr(1::1::1::0::Nil)
+    *    positionOf("_ & here() -> _".asFormula) == PosInExpr(0::1::Nil)
+    * }}}
+    */
+  def positionOf(fml: Formula): PosInExpr = fml.find(e =>
+    e==FuncOf(Function("here",None,Unit,Real),Nothing) || e==PredOf(Function("here",None,Unit,Bool),Nothing)
+  ) match {
+    case Some((pos,_)) => pos
+    case None => throw new IllegalArgumentException("here() locator does not occur in positionOf(" + fml + ")")
+  }
 
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable

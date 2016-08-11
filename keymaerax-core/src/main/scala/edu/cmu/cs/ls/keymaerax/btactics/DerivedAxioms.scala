@@ -1454,7 +1454,7 @@ object DerivedAxioms {
       HilbertCalculus.Dless(1, 0::1::1::1::Nil) &
       useAt(flipLessEqual)(1, 0::1::1::1::Nil) &
       useExpansionAt(">' derive >")(1, 0::1::1::1::Nil) &
-      byUS("DIo open differential invariance")
+      byUS("DIo open differential invariance >")
   )
 
   /**
