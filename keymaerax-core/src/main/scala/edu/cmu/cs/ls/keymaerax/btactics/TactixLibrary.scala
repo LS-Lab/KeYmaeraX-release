@@ -165,7 +165,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new DiffSolutionTool with QETool {
     override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = odeTool.diffSol(diffSys, diffArg, iv)
     override def qeEvidence(formula: Formula): (Formula, Evidence) = qeTool.qeEvidence(formula)
-})
+  })
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
   lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken

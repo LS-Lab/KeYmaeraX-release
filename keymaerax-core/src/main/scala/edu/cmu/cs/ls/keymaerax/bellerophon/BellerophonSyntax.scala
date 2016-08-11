@@ -178,6 +178,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     * @see [[Fixed]]
     */
   final def apply(seqIdx: Int, inExpr: List[Int], expected: Formula): T = apply(Fixed(Position(seqIdx, inExpr), Some(expected)))
+  final def apply(seqIdx: Int, inExpr: PosInExpr, expected: Formula): T = apply(seqIdx, inExpr.pos, expected)
   private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position(position)))
 
   /**
@@ -192,6 +193,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
    * @see [[Fixed]]
    */
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
+  final def apply(seqIdx: Int, inExpr: PosInExpr): T = apply(Fixed(Position(seqIdx, inExpr.pos)))
   /**
     * Returns the tactic at the position identified by `locator`.
     *
@@ -205,6 +207,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
     * @see [[apply(locator: PositionLocator)]]
     */
+  //@todo turn into properly type-checkable locator arguments without going crazy long.
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
