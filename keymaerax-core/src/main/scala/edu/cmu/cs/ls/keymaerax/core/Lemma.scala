@@ -68,6 +68,7 @@ object Lemma {
   private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
   private[core] def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
 
+  /** Computes the required evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: Provable, evidence: List[Evidence] = Nil): List[Evidence] = {
     val versionEvidence = {
       val hasVersionEvidence = evidence.exists(x => x match {
