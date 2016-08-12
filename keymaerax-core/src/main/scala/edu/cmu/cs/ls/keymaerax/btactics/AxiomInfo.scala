@@ -6,6 +6,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
+import edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
@@ -127,7 +130,7 @@ object DerivationInfo {
     new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","([{x′=f(x)&Q}]P↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-    , "DCaxiom", {case () => (fml: Formula) => HilbertCalculus.DC(fml) }),
+    , "DCaxiom", {case () => HilbertCalculus.useAt("DC differential cut")}),
     new InputPositionTacticInfo("diffCut"
     , RuleDisplayInfo("DC"
       , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
@@ -173,12 +176,10 @@ object DerivationInfo {
       , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "[{x′=f(x)&Q}]P↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
-      , "DG", {case () => (x:Variable) => (a:Term) => (b:Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(x),Plus(Times(a,x),b)))},
-      List(VariableArg("x"), TermArg("a"), TermArg("b"))),
+      , "DG", {case () => HilbertCalculus.useAt("DG differential ghost")}),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "[{x′=f(x)&Q}]P↔∃y [{x′=f(x),y′=g()&Q}]P")
-      , "DGC", {case () => (x:Variable) => (g:Term) => HilbertCalculus.DGC(x, g)},
-      List(VariableArg("x"), TermArg("g"))),
+      , "DGC", {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
     new CoreAxiomInfo("DG inverse differential ghost system", "DG inverse differential ghost system", "DGpps", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
@@ -278,9 +279,9 @@ object DerivationInfo {
     // Note: only used to implement Dskipd
     new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
 
-    new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => }),
-    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => }),
-    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => }),
+    new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => TactixLibrary.nil}),
+    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => TactixLibrary.nil}),
+    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => TactixLibrary.nil}),
     new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
 
     // Derived axioms
@@ -861,9 +862,9 @@ trait AxiomInfo extends ProvableInfo {
 }
 
 /** Meta-Information for an axiom from the prover core */
-case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any, override val inputs:List[ArgInfo] = Nil) extends AxiomInfo {
+case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => BelleExpr) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  def belleExpr = expr()
+  def belleExpr = new NamedTactic(codeName, expr ())
   override val formula:Formula = {
     Provable.axiom.get(canonicalName) match {
       case Some(fml) => fml
@@ -875,9 +876,9 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
 }
 
 /** Information for a derived axiom proved from the core */
-case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends AxiomInfo {
+case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => BelleExpr) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  def belleExpr = expr()
+  def belleExpr = new NamedTactic(codeName, expr())
   override lazy val formula: Formula =
     DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
 //  {
@@ -941,7 +942,7 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
 
 /** Information for an axiomatic rule */
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends ProvableInfo {
-  val expr = TactixLibrary.by(provable)
+  val expr = TactixLibrary.by(provable, codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr
   lazy val provable: Provable = Provable.rules(canonicalName)

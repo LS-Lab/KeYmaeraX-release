@@ -92,7 +92,7 @@ trait UnifyUSCalculus {
 
   /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved so far) */
   //@todo auto-weaken as needed (maybe even exchangeleft)
-  def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
+  def by(fact: Provable, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: Provable): Provable = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
@@ -101,6 +101,7 @@ trait UnifyUSCalculus {
   }
   /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
+  def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
   /**
     * by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
     * {{{
