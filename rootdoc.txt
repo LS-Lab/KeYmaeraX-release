@@ -53,10 +53,10 @@ Additional entry points and usage points for KeYmaera X API:
 Full references are provided elsewhere [[http://keymaeraX.org/]], the main references are the following:
 
 1. André Platzer. 
-[A complete uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/s10817-016-9385-1). 
+[[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. 
 Journal of Automated Reasoning, 2016.
-[arXiv 1601.06183](http://arxiv.org/abs/1601.06183)
+[[http://arxiv.org/abs/1601.06183 arXiv 1601.06183]]
 
 2. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
-[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
+[[http://dx.doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An axiomatic tactical theorem prover for hybrid systems]]. 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
