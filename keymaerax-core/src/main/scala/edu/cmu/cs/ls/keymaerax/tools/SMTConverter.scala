@@ -59,7 +59,7 @@ abstract class SMTConverter extends (Formula=>String) {
         case x: Variable =>
           //@note this check is redundant with the check from nameIdentifier
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
-          "(declare-fun " + PREFIX + nameIdentifier(x) + " () " + x.sort + ")"
+          "(declare-fun " + PREFIX + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
         case f: Function =>
           require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
           //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
@@ -132,6 +132,7 @@ abstract class SMTConverter extends (Formula=>String) {
       case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
         //@todo Code Review: check number conventions supported by SMTLIB format
+        //@note according to the SMTLib specification, numbers without . are mathematical integers, numbers with . are mathematical reals
         /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
           *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
           *      both have the maximal range in their category */
