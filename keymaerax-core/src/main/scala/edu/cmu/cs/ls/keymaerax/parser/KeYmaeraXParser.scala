@@ -298,6 +298,7 @@ object KeYmaeraXParser extends Parser {
 
   //@todo the style of this parser should probably be rewritten to a more functional style close to the grammar with more inline shifting/reducing for improved clarity and speed
 
+  //@todo performance bottleneck
   private def parseStep(st: ParseState): ParseState = {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.

@@ -5,7 +5,7 @@
 
   [[http://keymaeraX.org/]]
 
-  [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+  [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
 
 ==Package Structure==
 
@@ -29,7 +29,7 @@ Main documentation entry points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
 
-      - [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+      - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
       - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]` - Parser for concrete KeYmaera X syntax
       - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]` - Pretty printer for concrete KeYmaera X syntax
       - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser]]` - Parser for KeYmaera X problem files `.kyx`
@@ -47,4 +47,3 @@ Additional entry points and usage points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
 
   - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
-

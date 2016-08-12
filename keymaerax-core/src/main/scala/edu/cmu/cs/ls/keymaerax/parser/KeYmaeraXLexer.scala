@@ -286,6 +286,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @param mode The lexer mode.
    * @return A stream of symbols corresponding to input.
    */
+  //@todo performance bottleneck
   def inMode(input: String, mode: LexerMode) = {
     val correctedInput = normalizeNewlines(input)
     if (DEBUG) println("LEX: " + correctedInput)
