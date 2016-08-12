@@ -1054,7 +1054,7 @@ class DifferentialTests extends TacticTestBase {
   it should "solve x'=x" in withMathematica { implicit tool =>
     //val s = Sequent(IndexedSeq(), IndexedSeq("t=0 & x=1 -> [{x'=x, t'=1 & t<1}] x>0".asFormula))
     val s = Sequent(IndexedSeq(), IndexedSeq("x>0 -> [{x'=x}]x>0".asFormula))
-    val t = implyR(1) & andL('_)*@TheType() & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) <(
+    val t = implyR(1) & (andL('_)*) & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) <(
       closeId, implyR(1) & diffInd(tool, 'full)(1))
     proveBy(s, t) shouldBe 'proved
   }

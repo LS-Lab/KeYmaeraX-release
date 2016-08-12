@@ -23,9 +23,9 @@ object ToolTactics {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
 //      DebuggingTactics.recordQECall() &
-      alphaRule*@TheType() &
-      varExhaustiveEqL2R('L)*@TheType() &
-      tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
+      (alphaRule*) &
+        (varExhaustiveEqL2R('L)*) &
+        (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
       Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
       DebuggingTactics.assertProved
   )}
@@ -80,7 +80,7 @@ object ToolTactics {
     require(pos.isTopLevel, "transform only at top level")
     require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
 
-    val modalHide = alphaRule*@TheType() & ("modalHide" by ((mhsequent: Sequent) => {
+    val modalHide = (alphaRule*) & ("modalHide" by ((mhsequent: Sequent) => {
       mhsequent.ante.indices.map(i => if (mhsequent(AntePos(i)).isFOL) skip else hide(AntePos(i))).reduceLeftOption(_&_).getOrElse(skip) &
       mhsequent.succ.indices.map(i => if (mhsequent(SuccPos(i)).isFOL) skip else hide(SuccPos(i))).reduceLeftOption(_&_).getOrElse(skip)
     }))

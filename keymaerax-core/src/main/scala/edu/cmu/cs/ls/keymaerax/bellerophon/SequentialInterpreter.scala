@@ -107,7 +107,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               case _ => throw new BelleError("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(EitherTactic(left, BelleDot), "Failed right-hand side of |: " + right)
             }
         }
-        case SaturateTactic(child, annotation) =>
+        case SaturateTactic(child) =>
           var prev: BelleValue = null
           var result: BelleValue = v
           do {
@@ -120,12 +120,12 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             }
           } while (result != prev)
           result
-        case RepeatTactic(child, times, annotation) =>
+        case RepeatTactic(child, times) =>
           var result = v
           for (i <- 1 to times) try {
             result = apply(child, result)
           } catch {
-            case e: BelleError => throw e.inContext(RepeatTactic(e.context, times, annotation),
+            case e: BelleError => throw e.inContext(RepeatTactic(e.context, times),
               "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
           }
           result

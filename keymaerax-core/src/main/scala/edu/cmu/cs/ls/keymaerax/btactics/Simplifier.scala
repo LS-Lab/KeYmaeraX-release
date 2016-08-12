@@ -244,6 +244,6 @@ object Simplifier {
   })
 
   def simp(simps:List[Simplification] = defaultSimps):DependentPositionTactic = "simp" by ((pos, sequent) =>
-    simpOnce(simps)(pos) *@ TheType ())
+    ((simpOnce(simps)(pos))*))
 }
 

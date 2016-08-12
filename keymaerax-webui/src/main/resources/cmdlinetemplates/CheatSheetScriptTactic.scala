@@ -57,7 +57,7 @@ class CheatSheetScriptTactic extends (() => BelleExpr) {
                                        /* implyR('R) == first -> in succedent */
                                        /* implyR('_) == first -> in either antecedent or succedent where implyR is applicable */
       &                                /* tactic combinator a & b: first do 'a' then do 'b' on the result of 'a'; both must succeed */
-        andL('L)*@TheType()            /* tactic a*: exhaustively apply a */
+        andL('L).*()            /* tactic a*: exhaustively apply a */
       & loop(invariant)(1) <(          /* tactic a<(b,c): expects 'a' to produce 2 subgoals, does 'b' on subgoal 1 and 'c' on subgoal 2 */
         print("Base case") & QE        /* print to the console and close real arithmetic goal */
         ,

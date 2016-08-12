@@ -53,7 +53,7 @@ class StttTutorial extends TacticTestBase {
 
   "Example 1a" should "be provable" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
-    val tactic = implyR('_) & andL('_)*@TheType() & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
+    val tactic = implyR('_) & (andL('_)*) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
       exhaustiveEqR2L('L, "x0=x".asFormula) & diffWeaken(1) & exhaustiveEqL2R('L, "x_0=x0".asFormula) & prop
 
     proveBy(s, tactic) shouldBe 'proved
@@ -73,7 +73,7 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
 
-    val tactic = implyR('_) & andL('_)*@TheType() & loop("J(v)".asFormula)('R) <(
+    val tactic = implyR('_) & (andL('_)*) & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
       chase('R) & prop & OnAll(diffSolve()('R) partial) partial
@@ -92,7 +92,7 @@ class StttTutorial extends TacticTestBase {
 
   "Example3b" should "find correct safety condition" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.key"))
-    val tactic = implyR('_) & andL('_)*@TheType() & chase('R) & normalize & OnAll(diffSolve()('R) partial) & print("Foo")
+    val tactic = implyR('_) & (andL('_)*) & chase('R) & normalize & OnAll(diffSolve()('R) partial) & print("Foo")
     val intermediate = proveBy(s, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
@@ -135,7 +135,7 @@ class StttTutorial extends TacticTestBase {
     val plant = print("plant") & composeb('R) & assignb('R) &
       diffSolve(None)('R) & implyR('R)
 
-    val tactic = implyR('R) & (andL('L)*@TheType()) &
+    val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
       print("Base Case") & andR('R) & OnAll(closeId),
       print("Use Case") & QE,
@@ -158,7 +158,7 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with chase etc" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
-    val tactic = implyR('R) & andL('L)*@TheType() &
+    val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
         printIndexed("Base case") & andR('R) & OnAll(closeId),
         printIndexed("Use case") & QE,
@@ -172,7 +172,7 @@ class StttTutorial extends TacticTestBase {
   ignore should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
-    val tactic = implyR('R) & andL('L)*@TheType() &
+    val tactic = implyR('R) & (andL('L)*) &
       loop("J(v,x,B,S)".asFormula)('R) <(
         skip,
         skip,
@@ -202,7 +202,7 @@ class StttTutorial extends TacticTestBase {
 
   "Example 9a" should "be provable" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.key"))
-    val tactic = implyR('R) & andL('L)*@TheType() & diffInd(tool, 'full)('R)
+    val tactic = implyR('R) & (andL('L)*) & diffInd(tool, 'full)('R)
     proveBy(s, tactic) shouldBe 'proved
   }
 
@@ -214,12 +214,12 @@ class StttTutorial extends TacticTestBase {
       diffInvariant("xm<=x".asFormula, "5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2".asFormula)('R) &
       diffWeaken('R)
 
-    val tactic = implyR('R) & andL('L)*@TheType() &
+    val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & xm <= x & xr = (xm + S)/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2".asFormula)('R) <(
-        print("Base case") & (andR('R) <(closeId, skip))*@TheType() & closeId,
+        print("Base case") & ((andR('R) <(closeId, skip))*) & closeId,
         print("Use case") & QE,
-        print("Step") & andL('L)*@TheType() & chase('R) & andR('R) <(
-          allR('R) & implyR('R)*@TheType() & ode & implyR('R) & andL('L)*@TheType() & printIndexed("Foo") & QE,
+        print("Step") & (andL('L)*) & chase('R) & andR('R) <(
+          allR('R) & (implyR('R)*) & ode & implyR('R) & (andL('L)*) & printIndexed("Foo") & QE,
           ode & printIndexed("Bar") & QE
         )
       )
@@ -232,15 +232,15 @@ class StttTutorial extends TacticTestBase {
 
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
       s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) &
-      exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & andL('_)*@TheType() & diffWeaken('R)
+      exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & (andL('_)*) & diffWeaken('R)
 
-    val tactic = implyR('R) & andL('L)*@TheType() &
+    val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
         print("Base case") & speculativeQE,
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           printIndexed("Acc") & hideL(-9, "abs(y-ly)+v^2/(2*b) < lw".asFormula) & ode("a") &
-            alphaRule*@TheType() &
+            (alphaRule*) &
             printIndexed("Before replaceTransform") & replaceTransform("ep".asTerm, "c".asTerm)(-8) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),

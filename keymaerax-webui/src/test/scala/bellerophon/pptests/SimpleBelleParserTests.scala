@@ -182,28 +182,24 @@ class SimpleBelleParserTests extends TacticTestBase {
   "Kleene star parser" should "parse e*" in {
     val tactic = BelleParser("andR(1)*").asInstanceOf[SaturateTactic]
     tactic.child shouldBe   TactixLibrary.andR(1)
-    tactic.annotation shouldBe TheType()
   }
 
   it should "parse (e&e)*" in {
     val tactic = BelleParser("(andR(1) & andR(2))*").asInstanceOf[SaturateTactic]
     tactic.child.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
     tactic.child.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
-    tactic.annotation shouldBe TheType()
   }
 
   "NTIMES repeat combinator parser" should "parse e^22" in {
     val tactic = BelleParser("andR(1)^22").asInstanceOf[RepeatTactic]
     tactic.child shouldBe   TactixLibrary.andR(1)
     tactic.times shouldBe 22
-    tactic.annotation shouldBe TheType()
   }
 
   "saturate parser" should "parse e+" in {
     val tactic = BelleParser("andR(1)+").asInstanceOf[SeqTactic]
     tactic.left shouldBe TactixLibrary.andR(1)
     tactic.right.asInstanceOf[SaturateTactic].child shouldBe   TactixLibrary.andR(1)
-    tactic.right.asInstanceOf[SaturateTactic].annotation shouldBe TheType()
   }
 
   //endregion
