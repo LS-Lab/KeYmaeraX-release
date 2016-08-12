@@ -56,7 +56,15 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def getLocation = location
 }
 
-abstract case class BuiltInTactic(name: String) extends BelleExpr {
+/** A BelleExpr that has a proper code name, so is not just used internally during application. */
+trait NamedBelleExpr extends BelleExpr {
+  /** The code name of this Belle Expression */
+  val name: String
+
+  override def prettyString = name
+}
+
+abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
   private[bellerophon] final def execute(provable: Provable): Provable = try {
     result(provable)
   } catch {
@@ -64,11 +72,8 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
     case t: Throwable => throw new BelleError(t.getMessage, t)
   }
   private[bellerophon] def result(provable : Provable): Provable
-  override def prettyString = name
 }
-case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr {
-  override def prettyString = name
-
+case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   //@todo make this an assert.
   if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
 }
@@ -257,33 +262,28 @@ trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] 
   final override def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
 
-abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic {override def prettyString = name}
+abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic with NamedBelleExpr
 
-abstract case class BuiltInLeftTactic(name: String) extends BelleExpr with PositionalTactic {
+abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: Provable, position:Position) = position match {
     case p: AntePosition => computeAnteResult(provable, p)
     case _ => throw new BelleError("LeftTactics can only be applied at a AntePos")
   }
 
   def computeAnteResult(provable: Provable, pos: AntePosition): Provable
-
-  override def prettyString = name
-
 }
 
-abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
+abstract case class BuiltInRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: Provable, position:Position) = position match {
     case p: SuccPosition => computeSuccResult(provable, p)
     case _ => throw new BelleError("RightTactics can only be applied at a SuccPos")
   }
 
   def computeSuccResult(provable: Provable, pos: SuccPosition) : Provable
-
-  override def prettyString = name
 }
 
 
-abstract case class DependentTwoPositionTactic(name: String) extends BelleExpr {
+abstract case class DependentTwoPositionTactic(name: String) extends NamedBelleExpr {
   override def prettyString: String = s"UnappliedTwoPositionTactic of name ${name}" //@todo
 
   def computeExpr(p1: Position, p2: Position): DependentTactic
@@ -358,7 +358,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
   override def prettyString = positionTactic.prettyString + "(" + locator.prettyString + ")"
 }
 
-abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
+abstract case class BuiltInTwoPositionTactic(name: String) extends NamedBelleExpr {
   /** @note this should be called from within interpreters, but not by end users. */
   def computeResult(provable : Provable, posOne: Position, posTwo: Position) : Provable
 
@@ -369,8 +369,6 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
     * @note Convenience wrapper
     */
   final def apply(posOne: Int, posTwo: Int): AppliedBuiltinTwoPositionTactic = apply(Position(posOne), Position(posTwo))
-
-  override def prettyString = name
 }
 
 /** Motivation is similar to [[AppliedPositionTactic]], but for [[BuiltInTwoPositionTactic]] */
@@ -395,7 +393,7 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
  * @param name The name of the tactic.
  * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
-abstract case class DependentTactic(name: String) extends BelleExpr {
+abstract case class DependentTactic(name: String) extends NamedBelleExpr {
   def computeExpr(provable: Provable): BelleExpr = throw new BelleError("Not implemented")
   def computeExpr(e: BelleValue with BelleError): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
@@ -407,7 +405,6 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
     case be: BelleError => throw be
     case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
   }
-  override def prettyString: String = name
 }
 abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
   def computeExpr(sequent: Sequent): BelleExpr
@@ -419,13 +416,14 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
 /** DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
   *
   * @see [[AtPosition]] */
-abstract case class DependentPositionTactic(name: String) extends BelleExpr with AtPosition[DependentTactic] {
+abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr with AtPosition[DependentTactic] {
   override def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
 abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
+  //@todo extends NamedBelleExpr
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
 }
@@ -583,8 +581,11 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** @todo eisegesis -- simple types */
+@deprecated("remove")
 trait BelleType
+@deprecated("remove")
 case class TheType() extends BelleType
 /** @todo Added because SequentTypes are needed for unification tactics. */
+@deprecated("remove")
 case class SequentType(s : Sequent) extends BelleType
 

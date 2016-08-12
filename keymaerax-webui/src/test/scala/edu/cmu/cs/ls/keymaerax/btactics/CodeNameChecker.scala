@@ -5,10 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.NamedBelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import org.scalatest.{Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SummaryTest}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.immutable.Set
 
@@ -18,19 +19,20 @@ import scala.collection.immutable.Set
  * @author Andre Platzer
  */
 @SummaryTest
+@IgnoreInBuildTest
 class CodeNameChecker extends FlatSpec with Matchers {
   "Tactic codeNames versus AxiomInfo codeNames" should "agree" in {
     val all = DerivationInfo.allInfo
     for (info <- all) {
       instantiateSomeBelle(info) match {
-          //@todo make compile by reflection or generalizing type hierarchy for some BelleExpr
-        case Some(b) => //@todo info.codeName.toLowerCase shouldBe (b.name.toLowerCase())
+          // made compile by reflection or generalizing type hierarchy for some BelleExpr
+        case Some(b: NamedBelleExpr) => info.codeName.toLowerCase shouldBe (b.name.toLowerCase())
         case None =>
       }
     }
   }
 
-  /** get some silly BelleExpr from info by feeding it its input */
+  /** get some silly BelleExpr from info by feeding it its input in a type-compliant way. */
   private def instantiateSomeBelle(info: DerivationInfo): Option[BelleExpr] = {
     val e = info.inputs.foldLeft(info.belleExpr) ((t,arg) => arg match {
       case _: FormulaArg => t.asInstanceOf[Formula=>Any](True)
@@ -39,7 +41,7 @@ class CodeNameChecker extends FlatSpec with Matchers {
     })
     e match {
       case t: BelleExpr => Some(t)
-      case _ => println("WARNING: input and function seem incompatible for DerivationInfo: " + info); None
+      case _ => println("WARNING: input() and belleExpr() function seem incompatible for DerivationInfo: " + info); None
     }
   }
 }
