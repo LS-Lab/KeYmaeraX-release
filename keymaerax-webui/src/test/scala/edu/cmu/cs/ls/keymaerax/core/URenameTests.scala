@@ -111,6 +111,9 @@ class URenameTests extends FlatSpec with Matchers {
     }
   }
 
+  //@todo test similar unsound conclusions from other semantic renaming
+
+
   "Disallowed semantic renaming" should "refuse UnitFunctionals" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(UnitFunctional("F",AnyArg,Real))}
   }
@@ -121,30 +124,36 @@ class URenameTests extends FlatSpec with Matchers {
 
   it should "refuse Predicationals" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(PredicationalOf(Function("P",None,Bool,Bool),True))}
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(PredicationalOf(Function("P",None,Bool,Bool),True).asInstanceOf[Expression])}
   }
 
   it should "refuse ProgramConst" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(ProgramConst("a"))}
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(ProgramConst("a").asInstanceOf[Expression])}
   }
 
   it should "refuse DifferentialProgramConst" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DifferentialProgramConst("a",AnyArg))}
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DifferentialProgramConst("a",AnyArg).asInstanceOf[Expression])}
   }
 
   it should "refuse {DifferentialProgramConst}" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(ODESystem(DifferentialProgramConst("a",AnyArg), True))}
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(ODESystem(DifferentialProgramConst("a",AnyArg), True).asInstanceOf[Expression])}
   }
 
   it should "refuse [DifferentialProgramConst]false" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(Box(ODESystem(DifferentialProgramConst("a",AnyArg), True), False))}
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(Box(ODESystem(DifferentialProgramConst("a",AnyArg), True), False).asInstanceOf[Expression])}
   }
 
   it should "refuse DotFormula" in {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DotFormula)}
+    a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DotFormula).asInstanceOf[Expression]}
   }
 
   it should "refuse DotTerm" in {
     URename(Variable("x"),Variable("y"))(DotTerm) shouldBe DotTerm
+    URename(Variable("x"),Variable("y"))(DotTerm.asInstanceOf[Expression]) shouldBe DotTerm
   }
-  //@todo test similar unsound conclusions from other semantic renaming
 }
