@@ -72,6 +72,7 @@ object Lemma {
   /** Compute the checksum for the given Provable, which provides some protection against accidental changes. */
   final def checksum(fact: Provable): String =
     digest((fact.conclusion +: fact.subgoals.toList).map(_.prettyString).mkString(","))
+
   /** Checksum computation implementation */
   private def digest(s: String): String = digest.digest(s.getBytes).map("%02x".format(_)).mkString
 
