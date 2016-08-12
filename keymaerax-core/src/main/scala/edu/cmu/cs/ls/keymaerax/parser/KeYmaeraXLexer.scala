@@ -386,6 +386,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     def consumeTerminalLength(terminal: Terminal, location: Location): Option[(String, Token, Location)] =
       consumeColumns(terminal.img.length, terminal, location)
 
+    def swapOutFor(found: Option[(String, Token, Location)], repl: Terminal): Option[(String, Token, Location)] = found match {
+      case None => None
+      case Some((s,tok,cur)) => Some((s,Token(repl,tok.loc),cur))
+    }
+
     s match {
       //update location if we encounter whitespace/comments.
       case comment(theComment) => {
@@ -440,7 +445,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
 
       // File cases
-      case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc)
+      case PERIOD.startPattern(_*) => swapOutFor(consumeTerminalLength(PERIOD, loc), DOT)
         /*mode match {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PERIOD, loc)
         case _ => throw new Exception("Periods should only occur when processing files.")
