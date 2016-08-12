@@ -70,7 +70,7 @@ object AxiomaticODESolver {
 
   //region Preconditions
 
-  val odeSolverPreconds =  "odeSolverPreconds" by ((pos: Position, s: Sequent) => {
+  val odeSolverPreconds =  TacticFactory.anon ((pos: Position, s: Sequent) => {
     val modal = s(pos).asInstanceOf[Modal]
     val ODESystem(ode, constraint) = modal.program
 
@@ -91,7 +91,7 @@ object AxiomaticODESolver {
   /** Adds a time variable to the ODE if there isn't one already; otherwise, does nothing.
     *
     * @see [[addTimeVar]] */
-  val addTimeVarIfNecessary = "addTimeVarIfNecessary" by ((pos: Position, s:Sequent) => s(pos) match {
+  val addTimeVarIfNecessary = TacticFactory.anon ((pos: Position, s:Sequent) => s(pos) match {
       case x:DifferentialProgram if timeVar(x).isEmpty => addTimeVar(pos)
       case x:DifferentialProgram if timeVar(x).nonEmpty => Idioms.nil
       case x:ODESystem if timeVar(x).isEmpty => addTimeVar(pos)
@@ -99,7 +99,7 @@ object AxiomaticODESolver {
       case _ => throw AxiomaticODESolverExn(s"Expected DifferentialProgram or ODESystem but found ${s(pos).getClass}")
   })
 
-  val assertInitializedTimeVar = "assertInitializedTimeVar" by ((pos: Position, s: Sequent) => {
+  val assertInitializedTimeVar = TacticFactory.anon ((pos: Position, s: Sequent) => {
     val timer = (s(pos) match {
       case x: ODESystem => timeVar(x)
       case x: DifferentialProgram => timeVar(x)
@@ -122,7 +122,7 @@ object AxiomaticODESolver {
     *
     * @note If we want an initial value for time (kyxtime:=0) then this is the place to add that functionality.
     */
-  val addTimeVar = "addTimeVar" by((pos: Position, s:Sequent) => {
+  val addTimeVar = TacticFactory.anon ((pos: Position, s:Sequent) => {
     s(pos) match {
       case x:DifferentialProgram if timeVar(x).isEmpty => //ok
       case x:ODESystem if timeVar(x).isEmpty => //ok

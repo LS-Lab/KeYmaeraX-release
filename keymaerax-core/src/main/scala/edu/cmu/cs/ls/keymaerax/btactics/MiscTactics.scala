@@ -201,10 +201,10 @@ object TacticFactory {
   implicit class TacticForNameFactory(val name: String) {
     {
       try {
-        if (DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())
-          println("WARNING: codeName should be changed to a consistent name: " + name)
+        if (name != "ANON" && DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())
+          println("WARNING: codeName should be changed to a consistent name: " + name + " vs. " + DerivationInfo.ofCodeName(name).codeName)
       } catch {
-        case _: IllegalArgumentException => println("WARNING: codeName should be changed to a consistent name: " + name)
+        case _: IllegalArgumentException => println("WARNING: codeName not found: " + name)
       }
     }
 
@@ -288,6 +288,9 @@ object TacticFactory {
       }
     }
   }
+
+  def anon(t: ((Position, Sequent) => BelleExpr)) = "ANON" by t
+  def anon(t: (Sequent => BelleExpr)) = "ANON" by t
 
 }
 

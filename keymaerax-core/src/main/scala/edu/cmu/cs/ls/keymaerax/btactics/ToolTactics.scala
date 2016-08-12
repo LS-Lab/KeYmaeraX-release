@@ -42,7 +42,7 @@ object ToolTactics {
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(implicit qeTool: QETool) = "RCF" by ((sequent: Sequent) => {
+  def rcf(implicit qeTool: QETool) = TacticFactory.anon ((sequent: Sequent) => {
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
