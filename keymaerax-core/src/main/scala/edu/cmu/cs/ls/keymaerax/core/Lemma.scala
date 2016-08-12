@@ -22,7 +22,7 @@ import scala.collection.immutable._
   */
 object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
-  val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
+  private val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
 
   /**
    * Parses a lemma from its string representation.
@@ -73,7 +73,7 @@ object Lemma {
   private[core] def md5(s: String): String = digest.digest(s.getBytes).map("%02x".format(_)).mkString
   private[this] val digest = MessageDigest.getInstance("MD5")
 
-  /** Computes the required evidence to add to `fact` in order to turn it into a lemma */
+  /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: Provable, evidence: List[Evidence] = Nil): List[Evidence] = {
     val versionEvidence = {
       val hasVersionEvidence = evidence.exists(x => x match {
