@@ -229,7 +229,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs), Number(BigDecimal(rand.nextInt(6))))
       case it if (60 until 70 contains it) && diffs => DifferentialSymbol(vars(rand.nextInt(vars.length)))
       case it if (70 until 80 contains it) && diffs => Differential(nextT(vars, n-1, dots=dots, diffs=false, funcs=funcs))
-      case it if (80 until 84 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length)),None,Unit,Real),Nothing)
+      case it if (80 until 84 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length))+ "0",None,Unit,Real),Nothing)
       case it if (84 until 88 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length)),None,Real,Real), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
       case it if (88 until 95 contains it) && funcs => UnitFunctional(funcNames(rand.nextInt(funcNames.length)).toUpperCase,AnyArg,Real)
       case it if 95 until 200 contains it => assert(dots); DotTerm
@@ -266,9 +266,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs, funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs, funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
         case it if (290 until 300 contains it) && diffs => DifferentialFormula(nextF(vars, n-1, false, false, false, false, false))
-        case it if (300 until 304 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length)),None,Unit,Bool),Nothing)
+        case it if (300 until 304 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length))+ "0",None,Unit,Bool),Nothing)
         case it if (304 until 308 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length)),None,Real,Bool), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
-        case it if (308 until 310 contains it) && funcs => PredicationalOf(Function(predNames(rand.nextInt(predNames.length)).toUpperCase,None,Bool,Bool), nextF(vars, n-1, modals, false, false, diffs, funcs))
+        case it if (308 until 310 contains it) && funcs => PredicationalOf(Function(predNames(rand.nextInt(predNames.length)).toUpperCase + "1",None,Bool,Bool), nextF(vars, n-1, modals, false, false, diffs, funcs))
         case it if (310 until 320 contains it) && funcs => UnitPredicational(predNames(rand.nextInt(predNames.length)).toUpperCase,AnyArg)
         case it if 320 until 400 contains it => assert(dotFs); DotFormula
         case it if (0 to 400 contains it) && (!diffs || !funcs) => GreaterEqual(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))

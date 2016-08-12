@@ -459,9 +459,6 @@ object KeYmaeraXParser extends Parser {
         else reduce(st, 1, Number(BigDecimal(value)), r)
 
 
-//        // Help lexer convert PERIOD to DOT for convenience
-//      case r :+ Token(PERIOD,loc) =>
-//        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
       case r :+ Token(tok@(PLACE|NOTHING | TRUE|FALSE),_) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
@@ -716,6 +713,10 @@ object KeYmaeraXParser extends Parser {
       case _ :+ _ :+ Expr(t) =>
         if (followsExpression(t, la) && la!=EOF) shift(st)
         else error(st, List(FOLLOWSEXPRESSION))
+
+      // Help lexer convert PERIOD to DOT for convenience
+      case r :+ Token(PERIOD,loc) =>
+        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
 
       // small stack cases
       case Bottom :+ Expr(t) =>

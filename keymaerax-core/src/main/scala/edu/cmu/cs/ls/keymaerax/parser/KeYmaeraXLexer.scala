@@ -445,7 +445,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
 
       // File cases
-      case PERIOD.startPattern(_*) => swapOutFor(consumeTerminalLength(PERIOD, loc), DOT)
+      case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc) //swapOutFor(consumeTerminalLength(PERIOD, loc), DOT)
         /*mode match {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PERIOD, loc)
         case _ => throw new Exception("Periods should only occur when processing files.")
