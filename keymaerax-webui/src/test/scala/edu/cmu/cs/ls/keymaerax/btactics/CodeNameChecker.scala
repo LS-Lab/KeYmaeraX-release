@@ -18,7 +18,6 @@ import scala.collection.immutable.Set
  *
  * @author Andre Platzer
  */
-@SummaryTest
 @IgnoreInBuildTest
 class CodeNameChecker extends FlatSpec with Matchers {
   "Tactic codeNames versus AxiomInfo codeNames" should "agree" in {

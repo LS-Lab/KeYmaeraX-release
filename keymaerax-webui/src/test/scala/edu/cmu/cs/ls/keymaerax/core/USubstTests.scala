@@ -1222,8 +1222,8 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   it should "have no effect on other predicationals" taggedAs(CoverageTest) in {
-    val fml = "true->P{true} | x>0".asFormula
-    USubst(SubstitutionPair(PredicationalOf(Function("q",None,Bool,Bool),"false".asFormula),True)::Nil)(fml) shouldBe fml
+    val fml = "true->P{false} | x>0".asFormula
+    USubst(SubstitutionPair(PredicationalOf(Function("q",None,Bool,Bool),DotFormula),True)::Nil)(fml) shouldBe fml
   }
 
   // apply given context to the given argument
