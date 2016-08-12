@@ -106,7 +106,7 @@ object KeYmaeraXParser extends Parser {
   val parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
-  private[parser] val LAX = System.getProperty("LAX", "false")=="true"
+  private[parser] val LAX = System.getProperty("LAX", "true")=="true"
 
   private[parser] val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
