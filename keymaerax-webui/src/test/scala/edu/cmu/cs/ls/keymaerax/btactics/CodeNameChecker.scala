@@ -19,8 +19,8 @@ import scala.collection.immutable.Set
  * @author Andre Platzer
  */
 @IgnoreInBuildTest
-class CodeNameChecker extends FlatSpec with Matchers {
-  "Tactic codeNames versus AxiomInfo codeNames" should "agree" in {
+class CodeNameChecker extends TacticTestBase with Matchers {
+  "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { qeTool =>
     val all = DerivationInfo.allInfo
     for (info <- all) {
       println("Checking " + info.codeName)
