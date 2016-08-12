@@ -18,6 +18,8 @@ import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 import scala.collection.immutable
 import scala.collection.immutable._
 
+/** Facility for reading lemmas back in from their string representation.
+  */
 object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
   val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
@@ -50,8 +52,10 @@ object Lemma {
   * as quickly as possible. If converting the lemma back into a string already gives exactly the string we started with,
   * then we know it was parsed correctly. If not, proceed to check that the lemma, when printed and then
   * parsed a second time*, produces the same lemma. We consider this second condition sufficient because for lemmas that
-  * contain comments, the first check needs not succeed. */
-  private def matchesInput(result: Lemma, input:String):Boolean = {
+  * contain comments, the first check needs not succeed.
+  * @note performance bottleneck
+  */
+  private def matchesInput(result: Lemma, input:String): Boolean = {
     val str = result.toStringInternal
     str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
   }
@@ -66,7 +70,8 @@ object Lemma {
   /** Compute the checksum of this lemma, which provides some protection against accidental changes. */
   final def checksum(fact: Provable): String = md5(sequentsToString(fact.conclusion +: fact.subgoals.toList))
   private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
-  private[core] def md5(s: String): String = MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02x".format(_)).mkString
+  private[core] def md5(s: String): String = digest.digest(s.getBytes).map("%02x".format(_)).mkString
+  private[this] val digest = MessageDigest.getInstance("MD5")
 
   /** Computes the required evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: Provable, evidence: List[Evidence] = Nil): List[Evidence] = {
