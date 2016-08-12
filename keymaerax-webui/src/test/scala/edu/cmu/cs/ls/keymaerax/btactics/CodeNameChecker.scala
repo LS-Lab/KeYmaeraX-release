@@ -23,19 +23,21 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { qeTool =>
     val all = DerivationInfo.allInfo
     for (info <- all) {
-      println("Checking " + info.codeName)
+      //println("Checking " + info.codeName)
       instantiateSomeBelle(info) match {
           // made compile by reflection or generalizing type hierarchy for some BelleExpr
         case Some(b: NamedBelleExpr) =>
           if (info.codeName.toLowerCase != b.name.toLowerCase())
             println("TEST: codeName should be changed to a consistent name: " + info.codeName + " alias " + info.canonicalName + " gives " + b.name)
-        case None =>
+        case Some(b: BelleExpr) => println("TEST: belleExpr does not have a codeName: " + info.codeName + " alias " + info.canonicalName + " gives " + b)
+        case None => println("TEST: cannot instantiate belleExpr " + info.codeName + " alias " + info.canonicalName)
       }
     }
   }
 
   /** get some silly BelleExpr from info by feeding it its input in a type-compliant way. */
-  private def instantiateSomeBelle(info: DerivationInfo): Option[BelleExpr] = {
+  private def instantiateSomeBelle(info: DerivationInfo): Option[BelleExpr] =
+  try {
     val e = info.inputs.foldLeft(info.belleExpr) ((t,arg) => arg match {
       case _: FormulaArg => t.asInstanceOf[Formula=>Any](True)
       case _: VariableArg => t.asInstanceOf[Variable=>Any](Variable("dummy"))
@@ -45,5 +47,7 @@ class CodeNameChecker extends TacticTestBase with Matchers {
       case t: BelleExpr => Some(t)
       case _ => println("WARNING: input() and belleExpr() function seem incompatible for DerivationInfo: " + info); None
     }
+  } catch {
+    case _: NotImplementedError => None
   }
 }
