@@ -55,7 +55,7 @@ object Lemma {
   * contain comments, the first check needs not succeed.
   * @note performance bottleneck
   */
-  private def matchesInput(result: Lemma, input:String): Boolean = {
+  private def matchesInput(result: Lemma, input:String): Boolean = if (LEMMA_COMPAT_MODE) true else {
     val str = result.toStringInternal
     str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
   }
