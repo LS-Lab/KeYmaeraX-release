@@ -23,6 +23,7 @@ import scala.collection.immutable._
 object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
   private val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
+  private[this] val digest = MessageDigest.getInstance("MD5")
 
   /**
    * Parses a lemma from its string representation.
@@ -60,6 +61,7 @@ object Lemma {
     str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
   }
 
+  /** Parses a lemma from its string representation (without consistency checking). */
   private def fromStringInternal(lemma: String): Lemma = {
     //@note should ensure that string was indeed produced by KeYmaera X
     val (name, sequents, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
@@ -67,11 +69,11 @@ object Lemma {
     Lemma(fact, evidence, name)
   }
 
-  /** Compute the checksum of this lemma, which provides some protection against accidental changes. */
-  final def checksum(fact: Provable): String = md5(sequentsToString(fact.conclusion +: fact.subgoals.toList))
-  private[core] def sequentsToString(ss: List[Sequent]) = ss.map(_.prettyString).mkString(",")
-  private[core] def md5(s: String): String = digest.digest(s.getBytes).map("%02x".format(_)).mkString
-  private[this] val digest = MessageDigest.getInstance("MD5")
+  /** Compute the checksum for the given Provable, which provides some protection against accidental changes. */
+  final def checksum(fact: Provable): String =
+    digest((fact.conclusion +: fact.subgoals.toList).map(_.prettyString).mkString(","))
+  /** Checksum computation implementation */
+  private def digest(s: String): String = digest.digest(s.getBytes).map("%02x".format(_)).mkString
 
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: Provable, evidence: List[Evidence] = Nil): List[Evidence] = {
@@ -131,17 +133,21 @@ object Lemma {
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name: Option[String] = None) {
+  assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode) " + this)
+  private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || {
     val hasVersionEvidence = evidence.exists(x => x match {
       case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
       case _ => false
     })
     val hasHashEvidence = evidence.exists(_.isInstanceOf[HashEvidence])
-    if((!hasVersionEvidence || !hasHashEvidence) && !Lemma.LEMMA_COMPAT_MODE) {
-      assert(false, "Lemma should have a kyxversion and a hash")
-    }
+    hasVersionEvidence && hasHashEvidence
+  }
 
 
-  final def checksum = Lemma.checksum(fact)
+  /** The checksum of this Lemma, used for lightweight storage consistency checking purposes.
+    * @ensures \result == Lemma.checksum(fact)
+    */
+  lazy val checksum: String = Lemma.checksum(fact)
 
   //@todo name is alphabetical and not "\".\n false"
   //@note Now allowing more general forms of lemmas. @todo check for soundness.
@@ -161,6 +167,8 @@ final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name:
     (if (Lemma.fromStringInternal(toStringInternal).name == name) " same name " else " different name ")
   )
 
+  /** Produces a string representation of this lemma that is speculated to reparse as this lemma
+    * and will be checked to do so in [[toString]]. */
   private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +
       sequentToString(fact.conclusion) + "\n" +
