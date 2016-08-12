@@ -14,7 +14,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.collection.immutable.Set
 
 /**
- * Tests free variables
+ * Tests code names of tactics and AxiomInfo for compatibility for TacticExtraction.
  *
  * @author Andre Platzer
  */
