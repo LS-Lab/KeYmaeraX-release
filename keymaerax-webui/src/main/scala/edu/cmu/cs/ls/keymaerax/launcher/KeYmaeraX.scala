@@ -5,11 +5,12 @@ import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, ToolEvidence, Tool}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool, ToolEvidence}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CseCGenerator, SpiralGenerator}
 
 import scala.collection.immutable
@@ -28,7 +29,7 @@ object KeYmaeraX {
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information, formatted to 80 characters width. */
-  private val usage = "KeYmaera X Prover" + " " + VERSION +
+  val usage = "KeYmaera X Prover" + " " + VERSION +
     """
       |
       |Usage: java -Xss20M -jar keymaerax.jar
@@ -193,13 +194,14 @@ object KeYmaeraX {
 
   private def parseBelleTactic(fileName: String) = {
     val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
-    BTacticParser(fileContents) match {
-      case Some(_) =>
-        println("Parsed file successfully")
-        sys.exit(0)
-      case None =>
-        println("Failed to parse file.")
-        sys.exit(-1)
+    try {
+      BelleParser(fileContents)
+      println("Parsed file successfully")
+      sys.exit(0)
+    } catch {
+      case _: Exception =>
+          println("Failed to parse file.")
+          sys.exit(-1)
     }
   }
 
