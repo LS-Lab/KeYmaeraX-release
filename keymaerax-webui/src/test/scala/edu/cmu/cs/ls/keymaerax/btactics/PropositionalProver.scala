@@ -61,6 +61,18 @@ class PropositionalProver extends TacticTestBase  {
     "p()->p()|q()" ::
     "p()&q()->p()" ::
     "a()->(b()->a())" ::
+    "(p()->!p())->!p()" ::
+    "(p()->(q()->r())) -> (p()&q()->r())" ::
+    "(p()->(q()->r())) -> ((p()->q())->(p()->r()))" ::
+    "(p()->(p()->q())) -> (p()->q())" ::
+    "(p()->(q()->r())) -> (q()->(p()->r()))" ::
+    "(!p()->p())->p()" ::
+    "(p()->r()) & (q()->s()) -> (p()&q() -> r()&s())" ::
+    "p()->(q()->p())" ::
+    "p()->!!p()" ::
+    "!!p()->p()" ::
+    "false->a()" ::
+    "(p()->q())|(q()->p())" ::
     Nil
 
   "prop" should "prove list of simple propositional tautologies" in {
