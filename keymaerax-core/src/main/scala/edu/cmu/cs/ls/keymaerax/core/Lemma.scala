@@ -36,10 +36,10 @@ object Lemma {
     internalLemma.evidence.find(_.isInstanceOf[HashEvidence]) match {
       case Some(HashEvidence(hash)) =>
         assert(hash == internalLemma.checksum,
-          "Expected hashed evidence to match hash of conclusion + subgoals.")
+          "Expected hashed evidence to match hash of conclusion + subgoals: " + internalLemma.name + "\n" + lemma)
       case None => {
         if(LEMMA_COMPAT_MODE) println(s"WARNING: ${internalLemma.name.getOrElse("An unnamed lemma")} was reloaded without a hash confirmation.")
-        else throw new CoreException("Cannot reload a lemma without some Hash evidence.")
+        else throw new CoreException("Cannot reload a lemma without some Hash evidence: " + internalLemma.name)
       }
     }
 
