@@ -28,9 +28,9 @@ class CodeNameChecker extends TacticTestBase with Matchers {
           // made compile by reflection or generalizing type hierarchy for some BelleExpr
         case Some(b: NamedBelleExpr) =>
           if (info.codeName.toLowerCase != b.name.toLowerCase())
-            println("TEST: codeName should be changed to a consistent name: " + info.codeName + " alias " + info.canonicalName + " gives " + b.name)
+            println("TEST(WARNING): codeName should be changed to a consistent name: " + info.codeName + " alias " + info.canonicalName + " gives " + b.name)
         case Some(b: BelleExpr) => println("TEST: belleExpr does not have a codeName: " + info.codeName + " alias " + info.canonicalName + " gives " + b)
-        case None => println("TEST: cannot instantiate belleExpr " + info.codeName + " alias " + info.canonicalName)
+        case None => println("TEST(INFO): cannot instantiate belleExpr " + info.codeName + " alias " + info.canonicalName)
       }
     }
   }

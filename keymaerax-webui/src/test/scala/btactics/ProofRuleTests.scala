@@ -36,7 +36,7 @@ class ProofRuleTests extends TacticTestBase {
   it should "support axioms" in {
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ x_>0 -> z>0".asFormula)),
-      TactixLibrary.by("all instantiate",
+      TactixLibrary.by("allL",
         USubst(
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))

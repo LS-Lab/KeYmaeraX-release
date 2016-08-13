@@ -82,7 +82,7 @@ object DLBySubst {
    * }}}
    * @return the abstraction tactic.
    */
-  def abstractionb: DependentPositionTactic = new DependentPositionTactic("Abstraction") {
+  def abstractionb: DependentPositionTactic = new DependentPositionTactic("abstractionb") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(!pos.isAnte, "Abstraction only in succedent")
@@ -277,7 +277,7 @@ object DLBySubst {
    * }}}
    * @todo same for diamonds by the dual of K
    */
-  def generalize(c: Formula): DependentPositionTactic = new DependentPositionTactic("generalize") {
+  def generalize(c: Formula): DependentPositionTactic = new DependentPositionTactic("generalizeb") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
         case (ctx, Box(a, _)) =>

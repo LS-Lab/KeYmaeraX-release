@@ -17,7 +17,7 @@ import scala.language.postfixOps
 object FOQuantifierTactics {
   /** Proves exists by duality from universal base tactic */
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
-    "existsByDuality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    TacticFactory.anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Exists(vars, p)) =>
         require(vars.size == 1, "Exists by duality does not support block quantifiers")
         val v = vars.head
@@ -40,7 +40,7 @@ object FOQuantifierTactics {
   })
 
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    new DependentPositionTactic("all instantiate") {
+    new DependentPositionTactic("allL") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>

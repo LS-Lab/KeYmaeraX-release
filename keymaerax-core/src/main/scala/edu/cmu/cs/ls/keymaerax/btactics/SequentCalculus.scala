@@ -106,11 +106,11 @@ trait SequentCalculus {
     case Some(t: Term) => allL(t)(pos)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent */
-  lazy val existsL            : DependentPositionTactic = FOQuantifierTactics.existsSkolemize
+  lazy val existsL                    : DependentPositionTactic = "existsL" by ((pos,seq) => FOQuantifierTactics.existsSkolemize(pos))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
-  lazy val existsR                    : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, None)
+  lazy val existsR                    : DependentPositionTactic = "existsR" by ((pos,seq) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
   })

@@ -231,7 +231,7 @@ object ProofRuleTactics {
     }
   }
 
-  def skolemizeR = new BuiltInRightTactic("Skolemize") {
+  def skolemizeR = new BuiltInRightTactic("skolemizeR") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
@@ -239,7 +239,7 @@ object ProofRuleTactics {
     }
   }
 
-  def skolemizeL = new BuiltInLeftTactic("Skolemize") {
+  def skolemizeL = new BuiltInLeftTactic("skolemizeL") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
@@ -256,7 +256,7 @@ object ProofRuleTactics {
 
   /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
   @deprecated("Use SequentCalculus.close(0,0) instead")
-  private[btactics] def trivialCloser = new BuiltInTactic("CloseTrivialForm") {
+  private[btactics] def trivialCloser = new BuiltInTactic("TrivialCloser") {
     override def result(provable: Provable) = {
       requireOneSubgoal(provable, name)
       if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)

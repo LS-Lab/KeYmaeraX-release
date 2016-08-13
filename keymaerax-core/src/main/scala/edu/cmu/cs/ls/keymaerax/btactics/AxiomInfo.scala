@@ -7,10 +7,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 
 import scala.collection.immutable.HashMap
 
@@ -65,7 +64,8 @@ object DerivationInfo {
   //@todo
   private val needsCodeName = "TODOTHISAXIOMSTILLNEEDSACODENAME"
 
-  private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
+  private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
+  private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   private def convert(rules: Map[String,Provable]): List[DerivationInfo] =
   //@todo display info is rather impoverished
@@ -279,9 +279,9 @@ object DerivationInfo {
     // Note: only used to implement Dskipd
     new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
 
-    new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => TactixLibrary.nil}),
-    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => TactixLibrary.nil}),
-    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => TactixLibrary.nil}),
+    new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => posnil}),
+    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => posnil}),
+    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
     new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
 
     // Derived axioms
@@ -630,10 +630,10 @@ object DerivationInfo {
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
-    new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
+    /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
     //@todo unify axiomatic rule and derived rules mond / mondtodo
-    new TacticInfo("mond", "Diamond Monotonicity", {case () => TactixLibrary.mond}),
+    new TacticInfo("mond", "Diamond Monotonicity", {case () => TactixLibrary.mond}),*/
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
@@ -715,10 +715,10 @@ object DerivationInfo {
       , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
     new DerivedRuleInfo("[] monotone"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(||)"::Nil, "[a;]q_(||)"::Nil), SequentDisplay("p_(||)"::Nil, "q_(||)"::Nil)::Nil)
-      , "boxMonotone", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
+      , "monb", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
     new DerivedRuleInfo("[] monotone 2"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]q_(||)"::Nil, "[a;]p_(||)"::Nil), SequentDisplay("p_(||)"::Nil, "q_(||)"::Nil)::Nil)
-      , "boxMonotone2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
+      , "monb2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
       , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
@@ -862,9 +862,10 @@ trait AxiomInfo extends ProvableInfo {
 }
 
 /** Meta-Information for an axiom from the prover core */
-case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => BelleExpr) extends AxiomInfo {
+case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => DependentPositionTactic) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  def belleExpr = new NamedTactic(codeName, expr ())
+  import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
+  def belleExpr = codeName by ((pos:Position, seq:Sequent) => expr ()(pos))
   override val formula:Formula = {
     Provable.axiom.get(canonicalName) match {
       case Some(fml) => fml
@@ -876,9 +877,10 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
 }
 
 /** Information for a derived axiom proved from the core */
-case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => BelleExpr) extends AxiomInfo {
+case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => DependentPositionTactic) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  def belleExpr = new NamedTactic(codeName, expr())
+  import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
+  def belleExpr = codeName by ((pos:Position, seq:Sequent) => expr()(pos))
   override lazy val formula: Formula =
     DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
 //  {

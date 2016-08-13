@@ -598,7 +598,7 @@ object DifferentialTactics {
    * @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
     *       Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
    */
-  lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
+  lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("Dvariabletactic") {
     private val OPTIMIZED = true //@todo true
     private val axiom = AxiomInfo("x' derive var commuted")
     private val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))

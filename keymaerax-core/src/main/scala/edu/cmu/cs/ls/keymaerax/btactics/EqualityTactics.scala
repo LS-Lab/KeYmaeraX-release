@@ -68,7 +68,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos:Position, sequent:Sequent) => {
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = TacticFactory.anon ((pos:Position, sequent:Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
