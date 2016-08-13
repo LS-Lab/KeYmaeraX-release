@@ -3,16 +3,16 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
- * resulting from differential dynamic logic.
- * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
- * @author Andre Platzer
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @note Code Review: 2016-03-09
- */
+  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
+  * resulting from differential dynamic logic.
+  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
+  * @author Andre Platzer
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+  * @note Code Review: 2016-03-09
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
@@ -23,26 +23,26 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
 
 /**
- * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]]]
- */
+  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]]]
+  */
 private[core] object AxiomBase {
   /**
-   * KeYmaera X Axiomatic Proof Rules.
-   * @note Soundness-critical: Only return locally sound proof rules.
-   * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
-   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
-   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-   * @author Andre Platzer
-   */
+    * KeYmaera X Axiomatic Proof Rules.
+    * @note Soundness-critical: Only return locally sound proof rules.
+    * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+    * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @author Andre Platzer
+    */
   private[core] def loadAxiomaticRules : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
     val pany = UnitPredicational("p_", AnyArg)
     val qany = UnitPredicational("q_", AnyArg)
@@ -55,71 +55,71 @@ private[core] object AxiomBase {
 
     Map(
       /**
-       * Rule "CQ equation congruence".
-       * Premise f_(||) = g_(||)
-       * Conclusion ctxP_(f_(||)) <-> ctxP_(g_(||))
-       * End.
-       * {{{
-       *      f(x)   =  g(x)
-       *   --------------------- CQ
-       *    c(f(x)) <-> c(g(x))
-       * }}}
-       */
+        * Rule "CQ equation congruence".
+        * Premise f_(||) = g_(||)
+        * Conclusion ctxP_(f_(||)) <-> ctxP_(g_(||))
+        * End.
+        * {{{
+        *      f(x)   =  g(x)
+        *   --------------------- CQ
+        *    c(f(x)) <-> c(g(x))
+        * }}}
+        */
       ("CQ equation congruence",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
           Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       /**
-       * Rule "CE congruence".
-       * Premise p_(||) <-> q_(||)
-       * Conclusion ctxF_(p_(||)) <-> ctxF_(q_(||))
-       * End.
-       * {{{
-       *       p(x) <-> q(x)
-       *   --------------------- CE
-       *    C{p(x)} <-> C{q(x)}
-       * }}}
-       */
+        * Rule "CE congruence".
+        * Premise p_(||) <-> q_(||)
+        * Conclusion ctxF_(p_(||)) <-> ctxF_(q_(||))
+        * End.
+        * {{{
+        *       p(x) <-> q(x)
+        *   --------------------- CE
+        *    C{p(x)} <-> C{q(x)}
+        * }}}
+        */
       ("CE congruence",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
           Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
-       * Rule "<> monotone".
-       * Premise p(||) ==> q(||)
-       * Conclusion <a;>p(||) ==> <a;>q(||)
-       * End.
-       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
-       */
+        * Rule "<> monotone".
+        * Premise p(||) ==> q(||)
+        * Conclusion <a;>p(||) ==> <a;>q(||)
+        * End.
+        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+        */
       ("<> monotone",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
           Sequent(immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
       /**
-       * Rule "ind induction".
-       * Premise p(||) ==> [a;]p(||)
-       * Conclusion p(||) ==> [a*]p(||)
-       * {{{
-       *     p(x) |- [a]p(x)
-       *   --------------------- ind
-       *     p(x) |- [{a}*]p(x)
-       * }}}
-       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 17(1), 2015.  Lemma 4.1"
-       */
+        * Rule "ind induction".
+        * Premise p(||) ==> [a;]p(||)
+        * Conclusion p(||) ==> [a*]p(||)
+        * {{{
+        *     p(x) |- [a]p(x)
+        *   --------------------- ind
+        *     p(x) |- [{a}*]p(x)
+        * }}}
+        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 17(1), 2015.  Lemma 4.1"
+        */
       ("ind induction",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
           Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /* UNSOUND FOR HYBRID GAMES */
       /**
-       * Rule "Goedel".
-       * Premise p(||)
-       * Conclusion [a;]p(||)
-       * End.
-       * {{{
-       *       p(||)
-       *   ----------- G
-       *    [a;]p(||)
-       * }}}
-       * @NOTE Unsound for hybrid games
-       * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
-       */
+        * Rule "Goedel".
+        * Premise p(||)
+        * Conclusion [a;]p(||)
+        * End.
+        * {{{
+        *       p(||)
+        *   ----------- G
+        *    [a;]p(||)
+        * }}}
+        * @NOTE Unsound for hybrid games
+        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
+        */
       ("Goedel",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
           Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Box(a, pany)))))
@@ -127,12 +127,12 @@ private[core] object AxiomBase {
   }
 
   /**
-   * Look up an axiom of KeYmaera X,
-   * i.e. sound axioms are valid formulas of differential dynamic logic.
-   * parse the axiom file and add all loaded knowledge to the axioms map.
-   * @note Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
-   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
-   */
+    * Look up an axiom of KeYmaera X,
+    * i.e. sound axioms are valid formulas of differential dynamic logic.
+    * parse the axiom file and add all loaded knowledge to the axioms map.
+    * @note Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
       val res = KeYmaeraXAxiomParser(loadAxiomString())
@@ -161,8 +161,8 @@ private[core] object AxiomBase {
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     /**
-     * HYBRID PROGRAM MODALITY AXIOMS
-     */
+      * HYBRID PROGRAM MODALITY AXIOMS
+      */
     // Figure 2
     assert(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
     assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0)), "[:=] assign")
@@ -177,8 +177,8 @@ private[core] object AxiomBase {
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
     /**
-     * DIFFERENTIAL EQUATION AXIOMS
-     */
+      * DIFFERENTIAL EQUATION AXIOMS
+      */
     // Figure 3
     assert(axs("DW") == Box(ODESystem(ode, qany), qany), "DW")
     assert(axs("DC differential cut") == Imply(Box(ODESystem(ode, qany), UnitPredicational("r",AnyArg)),
@@ -239,22 +239,23 @@ private[core] object AxiomBase {
   }
 
   /**
-   * KeYmaera X axioms,
-   * i.e. sound axioms are valid formulas of differential dynamic logic.
-   *
-   * @note Soundness-critical: Only adopt valid formulas as axioms.
-   *
-   * @author Nathan Fulton
-   * @author Stefan Mitsch
-   * @author Jan-David Quesel
-   * @author Andre Platzer
-   *
-   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-   * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012."
-   * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
-   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   */
+    * KeYmaera X axioms,
+    * i.e. sound axioms are valid formulas of differential dynamic logic.
+    *
+    * @note Soundness-critical: Only adopt valid formulas as axioms.
+    *
+    * @author Nathan Fulton
+    * @author Stefan Mitsch
+    * @author Jan-David Quesel
+    * @author Andre Platzer
+    *
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012."
+    * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
+    * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+    */
   private[core] def loadAxiomString() : String =
 """
 Axiom "<> diamond".

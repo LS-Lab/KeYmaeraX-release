@@ -26,12 +26,12 @@ object Lemma {
   private[this] val digest = MessageDigest.getInstance("MD5")
 
   /**
-   * Parses a lemma from its string representation.
-   * @param lemma The lemma in string form.
-   * @return The lemma.
-   * @note soundness-critical, only call with true facts that come from serialized lemmas.
-   * @see [[Lemma.toString]]
-   */
+    * Parses a lemma from its string representation.
+    * @param lemma The lemma in string form.
+    * @return The lemma.
+    * @note soundness-critical, only call with true facts that come from serialized lemmas.
+    * @see [[Lemma.toString]]
+    */
   def fromString(lemma: String): Lemma = {
     val internalLemma = fromStringInternal(lemma)
 
@@ -49,13 +49,13 @@ object Lemma {
     internalLemma
   } ensuring(r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
 
-  /* This contract turns out to be a huge bottleneck when loading proofs on the UI, so it worth checking the contract
-  * as quickly as possible. If converting the lemma back into a string already gives exactly the string we started with,
-  * then we know it was parsed correctly. If not, proceed to check that the lemma, when printed and then
-  * parsed a second time*, produces the same lemma. We consider this second condition sufficient because for lemmas that
-  * contain comments, the first check needs not succeed.
-  * @note performance bottleneck
-  */
+  /** This contract turns out to be a huge bottleneck when loading proofs on the UI, so it worth checking the contract
+    * as quickly as possible. If converting the lemma back into a string already gives exactly the string we started with,
+    * then we know it was parsed correctly. If not, proceed to check that the lemma, when printed and then
+    * parsed a second time*, produces the same lemma. We consider this second condition sufficient because for lemmas that
+    * contain comments, the first check needs not succeed.
+    * @note performance bottleneck
+    */
   private def matchesInput(result: Lemma, input:String): Boolean = if (LEMMA_COMPAT_MODE) true else {
     val str = result.toStringInternal
     str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
@@ -105,34 +105,34 @@ object Lemma {
 }
 
 /**
- * Lemmas are named Provables, supported by some evidence of how they came about.
- * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
- * @example{{{
- * // prove a lemma
- * val proved = TactixLibrary.proveBy(
- *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
- *    orR(1) & close
- *  )
- * // store a lemma
- * val lemmaDB = LemmaDBFactory.lemmaDB
- * val evidence = ToolEvidence(immutable.Map("input" -> proved.toString, "output" -> "true")) :: Nil))
- * val lemmaID = lemmaDB.add(
- *   Lemma(proved, evidence, Some("Lemma <?> test"))
- * )
- *
- * // retrieve a lemma
- * val lemmaFact = lemmaDB.get(lemmaID).get.fact
- * // use a lemma literally
- * TactixLibrary.by(lemmaFact)
- * // use a uniform substitution instance of a lemma
- * TactixLibrary.byUS(lemmaFact)
- * }}}
- * @author Stefan Mitsch
- * @see [[RCF.proveArithmetic]]
- * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
- * @see [[Lemma.fromString]]
- * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
- */
+  * Lemmas are named Provables, supported by some evidence of how they came about.
+  * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
+  * @example{{{
+  * // prove a lemma
+  * val proved = TactixLibrary.proveBy(
+  *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+  *    orR(1) & close
+  *  )
+  * // store a lemma
+  * val lemmaDB = LemmaDBFactory.lemmaDB
+  * val evidence = ToolEvidence(immutable.Map("input" -> proved.toString, "output" -> "true")) :: Nil))
+  * val lemmaID = lemmaDB.add(
+  *   Lemma(proved, evidence, Some("Lemma <?> test"))
+  * )
+  *
+  * // retrieve a lemma
+  * val lemmaFact = lemmaDB.get(lemmaID).get.fact
+  * // use a lemma literally
+  * TactixLibrary.by(lemmaFact)
+  * // use a uniform substitution instance of a lemma
+  * TactixLibrary.byUS(lemmaFact)
+  * }}}
+  * @author Stefan Mitsch
+  * @see [[RCF.proveArithmetic]]
+  * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
+  * @see [[Lemma.fromString]]
+  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
+  */
 final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name: Option[String] = None) {
   assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode) " + this)
   private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || {

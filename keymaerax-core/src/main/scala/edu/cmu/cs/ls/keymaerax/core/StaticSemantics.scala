@@ -3,12 +3,12 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * The static semantics of differential dynamic logic.
- * @author Andre Platzer
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @note Code Review: 2016-03-09
- */
+  * The static semantics of differential dynamic logic.
+  * @author Andre Platzer
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @note Code Review: 2016-03-09
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
@@ -16,45 +16,45 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 
 /**
- * The static semantics of differential dynamic logic.
- * This object defines the static semantics of differential dynamic logic
- * in terms of the free variables and bound variables that expressions have as well as their signatures.
- * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
- * @author Andre Platzer
- * @author smitsch
- * @note soundness-critical
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @example
- * {{{
- *   val fml = Imply(Greater(Variable("x",None,Real), Number(5)),
- *     Forall(Seq(Variable("y",None,Real)),
- *       GreaterEqual(Variable("x",None,Real), FuncOf(Function("f",None,Real,Real), Variable("y",None,Real)))))
- *   // determine the static semantics of the above formula
- *   val stat = StaticSemantics(fml)
- *   println("Free variables  " + stat.fv)
- *   println("Bound variables " + stat.bv)
- *   // determine all function, predicate and program constants occurring in the above formula
- *   println("Signature       " + StaticSemantics.signature(fml))
- *   // determine all symbols occurring in the above formula
- *   println("Symbols         " + StaticSemantics.symbols(fml))
- * }}}
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools]]
- */
+  * The static semantics of differential dynamic logic.
+  * This object defines the static semantics of differential dynamic logic
+  * in terms of the free variables and bound variables that expressions have as well as their signatures.
+  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
+  * @author Andre Platzer
+  * @author smitsch
+  * @note soundness-critical
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+  * @example
+  * {{{
+  *   val fml = Imply(Greater(Variable("x",None,Real), Number(5)),
+  *     Forall(Seq(Variable("y",None,Real)),
+  *       GreaterEqual(Variable("x",None,Real), FuncOf(Function("f",None,Real,Real), Variable("y",None,Real)))))
+  *   // determine the static semantics of the above formula
+  *   val stat = StaticSemantics(fml)
+  *   println("Free variables  " + stat.fv)
+  *   println("Bound variables " + stat.bv)
+  *   // determine all function, predicate and program constants occurring in the above formula
+  *   println("Signature       " + StaticSemantics.signature(fml))
+  *   // determine all symbols occurring in the above formula
+  *   println("Symbols         " + StaticSemantics.symbols(fml))
+  * }}}
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools]]
+  */
 object StaticSemantics {
 
   import SetLattice.topVarsDiffVars
   import SetLattice.bottom
 
   /**
-   * Variable Categories for Formulas: Structure recording which names are free or bound
-   * in a formula.
- *
-   * @param fv Free names (maybe read)
-   * @param bv Bound names (maybe written)
-   * @note bv are not used in the core.
-   */
+    * Variable Categories for Formulas: Structure recording which names are free or bound
+    * in a formula.
+    *
+    * @param fv Free names (maybe read)
+    * @param bv Bound names (maybe written)
+    * @note bv are not used in the core.
+    */
   sealed case class VCF(fv: SetLattice[NamedSymbol],
                         bv: SetLattice[NamedSymbol]) {
     /** union of two variable categorizer structures for formulas */
@@ -62,36 +62,36 @@ object StaticSemantics {
   }
 
   /**
-   * Variable Categories for Programs: Structure recording which names are free, bound, or must-bound
-   * in a program.
- *
-   * @param fv Free names (maybe read)
-   * @param bv Bound names (maybe written on some paths)
-   * @param mbv Must-bound names (definitely written on all paths).
-   */
+    * Variable Categories for Programs: Structure recording which names are free, bound, or must-bound
+    * in a program.
+    *
+    * @param fv Free names (maybe read)
+    * @param bv Bound names (maybe written on some paths)
+    * @param mbv Must-bound names (definitely written on all paths).
+    */
   sealed case class VCP(fv: SetLattice[NamedSymbol],
                         bv: SetLattice[NamedSymbol],
                         mbv: SetLattice[NamedSymbol])
 
   /**
-   * Compute the static semantics of term t, i.e., the set of its free variables.
-   */
+    * Compute the static semantics of term t, i.e., the set of its free variables.
+    */
   def apply(t: Term): SetLattice[NamedSymbol] = freeVars(t)
 
   /**
-   * Compute the static semantics of formula f, i.e., its set of free and bound variables.
-   */
+    * Compute the static semantics of formula f, i.e., its set of free and bound variables.
+    */
   def apply(f: Formula): VCF = fmlVars(f)
 
   /**
-   * Compute the static semantics of program a, i.e., its set of free and bound and must-bound variables.
-   */
+    * Compute the static semantics of program a, i.e., its set of free and bound and must-bound variables.
+    */
   def apply(a: Program): VCP = progVars(a)
 
 
   /**
-   * The set FV(t) of free variables of term t.
-   */
+    * The set FV(t) of free variables of term t.
+    */
   def freeVars(term: Term): SetLattice[NamedSymbol] = term match {
     // base cases
     case x: Variable => SetLattice(x)
@@ -118,28 +118,28 @@ object StaticSemantics {
   }
 
   /**
-   * Check whether expression e is literally a properly differential term/expression, i.e. mentions differentials or differential symbols.
-   *
-   * @note Only verbatim mentions are counted, so not via Anything.
-   * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables.
-   * @note AtomicODE uses isDifferential to ensure explicit form of differential equations.
-   * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free DifferentialSymbols.
-   */
+    * Check whether expression e is literally a properly differential term/expression, i.e. mentions differentials or differential symbols.
+    *
+    * @note Only verbatim mentions are counted, so not via Anything.
+    * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables.
+    * @note AtomicODE uses isDifferential to ensure explicit form of differential equations.
+    * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free DifferentialSymbols.
+    */
   def isDifferential(e: Expression): Boolean = freeVars(e).symbols.exists(x => x.isInstanceOf[DifferentialSymbol])
 
   /**
-   * The set FV(f) of free variables of formula f.
-   */
+    * The set FV(f) of free variables of formula f.
+    */
   def freeVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).fv
 
   /**
-   * The set FV(a) of free variables of program a.
-   */
+    * The set FV(a) of free variables of program a.
+    */
   def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
 
   /**
-   * The set FV(e) of free variables of expression e.
-   */
+    * The set FV(e) of free variables of expression e.
+    */
   def freeVars(e: Expression): SetLattice[NamedSymbol] = e match {
     case t: Term => freeVars(t)
     case f: Formula => freeVars(f)
@@ -147,13 +147,13 @@ object StaticSemantics {
   }
 
   /**
-   * The set BV(f) of bound variables of formula f.
-   */
+    * The set BV(f) of bound variables of formula f.
+    */
   def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
 
   /**
-   * The set BV(a) of bound variables of program a.
-   */
+    * The set BV(a) of bound variables of program a.
+    */
   def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
 
   /** The set var(e) of variables of expression e, whether free or bound. */
@@ -251,14 +251,14 @@ object StaticSemantics {
   // signature of function, predicate, atomic program symbols
 
   /**
-   * The signature of expression e.
- *
-   * @note Result will not be order stable, so order could be different on different runs of the prover.
-   * @example{{{
-   *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
-   *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
-   * }}}
-   */
+    * The signature of expression e.
+    *
+    * @note Result will not be order stable, so order could be different on different runs of the prover.
+    * @example{{{
+    *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
+    *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
+    * }}}
+    */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => signature(t)
     case f: Formula => signature(f)
@@ -266,9 +266,9 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it.
-   * Disregarding number literals.
-   */
+    * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it.
+    * Disregarding number literals.
+    */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
     // base cases
     case _: Variable => Set.empty
@@ -294,9 +294,9 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
-   * symbols occurring in it.
-   */
+    * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
+    * symbols occurring in it.
+    */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
     // base cases
     case True | False => Set.empty
@@ -332,9 +332,9 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a program, i.e., set of function, predicate, and atomic program 
-   * symbols occurring in it.
-   */
+    * The signature of a program, i.e., set of function, predicate, and atomic program
+    * symbols occurring in it.
+    */
   def signature(program: Program): immutable.Set[NamedSymbol] = program match {
     // base cases
     case ap: ProgramConst => Set(ap)
@@ -356,8 +356,8 @@ object StaticSemantics {
   }
 
   /**
-   * Any (non-logical) symbols occurring verbatim in expression e, whether free or bound variable or function or predicate or program constant.
-   */
+    * Any (non-logical) symbols occurring verbatim in expression e, whether free or bound variable or function or predicate or program constant.
+    */
   def symbols(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
     case f: Formula => symbols(f)
@@ -365,21 +365,21 @@ object StaticSemantics {
   }
 
   /**
-   * Any (non-logical) symbol occurring verbatim in term, whether variable or function.
-   */
+    * Any (non-logical) symbol occurring verbatim in term, whether variable or function.
+    */
   def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).symbols
 
   /**
-   * Any (non-logical) symbol occurring verbatim in formula, whether free or bound variable or function or predicate or program constant.
-   */
+    * Any (non-logical) symbol occurring verbatim in formula, whether free or bound variable or function or predicate or program constant.
+    */
   def symbols(f: Formula): immutable.Set[NamedSymbol] = {
     val stat = StaticSemantics(f)
     signature(f) ++ stat.fv.symbols ++ stat.bv.symbols
   }
 
   /**
-   * Any (non-logical) symbol occurring verbatim in program, whether free or bound variable or function or predicate or program constant.
-   */
+    * Any (non-logical) symbol occurring verbatim in program, whether free or bound variable or function or predicate or program constant.
+    */
   def symbols(p: Program): immutable.Set[NamedSymbol] = {
     //@note stat.mbv subset of stat.bv so no point in adding them
     val stat = StaticSemantics(p)
@@ -389,26 +389,26 @@ object StaticSemantics {
   // convenience for sequents are unions over their formulas
 
   /**
-   * The set FV(a) of free variables of a sequent.
-   */
+    * The set FV(a) of free variables of a sequent.
+    */
   def freeVars(s: Sequent): SetLattice[NamedSymbol] =
     (s.ante ++ s.succ).foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
 
   /**
-   * The set BV(a) of bound variables of a sequent.
-   */
+    * The set BV(a) of bound variables of a sequent.
+    */
   def boundVars(s: Sequent): SetLattice[NamedSymbol] =
     (s.ante ++ s.succ).foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
 
   /**
-   * The signature of a sequent.
-   */
+    * The signature of a sequent.
+    */
   def signature(s: Sequent): immutable.Set[NamedSymbol] =
     (s.ante ++ s.succ).foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
 
   /**
-   * Any symbol occurring verbatim in a sequent, whether free or bound variable or function or predicate or program constant
-   */
+    * Any symbol occurring verbatim in a sequent, whether free or bound variable or function or predicate or program constant
+    */
   def symbols(s: Sequent): immutable.Set[NamedSymbol] =
     (s.ante ++ s.succ).foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b))
 

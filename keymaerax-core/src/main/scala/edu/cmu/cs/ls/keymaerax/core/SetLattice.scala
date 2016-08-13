@@ -3,10 +3,10 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Set Lattices are lattice of finite or cofinite sets.
- * @author smitsch
- * @note Code Review: 2016-03-09
- */
+  * Set Lattices are lattice of finite or cofinite sets.
+  * @author smitsch
+  * @note Code Review: 2016-03-09
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness (probably)
@@ -17,12 +17,12 @@ import scala.collection.GenTraversableOnce
 
 
 /**
- * Lattice of sets, i.e. the lattice of sets that also includes top and top-like elements.
- *
- * @tparam A Type of elements in the set
- * @author smitsch
- * @author Andre Platzer
- */
+  * Lattice of sets, i.e. the lattice of sets that also includes top and top-like elements.
+  *
+  * @tparam A Type of elements in the set
+  * @author smitsch
+  * @author Andre Platzer
+  */
 sealed trait SetLattice[A] {
   def isInfinite: Boolean
   def isEmpty: Boolean
@@ -105,12 +105,12 @@ object SetLattice {
   def except[A >: NamedSymbol](x: Variable): SetLattice[A] = new CoFiniteSet(Set(x, DifferentialSymbol(x), DotTerm, DotFormula), Set.empty)
 
   /**
-   * Symbols and differential symbols of set lattice sl.
-   * Will leave all Function and ProgramConst and DifferentialProgramConst in sl untouched
-   * but add DifferentialSymbol for all Variables in sl.
-   * @param sl A SetLattice of NamedSymbols.
-   * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
-   */
+    * Symbols and differential symbols of set lattice sl.
+    * Will leave all Function and ProgramConst and DifferentialProgramConst in sl untouched
+    * but add DifferentialSymbol for all Variables in sl.
+    * @param sl A SetLattice of NamedSymbols.
+    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
+    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = sl match {
     case FiniteSet(set) => FiniteSet(extendToDifferentialSymbols(set))
     case CoFiniteSet(excluded, symbols) if !excluded.exists(x=>x.isInstanceOf[DifferentialSymbol]) =>
@@ -122,23 +122,23 @@ object SetLattice {
   }
 
   /**
-   * Symbols and differential symbols of set.
- *
-   * @param set A Set of NamedSymbols.
-   * @return set ++ set' where set' is the set containing the primes of the variables in set.
-   */
+    * Symbols and differential symbols of set.
+    *
+    * @param set A Set of NamedSymbols.
+    * @return set ++ set' where set' is the set containing the primes of the variables in set.
+    */
   def extendToDifferentialSymbols(set : Set[NamedSymbol]) : Set[NamedSymbol] =
     set ++ set.filter(_.isInstanceOf[Variable]).map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
 }
 
 /**
- * A finite element of a lattice, represented as a finite set of concrete elements.
- *
- * @param set the concrete members of this finite element of a lattice
- * @tparam A Type of elements in the set
- * @note Implementation forwards to set.
- * @author Andre Platzer
- */
+  * A finite element of a lattice, represented as a finite set of concrete elements.
+  *
+  * @param set the concrete members of this finite element of a lattice
+  * @tparam A Type of elements in the set
+  * @note Implementation forwards to set.
+  * @author Andre Platzer
+  */
 private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = false
   def isEmpty: Boolean = set.isEmpty
@@ -165,16 +165,16 @@ private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
 }
 
 /**
- * Represents a co-set i.e. an infinite set that is the complement of a finite set.
- * It includes all elements, except explicitly excluded ones. Additionally,
- * keeps track of which symbols specifically are named to be included (i.e., a program constant c, which in terms of
- * fv/bv variables represents all possible symbols and thus is top, is tracked as c in symbols).
- *
- * @param excluded The elements not included in top.
- * @param literally The specific symbols contained verbatim in the set, even if all except excluded are present.
- * @tparam A The type of elements.
- * @author smitsch
- */
+  * Represents a co-set i.e. an infinite set that is the complement of a finite set.
+  * It includes all elements, except explicitly excluded ones. Additionally,
+  * keeps track of which symbols specifically are named to be included (i.e., a program constant c, which in terms of
+  * fv/bv variables represents all possible symbols and thus is top, is tracked as c in symbols).
+  *
+  * @param excluded The elements not included in top.
+  * @param literally The specific symbols contained verbatim in the set, even if all except excluded are present.
+  * @tparam A The type of elements.
+  * @author smitsch
+  */
 private case class CoFiniteSet[A](excluded: immutable.Set[A], literally: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = true
   def isEmpty = false

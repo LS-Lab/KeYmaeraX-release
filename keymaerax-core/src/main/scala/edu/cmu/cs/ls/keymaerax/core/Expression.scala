@@ -3,14 +3,14 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Differential Dynamic Logic expression data structures.
- * @author Andre Platzer
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
- * @note Code Review: 2016-03-09
- */
+  * Differential Dynamic Logic expression data structures.
+  * @author Andre Platzer
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+  * @note Code Review: 2016-03-09
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
@@ -36,8 +36,8 @@ object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def t
 object FunctionKind extends Kind { override def toString = "Function" }
 
 /**
- * Sorts
- */
+  * Sorts
+  */
 sealed trait Sort
 /** Unit type of [[edu.cmu.cs.ls.keymaerax.core.Nothing Nothing]] */
 object Unit extends Sort { override def toString = "Unit" }
@@ -61,21 +61,21 @@ case class Except(taboo: Variable) extends Space { override def toString: String
 
 
 /**
- * Expressions of differential dynamic logic.
- * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
- *
- * 1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
- *
- * 2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
- *
- * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
- *
- * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
- * @author Andre Platzer
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
- */
+  * Expressions of differential dynamic logic.
+  * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
+  *
+  * 1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
+  *
+  * 2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
+  *
+  * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
+  *
+  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
+  * @author Andre Platzer
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
+  */
 sealed trait Expression {
   def kind : Kind
   def sort : Sort
@@ -122,9 +122,9 @@ sealed trait SpaceDependent extends StateDependent {
 
 
 /**
- * A named symbol such as a variable or function symbol or predicate symbol.
- * @note User-level symbols should not use underscores, which are reserved for the core.
- */
+  * A named symbol such as a variable or function symbol or predicate symbol.
+  * @note User-level symbols should not use underscores, which are reserved for the core.
+  */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   insist(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names): " + name)
@@ -167,10 +167,10 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   */
 
 /**
- * Terms of differential dynamic logic.
- * @author Andre Platzer
+  * Terms of differential dynamic logic.
+  * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#termParser]]
- */
+  */
 sealed trait Term extends Expression {
   final def kind: Kind = TermKind
 }
@@ -309,10 +309,10 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   */
 
 /**
- * Formulas of differential dynamic logic.
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
- */
+  * Formulas of differential dynamic logic.
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
+  */
 sealed trait Formula extends Expression {
   final def kind: Kind = FormulaKind
   final def sort: Sort = Bool
@@ -477,10 +477,10 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { d
   */
 
 /**
- * Hybrid programs of differential dynamic logic.
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
- */
+  * Hybrid programs of differential dynamic logic.
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
+  */
 sealed trait Program extends Expression {
   /*final*/ def kind: Kind = ProgramKind
   final def sort: Sort = Trafo
@@ -547,10 +547,10 @@ case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = co
 
 
 /**
- * Differential programs
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
- */
+  * Differential programs
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
+  */
 sealed trait DifferentialProgram extends Program {
   override def kind: Kind = DifferentialProgramKind
 }
@@ -578,12 +578,12 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
 }
 
 /**
- * left,right parallel product of differential programs.
- * This data structure automatically reassociates to list form
- * DifferentialProduct(AtomicDifferentialProgram, DifferentialProduct(AtomicDifferentialProgram, ....))
- * @note This is a case class except for an override of the apply function.
- * @note Private constructor so only [[DifferentialProduct.apply]] can ever create this, which will re-associate et al.
- */
+  * left,right parallel product of differential programs.
+  * This data structure automatically reassociates to list form
+  * DifferentialProduct(AtomicDifferentialProgram, DifferentialProduct(AtomicDifferentialProgram, ....))
+  * @note This is a case class except for an override of the apply function.
+  * @note Private constructor so only [[DifferentialProduct.apply]] can ever create this, which will re-associate et al.
+  */
 final class DifferentialProduct private(val left: DifferentialProgram, val right: DifferentialProgram)
   extends DifferentialProgram with BinaryComposite {
 
@@ -597,11 +597,11 @@ final class DifferentialProduct private(val left: DifferentialProgram, val right
 
 object DifferentialProduct {
   /**
-   * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in
-   * the data structures.
-   * @note Completeness: reassociate needed in DifferentialProduct data structures for
-   *       axiom "DE differential effect (system)" so as not to get stuck after it.
-   */
+    * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in
+    * the data structures.
+    * @note Completeness: reassociate needed in DifferentialProduct data structures for
+    *       axiom "DE differential effect (system)" so as not to get stuck after it.
+    */
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
     require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
     require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
