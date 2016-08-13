@@ -158,11 +158,5 @@ object DifferentialHelper {
       .toMap
   }
 
-  @deprecated("use sortAtomicOdes instead", "4.2b2")
-  def unPrimedAndNotTime(system: ODESystem) = {
-    val primedVars = atomicOdes(system).map(ode => ode.xp.x)
-    atomicOdes(system).filter(x => freeVars(x).toSet.filterNot(x => x == timeVar(system)).intersect(primedVars.toSet).isEmpty)
-  }
-
   def isLinear(ode: DifferentialProgram) = true //@todo
 }

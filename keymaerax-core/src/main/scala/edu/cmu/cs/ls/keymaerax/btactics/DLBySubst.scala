@@ -349,7 +349,7 @@ object DLBySubst {
    */
   def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
-    alphaRule*@TheType() & ("doLoop" byWithInput(invariant, (pos, sequent) => {
+    (alphaRule*) & ("doLoop" byWithInput(invariant, (pos, sequent) => {
        sequent.sub(pos) match {
           case Some(b@Box(Loop(a), p)) =>
             val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)

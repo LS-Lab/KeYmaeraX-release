@@ -51,15 +51,15 @@ object AxiomaticODESolver {
     addTimeVarIfNecessary(odePos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
     assertInitializedTimeVar(odePos) & //@note we leave t'=0*t+1 for now because it's easier to name the position after inverseDiffGhost steps.
-    (cutInSoln(qeTool)(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).*@(TheType()) &
+    (cutInSoln(qeTool)(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     HilbertCalculus.DW(pos) &
     DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
     simplifyPostCondition(qeTool)(pos) &
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
-    (inverseDiffCut(qeTool)(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).*@(TheType()) &
+    (inverseDiffCut(qeTool)(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
-    RepeatTactic(inverseDiffGhost(qeTool)(pos), sizeOfTimeExplicitOde - 1, TheType()) &
+    RepeatTactic(inverseDiffGhost(qeTool)(pos), sizeOfTimeExplicitOde - 1) &
     DebuggingTactics.assert((s,p) => odeSize(s(p)) == 1, "ODE should only have time.")(pos) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
@@ -282,7 +282,7 @@ object AxiomaticODESolver {
   }
 
   @deprecated("Move this to a centralized location for ProveAs stuff", "4.2b2")
-  def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
+  private def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
     override def computeExpr(p:Provable) = {
       LemmaDBFactory.lemmaDB.remove(lemmaName)
       Idioms.nil

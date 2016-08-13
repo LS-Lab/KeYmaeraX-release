@@ -118,7 +118,7 @@ class ChilledWater extends TacticTestBase {
                 |    (v=1 | v=0) &
                 |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
-    val tactic = implyR('_) & andL('_)*@ TheType() & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
+    val tactic = implyR('_) & (andL('_)*) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
       QE & done,
       QE & done,
       boxAnd(1) & andR(1) <(
@@ -149,7 +149,7 @@ class ChilledWater extends TacticTestBase {
                 |    (v=1 | v=0) &
                 |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
-    val tactic = implyR('_) & andL('_)*@ TheType() & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
+    val tactic = implyR('_) & (andL('_)*) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
       QE & done,
       QE & done,
       // reduce the proof to the proof of Model 0

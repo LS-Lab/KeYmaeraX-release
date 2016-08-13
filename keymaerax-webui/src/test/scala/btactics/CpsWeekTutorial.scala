@@ -25,7 +25,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Example 0" should "prove with abstract invariant J(x)" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))
-    val tactic = implyR('R) & andL('L)*@TheType() & loop("J(v)".asFormula)('R) <(
+    val tactic = implyR('R) & (andL('L)*) & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
       print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
@@ -37,7 +37,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Example 1" should "have 4 open goals for abstract invariant J(x,v)" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val tactic = implyR('R) & andL('L)*@TheType() & loop("J(x,v)".asFormula)('R) <(
+    val tactic = implyR('R) & (andL('L)*) & loop("J(x,v)".asFormula)('R) <(
       print("Base case") partial,
       print("Use case") partial,
       print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
@@ -79,7 +79,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "prove with a manually written searchy tactic" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    val tactic = implyR('R) & andL('L)*@TheType() & loop("v^2<=2*b*(m-x)".asFormula)('R) <(
+    val tactic = implyR('R) & (andL('L)*) & loop("v^2<=2*b*(m-x)".asFormula)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
       print("Step") & normalize & diffSolve(None)('R) & QE
@@ -177,7 +177,7 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { implicit tool =>
-    def tactic(j: Formula) = implyR('R) & andL('L)*@TheType() & loop(j)('R) <(
+    def tactic(j: Formula) = implyR('R) & (andL('L)*) & loop(j)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
       print("Step") & normalize & OnAll(diffSolve(None)('R) & QE)
@@ -197,10 +197,10 @@ class CpsWeekTutorial extends TacticTestBase {
       s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t)".asFormula,
       s"-t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R)
 
-    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & andL('L)*@TheType() &
+    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & (andL('L)*) &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
-    val tactic = implyR('R) & andL('L)*@TheType() & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 | 2*b*abs(my-y)>v^2)".asFormula)('R) <(
+    val tactic = implyR('R) & (andL('L)*) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 | 2*b*abs(my-y)>v^2)".asFormula)('R) <(
       print("Base case") & QE,
       print("Use case") & QE,
       print("Step") & chase('R) & andR('R) <(

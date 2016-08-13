@@ -32,11 +32,11 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
   /** this*: saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
-  def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
+  def * = SaturateTactic(this)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
-  def +@(annotation: BelleType) = this & (this*@annotation)
+  def + = this & this.*
   /** this*: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
-  def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
+  def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
@@ -504,8 +504,8 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
-case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
-case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
+case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
+case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.

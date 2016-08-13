@@ -12,7 +12,7 @@ case class PosInBelleExpr(idxs: Seq[Int]) {
   def apply(e: BelleExpr) = e match {
     case e: SeqTactic => if(hd == 0) e.left else if(hd == 1) e.right else throw new PositionException(hd, e)
     case e: EitherTactic => if(hd == 0) e.left else if(hd == 1) e.right else throw new PositionException(hd, e)
-    case e: SaturateTactic => if(hd == 0) e.child else if(hd == 1) e.annotation else throw new PositionException(hd, e)
+    case e: SaturateTactic => if(hd == 0) e.child else throw new PositionException(hd, e)
     case e: BranchTactic => if(hd < e.children.length) e.children(hd) else throw new PositionException(hd, e)
     case e: USubstPatternTactic => if(hd < e.options.length*2) {
       if(hd % 2 == 0) e.options(hd)._1

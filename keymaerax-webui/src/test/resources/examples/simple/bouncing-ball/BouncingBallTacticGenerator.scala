@@ -8,7 +8,7 @@ import scala.language.postfixOps
 class BouncingBallTacticGenerator extends (() => BelleExpr) {
 
   def apply() = {
-    implyR(1) & andL('L)*@TheType() & loop("v^2<=2*g()*(H-h) & h>=0".asFormula)(1) <(
+    implyR(1) & andL('L).*() & loop("v^2<=2*g()*(H-h) & h>=0".asFormula)(1) <(
       QE,
       QE,
       composeb(1) & choiceb(1, 1::Nil) & testb(1, 1::0::Nil) & composeb(1, 1::1::Nil) &

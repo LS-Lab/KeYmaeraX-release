@@ -104,6 +104,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     else pre :+ l
   }
 
+  //@todo performance bottleneck
   private def sequentTokenParser(ts: TokenStream): Sequent = {
     require(ts.map(_.tok).contains(TURNSTILE))
 

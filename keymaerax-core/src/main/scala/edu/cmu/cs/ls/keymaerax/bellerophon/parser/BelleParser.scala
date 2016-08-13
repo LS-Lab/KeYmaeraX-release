@@ -15,7 +15,7 @@ object BelleParser extends (String => BelleExpr) {
   private var invariantGenerator : Option[Generator[Formula]] = None
   private var DEBUG = false
 
-  override def apply(s: String) = parseWithInvGen(s, None)
+  override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
   def parseWithInvGen(s: String, g:Option[Generator[Formula]] = None) = {
     invariantGenerator = g;
@@ -171,20 +171,20 @@ object BelleParser extends (String => BelleExpr) {
 
       //region Stars and Repitition
       case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(KLEENE_STAR, starLoc) => {
-        val parsedExpr = SaturateTactic(expr, TheType())
+        val parsedExpr = SaturateTactic(expr)
         parsedExpr.setLocation(starLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(starLoc)), st.input)
       }
 
 
       case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(N_TIMES(n), ntimesloc) => {
-        val parsedExpr = RepeatTactic(expr, n, TheType())
+        val parsedExpr = RepeatTactic(expr, n)
         parsedExpr.setLocation(ntimesloc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(ntimesloc)), st.input)
       }
 
       case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(SATURATE, satloc) => {
-        val paredExpr = SeqTactic(expr, SaturateTactic(expr, TheType()))
+        val paredExpr = SeqTactic(expr, SaturateTactic(expr))
         paredExpr.setLocation(satloc)
         ParserState(r :+ ParsedBelleExpr(paredExpr, loc.spanTo(satloc)), st.input)
       }

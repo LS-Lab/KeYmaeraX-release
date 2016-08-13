@@ -71,7 +71,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo Does this need to be fixed?
   it should "solve single time dependent eqn" ignore {withMathematica(implicit qeTool => {
     val f = "x=0&y=0&t=0 -> [{x'=t, t'=1}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(qeTool)(1).*@(TheType())
+    val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(qeTool)(1)*)
     println(proveBy(f,t))
     loneSucc(proveBy(f,t)) shouldBe ???
   })}

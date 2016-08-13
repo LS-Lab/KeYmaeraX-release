@@ -196,7 +196,7 @@ object DifferentialTactics {
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                  abstractionb(pos) & (allR(pos)*@TheType()) & ?(implyR(pos)) }) partial
+                  abstractionb(pos) & (allR(pos)*) & ?(implyR(pos)) }) partial
               } else skip
               )
           if (auto == 'full) Dconstify(t)(pos)

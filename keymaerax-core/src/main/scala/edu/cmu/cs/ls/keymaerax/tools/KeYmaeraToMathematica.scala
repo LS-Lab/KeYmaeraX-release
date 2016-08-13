@@ -97,33 +97,41 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     case False => MathematicaSymbols.FALSE
     case True => MathematicaSymbols.TRUE
     case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
-    case Exists(vs, phi) => convertQuantified(vs, phi, Exists.unapply, MathematicaSymbols.EXISTS)
-    case Forall(vs, phi) => convertQuantified(vs, phi, Forall.unapply, MathematicaSymbols.FORALL)
+    case exists: Exists => convertExists(exists)
+    case forall: Forall => convertForall(forall)
     case _ => throw new ConversionException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
-  //@todo Code Review: Forall and Exists should be separate conversions again, because matching on generics doesn't work in Scala
-  /** Convert block of quantifiers into a single quantifier block, using unapply (ua) and matching head (FORALL/EXISTS) */
-  protected def convertQuantified[T <: Quantified](vs: Seq[NamedSymbol], f: Formula,
-                                                   ua: T => Option[(Seq[Variable], Formula)], head: MExpr): MExpr = {
-    require(head == MathematicaSymbols.EXISTS || head == MathematicaSymbols.FORALL,
-      "Expected either existential or universal quantifier as MExpr head")
-
-    /** Recursively collect quantified variables, return variables+quantified formula */
-    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: T): (Seq[NamedSymbol], Formula) = {
-      ua(candidate) match {
-        case Some((nextVs, nextf: T)) => collectVars(vsSoFar ++ nextVs, nextf)
-        case Some((nextVs, nextf)) => (vsSoFar ++ nextVs, nextf)
+  /** Converts a universally quantified formula. */
+  protected def convertForall(f: Quantified): MExpr = {
+    /** Recursively collect universally quantified variables, return variables+child formula */
+    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
+      candidate match {
+        case Forall(nextVs, nextf: Forall) => collectVars(vsSoFar ++ nextVs, nextf)
+        case Forall(nextVs, nextf) => (vsSoFar ++ nextVs, nextf)
         case _ => (vsSoFar, candidate)
       }
     }
 
-    val (vars, formula) = f match {
-      case q: T => collectVars(vs, q)
-      case _ => (vs, f)
-    }
+    val (vars, formula) = collectVars(f.vars, f.child)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
-    new MExpr(head, Array[MExpr](variables, convertFormula(formula)))
+    new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
+  }
+
+  /** Converts an existentially quantified formula. */
+  protected def convertExists(f: Quantified): MExpr = {
+    /** Recursively collect existentially quantified variables, return variables+child formula */
+    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
+      candidate match {
+        case Exists(nextVs, nextf: Exists) => collectVars(vsSoFar ++ nextVs, nextf)
+        case Exists(nextVs, nextf) => (vsSoFar ++ nextVs, nextf)
+        case _ => (vsSoFar, candidate)
+      }
+    }
+
+    val (vars, formula) = collectVars(f.vars, f.child)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
+    new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
   }
 
   /** Convert a function. */

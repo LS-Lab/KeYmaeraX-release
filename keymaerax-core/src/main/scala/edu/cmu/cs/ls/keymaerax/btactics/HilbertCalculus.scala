@@ -133,8 +133,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
 //  def loop(invariant: Formula) = I(invariant)
-  /** K: modal modus ponens (hybrid systems) */
-  @deprecated("Use with care since limited to hybrid systems. Use monb instead.")
+  /** K: modal modus ponens (hybrid systems)
+    * @note Use with care since limited to hybrid systems. Use [[monb]] instead.
+    * @see [[monb]]
+    * @see [[mond]]
+    */
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games

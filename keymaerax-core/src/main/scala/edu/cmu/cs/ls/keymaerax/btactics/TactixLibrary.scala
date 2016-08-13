@@ -50,35 +50,36 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
-      OnAll(?(
-        (alphaRule partial)
-          | (closeId
-          | ((allR('R) partial)
-          | ((existsL('L) partial)
-          | (close
-          | ((beta partial)
-          | ((stepL partial)
-          | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType()
+    (OnAll(?(
+              (alphaRule partial)
+                | (closeId
+                | ((allR('R) partial)
+                | ((existsL('L) partial)
+                | (close
+                | ((beta partial)
+                | ((stepL partial)
+                | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial))*
     })
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   lazy val prop                    : BelleExpr = NamedTactic("prop", {
-    OnAll(?(
-      (close
-        | ((alphaRule partial)
-        | ((betaRule partial) partial) partial) partial) partial) partial) *@ TheType()
+    (OnAll(?(
+          (close
+            | ((alphaRule partial)
+            | ((betaRule partial) partial) partial) partial) partial) partial))*
   })
 
   /** master: master tactic that tries hard to prove whatever it could */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
-    OnAll(?(
-      (close
-        | ((must(normalize) partial)
-        | ((loop(gen)('L) partial)
-        | ((loop(gen)('R) partial)
-        | ((diffSolve(None)('R) partial)
-        | ((diffInd partial)
-        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial) *@ TheType() & ?(OnAll(QE))
+    ((OnAll(?(
+          (close
+            | ((must(normalize) partial)
+            | ((loop(gen)('L) partial)
+            | ((loop(gen)('R) partial)
+            | ((diffSolve(None)('R) partial)
+            | ((diffInd partial)
+            | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial))*) &
+      ?(OnAll(QE))
   }
 
   /*******************************************************************
@@ -133,7 +134,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         require(pos.isTopLevel, "with abstraction only at top-level")
         sequent(pos.checkTop) match {
           case Box(a, p) =>
-            t(pos) & abstractionb(pos) & (if (pos.isSucc) allR(pos)*@TheType() partial else skip)
+            t(pos) & abstractionb(pos) & (if (pos.isSucc) (allR(pos)*) partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
         }
       }
@@ -376,15 +377,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[QE]] */
   def RCF: BelleExpr = ToolTactics.rcf
 
-  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
-  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
-  def lazyQE = (
-    ((alphaRule | allR('_) | existsL('_)
-      | close
-      //@todo eqLeft|eqRight for equality rewriting directionally toward easy
-      //| (la(TacticLibrary.eqThenHideIfChanged)*)
-      | betaRule)*@TheType())
-      | QE)
+//  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
+//  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
+//  def lazyQE = (
+//    ((alphaRule | allR('_) | existsL('_)
+//          | close
+//          //@todo eqLeft|eqRight for equality rewriting directionally toward easy
+//          //| (la(TacticLibrary.eqThenHideIfChanged)*)
+//          | betaRule)*)
+//      | QE)
 
 
   // Global Utility Functions

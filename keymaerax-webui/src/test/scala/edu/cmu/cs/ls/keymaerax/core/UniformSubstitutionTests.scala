@@ -20,6 +20,7 @@ import scala.collection.immutable.IndexedSeq
 /**
  * Created by rjcn on 01/09/15.
  * @author Ran Ji
+ * @note Test needs KeYmaereaXParser.LAX==true
  */
 @UsualTest
 @USubstTest

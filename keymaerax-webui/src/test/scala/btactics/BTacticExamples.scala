@@ -79,6 +79,7 @@ class BTacticExamples extends TacticTestBase  {
   }
 
 
+  //@todo more tests like this because this is one of the few simple tests that fails when master/prop have the * inside the OnAll instead of outside the OnAll.
   "Proof by Search" should "prove (p() & q()) & r() <-> p() & (q() & r())" in {
     import TactixLibrary._
     // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
@@ -249,4 +250,5 @@ class BTacticExamples extends TacticTestBase  {
     proof shouldBe 'proved
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula))
   }
+
 }

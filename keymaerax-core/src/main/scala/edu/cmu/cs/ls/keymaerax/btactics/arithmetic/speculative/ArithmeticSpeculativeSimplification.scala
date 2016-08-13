@@ -54,7 +54,7 @@ object ArithmeticSpeculativeSimplification {
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   def proveOrRefuteAbs(implicit tool: QETool with CounterExampleTool): BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((hideR('R)*@TheType() & assertNoCex & QE()) | speculativeQENoAbs)
+    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll(((hideR('R)*) & assertNoCex & QE()) | speculativeQENoAbs)
     else error("Sequent does not contain abs")
   })
 
@@ -84,7 +84,7 @@ object ArithmeticSpeculativeSimplification {
       map{ case (f,p) => p.map(pos => OnAll(abs(pos) & orL('Llast) partial)).reduceLeft[BelleExpr](_&_) }.
       reduceLeft[BelleExpr](_&_)
 
-    absTactic & OnAll(andL('_)*@TheType() partial) & OnAll(exhaustiveEqL2R(hide=true)('L)*@TheType() partial)
+    absTactic & OnAll((andL('_)*) partial) & OnAll((exhaustiveEqL2R(hide=true)('L)*) partial)
   })
 
   /** Assert that there is no counter example. skip if none, error if there is. */

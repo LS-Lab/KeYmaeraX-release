@@ -6,7 +6,7 @@
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
   *
   * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -108,7 +108,7 @@ object KeYmaeraXParser extends Parser {
   /** Lax mode where the parser is a little flexible about accepting input. */
   private[parser] val LAX = System.getProperty("LAX", "true")=="true"
 
-  private[parser] val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private[parser] val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   private val parseErrorsAsExceptions = true
 
@@ -298,16 +298,15 @@ object KeYmaeraXParser extends Parser {
 
   //@todo the style of this parser should probably be rewritten to a more functional style close to the grammar with more inline shifting/reducing for improved clarity and speed
 
+  //@todo performance bottleneck
+  //@todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState): ParseState = {
-    val ParseState(s, input@(Token(la,_) :: rest)) = st
+    val ParseState(s, input@(Token(la,laloc) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
-      case r :+ Token(ASSIGN,loc1) :+ Token(STAR,loc2) =>
-        reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
-      // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
       case r :+ Token(ASSIGN,loc1) if la==STAR =>
-        shift(st)
+        reduce(shift(st), 2, Bottom :+ Token(ASSIGNANY, loc1--laloc), r)
 
       // nonproductive: special notation for annotations
       case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1) :+ Token(RPAREN,_) if isAnnotable(p) =>
@@ -460,10 +459,7 @@ object KeYmaeraXParser extends Parser {
         else reduce(st, 1, Number(BigDecimal(value)), r)
 
 
-        // PERIOD to DOT conversion for convenience
-      case r :+ Token(PERIOD,loc) =>
-        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
-      case r :+ Token(tok@(PLACE|NOTHING|ANYTHING | TRUE|FALSE),_) =>
+      case r :+ Token(tok@(PLACE|NOTHING | TRUE|FALSE),_) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // differentials
@@ -717,6 +713,10 @@ object KeYmaeraXParser extends Parser {
       case _ :+ _ :+ Expr(t) =>
         if (followsExpression(t, la) && la!=EOF) shift(st)
         else error(st, List(FOLLOWSEXPRESSION))
+
+      // Help lexer convert PERIOD to DOT for convenience
+      case r :+ Token(PERIOD,loc) =>
+        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
 
       // small stack cases
       case Bottom :+ Expr(t) =>

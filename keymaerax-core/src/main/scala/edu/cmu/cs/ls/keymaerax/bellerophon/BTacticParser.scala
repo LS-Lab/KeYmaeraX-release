@@ -142,21 +142,21 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     lazy val repeatP : PackratParser[BelleExpr] = {
       lazy val pattern = expressionParser ~ ANNOTATED_STAR ~ ("(" ~> typeParser <~ ")")
       log(pattern)(ANNOTATED_STAR) ^^ {
-        case expr ~ ANNOTATED_STAR ~ ty => SaturateTactic(expr, ty)
+        case expr ~ ANNOTATED_STAR ~ ty => SaturateTactic(expr)
       }
     }
 
     lazy val repeatPDefaultType: PackratParser[BelleExpr] = {
       lazy val pattern = expressionParser <~ STAR
       log(pattern)(STAR + " with default type") ^^ {
-        case expr => SaturateTactic(expr, TheType())
+        case expr => SaturateTactic(expr)
       }
     }
 
     lazy val ntimesP : PackratParser[BelleExpr] = {
       lazy val pattern = expressionParser ~ ANNOTATED_STAR ~ ("(" ~> typeParser <~ ")") ~ numberPattern
       log(pattern)(ANNOTATED_STAR) ^^ {
-        case expr ~ ANNOTATED_STAR ~ ty ~ number => RepeatTactic(expr, number.toInt, ty)
+        case expr ~ ANNOTATED_STAR ~ ty ~ number => RepeatTactic(expr, number.toInt)
       }
     }
 

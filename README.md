@@ -68,7 +68,7 @@ To run the regression test case suite, type, for example,
 
     sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 
-FAQ: Build Problems
+##### FAQ: Build Problems
 ===================
 The build file uses default paths to the Mathematica JLink JAR for MacOS and Mathematica 10 (see default.properties).
 If those are not suitable for your setup, create a file 'local.properties' in the same directory as default.properties
@@ -83,7 +83,7 @@ common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 
-FAQ: Run Problems
+##### FAQ: Run Problems
 =================
 
 If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
@@ -93,9 +93,9 @@ You could also try removing or renaming the model and proof database `~/.keymaer
 Generating API Documentation
 ============================
 
-KeYmaera X API Documentation is generated via Scaladoc.
+KeYmaera X API Documentation is generated via Scaladoc and available at:
   
-   http://www.keymaerax.org/scaladoc
+   http://keymaeraX.org/scaladoc
 
 To generate unified scaladoc for all subprojects locally, run:
 
@@ -114,7 +114,7 @@ For instance, `keymaerax-core/target/scala-2.11/api` for the core subproject.
 
 Main documentation to read for KeYmaera X API:
 
-    http://keymaerax.org/doc/dL-grammar.md - concrete syntax for input language Differential Dynamic Logic
+    http://keymaeraX.org/doc/dL-grammar.md - concrete syntax for input language Differential Dynamic Logic
     edu.cmu.cs.ls.keymaerax.core.package   - KeYmaera X kernel, proof certificates, main data structures
     edu.cmu.cs.ls.keymaerax.parser.package - Parser and pretty printer with concrete syntax and notation
     edu.cmu.cs.ls.keymaerax.btactics.package - Tactic library
@@ -158,7 +158,7 @@ Run Configurations Drop-down in Toolbar
  -> Select "keymaerax" as SDK and classpath of module
  -> Apply/OK
 
-IntelliJ FAQ
+##### IntelliJ FAQ
 ============
 If, at any time, you run into problems during the compilation process in IntelliJ, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. This is necessary for IntelliJ to find JLink.jar. IntelliJ keeps forgetting about it, so you may have to check repeatedly. If the problems persist, do `File->Invalidate Caches / Restart`.
 
@@ -176,9 +176,9 @@ In case of errors about `invalid or corrupt jarfile`, please update Java to a ne
 
 For development purposes, the Web UI can be run from an IDE by selecting as the Main class if you pass its JVM the option `-Xss20M`:
 
-    keymaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra/Boot.scala
+    keymaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra/NoSSLBoot.scala
 
-Note that using the launcher/Main class won't work in IntelliJ but Boot.scala must be used instead.
+Note that using the launcher/Main class won't work in IntelliJ but NoSSLBoot.scala must be used instead.
 
 Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9.
 It is recommended to use Mathematica 10.
@@ -191,7 +191,7 @@ To find out how to use KeYmaera X from command line, do `sbt clean assembly` and
 
     java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -help
 
-Make sure you have Java 1.8 for using command line like this. Java 1.7 and earlier versions may limit functionality.
+Make sure you have Java 1.8 for using the command line like this. Java 1.7 and earlier versions may limit functionality.
 
 Command Line Execution and Templates
 ====================================
@@ -239,6 +239,8 @@ Windows, 64bit, Mathematica 10.4
 Source Code Layout
 ==================
 
+KeYmaera X API Documentation explains the package layout: http://keymaeraX.org/scaladoc
+
 `build.sbt` - SBT configuration file.
 
 The project is split into two subprojects, `keymaerax-core` for the core functionalities of the prover and `keymaerax-webui` for everything else.
@@ -270,8 +272,6 @@ The additional packages in the directory `keymaerax-webui/src/main/scala` are se
     .hydra   - HyDRA Hybrid Distributed Reasoning Architecture server with REST API and database
     .launcher - KeYmaera X command line launcher with main program
     .tacticsinterface - Interface to the actics exposed to the web UI and REST API. Tactic combinator parser.
-
-ScalaDoc is available at: http://keymaerax.org/scaladoc
 
 Test Cases
 ==========
@@ -396,4 +396,4 @@ http://symbolaris.com/info/KeYmaera.html
 Contact
 =======
 
-KeYmaera X developers: keymaerax@keymaerax.org
+KeYmaera X developers: keymaeraX@keymaeraX.org

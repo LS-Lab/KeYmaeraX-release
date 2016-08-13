@@ -234,7 +234,7 @@ class HilbertTests extends TacticTestBase {
         useAt("[:=] assign equational")(1) &
         step(1) & step(1) &
         useAt("DI differential invariant")(1) & //@todo diffInd(1)
-        ((step('L) | step('R))*@TheType()) & abstractionb(1) & master()
+        ((step('L) | step('R))*) & abstractionb(1) & master()
     ) shouldBe 'proved
   }
 
