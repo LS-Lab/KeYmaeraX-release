@@ -24,7 +24,7 @@ libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" 
 
 /// mongodb driver
 
-libraryDependencies += "org.mongodb" %% "casbah" % "2.7.4"
+//libraryDependencies += "org.mongodb" %% "casbah" % "2.7.4"
 
 /// sqlite driver
 
