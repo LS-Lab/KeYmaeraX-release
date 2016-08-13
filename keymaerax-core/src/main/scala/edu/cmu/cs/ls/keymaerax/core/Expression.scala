@@ -109,8 +109,12 @@ sealed trait ApplicationOf extends Composite {
   def child : Expression
 }
 
+
+/** Expressions whose semantic interpretations have access to the state. */
+sealed trait StateDependent extends Expression
+
 /** Expressions limited to a given state-space. */
-sealed trait SpaceDependent extends Expression {
+sealed trait SpaceDependent extends StateDependent {
   /** The space that this expression lives on. */
   def space: Space
   final def index: Option[Int] = None
@@ -361,7 +365,7 @@ case class LessEqual(left: Term, right: Term) extends RComparisonFormula { def r
 case class Less(left: Term, right: Term) extends RComparisonFormula { def reapply = copy }
 
 /** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol _ for substitutions are unlike ordinary predicational symbols */
-object DotFormula extends NamedSymbol with AtomicFormula {
+object DotFormula extends NamedSymbol with AtomicFormula with StateDependent {
   def name: String = "\\_"
   def index: Option[Int] = None
 }
@@ -373,7 +377,8 @@ case class PredOf(func: Function, child: Term) extends AtomicFormula with Applic
 }
 
 /** Predicational or quantifier symbol applied to argument formula child. */
-case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
+case class PredicationalOf(func: Function, child: Formula)
+  extends AtomicFormula with ApplicationOf with StateDependent {
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
   insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
@@ -485,7 +490,7 @@ sealed trait Program extends Expression {
 sealed trait AtomicProgram extends Program with Atomic
 
 /** Uninterpreted program constant */
-sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {
+sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
   def index: Option[Int] = None
 }
 
@@ -558,7 +563,8 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   override def kind: Kind = ProgramKind
 }
 /** Uninterpreted differential program constant, limited to the given state space. */
-sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg) extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
+sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg)
+  extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
 }
 
