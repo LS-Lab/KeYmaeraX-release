@@ -24,7 +24,7 @@ object FOQuantifierTactics {
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
-          } else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
+          } else base(pos++PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
     })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
@@ -53,7 +53,7 @@ object FOQuantifierTactics {
 
             val assign = Box(Assign(x, t), p)
 
-            DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
+            DLBySubst.selfAssign(x)(pos ++ PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos) partial,
               cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
@@ -163,7 +163,7 @@ object FOQuantifierTactics {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(fml: Formula) =>
           require(where.nonEmpty, "Need at least one position to generalize")
-          require(where.map(w => sequent.sub(pos.topLevel + w)).toSet.size == 1, "Not all positions refer to the same term")
+          require(where.map(w => sequent.sub(pos.topLevel ++ w)).toSet.size == 1, "Not all positions refer to the same term")
           val fmlRepl = replaceWheres(fml, Variable("x_"))
 
           //@note create own substitution since UnificationMatch doesn't get it right yet
@@ -172,7 +172,7 @@ object FOQuantifierTactics {
           val pDot = replaceWheres(fml, DotTerm)
           val subst = USubst(
             SubstitutionPair(aP, pDot) ::
-            SubstitutionPair(aT, sequent.sub(pos.topLevel + where.head).get) :: Nil)
+            SubstitutionPair(aT, sequent.sub(pos.topLevel ++ where.head).get) :: Nil)
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast) partial) partial,

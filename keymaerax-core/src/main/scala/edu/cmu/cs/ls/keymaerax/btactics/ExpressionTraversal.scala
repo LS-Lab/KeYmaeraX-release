@@ -157,15 +157,15 @@ object ExpressionTraversal {
     case Right(x) => Some(x)
   }
 
-  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p+0, f, a) match {
+  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p++0, f, a) match {
     case Some(na) => val res = c(na); matchZero(p, f, res)
     case None => None
   }
 
-  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p+0, f, a) match {
+  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p++0, f, a) match {
     case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
-      case Left(None) => traverse(p+1, f, b) match {
+      case Left(None) => traverse(p++1, f, b) match {
         case Some(nb) => matchZero(p, f, c(na, nb))
         case None => None
       }
@@ -175,13 +175,13 @@ object ExpressionTraversal {
   }
 
   //@todo this should never happen
-  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p+0, f, a) match {
+  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p++0, f, a) match {
     case Some(na) => in(f, p, const(na, b, c)) match {
       case Left(Some(_)) => None
-      case Left(None) => traverse(p+1, f, b) match {
+      case Left(None) => traverse(p++1, f, b) match {
         case Some(nb) => in(f, p, const(na, nb, c)) match {
           case Left(Some(_)) => None
-          case Left(None) => traverse(p+2, f, c) match {
+          case Left(None) => traverse(p++2, f, c) match {
             case Some(nc) => val res = const(na, nb, nc); matchZero(p, f, res)
             case None => None
           }

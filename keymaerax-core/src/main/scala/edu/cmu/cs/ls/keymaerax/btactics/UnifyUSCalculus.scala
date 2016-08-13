@@ -1569,7 +1569,7 @@ trait UnifyUSCalculus {
           try {
             val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
             recursor.foldLeft(axUse)(
-              (pf, cursor) => doChase(pf, pos + cursor)
+              (pf, cursor) => doChase(pf, pos ++ cursor)
             )
           } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.sub(pos).get.prettyString + ")")}
         // take the first axiom among breadth that works for one useFor step
@@ -1588,7 +1588,7 @@ trait UnifyUSCalculus {
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
-                (pf, cursor) => doChase(pf, pos + cursor)
+                (pf, cursor) => doChase(pf, pos ++ cursor)
               )
           }
       }

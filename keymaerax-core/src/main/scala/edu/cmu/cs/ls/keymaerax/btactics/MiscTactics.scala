@@ -175,7 +175,7 @@ object Idioms {
   /**
    * shift(child, t) does t to positions shifted by child
    */
-  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p + child, t)
+  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p ++ child, t)
 }
 
 /** Creates tactic objects */

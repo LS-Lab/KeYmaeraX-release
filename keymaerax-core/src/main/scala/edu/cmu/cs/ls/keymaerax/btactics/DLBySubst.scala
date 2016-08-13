@@ -283,7 +283,7 @@ object DLBySubst {
         case (ctx, Box(a, _)) =>
           cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
             /* use */ /*label(BranchLabels.genUse)*/ ident,
-            /* show */(cohide(pos.top) & CMon(pos.inExpr+1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
+            /* show */(cohide(pos.top) & CMon(pos.inExpr++1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
           )
       }
     }
@@ -364,7 +364,7 @@ object DLBySubst {
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
                   andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & ProofRuleTactics.trivialCloser) partial
               ) partial,
-              /* c -> d */ cohide(pos) & CMon(pos.inExpr+1) & implyR(1) &
+              /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
                 (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)
             )
         }}))(pos)})

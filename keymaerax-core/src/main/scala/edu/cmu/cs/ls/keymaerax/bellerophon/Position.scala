@@ -45,9 +45,9 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
   /** Append child to obtain position of given subexpression. */
-  def +(appendChild: Int): PosInExpr = new PosInExpr(pos :+ appendChild) ensuring(r => this.isPrefixOf(r))
+  def ++(appendChild: Int): PosInExpr = new PosInExpr(pos :+ appendChild) ensuring(r => this.isPrefixOf(r))
   /** Append child to obtain position of given subexpression by concatenating `appendChild` to `this`. */
-  def +(appendChild : PosInExpr): PosInExpr = PosInExpr(this.pos ++ appendChild.pos) ensuring(r => this.isPrefixOf(r))
+  def ++(appendChild : PosInExpr): PosInExpr = PosInExpr(this.pos ++ appendChild.pos) ensuring(r => this.isPrefixOf(r))
 
   /** Head: The top-most position of this position */
   def head: Int = {require(pos!=Nil); pos.head}
@@ -56,7 +56,7 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   /** The parent of this position, i.e., one level up */
   def parent: PosInExpr = if (!pos.isEmpty) PosInExpr(pos.dropRight(1)) else throw new ProverException("ill-positioned: " + this + " has no parent")
   /** The sibling of this position (flip left to right and right to left) */
-  def sibling: PosInExpr = parent + (1-pos.last)
+  def sibling: PosInExpr = parent ++ (1-pos.last)
 
   /** Whether this position is a prefix of `p` */
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
@@ -103,7 +103,7 @@ sealed trait Position {
 
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
   //@todo this+0!=this is pretty confusing. 0,1 is worse than 1,2.
-  def +(child: PosInExpr): Position
+  def ++(child: PosInExpr): Position
 
   /** Advances the index by i on top-level positions. */
   def advanceIndex(i: Int): Position
@@ -201,7 +201,7 @@ trait AntePosition extends Position {
     require(index0+i >= 0, "Cannot advance to negative index")
     AntePosition.base0(index0+i, inExpr)
   }
-  def +(child : PosInExpr): AntePosition
+  def ++(child : PosInExpr): AntePosition
 }
 
 /** A position guaranteed to identify a succedent position
@@ -219,7 +219,7 @@ trait SuccPosition extends Position {
     require(index0+i >= 0, "Cannot advance to negative index")
     SuccPosition.base0(index0+i, inExpr)
   }
-  def +(child : PosInExpr): SuccPosition
+  def ++(child : PosInExpr): SuccPosition
 }
 
 /** A top-level anteedent position */
@@ -267,14 +267,14 @@ object SuccPosition {
 // Implementations
 
 private case class AntePositionImpl (top: AntePos, inExpr: PosInExpr) extends AntePosition {
-  def +(child : PosInExpr): AntePosition = new AntePositionImpl(top, inExpr+child)
+  def ++(child : PosInExpr): AntePosition = new AntePositionImpl(top, inExpr++child)
   def topLevel = AntePosition.apply(top)
   //@note not TopLevel if HereP
   def navigate(instead : PosInExpr): AntePosition = new AntePositionImpl(top, instead)
 }
 
 private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends SuccPosition {
-  def +(child : PosInExpr): SuccPosition = new SuccPositionImpl(top, inExpr+child)
+  def ++(child : PosInExpr): SuccPosition = new SuccPositionImpl(top, inExpr++child)
   def topLevel = SuccPosition.apply(top)
   //@note not TopLevel if HereP
   def navigate(instead : PosInExpr): SuccPosition = new SuccPositionImpl(top, instead)

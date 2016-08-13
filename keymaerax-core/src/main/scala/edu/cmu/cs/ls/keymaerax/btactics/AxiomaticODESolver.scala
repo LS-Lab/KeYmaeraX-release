@@ -409,8 +409,8 @@ object AxiomaticODESolver {
     else SuccPosition(pos.checkSucc.top, pos.inExpr.parent)
 
   def subPosition(pos: Position, sub: PosInExpr): Position =
-    if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr + sub)
-    else SuccPosition(pos.checkSucc.top, pos.inExpr + sub)
+    if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr ++ sub)
+    else SuccPosition(pos.checkSucc.top, pos.inExpr ++ sub)
   def subPosition(pos: Position, sub: List[Int]): Position = subPosition(pos, PosInExpr(sub))
 
   //endregion

@@ -137,7 +137,7 @@ object Context {
       fPos = fPos.dropRight(1)
     }
     (PosInExpr(fPos),PosInExpr(tPos))
-  } ensuring(r => r._1 + r._2 == pos, "Concatenating split positions retains original position"
+  } ensuring(r => r._1 ++ r._2 == pos, "Concatenating split positions retains original position"
     ) ensuring(r => at(f,r._1)._1.isFormulaContext && at(at(f,r._1)._2,r._2)._1.isTermContext, "Split into formula and term context")
 
   // at implementation

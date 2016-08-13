@@ -188,9 +188,9 @@ object DifferentialTactics {
               if (auto == 'full) close | QE else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
-                derive(pos + PosInExpr(1 :: Nil)) &
+                derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
-                (if (auto == 'full) Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent, pos) &
+                (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
                  else {
@@ -282,9 +282,9 @@ object DifferentialTactics {
             <(
               close | QE,
               //@note derive before DE to keep positions easier
-              derive(pos + PosInExpr(1 :: Nil)) &
+              derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
-                (Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent, pos) &
+                (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
                   ) partial
@@ -571,8 +571,8 @@ object DifferentialTactics {
           implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
             DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
             existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
-            useAt(auxEquiv, PosInExpr(0::Nil))(pos + PosInExpr(1::Nil)) &
-            existsR(pos + PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
+            useAt(auxEquiv, PosInExpr(0::Nil))(pos ++ PosInExpr(1::Nil)) &
+            existsR(pos ++ PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
           )
     })
 
