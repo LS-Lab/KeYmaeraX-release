@@ -410,10 +410,10 @@ object DerivedAxioms {
     * @todo will clash unlike the converse proof.
     */
   lazy val allEliminateAxiom = ??? /*derivedAxiom("all eliminate",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("(\\forall x_ p_(||)) -> p_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p_(||)) -> p_(||)".asFormula)),
     US(
       USubst(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil),
-      Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)))
+      Sequent(IndexedSeq(), IndexedSeq(allEliminateF)))
   )*/
 
   /**
@@ -1528,7 +1528,7 @@ object DerivedAxioms {
   )
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
-  //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
+  //    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
   //      (CutRight("\\exists x q(x) <-> !!(\\exists x (!!q(x)))".asFormula, SuccPos(0)), 0)
   //      // right branch
   //      (EquivifyRight(SuccPos(0)), 1)
@@ -1590,7 +1590,7 @@ object DerivedAxioms {
   //   */
   //  lazy val DvarF = "((x_)' = x_')".asFormula
   //  lazy val Dvar = derivedAxiom("'x derive var",
-  //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)))
+  //    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(DvarF)))
   //      (CutRight("\\forall x_ ((x_)' = x_')".asFormula, SuccPos(0)), 0)
   //      // right branch
   //      (UniformSubstitutionRule.UniformSubstitutionRuleForward(Axiom.axiom("all eliminate"),
@@ -1632,7 +1632,7 @@ object DerivedAxioms {
   )
   //@note elegant proof that clashes for some reason
   //  derivedAxiom("' linear right",
-  //  Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
+  //  Sequent(IndexedSeq(), IndexedSeq(DlinearRightF)),
   //  useAt("* commute")(1, 0::0::Nil) &
   //    useAt("* commute")(1, 1::Nil) &
   //    by(Dlinear)

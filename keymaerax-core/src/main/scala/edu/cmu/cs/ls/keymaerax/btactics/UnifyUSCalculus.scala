@@ -1427,7 +1427,7 @@ trait UnifyUSCalculus {
       // right branch
       (HideLeft(last), 0)
       ) (pr, 0)
-    /*(Provable.startProof(pr.conclusion.updated(pos, b).glue(Sequent(Nil, IndexedSeq(a), IndexedSeq())))
+    /*(Provable.startProof(pr.conclusion.updated(pos, b).glue(Sequent(IndexedSeq(a), IndexedSeq())))
       (Cut(Imply(a,b), pos), 0)
       // right branch
       (HideLeft(last), 1)

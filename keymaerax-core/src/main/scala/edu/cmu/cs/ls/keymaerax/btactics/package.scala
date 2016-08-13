@@ -52,7 +52,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *  import edu.cmu.cs.ls.keymaerax.core._
   *  // explicit proof certificate construction of |- !!p() <-> p()
   *  val proof = (Provable.startProof(
-  *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
+  *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
   *    (EquivRight(SuccPos(0)), 0)
   *    // right branch
   *      (NotRight(SuccPos(0)), 1)
@@ -75,7 +75,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * import TactixLibrary._
   * // Explicit proof tactic for |- !!p() <-> p()
   * val proof = TactixLibrary.proveBy(
-  *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
+  *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
   *    equivR(1) & <(
   *      (notL(-1) &
   *        notR(2) &
@@ -98,7 +98,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * import TactixLibrary._
   * // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
   * val proof = TactixLibrary.proveBy(
-  *    Sequent(Nil, IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
+  *    Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
   *    prop
   * )
   * }}}
@@ -144,7 +144,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * import DerivedAxioms._
   * // Proof by pointing of  |- &lt;v:=2*v+1;&gt;v!=0 <-> 2*v+1!=0
   * val proof = TactixLibrary.proveBy(
-  *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula)),
+  *   Sequent(IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula)),
   *   // use "<> diamond" axiom backwards at the indicated position on
   *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
   *   useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -164,7 +164,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * import TactixLibrary._
   * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
   * val proof = TactixLibrary.proveBy(
-  *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula)),
+  *   Sequent(IndexedSeq(), IndexedSeq("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula)),
   *   // use "<> diamond" axiom backwards at the indicated position on
   *   // |- __&lt;a;++b;&gt;p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
   *   useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -188,7 +188,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *  import TactixLibrary._
   *  // Proof by pointing with steps of  |- ⟨a++b⟩p(x) <-> (⟨a⟩p(x) | ⟨b⟩p(x))
   *  val proof = TactixLibrary.proveBy(
-  *    Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+  *    Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
   *    // use "<> diamond" axiom backwards at the indicated position on
   *    // |- __⟨a++b⟩p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
   *    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -293,7 +293,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * import TactixLibrary._
   * // proof by chase of |- [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1
   * val proof = TactixLibrary.proveBy(
-  *   Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
+  *   Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
   *   // chase the box in the succedent away
   *   chase(1,Nil) &
   *   // |- (x>0->2*(x+1)>=1)&(x=0->1>=1)

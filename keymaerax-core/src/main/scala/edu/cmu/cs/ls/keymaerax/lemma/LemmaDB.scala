@@ -22,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
  * val lemmaDB = LemmaDBFactory.lemmaDB
  * // prove a lemma
  * val proved = TactixLibrary.proveBy(
- *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+ *    Sequent(IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
  *    orR(1) & close
  *  )
  * // store a lemma

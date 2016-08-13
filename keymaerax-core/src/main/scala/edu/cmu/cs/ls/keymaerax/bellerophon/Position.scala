@@ -55,7 +55,7 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   def child: PosInExpr = PosInExpr(pos.tail)
   /** The parent of this position, i.e., one level up */
   def parent: PosInExpr = if (!pos.isEmpty) PosInExpr(pos.dropRight(1)) else throw new ProverException("ill-positioned: " + this + " has no parent")
-  /** The sibling of this position (flip left to right and right to left) */
+  /** The sibling of this position (flip last position from left to right and right to left) */
   def sibling: PosInExpr = parent ++ (1-pos.last)
 
   /** Whether this position is a prefix of `p` */
@@ -77,7 +77,7 @@ object PosInExpr {
   * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
   * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
   * @todo use AntePos and SuccPos directly instead of index etc.
-  * @todo Position should essentially become a nice name for a pair of a SeqPos and a PosInExpr.
+  * @todo Position should essentially become a nice type-preserving name for a pair of a SeqPos and a PosInExpr.
   * @see [[edu.cmu.cs.ls.keymaerax.core.SeqPos]]
   */
 sealed trait Position {
