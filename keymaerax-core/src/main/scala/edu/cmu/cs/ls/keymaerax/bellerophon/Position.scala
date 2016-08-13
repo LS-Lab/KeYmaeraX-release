@@ -102,7 +102,6 @@ sealed trait Position {
   //  def getIndex: Int = index
 
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
-  //@todo this+0!=this is pretty confusing. 0,1 is worse than 1,2.
   def ++(child: PosInExpr): Position
 
   /** Advances the index by i on top-level positions. */
