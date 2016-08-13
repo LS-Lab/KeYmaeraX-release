@@ -235,7 +235,9 @@ case class FuncOf(func: Function, child: Term) extends CompositeTerm with Applic
   def sort: Sort = func.sort
 }
 
-/** Arity 0 functional symbol `name:sort`, limited to the given state space. */
+/** Arity 0 functional symbol `name:sort`, limited to the given state space.
+  * The semantics of arity 0 functional symbol is given by the state, with the additional promise
+  * that taboo is not free so the value does not depend on taboo when space=Except(taboo). */
 case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol
 
 
@@ -385,7 +387,9 @@ case class PredicationalOf(func: Function, child: Formula)
   insist(!func.interpreted, "only uninterpreted predicationals are currently supported: " + this)
 }
 
-/** Arity 0 predicational symbol `name:bool`, limited to the given state space. */
+/** Arity 0 predicational symbol `name:bool`, limited to the given state space.
+  * The semantics of arity 0 predicational symbol is looked up by the state, with the additional promise
+  * that taboo is not free so the value does not depend on taboo when space=Except(taboo). */
 case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol
 
 
@@ -562,7 +566,10 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   extends Program {
   override def kind: Kind = ProgramKind
 }
-/** Uninterpreted differential program constant, limited to the given state space. */
+/** Uninterpreted differential program constant, limited to the given state space.
+  * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,
+  * with the additional promise that taboo is neither free nor bound, so the run does
+  * not depend on the value of taboo nor does the value of taboo change when space=Except(taboo). */
 sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg)
   extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
