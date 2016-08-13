@@ -110,7 +110,7 @@ object Lemma {
   * @example{{{
   * // prove a lemma
   * val proved = TactixLibrary.proveBy(
-  *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+  *    Sequent(IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
   *    orR(1) & close
   *  )
   * // store a lemma
