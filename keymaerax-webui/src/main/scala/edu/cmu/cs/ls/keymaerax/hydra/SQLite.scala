@@ -15,7 +15,8 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleExpr, BelleProvable, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -549,7 +550,7 @@ object SQLite {
         SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
           case BelleProvable(pr, _) => pr
         }
-      def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr).get
+      def loadTactic(id: Int): BelleExpr = BelleParser(getExecutable(id).belleExpr)
       trace.steps.foldLeft(initialProvable)({case (provable, currStep) =>
           run(provable, loadTactic(currStep.executableId))
         })
