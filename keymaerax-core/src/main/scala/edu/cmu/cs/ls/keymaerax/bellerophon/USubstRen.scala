@@ -120,10 +120,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
     * Whether this substitution matches to replace the given expression e,
     * because there is a substitution pair that matches e.
     */
-  private def matchHead(e: Expression): Boolean = e match {
-    case app: ApplicationOf => matchHeads.contains(app.func)
-    case _ => false
-  }
+  private def matchHead(e: ApplicationOf): Boolean = matchHeads.contains(e.func)
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable = rens.get(x) match {
@@ -342,7 +339,9 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
    * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
    */
   private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
-    require(c.count(pred) == 1, "unique element expected in " + c.mkString)
-    c.filter(pred).head
+    //require(c.count(pred) == 1, "unique element expected in " + c.mkString)
+    val matching = c.filter(pred)
+    require(matching.tail.isEmpty, "unique elemented expected in " + c.mkString)
+    matching.head
   }
 }
