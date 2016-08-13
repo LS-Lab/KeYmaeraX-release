@@ -147,7 +147,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *   Sequent(IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula)),
   *   // use "<> diamond" axiom backwards at the indicated position on
   *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
-  *   useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+  *   useExpandAt("<> diamond")(1, 0::Nil) &
   *   // use "[:=] assign" axiom forward at the indicated position on
   *   // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
   *   useAt("[:=] assign")(1, 0::0::Nil) &
@@ -167,16 +167,16 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *   Sequent(IndexedSeq(), IndexedSeq("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula)),
   *   // use "<> diamond" axiom backwards at the indicated position on
   *   // |- __&lt;a;++b;&gt;p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
-  *   useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+  *   useExpandAt("<> diamond")(1, 0::Nil) &
   *   // use "[++] choice" axiom forward at the indicated position on
   *   // |- !__[a;++b;]!p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
   *   useAt("[++] choice")(1, 0::0::Nil) &
   *   // use "<> diamond" axiom forward at the indicated position on
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  __&lt;a;&gt;p(x)__ | &lt;b;&gt;p(x)
-  *   useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
+  *   useExpandAt("<> diamond")(1, 1::0::Nil) &
   *   // use "<> diamond" axiom forward at the indicated position on
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __&lt;b;&gt;p(x)__
-  *   useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
+  *   useExpandAt("<> diamond")(1, 1::1::Nil) &
   *   // use propositional logic to show
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
   *   prop
@@ -191,7 +191,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *    Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
   *    // use "<> diamond" axiom backwards at the indicated position on
   *    // |- __⟨a++b⟩p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+  *    useExpandAt("<> diamond")(1, 0::Nil) &
   *    // |- !__[a;++b;]!p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step "[++] choice" axiom forward at the indicated position
   *    stepAt(1, 0::0::Nil) &
