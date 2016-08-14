@@ -128,6 +128,7 @@ object SetLattice {
     * @return set ++ set' where set' is the set containing the primes of the variables in set.
     */
   def extendToDifferentialSymbols(set : Set[NamedSymbol]) : Set[NamedSymbol] =
+    //@note assumes that only real variables occur
     set ++ set.filter(_.isInstanceOf[Variable]).map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
 }
 

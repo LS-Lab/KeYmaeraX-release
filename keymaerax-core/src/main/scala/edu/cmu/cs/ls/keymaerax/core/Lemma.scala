@@ -34,6 +34,7 @@ object Lemma {
     */
   def fromString(lemma: String): Lemma = {
     val internalLemma = fromStringInternal(lemma)
+    //@todo should verify checkSum of the above string here against the checksum of internalLemma.
 
     //Check that the resulting lemma has
     internalLemma.evidence.find(_.isInstanceOf[HashEvidence]) match {
@@ -175,11 +176,12 @@ final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name:
       sequentToString(fact.conclusion) + "\n" +
       fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
       "End.\n" +
+      //@todo should add checkSum of the above printed string here.
       evidence.mkString("\n\n") + "\n"
   }
 
   /** Produces a sequent block in Lemma file format */
-  private def sequentToString(s: Sequent) = {
+  private def sequentToString(s: Sequent): String = {
     //@note Regarding side-conditions:
     //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
     "Sequent.\n" +
