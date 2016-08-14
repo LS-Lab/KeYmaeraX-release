@@ -96,15 +96,10 @@ object SetLattice {
   def apply[A](s: immutable.Set[A]): SetLattice[A] = new FiniteSet(s)
   def apply[A](s: immutable.Seq[A]): SetLattice[A] = new FiniteSet(s.toSet)
   def bottom[A]: SetLattice[A] = new FiniteSet(Set.empty[A])
-  //def top[A](topSymbols: A*): SetLattice[A] = new CoFiniteSet(Set.empty, topSymbols.toSet)
-  /** An overapproximation of V\cup V' */
-  val topVarsDiffVars: SetLattice[Variable] = new CoFiniteSet(Set.empty, Set.empty)
-  //@note all DotTerms are the same, regardless of their projection and sort (see DotTerm)
-  //@todo when DifferentialSymbol are Variable, this should turn into topVarsDiffVars: SetLattice[Variable] = new CoFiniteSet(Set.empty, Set.empty)
-  //def topVarsDiffVars[A >: NamedSymbol](): SetLattice[A] = new CoFiniteSet(Set(DotTerm, DotFormula), Set.empty)
-  /** An overapproximation of all symbols in V\cup V', except x,x' */
+  /** The set of all variables including differential symbols. */
+  val allVars: SetLattice[Variable] = new CoFiniteSet(Set.empty, Set.empty)
+  /** The set of all variables including differential symbols, except x and x'. */
   def except(x: Variable): SetLattice[Variable] = new CoFiniteSet(Set(x, DifferentialSymbol(x)), Set.empty)
-  //def except[A >: NamedSymbol](x: Variable): SetLattice[A] = new CoFiniteSet(Set(x, DifferentialSymbol(x), DotTerm, DotFormula), Set.empty)
 
   /**
     * Symbols and differential symbols of set lattice sl.

@@ -77,6 +77,7 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
   */
 sealed trait Expression {
+  //@todo turn kind and sort into val?
   def kind : Kind
   def sort : Sort
   //override def toString : String = "(" + prettyString + ")@" + canonicalString
@@ -188,7 +189,7 @@ private[core] sealed trait RTerm extends Term {
   final def sort: Sort = Real
 }
 
-/** Variables have a name and index and sort and are either [[BaseVariable]] or [[DifferentialSymbol]]. */
+/** Variables have a name and index and sort. They are either [[BaseVariable]] or [[DifferentialSymbol]]. */
 sealed trait Variable extends NamedSymbol with AtomicTerm
 object Variable {
   /** Create a BaseVariable called 'name' with the given index and sort. */
@@ -226,10 +227,6 @@ sealed case class DotTerm(s: Sort) extends Expression with NamedSymbol with Atom
   def sort: Sort = s
   def name: String = "\\cdot"
   def index: Option[Int] = None
-
-  /** All dots are the same, regardless of their projection and sort */
-  override def equals(e: Any): Boolean = e match { case _: DotTerm => true case _ => false }
-  override def hashCode() = name.hashCode
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */

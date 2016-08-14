@@ -18,7 +18,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 
 import SetLattice.bottom
-import SetLattice.topVarsDiffVars
+import SetLattice.allVars
 
 
 /**
@@ -354,7 +354,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case Times(l, r)  => Times(usubst(l),  usubst(r))
       case Divide(l, r) => Divide(usubst(l), usubst(r))
       case Power(l, r)  => Power(usubst(l),  usubst(r))
-      case der@Differential(e) => requireAdmissible(topVarsDiffVars, e, term)
+      case der@Differential(e) => requireAdmissible(allVars, e, term)
         Differential(usubst(e))
       // unofficial
       case Pair(l, r) => Pair(usubst(l), usubst(r))
@@ -378,14 +378,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
-        requireAdmissible(topVarsDiffVars, fml, formula)
+        requireAdmissible(allVars, fml, formula)
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
         val PredicationalOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
         USubst(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
-        requireAdmissible(topVarsDiffVars, fml, formula)
+        requireAdmissible(allVars, fml, formula)
         PredicationalOf(q, usubst(fml))
       case DotFormula if  subsDefs.exists(_.what == DotFormula) =>
         subsDefs.find(_.what == DotFormula).get.repl.asInstanceOf[Formula]
@@ -411,7 +411,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => requireAdmissible(topVarsDiffVars, g, formula)
+      case der@DifferentialFormula(g) => requireAdmissible(allVars, g, formula)
         DifferentialFormula(usubst(g))
 
       // binding cases add bound variables to u

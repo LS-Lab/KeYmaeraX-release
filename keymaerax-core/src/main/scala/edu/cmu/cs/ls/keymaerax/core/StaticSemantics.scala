@@ -44,7 +44,7 @@ import scala.collection.immutable
   */
 object StaticSemantics {
 
-  import SetLattice.topVarsDiffVars
+  import SetLattice.allVars
   import SetLattice.bottom
 
   /**
@@ -177,9 +177,9 @@ object StaticSemantics {
     case Less(l, r)         => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
     case PredOf(p, arg)     => VCF(fv = freeVars(arg), bv = bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars, bv = topVarsDiffVars)
+    case PredicationalOf(p, arg) => VCF(fv = allVars, bv = allVars)
     //@note DotFormula is like a reserved zero-parameter Predicational. Its bound variables are debatable since it has no child.
-    case DotFormula         => VCF(fv = topVarsDiffVars, bv = topVarsDiffVars)
+    case DotFormula         => VCF(fv = allVars, bv = allVars)
     //@note UnitPredicational is a zero-parameter Predicational. Its bound variables are debatable since it has no child.
     case f:UnitPredicational=> VCF(fv = spaceVars(f.space), bv = spaceVars(f.space))
 
@@ -218,7 +218,7 @@ object StaticSemantics {
   private def progVars(program: Program): VCP = {
     program match {
       // base cases
-      case a: ProgramConst             => VCP(fv = topVarsDiffVars, bv = topVarsDiffVars, mbv = bottom)
+      case a: ProgramConst             => VCP(fv = allVars, bv = allVars, mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case Test(f) => VCP(fv = StaticSemantics(f).fv, bv = bottom, mbv = bottom)
@@ -412,7 +412,7 @@ object StaticSemantics {
   // helpers
   /** The variables and differential symbols that are in the given state space. */
   private def spaceVars(space: Space): SetLattice[Variable] = space match {
-    case AnyArg => SetLattice.topVarsDiffVars
+    case AnyArg => SetLattice.allVars
     case Except(taboo) => SetLattice.except(taboo)
   }
 
