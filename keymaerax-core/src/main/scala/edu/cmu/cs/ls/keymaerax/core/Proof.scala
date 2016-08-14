@@ -1196,9 +1196,9 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
       case _ => throw new InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
-    if (taboos.intersect(SetLattice[NamedSymbol](v)).isEmpty) immutable.List(s.updated(pos, phi))
+    if (taboos.intersect(SetLattice(v)).isEmpty) immutable.List(s.updated(pos, phi))
     else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
-        taboos.intersect(SetLattice[NamedSymbol](v)), v.toString, s.toString)
+        taboos.intersect(SetLattice(v)), v.toString, s.toString)
   }
 
 }
@@ -1263,7 +1263,6 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   private def dualFree(program: Program): Boolean = program match {
     case a: ProgramConst             => false /* @note false Unless USubst rejects Duals as substitutues for ProgramConst */
     case Assign(x, e)                => true
-    case DiffAssign(DifferentialSymbol(x), e) => true
     case AssignAny(x)                => true
     case Test(f)                     => true /* even if f contains duals, since they're different nested games) */
     case ODESystem(a, h)             => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */

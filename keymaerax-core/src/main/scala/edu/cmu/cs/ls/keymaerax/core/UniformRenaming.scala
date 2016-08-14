@@ -29,7 +29,8 @@ import scala.collection.immutable
   * @see [[BoundRenaming]]
   */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
-  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort: " + this)
+  insist(what.isInstanceOf[BaseVariable] && repl.isInstanceOf[BaseVariable], "Renaming currently only supports base variables: " + this)
 
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
   private[core] val TRANSPOSITION: Boolean = true
@@ -70,12 +71,14 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private def renameVar(x: Variable, context: Expression): Variable =
     if (x==what) repl
     else if (x==repl) if (TRANSPOSITION) what else throw new RenamingClashException("Replacement name " + repl.asString + " already occurs originally", this.toString, x.asString, context.prettyString)
-    else x
+    else x match {
+      case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y, context))
+      case _ => x
+    }
 
 
   private def rename(term: Term): Term = term match {
     case x: Variable                      => renameVar(x, term)
-    case DifferentialSymbol(x)            => DifferentialSymbol(renameVar(x, term))
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
     case Nothing | DotTerm                => term
@@ -91,7 +94,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case Differential(e) =>  Differential(rename(e))
     // unofficial
     case Pair(l, r)   => Pair(rename(l),   rename(r))
-    case _: UnitFunctional                => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
+    case _: UnitFunctional => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
   }
 
   private def rename(formula: Formula): Formula = formula match {
@@ -132,7 +135,6 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(program: Program): Program = program match {
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
-    case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))

@@ -98,11 +98,13 @@ object SetLattice {
   def bottom[A]: SetLattice[A] = new FiniteSet(Set.empty[A])
   //def top[A](topSymbols: A*): SetLattice[A] = new CoFiniteSet(Set.empty, topSymbols.toSet)
   /** An overapproximation of V\cup V' */
+  val topVarsDiffVars: SetLattice[Variable] = new CoFiniteSet(Set.empty, Set.empty)
   //@note all DotTerms are the same, regardless of their projection and sort (see DotTerm)
   //@todo when DifferentialSymbol are Variable, this should turn into topVarsDiffVars: SetLattice[Variable] = new CoFiniteSet(Set.empty, Set.empty)
-  def topVarsDiffVars[A >: NamedSymbol](): SetLattice[A] = new CoFiniteSet(Set(DotTerm, DotFormula), Set.empty)
+  //def topVarsDiffVars[A >: NamedSymbol](): SetLattice[A] = new CoFiniteSet(Set(DotTerm, DotFormula), Set.empty)
   /** An overapproximation of all symbols in V\cup V', except x,x' */
-  def except[A >: NamedSymbol](x: Variable): SetLattice[A] = new CoFiniteSet(Set(x, DifferentialSymbol(x), DotTerm, DotFormula), Set.empty)
+  def except(x: Variable): SetLattice[Variable] = new CoFiniteSet(Set(x, DifferentialSymbol(x)), Set.empty)
+  //def except[A >: NamedSymbol](x: Variable): SetLattice[A] = new CoFiniteSet(Set(x, DifferentialSymbol(x), DotTerm, DotFormula), Set.empty)
 
   /**
     * Symbols and differential symbols of set lattice sl.
@@ -111,13 +113,13 @@ object SetLattice {
     * @param sl A SetLattice of NamedSymbols.
     * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
     */
-  def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = sl match {
+  def extendToDifferentialSymbols(sl : SetLattice[Variable]) : SetLattice[Variable] = sl match {
     case FiniteSet(set) => FiniteSet(extendToDifferentialSymbols(set))
     case CoFiniteSet(excluded, symbols) if !excluded.exists(x=>x.isInstanceOf[DifferentialSymbol]) =>
       //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
       //@note then the lattice is already closed under ' so only literal symbols are augmented with '
       CoFiniteSet(excluded, extendToDifferentialSymbols(symbols))
-    case sl:CoFiniteSet[NamedSymbol] =>
+    case sl:CoFiniteSet[Variable] =>
       assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl); ???
   }
 
@@ -127,9 +129,9 @@ object SetLattice {
     * @param set A Set of NamedSymbols.
     * @return set ++ set' where set' is the set containing the primes of the variables in set.
     */
-  def extendToDifferentialSymbols(set : Set[NamedSymbol]) : Set[NamedSymbol] =
+  def extendToDifferentialSymbols(set : Set[Variable]) : Set[Variable] =
     //@note assumes that only real variables occur
-    set ++ set.filter(_.isInstanceOf[Variable]).map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
+    set ++ set.map(x => DifferentialSymbol(x))
 }
 
 /**

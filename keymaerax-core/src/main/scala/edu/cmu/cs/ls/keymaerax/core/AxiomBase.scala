@@ -187,12 +187,12 @@ private[core] object AxiomBase {
     /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
     assert(axs("DE differential effect") == Equiv(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
-      Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(DiffAssign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))), "DE differential effect")
+      Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(Assign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))), "DE differential effect")
     //@note in analogy to DE
     /* @note Completeness: reassociate needed in DifferentialProduct data structures */
     assert(axs("DE differential effect (system)") == Equiv(
       Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),fany),ode), qany), pany),
-      Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(DiffAssign(DifferentialSymbol(x), fany), pany))), "DE differential effect (system)")
+      Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(Assign(DifferentialSymbol(x), fany), pany))), "DE differential effect (system)")
     assert(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
       Equiv(Box(ODESystem(ode,qany),pany), Box(Test(qany),pany))), "DI differential invariance")
     assert(axs("DG differential ghost") == Equiv(

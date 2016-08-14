@@ -55,8 +55,8 @@ object StaticSemantics {
     * @param bv Bound names (maybe written)
     * @note bv are not used in the core.
     */
-  sealed case class VCF(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol]) {
+  sealed case class VCF(fv: SetLattice[Variable],
+                        bv: SetLattice[Variable]) {
     /** union of two variable categorizer structures for formulas */
     def ++(other: VCF): VCF = VCF(fv ++ other.fv, bv ++ other.bv)
   }
@@ -69,14 +69,14 @@ object StaticSemantics {
     * @param bv Bound names (maybe written on some paths)
     * @param mbv Must-bound names (definitely written on all paths).
     */
-  sealed case class VCP(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol],
-                        mbv: SetLattice[NamedSymbol])
+  sealed case class VCP(fv: SetLattice[Variable],
+                        bv: SetLattice[Variable],
+                        mbv: SetLattice[Variable])
 
   /**
     * Compute the static semantics of term t, i.e., the set of its free variables.
     */
-  def apply(t: Term): SetLattice[NamedSymbol] = freeVars(t)
+  def apply(t: Term): SetLattice[Variable] = freeVars(t)
 
   /**
     * Compute the static semantics of formula f, i.e., its set of free and bound variables.
@@ -92,10 +92,10 @@ object StaticSemantics {
   /**
     * The set FV(t) of free variables of term t.
     */
-  def freeVars(term: Term): SetLattice[NamedSymbol] = term match {
+  def freeVars(term: Term): SetLattice[Variable] = term match {
     // base cases
     case x: Variable => SetLattice(x)
-    case xp: DifferentialSymbol => SetLattice(xp)
+//    case xp: DifferentialSymbol => SetLattice(xp)
     case _: Number => bottom
     // Type hierarchy makes the assert superfluous, which is intentional to protect against change.
     case d: DotTerm => assert(!d.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
@@ -130,17 +130,17 @@ object StaticSemantics {
   /**
     * The set FV(f) of free variables of formula f.
     */
-  def freeVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).fv
+  def freeVars(f: Formula): SetLattice[Variable] = StaticSemantics(f).fv
 
   /**
     * The set FV(a) of free variables of program a.
     */
-  def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
+  def freeVars(a: Program): SetLattice[Variable] = StaticSemantics(a).fv
 
   /**
     * The set FV(e) of free variables of expression e.
     */
-  def freeVars(e: Expression): SetLattice[NamedSymbol] = e match {
+  def freeVars(e: Expression): SetLattice[Variable] = e match {
     case t: Term => freeVars(t)
     case f: Formula => freeVars(f)
     case a: Program => freeVars(a)
@@ -149,15 +149,15 @@ object StaticSemantics {
   /**
     * The set BV(f) of bound variables of formula f.
     */
-  def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
+  def boundVars(f: Formula): SetLattice[Variable] = StaticSemantics(f).bv
 
   /**
     * The set BV(a) of bound variables of program a.
     */
-  def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
+  def boundVars(a: Program): SetLattice[Variable] = StaticSemantics(a).bv
 
   /** The set var(e) of variables of expression e, whether free or bound. */
-  def vars(e: Expression): SetLattice[NamedSymbol] = e match {
+  def vars(e: Expression): SetLattice[Variable] = e match {
     case t: Term => freeVars(t)
     case f: Formula => freeVars(f) ++ boundVars(f)
     case a: Program => freeVars(a) ++ boundVars(a)
@@ -177,9 +177,9 @@ object StaticSemantics {
     case Less(l, r)         => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
     case PredOf(p, arg)     => VCF(fv = freeVars(arg), bv = bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
+    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars, bv = topVarsDiffVars)
     //@note DotFormula is like a reserved zero-parameter Predicational. Its bound variables are debatable since it has no child.
-    case DotFormula         => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
+    case DotFormula         => VCF(fv = topVarsDiffVars, bv = topVarsDiffVars)
     //@note UnitPredicational is a zero-parameter Predicational. Its bound variables are debatable since it has no child.
     case f:UnitPredicational=> VCF(fv = spaceVars(f.space), bv = spaceVars(f.space))
 
@@ -218,15 +218,12 @@ object StaticSemantics {
   private def progVars(program: Program): VCP = {
     program match {
       // base cases
-      case a: ProgramConst             => VCP(fv = topVarsDiffVars(), bv = topVarsDiffVars(), mbv = bottom)
+      case a: ProgramConst             => VCP(fv = topVarsDiffVars, bv = topVarsDiffVars, mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
-      case DiffAssign(xp, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
       case Test(f) => VCP(fv = StaticSemantics(f).fv, bv = bottom, mbv = bottom)
       case AtomicODE(xp@DifferentialSymbol(x), e) =>
-        VCP(fv = SetLattice[NamedSymbol](x) ++ freeVars(e),
-          bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp),
-          mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp))
+        VCP(fv = SetLattice(x) ++ freeVars(e), bv = SetLattice(Set(x,xp)), mbv = SetLattice(Set(x,xp)))
       // combinator cases
       case Choice(a, b) => val va = progVars(a); val vb = progVars(b)
         VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
@@ -272,7 +269,7 @@ object StaticSemantics {
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
     // base cases
     case _: Variable => Set.empty
-    case _: DifferentialSymbol => Set.empty
+//    case _: DifferentialSymbol => Set.empty
     case _: Number => Set.empty
     case FuncOf(f, arg) => Set(f) ++ signature(arg)
     case d: DotTerm => Set(d)
@@ -340,7 +337,6 @@ object StaticSemantics {
     case ap: ProgramConst => Set(ap)
     case ap: DifferentialProgramConst => Set(ap)
     case Assign(x, e)     => signature(e)
-    case DiffAssign(xp, e) => signature(e)
     case AssignAny(x)     => Set.empty
     case Test(f)          => signature(f)
     case AtomicODE(xp, e) => signature(e)
@@ -391,14 +387,14 @@ object StaticSemantics {
   /**
     * The set FV(a) of free variables of a sequent.
     */
-  def freeVars(s: Sequent): SetLattice[NamedSymbol] =
-    (s.ante ++ s.succ).foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
+  def freeVars(s: Sequent): SetLattice[Variable] =
+    (s.ante ++ s.succ).foldLeft(bottom[Variable])((a,b)=>a ++ freeVars(b))
 
   /**
     * The set BV(a) of bound variables of a sequent.
     */
-  def boundVars(s: Sequent): SetLattice[NamedSymbol] =
-    (s.ante ++ s.succ).foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
+  def boundVars(s: Sequent): SetLattice[Variable] =
+    (s.ante ++ s.succ).foldLeft(bottom[Variable])((a,b)=>a ++ boundVars(b))
 
   /**
     * The signature of a sequent.
@@ -415,8 +411,8 @@ object StaticSemantics {
 
   // helpers
   /** The variables and differential symbols that are in the given state space. */
-  private def spaceVars(space: Space): SetLattice[NamedSymbol] = space match {
-    case AnyArg => SetLattice.topVarsDiffVars()
+  private def spaceVars(space: Space): SetLattice[Variable] = space match {
+    case AnyArg => SetLattice.topVarsDiffVars
     case Except(taboo) => SetLattice.except(taboo)
   }
 

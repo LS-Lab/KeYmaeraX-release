@@ -92,12 +92,15 @@ sealed trait Composite extends Expression
 
 /** Unary composite expressions that are composed of one subexpression */
 sealed trait UnaryComposite extends Composite {
+  /** The child of this unary composite expression */
   def child: Expression
 }
 
 /** Binary composite expressions that are composed of two subexpressions */
 sealed trait BinaryComposite extends Composite {
+  /** The left child of this binary composite expression */
   def left: Expression
+  /** The right child of this binary composite expression */
   def right: Expression
 }
 
@@ -105,7 +108,9 @@ sealed trait BinaryComposite extends Composite {
 sealed trait ApplicationOf extends Composite {
   insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
   insist(sort == func.sort, "sort of application is the sort of the function")
+  /** The function/predicate/predicational that this application applies. */
   def func : Function
+  /** The child argument that this function/predicate/predicational application is applied to. */
   def child : Expression
 }
 
@@ -183,13 +188,18 @@ private[core] sealed trait RTerm extends Term {
   final def sort: Sort = Real
 }
 
-/** Variable called name with an index of a fixed sort */
-sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort = Real)
-  extends NamedSymbol with AtomicTerm
+/** Variables have a name and index and sort and are either [[BaseVariable]] or [[DifferentialSymbol]]. */
+sealed trait Variable extends NamedSymbol with AtomicTerm
+object Variable {
+  /** Create a BaseVariable called 'name' with the given index and sort. */
+  def apply(name: String, index: Option[Int]=None, sort: Sort=Real): BaseVariable = new BaseVariable(name,index,sort)
+}
+
+/** Elementary variable called `name` with an index of a fixed sort */
+case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) extends Variable
 
 /** Differential symbol x' for variable x */
-sealed case class DifferentialSymbol(x: Variable)
-  extends NamedSymbol with AtomicTerm with RTerm {
+case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   insist(x.sort == Real, "differential symbols expect real sort")
   def name: String = x.name
   def index: Option[Int] = x.index
@@ -502,10 +512,6 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
 case class Assign(x: Variable, e: Term) extends AtomicProgram {
   insist(e.sort == x.sort, "assignment of compatible sort " + this)
 }
-/** x':=e differential assignment */
-case class DiffAssign(xp: DifferentialSymbol, e: Term) extends AtomicProgram {
-  insist(e.sort == Real, "differential assignment of real sort " + this)
-}
 /** x:=* nondeterministic assignment */
 case class AssignAny(x: Variable) extends AtomicProgram
 /** ?cond test a formula as a condition on the current state */
@@ -581,7 +587,7 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
   /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols,
      which is required for soundness of axiom "DE differential effect (system)" */
   //@note avoid toString call, which could cause an infinite loop coming from contracts checking in pretty printer. But should probably be taken care of.
-  insist(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side: " + xp + "=" + e)
+  insist(xp.x.isInstanceOf[BaseVariable] && !StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side: " + xp + "=" + e)
 }
 
 /**
