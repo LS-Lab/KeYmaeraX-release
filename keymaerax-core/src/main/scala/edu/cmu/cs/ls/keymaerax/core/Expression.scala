@@ -106,8 +106,10 @@ sealed trait BinaryComposite extends Composite {
 
 /** Function/predicate/predicational application */
 sealed trait ApplicationOf extends Composite {
-  insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
-  insist(sort == func.sort, "sort of application is the sort of the function")
+  def applicable = {
+    insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
+    insist(sort == func.sort, "sort of application is the sort of the function")
+  }
   /** The function/predicate/predicational that this application applies. */
   val func : Function
   /** The child argument that this function/predicate/predicational application is applied to. */
@@ -131,16 +133,19 @@ sealed trait SpaceDependent extends StateDependent {
   * @note User-level symbols should not use underscores, which are reserved for the core.
   */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
-  insist(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
-    "non-empty names without underscores (except at end for internal names): " + name)
-  //@note the above requires conditions imply that !name.endsWith("__")
-  insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
-//  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
-//    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
-  //@note \\ part of the names for Nothing and Anything objects
-  require((name.charAt(0).isLetter || name.charAt(0)=='_' || name.charAt(0)=='\\') && name.forall(c=> c.isLetterOrDigit || c=='_' || c=='\\' || c=='$'), "alphabetical name: " + name)
-  require(index.getOrElse(0)>=0, "nonnegative index if any " + this)
+  def applicable: Unit = {
+    insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"),
+      "non-empty names without underscores (except at end for internal names): " + name)
+    //@note the above requires conditions imply that !name.endsWith("__")
+    insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
+    //  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
+    //    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
+    //@note \\ part of the names for Nothing and Anything objects
+    require((name.charAt(0).isLetter || name.charAt(0) == '_' || name.charAt(0) == '\\') && name.forall(c => c.isLetterOrDigit || c == '_' || c == '\\' || c == '$'), "alphabetical name: " + name)
+    require(index.getOrElse(0) >= 0, "nonnegative index if any " + this)
+  }
 
+  //@note initialization order dictates def everywhere or either lazy val or early initializer in subclasses. So that the basic contracts work on initialized data in all subclasses
   val name: String
   val index: Option[Int]
 
@@ -196,15 +201,18 @@ object Variable {
 }
 
 /** Elementary variable called `name` with an index of a fixed sort */
-case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) extends Variable
+case class BaseVariable(final val name: String, final val index: Option[Int]=None, final val sort: Sort=Real) extends Variable {
+  applicable
+}
 
 /** Differential symbol x' for variable x */
 case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   insist(x.sort == Real, "differential symbols expect real sort")
-  val name: String = x.name
-  val index: Option[Int] = x.index
+  final val name: String = x.name
+  final val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
   override def toString: String = asString //+ "@" + getClass.getSimpleName
+  applicable
 }
 
 /** Number literal */
@@ -215,30 +223,32 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
   */
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
   extends Expression with NamedSymbol {
-  val kind: Kind = FunctionKind
+  final val kind: Kind = FunctionKind
   /** Full string with names and full types */
   override def fullString: String = asString + ":" + domain + "->" + sort
+  applicable
 }
 
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
 object DotTerm extends DotTerm(Real)
 sealed case class DotTerm(s: Sort) extends Expression with NamedSymbol with AtomicTerm {
-  val sort: Sort = s
-  val name: String = "\\cdot"
-  val index: Option[Int] = None
+  final val sort: Sort = s
+  final val name: String = "\\cdot"
+  final val index: Option[Int] = None
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */
 object Nothing extends NamedSymbol with AtomicTerm {
-  val sort: Sort = Unit
-  val name: String = "\\nothing"
-  val index: Option[Int] = None
+  final val sort: Sort = Unit
+  final val name: String = "\\nothing"
+  final val index: Option[Int] = None
 }
 
 /** Function symbol applied to argument child func(child) */
 case class FuncOf(func: Function, child: Term) extends CompositeTerm with ApplicationOf {
   /** The sort of an ApplicationOf is the sort of func */
-  val sort: Sort = func.sort
+  final val sort: Sort = func.sort
+  applicable
 }
 
 /** Arity 0 functional symbol `name:sort`, limited to the given state space.
@@ -308,7 +318,7 @@ case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply =
 /** Pairs (left,right) for binary Function and FuncOf and PredOf */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   def reapply = copy
-  val sort: Sort = Tuple(left.sort, right.sort)
+  final val sort: Sort = Tuple(left.sort, right.sort)
 }
 
 /*********************************************************************************
@@ -374,14 +384,15 @@ case class Less(left: Term, right: Term) extends RComparisonFormula { def reappl
 
 /** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula with StateDependent {
-  val name: String = "\\_"
-  val index: Option[Int] = None
+  final val name: String = "\\_"
+  final val index: Option[Int] = None
 }
 
 /** Predicate symbol applied to argument child func(child) */
 case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
+  applicable
 }
 
 /** Predicational or quantifier symbol applied to argument formula child. */
@@ -391,6 +402,7 @@ case class PredicationalOf(func: Function, child: Formula)
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
   insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
   insist(!func.interpreted, "only uninterpreted predicationals are currently supported: " + this)
+  applicable
 }
 
 /** Arity 0 predicational symbol `name:bool`, limited to the given state space.
@@ -501,7 +513,8 @@ sealed trait AtomicProgram extends Program with Atomic
 
 /** Uninterpreted program constant */
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
-  val index: Option[Int] = None
+  final val index: Option[Int] = None
+  applicable
 }
 
 /** x:=e assignment */
@@ -558,7 +571,7 @@ case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = co
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
   */
 sealed trait DifferentialProgram extends Program {
-  override val kind: Kind = DifferentialProgramKind
+  override final val kind: Kind = DifferentialProgramKind
 }
 /** Atomic differential programs */
 sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
@@ -566,7 +579,7 @@ sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialPr
 //@note could say that ODESystem is no differential program since not to be nested within DifferentialProduct.
 case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   extends Program {
-  override val kind: Kind = ProgramKind
+  override final val kind: Kind = ProgramKind
 }
 /** Uninterpreted differential program constant, limited to the given state space.
   * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,
@@ -575,6 +588,7 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
 sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg)
   extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
+  applicable
 }
 
 /** x'=e atomic differential equation */
@@ -593,7 +607,7 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
   * @note This is a case class except for an override of the apply function.
   * @note Private constructor so only [[DifferentialProduct.apply]] can ever create this, which will re-associate et al.
   */
-final class DifferentialProduct private(val left: DifferentialProgram, val right: DifferentialProgram)
+final class DifferentialProduct private(final val left: DifferentialProgram, final val right: DifferentialProgram)
   extends DifferentialProgram with BinaryComposite {
 
   override def equals(e: Any): Boolean = e match {
