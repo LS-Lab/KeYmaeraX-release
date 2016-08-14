@@ -176,7 +176,7 @@ object EqualityTactics {
           case Some(vv) => vv
           case None => t match {
             case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
-            case Variable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+            case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
             case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
           }
         }

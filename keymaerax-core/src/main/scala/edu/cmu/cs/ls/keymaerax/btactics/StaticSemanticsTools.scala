@@ -21,13 +21,13 @@ object StaticSemanticsTools {
    * The set of variables that the top-level operator of this formula is binding itself,
    * so not those variables that are only bound because of operators in subformulas.
    */
-  def bindingVars(formula: Formula): SetLattice[NamedSymbol] = formula match {
+  def bindingVars(formula: Formula): SetLattice[Variable] = formula match {
     // DotFormula is like a reserved Predicational
     case DotFormula => boundVars(DotFormula)
     case PredicationalOf(p, arg) => boundVars(formula)
 
     // quantifier binding cases omit bound vars from fv and add bound variables to bf
-    case f: Quantified => SetLattice[NamedSymbol](f.vars) ensuring (r=> r==boundVars(Forall(f.vars,True)) && r==boundVars(Exists(f.vars,True)))
+    case f: Quantified => SetLattice(f.vars) ensuring (r=> r==boundVars(Forall(f.vars,True)) && r==boundVars(Exists(f.vars,True)))
 
     // modality bounding cases omit must-bound vars from fv and add (may-)bound vars to bv
     case f: Modal => boundVars(f.program) ensuring (r=> r==boundVars(Box(f.program,True)) && r==boundVars(Diamond(f.program,True)))
@@ -46,7 +46,7 @@ object StaticSemanticsTools {
    * The set of variables that the top-level operator of this program is binding itself,
    * so not those variables that are only bound because of operators in subprograms.
    */
-  def bindingVars(program: Program): SetLattice[NamedSymbol] = program match {
+  def bindingVars(program: Program): SetLattice[Variable] = program match {
     //@note It's the pieces of ODESystems that bind but the scope is the whole ODESystem, which is somewhat like an AtomicProgram
     case a: ODESystem     => boundVars(a)
     // base cases
@@ -62,7 +62,7 @@ object StaticSemanticsTools {
    * If an occurrence of a variable at formula(pos) is not boundAt(formula,pos) then it is a free occurrence.
    * @see [[Context.at()]]
    */
-  def boundAt(formula: Formula, pos: PosInExpr): SetLattice[NamedSymbol] = if (pos==HereP) bottom else formula match {
+  def boundAt(formula: Formula, pos: PosInExpr): SetLattice[Variable] = if (pos==HereP) bottom else formula match {
     case e:Quantified             if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
     case e:Modal                  if pos.head==0 => boundAt(e.program, pos.child)
     case e:Modal                  if pos.head==1 => bindingVars(e) ++ boundAt(e.child, pos.child)
@@ -82,7 +82,7 @@ object StaticSemanticsTools {
    * If an occurrence of a variable at program(pos) is not boundAt(program,pos) then it is a free occurrence.
    * @see [[Context.at()]]
    */
-  def boundAt(program: Program, pos: PosInExpr): SetLattice[NamedSymbol] = if (pos==HereP) bottom else program match {
+  def boundAt(program: Program, pos: PosInExpr): SetLattice[Variable] = if (pos==HereP) bottom else program match {
     //@note differential programs have global scope within the whole DifferentialProgram
     case dp:DifferentialProgram                  => bindingVars(dp)
     case e@ODESystem(ode, h)      if pos.head<=1 => bindingVars(e)
@@ -92,8 +92,6 @@ object StaticSemanticsTools {
     case e:BinaryCompositeProgram if pos.head==1 => bindingVars(e) ++ boundAt(e.right, pos.child)
     case e@Assign(x,t)            if pos.head==0 => bindingVars(e)
     case e@Assign(x,t)            if pos.head==1 => bottom
-    case e@DiffAssign(xp,t)       if pos.head==0 => bindingVars(e)
-    case e@DiffAssign(xp,t)       if pos.head==1 => bottom
     case Test(f)                  if pos.head==0 => bottom
     //case e:DifferentialProduct    if pos.head==0 => boundAt(e.left,  pos.child)
     //case e:DifferentialProduct    if pos.head==1 => boundAt(e.right,  pos.child)

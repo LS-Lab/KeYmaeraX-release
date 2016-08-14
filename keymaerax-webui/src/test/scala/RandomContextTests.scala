@@ -31,7 +31,7 @@ class RandomContextTests extends FlatSpec with Matchers {
     if (pos != PosInExpr.HereP && pos.pos.last==0 && (origin.sub(pos.parent) match {
       // exempt those positions where DotTerm makes no sense since restricted to variables
       case Some(Assign(_,_)) => true
-      case Some(DiffAssign(_,_)) => true
+      //case Some(DiffAssign(_,_)) => true
       case Some(AssignAny(_)) => true
       case Some(AtomicODE(_,_)) => true
       case None => true

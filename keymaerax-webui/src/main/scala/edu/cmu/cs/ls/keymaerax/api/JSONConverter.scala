@@ -39,7 +39,7 @@ object JSONConverter {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
         e match {
           case Number(_) => /* Nothing to do here */
-          case Variable(_, _, _) => /* Nothing to do here */
+          case BaseVariable(_, _, _) => /* Nothing to do here */
           case Nothing => /* Nothing to do here */
           case _ => jsonStack.push(List())
         }
@@ -86,7 +86,7 @@ object JSONConverter {
         val cf = ("id" -> convertPos(formulaId, p)) :: Nil
         val o = e match {
           case Number(i) => JsObject(("name" -> JsString(i.toString())) +: cf)
-          case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
+          case x@BaseVariable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[BaseVariable])) +: cf)
           case Nothing => JsObject(("name" -> JsString("Nothing")) +: cf)
           case FuncOf(a, b) => JsObject(("name" -> JsString("apply")) :: ("fnName" -> convertNamedSymbol(a)) :: ("sort" -> JsString(a.sort.toString)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Differential(a) => JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
@@ -110,7 +110,7 @@ object JSONConverter {
           case x@DifferentialProgramConst(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[DifferentialProgramConst])) +: cf)
           case Assign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case AssignAny(_) => JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case DiffAssign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          //case DiffAssign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Compose(_, _) => JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Choice(_, _) => JsObject(("name" -> JsString("Choice")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Test(_) => JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)

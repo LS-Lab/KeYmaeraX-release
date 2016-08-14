@@ -57,10 +57,10 @@ object ExpressionTraversal {
    */
   object TraverseToPosition {
     def apply(t: PosInExpr, cont: ExpressionTraversalFunction): ExpressionTraversalFunction = new TraverseToPosition(t, cont, Set.empty)
-    def apply(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]): ExpressionTraversalFunction = new TraverseToPosition(t, cont, blacklist)
+    def apply(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[Variable]): ExpressionTraversalFunction = new TraverseToPosition(t, cont, blacklist)
   }
 
-  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]) extends ExpressionTraversalFunction {
+  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[Variable]) extends ExpressionTraversalFunction {
     override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
       if(p == t) traverse(p, cont, e) match {
           case Some(x: Formula) => Right(x)
@@ -244,7 +244,6 @@ object ExpressionTraversal {
         case DifferentialProgramConst(_,_) => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case AssignAny(a) => matchOne(p, AssignAny.apply, f, a)
-        case DiffAssign(a, b) => matchTwo(p, DiffAssign.apply, f, a, b)
         case Test(a) => matchOne(p, Test.apply, f, a)
         case Compose(a, b) => matchTwo(p, Compose.apply, f, a, b)
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)

@@ -198,8 +198,6 @@ object Context {
   private def context(program: Program, pos: PosInExpr): (Program, Expression) = if (pos==HereP) (DotProgram, program) else {program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => (noContext, x)
     case Assign(x,t)       if pos.head==1 => val sp = context(t, pos.child); (Assign(x,sp._1), sp._2)
-    case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => (noContext, xp)
-    case DiffAssign(xp,t)  if pos.head==1 => val sp = context(t, pos.child); (DiffAssign(xp,sp._1), sp._2)
     case AssignAny(x)      if pos==PosInExpr(0::Nil) => (noContext, x)
     case Test(f)           if pos.head==0 => val sp = context(f, pos.child); (Test(sp._1), sp._2)
 
@@ -262,8 +260,6 @@ object Context {
   private def part(program: Program, pos: PosInExpr): Expression = if (pos==HereP) program else {program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => x
     case Assign(x,t)       if pos.head==1 => part(t, pos.child)
-    case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => xp
-    case DiffAssign(xp,t)  if pos.head==1 => part(t, pos.child)
     case AssignAny(x)      if pos==PosInExpr(0::Nil) => x
     case Test(f)           if pos.head==0 => part(f, pos.child)
 
@@ -352,8 +348,6 @@ object Context {
   else program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => Assign(repl.asInstanceOf[Variable], t)
     case Assign(x,t)       if pos.head==1 => Assign(x, replaceAt(t, pos.child, repl))
-    case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => DiffAssign(repl.asInstanceOf[DifferentialSymbol], t)
-    case DiffAssign(xp,t)  if pos.head==1 => DiffAssign(xp, replaceAt(t, pos.child, repl))
     case AssignAny(x)      if pos==PosInExpr(0::Nil) => AssignAny(repl.asInstanceOf[Variable])
     case Test(f)           if pos.head==0 => Test(replaceAt(f, pos.child, repl))
 
@@ -449,8 +443,6 @@ object Context {
   private def split(program: Program, pos: PosInExpr): (Program, Expression) = if (pos==HereP) (DotProgram, program) else {program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => (noContext, x)
     case Assign(x,t)       if pos.head==1 => val sp = split(t, pos.child); (Assign(x,sp._1), sp._2)
-    case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => (noContext, xp)
-    case DiffAssign(xp,t)  if pos.head==1 => val sp = split(t, pos.child); (DiffAssign(xp,sp._1), sp._2)
     case AssignAny(x)      if pos==PosInExpr(0::Nil) => (noContext, x)
     case Test(f)           if pos.head==0 => val sp = split(f, pos.child); (Test(sp._1), sp._2)
 

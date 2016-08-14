@@ -197,7 +197,6 @@ object AxiomIndex {
         //@todo "[:=] assign equality" does not automatically do the fresh renaming of "assignbTactic", which is not available forward, though.
         //case _: Assign => "assignbTactic" :: Nil
         case _: AssignAny => "[:*] assign nondet" :: Nil
-        case _: DiffAssign => "[':=] differential assign" :: Nil
         case _: Test => "[?] test" :: Nil
         case _: Compose => "[;] compose" :: Nil
         case _: Choice => "[++] choice" :: Nil

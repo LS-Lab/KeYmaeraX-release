@@ -94,7 +94,13 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   // implementation
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
-  private def renameVar(x: Variable, context: Expression): Variable = renaming.getOrElse(x, x)
+  private def renameVar(x: Variable, context: Expression): Variable = renaming.get(x) match {
+    case Some(repl) => repl
+    case None => x match {
+      case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y, context))
+      case _ => x
+    }
+  }
 
 
   private def rename(term: Term): Term = term match {
@@ -156,7 +162,6 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   private def rename(program: Program): Program = program match {
     case a: ProgramConst             => if (semanticRenaming) program else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
-    case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))

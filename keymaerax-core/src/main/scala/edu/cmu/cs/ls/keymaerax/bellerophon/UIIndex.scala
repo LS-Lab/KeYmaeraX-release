@@ -107,9 +107,9 @@ object UIIndex {
         }
         val rules = "abstractionb" :: "generalizeb" :: maybeSplit
         a match {
+          case Assign(DifferentialSymbol(_),_) => "[:=] assign" :: rules
           case _: Assign => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
-          case _: DiffAssign => "[':=] differential assign" :: rules
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules

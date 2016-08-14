@@ -49,7 +49,7 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
       e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
     else if (e.symbolQ() && MathematicaNameConversion.toKeYmaera(e).name.startsWith(CONST_FN_PREFIX))
       MathematicaNameConversion.toKeYmaera(e) match {
-        case Variable(name, index, sort) => FuncOf(Function(name.substring(CONST_FN_PREFIX.length), index, Unit, sort), Nothing)
+        case BaseVariable(name, index, sort) => FuncOf(Function(name.substring(CONST_FN_PREFIX.length), index, Unit, sort), Nothing)
       }
     else super.convert(e)
   }
@@ -111,7 +111,7 @@ object CEXM2KConverter extends UncheckedM2KConverter {
 
   override protected def convertAtomicTerm(e: MExpr): KExpr = {
     MathematicaNameConversion.toKeYmaera(e) match {
-      case Variable(name, index, sort) if name.startsWith(CEXK2MConverter.CONST_FN_PREFIX) =>
+      case BaseVariable(name, index, sort) if name.startsWith(CEXK2MConverter.CONST_FN_PREFIX) =>
         FuncOf(Function(name.replace(CEXK2MConverter.CONST_FN_PREFIX, ""), index, Unit, sort), Nothing)
       case _ => super.convertAtomicTerm(e)
     }
@@ -231,7 +231,7 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
   private def functionalizeVars(t: Term, arg: Term, vars: Variable*) = ExpressionTraversal.traverse(
     new ExpressionTraversalFunction {
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case v@Variable(name, idx, sort) if vars.isEmpty || vars.contains(v) =>
+        case v@BaseVariable(name, idx, sort) if vars.isEmpty || vars.contains(v) =>
           Right(FuncOf(Function(name, idx, arg.sort, sort), arg))
         case _ => Left(None)
       }

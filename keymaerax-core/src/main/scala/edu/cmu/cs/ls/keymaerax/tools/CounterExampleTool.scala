@@ -7,7 +7,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.{Term, NamedSymbol, Formula}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, NamedSymbol, Term}
 
 /**
  * Quantifier elimination tool.

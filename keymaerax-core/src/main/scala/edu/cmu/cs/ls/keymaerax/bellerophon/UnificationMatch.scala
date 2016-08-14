@@ -267,8 +267,9 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   protected def unify(e1: Term, e2: Term): List[SubstRepl] = e1 match {
-    case x: Variable                      => unifyVar(x,e2)
+      //@note prefer to unify Variables that are DifferentialSymbols by unifying their base variables.
     case xp: DifferentialSymbol           => unifyVar(xp,e2)
+    case x: Variable                      => unifyVar(x,e2)
     case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
     case f: UnitFunctional                => unifier(e1, e2)
     case FuncOf(f:Function, Nothing)      => unifier(e1, e2)
@@ -348,7 +349,6 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
     case a: ProgramConst             => unifier(e1, e2)
     case Assign(x, t)                => e2 match {case Assign(x2,t2) => unifies(x,t, x2,t2) case _ => ununifiable(e1,e2)}
-    case DiffAssign(xp, t)           => e2 match {case DiffAssign(xp2,t2) => unifies(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
     case AssignAny(x)                => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                     => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}
     case ODESystem(a, h)             => e2 match {case ODESystem(a2,h2) => unifies(a,h, a2,h2) case _ => ununifiable(e1,e2)}

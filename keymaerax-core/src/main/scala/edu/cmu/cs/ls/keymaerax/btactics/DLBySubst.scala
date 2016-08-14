@@ -94,8 +94,10 @@ object DLBySubst {
             val qPhi =
               if (vars.isEmpty) phi
               else
+              //@todo code quality needs improved
               //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
-                vars.filter(v => v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet].
+                vars.filter(v => v.isInstanceOf[BaseVariable]).map(v => v.asInstanceOf[NamedSymbol]).
+                  to[scala.collection.immutable.SortedSet].
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
@@ -317,7 +319,7 @@ object DLBySubst {
   def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
     (us: Subst) => us ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
-  private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
+  private def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
   }
 

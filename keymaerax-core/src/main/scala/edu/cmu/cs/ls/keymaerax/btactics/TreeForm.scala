@@ -30,7 +30,7 @@ object TreeForm {
         case Neg (t1) => Tree(Operator("-", Some(2)), List(Tree(Constant(Number(0)), List()), binaryTree(t1)))
         case Differential(t1) => Tree(Operator("'", Some(1)), List(binaryTree(t1)))
           //@todo this looses the index
-        case Variable (name, _, _) => Tree(Var(name), List())
+        case BaseVariable (name, _, _) => Tree(Var(name), List())
         //@todo this looses the index
         case DifferentialSymbol (v) => Tree(DiffVar(v.name), List())
           //@todo this looses the index and interpretedness

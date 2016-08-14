@@ -95,11 +95,12 @@ object ToolTactics {
     //@note assumes that modalHide is called first
     val smartHide = "smartHide" by ((shsequent: Sequent) => {
       val theCex = cex
+      val theCexVars = theCex.get.keySet.filter(x => x.isInstanceOf[Variable]).map(x => x.asInstanceOf[Variable])
       shsequent.ante.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCex.get.keySet).isEmpty) hide(AntePos(i))
+        if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCexVars).isEmpty) hide(AntePos(i))
         else skip).reduceLeftOption(_&_).getOrElse(skip) &
       shsequent.succ.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCex.get.keySet).isEmpty) hide(SuccPos(i))
+        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCexVars).isEmpty) hide(SuccPos(i))
         else skip).reduceLeftOption(_&_).getOrElse(skip)
     })
 

@@ -19,39 +19,39 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
  */
 class ExpressionTests extends FlatSpec with Matchers {
   "Expressions" should "refuse empty names" in {
-    a [CoreException] shouldBe thrownBy(new Variable("",None,Real))
+    a [CoreException] shouldBe thrownBy(Variable("",None,Real))
     a [CoreException] shouldBe thrownBy(new Function("",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst(""))
     a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("", AnyArg))
   }
 
   it should "refuse names with primes" in {
-    a [CoreException] shouldBe thrownBy(new Variable("x'",None,Real))
-    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x'",None,Real)))
+    a [CoreException] shouldBe thrownBy(Variable("x'",None,Real))
+    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(Variable("x'",None,Real)))
     a [CoreException] shouldBe thrownBy(new Function("x'",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst("x'"))
     a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x'", AnyArg))
   }
 
   it should "refuse names with inner underscores to avoid confusion with name.index" in {
-    a [CoreException] shouldBe thrownBy(new Variable("x_1",None,Real))
-    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x_1",None,Real)))
+    a [CoreException] shouldBe thrownBy(Variable("x_1",None,Real))
+    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(Variable("x_1",None,Real)))
     a [CoreException] shouldBe thrownBy(new Function("x_1",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst("x_1"))
     a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x_1", AnyArg))
   }
 
   it should "refuse names with middle inner underscores to avoid confusion with name.index" in {
-    a [CoreException] shouldBe thrownBy(new Variable("x_a",None,Real))
-    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x_a",None,Real)))
+    a [CoreException] shouldBe thrownBy(Variable("x_a",None,Real))
+    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(Variable("x_a",None,Real)))
     a [CoreException] shouldBe thrownBy(new Function("x_a",None,Unit,Real))
     a [CoreException] shouldBe thrownBy(new ProgramConst("x_a"))
     a [CoreException] shouldBe thrownBy(new DifferentialProgramConst("x_a", AnyArg))
   }
 
   it should "refuse names with negative index" in {
-    a [IllegalArgumentException] shouldBe thrownBy(new Variable("x",Some(-1),Real))
-    a [IllegalArgumentException] shouldBe thrownBy(new DifferentialSymbol(new Variable("x",Some(-1),Real)))
+    a [IllegalArgumentException] shouldBe thrownBy(Variable("x",Some(-1),Real))
+    a [IllegalArgumentException] shouldBe thrownBy(new DifferentialSymbol(Variable("x",Some(-1),Real)))
     a [IllegalArgumentException] shouldBe thrownBy(new Function("x",Some(-1),Unit,Real))
   }
 

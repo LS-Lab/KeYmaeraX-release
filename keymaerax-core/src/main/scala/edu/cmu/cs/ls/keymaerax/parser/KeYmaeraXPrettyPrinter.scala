@@ -143,7 +143,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   private def pp(program: Program): String = program match {
     case a: ProgramConst        => statement(a.asString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
-    case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
+    //case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + "(" + pp(f) + ")")
     case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
@@ -262,7 +262,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   private def pp(q: PosInExpr, program: Program): String = emit(q, program match {
     case a: ProgramConst        => statement(a.asString)
     case Assign(x, e)           => statement(pp(q++0, x) + op(program).opcode + pp(q++1, e))
-    case DiffAssign(xp, e)      => statement(pp(q++0, xp) + op(program).opcode + pp(q++1, e))
+    //case DiffAssign(xp, e)      => statement(pp(q++0, xp) + op(program).opcode + pp(q++1, e))
     case AssignAny(x)           => statement(pp(q++0, x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + pp(q++0, f))
     case ODESystem(ode, f)      => "{" + ppODE(q++0, ode) + (if (false && f==True) "" else op(program).opcode + pp(q++1, f)) + "}"

@@ -827,6 +827,24 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "[':=] differential assign".
+    *    [x_':=f();]p(x_') <-> p(f())
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assignDAxiomb = Provable.axioms("[':=] differential assign")
+  //@note the following derivation works if uniform renaming can mix BaseVariable with DifferentialSymbols.
+  /*derivedAxiom("[':=] differential assign",
+    Sequent(IndexedSeq(), IndexedSeq("[x_':=f();]p(x_') <-> p(f())".asFormula)),
+    ProofRuleTactics.uniformRenaming(DifferentialSymbol(Variable("x_")), Variable("x_")) &
+    byUS("[:=] assign")
+//      useAt("[:=] assign")(1, 0::0::Nil) &
+//      byUS(equivReflexiveAxiom)
+  )*/
+
+  /**
     * {{{Axiom "<':=> differential assign".
     *    <v':=t();>p(v') <-> p(t())
     * End.
@@ -837,7 +855,7 @@ object DerivedAxioms {
   lazy val assignDAxiom = derivedAxiom("<':=> differential assign",
     Sequent(IndexedSeq(), IndexedSeq("<x_':=f();>p(x_') <-> p(f())".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
-      useAt("[':=] differential assign")(1, 0::0::Nil) &
+      useAt(assignDAxiomb, PosInExpr(0::Nil))(1, 0::0::Nil) &
       useAt(doubleNegationAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )

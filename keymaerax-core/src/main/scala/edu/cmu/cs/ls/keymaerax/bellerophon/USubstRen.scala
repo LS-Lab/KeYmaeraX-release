@@ -82,8 +82,8 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
     * free variables of all repl that are not bound as arguments in what.
     * @return union of the freeVars of all our substitution pairs.
     */
-  def freeVars: SetLattice[NamedSymbol] = {
-    matchHeads.foldLeft(bottom[NamedSymbol])((a,b) => a ++ StaticSemantics.freeVars(b._2._2))
+  def freeVars: SetLattice[Variable] = {
+    matchHeads.foldLeft(bottom[Variable])((a,b) => a ++ StaticSemantics.freeVars(b._2._2))
   }
 
   /** apply this uniform renaming everywhere in an expression, resulting in an expression of the same kind. */
@@ -124,10 +124,12 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable = rens.get(x) match {
-    case None => x
-    case Some(repl) => repl.asInstanceOf[Variable]
+    case Some(repl) => repl
+    case None => x match {
+      case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y, context))
+      case _ => x
+    }
   }
-
 
   // implementation of uniform substitution application
       
@@ -136,7 +138,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
     term match {
       // uniform substitution base cases
       case x: Variable => renameVar(x, term)
-      case DifferentialSymbol(x) => DifferentialSymbol(renameVar(x, term))
+//      case DifferentialSymbol(x) => DifferentialSymbol(renameVar(x, term))
       case app@FuncOf(of, theta) if matchHead(app) =>
         val (what, repl) = matchHeads(of)
         val FuncOf(wf, wArg) = what
@@ -159,7 +161,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
       case Times(l, r)  => Times(usubst(l),  usubst(r))
       case Divide(l, r) => Divide(usubst(l), usubst(r))
       case Power(l, r)  => Power(usubst(l),  usubst(r))
-      case der@Differential(e) => requireAdmissible(topVarsDiffVars(), e, term)
+      case der@Differential(e) => requireAdmissible(topVarsDiffVars, e, term)
         Differential(usubst(e))
       // unofficial
       case Pair(l, r) => Pair(usubst(l), usubst(r))
@@ -180,14 +182,14 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         USubstRen((wArg, usubst(theta)) :: Nil).usubst(repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
-        requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
+        requireAdmissible(topVarsDiffVars, fml, formula)
         val (what, repl) = matchHeads(op)
         val PredicationalOf(wp, wArg) = what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
         USubstRen((wArg, usubst(fml)) :: Nil).usubst(repl.asInstanceOf[Formula])
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
-        requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
+        requireAdmissible(topVarsDiffVars, fml, formula)
         PredicationalOf(q, usubst(fml))
       case DotFormula => subs.getOrElse(DotFormula, DotFormula).asInstanceOf[Formula]
       case True | False => formula
@@ -211,13 +213,13 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
       case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => requireAdmissible(topVarsDiffVars(), g, formula)
+      case der@DifferentialFormula(g) => requireAdmissible(topVarsDiffVars, g, formula)
         DifferentialFormula(usubst(g))
 
       // binding cases add bound variables to u
-      case Forall(vars, g) => requireAdmissible(SetLattice[NamedSymbol](vars), g, formula)
+      case Forall(vars, g) => requireAdmissible(SetLattice(vars), g, formula)
         Forall(vars.map(x => renameVar(x,formula)), usubst(g))
-      case Exists(vars, g) => requireAdmissible(SetLattice[NamedSymbol](vars), g, formula)
+      case Exists(vars, g) => requireAdmissible(SetLattice(vars), g, formula)
         Exists(vars.map(x => renameVar(x,formula)), usubst(g))
 
       // Note could optimize speed by avoiding duplicate computation unless Scalac knows about CSE
@@ -233,7 +235,6 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
     program match {
       case a: ProgramConst   => subs.getOrElse(a, a).asInstanceOf[Program]
       case Assign(x, e)      => Assign(renameVar(x, program), usubst(e))
-      case DiffAssign(xp, e) => DiffAssign(DifferentialSymbol(renameVar(xp.x, program)), usubst(e))
       case AssignAny(x)      => AssignAny(renameVar(x, program))
       case Test(f)           => Test(usubst(f))
       case ODESystem(ode, h) =>
@@ -265,7 +266,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
    * uniform substitutions on differential programs
    * @param odeBV the bound variables of the whole ODESystem within which ode occurs, so all odeBV are taboo during the substitution.
    */
-  private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[NamedSymbol]): DifferentialProgram = {
+  private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[Variable]): DifferentialProgram = {
     ode match {
       case AtomicODE(DifferentialSymbol(x), e) => requireAdmissible(odeBV, e, ode)
         AtomicODE(DifferentialSymbol(renameVar(x, ode)), usubst(e))
@@ -280,13 +281,13 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   /**
    * Is this uniform substitution U-admissible for expression e?
    */
-  private def admissible(U: SetLattice[NamedSymbol], e: Expression): Boolean = admissible(U, StaticSemantics.signature(e))
+  private def admissible(U: SetLattice[Variable], e: Expression): Boolean = admissible(U, StaticSemantics.signature(e))
 
   /**
    * Require that this uniform substitution is U-admissible for expression e, and
    * raise informative exception if not.
    */
-  private def requireAdmissible(U: SetLattice[NamedSymbol], e: Expression, context: Expression): Unit =
+  private def requireAdmissible(U: SetLattice[Variable], e: Expression, context: Expression): Unit =
     if (!admissible(U, e))
       throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")
 
@@ -296,7 +297,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    * @see arXiv:1503.01981 Definition 12.
    */
-  private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): Boolean =
+  private def admissible(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): Boolean =
     // U-admissible iff FV(restrict this to occurrences) /\ U = empty
     clashSet(U, occurrences).isEmpty
     // this + " is " + U + "-admissible iff restriction " + projection(occurrences) + " to occurring symbols " + occurrences + " has no free variables " + projection(occurrences).freeVars + " of " + U)
@@ -321,7 +322,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
    * @see arXiv:1503.01981 Definition 12.
    * @note not used often
    */
-  private def clashSet(U: SetLattice[NamedSymbol], e: Expression): SetLattice[NamedSymbol] = clashSet(U, StaticSemantics.signature(e))
+  private def clashSet(U: SetLattice[Variable], e: Expression): SetLattice[Variable] = clashSet(U, StaticSemantics.signature(e))
 
   /**
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible
@@ -331,7 +332,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
    * @return FV(restrict this to occurrences) /\ U
    * @see arXiv:1503.01981 Definition 12.
    */
-  private def clashSet(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): SetLattice[NamedSymbol] =
+  private def clashSet(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): SetLattice[Variable] =
     projection(occurrences).freeVars.intersect(U)
 
   /**

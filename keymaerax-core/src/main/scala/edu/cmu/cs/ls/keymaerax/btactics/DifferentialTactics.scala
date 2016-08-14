@@ -70,13 +70,13 @@ object DifferentialTactics {
         case Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p) =>
           Box(
             ODESystem(DifferentialProduct(c, AtomicODE(xp, t)), h),
-            Box(DiffAssign(xp, t), p)
+            Box(Assign(xp, t), p)
           )
 
         case Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p) =>
           Box(
             ODESystem(AtomicODE(xp, t), h),
-            Box(DiffAssign(xp, t), p)
+            Box(Assign(xp, t), p)
           )
         case _ => println("Unsure how to predict DE outcome for " + fml); ???
       }
@@ -90,7 +90,7 @@ object DifferentialTactics {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
             val g = Box(
               ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
-              Box(DiffAssign(d, t), p)
+              Box(Assign(d, t), p)
             )
 
             //construct substitution
@@ -702,7 +702,7 @@ object DifferentialTactics {
     case Some(Box(a, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
-      def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
+      def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
         sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
       }
       val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)

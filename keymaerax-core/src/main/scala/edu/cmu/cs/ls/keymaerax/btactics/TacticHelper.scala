@@ -48,24 +48,24 @@ object TacticHelper {
 
   def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T =
     if (symbols(f).exists(_.name == t.name)) t match {
-      case Variable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
+      case BaseVariable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
       case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
     } else t
 
   def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T =
     if (names(s).exists(_.name == t.name)) t match {
-      case Variable(vName, _, vSort) => Variable(vName, freshIndexInSequent(vName, s), vSort).asInstanceOf[T]
+      case BaseVariable(vName, _, vSort) => Variable(vName, freshIndexInSequent(vName, s), vSort).asInstanceOf[T]
       case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
     } else t
 
   /** Returns a list of formulas that invariants should treat as invariants. */
   def propertiesOfConstants(s: Sequent, pos: SeqPos) : List[Formula] = {
-    val constants : Set[NamedSymbol] = invariantSymbols(s, pos)
+    val constants : Set[Variable] = invariantSymbols(s, pos)
     s.ante.filter(f => (StaticSemantics.freeVars(f) -- constants).isEmpty).toList
   } //@todo tests and then use this function to determine which formulas should be added to a loop invariant.
 
   /** Returns the set of variables we should consider as constant in invariant proofs for the modality located at pos. */
-  private def invariantSymbols(s: Sequent, pos: SeqPos) : Set[NamedSymbol] = {
+  private def invariantSymbols(s: Sequent, pos: SeqPos) : Set[Variable] = {
     val (program: Program, formula: Formula) = s(pos) match {
       case Box(p,f) => (p,f)
       case Diamond(p,f) => (p,f)
@@ -77,6 +77,6 @@ object TacticHelper {
     val boundInProgram = StaticSemantics.boundVars(program)
 
     //@todo not sure about that last term.
-    freeInModality.intersect(freeInGamma).intersect(SetLattice.topVarsDiffVars() -- boundInProgram).symbols
+    freeInModality.intersect(freeInGamma).intersect(SetLattice.topVarsDiffVars -- boundInProgram).symbols
   }
 }

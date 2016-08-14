@@ -105,8 +105,8 @@ class RandomReapplyTests extends FlatSpec with Matchers {
 
   def reapplied(term: Term): Term = term match {
     case n:Number => n
-    case x:Variable => Variable(x.name, x.index, x.sort)
     case xp:DifferentialSymbol => DifferentialSymbol(reapplied(xp.x).asInstanceOf[Variable])
+    case x:BaseVariable => Variable(x.name, x.index, x.sort)
     case FuncOf(f,t)     => FuncOf(f, reapplied(t))
     case f:UnitFunctional=> UnitFunctional(f.name, f.space, f.sort)
     case DotTerm => DotTerm
@@ -137,7 +137,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
 
   def reapplied(program: Program): Program = program match {
     case Assign(x,t)       => Assign(reapplied(x).asInstanceOf[Variable], reapplied(t))
-    case DiffAssign(x,t)   => DiffAssign(reapplied(x).asInstanceOf[DifferentialSymbol], reapplied(t))
+    //case DiffAssign(x,t)   => DiffAssign(reapplied(x).asInstanceOf[DifferentialSymbol], reapplied(t))
     case AssignAny(x)      => AssignAny(reapplied(x).asInstanceOf[Variable])
     case Test(f)           => Test(reapplied(f))
     case ProgramConst(a)   => ProgramConst(a)

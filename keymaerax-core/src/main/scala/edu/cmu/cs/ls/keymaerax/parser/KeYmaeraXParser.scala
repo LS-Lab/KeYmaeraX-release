@@ -1065,7 +1065,7 @@ object KeYmaeraXParser extends Parser {
       // programs
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
-      case sAssign.op => if (isDifferentialAssign(st)) sDiffAssign else sAssign
+      case sAssign.op => sAssign //if (isDifferentialAssign(st)) sDiffAssign else sAssign
       case sAssignAny.op => sAssignAny
       case sTest.op => sTest
       //      case p: ODESystem => sODESystem

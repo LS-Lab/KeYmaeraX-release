@@ -105,7 +105,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   }
 
   it should "parse diff assign" in {
-    "x' := 1;".asProgram shouldBe DiffAssign(DifferentialSymbol("x".asVariable), Number(1))
+    "x' := 1;".asProgram shouldBe Assign(DifferentialSymbol("x".asVariable), Number(1))
   }
 
   it should "parse (x)' as differential and x' as differential symbol" in {

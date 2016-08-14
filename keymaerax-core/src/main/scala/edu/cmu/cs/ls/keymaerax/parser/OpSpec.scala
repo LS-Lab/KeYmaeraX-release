@@ -233,7 +233,7 @@ object OpSpec {
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name, AnyArg))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
   assert(sAssign>sMinus, "atomic programs bind weaker than their constituent terms")
-  val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
+  //val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY,200, PostfixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
   val sTest         = lUnaryOpSpecF[Program](TEST,    200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
   assert(sTest>sEquiv, "tests bind weaker than their constituent formulas")
@@ -306,7 +306,7 @@ object OpSpec {
     case p: ProgramConst => sProgramConst
     case p: DifferentialProgramConst => sDifferentialProgramConst
     case p: Assign       => sAssign
-    case p: DiffAssign   => sDiffAssign
+    //case p: DiffAssign   => sDiffAssign
     case p: AssignAny    => sAssignAny
     case p: Test         => sTest
     case p: ODESystem    => sODESystem

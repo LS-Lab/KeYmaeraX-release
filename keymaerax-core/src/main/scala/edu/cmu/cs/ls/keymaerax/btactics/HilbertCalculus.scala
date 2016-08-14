@@ -174,7 +174,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * `\forall t>=0 ((\forall 0<=s<=t  q(x+c()*s) -> [x:=x+c()*t;]p(x))` */
   lazy val DS                 : DependentPositionTactic = namedUseAt("DS", "DS& differential equation solution")
   
-  /** Dassignb: [:='] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
+//  /** Dassignb: [':=] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : DependentPositionTactic = namedUseAt("Dassignb", "[':=] differential assign")
   /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
   lazy val Dplus              : DependentPositionTactic = namedUseAt("Dplus", "+' derive sum")
