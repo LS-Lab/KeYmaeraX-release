@@ -161,7 +161,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
       case Times(l, r)  => Times(usubst(l),  usubst(r))
       case Divide(l, r) => Divide(usubst(l), usubst(r))
       case Power(l, r)  => Power(usubst(l),  usubst(r))
-      case der@Differential(e) => requireAdmissible(topVarsDiffVars, e, term)
+      case der@Differential(e) => requireAdmissible(allVars, e, term)
         Differential(usubst(e))
       // unofficial
       case Pair(l, r) => Pair(usubst(l), usubst(r))
@@ -182,14 +182,14 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         USubstRen((wArg, usubst(theta)) :: Nil).usubst(repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
-        requireAdmissible(topVarsDiffVars, fml, formula)
+        requireAdmissible(allVars, fml, formula)
         val (what, repl) = matchHeads(op)
         val PredicationalOf(wp, wArg) = what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
         USubstRen((wArg, usubst(fml)) :: Nil).usubst(repl.asInstanceOf[Formula])
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
-        requireAdmissible(topVarsDiffVars, fml, formula)
+        requireAdmissible(allVars, fml, formula)
         PredicationalOf(q, usubst(fml))
       case DotFormula => subs.getOrElse(DotFormula, DotFormula).asInstanceOf[Formula]
       case True | False => formula
@@ -213,7 +213,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
       case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => requireAdmissible(topVarsDiffVars, g, formula)
+      case der@DifferentialFormula(g) => requireAdmissible(allVars, g, formula)
         DifferentialFormula(usubst(g))
 
       // binding cases add bound variables to u

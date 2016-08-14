@@ -77,6 +77,6 @@ object TacticHelper {
     val boundInProgram = StaticSemantics.boundVars(program)
 
     //@todo not sure about that last term.
-    freeInModality.intersect(freeInGamma).intersect(SetLattice.topVarsDiffVars -- boundInProgram).symbols
+    freeInModality.intersect(freeInGamma).intersect(SetLattice.allVars -- boundInProgram).symbols
   }
 }

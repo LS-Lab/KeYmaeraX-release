@@ -172,42 +172,42 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove K& down" in withMathematica { implicit qeTool => check(Kand)}
   it should "prove &-> down" in withMathematica { implicit qeTool => check(andImplies)}
 
-  "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
-  it should "prove !!" in {check(doubleNegationAxiom)}
-  it should "prove exists dual" in {check(existsDualAxiom)}
-  ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
-  ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
-  it should "prove all distribute" in {check(allDistributeAxiom)}
-  it should "prove box dual" in {check(boxAxiom)}
-  it should "prove <:=> assign" in {check(assigndAxiom)}
-  it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
-//  it should "prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
-  it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
-  it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
-  it should "prove <':=> differential assign" in {check(assignDAxiom)}
-  it should "prove <++> choice" in {check(choicedAxiom)}
-  it should "prove <;> compose" in {check(composedAxiom)}
-  it should "prove <*> iterate" in {check(iteratedAxiom)}
-  it should "prove exists generalize" in {check(existsGeneralize)}
-  it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex)}
-  it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute)}
-  it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual)}
-  it should "prove ! !=" in withMathematica { implicit qeTool => check(notNotEqual)}
-  it should "prove < negate" in withMathematica { implicit qeTool => check(notGreaterEqual)}
-  it should "prove >= flip" in withMathematica { implicit qeTool => check(flipGreaterEqual)}
-  it should "prove > flip" in withMathematica { implicit qeTool => check(flipGreater)}
-  it should "prove all substitute" in {check(allSubstitute)}
-  it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
-  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
-  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
-  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
-  //it should "prove DI differential invariance" in {check(DIinvariance)}
-  it should "prove DI differential invariant" in {check(DIinvariant)}
-  it should "prove DG differential pre-ghost" in {check(DGpreghost)}
-  it should "prove DW differential weakening" in {check(DWeakening)}
-  it should "prove abs" in withMathematica { implicit qeTool => check(absDef)}
-  it should "prove min" in withMathematica { implicit qeTool => check(minDef)}
-  it should "prove max" in withMathematica { implicit qeTool => check(maxDef)}
+  "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
+  it should "tactically prove !!" in {check(doubleNegationAxiom)}
+  it should "tactically prove exists dual" in {check(existsDualAxiom)}
+  ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
+  ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
+  it should "tactically prove all distribute" in {check(allDistributeAxiom)}
+  it should "tactically prove box dual" in {check(boxAxiom)}
+  it should "tactically prove <:=> assign" in {check(assigndAxiom)}
+  it should "tactically prove [:=] equational" in {check(assignbEquationalAxiom)}
+//  it should "tactically prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
+  it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
+  it should "tactically prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
+  it should "tactically prove <':=> differential assign" in {check(assignDAxiom)}
+  it should "tactically prove <++> choice" in {check(choicedAxiom)}
+  it should "tactically prove <;> compose" in {check(composedAxiom)}
+  it should "tactically prove <*> iterate" in {check(iteratedAxiom)}
+  it should "tactically prove exists generalize" in {check(existsGeneralize)}
+  it should "tactically prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex)}
+  it should "tactically prove = commute" in withMathematica { implicit qeTool => check(equalCommute)}
+  it should "tactically prove <=" in withMathematica { implicit qeTool => check(lessEqual)}
+  it should "tactically prove ! !=" in withMathematica { implicit qeTool => check(notNotEqual)}
+  it should "tactically prove < negate" in withMathematica { implicit qeTool => check(notGreaterEqual)}
+  it should "tactically prove >= flip" in withMathematica { implicit qeTool => check(flipGreaterEqual)}
+  it should "tactically prove > flip" in withMathematica { implicit qeTool => check(flipGreater)}
+  it should "tactically prove all substitute" in {check(allSubstitute)}
+  it should "tactically prove vacuous exists" in {check(vacuousExistsAxiom)}
+  it should "tactically prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
+  it should "tactically prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
+  it should "tactically prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  //it should "tactically prove DI differential invariance" in {check(DIinvariance)}
+  it should "tactically prove DI differential invariant" in {check(DIinvariant)}
+  it should "tactically prove DG differential pre-ghost" in {check(DGpreghost)}
+  it should "tactically prove DW differential weakening" in {check(DWeakening)}
+  it should "tactically prove abs" in withMathematica { implicit qeTool => check(absDef)}
+  it should "tactically prove min" in withMathematica { implicit qeTool => check(minDef)}
+  it should "tactically prove max" in withMathematica { implicit qeTool => check(maxDef)}
 
   "Derived Rule" should "prove allG" in withMathematica { implicit qeTool => allGeneralize.fact.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
