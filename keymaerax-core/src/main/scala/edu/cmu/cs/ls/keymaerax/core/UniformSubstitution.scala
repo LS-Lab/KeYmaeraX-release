@@ -71,6 +71,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
     * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
     */
+  //@todo turn into val?
   def freeVars: SetLattice[Variable] = what match {
     //@note semantic state-dependent symbols have no free variables.
     case what: StateDependent => what match {
@@ -482,12 +483,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /**
     * Is this uniform substitution U-admissible for expression e?
     */
+  @inline
   private def admissible(U: SetLattice[Variable], e: Expression): Boolean = admissible(U, StaticSemantics.signature(e))
 
   /**
     * Require that this uniform substitution is U-admissible for expression e, and
     * raise informative exception if not.
     */
+  @inline
   private def requireAdmissible(U: SetLattice[Variable], e: Expression, context: Expression): Unit =
     if (!admissible(U, e))
       throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")
@@ -499,6 +502,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
     * @see arXiv:1503.01981 Definition 12.
     */
+  @inline
   private def admissible(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): Boolean =
     // U-admissible iff FV(restrict this to occurrences) /\ U = empty
     clashSet(U, occurrences).isEmpty
@@ -509,6 +513,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
     * @see arXiv:1503.01981 Definition 12.
     */
+  @inline
   private def projection(affected: immutable.Set[NamedSymbol]): USubst = new USubst(
     subsDefs.filter(sigma => affected.contains(sigma.matchKey))
   )
@@ -523,6 +528,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * @see arXiv:1503.01981 Definition 12.
     * @note not used often
     */
+  @inline
   private def clashSet(U: SetLattice[Variable], e: Expression): SetLattice[Variable] =
     clashSet(U, StaticSemantics.signature(e))
 
@@ -535,6 +541,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * @see Definition 19 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
     * @see arXiv:1503.01981 Definition 12.
     */
+  @inline
   private def clashSet(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): SetLattice[Variable] =
     projection(occurrences).freeVars.intersect(U)
 
@@ -542,6 +549,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * Get the unique element in c to which pred applies.
     * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
     */
+  @inline
   private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
     //require(c.count(pred) == 1, "unique element expected in " + c.mkString)
     val matching = c.filter(pred)

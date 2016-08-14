@@ -77,9 +77,8 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
   */
 sealed trait Expression {
-  //@todo turn kind and sort into val?
-  def kind : Kind
-  def sort : Sort
+  val kind : Kind
+  val sort : Sort
   //override def toString : String = "(" + prettyString + ")@" + canonicalString
   override def toString : String = prettyString
   /** Pretty-printed string representing this expression */
@@ -94,15 +93,15 @@ sealed trait Composite extends Expression
 /** Unary composite expressions that are composed of one subexpression */
 sealed trait UnaryComposite extends Composite {
   /** The child of this unary composite expression */
-  def child: Expression
+  val child: Expression
 }
 
 /** Binary composite expressions that are composed of two subexpressions */
 sealed trait BinaryComposite extends Composite {
   /** The left child of this binary composite expression */
-  def left: Expression
+  val left: Expression
   /** The right child of this binary composite expression */
-  def right: Expression
+  val right: Expression
 }
 
 /** Function/predicate/predicational application */
@@ -110,9 +109,9 @@ sealed trait ApplicationOf extends Composite {
   insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
   insist(sort == func.sort, "sort of application is the sort of the function")
   /** The function/predicate/predicational that this application applies. */
-  def func : Function
+  val func : Function
   /** The child argument that this function/predicate/predicational application is applied to. */
-  def child : Expression
+  val child : Expression
 }
 
 
@@ -122,8 +121,8 @@ sealed trait StateDependent extends Expression
 /** Expressions limited to a given state-space. */
 sealed trait SpaceDependent extends StateDependent {
   /** The space that this expression lives on. */
-  def space: Space
-  final def index: Option[Int] = None
+  val space: Space
+  final val index: Option[Int] = None
 }
 
 
@@ -142,8 +141,8 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   require((name.charAt(0).isLetter || name.charAt(0)=='_' || name.charAt(0)=='\\') && name.forall(c=> c.isLetterOrDigit || c=='_' || c=='\\' || c=='$'), "alphabetical name: " + name)
   require(index.getOrElse(0)>=0, "nonnegative index if any " + this)
 
-  def name: String
-  def index: Option[Int]
+  val name: String
+  val index: Option[Int]
 
   /** Compare named symbols lexicographically: by name, index, category. */
   def compare(other: NamedSymbol): Int = {
@@ -178,7 +177,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#termParser]]
   */
 sealed trait Term extends Expression {
-  final def kind: Kind = TermKind
+  final val kind: Kind = TermKind
 }
 
 /** Atomic terms */
@@ -186,7 +185,7 @@ sealed trait AtomicTerm extends Term with Atomic
 
 /** Real terms */
 private[core] sealed trait RTerm extends Term {
-  final def sort: Sort = Real
+  final val sort: Sort = Real
 }
 
 /** Variables have a name and index and sort. They are either [[BaseVariable]] or [[DifferentialSymbol]]. */
@@ -202,8 +201,8 @@ case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) 
 /** Differential symbol x' for variable x */
 case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   insist(x.sort == Real, "differential symbols expect real sort")
-  def name: String = x.name
-  def index: Option[Int] = x.index
+  val name: String = x.name
+  val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
   override def toString: String = asString //+ "@" + getClass.getSimpleName
 }
@@ -216,7 +215,7 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
   */
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
   extends Expression with NamedSymbol {
-  def kind: Kind = FunctionKind
+  val kind: Kind = FunctionKind
   /** Full string with names and full types */
   override def fullString: String = asString + ":" + domain + "->" + sort
 }
@@ -224,22 +223,22 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
 object DotTerm extends DotTerm(Real)
 sealed case class DotTerm(s: Sort) extends Expression with NamedSymbol with AtomicTerm {
-  def sort: Sort = s
-  def name: String = "\\cdot"
-  def index: Option[Int] = None
+  val sort: Sort = s
+  val name: String = "\\cdot"
+  val index: Option[Int] = None
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */
 object Nothing extends NamedSymbol with AtomicTerm {
-  def sort: Sort = Unit
-  def name: String = "\\nothing"
-  def index: Option[Int] = None
+  val sort: Sort = Unit
+  val name: String = "\\nothing"
+  val index: Option[Int] = None
 }
 
 /** Function symbol applied to argument child func(child) */
 case class FuncOf(func: Function, child: Term) extends CompositeTerm with ApplicationOf {
   /** The sort of an ApplicationOf is the sort of func */
-  def sort: Sort = func.sort
+  val sort: Sort = func.sort
 }
 
 /** Arity 0 functional symbol `name:sort`, limited to the given state space.
@@ -261,7 +260,7 @@ sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
     *         }}}
     */
   def reapply: Term=>Term
-  def child: Term
+  val child: Term
 }
 
 /** Unary Composite Real Terms, i.e. real terms composed of one real term. */
@@ -278,15 +277,15 @@ sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
     *         }}}
     */
   def reapply: (Term,Term)=>Term
-  def left: Term
-  def right: Term
+  val left: Term
+  val right: Term
 }
 
 /** Binary Composite Real Terms, i.e. real terms composed of two real terms. */
 private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
-  def left: Term
-  def right: Term
+  val left: Term
+  val right: Term
 }
 
 /** - unary negation: minus */
@@ -309,7 +308,7 @@ case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply =
 /** Pairs (left,right) for binary Function and FuncOf and PredOf */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   def reapply = copy
-  def sort: Sort = Tuple(left.sort, right.sort)
+  val sort: Sort = Tuple(left.sort, right.sort)
 }
 
 /*********************************************************************************
@@ -323,8 +322,8 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
   */
 sealed trait Formula extends Expression {
-  final def kind: Kind = FormulaKind
-  final def sort: Sort = Bool
+  final val kind: Kind = FormulaKind
+  final val sort: Sort = Bool
 }
 
 /** Atomic formulas */
@@ -338,8 +337,8 @@ sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
     *         }}}
     */
   def reapply: (Term,Term)=>Formula
-  def left: Term
-  def right: Term
+  val left: Term
+  val right: Term
 }
 
 /** Real comparison formula composed of two real terms. */
@@ -375,8 +374,8 @@ case class Less(left: Term, right: Term) extends RComparisonFormula { def reappl
 
 /** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula with StateDependent {
-  def name: String = "\\_"
-  def index: Option[Int] = None
+  val name: String = "\\_"
+  val index: Option[Int] = None
 }
 
 /** Predicate symbol applied to argument child func(child) */
@@ -412,7 +411,7 @@ sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula 
     *         }}}
     */
   def reapply: Formula=>Formula
-  def child: Formula
+  val child: Formula
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two formulas. */
@@ -423,8 +422,8 @@ sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormul
     *         }}}
     */
   def reapply: (Formula,Formula)=>Formula
-  def left: Formula
-  def right: Formula
+  val left: Formula
+  val right: Formula
 }
 
 /** ! logical negation: not */
@@ -453,8 +452,8 @@ sealed trait Quantified extends /*Unary?*/CompositeFormula {
     */
   def reapply: (immutable.Seq[Variable],Formula)=>Formula
   /** The variables quantified here */
-  def vars: immutable.Seq[Variable]
-  def child: Formula
+  val vars: immutable.Seq[Variable]
+  val child: Formula
 }
 /** \forall vars universally quantified formula */
 case class Forall(vars: immutable.Seq[Variable], child: Formula) extends Quantified { def reapply = copy }
@@ -471,8 +470,8 @@ sealed trait Modal extends CompositeFormula {
     *         }}}
     */
   def reapply: (Program,Formula)=>Formula
-  def program: Program
-  def child: Formula
+  val program: Program
+  val child: Formula
 }
 /** box modality all runs of program satisfy child [program]child */
 case class Box(program: Program, child: Formula) extends Modal { def reapply = copy }
@@ -493,8 +492,8 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { d
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
   */
 sealed trait Program extends Expression {
-  /*final*/ def kind: Kind = ProgramKind
-  final def sort: Sort = Trafo
+  /*final*/ val kind: Kind = ProgramKind
+  final val sort: Sort = Trafo
 }
 
 /** Atomic programs */
@@ -502,7 +501,7 @@ sealed trait AtomicProgram extends Program with Atomic
 
 /** Uninterpreted program constant */
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
-  def index: Option[Int] = None
+  val index: Option[Int] = None
 }
 
 /** x:=e assignment */
@@ -525,7 +524,7 @@ sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram 
     *         }}}
     */
   def reapply: Program=>Program
-  def child: Program
+  val child: Program
 }
 
 /** Binary Composite Programs, i.e. programs composed of two programs. */
@@ -536,8 +535,8 @@ sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgra
     *         }}}
     */
   def reapply: (Program,Program)=>Program
-  def left: Program
-  def right: Program
+  val left: Program
+  val right: Program
 }
 
 
@@ -559,7 +558,7 @@ case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = co
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
   */
 sealed trait DifferentialProgram extends Program {
-  override def kind: Kind = DifferentialProgramKind
+  override val kind: Kind = DifferentialProgramKind
 }
 /** Atomic differential programs */
 sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
@@ -567,7 +566,7 @@ sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialPr
 //@note could say that ODESystem is no differential program since not to be nested within DifferentialProduct.
 case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   extends Program {
-  override def kind: Kind = ProgramKind
+  override val kind: Kind = ProgramKind
 }
 /** Uninterpreted differential program constant, limited to the given state space.
   * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,

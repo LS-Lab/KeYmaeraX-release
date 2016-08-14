@@ -39,14 +39,14 @@ import scala.collection.immutable
   */
 sealed trait SeqPos {
   /** Whether this position is in the antecedent on the left of the sequent arrow */
-  def isAnte: Boolean
+  val isAnte: Boolean
   /** Whether this position is in the succedent on the right of the sequent arrow */
-  def isSucc: Boolean = !isAnte
+  val isSucc: Boolean = !isAnte
 
   /**
     * The '''unsigned''' index into the antecedent or succedent list, respectively, '''0-indexed'''.
     */
-  private[keymaerax] def getIndex: Int
+  private[keymaerax] val getIndex: Int
 
   /**
     * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''.
@@ -55,7 +55,7 @@ sealed trait SeqPos {
     *  Zero is a degenerate case indicating whole sequent 0.
     * @see [[SeqPos.apply()]]
     */
-  final def getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
+  final val getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
 
   override def toString: String = getPos.toString
 }
@@ -66,9 +66,9 @@ sealed trait SeqPos {
   * @param index the position 0-indexed in antecedent.
   */
 case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
-  def isAnte: Boolean = true
+  val isAnte: Boolean = true
   /** The position 0-indexed in antecedent. */
-  private[keymaerax] def getIndex: Int = index
+  private[keymaerax] val getIndex: Int = index
 }
 
 /**
@@ -77,9 +77,9 @@ case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
   * @param index the position 0-indexed in succedent.
   */
 case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
-  def isAnte: Boolean = false
+  val isAnte: Boolean = false
   /** The position 0-indexed in succedent. */
-  private[keymaerax] def getIndex: Int = index
+  private[keymaerax] val getIndex: Int = index
 }
 
 object SeqPos {
@@ -704,33 +704,33 @@ trait ClosingRule extends Rule {}
 /** A rule applied to a position */
 trait PositionRule extends Rule {
   /** The position (on the right) where this rule will be applied at */
-  def pos: SeqPos
+  val pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
 /** A rule applied to a position in the antecedent on the left */
 trait LeftRule extends PositionRule {
   /** The position (on the left) where this rule will be applied at */
-  def pos: AntePos
+  val pos: AntePos
 }
 
 /** A rule applied to a position in the succedent on the right */
 trait RightRule extends PositionRule {
   /** The position (on the right) where this rule will be applied at */
-  def pos: SuccPos
+  val pos: SuccPos
 }
 
 /** An assumption rule, which is a position rule that has an additional position of an assumption. */
 trait AssumptionRule extends PositionRule {
   /** The position of the assumption used for this rule when used at the position `pos` */
-  def assume: SeqPos
+  val assume: SeqPos
   override def toString: String = name + " at " + pos + " assumption at " + assume
 }
 
 /** A rule applied to two positions. */
 trait TwoPositionRule extends Rule {
-  def pos1: SeqPos
-  def pos2: SeqPos
+  val pos1: SeqPos
+  val pos2: SeqPos
   override def toString: String = name + " at " + pos1 + " and " + pos2
 }
 
