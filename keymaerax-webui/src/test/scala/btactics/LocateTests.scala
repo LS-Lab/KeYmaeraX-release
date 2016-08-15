@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import scala.collection.immutable
 
 /**
- * Tests [[edu.cmu.cs.ls.keymaerax.btactics.PositionLocator]]
+ * Tests [[edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator]]
  */
 class LocateTests extends TacticTestBase {
 
