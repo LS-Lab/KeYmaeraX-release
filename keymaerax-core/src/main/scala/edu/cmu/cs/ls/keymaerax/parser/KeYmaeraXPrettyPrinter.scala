@@ -92,8 +92,8 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  def parser: KeYmaeraXParser.type = KeYmaeraXParser
-  def fullPrinter: (Expression => String) = this
+  val parser: KeYmaeraXParser.type = KeYmaeraXParser
+  val fullPrinter: (Expression => String) = this
 
 
   /** Pretty-print term to a string but without contract checking! */
@@ -198,8 +198,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  def parser: KeYmaeraXParser.type = KeYmaeraXParser
-  def fullPrinter: (Expression => String) = FullPrettyPrinter
+  val parser: KeYmaeraXParser.type = KeYmaeraXParser
+  val fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /** Pretty-print term to a string but without contract checking! */
   private[keymaerax] def stringify(expr: Expression) = expr match {

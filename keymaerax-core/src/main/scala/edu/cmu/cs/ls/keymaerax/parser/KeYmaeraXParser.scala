@@ -120,7 +120,7 @@ object KeYmaeraXParser extends Parser {
     catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}
   }
 
-  def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
+  val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -137,32 +137,32 @@ object KeYmaeraXParser extends Parser {
   }
 
   private val PSEUDOTOK = UnknownToken
-  override def termParser: (String => Term) =
+  override val termParser: (String => Term) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
       case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput(input)
     }
 
-  override def formulaParser: (String => Formula) =
+  override val formulaParser: (String => Formula) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
       case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput(input)
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
-  private[parser] def formulaTokenParser: (TokenStream => Formula) =
+  private[parser] val formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
       case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
-  override def programParser: (String => Program) =
+  override val programParser: (String => Program) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
       case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
-  override def differentialProgramParser: (String => DifferentialProgram) =
+  override val differentialProgramParser: (String => DifferentialProgram) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
       case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)

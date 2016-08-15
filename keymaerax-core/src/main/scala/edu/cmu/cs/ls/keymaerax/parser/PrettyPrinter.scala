@@ -41,9 +41,9 @@ trait PrettyPrinter extends (Expression => String) {
    * The corresponding full-form pretty printer producing full parentheses.
    * @ensures parser(fullPrinter(expr)) == expr
    */
-  def fullPrinter: (Expression => String)
+  val fullPrinter: (Expression => String)
 
   /** A parser that can read the input that this pretty-printer produces */
-  def parser: Parser
+  val parser: Parser
 
 }
