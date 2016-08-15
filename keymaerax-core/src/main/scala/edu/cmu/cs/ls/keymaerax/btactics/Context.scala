@@ -67,8 +67,8 @@ object Context {
     val sp = t match {
       case f: Term => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
       case f: Formula => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
-      case f: Program => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
       case f: DifferentialProgram => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
+      case f: Program => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
       case _ => ???  // trivial totality on possibly problematic patmats
     }
     (Context(sp._1), sp._2)
@@ -78,8 +78,8 @@ object Context {
   private def context(e: Expression, pos: PosInExpr): (Expression, Expression) = e match {
     case f: Term => context(f, pos)
     case f: Formula => context(f, pos)
-    case f: Program => context(f, pos)
     case f: DifferentialProgram => context(f, pos)
+    case f: Program => context(f, pos)
     case _ => ???  // trivial totality on possibly problematic patmats
   }
 

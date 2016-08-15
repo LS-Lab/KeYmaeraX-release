@@ -823,7 +823,7 @@ class DifferentialTests extends TacticTestBase {
     } catch {
       // proveBy may throw an expected exception sometimes -> filter the expected one
       case ex: Throwable if ex.getCause != null && ex.getCause.getMessage.contains("Unless proved, uniform substitutions instances cannot introduce free variables") => // expected
-      case ex => throw ex
+      case ex: Throwable => throw ex
     }
   }
 

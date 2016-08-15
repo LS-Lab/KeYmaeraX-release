@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, TheType, Position, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, Context, TactixLibrary, UnifyUSCalculus}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser

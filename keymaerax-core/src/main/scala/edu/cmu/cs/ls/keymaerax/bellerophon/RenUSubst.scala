@@ -267,7 +267,7 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
   protected val effective: USubstRen = try {
     USubstRen(rens ++
       (subsDefs.map(sp => try {
-        Predef.assert(!(sp.isInstanceOf[Variable]), "already filtered renaming part elsewhere")
+        Predef.assert(!(sp.what.isInstanceOf[Variable]), "already filtered renaming part elsewhere")
         (sp.what, renall(sp.repl))}
       catch {case ex: ProverException => throw ex.inContext("(" + sp + ")")}))
     )

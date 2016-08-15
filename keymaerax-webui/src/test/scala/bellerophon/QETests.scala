@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
-import edu.cmu.cs.ls.keymaerax.btactics.ToolTactics
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import scala.collection.immutable.IndexedSeq

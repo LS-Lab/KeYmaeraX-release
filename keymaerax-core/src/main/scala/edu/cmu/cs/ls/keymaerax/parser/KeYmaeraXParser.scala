@@ -376,8 +376,8 @@ object KeYmaeraXParser extends Parser {
       // nullary functional/predicational symbols of argument Taboo
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
         reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
-      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
-        shift(st)
+//      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
+//        shift(st)
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) =>
         if (la==RBANANA || la.isInstanceOf[IDENT]) shift(st)
         else error(st, List(RBANANA, ANYIDENT))
@@ -879,8 +879,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
-    case _: Variable => followsIdentifier(la) || /*if elaborated to program*/ followsProgram(la)
     case _: DifferentialSymbol => followsTerm(la) || la==ASSIGN
+    case _: Variable => followsIdentifier(la) || /*if elaborated to program*/ followsProgram(la)
     case FuncOf(_,_) => followsTerm(la) || /*elaboratable(FormulaKind, t)!=None &&*/ followsFormula(la) //@todo line irrelevant since followsTerm subsumes followsFormula
     case _: Term => followsTerm(la)
     case And(Equal(_:DifferentialSymbol, _), _) => followsFormula(la) || /*if elaborated to ODE*/ followsProgram(la)

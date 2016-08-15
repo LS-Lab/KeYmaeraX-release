@@ -72,7 +72,7 @@ object ParseException {
   def apply(msg: String, cause: Throwable): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "", cause)
 
-  def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException = if (state.la == EOF)
+  def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException = if (state.la.tok == EOF)
     new ParseException(msg, unmatched.loc, unmatched.toString, "", state.topString, state.toString /*, cause*/)
   else
     new ParseException(msg + "\nunmatched: :" + unmatched + " at " + unmatched.loc, state.location, state.la.toString, "", state.topString, state.toString /*, cause*/)

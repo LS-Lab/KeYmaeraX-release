@@ -264,10 +264,10 @@ object OpSpec {
     // terms
     case DotTerm(_)      => sDotTerm
     case Nothing         => sNothing
+    case t: DifferentialSymbol => sDifferentialSymbol
     case t: Variable     => sVariable
     case t: Number       => sNumber
     case t: FuncOf       => sFuncOf
-    case t: DifferentialSymbol => sDifferentialSymbol
     case t: Pair         => sPair
     case t: Differential => sDifferential
     case t: Neg          => sNeg

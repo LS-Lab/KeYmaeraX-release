@@ -6,10 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
-import edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 
 import scala.collection.immutable.HashMap
 

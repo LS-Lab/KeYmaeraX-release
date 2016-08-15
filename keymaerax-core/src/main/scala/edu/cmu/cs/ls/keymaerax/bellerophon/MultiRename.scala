@@ -105,10 +105,9 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   private def rename(term: Term): Term = term match {
     case x: Variable                      => renameVar(x, term)
-    case DifferentialSymbol(x)            => DifferentialSymbol(renameVar(x, term))
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
-    case Nothing | DotTerm                => term
+    case Nothing | DotTerm(_)             => term
     case _: UnitFunctional                => if (semanticRenaming) term else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
