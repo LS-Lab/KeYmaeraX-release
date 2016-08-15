@@ -51,6 +51,6 @@ class UIKeYmaeraXPrettyPrinter(val topId: String) extends KeYmaeraXWeightedPrett
   //@todo
   override def apply(seq: Sequent): String = ???
 
-  override def parser = throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
-  override def fullPrinter: (Expression => String) = throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.fullPrinter not implemented yet")
+  override val parser = throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+  override val fullPrinter: (Expression => String) = throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.fullPrinter not implemented yet")
 }
