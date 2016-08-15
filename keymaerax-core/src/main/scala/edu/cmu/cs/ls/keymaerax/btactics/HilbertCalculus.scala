@@ -287,7 +287,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** dualFree: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
   val dualFree                : PositionalTactic = ProofRuleTactics.dualFree
-  /** boxTre: proves `[a]true` as directly as possible.
+  /** boxTrue: proves `[a]true` as directly as possible.
     * @see [[dualFree]] */
   //@todo could do boxTrue = dualFree | master
   val boxTrue                 : PositionalTactic = dualFree

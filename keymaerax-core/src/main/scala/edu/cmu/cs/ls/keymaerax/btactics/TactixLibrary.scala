@@ -264,9 +264,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide real arithmetic (after simplifying logical transformations).
-    * Applies simplifying transformations to the real arithmetic questions before solving it.
+    * Applies simplifying transformations to the real arithmetic questions before solving it via [[RCF]].
     * @param order the order of variables to use during quantifier elimination
-    * @see [[QE]] */
+    * @see [[QE]]
+    * @see [[RCF]] */
   def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)
   def QE: BelleExpr = QE()
 
