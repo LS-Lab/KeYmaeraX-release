@@ -239,7 +239,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     /** Dpower: ^' derives a power */
     lazy val Dpower             : DependentPositionTactic = namedUseAt("Dpower", "^' derive power")
     /** Dcompose: o' derives a function composition by chain rule */
-    //lazy val Dcompose           : DependentPositionTactic = ???
+    lazy val Dcompose           : DependentPositionTactic = ???
     /** Dconst: c()' derives a constant `c()' = 0` */
     lazy val Dconst             : DependentPositionTactic = namedUseAt("Dconst", "c()' derive constant fn")
     /** Dvariable: x' derives a variable `(x)' = x'` */
