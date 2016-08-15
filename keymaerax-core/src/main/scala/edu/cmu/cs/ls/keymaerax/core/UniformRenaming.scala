@@ -81,7 +81,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case x: Variable                      => renameVar(x, term)
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
-    case Nothing | DotTerm                => term
+    case Nothing | DotTerm(_)             => term
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))

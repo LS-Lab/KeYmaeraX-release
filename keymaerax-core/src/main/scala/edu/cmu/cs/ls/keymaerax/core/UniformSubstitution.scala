@@ -133,7 +133,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case PredicationalOf(lf, arg) =>
       assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
       other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
-    //case _ => assert(false, "sameHead only used for ApplicationOf"); false
+    case _ => assert(false, "sameHead only used for ApplicationOf"); false
   }
 
   override def toString: String = "(" + what.prettyString + "~>" + repl.prettyString + ")"
