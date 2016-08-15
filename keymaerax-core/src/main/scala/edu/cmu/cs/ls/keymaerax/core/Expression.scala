@@ -104,36 +104,26 @@ sealed trait BinaryComposite extends Composite {
   val right: Expression
 }
 
-/** Function/predicate/predicational application */
+/** Function/predicate/predicational application
+  * @requires child.sort == func.domain
+  * @ensures sort == func.sort */
 sealed trait ApplicationOf extends Composite {
-  def applicable = {
-    insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
-    insist(sort == func.sort, "sort of application is the sort of the function")
-  }
+  insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
+  //@note initialization order would dictate that subclasses either provide lazy val or early initializer.
+  //insist(sort == func.sort, "sort of application is the sort of the function")
   /** The function/predicate/predicational that this application applies. */
   val func : Function
   /** The child argument that this function/predicate/predicational application is applied to. */
   val child : Expression
 }
 
-
-/** Expressions whose semantic interpretations have access to the state. */
-sealed trait StateDependent extends Expression
-
-/** Expressions limited to a given state-space. */
-sealed trait SpaceDependent extends StateDependent {
-  /** The space that this expression lives on. */
-  val space: Space
-  final val index: Option[Int] = None
-}
-
-
 /**
   * A named symbol such as a variable or function symbol or predicate symbol.
   * @note User-level symbols should not use underscores, which are reserved for the core.
   */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
-  def applicable: Unit = {
+  //@note initialization order uses explicit dataStructureInvariant that is called in all nontrivial subclasses after val have been initialized.
+  private[core] final def dataStructureInvariant: Unit = {
     insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"),
       "non-empty names without underscores (except at end for internal names): " + name)
     //@note the above requires conditions imply that !name.endsWith("__")
@@ -145,7 +135,6 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
     require(index.getOrElse(0) >= 0, "nonnegative index if any " + this)
   }
 
-  //@note initialization order dictates def everywhere or either lazy val or early initializer in subclasses. So that the basic contracts work on initialized data in all subclasses
   val name: String
   val index: Option[Int]
 
@@ -170,6 +159,18 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 
   override def toString: String = asString + "@" + getClass.getSimpleName
 }
+
+/** Expressions whose semantic interpretations have access to the state. */
+sealed trait StateDependent extends Expression
+
+/** Expressions limited to a given state-space. */
+sealed trait SpaceDependent extends StateDependent {
+  /** The space that this expression lives on. */
+  val space: Space
+  final val index: Option[Int] = None
+}
+
+
 
 /*********************************************************************************
   * Terms of differential dynamic logic
@@ -201,8 +202,8 @@ object Variable {
 }
 
 /** Elementary variable called `name` with an index of a fixed sort */
-case class BaseVariable(final val name: String, final val index: Option[Int]=None, final val sort: Sort=Real) extends Variable {
-  applicable
+case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) extends Variable {
+  dataStructureInvariant
 }
 
 /** Differential symbol x' for variable x */
@@ -212,7 +213,7 @@ case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   final val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
   override def toString: String = asString //+ "@" + getClass.getSimpleName
-  applicable
+  dataStructureInvariant
 }
 
 /** Number literal */
@@ -226,7 +227,7 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   final val kind: Kind = FunctionKind
   /** Full string with names and full types */
   override def fullString: String = asString + ":" + domain + "->" + sort
-  applicable
+  dataStructureInvariant
 }
 
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
@@ -246,9 +247,9 @@ object Nothing extends NamedSymbol with AtomicTerm {
 
 /** Function symbol applied to argument child func(child) */
 case class FuncOf(func: Function, child: Term) extends CompositeTerm with ApplicationOf {
-  /** The sort of an ApplicationOf is the sort of func */
+  /** The sort of an ApplicationOf is the sort of func
+    * @ensures sort == func.sort */
   final val sort: Sort = func.sort
-  applicable
 }
 
 /** Arity 0 functional symbol `name:sort`, limited to the given state space.
@@ -392,7 +393,6 @@ object DotFormula extends NamedSymbol with AtomicFormula with StateDependent {
 case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
-  applicable
 }
 
 /** Predicational or quantifier symbol applied to argument formula child. */
@@ -402,7 +402,6 @@ case class PredicationalOf(func: Function, child: Formula)
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
   insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
   insist(!func.interpreted, "only uninterpreted predicationals are currently supported: " + this)
-  applicable
 }
 
 /** Arity 0 predicational symbol `name:bool`, limited to the given state space.
@@ -514,7 +513,7 @@ sealed trait AtomicProgram extends Program with Atomic
 /** Uninterpreted program constant */
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
   final val index: Option[Int] = None
-  applicable
+  dataStructureInvariant
 }
 
 /** x:=e assignment */
@@ -588,7 +587,7 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
 sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg)
   extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
-  applicable
+  dataStructureInvariant
 }
 
 /** x'=e atomic differential equation */

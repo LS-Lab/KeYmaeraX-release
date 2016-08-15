@@ -217,10 +217,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
-  insist(noException(applicable()), "unique left-hand sides in substitutees " + this)
+  insist(noException(dataStructureInvariant), "unique left-hand sides in substitutees " + this)
 
   /** unique left hand sides in subsDefs */
-  private def applicable(): Unit = {
+  private def dataStructureInvariant: Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts = subsDefsInput.map(_.what).toList
     insist(lefts.distinct.size == lefts.size, "conflict: no duplicate substitutions for the same substitutee " + subsDefsInput)
