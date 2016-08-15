@@ -70,7 +70,9 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   *
   * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
   *
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
+  * 4. differential programs are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
+  *
+  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
   * @author Andre Platzer
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
