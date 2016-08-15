@@ -141,7 +141,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def toForward: Provable => Provable
 
   /** This RenUSubst implemented strictly from the core. */
-  def toCore: Expression => Expression
+  val toCore: Expression => Expression
 
   /** The first step that will be performed first toward the bottom of the proof. */
   private[bellerophon] def firstFlush: RenUSubst
@@ -209,7 +209,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
-  def toCore = throw new UnsupportedOperationException("not yet implemented. @todo")
+  val toCore = (e:Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[bellerophon] def firstFlush: RenUSubst = renaming
 
@@ -285,7 +285,7 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
-  def toCore: Expression => Expression = e => {
+  val toCore: Expression => Expression = e => {
     val replaced = usubst(e)
     Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
@@ -362,7 +362,7 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
       (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }
 
-  def toCore = throw new UnsupportedOperationException("not yet implemented. @todo")
+  val toCore = (e:Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[bellerophon] def firstFlush: RenUSubst = substitution
 

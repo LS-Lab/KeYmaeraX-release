@@ -39,7 +39,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   override def toString: String = "MultiRename{" + rens.map(sp => sp._1.toString + "~>" + sp._2).mkString(", ") + "}"
 
   /** This MultiRename implemented strictly from the core (but limited to no semantic renaming). */
-  def toCore: Expression => Expression =
+  val toCore: Expression => Expression =
   //@note core renaming only uses without transposition augmentation
     e => rena.foldLeft(e)((expr,sp)=>URename(sp._1,sp._2)(expr))
 

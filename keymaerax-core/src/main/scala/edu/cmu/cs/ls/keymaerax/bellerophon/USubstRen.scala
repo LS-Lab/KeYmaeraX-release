@@ -68,7 +68,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
 
 
   /** This USubstRen implemented strictly from the core. */
-  def toCore: Expression => Expression = e => {
+  val toCore: Expression => Expression = e => {
     val renall = MultiRename(RenUSubst.renamingPartOnly(subsDefsInput))
     // rename all substitutions (by transposition) since they'll be renamed back subsequently
     val usubst = USubst(subs.toList.map(sp => SubstitutionPair(sp._1, renall(sp._2))))
