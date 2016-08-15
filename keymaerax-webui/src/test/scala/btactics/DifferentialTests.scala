@@ -449,7 +449,7 @@ class DifferentialTests extends TacticTestBase {
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withMathematica { implicit qeTool =>
     // Equal(Differential(Variable("x")), "1".asTerm)
-    val result = proveBy("(x)'=1".asFormula, Dvar(1, 0::Nil))
+    val result = proveBy("(x)'=1".asFormula, Derive.Dvar(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     // Equal(DifferentialSymbol(Variable("x")), "1".asTerm)
@@ -457,35 +457,35 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "alpha rename if necessary" in withMathematica { implicit qeTool =>
-    val result = proveBy("(z)'=1".asFormula, Dvar(1, 0::Nil))
+    val result = proveBy("(z)'=1".asFormula, Derive.Dvar(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "z'=1".asFormula
   }
 
   it should "work in context" in withMathematica { implicit qeTool =>
-    val result = proveBy("[y:=1;](z)'=1".asFormula, Dvar(1, 1::0::Nil))
+    val result = proveBy("[y:=1;](z)'=1".asFormula, Derive.Dvar(1, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[y:=1;]z'=1".asFormula
   }
 
   it should "work in a context that binds the differential symbol" in withMathematica { implicit qeTool =>
-    val result = proveBy("[z':=1;](z)'=1".asFormula, Dvar(1, 1::0::Nil))
+    val result = proveBy("[z':=1;](z)'=1".asFormula, Derive.Dvar(1, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[z':=1;]z'=1".asFormula
   }
 
   it should "work in a context that binds x" in {
-    val result = proveBy("[z:=1;](z)'=1".asFormula, Dvar(1, 1::0::Nil))
+    val result = proveBy("[z:=1;](z)'=1".asFormula, Derive.Dvar(1, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[z:=1;]z'=1".asFormula
   }
 
   it should "work with other formulas around" in {
-    val result = proveBy(Sequent(IndexedSeq("a>0".asFormula), IndexedSeq("b<0".asFormula, "[z:=1;](z)'=1".asFormula, "c=0".asFormula)), Dvar(2, 1::0::Nil))
+    val result = proveBy(Sequent(IndexedSeq("a>0".asFormula), IndexedSeq("b<0".asFormula, "[z:=1;](z)'=1".asFormula, "c=0".asFormula)), Derive.Dvar(2, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "a>0".asFormula
     result.subgoals.head.succ should contain only ("b<0".asFormula, "[z:=1;]z'=1".asFormula, "c=0".asFormula)

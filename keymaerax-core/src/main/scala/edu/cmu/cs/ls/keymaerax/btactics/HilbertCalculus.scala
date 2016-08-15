@@ -20,17 +20,18 @@ import scala.language.postfixOps
 object HilbertCalculus extends HilbertCalculus
 
 /**
- * Hilbert Calculus for differential dynamic logic.
- * @author Andre Platzer
- * @author Stefan Mitsch
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
- * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
- * @see [[HilbertCalculus.derive()]]
- * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
- */
+  * Hilbert Calculus for differential dynamic logic.
+  * @author Andre Platzer
+  * @author Stefan Mitsch
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
+  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+  * @see [[HilbertCalculus.derive()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
+  */
 trait HilbertCalculus extends UnifyUSCalculus {
   import TacticFactory._
 
@@ -173,57 +174,64 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DS: Differential Solution solves a simple differential equation `[x'=c&q(x)]p(x)` by reduction to
     * `\forall t>=0 ((\forall 0<=s<=t  q(x+c()*s) -> [x:=x+c()*t;]p(x))` */
   lazy val DS                 : DependentPositionTactic = namedUseAt("DS", "DS& differential equation solution")
-  
-//  /** Dassignb: [':=] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
+
+  /** Dassignb: [':=] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : DependentPositionTactic = namedUseAt("Dassignb", "[':=] differential assign")
-  /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
-  lazy val Dplus              : DependentPositionTactic = namedUseAt("Dplus", "+' derive sum")
-  /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
-  lazy val Dneg               : DependentPositionTactic = namedUseAt("Dneg", "-' derive neg")
-  /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
-  lazy val Dminus             : DependentPositionTactic = namedUseAt("Dminus", "-' derive minus")
-  /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
-  lazy val Dtimes             : DependentPositionTactic = namedUseAt("Dtimes", "*' derive product")
-  /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
-  lazy val Dquotient          : DependentPositionTactic = namedUseAt("Dquotient", "/' derive quotient")
-  /** Dpower: ^' derives a power */
-  lazy val Dpower             : DependentPositionTactic = namedUseAt("Dpower", "^' derive power")
-  /** Dcompose: o' derives a function composition by chain rule */
-  lazy val Dcompose           : DependentPositionTactic = ???
-  /** Dconst: c()' derives a constant `c()' = 0` */
-  lazy val Dconst             : DependentPositionTactic = namedUseAt("Dconst", "c()' derive constant fn")
-  /** Dvariable: x' derives a variable `(x)' = x'` */
-  lazy val Dvar               : DependentPositionTactic = new DependentPositionTactic("Dvar") {
-    /** Create the actual tactic to be applied at position pos */
-    override def factory(pos: Position): DependentTactic = (if (INTERNAL) namedUseAt("Dvar", "x' derive var") else DifferentialTactics.Dvariable)(pos)
+
+  /**
+    * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].
+    *
+    * There is rarely a reason to use these separate axioms, since [[HilbertCalculus.derive]] already
+    * uses the appropriate differential axiom as needed.
+    * @see Figure 3 in Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see [[HilbertCalculus.derive]]
+    */
+  object Derive {
+    /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
+    lazy val Dplus              : DependentPositionTactic = namedUseAt("Dplus", "+' derive sum")
+    /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
+    lazy val Dneg               : DependentPositionTactic = namedUseAt("Dneg", "-' derive neg")
+    /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
+    lazy val Dminus             : DependentPositionTactic = namedUseAt("Dminus", "-' derive minus")
+    /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
+    lazy val Dtimes             : DependentPositionTactic = namedUseAt("Dtimes", "*' derive product")
+    /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
+    lazy val Dquotient          : DependentPositionTactic = namedUseAt("Dquotient", "/' derive quotient")
+    /** Dpower: ^' derives a power */
+    lazy val Dpower             : DependentPositionTactic = namedUseAt("Dpower", "^' derive power")
+    /** Dcompose: o' derives a function composition by chain rule */
+    //lazy val Dcompose           : DependentPositionTactic = ???
+    /** Dconst: c()' derives a constant `c()' = 0` */
+    lazy val Dconst             : DependentPositionTactic = namedUseAt("Dconst", "c()' derive constant fn")
+    /** Dvariable: x' derives a variable `(x)' = x'` */
+    lazy val Dvar               : DependentPositionTactic = new DependentPositionTactic("Dvar") {
+      /** Create the actual tactic to be applied at position pos */
+      override def factory(pos: Position): DependentTactic = (if (INTERNAL) namedUseAt("Dvar", "x' derive var") else DifferentialTactics.Dvariable)(pos)
+    }
+
+    /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
+    lazy val Dand               : DependentPositionTactic = namedUseAt("Dand", "&' derive and")
+    /** Dor: |' derives a disjunction `(p(x)|q(x))'` to obtain `p(x)' & q(x)'` */
+    lazy val Dor                : DependentPositionTactic = namedUseAt("Dor", "|' derive or")
+    /** Dimply: ->' derives an implication `(p(x)->q(x))'` to obtain `(!p(x) | q(x))'` */
+    lazy val Dimply             : DependentPositionTactic = namedUseAt("Dimply", "->' derive imply")
+    /** Dequal: =' derives an equation `(f(x)=g(x))'` to obtain `f(x)'=g(x)'` */
+    lazy val Dequal             : DependentPositionTactic = namedUseAt("Dequal", "=' derive =")
+    /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
+    lazy val Dnotequal          : DependentPositionTactic = namedUseAt("Dnotequal", "!=' derive !=")
+    /** Dless: <' derives less-than `(f(x)⟨g(x))'` to obtain `f(x)'<=g(x)'` */
+    lazy val Dless              : DependentPositionTactic = namedUseAt("Dless", "<' derive <")
+    /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
+    lazy val Dlessequal         : DependentPositionTactic = namedUseAt("Dlessequal", "<=' derive <=")
+    /** Dgreater: >' derives greater-than `(f(x)>g(x))'` to obtain `f(x)'>=g(x)'` */
+    lazy val Dgreater           : DependentPositionTactic = namedUseAt("Dgreater", ">' derive >")
+    /** Dgreaterequal: >=' derives a greater-or-equal `(f(x)>=g(x))'` to obtain `f(x)'>=g(x)'` */
+    lazy val Dgreaterequal      : DependentPositionTactic = namedUseAt("Dgreaterequal", ">=' derive >=")
+    /** Dforall: \forall' derives an all quantifier `(\forall x p(x))'` to obtain `\forall x (p(x)')` */
+    lazy val Dforall            : DependentPositionTactic = namedUseAt("Dforall", "forall' derive forall")
+    /** Dexists: \exists' derives an exists quantifier */
+    lazy val Dexists            : DependentPositionTactic = namedUseAt("Dexists", "exists' derive exists")
   }
-
-  /** Dcompose: o' derives a function composition by chain rule */
-  //@todo lazy val Dcompose           : BuiltInPositionTactic = ???
-
-  /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
-  lazy val Dand               : DependentPositionTactic = namedUseAt("Dand", "&' derive and")
-  /** Dor: |' derives a disjunction `(p(x)|q(x))'` to obtain `p(x)' & q(x)'` */
-  lazy val Dor                : DependentPositionTactic = namedUseAt("Dor", "|' derive or")
-  /** Dimply: ->' derives an implication `(p(x)->q(x))'` to obtain `(!p(x) | q(x))'` */
-  lazy val Dimply             : DependentPositionTactic = namedUseAt("Dimply", "->' derive imply")
-  /** Dequal: =' derives an equation `(f(x)=g(x))'` to obtain `f(x)'=g(x)'` */
-  lazy val Dequal             : DependentPositionTactic = namedUseAt("Dequal", "=' derive =")
-  /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
-  lazy val Dnotequal          : DependentPositionTactic = namedUseAt("Dnotequal", "!=' derive !=")
-  /** Dless: <' derives less-than `(f(x)⟨g(x))'` to obtain `f(x)'<=g(x)'` */
-  lazy val Dless              : DependentPositionTactic = namedUseAt("Dless", "<' derive <")
-  /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
-  lazy val Dlessequal         : DependentPositionTactic = namedUseAt("Dlessequal", "<=' derive <=")
-  /** Dgreater: >' derives greater-than `(f(x)>g(x))'` to obtain `f(x)'>=g(x)'` */
-  lazy val Dgreater           : DependentPositionTactic = namedUseAt("Dgreater", ">' derive >")
-  /** Dgreaterequal: >=' derives a greater-or-equal `(f(x)>=g(x))'` to obtain `f(x)'>=g(x)'` */
-  lazy val Dgreaterequal      : DependentPositionTactic = namedUseAt("Dgreaterequal", ">=' derive >=")
-  /** Dforall: \forall' derives an all quantifier `(\forall x p(x))'` to obtain `\forall x (p(x)')` */
-  lazy val Dforall            : DependentPositionTactic = namedUseAt("Dforall", "forall' derive forall")
-  /** Dexists: \exists' derives an exists quantifier */
-  lazy val Dexists            : DependentPositionTactic = namedUseAt("Dexists", "exists' derive exists")
-
 
 
   /** boxAnd: splits `[a](p&q)` into `[a]p & [a]q` */

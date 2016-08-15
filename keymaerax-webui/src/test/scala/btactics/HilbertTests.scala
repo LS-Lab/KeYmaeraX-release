@@ -24,6 +24,7 @@ import scala.collection.immutable._
 @SummaryTest
 @UsualTest
 class HilbertTests extends TacticTestBase {
+  import HilbertCalculus.Derive._
 
   object TestLib extends UnifyUSCalculus
 
