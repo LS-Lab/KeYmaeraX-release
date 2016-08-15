@@ -4,8 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Sequent}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXWeightedPrettyPrinter, Parser, PrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
 object UIKeYmaeraXPrettyPrinter {
@@ -51,6 +51,13 @@ class UIKeYmaeraXPrettyPrinter(val topId: String) extends KeYmaeraXWeightedPrett
   //@todo
   override def apply(seq: Sequent): String = ???
 
-  override val parser = (e:Expression) => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+  override val parser = new Parser() {
+    def apply(input: String): Expression = throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+    val termParser: (String => Term) = s => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+    val formulaParser: (String => Formula) = s => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+    val programParser: (String => Program) = s => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+    val differentialProgramParser: (String => DifferentialProgram) = s => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.parser is undefined since not parsing HTML")
+    val printer: PrettyPrinter = UIKeYmaeraXPrettyPrinter.this
+  }
   override val fullPrinter: (Expression => String) = (e:Expression) => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.fullPrinter not implemented yet")
 }
