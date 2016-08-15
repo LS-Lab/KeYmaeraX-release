@@ -41,7 +41,7 @@ sealed trait SeqPos {
   /** Whether this position is in the antecedent on the left of the sequent arrow */
   val isAnte: Boolean
   /** Whether this position is in the succedent on the right of the sequent arrow */
-  val isSucc: Boolean = !isAnte
+  val isSucc: Boolean
 
   /**
     * The '''unsigned''' index into the antecedent or succedent list, respectively, '''0-indexed'''.
@@ -55,7 +55,7 @@ sealed trait SeqPos {
     *  Zero is a degenerate case indicating whole sequent 0.
     * @see [[SeqPos.apply()]]
     */
-  final val getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
+  final lazy val getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
 
   override def toString: String = getPos.toString
 }
@@ -67,6 +67,7 @@ sealed trait SeqPos {
   */
 case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
   val isAnte: Boolean = true
+  val isSucc: Boolean = !isAnte
   /** The position 0-indexed in antecedent. */
   private[keymaerax] val getIndex: Int = index
 }
@@ -78,6 +79,7 @@ case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
   */
 case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
   val isAnte: Boolean = false
+  val isSucc: Boolean = !isAnte
   /** The position 0-indexed in succedent. */
   private[keymaerax] val getIndex: Int = index
 }
