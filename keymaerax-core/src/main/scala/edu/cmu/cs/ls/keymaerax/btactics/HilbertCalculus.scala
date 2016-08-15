@@ -21,6 +21,9 @@ object HilbertCalculus extends HilbertCalculus
 
 /**
   * Hilbert Calculus for differential dynamic logic.
+  *
+  * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in:
+  * Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
@@ -29,8 +32,10 @@ object HilbertCalculus extends HilbertCalculus
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
   * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+  * @see [[HilbertCalculus.stepAt()]]
   * @see [[HilbertCalculus.derive()]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
   */
 trait HilbertCalculus extends UnifyUSCalculus {
   import TacticFactory._
@@ -38,7 +43,20 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private[btactics] val INTERNAL = false
 
+  /**
+    * Make the canonical simplifying proof step at the indicated position
+    * except when a decision needs to be made (e.g. invariants for loops or for differential equations).
+    * Using the canonical [[AxiomIndex]].
+    * @author Andre Platzer
+    * @note Efficient source-level indexing implementation.
+    * @see [[AxiomIndex]]
+    */
+  lazy val stepAt: DependentPositionTactic = stepAt(AxiomIndex.axiomFor)
+
+
+  //
   // axiomatic rules
+  //
 
   /** G: Gödel generalization rule reduces a proof of `|- [a]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
@@ -62,10 +80,14 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
   lazy val mond               : BelleExpr         = byUS("<> monotone")
 
-
+  //
   // axioms
+  //
 
-  // modalities
+  //
+  //box modality
+  //
+
   /** diamond: <.> reduce double-negated box `![a]!p(x)` to a diamond `⟨a⟩p(x)`. */
   lazy val diamond            : DependentPositionTactic = useAt("<> diamond")
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
@@ -81,12 +103,6 @@ trait HilbertCalculus extends UnifyUSCalculus {
         else DLBySubst.assignb(pos)
       }
     }
-  }
-
-  private[btactics] def namedUseAt(codeName: String, axiomName: String, inst: (Subst=>Subst) = us=>us) = new DependentPositionTactic(codeName) {
-    assert(DerivationInfo.hasCodeName(codeName), s"$codeName is a tactic name but is not a DerivationInfo codeName.")
-    if (DerivationInfo.ofCodeName(codeName).codeName.toLowerCase() != codeName.toLowerCase()) println("WARNING: codeName should be changed to a consistent name: " + codeName)
-    override def factory(pos: Position): DependentTactic = useAt(axiomName, inst)(pos)
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
@@ -105,17 +121,21 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** dualb: [^d^] handle dual game `[{a}^d^]p(x)` by `![a]!p(x)` */
   lazy val dualb              : DependentPositionTactic = namedUseAt("dualb", "[d] dual")
 
+  //
+  // diamond modality
+  //
+
+  /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
+  lazy val box                : DependentPositionTactic = namedUseAt("box", "[] box")
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : DependentPositionTactic = new DependentPositionTactic("assignd") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        useAt("<:=> assign") | useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
+        useAt("<:=> assign") | useAt("<:=> assign equational")
       }
     }
   }
 
-  /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
-  lazy val box                : DependentPositionTactic = namedUseAt("box", "[] box")
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
   lazy val randomd            : DependentPositionTactic = useAt("<:*> assign nondet")
   /** testd: <?> simplifies test `<?q;>p` to a conjunction `q&p` */
@@ -130,6 +150,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val iterated           : DependentPositionTactic = namedUseAt("iterated", "<*> iterate")
   /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
   lazy val duald              : DependentPositionTactic = namedUseAt("duald", "<d> dual")
+
+  //
+  //
+  //
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
@@ -146,8 +170,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
     //@todo useAt except with dualFree as the tactic to prove the global prereq [a]true.
   lazy val V                  : DependentPositionTactic = useAt("V vacuous")
-//
-//  // differential equations
+
+  //
+  // differential equations
+  //
+
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : DependentPositionTactic = namedUseAt("DWeaken", "DW differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
@@ -177,6 +204,18 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** Dassignb: [':=] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : DependentPositionTactic = namedUseAt("Dassignb", "[':=] differential assign")
+
+  /*******************************************************************
+    * Derive by proof
+    *******************************************************************/
+
+  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof).
+    * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
+    * @see [[UnifyUSCalculus.chase]]
+    */
+  lazy val derive: DependentPositionTactic = new DependentPositionTactic("derive") {
+    override def factory(pos: Position): DependentTactic = chase(pos)
+  }
 
   /**
     * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].
@@ -233,6 +272,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
     lazy val Dexists            : DependentPositionTactic = namedUseAt("Dexists", "exists' derive exists")
   }
 
+  //
+  // Additional
+  //
 
   /** boxAnd: splits `[a](p&q)` into `[a]p & [a]q` */
   lazy val boxAnd             : DependentPositionTactic = namedUseAt("boxAnd", "[] split")
@@ -265,28 +307,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //@todo document and unclear what it really does depending on the index
   lazy val existsE            : DependentPositionTactic = namedUseAt("existsE", "exists eliminate")
 
-  //@todo make the other quantifier axioms accessible by useAt too
 
-  /**
-   * Make the canonical simplifying proof step based at the indicated position
-   * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
-   * Using the canonical [[AxiomIndex]].
-   * @author Andre Platzer
-   * @note Efficient source-level indexing implementation.
-   * @see [[AxiomIndex]]
-   */
-  lazy val stepAt: DependentPositionTactic = stepAt(AxiomIndex.axiomFor)
+  // implementation
 
-  /*******************************************************************
-    * Derive by proof
-    *******************************************************************/
-
-  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof).
-    * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
-    * @see [[UnifyUSCalculus.chase]]
-    */
-  lazy val derive: DependentPositionTactic = new DependentPositionTactic("derive") {
-    override def factory(pos: Position): DependentTactic = chase(pos)
+  private[btactics] def namedUseAt(codeName: String, axiomName: String, inst: (Subst=>Subst) = us=>us) = new DependentPositionTactic(codeName) {
+    assert(DerivationInfo.hasCodeName(codeName), s"$codeName is a tactic name but is not a DerivationInfo codeName.")
+    if (DerivationInfo.ofCodeName(codeName).codeName.toLowerCase() != codeName.toLowerCase()) println("WARNING: codeName should be changed to a consistent name: " + codeName)
+    override def factory(pos: Position): DependentTactic = useAt(axiomName, inst)(pos)
   }
-
 }
