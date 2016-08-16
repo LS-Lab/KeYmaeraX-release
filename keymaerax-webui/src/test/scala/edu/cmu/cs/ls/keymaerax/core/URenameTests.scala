@@ -152,8 +152,8 @@ class URenameTests extends FlatSpec with Matchers {
     a [RenamingClashException] shouldBe thrownBy{URename(Variable("x"),Variable("y"))(DotFormula).asInstanceOf[Expression]}
   }
 
-  it should "refuse DotTerm" in {
-    URename(Variable("x"),Variable("y"))(DotTerm) shouldBe DotTerm
-    URename(Variable("x"),Variable("y"))(DotTerm.asInstanceOf[Expression]) shouldBe DotTerm
+  it should "refuse DotTerm()" in {
+    URename(Variable("x"),Variable("y"))(DotTerm()) shouldBe DotTerm()
+    URename(Variable("x"),Variable("y"))(DotTerm().asInstanceOf[Expression]) shouldBe DotTerm()
   }
 }

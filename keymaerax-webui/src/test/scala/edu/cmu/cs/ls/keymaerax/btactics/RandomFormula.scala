@@ -104,8 +104,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case a: DifferentialProgramConst => a->nextDP(vars,size)
       case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
       case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false)
-      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm)->nextT(othervars,size,dots=true,diffs=false,funcs=false)
-      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm)->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false)
+      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
+      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false)
       case ow => ow->ow
     })
     def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
@@ -212,7 +212,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean, funcs: Boolean) : Term = {
     require(n>=0)
-    if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(1))
+    if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm()} else Number(BigDecimal(1))
     val r = rand.nextInt(if (dots) 105 else 95/*+1*/)
     r match {
       case 0 => Number(BigDecimal(0))
@@ -232,7 +232,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if (80 until 84 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length))+ "0",None,Unit,Real),Nothing)
       case it if (84 until 88 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length)),None,Real,Real), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
       case it if (88 until 95 contains it) && funcs => UnitFunctional(funcNames(rand.nextInt(funcNames.length)).toUpperCase,AnyArg,Real)
-      case it if 95 until 200 contains it => assert(dots); DotTerm
+      case it if 95 until 200 contains it => assert(dots); DotTerm()
       // cleanup case without diffs and funcs emphasizes nonzero constants and variables to make for more interesting polynomials etc.
       case it if (60 until 200 contains it) && (!diffs || !funcs) =>
         if (r%2==0) vars(rand.nextInt(vars.length)) else Number(BigDecimal(1+rand.nextInt(100)))

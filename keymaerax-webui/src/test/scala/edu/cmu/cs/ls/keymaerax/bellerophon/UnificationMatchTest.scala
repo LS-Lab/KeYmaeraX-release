@@ -115,7 +115,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     //@todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
-      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
         SubstitutionPair(Variable("x"), Variable("y")) ::
         SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
   }
@@ -155,14 +155,14 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   "New unification match" should "unify renaming and instance 3*f(x)>2 and 5*x>2" in {
     shouldMatch("3*f(x)>2".asFormula,
       "3*(5*x)>2".asFormula, RenUSubst(
-        (FuncOf(Function("f", None, Real, Real), DotTerm), Times(Number(5), DotTerm)) :: Nil
+        (FuncOf(Function("f", None, Real, Real), DotTerm()), Times(Number(5), DotTerm())) :: Nil
       ))
   }
 
   it should "unify renaming and instance p(x) and x>5" in {
     shouldMatch("p(x)".asFormula,
       "x>5".asFormula, RenUSubst(
-        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, Number(5))) :: Nil
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(5))) :: Nil
       ))
   }
 
@@ -189,7 +189,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     //@todo not sure about the expected exception
     a[ProverException] shouldBe thrownBy(
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
-      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
         SubstitutionPair(Variable("x"), Variable("y")) ::
         SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
     )
@@ -201,7 +201,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
     //@todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe RenUSubst(
-      (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+      (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
         (Variable("x"), Variable("y")) ::
         ("t()".asTerm, Variable("z")) :: Nil)
   }
@@ -209,53 +209,53 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   it should "unify [x:=f();]p(x) with [x:=7+x;]x^2>=5" in {
     shouldMatch("[x:=f();]p(x)".asFormula, "[x:=7+x;]x^2>=5".asFormula, RenUSubst(
         ("f()".asTerm, "7+x".asTerm) ::
-          (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+          (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) <-> p(f()) with [x:=7+x;]x^2>=5 <-> (7+x)^2>=5" in {
     shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula, RenUSubst(
       ("f()".asTerm, "7+x".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) with [y:=7+z;]y^2>=5" in {
     shouldMatch("[x:=f();]p(x)".asFormula, "[y:=7+z;]y^2>=5".asFormula, RenUSubst(
       (Variable("x"), Variable("y")) ::
       ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [y:=f();]p(y) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
     shouldMatch("[y:=f();]p(y) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
       (("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil)))
   }
 
   it should "unify [x_:=f();]p(x_) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
     shouldMatch("[x_:=f();]p(x_) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
       (Variable("x_"), Variable("y")) ::
         ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
     shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
       (Variable("x"), Variable("y")) ::
         ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x_:=y;]p(x_) with [y_0:=y;]y_0>2" in {
     shouldMatch("[x_:=y;]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, RenUSubst(
       (Variable("x_"), Variable("y",Some(0))) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "2".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "2".asTerm)) :: Nil))
   }
 
   it should "unify [x_:=f();]p(x_) with [y_0:=y;]y_0>2" in {
     shouldMatch("[x_:=f();]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, RenUSubst(
       (Variable("x_"), Variable("y",Some(0))) ::
         ("f()".asTerm, "y".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "2".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "2".asTerm)) :: Nil))
   }
 
 //  it should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=y;]y_0>0<->y>0" in {
@@ -287,13 +287,13 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   "Dassignb unification" should "unify [u':=f();]p(u') with [u':=b();]u'>=0" in {
     shouldMatch("[u':=f();]p(u')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
       (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::
-        (PredOf(Function("p",None,Real,Bool),DotTerm), GreaterEqual(DotTerm,Number(0))) :: Nil))
+        (PredOf(Function("p",None,Real,Bool),DotTerm()), GreaterEqual(DotTerm(),Number(0))) :: Nil))
   }
 
   it should "unify [x':=f();]p(x') with [u':=b();]u'>=0" in {
     shouldMatch("[x':=f();]p(x')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
       (Variable("x"), Variable("u")) :: (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::
-        (PredOf(Function("p",None,Real,Bool),DotTerm), GreaterEqual(DotTerm,Number(0))) :: Nil))
+        (PredOf(Function("p",None,Real,Bool),DotTerm()), GreaterEqual(DotTerm(),Number(0))) :: Nil))
   }
 
 
@@ -483,6 +483,6 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   "Reunifier ideally" should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs OptimisticTest ignore {
     shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, RenUSubst(
       ("f()".asTerm, "7+x".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 }

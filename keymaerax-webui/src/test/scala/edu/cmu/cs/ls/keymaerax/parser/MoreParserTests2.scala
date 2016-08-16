@@ -171,9 +171,9 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   }
 
   it should "round trip parse dot terms" in {
-    parser.termParser(parser.termParser(".").prettyString) shouldBe DotTerm
-    parser.termParser(parser.termParser("•").prettyString) shouldBe DotTerm
-    parser.termParser(parser.termParser("•()").prettyString) shouldBe DotTerm
+    parser.termParser(parser.termParser(".").prettyString) shouldBe DotTerm()
+    parser.termParser(parser.termParser("•").prettyString) shouldBe DotTerm()
+    parser.termParser(parser.termParser("•()").prettyString) shouldBe DotTerm()
     parser.termParser(parser.termParser("•(•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Real))
     parser.termParser(parser.termParser("•(•,•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)))
   }

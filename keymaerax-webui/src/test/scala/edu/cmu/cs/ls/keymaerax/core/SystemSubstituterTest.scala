@@ -82,10 +82,10 @@ class SystemSubstituterTest extends TacticTestBase {
         Nil))}
     //@todo should throw or leave f,p,q untouched since they have different types
     theDeductionOf(pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Number(3)) ::
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm()), Number(3)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), "y_=9".asFormula) ::
+        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm()), "y_=9".asFormula) ::
         Nil))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
     //@note this is a mistyped substitution so near no-op would be acceptable
     theDeductionOf {pr(USubst(
@@ -234,10 +234,10 @@ class SystemSubstituterTest extends TacticTestBase {
         SubstitutionPair(UnitPredicational("p",Except(y)), ".>=0".asFormula) ::
         Nil))}
     theDeductionOf(pr(USubst(
-      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm), Variable("y_",None,Real)) ::
+      SubstitutionPair(FuncOf(Function("f",None,Real,Real),DotTerm()), Variable("y_",None,Real)) ::
         SubstitutionPair(UnitFunctional("g",AnyArg,Real), Number(5)) ::
-        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm), True) ::
-        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), ".>=0".asFormula) ::
+        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
+        SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm()), ".>=0".asFormula) ::
         Nil))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
     //@note this is a mistyped substitution so near no-op would be acceptable
     theDeductionOf(pr(USubst(
