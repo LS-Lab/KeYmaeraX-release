@@ -7,7 +7,7 @@
   * @author Andre Platzer
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -95,7 +95,6 @@ object StaticSemantics {
   def freeVars(term: Term): SetLattice[Variable] = term match {
     // base cases
     case x: Variable => SetLattice(x)
-//    case xp: DifferentialSymbol => SetLattice(xp)
     case _: Number => bottom
     // Type hierarchy makes the assert superfluous, which is intentional to protect against change.
     case d: DotTerm => assert(!d.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
@@ -118,10 +117,10 @@ object StaticSemantics {
   }
 
   /**
-    * Check whether expression e is literally a properly differential term/expression, i.e. mentions differentials or differential symbols.
+    * Check whether expression e is literally a properly differential term/expression, i.e. mentions differentials or differential symbols free.
     *
-    * @note Only verbatim mentions are counted, so not via Anything.
-    * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables.
+    * @note Only verbatim mentions are counted, so not via indirect Space dependency.
+    * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables, but (x+y)' is differential.
     * @note AtomicODE uses isDifferential to ensure explicit form of differential equations.
     * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free DifferentialSymbols.
     */
@@ -177,6 +176,7 @@ object StaticSemantics {
     case Less(l, r)         => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
     case PredOf(p, arg)     => VCF(fv = freeVars(arg), bv = bottom)
+    //@note Could move SpaceDependent to the bottom of the match since core will not be interested in its free variables
     case PredicationalOf(p, arg) => VCF(fv = allVars, bv = allVars)
     //@note DotFormula is like a reserved zero-parameter Predicational. Its bound variables are debatable since it has no child.
     case DotFormula         => VCF(fv = allVars, bv = allVars)
@@ -230,7 +230,7 @@ object StaticSemantics {
       case Compose(a, b) => val va = progVars(a); val vb = progVars(b)
         VCP(fv = va.fv ++ (vb.fv -- va.mbv), bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
       case Loop(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = bottom)
-      case Dual(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = va.mbv)
+      case Dual(a) => progVars(a)
 
       // special cases
       //@note x:=* in analogy to x:=e
@@ -269,7 +269,6 @@ object StaticSemantics {
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
     // base cases
     case _: Variable => Set.empty
-//    case _: DifferentialSymbol => Set.empty
     case _: Number => Set.empty
     case FuncOf(f, arg) => Set(f) ++ signature(arg)
     case d: DotTerm => Set(d)
