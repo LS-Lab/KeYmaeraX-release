@@ -7,7 +7,7 @@
   * @author Andre Platzer
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -30,7 +30,8 @@ import scala.collection.immutable
   */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
   insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort: " + this)
-  insist(what.isInstanceOf[BaseVariable] && repl.isInstanceOf[BaseVariable], "Renaming currently only supports base variables: " + this)
+  //@note Unlike renaming x to z, renaming x' to z would be unsound in (x+y)'=x'+y'.
+  insist(what.isInstanceOf[BaseVariable] && repl.isInstanceOf[BaseVariable], "Renaming only supports base variables: " + this)
 
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
   private[core] val TRANSPOSITION: Boolean = true
@@ -67,13 +68,13 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   // implementation
 
-  /** Rename a variable (that occurs in the given context for error reporting purposes) */
+  /** Rename a variable and/or differential symbol x (that occurs in the given `context` for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable =
     if (x==what) repl
     else if (x==repl) if (TRANSPOSITION) what else throw new RenamingClashException("Replacement name " + repl.asString + " already occurs originally", this.toString, x.asString, context.prettyString)
     else x match {
       case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y, context))
-      case _ => x
+      case x: BaseVariable => x
     }
 
 

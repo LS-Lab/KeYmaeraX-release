@@ -5,7 +5,7 @@
 /**
   * KeYmaera X Exception and Error Hierarchy.
   * @author Andre Platzer
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -37,29 +37,15 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
   override def toString: String = super.getMessage + getContext
 
 }
-// class ProverException private(ex: RuntimeException) extends RuntimeException(ex) {
-//   def this(message:String) = this(new RuntimeException(message))
-//   def this(message:String, throwable: Throwable) = this(new RuntimeException(message, throwable))
-// }
-
 /** Critical exceptions from the KeYmaera X Prover Core. */
 class CoreException(msg: String) extends ProverException(msg)
 
 /** Substitution clash */
 case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
-  extends CoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info) {
-  //  def inContext(context: String): SubstitutionClashException =
-  //new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
-}
+  extends CoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info)
 
 /** Uniform or bound renaming clash exception */
-case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "") extends CoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info) {
-  /**
-    * Add the context information to this exception, returning the resulting exception to be thrown.
-    */
-  //  def inContext(context: String): BoundRenamingClashException =
-  //    new BoundRenamingClashException(msg, ren, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
-}
+case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "") extends CoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info)
 
 /** Skolem symbol clash */
 case class SkolemClashException(msg: String, clashedNames:SetLattice[Variable], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
