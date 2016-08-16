@@ -63,6 +63,22 @@ http://dx.doi.org/10.1145/2817824
 ------------------------------------------------------------------
 The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
 A log of all major code reviews and the findings are reported here:
+
+Code Review: KeYmaera X Core: 2016-08-16
+  NOTE Could turn DifferentialProgram into non-Program.
+  NOTE Could remove some convenience functionality from the core that the core does not use.
+  TODO DG inverse differential ghost system and DG inverse differential ghost should merge into one axiom.
+  TODO Categorization of proof rules as PositionRule, TwoPositionRule are not necessarily useful.
+  TODO Review SetLattice
+
+
+Extended Delta Code Review: 2016-08-16 Full review of lemma handling
+  NOTE Lemma could isolate checksum handling exclusively into toString and fromString
+  TODO Review SQLLite.getLemmas and its interaction with create and contracts.
+  TODO Number format standard in SMTLIB seems underdefined.
+  TODO Polya result parsing needs to become more reliable
+
+
 Extended Code Review: 2016-08-02 but not core code review
   Verdict: Significant improvement of reliability of tool handling.
   TODO Add lemma evidence directly in LemmaDB.toString

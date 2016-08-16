@@ -12,9 +12,9 @@ import scala.language.postfixOps
 
 
 /**
- * [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
+ * Implementation: [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
  */
-object FOQuantifierTactics {
+protected object FOQuantifierTactics {
   /** Proves exists by duality from universal base tactic */
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
     TacticFactory.anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -34,7 +34,7 @@ object FOQuantifierTactics {
       useAt("all instantiate", PosInExpr(1::Nil), (us: Subst) => RenUSubst(
         ("x_".asTerm, v) ::
         ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
-        ("p(.)".asFormula, fml.replaceFree(t, DotTerm)) :: Nil))(pos)
+        ("p(.)".asFormula, fml.replaceFree(t, DotTerm())) :: Nil))(pos)
     })
     what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
@@ -168,8 +168,8 @@ object FOQuantifierTactics {
 
           //@note create own substitution since UnificationMatch doesn't get it right yet
           val aT = FuncOf(Function("f", None, Unit, Real), Nothing)
-          val aP = PredOf(Function("p_", None, Real, Bool), DotTerm)
-          val pDot = replaceWheres(fml, DotTerm)
+          val aP = PredOf(Function("p_", None, Real, Bool), DotTerm())
+          val pDot = replaceWheres(fml, DotTerm())
           val subst = USubst(
             SubstitutionPair(aP, pDot) ::
             SubstitutionPair(aT, sequent.sub(pos.topLevel ++ where.head).get) :: Nil)

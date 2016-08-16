@@ -37,7 +37,7 @@ class ProofRuleTests extends TacticTestBase {
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ x_>0 -> z>0".asFormula)),
       TactixLibrary.by("all instantiate",
         USubst(
-          SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
+          SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
     result shouldBe 'proved
   }

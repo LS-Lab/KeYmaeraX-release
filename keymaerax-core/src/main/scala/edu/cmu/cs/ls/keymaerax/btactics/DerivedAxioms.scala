@@ -18,7 +18,7 @@ import scala.language.postfixOps
 import scala.reflect.runtime.{universe => ru}
 
 /**
- * Derived Axioms.
+ * Database of Derived Axioms.
  *
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]

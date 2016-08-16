@@ -417,11 +417,11 @@ object KeYmaeraXParser extends Parser {
       // DOT arity=0
       case r :+ Token(DOT,_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN) shift(st) else reduce(st, 1, DotTerm, r)
+        if (la==LPAREN) shift(st) else reduce(st, 1, DotTerm(), r)
 
       case r :+ Token(DOT,_) :+ (optok@Token(LPAREN,_)) :+ Token(RPAREN,_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduce(st, 3, DotTerm, r)
+        reduce(st, 3, DotTerm(), r)
 
       // DOT arity>0
       case r :+ Token(DOT,_) :+ (optok@Token(LPAREN,_)) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>

@@ -12,12 +12,12 @@ import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 import scala.language.postfixOps
 
 /**
- * Tactics that execute and use the output of tools.
+ * Implementation: Tactics that execute and use the output of tools.
  * Also contains tactics for pre-processing sequents.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-object ToolTactics {
+private object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[NamedSymbol] = Nil)(qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
@@ -47,6 +47,8 @@ object ToolTactics {
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
     //Run QE and extract the resulting provable and equivalence
+    //@todo how about storing the lemma, but also need a way of finding it again
+    //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
     val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
     val Equiv(_, result) = qeFact.conclusion.succ.head
 

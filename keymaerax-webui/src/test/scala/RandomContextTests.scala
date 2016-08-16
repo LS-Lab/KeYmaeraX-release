@@ -29,7 +29,7 @@ class RandomContextTests extends FlatSpec with Matchers {
 
   def contextShouldBe[T<:Formula](origin: T, pos: PosInExpr): Boolean = {
     if (pos != PosInExpr.HereP && pos.pos.last==0 && (origin.sub(pos.parent) match {
-      // exempt those positions where DotTerm makes no sense since restricted to variables
+      // exempt those positions where DotTerm() makes no sense since restricted to variables
       case Some(Assign(_,_)) => true
       //case Some(DiffAssign(_,_)) => true
       case Some(AssignAny(_)) => true
@@ -67,7 +67,7 @@ class RandomContextTests extends FlatSpec with Matchers {
   private val noContextD = DifferentialProgramConst("noctxD",AnyArg)
 
 
-  //@note these tests sometimes fails for too courageous DotTerm occurrences in the wrong places caused by random positioning. For example left of assignment ...
+  //@note these tests sometimes fails for too courageous DotTerm() occurrences in the wrong places caused by random positioning. For example left of assignment ...
   "The positioning" should "consistently split formulas (checkin)" taggedAs(CheckinTest) in {test(5,2)}
   it should "consistently split formulas (summary)" taggedAs(SummaryTest) in {test(20,8)}
   it should "consistently split formulas (usual)" taggedAs(UsualTest) in {test(50,10)}

@@ -16,10 +16,10 @@ import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
 /**
-  * This is an example of how to implement some of the dL tactics using substitution tactics.
+  * Implementation: some dL tactics using substitution tactics.
   * Created by nfulton on 11/3/15.
   */
-object DLBySubst {
+private object DLBySubst {
 
   private[btactics] lazy val monb2 = byUS("[] monotone 2")
 

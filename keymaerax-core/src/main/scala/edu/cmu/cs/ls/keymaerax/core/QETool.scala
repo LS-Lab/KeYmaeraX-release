@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 

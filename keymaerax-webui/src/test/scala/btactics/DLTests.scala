@@ -476,8 +476,8 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).succ should contain only "J(x+1)".asFormula
 
     val subst = USubst(SubstitutionPair(
-      "J(x)".asFormula.replaceFree("x".asTerm, DotTerm),
-      "x>=1".asFormula.replaceFree("x".asTerm, DotTerm))::Nil)
+      "J(x)".asFormula.replaceFree("x".asTerm, DotTerm()),
+      "x>=1".asFormula.replaceFree("x".asTerm, DotTerm()))::Nil)
     val substResult = result(subst)
 
     // init

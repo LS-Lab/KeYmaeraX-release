@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.Predef.Pair
@@ -48,7 +48,7 @@ object RenUSubst {
    * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
    */
   private[bellerophon] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
-    case DotTerm => DotTerm
+    case d: DotTerm => d
     //case Nothing => {assert(sp._2 == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing} // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst             => a
@@ -125,7 +125,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def getRenamingTactic: BelleExpr = rens.foldLeft[BelleExpr](Idioms.ident)((t,sp)=> t &
     //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
     //@note permutations would help simplify matters here since they are their own inverse.
-    ProofRuleTactics.uniformRenaming(sp._2, sp._1))
+    TactixLibrary.uniformRename(sp._2, sp._1))
 
 
   /**

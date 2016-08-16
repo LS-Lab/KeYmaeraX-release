@@ -13,7 +13,7 @@
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -55,7 +55,7 @@ sealed trait SeqPos {
     *  Zero is a degenerate case indicating whole sequent 0.
     * @see [[SeqPos.apply()]]
     */
-  final lazy val getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
+  final lazy val getPos: Int = if (isSucc) {assert(!isAnte); getIndex+1} else {assert(isAnte); -(getIndex+1)}
 
   override def toString: String = getPos.toString
 }
@@ -177,14 +177,12 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     * @param f the replacing formula
     * @return a copy of this sequent with the formula at position p replaced by f.
     */
-  def updated(p: SeqPos, f: Formula): Sequent = {
-    if (p.isAnte) {
-      Sequent(ante.updated(p.getIndex, f), succ)
-    } else {
-      assert(p.isSucc)
-      Sequent(ante, succ.updated(p.getIndex, f))
-    }
+  def updated(p: SeqPos, f: Formula): Sequent = p match {
+    case sp: SuccPos => updated(sp, f)
+    case ap: AntePos => updated(ap, f)
   }
+  def updated(p: AntePos, f: Formula): Sequent = Sequent(ante.updated(p.getIndex, f), succ)
+  def updated(p: SuccPos, f: Formula): Sequent = Sequent(ante, succ.updated(p.getIndex, f))
 
   /**
     * A copy of this sequent with the indicated position replaced by gluing the sequent s.
@@ -195,19 +193,18 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     * @see [[Sequent.updated(Position,Formula)]]
     * @see [[Sequent.glue(Sequent)]]
     */
-  def updated(p: SeqPos, s: Sequent): Sequent = {
-    if (p.isAnte) {
-      Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
-    } else {
-      assert(p.isSucc)
-      Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
-    }
-  } ensuring(r=> if (p.isAnte)
-    r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s))
-  else
-    r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
-    "result after re-including updated formula is equivalent to " + this + " glue " + s
-    )
+  def updated(p: SeqPos, s: Sequent): Sequent = p match {
+    case sp: SuccPos => updated(sp, s)
+    case ap: AntePos => updated(ap, s)
+  }
+  def updated(p: AntePos, s: Sequent): Sequent = {
+    Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
+  } ensuring(r=> r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
+    "result after re-including updated formula is equivalent to " + this + " glue " + s)
+  def updated(p: SuccPos, s: Sequent): Sequent = {
+    Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
+  } ensuring(r=> r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
+    "result after re-including updated formula is equivalent to " + this + " glue " + s)
 
   /**
     * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
@@ -392,8 +389,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @requires(isProved)
     */
   final def proved: Sequent = {
-    insist(isProved, "Only Provables that have been proved have a proven conclusion " + this)
-    if (isProved) conclusion else throw new CoreException("ASSERT: Provables with remaining subgoals are not proved yet " + this)
+    if (isProved) conclusion else throw new CoreException("Only Provables that have been proved have a proven conclusion " + this)
   }
 
   /**
@@ -462,8 +458,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    insist(subderivation.conclusion == subgoals(subgoal), "substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
-    if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
+    if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
       case Nil =>
@@ -1064,10 +1059,10 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
   /** <->L Equiv left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
+    val Equiv(p,q) = s(pos)
     //@note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
-    immutable.List(s.updated(pos, And(a,b)),
-                   s.updated(pos, And(Not(a),Not(b))))
+    immutable.List(s.updated(pos, And(p,q)),
+                   s.updated(pos, And(Not(p),Not(q))))
   }
 }
 
@@ -1154,6 +1149,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
     * @note URename.TRANSPOSITION is irrelevant here, since repl can't occur when admissible.
     */
   private def admissible(e: Expression): Boolean =
+    //@note StaticSemantics.symbols(e) is the same as StaticSemantics.vars(e) unless StateDependent occur, which cause a renaming clash though.
     what == repl || StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
 }
 
@@ -1257,7 +1253,7 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   override def apply(s: Sequent): immutable.List[Sequent] = {
     s(pos) match {
       case Box(a, True) if dualFree(a) => Nil
-      case _ => throw new InapplicableRuleException("DualFree is not applicable to " + s + " at " + pos, this, s)
+      case _ => throw new InapplicableRuleException("DualFree is not applicable to " + s + " at " + pos + " because a duality operator occurs", this, s)
     }
   } ensuring (s(pos).isInstanceOf[Box] && s(pos).asInstanceOf[Box].child==True && dualFree(s(pos).asInstanceOf[Box].program) && pos.isSucc && _.isEmpty, "closed if applicable")
 

@@ -1,3 +1,10 @@
+/**
+  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * @note Code Review 2016-08-16
+  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
@@ -22,8 +29,8 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
     /* Use a single get() call for performance when getting uncached lemmas */
     try {
       val fromDB = db.get(uncachedIDs).map(_.zip(uncachedIdxs))
-      fromDB.map{ case list =>
-        cachedLemmas.++= (fromCache.map{case (lemma, idx) => (lemmaIDs(idx), lemma)})
+      fromDB.map{ list =>
+        cachedLemmas ++= fromCache.map{case (lemma, idx) => (lemmaIDs(idx), lemma)}
         /* Preserve original order when combining cached vs. uncached lemmas*/
         (list ::: fromCache).sortWith{case ((_,i), (_,j)) => i < j}.map(_._1)
       }
@@ -39,7 +46,7 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
 
   override def add(lemma: Lemma): LemmaID = {
     val id = db.add(lemma)
-    cachedLemmas.+=((id,lemma))
+    cachedLemmas += ((id,lemma))
     id
   }
 
@@ -48,8 +55,8 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
     db.deleteDatabase()
   }
 
-  override def remove(id:LemmaID):Boolean = {
-    cachedLemmas.-=(id)
+  override def remove(id:LemmaID): Unit = {
+    cachedLemmas -= id
     db.remove(id)
   }
 }

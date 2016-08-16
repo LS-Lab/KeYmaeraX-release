@@ -9,7 +9,7 @@
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -127,19 +127,16 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   //@note initialization order uses explicit dataStructureInvariant that is called in all nontrivial subclasses after val have been initialized.
   private[core] final def namingConvention: Unit = {
     insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"), "non-empty names without underscores (except at end for internal names): " + name)
-    //@note the above requires conditions imply that !name.endsWith("__")
-    //insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
-    //  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
-    //    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
-    //@note \\ and _ are names for special Nothing and DotFormula objects
-    require(name.charAt(0).isLetter && name.forall(c => c.isLetterOrDigit || c == '_' /*|| c == '$'*/), "alphabetical name expected: " + name)
-    require(index.getOrElse(0) >= 0, "nonnegative index if any " + this)
+    //@note in particular: names cannot have primes
+    insist(name.charAt(0).isLetter && name.forall(c => c.isLetterOrDigit || c == '_'), "alphabetical name expected: " + name)
+    insist(index.getOrElse(0) >= 0, "nonnegative index if any " + this)
   }
 
   val name: String
   val index: Option[Int]
 
-  /** Compare named symbols lexicographically: by name, index, category. */
+  /** Compare named symbols lexicographically: by name, index, category.
+    * @note not used in the core, so not soundness-critical, but breaks tactics if wrong. */
   def compare(other: NamedSymbol): Int = {
     val cmp = name.compare(other.name)
     if (cmp != 0) cmp else {
@@ -158,13 +155,15 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   /** Full string with names and full types */
   def fullString: String = asString + ":" + sort
 
-  override def toString: String = asString + "@" + getClass.getSimpleName
+  override def toString: String = asString
 }
 
-/** Expressions whose semantic interpretations have access to the state. */
+/** Expressions whose semantic interpretations have access to the state.
+  * @note Not soundness-critical, merely speeds up matching in [[SubstitutionPair.freeVars]]. */
 sealed trait StateDependent extends Expression
 
-/** Expressions limited to a given state-space. */
+/** Expressions limited to a given state-space.
+  * @since 4.2 */
 sealed trait SpaceDependent extends StateDependent {
   /** The space that this expression lives on. */
   val space: Space
@@ -210,10 +209,11 @@ case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) 
 /** Differential symbol x' for variable x */
 case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   insist(x.sort == Real, "differential symbols expect real sort")
+  insist(!x.isInstanceOf[DifferentialSymbol], "Higher-order differential symbols are not supported")
   final val name: String = x.name
   final val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
-  override def toString: String = asString //+ "@" + getClass.getSimpleName
+  override def toString: String = asString
   namingConvention
 }
 
@@ -231,9 +231,8 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   namingConvention
 }
 
-/** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
-object DotTerm extends DotTerm(Real)
-sealed case class DotTerm(s: Sort) extends Expression with NamedSymbol with AtomicTerm {
+/** •: Placeholder for terms in uniform substitutions of given sort. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
+sealed case class DotTerm(s: Sort = Real) extends Expression with NamedSymbol with AtomicTerm {
   final val sort: Sort = s
   final val name: String = "\\cdot"
   final val index: Option[Int] = None
@@ -256,7 +255,9 @@ case class FuncOf(func: Function, child: Term) extends CompositeTerm with Applic
 /** Arity 0 functional symbol `name:sort`, limited to the given state space.
   * The semantics of arity 0 functional symbol is given by the state, with the additional promise
   * that taboo is not free so the value does not depend on taboo when space=Except(taboo). */
-case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol
+case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol {
+  namingConvention
+}
 
 
 /** Composite terms */
@@ -408,7 +409,9 @@ case class PredicationalOf(func: Function, child: Formula)
 /** Arity 0 predicational symbol `name:bool`, limited to the given state space.
   * The semantics of arity 0 predicational symbol is looked up by the state, with the additional promise
   * that taboo is not free so the value does not depend on taboo when space=Except(taboo). */
-case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol
+case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol {
+  namingConvention
+}
 
 
 /** Composite formulas */
@@ -450,7 +453,7 @@ case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula { 
 case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { def reapply = copy }
 
 /** Quantified formulas */
-sealed trait Quantified extends /*Unary?*/CompositeFormula {
+sealed trait Quantified extends CompositeFormula {
   insist(vars.length==1, "quantifiers bind exactly one variable at the moment")
 //  require(vars.nonEmpty, "quantifiers bind at least one variable")
 //  insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
@@ -504,7 +507,7 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { d
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
   */
 sealed trait Program extends Expression {
-  /*final*/ val kind: Kind = ProgramKind
+  val kind: Kind = ProgramKind
   final val sort: Sort = Trafo
 }
 
@@ -517,14 +520,15 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
   namingConvention
 }
 
-/** x:=e assignment */
+/** x:=e assignment and/or differential assignment x':=e */
 case class Assign(x: Variable, e: Term) extends AtomicProgram {
   insist(e.sort == x.sort, "assignment of compatible sort " + this)
 }
-/** x:=* nondeterministic assignment */
+/** x:=* nondeterministic assignment and/or nondeterministic differential assignment x':=* */
 case class AssignAny(x: Variable) extends AtomicProgram
 /** ?cond test a formula as a condition on the current state */
 case class Test(cond: Formula) extends AtomicProgram
+
 
 /** composite programs */
 sealed trait CompositeProgram extends Program with Composite
@@ -564,6 +568,10 @@ case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = co
   require(false, "Hybrid games are currently disabled")
 }
 
+/** Differential equation system ode with given evolution domain constraint */
+case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) extends Program
+
+
 
 /**
   * Differential programs
@@ -573,14 +581,10 @@ case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = co
 sealed trait DifferentialProgram extends Program {
   override final val kind: Kind = DifferentialProgramKind
 }
+
 /** Atomic differential programs */
 sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
-/** Differential equation system ode with given evolution domain constraint */
-//@note could say that ODESystem is no differential program since not to be nested within DifferentialProduct.
-case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
-  extends Program {
-  override final val kind: Kind = ProgramKind
-}
+
 /** Uninterpreted differential program constant, limited to the given state space.
   * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,
   * with the additional promise that taboo is neither free nor bound, so the run does
@@ -626,11 +630,10 @@ object DifferentialProduct {
     *       axiom "DE differential effect (system)" so as not to get stuck after it.
     */
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
-    require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
-    require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
     insist(differentialSymbols(left).intersect(differentialSymbols(right)).isEmpty, "No duplicate differential equations when composing differential equations " + left + " and " + right)
     reassociate(left, right)
-  } ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
+  } ensuring(r => listify(r) == listify(left) ++ listify(right), "reassociating DifferentialProduct does not change the list of atomic ODEs"
+    ) ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
     "No undetected duplicate differential equations when composing differential equations " + left + " and " + right + " to form " + reassociate(left, right))
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
@@ -639,7 +642,7 @@ object DifferentialProduct {
   }
 
   //@tailrec
-  private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = (left match {
+  private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = left match {
     // properly associated cases
     case l: AtomicODE => new DifferentialProduct(l, right)
     case l: DifferentialProgramConst => new DifferentialProduct(l, right)
@@ -647,8 +650,7 @@ object DifferentialProduct {
     case DifferentialProduct(ll, lr) =>
       assert(ll.isInstanceOf[AtomicDifferentialProgram], "reassociation has succeeded on the left")
       reassociate(ll, reassociate(lr, right))
-  }) ensuring(r => listify(r) == listify(left) ++ listify(right),
-    "reassociating DifferentialProduct does not change the list of atomic ODEs")
+  }
 
   /** Turn differential program ode along its DifferentialProduct into a list */
   private def listify(ode: DifferentialProgram): immutable.List[DifferentialProgram] = ode match {
@@ -656,8 +658,9 @@ object DifferentialProduct {
     case a: AtomicDifferentialProgram => a :: Nil
   }
 
-  /** The list of all literal differential symbols in ode */
+  /** The list of all literal differential symbols in ODE */
   //@note Differential symbols can only occur on the left of AtomicODEs anyhow.
+  //@note Could use the StaticSemantics from this contract equivalently.
   private def differentialSymbols(ode: DifferentialProgram): immutable.List[DifferentialSymbol] = {ode match {
     case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
     case AtomicODE(xp, _) => xp :: Nil

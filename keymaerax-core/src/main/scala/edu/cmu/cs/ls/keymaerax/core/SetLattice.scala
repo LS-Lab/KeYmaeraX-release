@@ -99,6 +99,7 @@ object SetLattice {
   /** The set of all variables including differential symbols. */
   val allVars: SetLattice[Variable] = new CoFiniteSet(Set.empty, Set.empty)
   /** The set of all variables including differential symbols, except x and x'. */
+  //@note Cannot remove all x'' from the CoFiniteSet
   def except(x: Variable): SetLattice[Variable] = new CoFiniteSet(Set(x, DifferentialSymbol(x)), Set.empty)
 
   /**

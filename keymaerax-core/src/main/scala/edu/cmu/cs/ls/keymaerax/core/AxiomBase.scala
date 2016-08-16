@@ -11,7 +11,7 @@
   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
-  * @note Code Review: 2016-03-09
+  * @note Code Review: 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -142,7 +142,7 @@ private[core] object AxiomBase {
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms */
-  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+  private def assertCheckAxiomFile(axs : Map[String, Formula]): Boolean = {
     val x = Variable("x_", None, Real)
     val y = Variable("y_", None, Real)
     val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
@@ -204,7 +204,7 @@ private[core] object AxiomBase {
     assert(axs("DG differential ghost constant") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
-        AtomicODE(DifferentialSymbol(y), UnitFunctional("g",Except(y),Real))
+        AtomicODE(DifferentialSymbol(y), UnitFunctional("b",Except(y),Real))
       ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost constant")
     //@note in analogy to remark in proof of soundness of DG
     assert(axs("DG inverse differential ghost system") == Imply(
@@ -336,7 +336,7 @@ End.
 
 /* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
 Axiom "DG differential ghost constant".
-  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(|y_|)&q(|y_|)}]p(|y_|)
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
 End.
 
 Axiom "DG inverse differential ghost system".
@@ -348,7 +348,6 @@ Axiom "DG inverse differential ghost".
   [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
 End.
 
-/* Formatter axioms for diff eqs. */
 Axiom ", commute".
   [{c,d&q(||)}]p(||) <-> [{d,c&q(||)}]p(||)
 End.
@@ -379,71 +378,71 @@ Axiom "-' derive neg".
 End.
 
 Axiom "+' derive sum".
-  (f(||) + g(||))' = ((f(||))') + ((g(||))')
+  (f(||) + g(||))' = f(||)' + g(||)'
 End.
 
 Axiom "-' derive minus".
-  (f(||) - g(||))' = ((f(||))') - ((g(||))')
+  (f(||) - g(||))' = f(||)' - g(||)'
 End.
 
 Axiom "*' derive product".
-  (f(||) * g(||))' = (((f(||))')*g(||)) + (f(||)*((g(||))'))
+  (f(||) * g(||))' = f(||)'*g(||) + f(||)*g(||)'
 End.
 
 Axiom "/' derive quotient".
-  (f(||) / g(||))' = ((((f(||))')*g(||)) - (f(||)*((g(||))'))) / (g(||)^2)
+  (f(||) / g(||))' = (f(||)'*g(||) - f(||)*g(||)') / (g(||)^2)
 End.
 
 Axiom "chain rule".
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = ((f(y_))') * ((g(x_))') )
+	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = f(y_)' * g(x_)' )
 End.
 
 Axiom "^' derive power".
-	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- (c() != 0)
+	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- c()!=0
 End.
 
 Axiom "=' derive =".
-  (f(||) = g(||))' <-> ((f(||)') = (g(||)'))
+  (f(||) = g(||))' <-> f(||)' = g(||)'
 End.
 
 Axiom ">=' derive >=".
-  (f(||) >= g(||))' <-> ((f(||)') >= (g(||)'))
+  (f(||) >= g(||))' <-> f(||)' >= g(||)'
 End.
 
 Axiom ">' derive >".
-  (f(||) > g(||))' <-> ((f(||)') >= (g(||)'))
+  (f(||) > g(||))' <-> f(||)' >= g(||)'
   /* sic! easier */
 End.
 
 Axiom "<=' derive <=".
-  (f(||) <= g(||))' <-> ((f(||)') <= (g(||)'))
+  (f(||) <= g(||))' <-> f(||)' <= g(||)'
 End.
 
 Axiom "<' derive <".
-  (f(||) < g(||))' <-> ((f(||)') <= (g(||)'))
+  (f(||) < g(||))' <-> f(||)' <= g(||)'
   /* sic! easier */
 End.
 
 Axiom "!=' derive !=".
-  (f(||) != g(||))' <-> ((f(||)') = (g(||)'))
+  (f(||) != g(||))' <-> f(||)' = g(||)'
   /* sic! */
 End.
 
 Axiom "&' derive and".
-  (p(||) & q(||))' <-> ((p(||)') & (q(||)'))
+  (p(||) & q(||))' <-> p(||)' & q(||)'
 End.
 
 Axiom "|' derive or".
-  (p(||) | q(||))' <-> ((p(||)') & (q(||)'))
+  (p(||) | q(||))' <-> p(||)' & q(||)'
   /* sic! yet <- */
 End.
 
 Axiom "forall' derive forall".
-  (\forall x_ p(||))' <-> (\forall x_ (p(||)'))
+  (\forall x_ p(||))' <-> \forall x_ p(||)'
 End.
 
 Axiom "exists' derive exists".
-  (\exists x_ p(||))' <-> (\forall x_ (p(||)'))
+  (\exists x_ p(||))' <-> \forall x_ p(||)'
   /* sic! yet <- */
 End.
 
@@ -463,7 +462,7 @@ End.
 
 /* @NOTE Unsound for hybrid games */
 Axiom "K modal modus ponens".
-  [a;](p(||)->q(||)) -> (([a;]p(||)) -> ([a;]q(||)))
+  [a;](p(||)->q(||)) -> ([a;]p(||) -> [a;]q(||))
 End.
 
 /* @NOTE Unsound for hybrid games, use ind induction rule instead */
@@ -506,11 +505,11 @@ End.
  */
 
 Axiom "const congruence".
-  (s() = t()) -> (ctxT_(s()) = ctxT_(t()))
+  s() = t() -> ctxT_(s()) = ctxT_(t())
 End.
 
 Axiom "const formula congruence".
-  (s() = t()) -> (ctxF_(s()) <-> ctxF_(t()))
+  s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
 End.
 """
 }

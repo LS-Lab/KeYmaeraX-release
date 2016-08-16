@@ -30,7 +30,7 @@ import scala.language.postfixOps
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch]]
   * @see [[AxiomIndex]]
-  * @see Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   */
 trait UnifyUSCalculus {
@@ -277,6 +277,19 @@ trait UnifyUSCalculus {
   //    }
   //  }
 
+  // renaming
+
+  /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
+    */
+  def uniformRename(what: Variable, repl: Variable): BuiltInTactic = ProofRuleTactics.uniformRenaming(what,repl)
+
+  /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
+    * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
+    */
+  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
+
+
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.
     * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
@@ -424,7 +437,7 @@ trait UnifyUSCalculus {
         case Imply(DotFormula, other) => implyStep(other)
 
         //@note all DotTerms are equal
-        case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+        case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty =>
           // try to prove prereq globally
           /* {{{
            *                                         fact
@@ -535,7 +548,7 @@ trait UnifyUSCalculus {
   def CQ(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
     private val f_ = UnitFunctional("f_", AnyArg, Real)
     private val g_ = UnitFunctional("g_", AnyArg, Real)
-    private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
+    private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm())
 
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.isEmpty && sequent.succ.length == 1, "Expected empty antecedent and single succedent, but got " + sequent)
@@ -838,7 +851,7 @@ trait UnifyUSCalculus {
         require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
         equiv(
           Provable.rules("CQ equation congruence")(
-            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
+            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm()), C.ctx) ::
               SubstitutionPair(UnitFunctional("f_", AnyArg, Real), left) ::
               SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
               Nil))
@@ -1202,10 +1215,10 @@ trait UnifyUSCalculus {
 
         // in which context of the fact does the key occur
         K.ctx match {
-          case Equal(DotTerm, o) =>
+          case Equal(DotTerm(_), o) =>
             equivStep(o)
 
-          case Equal(o, DotTerm) =>
+          case Equal(o, DotTerm(_)) =>
             equivStep(o)
 
           case Equiv(DotFormula, o) =>
@@ -1345,7 +1358,7 @@ trait UnifyUSCalculus {
             } else proved(proof, 0)
 
 
-          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty =>
             // try to prove prereq globally
             //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
             /* {{{

@@ -4,11 +4,11 @@
 */
 /**
  * @author Stefan Mitsch
- * @note Code Review: 2016-08-02
+ * @note Code Review: 2016-08-16
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import java.io.{File, PrintWriter}
+import java.io.{File, IOException, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -36,7 +36,7 @@ class FileLemmaDB extends LemmaDBBase {
   private def file(id:LemmaID):File = new File(lemmadbpath, id + ".alp")
 
   def readLemmas(ids: List[LemmaID]):Option[List[String]] = {
-    flatOpt(ids.map{case lemmaID =>
+    flatOpt(ids.map{lemmaID =>
       val f = file(lemmaID)
       if (f.exists()) {
         Some(scala.io.Source.fromFile(f).mkString)
@@ -54,10 +54,8 @@ class FileLemmaDB extends LemmaDBBase {
     f.getName.substring(0, f.getName.length-".alp".length)
   }
 
-  /* @todo: Is this supposed to return true if deleted successfully? */
-  override def remove(id: String): Boolean =
-    try { file(id).delete() }
-    finally { false }
+  override def remove(id: String): Unit =
+    if (!file(id).delete()) throw new IOException("File deletion for " + file(id) + " was not successful")
 
   override def deleteDatabase(): Unit = {
     lemmadbpath.delete()

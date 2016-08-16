@@ -62,7 +62,7 @@ object SQLite {
 
     def createLemma():LemmaID = db.createLemma().toString
 
-    override def remove(name: String): Boolean = {
+    override def remove(name: String): Unit = {
       db.deleteLemma(name.toInt)
     }
 
@@ -128,22 +128,25 @@ object SQLite {
 
     private[SQLite] def getLemma(lemmaId: Int): Option[String] = {
       getLemmas(List(lemmaId)) match {
-        case Some(lemmas) => lemmas.headOption
+        case Some(lemmas) if lemmas.size <= 1 => lemmas.headOption
         case None => None
+        case Some(l) if l.size>1 => throw new IllegalStateException("Should never get more than one lemma when asking for one lemma")
       }
     }
 
     /** Allow retrieving lemmas in bulk to reduce the number of database queries */
     private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
+      //@todo Code Review: This code should be revised to either select in SQL land from lemmaIds, or read all and filter, or read individual ones in a single transaction
       synchronizedTransaction({
-        if(Lemmas.length.run == 0) None
-        val lemmaMap = Lemmas.map{case row => {
+        val lemmaMap = Lemmas.map{row => {
           val id = row._Id.getOrElse(throw new IllegalStateException("Did not expect lemma with null Id."))
           //Note: we allow the lemma text to be empty because of the Create / check we got ID / actually write lemma protocol assumed by CachedLemmaDB.
+          //@todo Code Review: for lemmas that are in lemmaIds, assert not None, for all other lemmas, filter them out instead of converting to empty string
           val lemmaText = row.lemma.getOrElse("")
           (id, lemmaText)
         }}.list.toMap
         try {
+          //@todo Code Review: check that lemmaIds really should not have "" names now
           Some(lemmaIds.map(lemmaMap(_)))
         } catch {
           case _:Exception => None
@@ -151,9 +154,11 @@ object SQLite {
       })
     }
 
-    private[SQLite] def deleteLemma(lemmaId: Int): Boolean = {
+    private[SQLite] def deleteLemma(lemmaId: Int): Unit = {
       synchronizedTransaction({
-        Lemmas.filter(_._Id === lemmaId).delete == 1
+        // check that it deleted exactly one row
+        val deletedEntries = Lemmas.filter(_._Id === lemmaId).delete
+        assert(deletedEntries == 1, "deleting one identifier should delete one entry")
       })
     }
 
@@ -167,7 +172,9 @@ object SQLite {
       sqlu"PRAGMA wal_checkpoint(FULL)".execute(session)
     }
 
-    // Configuration
+
+    // Configuration and database setup and initialization and all DB communication
+
     override def getAllConfigurations: Set[ConfigurationPOJO] =
       synchronizedTransaction({
         nSelects = nSelects + 1

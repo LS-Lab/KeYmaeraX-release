@@ -109,7 +109,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     case x:BaseVariable => Variable(x.name, x.index, x.sort)
     case FuncOf(f,t)     => FuncOf(f, reapplied(t))
     case f:UnitFunctional=> UnitFunctional(f.name, f.space, f.sort)
-    case DotTerm => DotTerm
+    case d: DotTerm => d
     case Nothing => Nothing
     // homomorphic cases
     case f:UnaryCompositeTerm  => f.reapply(reapplied(f.child))

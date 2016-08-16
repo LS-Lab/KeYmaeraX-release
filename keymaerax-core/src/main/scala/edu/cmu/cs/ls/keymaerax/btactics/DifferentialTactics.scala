@@ -15,12 +15,12 @@ import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
 /**
- * [[DifferentialTactics]] provides tactics for differential equations.
+ * Implementation: provides tactics for differential equations.
   *
   * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
-object DifferentialTactics {
+private object DifferentialTactics {
 
   /**
    * Differential effect: exhaustively extracts differential equations from an atomic ODE or an ODE system into
