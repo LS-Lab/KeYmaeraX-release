@@ -98,19 +98,26 @@ trait SequentCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allSkolemize]] */
   lazy val allR               : DependentPositionTactic = FOQuantifierTactics.allSkolemize
-  /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
+  /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
+  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `term`. */
   def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
+  /** all left: instantiate a universal quantifier in the antecedent by itself. */
   lazy val allL                     : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
+  /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
+  //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => allL(t)(pos)
   })
-  /** exists left: Skolemize an existential quantifier in the antecedent */
+  /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
   lazy val existsL                    : DependentPositionTactic = "existsL" by ((pos,seq) => FOQuantifierTactics.existsSkolemize(pos))
-  /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
+  /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
+  /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
+  /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   lazy val existsR                    : DependentPositionTactic = "existsR" by ((pos,seq) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
+  /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
   })
