@@ -107,8 +107,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     /** Recursively collect universally quantified variables, return variables+child formula */
     def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
       candidate match {
-        case Forall(nextVs, nextf: Forall) => collectVars(vsSoFar ++ nextVs, nextf)
-        case Forall(nextVs, nextf) => (vsSoFar ++ nextVs, nextf)
+        case Forall(nextVs, nextf) => collectVars(vsSoFar ++ nextVs, nextf)
         case _ => (vsSoFar, candidate)
       }
     }
@@ -123,8 +122,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     /** Recursively collect existentially quantified variables, return variables+child formula */
     def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
       candidate match {
-        case Exists(nextVs, nextf: Exists) => collectVars(vsSoFar ++ nextVs, nextf)
-        case Exists(nextVs, nextf) => (vsSoFar ++ nextVs, nextf)
+        case Exists(nextVs, nextf) => collectVars(vsSoFar ++ nextVs, nextf)
         case _ => (vsSoFar, candidate)
       }
     }

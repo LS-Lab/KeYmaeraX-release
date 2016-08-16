@@ -3,7 +3,7 @@
   * See LICENSE.txt for the conditions of this license.
   */
 /**
-  * @note Code Review 2016-08-02
+  * @note Code Review 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
@@ -70,16 +70,10 @@ trait LemmaDB {
    */
   def add(lemma: Lemma): LemmaID
 
-  /** Should return true if removed and false if not. Should not throw errors on failure to remove. */
-  def remove(name: LemmaID): Boolean
+  /** Delete the lemma of the given identifier, throwing exceptions if that was unsuccessful.*/
+  def remove(name: LemmaID): Unit
 
   /** Delete the whole lemma database */
   def deleteDatabase(): Unit
 
-  /** For convenience when implementing bulk get() from individual get() */
-  protected def flatOpt[T](L:List[Option[T]]):Option[List[T]] =
-    L.foldRight[Option[List[T]]](Some(Nil)){
-      case (Some(x),Some(xs)) => Some(x::xs)
-      case _ => None
-    }
 }

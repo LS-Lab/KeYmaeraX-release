@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import java.security.MessageDigest
 
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
@@ -24,6 +24,9 @@ object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
   private val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
   private[this] val digest = MessageDigest.getInstance("MD5")
+
+  /** The pretty printer that is used for lemma storage purposes */
+  private val printer = FullPrettyPrinter
 
   /**
     * Parses a lemma from its string representation.
@@ -55,9 +58,10 @@ object Lemma {
     * then we know it was parsed correctly. If not, proceed to check that the lemma, when printed and then
     * parsed a second time*, produces the same lemma. We consider this second condition sufficient because for lemmas that
     * contain comments, the first check needs not succeed.
-    * @note performance bottleneck
+    * @note performance bottleneck for loading
     */
-  private def matchesInput(result: Lemma, input:String): Boolean = if (LEMMA_COMPAT_MODE) true else {
+  private def matchesInput(result: Lemma, input:String): Boolean = {
+    //@note performance could be optimized by using contract-free stringify calls here for rechecking purposes
     val str = result.toStringInternal
     str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
   }
@@ -184,10 +188,11 @@ final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name:
   private def sequentToString(s: Sequent): String = {
     //@note Regarding side-conditions:
     //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
+    //@note It is enough to use contract-free stringify since toString will reparse the entire lemma in its ensuring contract again.
     "Sequent.\n" +
-      s.ante.map(x => "Formula: " + KeYmaeraXPrettyPrinter.fullPrinter(x)).mkString("\n") +
+      s.ante.map(x => "Formula: " + Lemma.printer.stringify(x)).mkString("\n") +
       "\n==>\n" +
-      s.succ.map(x => "Formula: " + KeYmaeraXPrettyPrinter.fullPrinter(x)).mkString("\n")
+      s.succ.map(x => "Formula: " + Lemma.printer.stringify(x)).mkString("\n")
   }
 }
 

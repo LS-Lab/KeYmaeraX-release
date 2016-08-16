@@ -47,6 +47,8 @@ private object ToolTactics {
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
     //Run QE and extract the resulting provable and equivalence
+    //@todo how about storing the lemma, but also need a way of finding it again
+    //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
     val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
     val Equiv(_, result) = qeFact.conclusion.succ.head
 

@@ -3,7 +3,7 @@
   * See LICENSE.txt for the conditions of this license.
   */
 /**
-  * @note Code Review 2016-08-02
+  * @note Code Review 2016-08-16
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
@@ -20,7 +20,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 object LemmaDBFactory {
 
   /** mutable state for switching out default implementation */
-  private var lemmaDBInstance: LemmaDB = new CachedLemmaDB(new FileLemmaDB())
+  private[this] var lemmaDBInstance: LemmaDB = new CachedLemmaDB(new FileLemmaDB())
 
   /** Returns the lemma DB */
   def lemmaDB: LemmaDB = lemmaDBInstance
