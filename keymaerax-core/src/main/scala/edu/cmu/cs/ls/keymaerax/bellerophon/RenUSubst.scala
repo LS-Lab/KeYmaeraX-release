@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.Predef.Pair
@@ -125,7 +125,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def getRenamingTactic: BelleExpr = rens.foldLeft[BelleExpr](Idioms.ident)((t,sp)=> t &
     //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
     //@note permutations would help simplify matters here since they are their own inverse.
-    ProofRuleTactics.uniformRenaming(sp._2, sp._1))
+    TactixLibrary.uniformRename(sp._2, sp._1))
 
 
   /**

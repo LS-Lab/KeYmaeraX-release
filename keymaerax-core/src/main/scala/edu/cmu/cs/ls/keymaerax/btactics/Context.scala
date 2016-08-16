@@ -21,6 +21,10 @@ import scala.collection.immutable._
   *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
   *   // split f into context ctx and subformula g such that f is ctx{g}
   *   val (ctx,g) = Context.at(f, PosInExpr(1::1::Nil))
+  *   // x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]_
+  *   println(ctx)
+  *   // x>=1
+  *   println(f)
   *   println(f + " is the same as " + ctx(g))
   *  }}}
   * @author Andre Platzer
@@ -28,7 +32,7 @@ import scala.collection.immutable._
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]
   */
 object Context {
-  /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts */
+  /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives theoretically fast unguarded replacement contexts that are slow in practice. */
   private[btactics] val GUARDED = false
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)

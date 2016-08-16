@@ -9,11 +9,11 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, Position}
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
-  * Tactics for manipulating box/diamond properties about hybrid programs.
+  * Implementation: Tactics for manipulating box/diamond properties about hybrid programs.
   *
   * @author Nathan Fulton
   */
-object HybridProgramTactics {
+private object HybridProgramTactics {
   import TacticFactory._
   import Augmentors._
 

@@ -12,9 +12,10 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
- * Tactics to rewrite equalities and introduce abbreviations.
+ * Implementation: Tactics to rewrite equalities and introduce abbreviations.
+  *
  */
-object EqualityTactics {
+private object EqualityTactics {
 
   /**
    * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).

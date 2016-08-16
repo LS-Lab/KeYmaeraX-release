@@ -30,7 +30,7 @@ import scala.language.postfixOps
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch]]
   * @see [[AxiomIndex]]
-  * @see Andre Platzer. [[http://arxiv.org/pdf/1601.06183.pdf A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. arXiv:1601.06183
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   */
 trait UnifyUSCalculus {
@@ -289,6 +289,19 @@ trait UnifyUSCalculus {
   //      subst.toTactic(form)
   //    }
   //  }
+
+  // renaming
+
+  /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
+    */
+  def uniformRename(what: Variable, repl: Variable): BuiltInTactic = ProofRuleTactics.uniformRenaming(what,repl)
+
+  /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
+    * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
+    */
+  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
+
 
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.

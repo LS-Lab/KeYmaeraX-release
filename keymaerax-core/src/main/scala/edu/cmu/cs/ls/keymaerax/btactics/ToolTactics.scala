@@ -12,12 +12,12 @@ import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 import scala.language.postfixOps
 
 /**
- * Tactics that execute and use the output of tools.
+ * Implementation: Tactics that execute and use the output of tools.
  * Also contains tactics for pre-processing sequents.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-object ToolTactics {
+private object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")

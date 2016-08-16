@@ -12,9 +12,9 @@ import scala.language.postfixOps
 
 
 /**
- * [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
+ * Implementation: [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
  */
-object FOQuantifierTactics {
+protected object FOQuantifierTactics {
   /** Proves exists by duality from universal base tactic */
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
     TacticFactory.anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
