@@ -27,7 +27,7 @@ class ChilledWater extends TacticTestBase {
   def DAcleanup(msg: String): BelleExpr = skip <(
     /* base case */ printIndexed(msg + "b4 QE") & QE & done,
     /* induction: diff*y^2>0 -> [{ode}]diff*y^2>0 */ printIndexed(msg + "b4 diffInd") &
-    diffInd(qeTool)(1, 1::Nil) & QE & done // formula of the form lhs -> rhs, 1::Nil traverses to rhs
+    diffInd()(1, 1::Nil) & QE & done // formula of the form lhs -> rhs, 1::Nil traverses to rhs
     )
 
   /* DA depending on the states of valve and load, diff is what we're trying to prove is
@@ -60,7 +60,7 @@ class ChilledWater extends TacticTestBase {
     diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=None, "Tlu()-Tl") & done,
     /* ?l=0;v:=0; */
     diffCut("Tw<Tl".asFormula)(1) <(
-      /* use cut */ diffInd(qeTool)(1) & done,
+      /* use cut */ diffInd()(1) & done,
       /* show cut */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done //@note now we know sign of Tl' plus Tl<Tlu initially
       ),
     /* ?v=1;l:=0; */
@@ -71,7 +71,7 @@ class ChilledWater extends TacticTestBase {
       diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=Some(false), "Tlu()-Tl") & done,
       /* v=0 */
       diffCut("Tw<Tl".asFormula)(1) <(
-        /* use cut */ diffInd(qeTool)(1) & done,
+        /* use cut */ diffInd()(1) & done,
         /* show cut */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done
         )
       )
@@ -83,7 +83,7 @@ class ChilledWater extends TacticTestBase {
     /* ?l=0;v:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
     diffWeaken(1) & QE & done,
     DAchilled(valve=false, load=Some(false), "Tl-Tw") & done,
-    diffInd(qeTool)(1) & done
+    diffInd()(1) & done
     ),
     /* ?v=1;l:=1; */ diffInvariant("Tw=a()".asFormula)(1) & diffWeaken(1) & QE & done,
     /* l:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
@@ -92,7 +92,7 @@ class ChilledWater extends TacticTestBase {
       DAchilled(valve=true, load=Some(false), "Tl-Tw") & done,
       DAchilled(valve=false, load=Some(false), "Tl-Tw") & done
       ),
-    diffInd(qeTool)(1) & done
+    diffInd()(1) & done
     )
     )
 
@@ -188,7 +188,7 @@ class ChilledWater extends TacticTestBase {
               diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
                 diffWeaken(1) & QE & done,
                 DAchilled(valve=false, load=Some(true), "Tl-Tw") & done,
-                diffInd(qeTool)(1) & done
+                diffInd()(1) & done
                 ),
               skip,
               skip

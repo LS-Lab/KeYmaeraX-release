@@ -74,7 +74,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     proveBy("abs(x-y)>=t -> abs(x-y+0)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
 
-  ignore should "prove abs(x-y)>=t -> abs(x-y)>=t+0" in withMathematica { implicit tool =>
+  it should "prove abs(x-y)>=t -> abs(x-y)>=t+0" ignore withMathematica { implicit tool =>
     //@todo exhaustiveAbsSplit computes all abs positions before calling abs... but abs abbreviates both succ and ante if same
     proveBy("abs(x-y)>=t -> abs(x-y)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
@@ -287,7 +287,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     boundHidden.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "2*C-C^2>=0".asFormula)
     boundHidden.subgoals.head.succ should contain only "x<=m".asFormula
 
-    proveBy(boundHidden.subgoals.head, ArithmeticSpeculativeSimplification.speculativeQE(tool)) shouldBe 'proved
+    proveBy(boundHidden.subgoals.head, ArithmeticSpeculativeSimplification.speculativeQE) shouldBe 'proved
   }
 
   it should "work on a Robix example" in withMathematica { tool =>
@@ -298,7 +298,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       OnAll((andL('_)*) partial) & OnAll((exhaustiveEqL2R(hide=true)('L)*) partial)
 
     //@todo hideNonmatchingBounds does not yet work on the "middle" abs branches
-    val s = proveBy(fml, tactic <(ArithmeticSpeculativeSimplification.speculativeQE(tool), skip, skip, ArithmeticSpeculativeSimplification.speculativeQE(tool)))
+    val s = proveBy(fml, tactic <(ArithmeticSpeculativeSimplification.speculativeQE, skip, skip, ArithmeticSpeculativeSimplification.speculativeQE))
     s.subgoals should have size 2
   }
 

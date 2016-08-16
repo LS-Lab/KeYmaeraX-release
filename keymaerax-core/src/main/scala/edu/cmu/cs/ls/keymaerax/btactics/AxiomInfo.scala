@@ -55,7 +55,6 @@ object DerivationInfo {
     SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
   }
 
-  implicit def qeTool: QETool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
   //@todo
@@ -188,7 +187,7 @@ object DerivationInfo {
       , AxiomDisplayInfo("DIo", "([{x′=f(x)&Q}]f(x)<g(x)↔[?Q]f(x)<g(x))←(f(x)<g(x)→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
       , "DIoless", {case () => ???}),
 
-    new PositionTacticInfo("axiomaticSolve", "axiomaticSolve", {case () => AxiomaticODESolver.apply(qeTool)}, needsTool = true),
+    new PositionTacticInfo("axiomaticSolve", "axiomaticSolve", {case () => AxiomaticODESolver.apply()}, needsTool = true),
     
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn"
@@ -642,7 +641,7 @@ object DerivationInfo {
     new TacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
-    new TacticInfo("pQE", "pQE",  {case () => ToolTactics.partialQE}, needsTool = true),
+    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
 
     // Differential tactics
     new PositionTacticInfo("DIRule",
@@ -656,7 +655,7 @@ object DerivationInfo {
       (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
       /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
         (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & Q}](P)′","&Delta;"), true))),
-    {case () => DifferentialTactics.diffInd}, needsTool = true),
+    {case () => DifferentialTactics.diffInd()}, needsTool = true),
     new PositionTacticInfo("diffInd",
     RuleDisplayInfo("diffInd",
       (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
@@ -668,7 +667,7 @@ object DerivationInfo {
       (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
       /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
         (List("Q"), List("[x′:=f(x)](P)′"), true))),
-    {case () => DifferentialTactics.diffInd}),
+    {case () => DifferentialTactics.diffInd()}),
     new InputPositionTacticInfo("diffInvariant"
     , RuleDisplayInfo("DC+DI"
       , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))

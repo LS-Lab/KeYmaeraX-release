@@ -311,13 +311,13 @@ class DifferentialTests extends TacticTestBase {
 
   "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
-      implyR(1) & diffInd(qeTool)(1)
+      implyR(1) & diffInd()(1)
     ) shouldBe 'proved
   }
 
   it should "behave as DI rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
-      implyR(1) & diffInd(qeTool, 'none)(1)
+      implyR(1) & diffInd('none)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
@@ -328,7 +328,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "behave as diffInd rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
-      implyR(1) & diffInd(qeTool, 'diffInd)(1)
+      implyR(1) & diffInd('diffInd)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
@@ -339,19 +339,19 @@ class DifferentialTests extends TacticTestBase {
 
   it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula)),
-      implyR(1) & diffInd(qeTool)(1)
+      implyR(1) & diffInd()(1)
     ) shouldBe 'proved
   }
 
   it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
-      implyR(1) & diffInd(qeTool)(1)
+      implyR(1) & diffInd()(1)
     ) shouldBe 'proved
   }
 
   it should "behave as DI on x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
-      implyR(1) & diffInd(qeTool, 'none)(1)
+      implyR(1) & diffInd('none)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x*x+y*y>=8".asFormula, "true".asFormula)
@@ -362,7 +362,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "behave as diffInd on x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
-      implyR(1) & diffInd(qeTool, 'diffInd)(1)
+      implyR(1) & diffInd('diffInd)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x*x+y*y>=8".asFormula, "true".asFormula)
@@ -373,13 +373,13 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
-      assignb(1) & diffInd(qeTool)(1)
+      assignb(1) & diffInd()(1)
     ) shouldBe 'proved
   }
 
   it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5 in reverse" in withMathematica { implicit qeTool =>
     proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
-      diffInd(qeTool)(1, 1::Nil) &
+      diffInd()(1, 1::Nil) &
         assignb(1) & // handle updates
         QE
     ) shouldBe 'proved
@@ -387,7 +387,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in {
     val result = proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[{x'=2}]x>=5".asFormula)),
-      DifferentialTactics.diffInd(null, 'none)(1)
+      DifferentialTactics.diffInd('none)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
@@ -398,7 +398,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in {
     val result = proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
-      DifferentialTactics.diffInd(null, 'none)(1, 1::Nil)
+      DifferentialTactics.diffInd('none)(1, 1::Nil)
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>=5".asFormula
@@ -407,7 +407,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "x>=5 -> [{x'=2&x>7}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[{x'=2 & x>7}]x>=5".asFormula)),
-      DifferentialTactics.diffInd(qeTool, 'diffInd)(1))
+      DifferentialTactics.diffInd('diffInd)(1))
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "x>7".asFormula)
     result.subgoals.head.succ should contain only "x>=5".asFormula
@@ -417,7 +417,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "keep context around" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5&A()>0 -> [{x'=A()}]x>=5".asFormula)),
-      implyR(1) & diffInd(tool, 'diffInd)(1)
+      implyR(1) & diffInd('diffInd)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5&A()>0".asFormula, "true".asFormula)
@@ -439,12 +439,12 @@ class DifferentialTests extends TacticTestBase {
                   |End.
                   |""".stripMargin
 
-    proveBy(KeYmaeraXProblemParser(input), implyR(1) & diffInd(qeTool, 'full)(1)) shouldBe 'proved
+    proveBy(KeYmaeraXProblemParser(input), implyR(1) & diffInd('full)(1)) shouldBe 'proved
   }
 
   it should "prove with and without frame constraint y'=0" in withMathematica { tool =>
-    proveBy(Sequent(IndexedSeq("x=y".asFormula), IndexedSeq("[{x'=2 & x>=0}]x>=y".asFormula)), diffInd(tool, 'full)('R)) shouldBe 'proved
-    proveBy(Sequent(IndexedSeq("x=y".asFormula), IndexedSeq("[{x'=2, y'=0 & x>=0}]x>=y".asFormula)), diffInd(tool, 'full)('R)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x=y".asFormula), IndexedSeq("[{x'=2 & x>=0}]x>=y".asFormula)), diffInd('full)('R)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x=y".asFormula), IndexedSeq("[{x'=2, y'=0 & x>=0}]x>=y".asFormula)), diffInd('full)('R)) shouldBe 'proved
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withMathematica { implicit qeTool =>
@@ -760,53 +760,53 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0" in withMathematica { implicit qeTool =>
     proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
-      implyR(1) & diffInd(qeTool,'full)(1)) shouldBe 'proved
+      implyR(1) & diffInd('full)(1)) shouldBe 'proved
   }
 
   it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0 manual" in withMathematica { implicit qeTool =>
     proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
-      implyR(1) & diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
+      implyR(1) & diffInd('none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0 manual" in withMathematica { implicit qeTool =>
     proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd('none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE))) shouldBe 'proved
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0" in withMathematica { implicit qeTool =>
     proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd('full)(1))) shouldBe 'proved
   }
 
   it should "let us prove variable x+y+z>=0 -> [{x'=5,y'=2}]x+y+z>=0" in withMathematica { implicit qeTool =>
     proveBy("x+y+z>=0 -> [{x'=5,y'=2}]x+y+z>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), diffInd('full)(1))) shouldBe 'proved
   }
 
   it should "let us prove variable x+z>=0&y+z>=0 -> [{x'=5,y'=2}](x+z>=0&y+z>=0)" in withMathematica { implicit qeTool =>
     proveBy("x+z>=0&y+z>=0 -> [{x'=5,y'=2}](x+z>=0&y+z>=0)".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), diffInd('full)(1))) shouldBe 'proved
   }
 
   it should "prove const a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0 directly" in withMathematica { implicit qeTool =>
-    proveBy("a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+    proveBy("a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0".asFormula, implyR(1) & diffInd()(1)) shouldBe 'proved
   }
 
   it should "let us prove variable x>=0 & v>=0 -> [{x'=v}]x>=0" in withMathematica { implicit qeTool =>
     proveBy("x>=0 & v>=0 -> [{x'=v}]x>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), diffInd('full)(1))) shouldBe 'proved
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0" in withMathematica { implicit qeTool =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), diffInd('full)(1))) shouldBe 'proved
   }
 
   it should "perhaps prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 directly if diffInd were powerful enough" in withMathematica { implicit qeTool =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & diffInd(qeTool, 'full)(1)) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & diffInd('full)(1)) shouldBe 'proved
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 despite silly names" in withMathematica { implicit qeTool =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), diffInd('full)(1))) shouldBe 'proved
   }
 
 
@@ -919,7 +919,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
-      diffInd(qeTool)(1, 1::Nil) & QE
+      diffInd()(1, 1::Nil) & QE
       ))
     result shouldBe 'proved
   }
@@ -928,7 +928,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
-      implyR(1) & diffInd(qeTool)(1) & QE
+      implyR(1) & diffInd()(1) & QE
       ))
     result shouldBe 'proved
   }
@@ -937,7 +937,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
       QE
       ,
-      implyR(1) & diffInd(qeTool)(1) & QE
+      implyR(1) & diffInd()(1) & QE
       ))
     result shouldBe 'proved
   }
@@ -947,7 +947,7 @@ class DifferentialTests extends TacticTestBase {
       <(
       QE
       ,
-      implyR(1) & diffInd(qeTool)(1) & QE
+      implyR(1) & diffInd()(1) & QE
       ))
     result shouldBe 'proved
   }
@@ -956,7 +956,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
       QE
       ,
-      diffInd(qeTool)(1, 1::Nil) & QE
+      diffInd()(1, 1::Nil) & QE
       ))
     result shouldBe 'proved
   }
@@ -965,7 +965,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("x>0&a<0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) & DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
       QE
       ,
-      diffInd(qeTool)(1, 1::Nil) & QE
+      diffInd()(1, 1::Nil) & QE
       ))
     result shouldBe 'proved
   }
@@ -974,7 +974,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("x>0&a>0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) & DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
       QE
       ,
-      diffInd(qeTool)(1, 1::Nil) & QE
+      diffInd()(1, 1::Nil) & QE
       ))
     result shouldBe 'proved
   }
@@ -1055,7 +1055,7 @@ class DifferentialTests extends TacticTestBase {
     //val s = Sequent(IndexedSeq(), IndexedSeq("t=0 & x=1 -> [{x'=x, t'=1 & t<1}] x>0".asFormula))
     val s = Sequent(IndexedSeq(), IndexedSeq("x>0 -> [{x'=x}]x>0".asFormula))
     val t = implyR(1) & (andL('_)*) & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) <(
-      closeId, implyR(1) & diffInd(tool, 'full)(1))
+      closeId, implyR(1) & diffInd('full)(1))
     proveBy(s, t) shouldBe 'proved
   }
 
@@ -1237,7 +1237,7 @@ class DifferentialTests extends TacticTestBase {
             withSafeClue("Random differential invariant " + conjecture + "\n" + randClue) {
               print(conjecture)
               val result = proveBy(conjecture,
-                implyR(1) & diffInd(qeTool)(1))
+                implyR(1) & diffInd()(1))
               result shouldBe 'proved
             }
         }
@@ -1246,31 +1246,31 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "prove boring case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
-    proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+    proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & diffInd()(1)) shouldBe 'proved
   }
   it should "prove ^0 case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
-    proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+    proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & diffInd()(1)) shouldBe 'proved
   }
   it should "prove crazy ^0 case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
-    proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+    proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & diffInd()(1)) shouldBe 'proved
   }
   it should "prove crazy case" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { implicit qeTool =>
-    proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+    proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & diffInd()(1)) shouldBe 'proved
   }
 
   "Open Differential Invariant" should "prove x^2>5 -> [{x'=x^3+x^4}]x^2>5" in withMathematica { implicit qeTool =>
-    proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, implyR(1) & openDiffInd(qeTool)(1))
+    proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, implyR(1) & openDiffInd(1))
   }
 
   it should "prove x^2>5 -> [{x'=x^3+x^4}]x^2>5 incontext" taggedAs(IgnoreInBuildTest) in withMathematica { implicit qeTool =>
-    proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, openDiffInd(qeTool)(1, 1::Nil))
+    proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, openDiffInd(1, 1::Nil))
   }
 
   it should "prove x^2<5 -> [{x'=x^3+x^4}]x^2<5" in withMathematica { implicit qeTool =>
-    proveBy("x^2<5 -> [{x'=x^3+x^4}]x^2<5".asFormula, implyR(1) & openDiffInd(qeTool)(1))
+    proveBy("x^2<5 -> [{x'=x^3+x^4}]x^2<5".asFormula, implyR(1) & openDiffInd(1))
   }
 
   it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withMathematica { implicit qeTool =>
-    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(qeTool)(1))
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1))
   }
 }

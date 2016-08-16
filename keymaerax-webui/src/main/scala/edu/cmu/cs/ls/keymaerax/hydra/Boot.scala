@@ -133,7 +133,6 @@ object HyDRAInitializer {
         e.printStackTrace()
     }
 
-    DerivedAxioms.qeTool = tool
     TactixLibrary.qeTool = tool
     TactixLibrary.odeTool = tool
     TactixLibrary.cexTool = tool

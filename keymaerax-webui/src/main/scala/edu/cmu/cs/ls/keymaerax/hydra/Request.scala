@@ -1066,9 +1066,6 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
           //@todo figure out which of these are actually necessary.
           System.out.flush()
           System.err.flush()
-          DerivedAxioms.qeTool match {
-            case t: Tool => t.shutdown(); DerivedAxioms.qeTool = null;
-          }
           TactixLibrary.qeTool match {
             case t: Tool => t.shutdown(); TactixLibrary.qeTool = null;
           }

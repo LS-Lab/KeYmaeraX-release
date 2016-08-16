@@ -39,19 +39,6 @@ trait UnifyUSCalculus {
   /** Whether to use a liberal context via replaceAt instead of proper Context substitutions */
   private val LIBERAL = Context.GUARDED
 
-  /** Quantifier elimination tool
-    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
-    * @see [[DerivedAxioms]] */
-  implicit var qeTool: QETool = null
-  /** Differential equation solving oracle.
-    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
-    * @see [[DerivedAxioms]] */
-  implicit var odeTool: DiffSolutionTool = null
-  /** Counterexample finding oracle.
-    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
-    * @see [[DerivedAxioms]] */
-  implicit var cexTool: CounterExampleTool = null
-
   /** The (generalized) substitutions used for unification */
   type Subst = UnificationMatch.Subst
 

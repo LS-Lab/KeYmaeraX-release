@@ -126,7 +126,7 @@ class CpsWeekTutorial extends TacticTestBase {
       "t_>=0".asFormula)
     result.subgoals.head.succ should contain only "x<=m".asFormula
 
-    val initCond = proveBy(result.subgoals.head, ToolTactics.partialQE)
+    val initCond = proveBy(result.subgoals.head, TactixLibrary.partialQE)
     initCond.subgoals should have size 1
     initCond.subgoals.head.ante shouldBe empty
     initCond.subgoals.head.succ should contain only "v_0<=0|v_0>0&(t_<=0|t_>0&(((b<=0|(0 < b&b < t_^-1*v_0)&((m < x_0|(x_0<=m&m < 1/2*(-1*b*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)&((v < -1*b*t_+v_0|v=-1*b*t_+v_0&(t__0 < 0|t__0>0))|v>-1*b*t_+v_0))|x>1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)))|m>=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)))|b=t_^-1*v_0&((m < x_0|(x_0<=m&m < 1/2*(-1*b*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)&((v < 0|v=0&(t__0 < 0|t__0>0))|v>0))|x>1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)))|m>=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)))|b>t_^-1*v_0))".asFormula
@@ -159,7 +159,7 @@ class CpsWeekTutorial extends TacticTestBase {
       "v>=0".asFormula, "t<=ep".asFormula)
     result.subgoals.head.succ should contain only "v^2 <= 2*b*(m-x)".asFormula
 
-    val initCond = proveBy(result.subgoals.head, hideL(-5, "Q(x_0,v_0)".asFormula) & ToolTactics.partialQE)
+    val initCond = proveBy(result.subgoals.head, hideL(-5, "Q(x_0,v_0)".asFormula) & TactixLibrary.partialQE)
     initCond.subgoals should have size 1
     initCond.subgoals.head.ante shouldBe empty
     initCond.subgoals.head.succ should contain only "(t_ < 0|t_=0&(v_0<=0|v_0>0&((v < v_0|v=v_0&(ep<=0|ep>0&(b<=0|b>0&((x < 1/2*b^-1*(2*b*m+-1*v_0^2)|x=1/2*b^-1*(2*b*m+-1*v^2))|x>1/2*b^-1*(2*b*m+-1*v_0^2)))))|v>v_0)))|t_>0&((v_0 < 0|v_0=0&(v<=0|v>0&((t < t_|t=t_&((A < t_^-1*v|A=t_^-1*v&(ep < t|ep>=t&(b<=0|b>0&(((x<=1/2*b^-1*(2*b*m+-1*v^2)|(1/2*b^-1*(2*b*m+-1*v^2) < x&x < 1/2*b^-1*(2*b*m+A*b*t_^2))&((x_0 < 1/2*(-1*A*t_^2+2*x)|x_0=1/2*(-1*A*t_^2+2*x)&((t_0 < 0|t_0=0&(t__0 < 0|t__0>0))|t_0>0))|x_0>1/2*(-1*A*t_^2+2*x)))|x=1/2*b^-1*(2*b*m+A*b*t_^2)&((x_0 < m|x_0=m&((t_0 < 0|t_0=0&(t__0 < 0|t__0>0))|t_0>0))|x_0>m))|x>1/2*b^-1*(2*b*m+A*b*t_^2)))))|A>t_^-1*v))|t>t_)))|v_0>0&(v < v_0|v>=v_0&((t < t_|t=t_&((A < t_^-1*(v+-1*v_0)|A=t_^-1*(v+-1*v_0)&(ep < t|ep>=t&(b<=0|b>0&(((x<=1/2*b^-1*(2*b*m+-1*v^2)|(1/2*b^-1*(2*b*m+-1*v^2) < x&x < 1/2*b^-1*(2*b*m+A*b*t_^2+2*b*t_*v_0+-1*v_0^2))&((x_0 < 1/2*(-1*A*t_^2+-2*t_*v_0+2*x)|x_0=1/2*(-1*A*t_^2+-2*t_*v_0+2*x)&((t_0 < 0|t_0=0&(t__0 < 0|t__0>0))|t_0>0))|x_0>1/2*(-1*A*t_^2+-2*t_*v_0+2*x)))|x=1/2*b^-1*(2*b*m+A*b*t_^2+2*b*t_*v_0+-1*v_0^2)&((x_0 < 1/2*b^-1*(2*b*m+-1*v_0^2)|x_0=1/2*(-1*A*t_^2+-2*t_*v_0+2*x)&((t_0 < 0|t_0=0&(t__0 < 0|t__0>0))|t_0>0))|x_0>1/2*b^-1*(2*b*m+-1*v_0^2)))|x>1/2*b^-1*(2*b*m+A*b*t_^2+2*b*t_*v_0+-1*v_0^2)))))|A>t_^-1*(v+-1*v_0)))|t>t_)))".asFormula

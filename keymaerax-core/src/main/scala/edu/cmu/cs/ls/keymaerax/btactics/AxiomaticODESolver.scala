@@ -39,9 +39,9 @@ object AxiomaticODESolver {
 
   //region The main tactic
 
-  def apply(implicit qeTool: QETool) = axiomaticSolve(qeTool)
+  def apply() = axiomaticSolve()
 
-  def axiomaticSolve(implicit qeTool: QETool) = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
+  def axiomaticSolve() = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
     val ode = s(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
     val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1
@@ -51,15 +51,15 @@ object AxiomaticODESolver {
     addTimeVarIfNecessary(odePos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
     assertInitializedTimeVar(odePos) & //@note we leave t'=0*t+1 for now because it's easier to name the position after inverseDiffGhost steps.
-    (cutInSoln(qeTool)(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
+    (cutInSoln(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     HilbertCalculus.DW(pos) &
     DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
-    simplifyPostCondition(qeTool)(pos) &
+    simplifyPostCondition(pos) &
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
-    (inverseDiffCut(qeTool)(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
+    (inverseDiffCut(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
-    RepeatTactic(inverseDiffGhost(qeTool)(pos), sizeOfTimeExplicitOde - 1) &
+    RepeatTactic(inverseDiffGhost(pos), sizeOfTimeExplicitOde - 1) &
     DebuggingTactics.assert((s,p) => odeSize(s(p)) == 1, "ODE should only have time.")(pos) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
@@ -149,7 +149,7 @@ object AxiomaticODESolver {
 
   //region Cut in solutions
 
-  def cutInSoln(implicit qeTool: QETool) = "cutInSoln" by ((pos: Position, s: Sequent) => {
+  val cutInSoln = "cutInSoln" by ((pos: Position, s: Sequent) => {
     assert(s(pos).isInstanceOf[Modal], s"Expected a modality but found ${s(pos).prettyString}")
     val system:ODESystem = s(pos).asInstanceOf[Modal].program match {
       case x:ODESystem => x
@@ -181,7 +181,7 @@ object AxiomaticODESolver {
       case Box(ode, postcond) => {
         DifferentialTactics.diffCut(solnToCut)(pos) <(
           Idioms.nil,
-          DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd(qeTool)(pos) & DebuggingTactics.assertProved
+          DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos) & DebuggingTactics.assertProved
         )
       }
       case Diamond(ode, postcond) => throw noDiamondsForNowExn
@@ -226,7 +226,7 @@ object AxiomaticODESolver {
 
   /** Adds t>=0 to the differential equation's domain constraint.
     * @todo Why is this necessary? It's not included in the paper proof. */
-  def cutInTimeLB(implicit qeTool: QETool) = "cutInTimeLB" by ((pos: Position, s: Sequent) => {
+  val cutInTimeLB = "cutInTimeLB" by ((pos: Position, s: Sequent) => {
     assert(s(pos).isInstanceOf[Modal], s"Expected modality at position ${pos} of ${s.prettyString}")
     assert(s(pos).asInstanceOf[Modal].program.isInstanceOf[ODESystem], s"Expected modality to contain ODE System but it did not in ${s(pos)}")
 
@@ -237,7 +237,7 @@ object AxiomaticODESolver {
 
     //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
     s(pos).asInstanceOf[Modal] match {
-      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(Idioms.nil, TactixLibrary.diffInd(qeTool)(pos) & DebuggingTactics.assertProved)
+      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(Idioms.nil, TactixLibrary.diffInd()(pos) & DebuggingTactics.assertProved)
       case Diamond(_,_) => throw noDiamondsForNowExn
     }
   })
@@ -246,7 +246,7 @@ object AxiomaticODESolver {
 
   //region Simplify post-condition
 
-  def simplifyPostCondition(implicit qetool: QETool) = "simplifyPostCondition" by ((pos: Position, s: Sequent) => {
+  val simplifyPostCondition = "simplifyPostCondition" by ((pos: Position, s: Sequent) => {
     val modality = s(pos).asInstanceOf[Modal]
     val Box(ode, Imply(evolutionDomain, originalConclusion)) = modality
 
@@ -293,7 +293,7 @@ object AxiomaticODESolver {
 
   //region Inverse diff cuts
 
-  def inverseDiffCut(implicit qeTool: QETool) = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
+  val inverseDiffCut = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
     val f: Modal = s(pos).asInstanceOf[Modal]
     val ODESystem(ode, constraint) = f.program
     val p = f.child
@@ -303,7 +303,7 @@ object AxiomaticODESolver {
         case Box(_, _) => {
           HilbertCalculus.useExpansionAt("DC differential cut")(pos) <(
             Idioms.nil, /* Branch with no ev dom contraint */
-            DifferentialTactics.diffInd(qeTool)(1) & DebuggingTactics.assertProved /* Show precond of diff cut */
+            DifferentialTactics.diffInd()(1) & DebuggingTactics.assertProved /* Show precond of diff cut */
             )
         }
         case Diamond(_,_) => throw noDiamondsForNowExn
@@ -322,7 +322,7 @@ object AxiomaticODESolver {
 
   //region Inverse diff ghosts
 
-  def inverseDiffGhost(implicit qeTool: QETool) = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
+  val inverseDiffGhost = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
     val f: Modal = s(pos).asInstanceOf[Modal]
     val ODESystem(ode, constraint) = f.program
     val p = f.child

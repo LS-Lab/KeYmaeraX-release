@@ -19,8 +19,8 @@ import scala.language.postfixOps
  */
 object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = {
-    require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: QETool): BelleExpr = {
+    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
 //      DebuggingTactics.recordQECall() &
       (alphaRule*) &
@@ -29,20 +29,20 @@ object ToolTactics {
       Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
       DebuggingTactics.assertProved
   )}
-  def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
+  def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(implicit qeTool: QETool) = {
-    require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+  def partialQE(qeTool: QETool) = {
+    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
       toSingleFormula & rcf(qeTool)
     )
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(implicit qeTool: QETool) = TacticFactory.anon ((sequent: Sequent) => {
+  def rcf(qeTool: QETool) = TacticFactory.anon ((sequent: Sequent) => {
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
@@ -76,7 +76,7 @@ object ToolTactics {
    * @param tool The tool to perform QE and obtain counter examples.
    * @return The tactic
    */
-  def transform(to: Formula)(implicit tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos: Position, sequent: Sequent) => {
+  def transform(to: Formula)(tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel, "transform only at top level")
     require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
 

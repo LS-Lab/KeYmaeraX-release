@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
@@ -29,7 +29,7 @@ class StttTutorial extends TacticTestBase {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     val tactic = implyR('_) & andL('_) & DC("v>=0".asFormula)(1) <(
       /* use */ diffWeaken(1) & prop,
-      /* show */ diffInd(qeTool)(1)
+      /* show */ diffInd()(1)
       )
     proveBy(s, tactic) shouldBe 'proved
   }
@@ -105,7 +105,7 @@ class StttTutorial extends TacticTestBase {
       IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
       IndexedSeq("((v>=0&t_>=0)&v=-1*B*t_+v_0)&x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
 
-    val brake = proveBy(intermediate.subgoals(2), ToolTactics.partialQE)
+    val brake = proveBy(intermediate.subgoals(2), TactixLibrary.partialQE)
     brake.subgoals should have size 1
     brake.subgoals.head shouldBe Sequent(
       IndexedSeq(),
@@ -202,7 +202,7 @@ class StttTutorial extends TacticTestBase {
 
   "Example 9a" should "be provable" in withMathematica { implicit tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.key"))
-    val tactic = implyR('R) & (andL('L)*) & diffInd(tool, 'full)('R)
+    val tactic = implyR('R) & (andL('L)*) & diffInd('full)('R)
     proveBy(s, tactic) shouldBe 'proved
   }
 

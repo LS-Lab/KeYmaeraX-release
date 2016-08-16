@@ -30,14 +30,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   "axiomatic ode solver" should "work!" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver(qeTool)(1)
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=kyxtime+1*t_;](a/2*kyxtime^2+2*kyxtime+1)^3>=1)".asFormula
   })
 
   it should "work using my own time" in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver(qeTool)(1)
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;](a/2*t^2+2*t+1)^3>=1)".asFormula
   })
@@ -45,7 +45,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   it should "solve double integrator" in {withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver(qeTool)(1)
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;]a/2*t^2+2*t+1>=0)".asFormula
   })}
 
@@ -64,14 +64,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   "cutInSolns" should "solve x'=y,t'=1" in {withMathematica(implicit qeTool => {
     val f = "x=0&y=0&t=0 -> [{x'=y, t'=1}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(qeTool)(1)
+    val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(1)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*t+0}]x>=0".asFormula
   })}
 
   //@todo Does this need to be fixed?
   it should "solve single time dependent eqn" ignore {withMathematica(implicit qeTool => {
     val f = "x=0&y=0&t=0 -> [{x'=t, t'=1}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(qeTool)(1)*)
+    val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(1)*)
     println(proveBy(f,t))
     loneSucc(proveBy(f,t)) shouldBe ???
   })}
@@ -88,7 +88,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   it should "work in simplifyPostCondition" in {withMathematica(implicit qeTool => {
     val f = "[{x'=1}](x=22 -> x>0)".asFormula
-    val t = simplifyPostCondition(qeTool)(1)
+    val t = simplifyPostCondition(1)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=1&true}]22>0".asFormula
   })}
 
@@ -125,7 +125,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
       val problem: Formula = KeYmaeraXProblemParser(model)
 
       import TactixLibrary.{implyR, composeb, assignb, allR, QE}
-      val t: BelleExpr = implyR(1) & composeb(1) & assignb(1) & AxiomaticODESolver.axiomaticSolve(qet)(1) & allR(1) & implyR(1) & implyR(1) & assignb(1) & QE
+      val t: BelleExpr = implyR(1) & composeb(1) & assignb(1) & AxiomaticODESolver.axiomaticSolve()(1) & allR(1) & implyR(1) & implyR(1) & assignb(1) & QE
 
       val result : Provable = proveBy(problem, t)
       result.isProved shouldBe false

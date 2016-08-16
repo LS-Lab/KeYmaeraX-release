@@ -269,7 +269,6 @@ object KeYmaeraX {
 
     val mathematica = new Mathematica()
     mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
-    DerivedAxioms.qeTool = mathematica
     TactixLibrary.qeTool = mathematica
     TactixLibrary.cexTool = mathematica
     TactixLibrary.odeTool = mathematica
@@ -279,10 +278,6 @@ object KeYmaeraX {
   }
 
   def shutdownProver() = {
-    if (DerivedAxioms.qeTool != null) {
-      DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
-      DerivedAxioms.qeTool = null
-    }
     if (TactixLibrary.qeTool != null) {
       TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
       TactixLibrary.qeTool = null

@@ -174,7 +174,7 @@ object DifferentialTactics {
    * }}}
    * @incontext
    */
-  def diffInd(implicit qeTool: QETool, auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+  def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
     require(auto == 'none || auto == 'diffInd || auto == 'full, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -242,13 +242,12 @@ object DifferentialTactics {
    * }}}
    * @incontext
    */
-  lazy val DIRule: DependentPositionTactic = diffInd(null, 'none)
-  lazy val diffIndRule: DependentPositionTactic = diffInd(null, 'diffInd)
+  lazy val DIRule: DependentPositionTactic = diffInd('none)
+  lazy val diffIndRule: DependentPositionTactic = diffInd('diffInd)
 
   /**
     * openDiffInd: Open Differential Invariant proves an open formula to be an invariant of a differential equation (by DIo, DW, DE, QE)
     *
-    * @param qeTool Quantifier elimination tool for final QE step of tactic.
     * @example{{{
     *         *
     *    ---------------------openDiffInd(qeTool)(1)
@@ -261,7 +260,7 @@ object DifferentialTactics {
     * }}}
     * @incontext
     */
-  def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
+  val openDiffInd: DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && pos.isTopLevel && (sequent.sub(pos) match {
@@ -416,10 +415,10 @@ object DifferentialTactics {
    * @see [[diffCut]]
    * @see [[diffInd]]
    */
-  def diffInvariant(qeTool: QETool, formulas: Formula*): DependentPositionTactic =
+  def diffInvariant(formulas: Formula*): DependentPositionTactic =
     "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
-      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast))
+      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()('Rlast))
       diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
     })
 
@@ -650,7 +649,7 @@ object DifferentialTactics {
         )
   })
 
-  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(tool: DiffSolutionTool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
@@ -671,7 +670,7 @@ object DifferentialTactics {
 
         diffUnpackEvolutionDomainInitially(diffEqPos) &
           initialGhosts &
-          diffInvariant(tool, flatSolution:_*)(diffEqPos) &
+          diffInvariant(flatSolution:_*)(diffEqPos) &
           // initial ghosts are at the end of the antecedent
           exhaustiveEqR2L(hide=true)('Llast)*flatSolution.size &
           diffWeaken(diffEqPos)

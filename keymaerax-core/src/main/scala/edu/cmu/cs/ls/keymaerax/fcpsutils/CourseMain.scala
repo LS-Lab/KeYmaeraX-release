@@ -22,7 +22,6 @@ object CourseMain {
   catch {
     case _ => println("Won't be able to parse tactics or check proofs.")
   }
-  DerivedAxioms.qeTool = qeTool
   TactixLibrary.qeTool = qeTool
 
   PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)

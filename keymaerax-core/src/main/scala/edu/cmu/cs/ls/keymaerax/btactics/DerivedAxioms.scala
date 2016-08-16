@@ -31,8 +31,7 @@ object DerivedAxioms {
 
   /** Database for derived axioms */
   val derivedAxiomDB = LemmaDBFactory.lemmaDB
-  /*@note must be initialized from outside; is var so that unit tests can setup/tear down */
-  implicit var qeTool: QETool = null
+
   type LemmaID = String
 
   /** A Provable proving the derived axiom/rule named id (convenience) */

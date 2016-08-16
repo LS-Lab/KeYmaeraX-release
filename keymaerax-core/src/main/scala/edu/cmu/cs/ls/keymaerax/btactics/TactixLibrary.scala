@@ -40,6 +40,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Generates loop and differential invariants */
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
+  /** Quantifier elimination tool
+    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
+    * @see [[DerivedAxioms]] */
+  var qeTool: QETool = null
+  /** Differential equation solving oracle.
+    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
+    * @see [[DerivedAxioms]] */
+  var odeTool: DiffSolutionTool = null
+  /** Counterexample finding oracle.
+    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
+    * @see [[DerivedAxioms]] */
+  var cexTool: CounterExampleTool = null
+
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val step               : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
@@ -77,7 +90,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
             | ((loop(gen)('L) partial)
             | ((loop(gen)('R) partial)
             | ((diffSolve(None)('R) partial)
-            | ((diffInd partial)
+            | ((diffInd() partial)
             | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial))*) &
       ?(OnAll(QE))
   }
@@ -187,10 +200,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * )
     * }}}
     */
-  def diffInd(implicit qeTool: QETool, auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(qeTool, auto)
+  def diffInd(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
-  def diffInvariant(invariants: Formula*): DependentPositionTactic =
-    DifferentialTactics.diffInvariant(qeTool, invariants:_*)
+  def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * @example
     * {{{
@@ -199,7 +211,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * )
     * }}}
     */
-  def openDiffInd(implicit qeTool: QETool): DependentPositionTactic = DifferentialTactics.openDiffInd(qeTool)
+  def openDiffInd: DependentPositionTactic = DifferentialTactics.openDiffInd
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
@@ -268,8 +280,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)
+  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(qeTool)
   def QE: BelleExpr = QE()
+
+  /** Quantifier elimination returning equivalent result, irrespective of result being valid or not. */
+  def partialQE: BelleExpr = ToolTactics.partialQE(qeTool)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -376,7 +391,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Real-closed field arithmetic on a single formula without any extra smarts.
     * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf
+  def RCF: BelleExpr = ToolTactics.rcf(qeTool)
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -452,6 +467,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * }}}
    */
   def proveBy(goal: Formula, tactic: BelleExpr): Provable = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+
+  /** Finds a counter example, indicating that the specified formula is not valid. */
+  def findCounterExample(formula: Formula) = cexTool.findCounterExample(formula)
 
 
   ///

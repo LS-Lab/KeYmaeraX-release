@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, ProofRuleTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, ProofRuleTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.SignAnalysis
@@ -28,12 +28,12 @@ object ArithmeticSpeculativeSimplification {
 
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
-  def speculativeQE(implicit tool: QETool with CounterExampleTool): BelleExpr = "QE" by ((sequent: Sequent) => {
+  val speculativeQE: BelleExpr = "QE" by ((sequent: Sequent) => {
     (print("Trying abs...") & proveOrRefuteAbs & print("...abs done")) | speculativeQENoAbs
   })
 
   /** QE without handling abs */
-  private def speculativeQENoAbs(implicit tool: QETool with CounterExampleTool): BelleExpr = "QE" by ((sequent: Sequent) => {
+  private val speculativeQENoAbs: BelleExpr = "QE" by ((sequent: Sequent) => {
     (print("Trying orIntro and smart hiding...") & (orIntro((print("Bound") & hideNonmatchingBounds & smartHide & QE()) | (print("Non-Bound") & smartHide & QE())) & print("... orIntro and smart hiding successful"))) |
     (print("orIntro failed, trying smart hiding...") & ((hideNonmatchingBounds & smartHide & QE()) | (smartHide & QE())) & print("...smart hiding successful")) |
     (print("All simplifications failed, falling back to ordinary QE") & QE())
@@ -51,10 +51,18 @@ object ArithmeticSpeculativeSimplification {
     } else finish
   })
 
+  /** Assert that there is no counter example. skip if none, error if there is. */
+  val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
+    TactixLibrary.findCounterExample(sequent.toFormula) match {
+      case Some(cex) => error("Found counterexample " + cex)
+      case None => skip
+    }
+  })
+
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
-  def proveOrRefuteAbs(implicit tool: QETool with CounterExampleTool): BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
+  val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll(((hideR('R)*) & assertNoCex & QE()) | speculativeQENoAbs)
+    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll(((hideR('R)*) & assertNoCex & QE) | speculativeQENoAbs)
     else error("Sequent does not contain abs")
   })
 
@@ -85,14 +93,6 @@ object ArithmeticSpeculativeSimplification {
       reduceLeft[BelleExpr](_&_)
 
     absTactic & OnAll((andL('_)*) partial) & OnAll((exhaustiveEqL2R(hide=true)('L)*) partial)
-  })
-
-  /** Assert that there is no counter example. skip if none, error if there is. */
-  def assertNoCex(implicit tool: CounterExampleTool): BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
-    tool.findCounterExample(sequent.toFormula) match {
-      case Some(cex) => error("Found counterexample " + cex)
-      case None => skip
-    }
   })
 
   /** Hides formulas with non-matching bounds. */

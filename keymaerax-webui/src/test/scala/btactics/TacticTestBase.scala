@@ -65,7 +65,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
   def withTool[T <: Tool with QETool with DiffSolutionTool with CounterExampleTool](tool: T)(testcode: T => Any): Unit = {
     tool shouldBe 'initialized
-    DerivedAxioms.qeTool = tool
     TactixLibrary.qeTool = tool
     TactixLibrary.odeTool = tool
     TactixLibrary.cexTool = tool
@@ -77,7 +76,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
   def withQETool[T <: Tool with QETool](tool: T)(testcode: T => Any): Unit = {
     tool shouldBe 'initialized
-    DerivedAxioms.qeTool = tool
     TactixLibrary.qeTool = tool
     try {
       testcode(tool)
@@ -95,10 +93,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /* Test teardown */
   override def afterEach() = {
     //@todo is there a way of avoiding duplicate shutdowns, in case they are problematic?
-    if (DerivedAxioms.qeTool != null) {
-      DerivedAxioms.qeTool match { case t: Tool => t.shutdown() }
-      DerivedAxioms.qeTool = null
-    }
     if (TactixLibrary.qeTool != null) {
       TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
       TactixLibrary.qeTool = null
