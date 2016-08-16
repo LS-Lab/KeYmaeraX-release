@@ -125,15 +125,14 @@ sealed trait ApplicationOf extends Composite {
   */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   //@note initialization order uses explicit dataStructureInvariant that is called in all nontrivial subclasses after val have been initialized.
-  private[core] final def dataStructureInvariant: Unit = {
-    insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"),
-      "non-empty names without underscores (except at end for internal names): " + name)
+  private[core] final def namingConvention: Unit = {
+    insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"), "non-empty names without underscores (except at end for internal names): " + name)
     //@note the above requires conditions imply that !name.endsWith("__")
-    insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
+    //insist(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
     //  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores " +
     //    "(internal names allow _ at the end, \\_ at the beginning, and \\ followed by letters only): " + name)
-    //@note \\ part of the names for Nothing and Anything objects
-    require((name.charAt(0).isLetter || name.charAt(0) == '_' || name.charAt(0) == '\\') && name.forall(c => c.isLetterOrDigit || c == '_' || c == '\\' || c == '$'), "alphabetical name: " + name)
+    //@note \\ and _ are names for special Nothing and DotFormula objects
+    require(name.charAt(0).isLetter && name.forall(c => c.isLetterOrDigit || c == '_' /*|| c == '$'*/), "alphabetical name expected: " + name)
     require(index.getOrElse(0) >= 0, "nonnegative index if any " + this)
   }
 
@@ -205,7 +204,7 @@ object Variable {
 
 /** Elementary variable called `name` with an index of a fixed sort */
 case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) extends Variable {
-  dataStructureInvariant
+  namingConvention
 }
 
 /** Differential symbol x' for variable x */
@@ -215,7 +214,7 @@ case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   final val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
   override def toString: String = asString //+ "@" + getClass.getSimpleName
-  dataStructureInvariant
+  namingConvention
 }
 
 /** Number literal */
@@ -229,7 +228,7 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   final val kind: Kind = FunctionKind
   /** Full string with names and full types */
   override def fullString: String = asString + ":" + domain + "->" + sort
-  dataStructureInvariant
+  namingConvention
 }
 
 /** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
@@ -515,7 +514,7 @@ sealed trait AtomicProgram extends Program with Atomic
 /** Uninterpreted program constant */
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
   final val index: Option[Int] = None
-  dataStructureInvariant
+  namingConvention
 }
 
 /** x:=e assignment */
@@ -589,7 +588,7 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
 sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg)
   extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
-  dataStructureInvariant
+  namingConvention
 }
 
 /** x'=e atomic differential equation */
