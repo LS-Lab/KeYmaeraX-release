@@ -1163,7 +1163,7 @@ trait UnifyUSCalculus {
         Predef.assert(fact.conclusion.succ.head==K(k), "correctly matched key in fact")
         Predef.assert(proof.conclusion(p.top)==C(c), "correctly matched occurrence in input proof")
         Predef.assert(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
-        Predef.assert(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
+        Predef.assert(List((C, DotFormula), (C, DotTerm())).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
         /** Forward equivalence rewriting step to replace occurrence of instance of key k by instance of other o in context
           * {{{
