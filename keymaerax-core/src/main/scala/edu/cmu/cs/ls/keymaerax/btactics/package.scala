@@ -74,8 +74,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * {{{
   * import TactixLibrary._
   * // Explicit proof tactic for |- !!p() <-> p()
-  * val proof = TactixLibrary.proveBy(
-  *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
+  * val proof = TactixLibrary.proveBy("!!p() <-> p()".asFormula,
   *    equivR(1) & <(
   *      (notL(-1) &
   *        notR(2) &
@@ -97,8 +96,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * {{{
   * import TactixLibrary._
   * // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
-  * val proof = TactixLibrary.proveBy(
-  *    Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
+  * val proof = TactixLibrary.proveBy("(p() & q()) & r() <-> p() & (q() & r())".asFormula,
   *    prop
   * )
   * }}}
@@ -141,42 +139,39 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *
   * {{{
   * import TactixLibrary._
-  * import DerivedAxioms._
   * // Proof by pointing of  |- &lt;v:=2*v+1;&gt;v!=0 <-> 2*v+1!=0
-  * val proof = TactixLibrary.proveBy(
-  *   Sequent(IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula)),
+  * val proof = TactixLibrary.proveBy("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula,
   *   // use "<> diamond" axiom backwards at the indicated position on
   *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
-  *   useExpandAt("<> diamond")(1, 0::Nil) &
+  *   useExpansionAt("<> diamond")(1, 0::Nil) &
   *   // use "[:=] assign" axiom forward at the indicated position on
   *   // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
   *   useAt("[:=] assign")(1, 0::0::Nil) &
   *   // use double negation at the indicated position on
   *   // |- __!!q(2*v+1)__ <-> q(2*v+1)
-  *   useAt(doubleNegationAxiom)(1, 0::Nil) &
+  *   useAt("!! double negation")(1, 0::Nil) &
   *   // close by (an instance of) reflexivity |- p() <-> p()
   *   // |- q(2*v+1) <-> q(2*v+1)
-  *   byUS(equivReflexiveAxiom)
+  *   byUS("<-> reflexive")
   * )
   * }}}
   * Another example is:
   * {{{
   * import TactixLibrary._
   * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
-  * val proof = TactixLibrary.proveBy(
-  *   Sequent(IndexedSeq(), IndexedSeq("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula)),
+  * val proof = TactixLibrary.proveBy("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula,
   *   // use "<> diamond" axiom backwards at the indicated position on
   *   // |- __&lt;a;++b;&gt;p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
-  *   useExpandAt("<> diamond")(1, 0::Nil) &
+  *   useExpansionAt("<> diamond")(1, 0::Nil) &
   *   // use "[++] choice" axiom forward at the indicated position on
   *   // |- !__[a;++b;]!p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
   *   useAt("[++] choice")(1, 0::0::Nil) &
   *   // use "<> diamond" axiom forward at the indicated position on
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  __&lt;a;&gt;p(x)__ | &lt;b;&gt;p(x)
-  *   useExpandAt("<> diamond")(1, 1::0::Nil) &
+  *   useExpansionAt("<> diamond")(1, 1::0::Nil) &
   *   // use "<> diamond" axiom forward at the indicated position on
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __&lt;b;&gt;p(x)__
-  *   useExpandAt("<> diamond")(1, 1::1::Nil) &
+  *   useExpansionAt("<> diamond")(1, 1::1::Nil) &
   *   // use propositional logic to show
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
   *   prop
@@ -187,11 +182,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * {{{
   *  import TactixLibrary._
   *  // Proof by pointing with steps of  |- ⟨a++b⟩p(x) <-> (⟨a⟩p(x) | ⟨b⟩p(x))
-  *  val proof = TactixLibrary.proveBy(
-  *    Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+  *  val proof = TactixLibrary.proveBy("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula,
   *    // use "<> diamond" axiom backwards at the indicated position on
   *    // |- __⟨a++b⟩p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    useExpandAt("<> diamond")(1, 0::Nil) &
+  *    useExpansionAt("<> diamond")(1, 0::Nil) &
   *    // |- !__[a;++b;]!p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step "[++] choice" axiom forward at the indicated position
   *    stepAt(1, 0::0::Nil) &
@@ -238,7 +232,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *    import TactixLibrary._
   *    // |- x*(x+1)>=0 -> [y:=0;x:=__x^2+x__;]x>=y
   *    val proof = TactixLibrary.proveBy("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula,
-  *      CEat(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE)) (1, 1::0::1::1::Nil) &
+  *      CEat(proveBy("x*(x+1)=x^2+x".asFormula, QE)) (1, 1::0::1::1::Nil) &
   *      // |- x*(x+1)>=0 -> [y:=0;x:=__x*(x+1)__;]x>=y by CE/CQ using x*(x+1)=x^2+x at the indicated position
   *      // step uses top-level operator [;]
   *      stepAt(1, 1::Nil) &
@@ -258,7 +252,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *   val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
   *   // |- x<5 & __x^2<4__ -> [{x' = 5*x & __x^2<4__}](__x^2<4__ & x>=1)
   *   val proof = TactixLibrary.proveBy("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
-  *     CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
+  *     CEat(proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
   *   )
   *   // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
   *   println(proof.subgoals)
