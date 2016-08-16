@@ -173,7 +173,7 @@ object Context {
   // elegant reapply-based context splitting
 
   /** @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools.boundAt()]] for same positions */
-  private def context(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
+  private def context(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm(term.sort),term) else {term match {
     case FuncOf(f,t)     if pos.head==0 => val sp = context(t, pos.child); (FuncOf(f, sp._1), sp._2)
     // homomorphic cases
     case f:UnaryCompositeTerm  if pos.head==0 => val sp = context(f.child, pos.child); (f.reapply(sp._1), sp._2)
@@ -380,7 +380,7 @@ object Context {
   // @note used only for contracts and performance comparison
 
   /** @see [[StaticSemanticsTools.boundAt()]] */
-  private def split(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
+  private def split(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm(term.sort),term) else {term match {
     case FuncOf(f,t)     if pos.head==0 => val sp = split(t, pos.child); (FuncOf(f, sp._1), sp._2)
     // homomorphic cases
     case Neg(g)          if pos.head==0 => val sp = split(g, pos.child); (Neg(sp._1), sp._2)
@@ -513,7 +513,7 @@ sealed trait Context[+T <: Expression] extends (Expression => Formula) {
   def isFormulaContext = signature(ctx).contains(DotFormula)
 
   /** True if this context has a DotTerm so expects a term as argument */
-  def isTermContext = signature(ctx).contains(DotTerm)
+  def isTermContext = signature(ctx).exists(_.isInstanceOf[DotTerm])
 
   /** True if this context has a DotProgram so expects a program as argument */
   def isProgramContext = signature(ctx).contains(DotProgram)
@@ -539,7 +539,7 @@ sealed trait Context[+T <: Expression] extends (Expression => Formula) {
   */
 private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr) extends Context[T] {
   import Context.{DotDiffProgram, DotProgram}
-  private lazy val dotty = if (isFormulaContext) DotFormula else if (isTermContext) DotTerm else if (isProgramContext) DotProgram else DotDiffProgram
+  private lazy val dotty = if (isFormulaContext) DotFormula else if (isTermContext) DotTerm() else if (isProgramContext) DotProgram else DotDiffProgram
   def ctx: T = apply(dotty).asInstanceOf[T]
 
   def apply(e: Expression): Formula = Context.replaceAt(replicate, dot, e).asInstanceOf[Formula]
@@ -578,7 +578,7 @@ private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr)
 private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
   import Context.{DotDiffProgram, DotProgram}
   // either a term or a formula context, not both
-  require(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
+  require(!(signature(ctx).contains(DotFormula) && signature(ctx).exists(_.isInstanceOf[DotTerm])), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
 
   /** Return the result of instantiating this context with argument `e`.
     * That is filling the respective dot placeholder of this context with expression `e`. */
@@ -610,7 +610,7 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
   private def instantiate(withT: Term): Formula = {
     assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
     val context = Function("dottingCapprox_", None, Real, Bool)
-    USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
+    USubst(SubstitutionPair(PredOf(context, DotTerm(Real)), ctx) :: Nil)(PredOf(context, withT))
   }
 
   /**

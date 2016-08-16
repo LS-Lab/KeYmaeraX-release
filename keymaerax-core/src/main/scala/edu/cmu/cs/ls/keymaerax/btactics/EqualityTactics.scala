@@ -75,13 +75,13 @@ private object EqualityTactics {
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
           case Some(f: Formula) =>
             (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
-              sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm)))
+              sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm())))
           case Some(t: Term) if t == lhs =>
             (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula])),
-              sequent(pos.top).replaceAt(pos.inExpr, DotTerm))
+              sequent(pos.top).replaceAt(pos.inExpr, DotTerm()))
           case Some(t: Term) if t != lhs =>
             (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
-              sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, DotTerm)))
+              sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, DotTerm())))
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
@@ -91,7 +91,7 @@ private object EqualityTactics {
           /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(
             (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
             (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
-            (PredOf(Function("ctxF_", None, Real, Bool), DotTerm), dottedRepl) :: Nil))
+            (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
           )
     }
   })

@@ -594,12 +594,12 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
       val r = repl match {
         case rhs: Term    => ren(
           replaceFree(
-            replaceFree(rhs)(ren(Variable("x_")),DotTerm)
-          ) (ren(DifferentialSymbol(Variable("x_"))), DotTerm)
+            replaceFree(rhs)(ren(Variable("x_")),DotTerm())
+          ) (ren(DifferentialSymbol(Variable("x_"))), DotTerm())
         )
         case rhs: Formula => ren(
           //@todo if this match doesn't work, could keep looking for argument in next occurrence of what
-          replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), DotTerm)
+          replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), DotTerm())
         )
       }
       println("\t\t\tINFO: post-hoc optimizable: " + repl + " dottify " + r)
@@ -608,8 +608,8 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
     //@note URename with TRANSPOSITION=true are their own inverses
     val inverseRename = (subst:RenUSubst) => RenUSubst(subst.subsDefsInput.map(sp =>
       (sp._1, sp._1 match {
-        case FuncOf(_, DotTerm) => posthocDottify(sp._1, sp._2)
-        case PredOf(_, DotTerm) => posthocDottify(sp._1, sp._2)
+        case FuncOf(_, DotTerm(_)) => posthocDottify(sp._1, sp._2)
+        case PredOf(_, DotTerm(_)) => posthocDottify(sp._1, sp._2)
         case _ => ren(sp._2)
       } )))
     val renamedSubst = inverseRename(subst)

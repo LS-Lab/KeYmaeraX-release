@@ -30,7 +30,7 @@ class CpsWeekTutorial extends TacticTestBase {
       skip,
       print("Step") & normalize & OnAll(diffSolve(None)('R) partial) partial
       ) & US(USubst(SubstitutionPair(
-            "J(v)".asFormula.replaceFree("v".asTerm, DotTerm), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm))::Nil)) & OnAll(QE)
+            "J(v)".asFormula.replaceFree("v".asTerm, DotTerm()), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm()))::Nil)) & OnAll(QE)
 
     proveBy(s, tactic) shouldBe 'proved
   }

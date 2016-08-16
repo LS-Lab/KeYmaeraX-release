@@ -48,7 +48,7 @@ object RenUSubst {
    * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
    */
   private[bellerophon] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
-    case DotTerm => DotTerm
+    case d: DotTerm => d
     //case Nothing => {assert(sp._2 == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing} // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst             => a

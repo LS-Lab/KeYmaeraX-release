@@ -450,7 +450,7 @@ trait UnifyUSCalculus {
         case Imply(DotFormula, other) => implyStep(other)
 
         //@note all DotTerms are equal
-        case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+        case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty =>
           // try to prove prereq globally
           /* {{{
            *                                         fact
@@ -561,7 +561,7 @@ trait UnifyUSCalculus {
   def CQ(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
     private val f_ = UnitFunctional("f_", AnyArg, Real)
     private val g_ = UnitFunctional("g_", AnyArg, Real)
-    private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
+    private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm())
 
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.isEmpty && sequent.succ.length == 1, "Expected empty antecedent and single succedent, but got " + sequent)
@@ -864,7 +864,7 @@ trait UnifyUSCalculus {
         require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
         equiv(
           Provable.rules("CQ equation congruence")(
-            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
+            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm()), C.ctx) ::
               SubstitutionPair(UnitFunctional("f_", AnyArg, Real), left) ::
               SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
               Nil))
@@ -1228,10 +1228,10 @@ trait UnifyUSCalculus {
 
         // in which context of the fact does the key occur
         K.ctx match {
-          case Equal(DotTerm, o) =>
+          case Equal(DotTerm(_), o) =>
             equivStep(o)
 
-          case Equal(o, DotTerm) =>
+          case Equal(o, DotTerm(_)) =>
             equivStep(o)
 
           case Equiv(DotFormula, o) =>
@@ -1371,7 +1371,7 @@ trait UnifyUSCalculus {
             } else proved(proof, 0)
 
 
-          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty =>
             // try to prove prereq globally
             //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
             /* {{{

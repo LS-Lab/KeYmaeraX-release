@@ -187,7 +187,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip x
     round trip Variable("y", None, Real)
     round trip Variable("xyzd", None, Real)
-    round trip Variable("_", None, Real)
+    //round trip Variable("_", None, Real)
     round trip Variable("x_", None, Real)
     round trip Variable("x", Some(0), Real)
     round trip Variable("x", Some(5), Real)
@@ -198,7 +198,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "commute crazy names" in {
     round trip Variable("x_", None, Real)
-    round trip Variable("_", None, Real)
+    //round trip Variable("_", None, Real)
     round trip FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real))
   }
 
