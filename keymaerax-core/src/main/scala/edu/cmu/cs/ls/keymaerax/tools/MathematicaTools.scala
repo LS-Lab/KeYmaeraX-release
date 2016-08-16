@@ -30,7 +30,7 @@ object ToolConversions {
 }
 
 class UncheckedM2KConverter extends MathematicaToKeYmaera {
-  val CONST_FN_PREFIX = "fn$"
+  val CONST_FN_SUFFIX = "cnstfn_"
 
   //@note unchecked, because ambiguous And==&& vs. And==Rules conversion
   override def k2m = null
@@ -47,9 +47,9 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
     //@note e.head() by itself is not meaningful -- it combines e.head.head == Derivative and e.head.args == degree
     else if (e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1 &&
       e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
-    else if (e.symbolQ() && MathematicaNameConversion.toKeYmaera(e).name.startsWith(CONST_FN_PREFIX))
+    else if (e.symbolQ() && MathematicaNameConversion.toKeYmaera(e).name.endsWith(CONST_FN_SUFFIX))
       MathematicaNameConversion.toKeYmaera(e) match {
-        case BaseVariable(name, index, sort) => FuncOf(Function(name.substring(CONST_FN_PREFIX.length), index, Unit, sort), Nothing)
+        case BaseVariable(name, index, sort) => FuncOf(Function(name.substring(0, name.length - CONST_FN_SUFFIX.length), index, Unit, sort), Nothing)
       }
     else super.convert(e)
   }
@@ -76,21 +76,23 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
 }
 
 class UncheckedK2MConverter extends KeYmaeraToMathematica {
-  val CONST_FN_PREFIX = "fn$"
+  val CONST_FN_SUFFIX = "cnstfn_"
 
   //@note unchecked, because ambiguous And==&& vs. And==Rule in converse conversion
   override def m2k = null
   override def apply(e: KExpr): MExpr = convert(e)
 
   override protected def convertTerm(t: Term): MExpr = t match {
-    case FuncOf(Function(name, index, Unit, _, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case FuncOf(Function(name, index, Unit, _, false), Nothing) =>
+      MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
 
 object CEXK2MConverter extends UncheckedK2MConverter {
   override def convert(e: KExpr): MExpr = e match {
-    case Function(name, index, Unit, _, false) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case Function(name, index, Unit, _, false) =>
+      MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
     case _ => super.convert(e)
   }
 
@@ -100,7 +102,7 @@ object CEXK2MConverter extends UncheckedK2MConverter {
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
     case DifferentialSymbol(c) =>
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-    case FuncOf(Function(name, index, Unit, _, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(CONST_FN_PREFIX + name, index))
+    case FuncOf(Function(name, index, Unit, _, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
@@ -111,8 +113,8 @@ object CEXM2KConverter extends UncheckedM2KConverter {
 
   override protected def convertAtomicTerm(e: MExpr): KExpr = {
     MathematicaNameConversion.toKeYmaera(e) match {
-      case BaseVariable(name, index, sort) if name.startsWith(CEXK2MConverter.CONST_FN_PREFIX) =>
-        FuncOf(Function(name.replace(CEXK2MConverter.CONST_FN_PREFIX, ""), index, Unit, sort), Nothing)
+      case BaseVariable(name, index, sort) if name.endsWith(CEXK2MConverter.CONST_FN_SUFFIX) =>
+        FuncOf(Function(name.substring(0, name.length - CEXK2MConverter.CONST_FN_SUFFIX.length), index, Unit, sort), Nothing)
       case _ => super.convertAtomicTerm(e)
     }
   }
@@ -145,7 +147,8 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
         case _ =>
           if (DEBUG) println("Counterexample " + cex.prettyString)
           Some(ToolConversions.flattenConjunctions(cex).map({
-            case Equal(name: NamedSymbol, value) => name -> value
+            case Equal(name: Variable, value) => name -> value
+            case Equal(name: DifferentialSymbol, value) => name -> value
             case Equal(FuncOf(fn, _), value) => fn -> value
           }).toMap)
       }
