@@ -153,7 +153,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     val fml = node.sequent.toFormula
     if (fml.isFOL) {
       try {
-        TactixLibrary.cexTool.findCounterExample(fml) match {
+        ToolProvider.cexTool().findCounterExample(fml) match {
           //@todo return actual sequent, use collapsiblesequentview to display counterexample
           case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
           case None => new CounterExampleResponse("cex.none") :: Nil
@@ -225,7 +225,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
       primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
     val time: Variable = Variable("t_", None, Real)
     //@note replace initial values with original variable, since we turn them into assignments
-    val solution = replaceFree(TactixLibrary.odeTool.diffSol(ode, time, iv).get, iv.map(_.swap))
+    val solution = replaceFree(ToolProvider.odeTool().diffSol(ode, time, iv).get, iv.map(_.swap))
     val flatSolution = flattenConjunctions(solution).
       sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
     Compose(
@@ -263,14 +263,12 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
-    //@HACK do not want to change the tool type in TactixLibrary
-    TactixLibrary.qeTool match {
-      case s: SimulationTool =>
-        val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
-        val simulation = s.simulate(initial, timedStateRelation, steps, n)
-        new SimulationResponse(simulation, stepDuration) :: Nil
-      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
-    }
+    val s = ToolProvider.simulationTool()
+    if (s != null) {
+      val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
+      val simulation = s.simulate(initial, timedStateRelation, steps, n)
+      new SimulationResponse(simulation, stepDuration) :: Nil
+    } else new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
   }
 }
 
@@ -1066,15 +1064,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
           //@todo figure out which of these are actually necessary.
           System.out.flush()
           System.err.flush()
-          TactixLibrary.qeTool match {
-            case t: Tool => t.shutdown(); TactixLibrary.qeTool = null;
-          }
-          TactixLibrary.odeTool match {
-            case t: Tool => t.shutdown(); TactixLibrary.odeTool = null;
-          }
-          TactixLibrary.cexTool match {
-            case t: Tool => t.shutdown(); TactixLibrary.cexTool = null;
-          }
+          ToolProvider.shutdown()
           System.out.flush()
           System.err.flush()
           HyDRAServerConfig.system.shutdown()

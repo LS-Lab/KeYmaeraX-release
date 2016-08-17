@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
 
-import scala.Predef.{???,require}
 import scala.collection.immutable._
 import scala.language.postfixOps
 
@@ -39,19 +38,6 @@ import scala.language.postfixOps
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Generates loop and differential invariants */
   var invGenerator: Generator[Formula] = new NoneGenerate()
-
-  /** Quantifier elimination tool
-    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
-    * @see [[DerivedAxioms]] */
-  var qeTool: QETool = null
-  /** Differential equation solving oracle.
-    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
-    * @see [[DerivedAxioms]] */
-  var odeTool: DiffSolutionTool = null
-  /** Counterexample finding oracle.
-    * @note must be initialized from outside; is var so that unit tests can setup/tear down.
-    * @see [[DerivedAxioms]] */
-  var cexTool: CounterExampleTool = null
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val step               : DependentPositionTactic = "step" by ((pos: Position) =>
@@ -177,8 +163,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
   def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new DiffSolutionTool with QETool {
-    override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = odeTool.diffSol(diffSys, diffArg, iv)
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = qeTool.qeEvidence(formula)
+    override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = ToolProvider.odeTool().diffSol(diffSys, diffArg, iv)
+    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().qeEvidence(formula)
   })
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
@@ -280,11 +266,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(qeTool)
+  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool())
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not. */
-  def partialQE: BelleExpr = ToolTactics.partialQE(qeTool)
+  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool())
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -328,8 +314,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Transform an FOL formula into the formula 'to' [[ToolTactics.transform]].
     * A proof why that tranformation is acceptable will be shown on demand. */
   def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = qeTool.qeEvidence(formula)
-    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = cexTool.findCounterExample(formula)
+    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().qeEvidence(formula)
+    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = ToolProvider.cexTool().findCounterExample(formula)
   })
 
   //
@@ -391,7 +377,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Real-closed field arithmetic on a single formula without any extra smarts.
     * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf(qeTool)
+  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool())
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -469,7 +455,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def proveBy(goal: Formula, tactic: BelleExpr): Provable = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = cexTool.findCounterExample(formula)
+  def findCounterExample(formula: Formula) = ToolProvider.cexTool().findCounterExample(formula)
 
 
   ///

@@ -267,29 +267,14 @@ object KeYmaeraX {
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
     TactixLibrary.invGenerator = generator
 
-    val mathematica = new Mathematica()
-    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
-    TactixLibrary.qeTool = mathematica
-    TactixLibrary.cexTool = mathematica
-    TactixLibrary.odeTool = mathematica
+    ToolProvider.setProvider(new MathematicaToolProvider(DefaultConfiguration.defaultMathematicaConfig))
 
     //@note just in case the user shuts down the prover from the command line
     Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
   }
 
   def shutdownProver() = {
-    if (TactixLibrary.qeTool != null) {
-      TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
-      TactixLibrary.qeTool = null
-    }
-    if (TactixLibrary.cexTool != null) {
-      TactixLibrary.cexTool match { case t: Tool => t.shutdown() }
-      TactixLibrary.cexTool = null
-    }
-    if (TactixLibrary.odeTool != null) {
-      TactixLibrary.odeTool match { case t: Tool => t.shutdown() }
-      TactixLibrary.odeTool = null
-    }
+    ToolProvider.shutdown()
     TactixLibrary.invGenerator = new NoneGenerate()
   }
 

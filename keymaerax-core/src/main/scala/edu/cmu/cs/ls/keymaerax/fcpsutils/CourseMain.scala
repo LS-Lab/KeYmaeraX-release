@@ -2,27 +2,26 @@ package edu.cmu.cs.ls.keymaerax.fcpsutils
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BTacticParser}
-import edu.cmu.cs.ls.keymaerax.btactics.{NoneGenerate, TactixLibrary, DerivedAxioms}
-import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Provable, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BelleProvable, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Provable}
+import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
 /**
   * @author Nathan Fulton
   */
 object CourseMain {
-  val qeTool = new Mathematica()
   try {
-    //@todo initialize MathKernel for ohmu.
-    qeTool.init(Map("linkName" -> "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel", "libDir" -> "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"))
-    if(qeTool.isInitialized) println("Initialized!")
+    val config = Map(
+      "linkName" -> "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel",
+      "libDir" -> "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
+    val provider = new MathematicaToolProvider(config)
+    ToolProvider.setProvider(provider)
+    if(provider.tool.isInitialized) println("Initialized!")
     else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
+  } catch {
+    case _: Throwable => println("Won't be able to parse tactics or check proofs.")
   }
-  catch {
-    case _ => println("Won't be able to parse tactics or check proofs.")
-  }
-  TactixLibrary.qeTool = qeTool
 
   PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 

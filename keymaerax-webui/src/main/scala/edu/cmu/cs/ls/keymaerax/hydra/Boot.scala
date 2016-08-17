@@ -4,12 +4,12 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, DerivedAxioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
 import edu.cmu.cs.ls.keymaerax.tools._
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, QETool}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import spray.can.Http
 
@@ -94,7 +94,7 @@ object SSLBoot extends App with KyxSslConfiguration {
 
   //@todo Should also check that the .aks file actually exists.
 
-  println(s"SSL BOOT: Attempting to listen on ${host}:${port}. SSL requests only!")
+  println(s"SSL BOOT: Attempting to listen on $host:$port. SSL requests only!")
   println("NOTE: No browser instance will open because we assume SSL-hosted servers are headless (i.e., SSL mode is for production deployments only -- if hosting locally, use NonSSLBoot!)")
 
   HyDRAInitializer(args, database)
@@ -118,11 +118,12 @@ object HyDRAInitializer {
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
-    val tool: Tool with QETool with DiffSolutionTool with CounterExampleTool = createTool(options)
+
 
     try {
-      initFromDB(tool, database)
-      assert(tool.isInitialized, "Mathematica should be initialized after init()")
+      val config = configFromDB(options, database)
+      val tool: Tool = createTool(options, config)
+      assert(tool.isInitialized, "Tool should be initialized after init()")
     } catch {
       //@todo add e to log here and in other places
       case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
@@ -133,9 +134,6 @@ object HyDRAInitializer {
         e.printStackTrace()
     }
 
-    TactixLibrary.qeTool = tool
-    TactixLibrary.odeTool = tool
-    TactixLibrary.cexTool = tool
     try {
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
@@ -152,29 +150,33 @@ object HyDRAInitializer {
     case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
   }
 
-  private def createTool(options: OptionMap): Tool with QETool with DiffSolutionTool with CounterExampleTool = {
+  private def createTool(options: OptionMap, config: ToolProvider.Configuration): Tool = {
+    val tool: String = options.getOrElse('tool, "mathematica").toString
+    val provider = tool.toLowerCase() match {
+      case "mathematica" => new MathematicaToolProvider(config)
+      case "z3" => new Z3ToolProvider
+      case t => throw new Exception("Unknown tool '" + t + "'")
+    }
+    ToolProvider.setProvider(provider)
+    provider.tool
+  }
+
+  private def configFromDB(options: OptionMap, db: DBAbstraction): ToolProvider.Configuration = {
     val tool: String = options.getOrElse('tool, "mathematica").toString
     tool.toLowerCase() match {
-      case "mathematica" => new Mathematica()
-      case "z3" => new Z3()
+      case "mathematica" => mathematicaConfigFromDB(db)
+      case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
 
-
-
-  private def initFromDB(tool: Tool, db: DBAbstraction) = tool match {
-    case t: Mathematica => initMathematicaFromDB(t, db)
-    case t: Z3 => t.init(Map.empty)
-  }
-
-  private def initMathematicaFromDB(mathematica: Mathematica, db: DBAbstraction) = {
+  private def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
     getMathematicaLinkName(db) match {
       case Some(l) => getMathematicaLibDir(db) match {
-        case Some(libDir) => mathematica.init(Map("linkName" -> l, "libDir" -> libDir))
-        case None => mathematica.init(Map("linkName" -> l))
+        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir)
+        case None => Map("linkName" -> l)
       }
-      case None => mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
+      case None => DefaultConfiguration.defaultMathematicaConfig
     }
   }
 
