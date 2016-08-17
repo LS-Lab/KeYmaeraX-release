@@ -94,6 +94,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     val vars = nextNames("z", size / 3 + 1)
     val othervars = nextNames("y", size / 5 + 1)
     val symbols = StaticSemantics.signature(fml)
+    //@todo make sure not to create diffs when the symbol occurs within another diff
     val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
       case p@UnitPredicational(_,AnyArg) => p->nextF(vars,size)
       case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=false)
