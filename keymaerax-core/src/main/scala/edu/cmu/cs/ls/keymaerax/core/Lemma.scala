@@ -70,6 +70,7 @@ object Lemma {
   private def fromStringInternal(lemma: String): Lemma = {
     //@note should ensure that string was indeed produced by KeYmaera X
     val (name, sequents, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
+    //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
     Lemma(fact, evidence, name)
   }

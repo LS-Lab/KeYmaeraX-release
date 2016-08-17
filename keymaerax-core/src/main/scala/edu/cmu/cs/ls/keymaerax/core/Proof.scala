@@ -693,11 +693,6 @@ private object Rule {
   *********************************************************************************
   */
 
-//@todo Code Review: determine whether this categorization of proof rules is useful.
-
-/** A rule that tries closing a subgoal */
-trait ClosingRule extends Rule {}
-
 /** A rule applied to a position */
 trait PositionRule extends Rule {
   /** The position (on the right) where this rule will be applied at */
@@ -715,20 +710,6 @@ trait LeftRule extends PositionRule {
 trait RightRule extends PositionRule {
   /** The position (on the right) where this rule will be applied at */
   val pos: SuccPos
-}
-
-/** An assumption rule, which is a position rule that has an additional position of an assumption. */
-trait AssumptionRule extends PositionRule {
-  /** The position of the assumption used for this rule when used at the position `pos` */
-  val assume: SeqPos
-  override def toString: String = name + " at " + pos + " assumption at " + assume
-}
-
-/** A rule applied to two positions. */
-trait TwoPositionRule extends Rule {
-  val pos1: SeqPos
-  val pos2: SeqPos
-  override def toString: String = name + " at " + pos1 + " and " + pos2
 }
 
 /*********************************************************************************
@@ -781,7 +762,7 @@ case class HideLeft(pos: AntePos) extends LeftRule {
   * G |- p, q, D
   * }}}
   */
-case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRule {
+case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends Rule {
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
@@ -796,7 +777,7 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
   * p, q, G |- D
   * }}}
   */
-case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
+case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
   val name: String = "ExchangeLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
@@ -816,7 +797,7 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRul
   *   p, G |- p, D
   * }}}
   */
-case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with ClosingRule {
+case class Close(assume: AntePos, pos: SuccPos) extends Rule {
   val name: String = "Close"
   /** Close identity */
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -833,7 +814,7 @@ case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with Clos
   *   G |- true, D
   * }}}
   */
-case class CloseTrue(pos: SuccPos) extends RightRule with ClosingRule {
+case class CloseTrue(pos: SuccPos) extends RightRule {
   val name: String = "CloseTrue"
   /** close true */
   override def apply(s: Sequent): immutable.List[Sequent] = {
@@ -850,7 +831,7 @@ case class CloseTrue(pos: SuccPos) extends RightRule with ClosingRule {
   *   false, G |- D
   * }}}
   */
-case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
+case class CloseFalse(pos: AntePos) extends LeftRule {
   val name: String = "CloseFalse"
   /** close false */
   override def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1220,6 +1201,7 @@ object RCF {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
+  //@todo move to Provable object directly?
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
     // Quantifier elimination determines (quantifier-free) equivalent of f.
@@ -1247,7 +1229,7 @@ object RCF {
   *
   * @note When using hybrid games axiomatization
   */
-final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
+final case class DualFree(pos: SuccPos) extends RightRule {
   val name: String = "dualFree"
   /** Prove [a]true by showing that a is dual-free */
   override def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1332,7 +1314,7 @@ case class CoHideLeft(pos: AntePos) extends LeftRule {
   *
   * @derived
   */
-case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
+case class CoHide2(pos1: AntePos, pos2: SuccPos) extends Rule {
   val name: String = "CoHide2"
   /** co-weakening = co-hide all but the indicated positions */
   def apply(s: Sequent): immutable.List[Sequent] = {
