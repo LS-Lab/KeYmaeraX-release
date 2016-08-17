@@ -246,7 +246,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   private val limitedSchematicAxioms = "[:=] assign equality" :: "[:=] assign" :: "[:=] assign equality exists" ::
     "[:=] self assign" :: "[':=] differential assign" :: "[:*] assign nondet" :: "[?] test" ::
     "DE differential effect" :: "DG differential ghost" :: "DG differential ghost constant" ::
-    "DG inverse differential ghost system" :: "DG inverse differential ghost" ::
+    "DG inverse differential ghost" ::
     "DS& differential equation solution" ::
     //"c()' derive constant fn" :: //@todo would need to avoid all variables here
     "x' derive var" ::

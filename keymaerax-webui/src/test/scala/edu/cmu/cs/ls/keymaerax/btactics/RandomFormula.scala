@@ -86,8 +86,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random schematic instance of the given Formula `fml` of complexity `size`.
     * @param renamed whether variables can have been renamed in the schematic instance generated.
-    * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.   */
-  def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false): Formula = {
+    * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.
+    * @param diffs whether differentials can be used in the schematic instance. */
+  def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false, diffs: Boolean = false): Formula = {
     val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable]).
       filter(x => builtins || !x.name.endsWith("_"))
     // two different piles of variables to avoid accidental capture during the schematic instantiation
@@ -96,7 +97,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     val symbols = StaticSemantics.signature(fml)
     //@todo make sure not to create diffs when the symbol occurs within another diff
     val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
-      case p@UnitPredicational(_,AnyArg) => p->nextF(vars,size)
+      case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size) else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false)
       case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=false)
       // need to teach the term some manners such as no diffs if occurs in ODE
       case p@UnitFunctional(_,AnyArg,_) => p->nextT(vars,size,dots=false,diffs=false,funcs=true)
@@ -118,30 +119,38 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     if (!renamed)
       inst
     else {
-      val instvars = StaticSemantics.vars(inst).symbols
-      // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
-      // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
-      val allvars:List[Variable] = instvars.filter(x => x.isInstanceOf[BaseVariable] &&
-        !instvars.contains(DifferentialSymbol(x.asInstanceOf[BaseVariable]))
-      ).toList
-      val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable].asInstanceOf[Variable],
-        (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))))).to
-      val noncycrenamings = renamings.filter(sp => !renamings.exists(p=>p._1 == sp._2))
-      val ren = MultiRename(noncycrenamings)
-      val renamedInst = ren(inst)
-      val other = try {
-        ren.toCore(inst)
+      try {
+        val instvars = StaticSemantics.vars(inst).symbols
+        // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
+        // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
+        val allvars: List[Variable] = instvars.filter(x => x.isInstanceOf[BaseVariable] &&
+          !instvars.contains(DifferentialSymbol(x.asInstanceOf[BaseVariable]))
+        ).toList
+        val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable].asInstanceOf[Variable],
+          (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))))).to
+        val noncycrenamings = renamings.filter(sp => !renamings.exists(p => p._1 == sp._2))
+        val ren = MultiRename(noncycrenamings)
+        val renamedInst = ren(inst)
+        val other = try {
+          ren.toCore(inst)
+        } catch {
+          // exception can happen when MultiRename used semantic renaming
+          case ignore: Throwable => inst
+        }
+        if (other == renamedInst)
+          renamedInst
+        else {
+          // strangely, both renamings disagree
+          println("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+          throw new IllegalStateException("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+          // inst
+        }
       } catch {
-        // exception can happen when MultiRename used semantic renaming
-        case _ => inst
-      }
-      if (other == renamedInst)
-        renamedInst
-      else {
-        // strangely, both renamings disagree
-        println("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
-        throw new IllegalStateException("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
-        inst
+        // for example (x')' disallowed at present
+        case ignore: CoreException => if (diffs)
+          nextSchematicInstance(fml, size, renamed=renamed, builtins=builtins, diffs=false)
+        else
+          throw ignore
       }
     }
   }
