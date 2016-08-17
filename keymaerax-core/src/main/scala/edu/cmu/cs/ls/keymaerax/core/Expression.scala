@@ -409,7 +409,6 @@ case class Equal(left: Term, right: Term) extends ComparisonFormula {
   def reapply = copy
 }
 /** != disequality left != right */
-//@todo DisEqual or UnEqual might have been better name to not confuse with Not(Equal()) even though equivalent
 case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
   insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
   def reapply = copy

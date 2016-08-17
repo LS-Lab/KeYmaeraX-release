@@ -662,7 +662,6 @@ object Provable {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  //@todo move to Provable object directly?
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
     // Quantifier elimination determines (quantifier-free) equivalent of f.
