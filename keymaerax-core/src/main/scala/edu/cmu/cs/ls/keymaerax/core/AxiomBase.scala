@@ -334,7 +334,7 @@ Axiom "DG differential ghost constant".
 End.
 
 Axiom "DG inverse differential ghost".
-  /* [{x_'=f(x_)&q(x_)}]p(x_)  ->  \forall y_ [{y_'=g(||),x_'=f(x_)&q(x_)}]p(x_) */
+  /* [{x_'=f(x_)&q(x_)}]p(x_) <-> \forall y_ [{y_'=a(x_)*y+b(x_),x_'=f(x_)&q(x_)}]p(x_) */
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 

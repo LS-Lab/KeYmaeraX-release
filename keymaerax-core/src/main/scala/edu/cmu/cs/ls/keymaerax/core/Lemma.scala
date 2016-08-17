@@ -134,7 +134,7 @@ object Lemma {
   * TactixLibrary.byUS(lemmaFact)
   * }}}
   * @author Stefan Mitsch
-  * @see [[RCF.proveArithmetic]]
+  * @see [[Provable.proveArithmetic]]
   * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
   * @see [[Lemma.fromString]]
   * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.

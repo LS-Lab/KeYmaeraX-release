@@ -583,8 +583,13 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
 /** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules. */
 object Provable {
-  //@todo Code Review: LAX_MODE should be false
-  private[core] val LAX_MODE = System.getProperty("LAX", "true")=="true"
+  //@todo Code Review: it would be nice if LAX_MODE were false
+  private val LAX_MODE = System.getProperty("LAX", "true")=="true"
+  /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
+  private[this] val trustedTools: immutable.List[String] =
+  "edu.cmu.cs.ls.keymaerax.tools.Mathematica" :: "edu.cmu.cs.ls.keymaerax.tools.Z3" ::
+    (if (LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
+
 
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
   val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
@@ -649,6 +654,24 @@ object Provable {
     */
   def startProof(goal : Formula): Provable =
     startProof(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
+
+  /**
+    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
+    *
+    * @param t The quantifier-elimination tool.
+    * @param f The formula.
+    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+    */
+  //@todo move to Provable object directly?
+  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
+    // Quantifier elimination determines (quantifier-free) equivalent of f.
+    val (equivalent, evidence) = t.qeEvidence(f)
+    //@note soundness-critical
+    val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
+      immutable.IndexedSeq())
+    Lemma(fact, Lemma.requiredEvidence(fact, evidence :: Nil), None)
+  }
 
   /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
@@ -1179,38 +1202,6 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
   }
 
 }
-
-/*********************************************************************************
-  * Real Arithmetic
-  *********************************************************************************
-  */
-
-/** Real arithmetic */
-object RCF {
-  /** List of the class names of all external tools whose answers KeYmaera X would believe */
-  private[this] val trustedTools: immutable.List[String] =
-    "edu.cmu.cs.ls.keymaerax.tools.Mathematica" :: "edu.cmu.cs.ls.keymaerax.tools.Z3" ::
-      (if (Provable.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
-
-  /**
-    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
-    *
-    * @param t The quantifier-elimination tool.
-    * @param f The formula.
-    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
-    */
-  //@todo move to Provable object directly?
-  def proveArithmetic(t: QETool, f: Formula): Lemma = {
-    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
-    // Quantifier elimination determines (quantifier-free) equivalent of f.
-    val (equivalent, evidence) = t.qeEvidence(f)
-    //@note soundness-critical
-    val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
-      immutable.IndexedSeq())
-    Lemma(fact, Lemma.requiredEvidence(fact, evidence :: Nil), None)
-  }
-}
-
 
 /*********************************************************************************
   * Hybrid Games
