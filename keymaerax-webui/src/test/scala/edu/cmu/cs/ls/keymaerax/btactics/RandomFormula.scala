@@ -88,7 +88,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     * @param renamed whether variables can have been renamed in the schematic instance generated.
     * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.   */
   def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false): Formula = {
-    val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[Variable]).
+    val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable]).
       filter(x => builtins || !x.name.endsWith("_"))
     // two different piles of variables to avoid accidental capture during the schematic instantiation
     val vars = nextNames("z", size / 3 + 1)
@@ -120,11 +120,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       val instvars = StaticSemantics.vars(inst).symbols
       // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
       // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
-      val allvars = instvars.filter(x => x.isInstanceOf[Variable] &&
-        !instvars.contains(DifferentialSymbol(x.asInstanceOf[Variable]))
+      val allvars = instvars.filter(x => x.isInstanceOf[BaseVariable] &&
+        !instvars.contains(DifferentialSymbol(x.asInstanceOf[BaseVariable]))
       ).toList
-      val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[Variable],
-        (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[Variable])).to
+      val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable],
+        (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[BaseVariable])).to
       val noncycrenamings = renamings.filter(sp => !renamings.exists(p=>p._1 == sp._2))
       val ren = MultiRename(noncycrenamings)
       val renamedInst = ren(inst)
