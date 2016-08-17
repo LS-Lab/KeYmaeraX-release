@@ -355,7 +355,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   * {{{
   *  // explicit proof certificate construction of |- !!p() <-> p()
   *  val proof = (Provable.startProof(
-  *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
+  *    "!!p() <-> p()".asFormula)
   *    (EquivRight(SuccPos(0)), 0)
   *    // right branch
   *      (NotRight(SuccPos(0)), 1)
@@ -488,12 +488,12 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
-  def apply(subst: USubst): Provable =
+  final def apply(subst: USubst): Provable =
     try {
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
       //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 27."
       //@note case isProved is covered by "Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26." and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
-      insist(subst.freeVars.isEmpty || isProved || Rule.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
+      insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
       new Provable(subst(conclusion), subgoals.map(s => subst(s)))
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
 
@@ -520,7 +520,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * Will return a Provable with the same subgoals but an updated conclusion.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
-  final def apply(newConsequence: Sequent, rule: Rule): Provable = {
+  def apply(newConsequence: Sequent, rule: Rule): Provable = {
     //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
     insist(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " was expected to justify\n" + this.conclusion.prettyString + "\n-----------------------------" + rule + "??\n" + newConsequence.prettyString +
       "\n\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule instead led to " + rule(newConsequence) +
@@ -550,7 +550,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
-  final def apply(prolongation: Provable): Provable = {
+  def apply(prolongation: Provable): Provable = {
     //@note it really already works when prolongation.subgoal(0)==conclusion but it's somewhat surprising so disallowed.
     require(prolongation.subgoals.length==1, "Currently only for prolongations with exactly one subgoal\n" + this + "\nwith\n" + prolongation)
     prolongation(this, 0)
@@ -581,8 +581,11 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 }
 
 
-/** Starting new Provables to begin a proof */
+/** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules. */
 object Provable {
+  //@todo Code Review: LAX_MODE should be false
+  private[core] val LAX_MODE = System.getProperty("LAX", "true")=="true"
+
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
   val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
@@ -600,7 +603,7 @@ object Provable {
     new Provable(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
   )
 
-  /** immutable list of locally sound axiomatic proof rules.
+  /** immutable list of Provables of locally sound axiomatic proof rules.
     * {{{
     *    Gi |- Di
     *   ---------- (axiomatic rule)
@@ -681,11 +684,6 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
 
   //@note Convenience method not used in the soundness-critical core nor anywhere else.
   override def toString: String = name
-}
-
-private object Rule {
-  //@todo Code Review: LAX_MODE should be false
-  private[core] val LAX_MODE = System.getProperty("LAX", "true")=="true"
 }
 
 /*********************************************************************************
@@ -1192,7 +1190,7 @@ object RCF {
   /** List of the class names of all external tools whose answers KeYmaera X would believe */
   private[this] val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaerax.tools.Mathematica" :: "edu.cmu.cs.ls.keymaerax.tools.Z3" ::
-      (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
+      (if (Provable.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
 
   /**
     * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
