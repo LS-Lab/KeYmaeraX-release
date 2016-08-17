@@ -24,7 +24,7 @@ R3) UniformSubstitution.scala for correctness and compliance with section 3.0 [1
 R4) UniformRenaming.scala for correctness
 R5) Proof.scala for correctness and compliance with [1,2]
 R6) AxiomBase.scala for correctness and compliance with Fig 2+3 [1] as well as [3] for sequent calculus
-R7) SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala, QETool.scala
+R7) SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala, QETool.scala, Lemma.scala
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
@@ -45,7 +45,6 @@ A complete uniform substitution calculus for differential dynamic logic.
 Journal of Automated Reasoning, 2016.
 http://dx.doi.org/10.1007/s10817-016-9385-1 http://arxiv.org/abs/1601.06183
 
-Based on:
 André Platzer. 
 A uniform substitution calculus for differential dynamic logic.
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.  Extended version arXiv http://arxiv.org/abs/1503.01981
