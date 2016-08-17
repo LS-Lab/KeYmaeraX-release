@@ -50,9 +50,9 @@ class ExpressionTests extends FlatSpec with Matchers {
   }
 
   it should "refuse names with negative index" in {
-    a [IllegalArgumentException] shouldBe thrownBy(Variable("x",Some(-1),Real))
-    a [IllegalArgumentException] shouldBe thrownBy(new DifferentialSymbol(Variable("x",Some(-1),Real)))
-    a [IllegalArgumentException] shouldBe thrownBy(new Function("x",Some(-1),Unit,Real))
+    a [CoreException] shouldBe thrownBy(Variable("x",Some(-1),Real))
+    a [CoreException] shouldBe thrownBy(new DifferentialSymbol(Variable("x",Some(-1),Real)))
+    a [CoreException] shouldBe thrownBy(new Function("x",Some(-1),Unit,Real))
   }
 
   it should "support reapplying pairs" in {

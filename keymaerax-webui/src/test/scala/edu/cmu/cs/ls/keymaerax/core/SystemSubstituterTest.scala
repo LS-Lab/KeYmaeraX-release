@@ -51,7 +51,7 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(UnitFunctional("g",Except(y),Real), Number(0)) ::
+      SubstitutionPair(UnitFunctional("b",Except(y),Real), Number(0)) ::
       SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
       SubstitutionPair(DifferentialProgramConst("c",Except(y)), AtomicODE(DifferentialSymbol(Variable("t",None,Real)), Number(1))) ::
       SubstitutionPair(UnitPredicational("p",Except(y)), "y_=0".asFormula) ::
@@ -208,13 +208,13 @@ class SystemSubstituterTest extends TacticTestBase {
     val pr = Provable.axioms("DG differential ghost constant")
     pr shouldBe 'proved
     a [CoreException] shouldBe thrownBy {pr(USubst(
-      SubstitutionPair(UnitFunctional("g",Except(y),Real), Number(-1)) ::
+      SubstitutionPair(UnitFunctional("b",Except(y),Real), Number(-1)) ::
         SubstitutionPair(UnitPredicational("q",Except(y)), True) ::
         SubstitutionPair(DifferentialProgramConst("c", Except(y)), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",Except(y)), "x<=10".asFormula) ::
         Nil))}
     theDeductionOf(pr(USubst(
-      SubstitutionPair(FuncOf(Function("g",None,Unit,Real),Nothing), Number(-1)) ::
+      SubstitutionPair(FuncOf(Function("b",None,Unit,Real),Nothing), Number(-1)) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
         SubstitutionPair(DifferentialProgramConst("c", AnyArg), AtomicODE(DifferentialSymbol(Variable("x",None,Real)), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x<=10".asFormula) ::
