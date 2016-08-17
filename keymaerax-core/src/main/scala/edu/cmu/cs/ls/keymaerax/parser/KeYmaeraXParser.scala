@@ -241,7 +241,9 @@ object KeYmaeraXParser extends Parser {
     //@todo And(And(x'=5,x>0),x<12)) is not lifted yet
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h)
-      if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(h) => Some(ODESystem(AtomicODE(xp, e), h))
+      if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(e) && !StaticSemantics.isDifferential(h) => Some(ODESystem(AtomicODE(xp, e), h))
+    case And(UnitPredicational(c,space), h@UnitPredicational(_,_))
+      if (kind==DifferentialProgramKind || kind==ProgramKind) => Some(ODESystem(DifferentialProgramConst(c, space), h))
     case ode: ODESystem if kind==ProgramKind => Some(ode)
     // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
@@ -374,8 +376,20 @@ object KeYmaeraXParser extends Parser {
         reduceUnitFuncOrPredOf(st, 4, tok, AnyArg, r)
 
       // nullary functional/predicational symbols of argument AnyArg
+      case r :+ (tok1@Token(tok11:IDENT,_)) :+ (tok2@Token(LBRACE,_)) :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Token(RBANANA,_)  =>
+        reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r :+ tok1 :+ tok2)
+      // differential program constant of argument AnyArg
+      case r :+ (tok1@Token(LBRACE,_)) :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Token(RBANANA,_) =>
+        reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r :+ tok1)
+      // nullary functional/predicational symbols of argument AnyArg
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Token(RBANANA,_)  =>
         reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r)
+      // nullary functional/predicational symbols of argument Taboo
+      case r :+ (tok1@Token(tok11:IDENT,_)) :+ (tok2@Token(LBRACE,_)) :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
+        reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r :+ tok1 :+ tok2)
+      // differential program constant of argument Taboo
+      case r :+ (tok1@Token(LBRACE,_)) :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_) =>
+        reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r :+ tok1)
       // nullary functional/predicational symbols of argument Taboo
       case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
         reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
