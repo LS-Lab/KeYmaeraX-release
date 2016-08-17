@@ -165,11 +165,11 @@ package edu.cmu.cs.ls.keymaerax
   * @see [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-  * @note Code Review 2015-08-24
+  * @note Code Review 2016-08-17
   */
 package object core {
   /** KeYmaera X core kernel version number */
-  val VERSION = "4.2b2"
+  val VERSION = "4.2"
 
   /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
     *  This method is a `require` coming from the prover core that cannot be disabled.
