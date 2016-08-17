@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
 import scala.collection.immutable.Map
 
 /**
- * The KeYmaera tool.
+ * The KeYmaera X tool.
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
