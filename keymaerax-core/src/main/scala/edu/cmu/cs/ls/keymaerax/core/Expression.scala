@@ -19,7 +19,7 @@ import scala.collection.immutable
 import scala.math._
 
 /**
-  * Kinds of expressions (term, formula, program).
+  * Kinds of expressions (term, formula, program, differential program).
   */
 sealed trait Kind
 /** All expressions that are neither terms nor formulas nor programs nor functions are of kind ExpressionKind */
@@ -36,7 +36,7 @@ object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def t
 object FunctionKind extends Kind { override def toString = "Function" }
 
 /**
-  * Sorts
+  * Sorts of expressions (real, bool, etc).
   */
 sealed trait Sort
 /** Unit type of [[edu.cmu.cs.ls.keymaerax.core.Nothing Nothing]] */
@@ -80,7 +80,9 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   * @see [[http://symbolaris.com/logic/dL.html Syntax of differential dynamic logic]]
   */
 sealed trait Expression {
+  /** What kind of an expression this is, e.g., [[TermKind]], [[FormulaKind]], [[ProgramKind]]. */
   val kind : Kind
+  /** The sort of this expression, e.g., [[Real]], [[Bool]]. */
   val sort : Sort
   //override def toString : String = "(" + prettyString + ")@" + canonicalString
   override def toString : String = prettyString
