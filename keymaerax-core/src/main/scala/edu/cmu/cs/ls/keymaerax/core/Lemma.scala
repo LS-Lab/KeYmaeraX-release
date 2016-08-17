@@ -23,6 +23,7 @@ import scala.collection.immutable._
 object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
   private val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
+  //@todo figure out a stable but fast checksum. Ideally something like portable hashCodes.
   private[this] val digest = MessageDigest.getInstance("MD5")
 
   /** The pretty printer that is used for lemma storage purposes */
@@ -59,7 +60,7 @@ object Lemma {
     val (name, sequents, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
     evidence.find(_.isInstanceOf[HashEvidence]) match {
       case Some(HashEvidence(hash)) =>
-        assert(hash == checksum(sequents.to[IndexedSeq[Sequent]]),
+        assert(hash == checksum(sequents.to),
           "Expected hashed evidence to match hash of conclusion + subgoals: " + name + "\n" + lemma)
       case None => {
         if(LEMMA_COMPAT_MODE) println(s"WARNING: ${name.getOrElse("An unnamed lemma")} was reloaded without a hash confirmation.")
