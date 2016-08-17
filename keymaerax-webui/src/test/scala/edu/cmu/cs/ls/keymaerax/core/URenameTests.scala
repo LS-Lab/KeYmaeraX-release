@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
@@ -27,7 +27,7 @@ import scala.collection.immutable.IndexedSeq
  */
 @SummaryTest
 @USubstTest
-class URenameTests extends FlatSpec with Matchers {
+class URenameTests extends TacticTestBase {
   KeYmaera.init(Map.empty)
 
   "Bound renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs(AdvocatusTest) in {
@@ -155,5 +155,24 @@ class URenameTests extends FlatSpec with Matchers {
   it should "refuse DotTerm()" in {
     URename(Variable("x"),Variable("y"))(DotTerm()) shouldBe DotTerm()
     URename(Variable("x"),Variable("y"))(DotTerm().asInstanceOf[Expression]) shouldBe DotTerm()
+  }
+
+  "Differential renaming" should "refuse to rename differential symbols without their respective base variable" taggedAs(AdvocatusTest) in {
+    a [CoreException] shouldBe thrownBy{URename(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z")))("(x+y)'=x'+y'".asFormula)}
+  }
+
+  it should "avoid unsound renaming proofs" taggedAs(AdvocatusTest) in {
+//    val proof1 = Provable.axioms("*' derive product")(USubst(
+//      SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asVariable) ::
+//        SubstitutionPair(UnitFunctional("g",AnyArg,Real), "y".asVariable) :: Nil))
+//    proof1 shouldBe 'proved
+//    proof1.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=(x)'+(y)'".asFormula))
+//    val proof = proof1
+    import TactixLibrary._
+    val proof = TactixLibrary.proveBy("(x+y)'=x'+y'".asFormula, derive(1, 0::Nil) & byUS("= reflexive"))
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula))
+    a [CoreException] shouldBe thrownBy{proof(UniformRenaming(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z"))), 0)}
+    // this prolongation wouldBe a proof of unsound (x+y)'=z'+y'
   }
 }
