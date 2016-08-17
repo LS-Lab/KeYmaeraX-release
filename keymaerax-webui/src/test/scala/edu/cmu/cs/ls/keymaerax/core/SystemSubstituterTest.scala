@@ -197,7 +197,7 @@ class SystemSubstituterTest extends TacticTestBase {
       case Sequent(IndexedSeq(), IndexedSeq(Equiv(
       Box(ODESystem(DifferentialProgramConst("c", Except(y1)), UnitPredicational("q", Except(y2))), UnitPredicational("p", Except(y3))),
       Exists(Seq(y4), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c", Except(y5)),
-      AtomicODE(DifferentialSymbol(y), UnitFunctional("g", Except(y6), Real))
+      AtomicODE(DifferentialSymbol(y), UnitFunctional("b", Except(y6), Real))
       ), UnitPredicational("q", Except(y7))), UnitPredicational("p", Except(y8))))))) if
       y1 == y && y2 == y && y3 == y && y4==y && y5 == y && y6 == y && y7==y && y8==y => true
       case _ => false
