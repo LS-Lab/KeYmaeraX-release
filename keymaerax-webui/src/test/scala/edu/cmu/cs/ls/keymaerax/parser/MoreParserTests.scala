@@ -7,19 +7,27 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
  * Created by nfulton on 2/23/15.
   *
   * @author Nathan Fulton
  */
-class ArithmeticParserTests extends FlatSpec with Matchers {
+class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val one = Number(1)
   val two = Number(2)
   val three = Number(3)
   val six = Number(6)
+
+  override def beforeEach() = {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  }
+
+  override def afterEach() = {
+    PrettyPrinter.setPrinter(e => e.getClass.getName)
+  }
 
 
   "Add" should "print/parse correctly -- left" in {
