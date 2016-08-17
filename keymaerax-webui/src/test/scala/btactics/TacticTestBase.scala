@@ -25,9 +25,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any) {
-    val mathematica = new Mathematica()
-    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
-    withTool(mathematica)(testcode)
+    val provider = new MathematicaToolProvider(DefaultConfiguration.defaultMathematicaConfig)
+    ToolProvider.setProvider(provider)
+    testcode(provider.tool)
   }
 
   /**
@@ -41,9 +41,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     * }}}
     * */
   def withZ3(testcode: Z3 => Any) {
-    val z3 = new Z3()
-    z3.init(DefaultConfiguration.defaultMathematicaConfig)
-    withTool(z3)(testcode)
+    val provider = new Z3ToolProvider
+    ToolProvider.setProvider(provider)
+    testcode(provider.tool)
   }
 
   /**
@@ -57,29 +57,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     * }}}
     * */
   def withPolya(testcode: Polya => Any) {
-    val polya = new Polya()
-    polya.init(DefaultConfiguration.defaultMathematicaConfig)
-    withQETool(polya)(testcode)
-  }
-
-  /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
-  def withTool[T <: Tool with QETool with DiffSolutionTool with CounterExampleTool](tool: T)(testcode: T => Any): Unit = {
-    tool shouldBe 'initialized
-    TactixLibrary.qeTool = tool
-    TactixLibrary.odeTool = tool
-    TactixLibrary.cexTool = tool
-    try {
-      testcode(tool)
-    } finally tool.shutdown()
-  }
-
-  /** Sets 'tool' as the tool used in DerivedAxioms and TactixLibrary. tool must be initialized already. */
-  def withQETool[T <: Tool with QETool](tool: T)(testcode: T => Any): Unit = {
-    tool shouldBe 'initialized
-    TactixLibrary.qeTool = tool
-    try {
-      testcode(tool)
-    } finally tool.shutdown()
+    val provider = new PolyaToolProvider
+    ToolProvider.setProvider(provider)
+    testcode(provider.tool)
   }
 
   /** Test setup */
@@ -93,19 +73,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /* Test teardown */
   override def afterEach() = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
-    //@todo is there a way of avoiding duplicate shutdowns, in case they are problematic?
-    if (TactixLibrary.qeTool != null) {
-      TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
-      TactixLibrary.qeTool = null
-    }
-    if (TactixLibrary.cexTool != null) {
-      TactixLibrary.cexTool match { case t: Tool => t.shutdown() }
-      TactixLibrary.cexTool = null
-    }
-    if (TactixLibrary.odeTool != null) {
-      TactixLibrary.odeTool match { case t: Tool => t.shutdown() }
-      TactixLibrary.odeTool = null
-    }
+    ToolProvider.shutdown()
     TactixLibrary.invGenerator = new NoneGenerate()
   }
 
