@@ -29,6 +29,7 @@ object KeYmaera extends ToolBase("KeYmaera") {
   override def restart() = {}
 
   override def shutdown() = {
+    PrettyPrinter.setPrinter(e => e.getClass.getName)
     initialized = false
   }
 }
