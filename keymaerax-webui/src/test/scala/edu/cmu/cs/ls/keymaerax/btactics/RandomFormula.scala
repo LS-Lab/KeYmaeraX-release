@@ -120,11 +120,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       val instvars = StaticSemantics.vars(inst).symbols
       // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
       // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
-      val allvars = instvars.filter(x => x.isInstanceOf[BaseVariable] &&
+      val allvars:List[Variable] = instvars.filter(x => x.isInstanceOf[BaseVariable] &&
         !instvars.contains(DifferentialSymbol(x.asInstanceOf[BaseVariable]))
       ).toList
-      val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable],
-        (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))).asInstanceOf[BaseVariable])).to
+      val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable].asInstanceOf[Variable],
+        (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))))).to
       val noncycrenamings = renamings.filter(sp => !renamings.exists(p=>p._1 == sp._2))
       val ren = MultiRename(noncycrenamings)
       val renamedInst = ren(inst)
