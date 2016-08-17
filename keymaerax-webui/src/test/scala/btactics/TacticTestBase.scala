@@ -92,6 +92,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /* Test teardown */
   override def afterEach() = {
+    PrettyPrinter.setPrinter(e => e.getClass.getName)
     //@todo is there a way of avoiding duplicate shutdowns, in case they are problematic?
     if (TactixLibrary.qeTool != null) {
       TactixLibrary.qeTool match { case t: Tool => t.shutdown() }
