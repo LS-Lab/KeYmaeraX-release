@@ -32,7 +32,7 @@ import scala.collection.immutable
   * @author Stefan Mitsch
   * @author Nathan Fulton
   */
-object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Sequent], List[Evidence])) {
+object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutable.List[Sequent], immutable.List[Evidence])) {
   /** the lemma name, the lemma conclusion, and the supporting evidence */
   private type Lemma = (Option[String], List[Sequent], List[Evidence])
 
