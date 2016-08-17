@@ -1,19 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
 /** More tests for KeYmaeraXParser
  */
-class MoreParserTests2 extends FlatSpec with Matchers {
-  KeYmaera.init(Map.empty)
-  val parser = KeYmaeraXParser
-  val pp = KeYmaeraXPrettyPrinter
-
+class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   val x = Variable("x")
   val y = Variable("y")
   val z = Variable("z")
@@ -29,6 +24,21 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   val p = Function("p",None,Real,Bool)
   val q = Function("q",None,Real,Bool)
   val r = Function("r",None,Real,Bool)
+
+  var parser: Parser = null
+  var pp: PrettyPrinter = null
+
+  override def beforeEach() = {
+    KeYmaera.init(Map.empty)
+    parser = KeYmaeraXParser
+    pp = KeYmaeraXPrettyPrinter
+  }
+
+  override def afterEach() = {
+    pp = null
+    parser = null
+    KeYmaera.shutdown()
+  }
 
   "The parser" should "parse a*(-b-c)" in {
     val input = "a*(-b-c)"
