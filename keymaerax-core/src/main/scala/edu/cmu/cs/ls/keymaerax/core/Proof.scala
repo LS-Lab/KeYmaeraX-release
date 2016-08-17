@@ -695,7 +695,7 @@ private object Rule {
 
 /** A rule applied to a position */
 trait PositionRule extends Rule {
-  /** The position (on the right) where this rule will be applied at */
+  /** The position where this rule will be applied at */
   val pos: SeqPos
   override def toString: String = name + " at " + pos
 }
