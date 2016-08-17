@@ -209,7 +209,7 @@ case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) 
 /** Differential symbol x' for variable x */
 case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   insist(x.sort == Real, "differential symbols expect real sort")
-  insist(!x.isInstanceOf[DifferentialSymbol], "Higher-order differential symbols are not supported")
+  insist(!x.isInstanceOf[DifferentialSymbol], "Higher-order differential symbols are not supported " + this)
   final val name: String = x.name
   final val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
