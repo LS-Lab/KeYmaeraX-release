@@ -3,7 +3,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, CounterExampleTool, ToolBase}
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
+import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
 import scala.collection.immutable._
 
@@ -12,7 +13,7 @@ class ArithmeticTests extends TacticTestBase {
   private class MockTool(expected: Formula) extends ToolBase("MockTool") with QETool with CounterExampleTool {
     initialized = true
     //@todo should we keep hacking ourselves into the trusted tools of the core, or should we add a TestMode where MockTool is trusted?
-    val rcf = Class.forName(RCF.getClass.getCanonicalName).getField("MODULE$").get(null)
+    val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
     val trustedToolsField = rcf.getClass.getDeclaredField("trustedTools")
     trustedToolsField.setAccessible(true)
     val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
@@ -32,6 +33,8 @@ class ArithmeticTests extends TacticTestBase {
     override def init(config: Map[String, String]): Unit = {}
     override def restart(): Unit = {}
   }
+
+  //@todo AdvocatusTest that inserts a broken tool by reflection.
 
   "fullQE" should "apply equalities, transform to implication, and compute universal closure" in {
     val tool = new MockTool(
