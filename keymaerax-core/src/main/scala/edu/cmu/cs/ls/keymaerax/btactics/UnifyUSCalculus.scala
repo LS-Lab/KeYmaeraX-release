@@ -368,7 +368,8 @@ trait UnifyUSCalculus {
       require(!RECHECK || subst(k) == c, "correctly matched input")
       //@note might cause some irrelevant clashes
       require(C(c).at(p.inExpr) == (C,c), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c))
-      require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
+      //@todo generalization of DotTerm to other types should be acceptable, too
+      require(List((C,DotFormula),(C,DotTerm())).contains(C.ctx.at(p.inExpr)), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c) + "\nwith context at position " + p.inExpr + " having placeholder " + C.ctx.at(p.inExpr))
 
       /** Equivalence rewriting step */
       def equivStep(other: Expression, fact: Provable): BelleExpr = {
