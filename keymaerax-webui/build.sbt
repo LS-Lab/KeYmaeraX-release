@@ -1,7 +1,5 @@
 name := "KeYmaeraX-Web"
 
-version := "4.2b2"
-
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
