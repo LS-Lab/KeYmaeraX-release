@@ -1,9 +1,9 @@
-import java.io.FileInputStream
+import java.io.{BufferedReader, FileInputStream, FileReader}
 import java.util.Properties
 
 name := "KeYmaeraX-Core"
 
-version := "4.2b2"
+version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/.VERSION")).readLine()
 
 assemblyJarName in assembly := "keymaerax-core.jar" 
 
