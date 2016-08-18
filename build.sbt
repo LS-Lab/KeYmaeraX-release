@@ -4,7 +4,7 @@ scalaVersion in ThisBuild := "2.11.7"
 
 //scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
 
-version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/.VERSION")).readLine()
+version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
 lazy val core = (project in file("keymaerax-core"))
 
