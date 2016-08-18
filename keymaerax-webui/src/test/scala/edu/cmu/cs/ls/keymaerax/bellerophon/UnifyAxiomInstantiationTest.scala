@@ -3,10 +3,10 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.core.{AnyArg, Formula, Provable, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, Suite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomIndex, AxiomInfo, Context, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
@@ -16,7 +16,7 @@ import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
   * @author Andre Platzer
   */
 @SummaryTest
-class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
+class UnifyAxiomInstantiationTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   KeYmaera.init(Map.empty)
 
   val randomTrials = 20
@@ -24,6 +24,11 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers {
   val rand = new RandomFormula()
 
   val unify = UnificationMatch
+
+  override def beforeAll() = {
+    // the tests in here rely on a populated lemma database, since otherwise some of them require QE (depends on the queried axiom).
+    new DerivedAxiomsTests().execute("The DerivedAxioms prepopulation procedure should not crash")
+  }
 
 
   private def matchDirect(axiom: String, instance: Formula): Boolean = {

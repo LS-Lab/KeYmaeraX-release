@@ -328,10 +328,14 @@ object Helpers {
          formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
         */
         val idx = if (isAnte) (-i)-1 else i+1
-        val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
+        val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter(idx.toString)(fml))
+        val fmlString = JsString(fml.prettyString)
         JsObject(
           "id" -> JsString(idx.toString),
-          "formula" -> fmlJson
+          "formula" -> JsObject(
+            "html" -> fmlHtml,
+            "string" -> fmlString
+          )
         )}.toVector)
     }
     JsObject(

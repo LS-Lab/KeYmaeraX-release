@@ -171,7 +171,7 @@ import scala.io.Source
   */
 package object core {
   /** KeYmaera X core kernel version number */
-  val VERSION = Source.fromURL(getClass.getResource("/.VERSION")).getLines().next
+  val VERSION = Source.fromInputStream(getClass.getResourceAsStream("/VERSION")).getLines().next
 
   /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
     *  This method is a `require` coming from the prover core that cannot be disabled.

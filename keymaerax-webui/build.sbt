@@ -2,7 +2,7 @@ import java.io.{BufferedReader, FileReader}
 
 name := "KeYmaeraX-Web"
 
-version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/.VERSION")).readLine()
+version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 

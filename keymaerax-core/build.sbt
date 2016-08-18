@@ -3,7 +3,7 @@ import java.util.Properties
 
 name := "KeYmaeraX-Core"
 
-version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/.VERSION")).readLine()
+version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
 assemblyJarName in assembly := "keymaerax-core.jar" 
 
