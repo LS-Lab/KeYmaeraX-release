@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax
 
+import scala.io.Source
+
 /**
   * KeYmaera X Kernel:
   * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
@@ -169,7 +171,7 @@ package edu.cmu.cs.ls.keymaerax
   */
 package object core {
   /** KeYmaera X core kernel version number */
-  val VERSION = "4.2"
+  val VERSION = Source.fromURL(getClass.getResource("/.VERSION")).getLines().next
 
   /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
     *  This method is a `require` coming from the prover core that cannot be disabled.
