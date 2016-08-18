@@ -177,6 +177,7 @@ object DerivationInfo {
       , AxiomDisplayInfo("DG", "[{x′=f(x)&Q}]P↔∃y [{x′=f(x),y′=g()&Q}]P")
       , "DGC", {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
+    new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
