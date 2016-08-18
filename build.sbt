@@ -30,6 +30,7 @@ lazy val root = (project in file("."))
   .aggregate(core, keymaerax)
 
 
+// extra runtime checks for initialization order: "-Xcheckinit"
 scalacOptions in Compile ++= Seq("-doc-root-content", "rootdoc.txt")
 
 target in Compile in doc := baseDirectory.value / "api"
