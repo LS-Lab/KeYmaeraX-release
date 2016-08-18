@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXWeightedPrettyPrinter, Parser, PrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
 object UIKeYmaeraXPrettyPrinter {
@@ -21,32 +21,50 @@ class UIKeYmaeraXPrettyPrinter(val topId: String) extends KeYmaeraXWeightedPrett
   private val HTML_OPEN = "$#@@$"
   private val HTML_CLOSE = "$@@#$"
 
-  override def apply(expr: Expression): String = (stringify(expr)
+  override def apply(expr: Expression): String = stringify(expr)
+    //@todo custom OpSpec?
+    .replaceAllLiterally("&", "&#8743;")
+    .replaceAllLiterally("!", "&not;")
+    .replaceAllLiterally("|", "&#8744;")
+    .replaceAllLiterally("->", "→")
+    .replaceAllLiterally("<->", "&#8596;")
+    .replaceAllLiterally("<=", "&leq;")
+    .replaceAllLiterally("!=", "&ne;")
+    .replaceAllLiterally(">=", "&geq;")
+    //.replaceAllLiterally("*", "&middot;") // program * vs. multiplication *
+    // ^y --> <sup>y</sup>
+    .replaceAllLiterally("\\forall", "&forall;")
+    .replaceAllLiterally("\\exists", "&exist;")
+    .replaceAllLiterally("[", "&#91;")
+    .replaceAllLiterally("]", "&#93;")
+    .replaceAllLiterally("++", "&#8746;")
     .replaceAllLiterally("<", "&lt;")
     .replaceAllLiterally(">", "&gt;")
     .replaceAllLiterally(HTML_OPEN, "<")
     .replaceAllLiterally(HTML_CLOSE, ">")
-    )
 
-  protected override def emit(q: PosInExpr, s: String): String =
-    wrap(topId + "/" + q.pos.mkString("."), s)
+  protected override def emit(q: PosInExpr, s: String): String = wrap(topId + "," + q.pos.mkString(","), s)
 
 //  private def wrap(id: String, content: String): String =
 //    HTML_OPEN + "term id=\"" + id + "\"" + HTML_CLOSE + content + HTML_OPEN + "/term" + HTML_CLOSE
 
   private def wrap(id: String, content: String): String =
-  s"""$$#@@$$span class="hl" id="$id"
-    | onmouseover="$$(event.target).addClass('hlhover');"
-    | onmouseout="$$(event.target).removeClass('hlhover');"
-    | ng-click="formulaClick('$id', $$event)"
-    | ng-right-click="formulaRightClick('$id', $$event)"
-    | ng-repeat="formulaId in ['$id']"
-    | uib-popover-template="'templates/axiomPopoverTemplate.html'"
-    | popover-is-open="tacticPopover.isOpen('$id')"
-    | popover-append-to-body="true"
-    | popover-placement="bottom"$$@@#$$$content$$#@@$$/span$$@@#$$
-  """.stripMargin
-
+    s"""${HTML_OPEN}span ng-class="{'hl':true, 'hlhover':isFormulaHighlighted('$id')}" id="$id"
+        |  ng-mouseover="$$event.stopPropagation();highlightFormula('$id')"
+        |  ng-mouseleave="$$event.stopPropagation();highlightFormula(undefined)"
+        |  k4-droppable on-drop="dndSink('$id').formulaDrop(dragData)"
+        |  on-drag-enter="dndSink('$id').formulaDragEnter(dragData)"
+        |  on-drag-leave="dndSink('$id').formulaDragLeave(dragData)"
+        |  ng-click="formulaClick('$id', $$event)"
+        |  ng-right-click="formulaRightClick('$id', $$event)"
+        |  uib-tooltip-template="'templates/formulaDndTooltipTemplate.html'"
+        |  tooltip-placement="bottom"
+        |  tooltip-trigger="none" tooltip-is-open="dndTooltip.isOpen('$id')"
+        |  uib-popover-template="'templates/axiomPopoverTemplate.html'"
+        |  popover-is-open="tacticPopover.isOpen('$id')"
+        |  popover-trigger="none"
+        |  popover-append-to-body="true"
+        |  popover-placement="auto bottom"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE""".stripMargin
 
   //@todo
   override def apply(seq: Sequent): String = ???
