@@ -418,6 +418,10 @@ del {
   text-overflow: ellipsis;
 }
 
+.k4-formula-preformat {
+  white-space: pre-wrap;
+}
+
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
   opacity: 1;
   position: absolute;
