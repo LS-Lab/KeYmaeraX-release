@@ -344,11 +344,9 @@ object AxiomaticODESolver {
           val renaming =
             RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_DE.xp.x))
 
-//          val Plus(Times(a, y_), b) = y_DE.e //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=--->(a(|y_|)*y_)+b(|y_|)<---,c{|y_|}&q(|y_|)}]p(|y_|)
           val result = renaming ++
             RenUSubst(USubst(
               "a(||)".asTerm    ~> renaming(y_DE.e) ::
-//              "b(|y_|)".asTerm    ~> renaming(b) ::
               "q(|y_|)".asFormula ~> r.substitution("q(|y_|)".asFormula) ::
               DifferentialProgramConst("c", Except("y_".asVariable)) ~> r(DifferentialProgramConst("c", Except("y_".asVariable))) ::
               "p(|y_|)".asFormula ~> r.substitution("p(|y_|)".asFormula) ::
