@@ -8,13 +8,10 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import TacticFactory._
 import Augmentors._
-import com.sun.org.apache.xpath.internal.operations.Equals
-
-import scala.collection.parallel.immutable
+import DifferentialHelper._
 
 /**
   * An Axiomatic ODE solver.
