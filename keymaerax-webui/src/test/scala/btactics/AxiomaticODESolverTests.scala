@@ -23,7 +23,6 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   import Augmentors._
   import TacticFactory._
 
-  val dg = PrivateMethod[DependentPositionTactic]('DG)
   val dgc = PrivateMethod[DependentPositionTactic]('DGC)
 
   //region integration tests
@@ -147,7 +146,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   /** @note there's a more robust version of this test in [[DifferentialTests]] */
   it should "DG" taggedAs(IgnoreInBuildTest) in {
     val f = "[{x'=v}]1=1".asFormula
-    val t = (HilbertCalculus invokePrivate dg(Variable("zz", None), Number(22), Number(99)))(1)
+    val t = DifferentialTactics.DG("zz' = 22*zz + 99".asDifferentialProgram)(1)
     loneSucc(proveBy(f,t)) shouldBe "\\exists zz [{x'=v,zz'=22*zz+99&true}]1=1".asFormula
   }
 
