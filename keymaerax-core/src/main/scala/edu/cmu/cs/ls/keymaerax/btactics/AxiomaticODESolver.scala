@@ -284,7 +284,9 @@ object AxiomaticODESolver {
   @deprecated("Move this to a centralized location for ProveAs stuff", "4.2b2")
   private def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
     override def computeExpr(p:Provable) = {
-      LemmaDBFactory.lemmaDB.remove(lemmaName)
+      //Silently succeed if the lemma does not yet exist.
+      if(LemmaDBFactory.lemmaDB.contains(lemmaName))
+        LemmaDBFactory.lemmaDB.remove(lemmaName)
       Idioms.nil
     }
   }
