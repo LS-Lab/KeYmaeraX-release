@@ -26,7 +26,7 @@ import DifferentialHelper._
   * @author Nathan Fulton
   */
 object AxiomaticODESolver {
-  private val ODE_DEBUGGER = false
+  private val ODE_DEBUGGER = true
 
   /** The name of the explicit time variables. */
   private val TIMEVAR : String = "kyxtime"
@@ -321,6 +321,14 @@ object AxiomaticODESolver {
 
   //region Inverse diff ghosts
 
+  /**
+    * Removes the left-most DE from a system of ODEs:
+    * {{{
+    *   [v'=a,t'=1 & q]p
+    *   ---------------------- inserverDiffGhost
+    *   [x'=v,v'=a,t'=1 & q]p
+    * }}}
+    */
   val inverseDiffGhost = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
     val f: Modal = s(pos).asInstanceOf[Modal]
     val ODESystem(ode, constraint) = f.program
@@ -328,20 +336,19 @@ object AxiomaticODESolver {
 
     ode match {
       case ode:DifferentialProduct => {
-        val y_ = firstODE(ode)
-        val x_ = secondODE(ode)
+        val y_DE = firstODE(ode)    //The left-most ODE in the system matching the pattern y_' = a(|y_|)*y_ + b(|y_|).
 
         /* Note: Constructing our own substitution because the default substitution seems to get at least g(||) wrong. */
         def subst(r: RenUSubst) = {
           if(ODE_DEBUGGER) println("[inverseDiffGhost] input to subst:    " + r)
           val renaming =
-            RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_.xp.x)) ++
-            RenUSubst(URename("x_".asTerm.asInstanceOf[Variable], x_.xp.x))
+            RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_DE.xp.x))
 
-            val result = renaming ++
+//          val Plus(Times(a, y_), b) = y_DE.e //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=--->(a(|y_|)*y_)+b(|y_|)<---,c{|y_|}&q(|y_|)}]p(|y_|)
+          val result = renaming ++
             RenUSubst(USubst(
-              "g(||)".asTerm ~> renaming(y_.e) ::
-              "f(|y_|)".asTerm ~> x_.e ::
+              "a(||)".asTerm    ~> renaming(y_DE.e) ::
+//              "b(|y_|)".asTerm    ~> renaming(b) ::
               "q(|y_|)".asFormula ~> r.substitution("q(|y_|)".asFormula) ::
               DifferentialProgramConst("c", Except("y_".asVariable)) ~> r(DifferentialProgramConst("c", Except("y_".asVariable))) ::
               "p(|y_|)".asFormula ~> r.substitution("p(|y_|)".asFormula) ::
@@ -353,17 +360,18 @@ object AxiomaticODESolver {
 
         f match {
           case Box(_,_) => {
-            val axiomName = if(atomicOdes(ode).length > 2) "DG inverse differential ghost system" else "DG inverse differential ghost"
+            val axiomName = "DG inverse differential ghost implicational"
 
-            TactixLibrary.cut(Forall(y_.xp.x::Nil, f)) <(
+            //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
+            TactixLibrary.cut(Forall(y_DE.xp.x::Nil, f)) <(
               HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved
               ,
               TactixLibrary.hide(pos) &
-              DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate ${y_} from the ODE via an application of ${axiomName}.", ODE_DEBUGGER) &
+              DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate ${y_DE} from the ODE via an application of ${axiomName}.", ODE_DEBUGGER) &
               HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos)
             ) &
             DebuggingTactics.assertProvableSize(1) &
-            DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate ${y_} from the ODE.", ODE_DEBUGGER) &
+            DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate ${y_DE} from the ODE.", ODE_DEBUGGER) &
             DebuggingTactics.assert((s,p) => odeSize(s(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
           }
           case Diamond(_,_) => throw noDiamondsForNowExn
