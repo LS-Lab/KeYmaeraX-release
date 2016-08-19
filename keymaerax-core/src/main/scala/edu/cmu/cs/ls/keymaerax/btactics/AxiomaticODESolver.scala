@@ -68,8 +68,12 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
     DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
-    DebuggingTactics.assertAt((x:Expression) => s"Should be a boxed assignment: ${x.getClass}", isAssignment)(timeAssignmentPos) &
-    HilbertCalculus.assignb(timeAssignmentPos) &
+    ((DebuggingTactics.assertAt((x:Expression) => s"Should be a boxed assignment: ${x.getClass}", isAssignment)(timeAssignmentPos) &
+      HilbertCalculus.assignb(timeAssignmentPos)
+     )
+     |
+      Idioms.nil
+    ) &
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER)
   })
 
