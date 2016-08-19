@@ -52,6 +52,12 @@ class ODETests extends TacticTestBase {
       )) shouldBe 'proved
   }
 
+  it should "split* and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ((boxAnd(1) & andR(1))*) & onAll(
+      ODE(1)
+    )) shouldBe 'proved
+  }
+
   it should "prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
@@ -100,7 +106,7 @@ class ODETests extends TacticTestBase {
     for (ex <- list) {
       val fml = ex.asFormula
       println("\nProving\n" + fml)
-      val proof = TactixLibrary.proveBy(fml, (implyR(1) & ODE(1) & (onAll(QE) | done)) | skip)
+      val proof = TactixLibrary.proveBy(fml, (implyR(1) & ODE(1) & onAll(QE)) | skip)
       if (proof.isProved)
         println("\nProved: " + fml)
       else {
