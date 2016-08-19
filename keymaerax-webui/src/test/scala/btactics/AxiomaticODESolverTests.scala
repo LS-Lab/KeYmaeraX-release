@@ -6,11 +6,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
@@ -30,7 +28,6 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    println(result.prettyString)
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+1)^3>=1)".asFormula
   })
 
@@ -108,11 +105,10 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*t+0}]x>=0".asFormula
   })}
 
-  //@todo Does this need to be fixed?
-  it should "solve single time dependent eqn" ignore {withMathematica(implicit qeTool => {
+  //@todo fix.
+  ignore should "solve single time dependent eqn" taggedAs(TodoTest) in {withMathematica(implicit qeTool => {
     val f = "x=0&y=0&t=0 -> [{x'=t, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(1)*)
-    println(proveBy(f,t))
     loneSucc(proveBy(f,t)) shouldBe ???
   })}
 
@@ -140,7 +136,6 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val initialConds = conditionsToValues(extractInitialConditions(None)("x=1&v=2&a=3&t=0".asFormula))
     val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
     val result = Integrator.apply(initialConds, system)
-    println(result.mkString(","))
     result shouldBe "x=a/2*t^2+2*t+1".asFormula :: "v=a*t+2".asFormula :: Nil
   }
   //endregion
@@ -194,7 +189,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   it should "assignbExists" in {
     val f = "\\exists kyxtime [{x'=v,kyxtime'=1&true}]1=1".asFormula
     val t = DLBySubst.assignbExists(Number(1))(1)
-    println(proveBy(f,t))
+    proveBy(f,t) shouldBe "[kyxtime:=1;][{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
 
   "assignb in context" should "work" in {
@@ -210,10 +205,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //We're just looking for now errors during the diffGhost steps. This test is here to help isolate when both implementations are having troubles ghosting.
   "Original diff solve" should "work" in {withMathematica(implicit qet => {
     val model = "[{x'=v,v'=a}]1=1".asFormula
-
     val t: BelleExpr = DifferentialTactics.diffSolve(None)(qet)(1)
-
-    val result = proveBy(model, t)
-    println(result)
+    proveBy(model, t) //just don't throw any exceptions.
   })}
 }
