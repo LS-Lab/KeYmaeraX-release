@@ -644,6 +644,9 @@ object DerivationInfo {
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
 
     // Differential tactics
+    new PositionTacticInfo("ODE",
+      "ODE",
+      {case () => TactixLibrary.ODE}, needsTool = true),
     new PositionTacticInfo("DIRule",
       RuleDisplayInfo("DI",
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),

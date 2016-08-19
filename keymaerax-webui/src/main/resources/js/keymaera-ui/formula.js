@@ -125,9 +125,9 @@ angular.module('formula')
             // compile template, bind to scope, and add into DOM
             if (scope.collapsed) {
               //@note if collapsed we don't have any listeners, no need to compile
-              element.append('<span>' + fmlMarkup + '</span>');
+              element.append('<span class="k4-formula-preformat">' + fmlMarkup + '</span>');
             } else {
-              var template = '<span ng-class="{\'k4-abbreviate\': collapsed, \'k4-formula-preformat\': !collapsed}">' + fmlMarkup + '</span>';
+              var template = '<span ng-class="{\'k4-abbreviate\': collapsed, \'k4-formula-preformat\': true}">' + fmlMarkup + '</span>';
               element.append($compile(template)(scope));
             }
 
