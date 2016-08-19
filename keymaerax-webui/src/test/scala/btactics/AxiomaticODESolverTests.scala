@@ -31,28 +31,29 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=kyxtime+1*t_;](2*kyxtime+1)^3>=1)".asFormula
+    println(result.prettyString)
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(2*kyxtime+1*t_+1)^3>=1)".asFormula
   })
 
   it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=kyxtime+1*t_;](a/2*kyxtime^2+2*kyxtime+1)^3>=1)".asFormula
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
   })
 
   it should "work using my own time" in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;](a/2*t^2+2*t+1)^3>=1)".asFormula
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(t+1*t_)^2+2*(t+1*t_)+1)^3>=1)".asFormula
   })
 
 
   it should "solve double integrator" in {withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;]a/2*t^2+2*t+1>=0)".asFormula
+    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
   })}
 
   it should "work on the triple integrator x'''=j" in {withMathematica(implicit qeTool => {
@@ -61,24 +62,24 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
     //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=0+1*t_;]((4/2)/3*kyxtime^3+(3/2)*kyxtime^2+2*kyxtime+1)^3>=1)".asFormula
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->((4/2)/3*(0+1*t_)^3+(3/2)*(0+1*t_)^2+2*(0+1*t_)+1)^3>=1)".asFormula
   })}
 
   "axiomatic ode solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & TactixLibrary.QE()
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.debug("About to QE on", true) & TactixLibrary.QE()
     proveBy(f, t) shouldBe 'proved
   })
 
   it should "prove the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica {implicit qeTool =>
     val f = "x=1&v=2&a=3 -> [{x'=v,v'=a}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & TactixLibrary.QE()
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.debug("About to QE on", true) & TactixLibrary.QE()
     proveBy(f, t) shouldBe 'proved
   }
 
   it should "prove the triple integrator x'''=j" in {withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & TactixLibrary.QE()
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.debug("About to QE on", true) & TactixLibrary.QE()
     proveBy(f, t) shouldBe 'proved
   })}
 
@@ -188,6 +189,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "\\exists kyxtime [{x'=v,kyxtime'=1&true}]1=1".asFormula
     val t = DLBySubst.assignbExists(Number(1))(1)
     println(proveBy(f,t))
+  }
+
+  "assignb in context" should "work" in {
+    val f = "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=kyxtime+1*t_;](v*kyxtime+1)^3>=1)".asFormula
+    val pos = SuccPosition(SuccPos(0), PosInExpr(0::1::1::Nil)) //Also tests this as the appropriate position. See [[AxiomaticODESolver.apply]]'s definition of "timeAssignmentPos"
+    val t = DebuggingTactics.debugAt("At that position is: ", true)(pos) & HilbertCalculus.assignb(pos)
+
+    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+1)^3>=1)".asFormula
   }
 
   //endregion
