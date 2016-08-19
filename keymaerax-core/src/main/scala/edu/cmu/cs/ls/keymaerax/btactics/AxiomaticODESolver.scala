@@ -265,6 +265,10 @@ object AxiomaticODESolver {
 
     tmpmsg(s"Implication is ${implication.prettyString}")
     tmpmsg(s"And modality is ${s(pos).prettyString}")
+
+    if(!implication.isFOL)
+      throw new AxiomaticODESolverExn("Could not solve the ODE axiomatically because the post-condition is non-arithmetic.")
+
     /*
      * Explanation:
      * The tactic in the next four lines creates a new lemma that proves `implication`, then uses that lemma to perform useAt rewriting on the
@@ -278,7 +282,7 @@ object AxiomaticODESolver {
      * @todo ProveAs should do this be default at the end of each execution, and should implicitly use a namespace that lazuUseAt et al knows about.
      */
     clearProveAsScope("_simplifyPostCondition") &
-    ProveAs("_simplifyPostCondition", implication, TactixLibrary.QE) &
+    ProveAs("_simplifyPostCondition", implication, TactixLibrary.QE | TactixLibrary.close) & //@note close will sometimes work when the post-condition is non-arithmetic...
     HilbertCalculus.lazyUseAt("_simplifyPostCondition", PosInExpr(1 :: Nil))(subPosition(pos, PosInExpr(1::Nil))) & //@todo weird positioning...
     clearProveAsScope("_simplifyPostCondition")
   })
