@@ -10,14 +10,14 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
 object UIKeYmaeraXPrettyPrinter {
   /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
-  def apply(topId: String): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId)
+  def apply(topId: String, plainText: Boolean): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId, plainText)
 }
 
 /**
   * User-interface pretty printer for KeYmaera X syntax.
   * @author Andre Platzer
   */
-class UIKeYmaeraXPrettyPrinter(val topId: String) extends KeYmaeraXWeightedPrettyPrinter {
+class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends KeYmaeraXWeightedPrettyPrinter {
   private val HTML_OPEN = "$#@@$"
   private val HTML_CLOSE = "$@@#$"
 
@@ -49,7 +49,8 @@ class UIKeYmaeraXPrettyPrinter(val topId: String) extends KeYmaeraXWeightedPrett
 //    HTML_OPEN + "term id=\"" + id + "\"" + HTML_CLOSE + content + HTML_OPEN + "/term" + HTML_CLOSE
 
   private def wrap(id: String, content: String): String =
-    s"""${HTML_OPEN}span ng-class="{'hl':true, 'hlhover':isFormulaHighlighted('$id')}" id="$id"
+    if (plainText) content
+    else s"""${HTML_OPEN}span ng-class="{'hl':true, 'hlhover':isFormulaHighlighted('$id')}" id="$id"
         |  ng-mouseover="$$event.stopPropagation();highlightFormula('$id')"
         |  ng-mouseleave="$$event.stopPropagation();highlightFormula(undefined)"
         |  k4-droppable on-drop="dndSink('$id').formulaDrop(dragData)"

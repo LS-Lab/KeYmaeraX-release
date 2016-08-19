@@ -328,8 +328,8 @@ object Helpers {
          formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
         */
         val idx = if (isAnte) (-i)-1 else i+1
-        val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter(idx.toString)(fml))
-        val fmlString = JsString(fml.prettyString)
+        val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=false)(fml))
+        val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=true)(fml))
         JsObject(
           "id" -> JsString(idx.toString),
           "formula" -> JsObject(
