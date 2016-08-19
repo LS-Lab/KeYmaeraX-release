@@ -70,6 +70,8 @@ object DebuggingTactics {
     }
   }
 
+  def assertAt(msg: => String, assertion: Expression => Boolean): BuiltInPositionTactic = assertAt((e:Expression) => msg, assertion)
+
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
   def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: Provable): Provable = {
