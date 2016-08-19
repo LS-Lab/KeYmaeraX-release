@@ -20,6 +20,7 @@
   'keymaerax.errorHandlers',
   'keymaerax.interceptors',
   'keymaerax.services',
+  'keymaerax.ui.binding',
   'keymaerax.ui.keyevents',
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
