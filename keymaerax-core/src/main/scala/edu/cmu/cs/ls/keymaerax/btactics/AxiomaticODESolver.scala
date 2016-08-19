@@ -44,7 +44,7 @@ object AxiomaticODESolver {
     val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1
 
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
-    val timeAssignmentPos = SuccPosition(SuccPos(0), PosInExpr(0::1::1::Nil))
+    val timeAssignmentPos = subPosition(pos, PosInExpr(0::1::1::Nil))
     val isAssignment : Expression => Boolean = (e : Expression) => e match {
       case Box(Assign(_,_), _) => true
       case _ => false
