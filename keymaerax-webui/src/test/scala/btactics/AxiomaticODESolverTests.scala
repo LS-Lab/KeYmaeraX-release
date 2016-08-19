@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import org.scalatest.PrivateMethodTester
-import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest}
+import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
 
 /**
   * @author Nathan Fulton
@@ -54,6 +54,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
+  })}
+
+  //@todo support non-arithmetic post-condition.
+  ignore should "not fail if the post-condition is non-arithmetic." taggedAs(TodoTest) in {withMathematica(implicit qeTool => {
+    val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    println(proveBy(f,t))
+    //shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
   })}
 
   it should "work on the triple integrator x'''=j" in {withMathematica(implicit qeTool => {
