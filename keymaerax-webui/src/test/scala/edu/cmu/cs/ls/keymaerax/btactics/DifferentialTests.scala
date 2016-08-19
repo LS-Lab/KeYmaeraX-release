@@ -1258,19 +1258,19 @@ class DifferentialTests extends TacticTestBase {
     proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & diffInd()(1)) shouldBe 'proved
   }
 
-  "Open Differential Invariant" should "prove x^2>5 -> [{x'=x^3+x^4}]x^2>5" in withMathematica { implicit qeTool =>
-    proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, implyR(1) & openDiffInd(1))
+  "Open Differential Invariant" should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withMathematica { implicit qeTool =>
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "prove x^2>5 -> [{x'=x^3+x^4}]x^2>5 incontext" taggedAs(IgnoreInBuildTest) in withMathematica { implicit qeTool =>
-    proveBy("x^2>5 -> [{x'=x^3+x^4}]x^2>5".asFormula, openDiffInd(1, 1::Nil))
+  it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs(IgnoreInBuildTest) in withMathematica { implicit qeTool =>
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, openDiffInd(1, 1::Nil)) shouldBe 'proved
   }
 
-  it should "prove x^2<5 -> [{x'=x^3+x^4}]x^2<5" in withMathematica { implicit qeTool =>
-    proveBy("x^2<5 -> [{x'=x^3+x^4}]x^2<5".asFormula, implyR(1) & openDiffInd(1))
+  it should "prove 5<x^3 -> [{x'=x^3+x^4}]5<x^3" in withMathematica { implicit qeTool =>
+    proveBy("5<x^3 -> [{x'=x^3+x^4}]5<x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
   it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withMathematica { implicit qeTool =>
-    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1))
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 }

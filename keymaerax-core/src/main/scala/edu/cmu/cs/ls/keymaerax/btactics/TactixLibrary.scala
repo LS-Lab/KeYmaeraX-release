@@ -169,22 +169,23 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   * @see [[openDiffInd]]
   * @todo @see [[DA]]
   */
-  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
-    ((boxAnd(pos) & andR(pos))*) & onAll(
+def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
+  ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
       (diffWeaken(pos) & QE) |
         (if (seq.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false})
         // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) //| diffSolve()(pos)
+          openDiffInd(pos) | diffSolve()(pos)
         else
-          //@todo check degeneracy for split to > or =
+        //@todo check degeneracy for split to > or =
           diffInd()(pos)
             //@todo | diffInvariant(cuts) | DA ...
-            //| diffSolve()(pos)
+            | diffSolve()(pos)
           ))
-  })
+    )(pos))
+})
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
