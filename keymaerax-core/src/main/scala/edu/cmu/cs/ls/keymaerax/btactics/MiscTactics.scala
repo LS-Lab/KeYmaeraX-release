@@ -56,6 +56,22 @@ object DebuggingTactics {
     }
   }
 
+  /**
+    * Assert that the assertion holds at a the specified position. Could be a non-top-level position. Analogous to [[debugAt]].
+    * @param msg The message to display.
+    * @param assertion The assertion.
+    */
+  def assertAt(msg: Expression => String, assertion: Expression => Boolean): BuiltInPositionTactic = new BuiltInPositionTactic("NOT_EXTRACTABLE") {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
+      val ctx = provable.subgoals.head.at(pos)
+      if (!assertion(ctx._2))
+        throw new BelleUserGeneratedError("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
+      provable
+    }
+  }
+
+  def assertAt(msg: => String, assertion: Expression => Boolean): BuiltInPositionTactic = assertAt((e:Expression) => msg, assertion)
+
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
   def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: Provable): Provable = {

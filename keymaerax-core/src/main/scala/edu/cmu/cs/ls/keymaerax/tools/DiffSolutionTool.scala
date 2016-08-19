@@ -17,6 +17,7 @@ trait DiffSolutionTool {
    * @param diffArg The name of the differential argument (dx/d diffArg = theta).
    * @param iv The initial values per derivative.
    * @return The solution if found; None otherwise
+    *         The solution should be a
    */
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula]
 }

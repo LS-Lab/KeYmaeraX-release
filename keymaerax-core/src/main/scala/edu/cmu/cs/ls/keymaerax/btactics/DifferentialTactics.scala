@@ -250,12 +250,12 @@ private object DifferentialTactics {
     *
     * @example{{{
     *         *
-    *    ---------------------openDiffInd(qeTool)(1)
+    *    ---------------------openDiffInd(1)
     *    x^2>5 |- [{x'=x^3+x^4}]x^2>5
     * }}}
     * @example{{{
     *         *
-    *    ---------------------openDiffInd(qeTool)(1)
+    *    ---------------------openDiffInd(1)
     *    x^3>5 |- [{x'=x^3+x^4}]x^3>5
     * }}}
     * @incontext
@@ -277,11 +277,10 @@ private object DifferentialTactics {
             if (greater)
               HilbertCalculus.namedUseAt("DIogreater", "DIo open differential invariance >")
             else
-              HilbertCalculus.namedUseAt("DIoless", "DIo open differential invariance <"))(pos)
-            <(
-              close | QE,
+              HilbertCalculus.namedUseAt("DIoless", "DIo open differential invariance <"))(pos) <(
+              testb(pos) & (close | QE),
               //@note derive before DE to keep positions easier
-              derive(pos ++ PosInExpr(1 :: Nil)) &
+              implyR(pos) & derive(pos ++ PosInExpr(1::1::Nil)) &
                 DE(pos) &
                 (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier

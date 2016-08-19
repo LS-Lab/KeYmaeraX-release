@@ -26,7 +26,7 @@ import DifferentialHelper._
   * @author Nathan Fulton
   */
 object AxiomaticODESolver {
-  private val ODE_DEBUGGER = true
+  private val ODE_DEBUGGER = false
 
   /** The name of the explicit time variables. */
   private val TIMEVAR : String = "kyxtime"
@@ -42,6 +42,13 @@ object AxiomaticODESolver {
     val odePos = subPosition(pos, 0::Nil)
     val ode = s(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
     val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1
+
+    //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
+    val timeAssignmentPos = SuccPosition(SuccPos(0), PosInExpr(0::1::1::Nil))
+    val isAssignment : Expression => Boolean = (e : Expression) => e match {
+      case Box(Assign(_,_), _) => true
+      case _ => false
+    }
 
     odeSolverPreconds(pos) &
     DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
@@ -60,7 +67,10 @@ object AxiomaticODESolver {
     DebuggingTactics.assert((s,p) => odeSize(s(p)) == 1, "ODE should only have time.")(pos) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
-    DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER)
+    DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
+    DebuggingTactics.assertAt((x:Expression) => s"Should be a boxed assignment: ${x.getClass}", isAssignment)(timeAssignmentPos) &
+    HilbertCalculus.assignb(timeAssignmentPos) &
+    DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER)
   })
 
   //endregion

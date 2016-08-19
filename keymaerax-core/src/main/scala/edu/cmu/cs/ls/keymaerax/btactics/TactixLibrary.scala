@@ -170,19 +170,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   * @todo @see [[DA]]
   */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
-    ((boxAnd(pos) & andR(pos))*) & onAll(
+    ((boxAnd(pos) & andR(pos))*) & DebuggingTactics.printIndexed("splits") & onAll(
       (diffWeaken(pos) & QE) |
         (if (seq.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false})
         // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) //| diffSolve()(pos)
+          openDiffInd(pos) | diffSolve()(pos)
         else
           //@todo check degeneracy for split to > or =
           diffInd()(pos)
             //@todo | diffInvariant(cuts) | DA ...
-            //| diffSolve()(pos)
+            | diffSolve()(pos)
           ))
   })
 
