@@ -170,7 +170,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   * @todo @see [[DA]]
   */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
-    ((boxAnd(pos) & andR(pos))*) & onAll(
+    ((boxAnd(pos) & andR(pos))*) & DebuggingTactics.printIndexed("splits") & onAll(
       (diffWeaken(pos) & QE) |
         (if (seq.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true

@@ -39,6 +39,23 @@ class ODETests extends TacticTestBase {
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "split and prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & boxAnd(1) & andR(1) <(
+      ODE(1),
+      ODE(1)
+      )) shouldBe 'proved
+  }
+
+  it should "split and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & boxAnd(1) & andR(1) & onAll(
+      ODE(1)
+      )) shouldBe 'proved
+  }
+
+  it should "prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
   //@note: there's overlap as multiple methods are able to prove some of the following examples
   val list =
   // solvable cases
@@ -60,6 +77,9 @@ class ODETests extends TacticTestBase {
       "x>0->[{x'=x^2+5}]x>0" ::
       "x^3>0->[{x'=x+5}]x^3>0" ::
       "x^3>0->[{x'=x^2+5}]x^3>0" ::
+      "y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}]y>2" ::
+      "y^3>2 -> [{x'=x^3+x^4,y'=5*y+y^2}]y^3>2" ::
+      "y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}]y^3>2" ::
       // split open cases
       "x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" ::
       // split cases
