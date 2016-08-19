@@ -177,12 +177,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false})
         // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) | diffSolve()(pos)
+          openDiffInd(pos) //| diffSolve()(pos)
         else
           //@todo check degeneracy for split to > or =
           diffInd()(pos)
             //@todo | diffInvariant(cuts) | DA ...
-            | diffSolve()(pos)
+            //| diffSolve()(pos)
           ))
   })
 

@@ -63,9 +63,11 @@ class ODETests extends TacticTestBase {
     for (ex <- list) {
       val fml = ex.asFormula
       println("\nProving\n" + fml)
-      if (TactixLibrary.proveBy(fml, implyR(1) & ODE(1)).isProved)
+      val proof = TactixLibrary.proveBy(fml, implyR(1) & ODE(1))
+      if (proof.isProved)
         println("\nProved: " + fml)
       else {
+        println(proof)
         println("\nFailed: " + fml)
         fail = fail :+ ex
       }
