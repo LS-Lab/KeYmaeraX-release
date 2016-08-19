@@ -27,7 +27,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   //region integration tests
 
-  "axiomatic ode solver" should "work!" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
+  "axiomatic ode solver" should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica(implicit qeTool => {
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
@@ -46,6 +46,27 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[t:=t+1*t_;]a/2*t^2+2*t+1>=0)".asFormula
+  })}
+
+  it should "work on the triple integrator x'''=j" in {withMathematica(implicit qeTool => {
+    val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
+    //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=0+1*t_;]((4/2)/3*kyxtime^3+(3/2)*kyxtime^2+2*kyxtime+1)^3>=1))".asFormula
+  })}
+
+  "axiomatic ode solver for proofs" should "prove the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica {implicit qeTool =>
+    val f = "x=1&v=2&a=3 -> [{x'=v,v'=a}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & TactixLibrary.QE()
+    proveBy(f, t) shouldBe 'proved
+  }
+
+  it should "prove the triple integrator x'''=j" in {withMathematica(implicit qeTool => {
+    val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & TactixLibrary.QE()
+    proveBy(f, t) shouldBe 'proved
   })}
 
   //endregion
