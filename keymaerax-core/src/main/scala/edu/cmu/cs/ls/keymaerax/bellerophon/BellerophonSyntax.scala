@@ -553,6 +553,7 @@ case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends Be
   *
   * @see [[Provable.apply(USubst)]]
   * @todo generalize inner to also AtPosition[E]
+  * @note abbr should be fresh in the Provable
   */
 case class LetInspect(abbr: Expression, instantiator: Provable => Expression, inner: BelleExpr) extends BelleExpr {
   override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"

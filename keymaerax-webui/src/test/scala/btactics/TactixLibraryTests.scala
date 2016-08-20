@@ -116,4 +116,45 @@ class TactixLibraryTests extends TacticTestBase {
         ChooseSome(someList, (inv:Formula) => loop(inv)(1) & (master() & QE))
     ) shouldBe 'proved
   }
+
+  "LetInspect" should "post-hoc instantiate a j closing \\exists j 5+3=j" in withMathematica{qeTool =>
+    val proof = proveBy("\\exists jj 5+3=jj".asFormula,
+      LetInspect("j()".asTerm,
+        (pr:Provable) => pr.subgoals.head.succ.head match {
+          case Equal(l,r) => l
+        }
+        ,
+        existsR("j()".asTerm)(1) &
+          (step(1, 0::Nil)*)
+      ) & byUS("= reflexive")
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
+    proof shouldBe 'proved
+  }
+
+  ignore should "post-hoc instantiate a j closing \\exists j (x+x)'=j" in withMathematica{qeTool =>
+    val proof = proveBy("\\exists jj (x+x)'=jj".asFormula,
+      LetInspect("j(.)".asTerm,
+        (pr:Provable) => pr.subgoals.head.succ.head match {
+          case Equal(l,r) => l
+        }
+        ,
+        existsR("j(x)".asTerm)(1) &
+        derive(1, 0::Nil)))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x)'=jj".asFormula))
+    proof shouldBe 'proved
+  }
+
+  it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" in withMathematica{qeTool =>
+    val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
+      LetInspect("j(||)".asTerm,
+        (pr:Provable) => pr.subgoals.head.succ.head match {
+          case Equal(l,r) => l
+        }
+        ,
+        existsR("j(||)".asTerm)(1) &
+        derive(1, 0::Nil)))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
+    proof shouldBe 'proved
+  }
 }
