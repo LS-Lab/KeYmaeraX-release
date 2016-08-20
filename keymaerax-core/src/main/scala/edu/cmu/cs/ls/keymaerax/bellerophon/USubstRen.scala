@@ -150,6 +150,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
       case Nothing => Nothing
       case d: DotTerm        => subs.getOrElse(d, d).asInstanceOf[Term]
+      case app@UnitFunctional(f,Except(v),sort) if !subs.contains(app) => UnitFunctional(f,Except(renameVar(v,term)),sort)
       case f: UnitFunctional => subs.getOrElse(f, f).asInstanceOf[Term]
       case n: Number => n
       //@note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -171,6 +172,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   /** uniform substitution on formulas */
   private def usubst(formula: Formula): Formula = {
     formula match {
+      case app@UnitPredicational(p,Except(v)) if !subs.contains(app) => UnitPredicational(p,Except(renameVar(v,formula)))
       case p: UnitPredicational => subs.getOrElse(p, p).asInstanceOf[Formula]
       case app@PredOf(op, theta) if matchHead(app) =>
         val (what, repl) = matchHeads(op)
@@ -270,6 +272,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
     ode match {
       case AtomicODE(DifferentialSymbol(x), e) => requireAdmissible(odeBV, e, ode)
         AtomicODE(DifferentialSymbol(renameVar(x, ode)), usubst(e))
+      case app@DifferentialProgramConst(c,Except(v)) if !subs.contains(app) => DifferentialProgramConst(c,Except(renameVar(v,ode)))
       case c: DifferentialProgramConst => subs.getOrElse(c, c).asInstanceOf[DifferentialProgram]
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(a, odeBV), usubstODE(b, odeBV))

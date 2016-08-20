@@ -108,6 +108,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
     case Nothing | DotTerm(_)             => term
+    case UnitFunctional(f,Except(v),sort) => if (semanticRenaming) UnitFunctional(f,Except(renameVar(v,term)),sort) else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
     case _: UnitFunctional                => if (semanticRenaming) term else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -127,6 +128,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
     case PredOf(p, theta)   => PredOf(p, rename(theta))
     case PredicationalOf(c, fml) => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case DotFormula         => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case UnitPredicational(p,Except(v)) => if (semanticRenaming) UnitPredicational(p,Except(renameVar(v,formula))) else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case _: UnitPredicational => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case True | False       => formula
 
@@ -176,6 +178,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
+    case DifferentialProgramConst(c,Except(v)) => if (semanticRenaming) DifferentialProgramConst(c,Except(renameVar(v,ode))) else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)
     case c: DifferentialProgramConst => if (semanticRenaming) ode else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)
     // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
