@@ -22,6 +22,74 @@ import scala.language.postfixOps
  */
 private object DifferentialTactics {
 
+  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
+    ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
+      (diffWeaken(pos) & QE) |
+        (if (seq.sub(pos) match {
+          case Some(Box(_: ODESystem, _: Greater)) => true
+          case Some(Box(_: ODESystem, _: Less)) => true
+          case _ => false})
+        // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
+          openDiffInd(pos) | diffSolve()(pos)
+        else
+        //@todo check degeneracy for split to > or =
+          diffInd()(pos)
+            //@todo | diffInvariant(cuts) | DA ...
+            | diffSolve()(pos)
+          ))
+      )(pos))
+  })
+
+  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    val quantity = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => Minus(a,b)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => Minus(b,a)
+      case e => throw new BelleError("DGauto does not support argument shape: " + e)
+    }
+    //@todo find a ghost that's not in ode
+    val ghost = Variable("y_")
+    val spooky = if (false) //@todo ultimate substitution won't work if it ain't true
+      UnitFunctional("jj",Except(ghost),Real)
+    else
+      Variable("jj")
+    LetInspect(
+      spooky,
+      (pr:Provable) => {
+        assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
+        println("Instantiate::\n" + pr)
+        // induction step condition \forall x \forall ghost condition>=0
+        FormulaTools.kernel(pr.subgoals.head.succ.head) match {
+          case GreaterEqual(condition, Number(_/*@todo BigDecimal(0)*/)) =>
+            //@todo call Mathematica. And in fact a witness of Reduce of >=0 would suffice
+            println("Solve[" + condition + "==0" + "," + spooky + "]")
+            ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
+              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=" + r + "*" + ghost); r
+              case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
+                throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
+              case Some(stuff) => println("Solve[" + condition + "==0" + "," + spooky + "]")
+                throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
+            }
+          case _ => throw new AssertionError("Unexpected shape " + pr)
+        }
+      }
+      ,
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
+      )(pos) <(
+        close | QE,
+        diffInd()(pos ++ PosInExpr(1::Nil))
+          & implyR(pos) // initial assumption
+          & implyR(pos) // domain
+          & andR(pos) <(
+          // initial condition
+          close | QE,
+          // universal closure of induction step
+          skip
+          )
+        )
+    )
+  })
+
   /**
    * Differential effect: exhaustively extracts differential equations from an atomic ODE or an ODE system into
    * differential assignments.
