@@ -21,7 +21,9 @@ private object MathematicaSymbols {
       "Greater", "GreaterEqual", "Inequality", "ForAll", "Exists", "And",
       "Or", "Implies", "Equivalent", "InverseFunction", "Integrate", "Rule",
       "List", "Reduce", "Reals")
-      
+
+  //@todo isn't this a possible memory deallocation bug?
+
   val FALSE = new MExpr(Expr.SYMBOL, "False")
   val TRUE = new MExpr(Expr.SYMBOL, "True")
   val NOT = new MExpr(Expr.SYMBOL, "Not")
@@ -57,6 +59,8 @@ private object MathematicaSymbols {
   val REDUCE = new MExpr(Expr.SYMBOL,  "Reduce")
   val RESOLVE = new MExpr(Expr.SYMBOL,  "Resolve")
   val REALS = new MExpr(Expr.SYMBOL, "Reals")
+  val Solve = new MExpr(Expr.SYMBOL,  "Solve")
+  val DSolve = new MExpr(Expr.SYMBOL,  "DSolve")
   val CHECK = new MExpr(Expr.SYMBOL, "Check")
   val EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")
   val ABORTED = new MExpr(Expr.SYMBOL, "$Aborted")
