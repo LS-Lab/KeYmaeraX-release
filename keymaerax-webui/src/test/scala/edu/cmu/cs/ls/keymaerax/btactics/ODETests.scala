@@ -62,8 +62,8 @@ class ODETests extends TacticTestBase {
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "DAauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
-    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DAauto(1)) shouldBe 'proved
+  it should "DGauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
   it should "prove x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
