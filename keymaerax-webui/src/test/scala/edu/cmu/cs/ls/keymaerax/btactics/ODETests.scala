@@ -25,6 +25,16 @@ class ODETests extends TacticTestBase {
   "openDiffInd" should "directly prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
+
+  "DGauto" should "DGauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
+  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
+    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
+
   "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
@@ -60,14 +70,6 @@ class ODETests extends TacticTestBase {
 
   it should "prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
-  }
-
-  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
-    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
-  }
-
-  it should "DGauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
-    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
   it should "prove x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>

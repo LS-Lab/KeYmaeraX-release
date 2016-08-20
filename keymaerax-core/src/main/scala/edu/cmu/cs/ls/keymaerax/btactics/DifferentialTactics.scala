@@ -30,10 +30,11 @@ private object DifferentialTactics {
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false})
         // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) | TactixLibrary.diffSolve()(pos)
+          openDiffInd(pos) | DGauto(pos) | TactixLibrary.diffSolve()(pos)
         else
         //@todo check degeneracy for split to > or =
           diffInd()(pos)
+            | DGauto(pos)
             //@todo | diffInvariant(cuts) | DA ...
             | TactixLibrary.diffSolve()(pos)
           ))
@@ -41,6 +42,7 @@ private object DifferentialTactics {
   })
 
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    //import TactixLibrary._
     val quantity = seq.sub(pos) match {
       case Some(Box(ODESystem(ode, _), Greater(a, b))) => Minus(a,b)
       case Some(Box(ODESystem(ode, _), Less(a, b))) => Minus(b,a)
@@ -51,7 +53,7 @@ private object DifferentialTactics {
     val spooky = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
       UnitFunctional("jj",Except(ghost),Real)
     else
-      Variable("jj")
+      FuncOf(Function("jj",None,Unit,Real),Nothing) //Variable("jj")
     //@todo should allocate space
     var constructedGhost: Option[Term] = None
     val cleanup = "" by ((pos:Position,seq:Sequent) =>
@@ -60,7 +62,8 @@ private object DifferentialTactics {
         Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
       )(pos) <(
         close | QE,
-        diffInd()(pos ++ PosInExpr(1::Nil)) & QE
+        //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
+        implyR(pos) & diffInd()(pos) & QE
         )
     )
     LetInspect(
