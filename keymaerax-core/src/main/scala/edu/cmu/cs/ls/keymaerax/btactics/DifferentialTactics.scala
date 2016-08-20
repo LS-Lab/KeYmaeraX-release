@@ -30,12 +30,12 @@ private object DifferentialTactics {
           case Some(Box(_: ODESystem, _: Less)) => true
           case _ => false})
         // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) | diffSolve()(pos)
+          openDiffInd(pos) | TactixLibrary.diffSolve()(pos)
         else
         //@todo check degeneracy for split to > or =
           diffInd()(pos)
             //@todo | diffInvariant(cuts) | DA ...
-            | diffSolve()(pos)
+            | TactixLibrary.diffSolve()(pos)
           ))
       )(pos))
   })
@@ -48,7 +48,7 @@ private object DifferentialTactics {
     }
     //@todo find a ghost that's not in ode
     val ghost = Variable("y_")
-    val spooky = if (false) //@todo ultimate substitution won't work if it ain't true
+    val spooky = if (true) //@todo ultimate substitution won't work if it ain't true
       UnitFunctional("jj",Except(ghost),Real)
     else
       Variable("jj")
