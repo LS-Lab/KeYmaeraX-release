@@ -77,7 +77,7 @@ private object DifferentialTactics {
             //@todo call Mathematica. And in fact a witness of Reduce of >=0 would suffice
             println("Solve[" + condition + "==0" + "," + spooky + "]")
             ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
-              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=" + r + "*" + ghost);
+              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=(" + r + ")*" + ghost);
                 constructedGhost = Some(r)
                 r
               case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
