@@ -209,10 +209,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           case GreaterEqual(condition, Number(_/*@todo BigDecimal(0)*/)) =>
             //@todo call Mathematica. And in fact a witness of Reduce of >=0 would suffice
             println("Solve[" + condition + "==0" + "," + spooky + "]")
-            Divide(Number(1),Number(2))
+            ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
+              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=" + r + "*" + ghost); r
+              case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
+                throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
+              case Some(stuff) => println("Solve[" + condition + "==0" + "," + spooky + "]")
+                throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
+            }
           case _ => throw new AssertionError("Unexpected shape " + pr)
         }
-        //@todo solve for spooky and get linear fragments
       }
       ,
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
