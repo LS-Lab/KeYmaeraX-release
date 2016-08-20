@@ -36,6 +36,15 @@ object FormulaTools {
   }
 
   /**
+    * Gets the (unquantified) kernel part of a quantified formula by peeling off quantifiers.
+    */
+  def kernel(formula: Formula): Formula = formula match {
+    case Forall(vars, p) => kernel(p)
+    case Exists(vars, p) => kernel(p)
+    case p => p
+  }
+
+  /**
    * Returns the polarity of the subformula at position pos in formula.
    * @param formula The formula.
    * @param pos The position within formula for which the polarity is searched.
