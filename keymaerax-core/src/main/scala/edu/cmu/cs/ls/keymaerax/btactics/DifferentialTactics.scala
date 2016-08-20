@@ -48,10 +48,21 @@ private object DifferentialTactics {
     }
     //@todo find a ghost that's not in ode
     val ghost = Variable("y_")
-    val spooky = if (true) //@todo ultimate substitution won't work if it ain't true
+    val spooky = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
       UnitFunctional("jj",Except(ghost),Real)
     else
       Variable("jj")
+    //@todo should allocate space
+    var constructedGhost: Option[Term] = None
+    val cleanup = "" by ((pos:Position,seq:Sequent) =>
+      // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction unsuccessful")), ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
+      )(pos) <(
+        close | QE,
+        diffInd()(pos ++ PosInExpr(1::Nil)) & QE
+        )
+    )
     LetInspect(
       spooky,
       (pr:Provable) => {
@@ -63,7 +74,9 @@ private object DifferentialTactics {
             //@todo call Mathematica. And in fact a witness of Reduce of >=0 would suffice
             println("Solve[" + condition + "==0" + "," + spooky + "]")
             ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
-              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=" + r + "*" + ghost); r
+              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=" + r + "*" + ghost);
+                constructedGhost = Some(r)
+                r
               case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
                 throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
               case Some(stuff) => println("Solve[" + condition + "==0" + "," + spooky + "]")
@@ -87,7 +100,7 @@ private object DifferentialTactics {
           skip
           )
         )
-    )
+    ) | cleanup(pos)
   })
 
   /**

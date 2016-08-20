@@ -171,7 +171,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @todo @see [[DA]]
     */
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
-  /** DG/DA in automatic mode */
+  /** DG/DA in automatic mode
+    * @see [[DA]] */
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
