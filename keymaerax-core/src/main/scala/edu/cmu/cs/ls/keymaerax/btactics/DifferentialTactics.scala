@@ -61,9 +61,9 @@ private object DifferentialTactics {
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction unsuccessful")), ghost), Number(0))),
         Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
       )(pos) <(
-        close | QE,
+        (close | QE) & done,
         //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
-        implyR(pos) & diffInd()(pos) & QE
+        implyR(pos) & diffInd()(pos) & QE & done
         )
     )
     LetInspect(
@@ -92,18 +92,18 @@ private object DifferentialTactics {
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
         Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
       )(pos) <(
-        close | QE,
+        (close | QE) & done,
         diffInd()(pos ++ PosInExpr(1::Nil))
           & implyR(pos) // initial assumption
           & implyR(pos) // domain
           & andR(pos) <(
           // initial condition
-          close | QE,
+          (close | QE) & done,
           // universal closure of induction step
           skip
           )
         )
-    ) | cleanup(pos)
+    ) & QE & done | cleanup(pos)
   })
 
   /**
