@@ -1270,7 +1270,7 @@ class DifferentialTests extends TacticTestBase {
     proveBy("5<x^3 -> [{x'=x^3+x^4}]5<x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withMathematica { implicit qeTool =>
-    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+  it should "prove x^3>5 -> [{x'=7*x^3+x^8}]x^3>5" in withMathematica { implicit qeTool =>
+    proveBy("x^3>5 -> [{x'=7*x^3+x^8}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 }
