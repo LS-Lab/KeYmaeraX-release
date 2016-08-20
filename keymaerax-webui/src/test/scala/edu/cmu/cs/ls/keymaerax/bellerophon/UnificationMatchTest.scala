@@ -284,6 +284,17 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       (Variable("x_"), Variable("y",Some(0))) :: Nil))
   }
 
+  it should "unify j()=x+y with s()=s()" in {
+    shouldUnify("s()=s()".asFormula, "j()=x+y".asFormula, USubst(
+      SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
+  }
+
+  it should "unify x+y=j() with s()=s()" in {
+    shouldUnify("s()=s()".asFormula, "x+y=j()".asFormula, USubst(
+      SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
+  }
+
+
   "Dassignb unification" should "unify [u':=f();]p(u') with [u':=b();]u'>=0" in {
     shouldMatch("[u':=f();]p(u')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
       (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::

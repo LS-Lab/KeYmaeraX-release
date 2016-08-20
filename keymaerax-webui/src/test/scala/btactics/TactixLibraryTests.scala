@@ -155,8 +155,37 @@ class TactixLibraryTests extends TacticTestBase {
         }
         ,
         existsR("j(x)".asTerm)(1) &
-        derive(1, 0::Nil)))
+        derive(1, 0::Nil))
+        & byUS("= reflexive"))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x)'=jj".asFormula))
+    proof shouldBe 'proved
+  }
+
+  it should "post-hoc find a j() closing (x+x*y)'=j()" in withMathematica{qeTool =>
+    val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
+      LetInspect("j(||)".asTerm,
+        (pr:Provable) => pr.subgoals.head.succ.head match {
+          case Equal(l,r) => l
+        }
+        ,
+        existsR("j()".asTerm)(1) &
+          derive(1, 0::Nil))
+        & byUS("= reflexive"))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
+    proof shouldBe 'proved
+  }
+
+  it should "post-hoc find a j() closing j()=(x+x*y)'" in withMathematica{qeTool =>
+    val proof = proveBy("\\exists jj jj=(x+x*y)'".asFormula,
+      LetInspect("j(||)".asTerm,
+        (pr:Provable) => pr.subgoals.head.succ.head match {
+          case Equal(l,r) => r
+        }
+        ,
+        existsR("j()".asTerm)(1) &
+        derive(1, 1::Nil))
+        & byUS("= reflexive"))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj jj=(x+x*y)'".asFormula))
     proof shouldBe 'proved
   }
 
@@ -168,7 +197,8 @@ class TactixLibraryTests extends TacticTestBase {
         }
         ,
         existsR("j(||)".asTerm)(1) &
-        derive(1, 0::Nil)))
+          derive(1, 0::Nil))
+        & byUS("= reflexive"))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
     proof shouldBe 'proved
   }

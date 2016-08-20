@@ -30,8 +30,12 @@ class ODETests extends TacticTestBase {
     proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
-  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
-    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+//  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
+//    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+//  }
+
+  it should "DGauto x>0->[{x'=-x+1}]x>0" in withMathematica { qeTool =>
+    proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
 
