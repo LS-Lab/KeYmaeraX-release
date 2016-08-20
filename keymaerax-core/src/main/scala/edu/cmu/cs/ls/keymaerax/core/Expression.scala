@@ -277,6 +277,7 @@ case class FuncOf(func: Function, child: Term) extends CompositeTerm with Applic
   * The semantics of arity 0 functional symbol is given by the state, with the additional promise
   * that taboo is not free so the value does not depend on taboo when space=Except(taboo). */
 case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol {
+  override def asString: String = super.asString + "(" + space + ")"
   namingConvention
 }
 
@@ -448,6 +449,7 @@ case class PredicationalOf(func: Function, child: Formula)
   * The semantics of arity 0 predicational symbol is looked up by the state, with the additional promise
   * that taboo is not free so the value does not depend on taboo when space=Except(taboo). */
 case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol {
+  override def asString: String = super.asString + "(" + space + ")"
   namingConvention
 }
 
