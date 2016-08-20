@@ -35,10 +35,6 @@ object AxiomIndex {
    */
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
-    case "all instantiate" | "all eliminate"
-         | "vacuous all quantifier" | "vacuous exists quantifier"
-         | "all dual" | "exists dual" => directReduction
-    case "const congruence" | "const formula congruence" => reverseReduction
     // [a] modalities and <a> modalities
     case "<> diamond" | "[] box" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign" | "<:=> assign" | "[':=] differential assign" | "<':=> differential assign" => directReduction
@@ -89,6 +85,12 @@ object AxiomIndex {
     case "chain rule" => (PosInExpr(1::1::0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "x' derive var"   => nullaryDefault
 
+    case "all instantiate" | "all eliminate"
+         | "vacuous all quantifier" | "vacuous exists quantifier"
+         | "all dual" | "exists dual" => directReduction
+    case "exists eliminate"
+         | "const congruence" | "const formula congruence" => reverseReduction
+
     /* @todo Adapt for hybrid games */
     case "V vacuous" => assert(Provable.axiom(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
       (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
@@ -131,7 +133,7 @@ object AxiomIndex {
   private val unaryDefault = (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
   private val binaryDefault = (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
   private val directReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
-  private val reverseReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
+  private val reverseReduction = (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
 
 
   // lookup canonical axioms for an expression (index)
@@ -139,6 +141,7 @@ object AxiomIndex {
   /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
   def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
 
+  //@todo add "ODE" or replace others with "ODE"
   private val odeList: List[String] = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
   //@note "diffCut" is more powerful than "DC differential cut" due to old(.) but only with a suitable invariant generator.
 
