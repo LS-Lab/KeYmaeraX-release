@@ -537,7 +537,7 @@ private object DifferentialTactics {
           /* use */ skip,
           /* show */ cohide(pos.top) &
           //@todo why is this renaming here? Makes no sense to me.
-          /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
+          ///* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
           equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
           )
     }
