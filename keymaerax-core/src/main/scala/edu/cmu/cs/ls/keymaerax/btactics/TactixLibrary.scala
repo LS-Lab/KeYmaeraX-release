@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
+import scala.math.BigDecimal
 
 /**
  * Tactix: Main tactic library with simple interface.
@@ -160,17 +161,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // differential equations
 
-/** ODE: try to prove a property of a differential equation automatically.
-  * @see [[diffSolve]]
-  * @todo @see [[diffCut]]
-  * @see [[diffInd]]
-  * @todo @see [[diffInvariant]]
-  * @see [[diffWeaken]]
-  * @see [[openDiffInd]]
-  * @todo @see [[DA]]
-  */
-def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
-  ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
+  /** ODE: try to prove a property of a differential equation automatically.
+    * @see [[diffSolve]]
+    * @todo @see [[diffCut]]
+    * @see [[diffInd]]
+    * @todo @see [[diffInvariant]]
+    * @see [[diffWeaken]]
+    * @see [[openDiffInd]]
+    * @todo @see [[DA]]
+    */
+  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
+    ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
       (diffWeaken(pos) & QE) |
         (if (seq.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
@@ -184,8 +185,52 @@ def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {requ
             //@todo | diffInvariant(cuts) | DA ...
             | diffSolve()(pos)
           ))
-    )(pos))
-})
+      )(pos))
+  })
+  lazy val DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    val quantity = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => Minus(a,b)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => Minus(b,a)
+      case e => throw new BelleError("DGauto does not support argument shape: " + e)
+    }
+    //@todo find a ghost that's not in ode
+    val ghost = Variable("y_")
+    val spooky = if (false) //@todo ultimate substitution won't work if it ain't true
+      UnitFunctional("jj",Except(ghost),Real)
+    else
+      Variable("jj")
+    LetInspect(
+      spooky,
+      (pr:Provable) => {
+        assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
+        println("Instantiate::\n" + pr)
+        // induction step condition \forall x \forall ghost condition>=0
+        FormulaTools.kernel(pr.subgoals.head.succ.head) match {
+          case GreaterEqual(condition, Number(_/*@todo BigDecimal(0)*/)) =>
+            //@todo call Mathematica. And in fact a witness of Reduce of >=0 would suffice
+            println("Solve[" + condition + "==0" + "," + spooky + "]")
+            Divide(Number(1),Number(2))
+          case _ => throw new AssertionError("Unexpected shape " + pr)
+        }
+        //@todo solve for spooky and get linear fragments
+      }
+      ,
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
+      )(pos) <(
+        close | QE,
+        diffInd()(pos ++ PosInExpr(1::Nil))
+          & implyR(pos) // initial assumption
+          & implyR(pos) // domain
+          & andR(pos) <(
+          // initial condition
+          close | QE,
+          // universal closure of induction step
+          skip
+          )
+        )
+    )
+  })
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
