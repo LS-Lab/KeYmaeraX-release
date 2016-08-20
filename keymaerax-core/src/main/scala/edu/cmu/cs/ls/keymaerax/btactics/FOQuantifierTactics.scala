@@ -72,7 +72,10 @@ protected object FOQuantifierTactics {
   }
 
   def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    existsByDuality(allInstantiate(quantified, instance))
+    if (instance==None)
+      useAt("exists eliminate")
+    else
+      existsByDuality(allInstantiate(quantified, instance))
 
 
   /**

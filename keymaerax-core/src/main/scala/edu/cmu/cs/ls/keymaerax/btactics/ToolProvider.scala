@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
   * @author Stefan Mitsch
   * @see [[edu.cmu.cs.ls.keymaerax.tools]]
   */
-object ToolProvider {
+object ToolProvider extends ToolProvider {
 
   /** Configuration options for tools. */
   type Configuration = Map[String, String]
@@ -36,20 +36,19 @@ object ToolProvider {
 
   // convenience methods forwarding to the current factory
 
-  /** Returns a quantifier elimination tool for real arithmetic. */
   def qeTool(): QETool = f.qeTool()
 
-  /** Returns a differential equation solving helper tool. */
   def odeTool(): DiffSolutionTool = f.odeTool()
 
-  /** Returns a counterexample finding helper tool. */
   def cexTool(): CounterExampleTool = f.cexTool()
 
-  /** Returns a simulation helper tool. */
   def simulationTool(): SimulationTool = f.simulationTool()
 
-  /** Shutdown the tools provided by the current provider. After shutdown, the provider hands out null only. */
+  def solverTool(): SolutionTool = f.solverTool()
+
   def shutdown(): Unit = f.shutdown()
+
+  def tools(): List[Tool] = f.tools()
 
 }
 
@@ -72,6 +71,9 @@ trait ToolProvider {
   /** Returns a simulation tool. */
   def simulationTool(): SimulationTool
 
+  /** Returns an equation solver tool. */
+  def solverTool(): SolutionTool
+
   /** Shutdown the tools provided by this provider. After shutdown, the provider hands out null only. */
   def shutdown(): Unit
 }
@@ -88,6 +90,7 @@ class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
   override def odeTool(): DiffSolutionTool = theTool  match { case t: DiffSolutionTool => t case _ => null }
   override def cexTool(): CounterExampleTool = theTool  match { case t: CounterExampleTool => t case _ => null }
   override def simulationTool(): SimulationTool = theTool  match { case t: SimulationTool => t case _ => null }
+  override def solverTool(): SolutionTool = theTool match { case t: SolutionTool => t case _ => null }
   override def shutdown(): Unit = {
     if (theTool != null) {
       theTool.shutdown()
@@ -105,6 +108,7 @@ class NullToolProvider extends ToolProvider {
   override def odeTool(): DiffSolutionTool = null
   override def cexTool(): CounterExampleTool = null
   override def simulationTool(): SimulationTool = null
+  override def solverTool(): SolutionTool = null
   override def shutdown(): Unit = {}
 }
 

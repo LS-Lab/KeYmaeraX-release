@@ -25,6 +25,16 @@ class ODETests extends TacticTestBase {
   "openDiffInd" should "directly prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
+
+  "DGauto" should "DGauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
+  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
+    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
+
   "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
@@ -52,8 +62,18 @@ class ODETests extends TacticTestBase {
       )) shouldBe 'proved
   }
 
+  it should "split* and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ((boxAnd(1) & andR(1))*) & onAll(
+      ODE(1)
+    )) shouldBe 'proved
+  }
+
   it should "prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withMathematica { qeTool =>
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
   //@note: there's overlap as multiple methods are able to prove some of the following examples
@@ -100,7 +120,7 @@ class ODETests extends TacticTestBase {
     for (ex <- list) {
       val fml = ex.asFormula
       println("\nProving\n" + fml)
-      val proof = TactixLibrary.proveBy(fml, (implyR(1) & ODE(1) & (onAll(QE) | done)) | skip)
+      val proof = TactixLibrary.proveBy(fml, (implyR(1) & ODE(1) & onAll(QE)) | skip)
       if (proof.isProved)
         println("\nProved: " + fml)
       else {
@@ -112,8 +132,8 @@ class ODETests extends TacticTestBase {
     if (fail.isEmpty)
       println("All examples proved successfully")
     else {
-      println("\n\nSuccesses: " + list.filter(x => !fail.contains(x)).mkString("\n"))
-      println("\n\nFailures: " + fail.mkString("\n"))
+      println("\n\nSuccesses:\n" + list.filter(x => !fail.contains(x)).mkString("\n"))
+      println("\n\nFailures:\n" + fail.mkString("\n"))
       fail shouldBe 'empty
     }
   }

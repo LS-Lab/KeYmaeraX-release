@@ -211,7 +211,7 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
     val initialValues = diffSys.map(t => k2m(
       Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), iv(t._1))))
 
-    val input = new MExpr(new MExpr(Expr.SYMBOL, "DSolve"),
+    val input = new MExpr(MathematicaSymbols.DSolve,
       Array[MExpr](
         new MExpr(Expr.SYM_LIST, (convertedDiffSys ++ initialValues).toArray),
         new MExpr(Expr.SYM_LIST, functions.toArray),
@@ -272,6 +272,32 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
     }
   }
 }
+
+
+/**
+  * A link to Mathematica using the JLink interface.
+  *
+  * @author Andre Platzer
+  */
+class MathematicaSolutionTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with SolutionTool {
+
+  def solve(equations: Formula, vars: List[Expression]): Option[Formula] = {
+    val eqs = k2m(equations)
+    val v = vars.map(k2m)
+
+    val input = new MExpr(MathematicaSymbols.Solve,
+      Array[MExpr](
+        eqs,
+        new MExpr(Expr.SYM_LIST, v.toArray)
+        ))
+    val (_, result) = run(input)
+    result match {
+      case f: Formula => Some(f)
+      case _ => None
+    }
+  }
+}
+
 
 object SimulationM2KConverter extends M2KConverter[Simulation] {
 

@@ -44,7 +44,7 @@ object AxiomaticODESolver {
     val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1
 
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
-    val timeAssignmentPos = SuccPosition(SuccPos(0), PosInExpr(0::1::1::Nil))
+    val timeAssignmentPos = subPosition(pos, PosInExpr(0::1::1::Nil))
     val isAssignment : Expression => Boolean = (e : Expression) => e match {
       case Box(Assign(_,_), _) => true
       case _ => false
@@ -68,8 +68,12 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     HilbertCalculus.useAt("DS& differential equation solution")(pos) &
     DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
-    DebuggingTactics.assertAt((x:Expression) => s"Should be a boxed assignment: ${x.getClass}", isAssignment)(timeAssignmentPos) &
-    HilbertCalculus.assignb(timeAssignmentPos) &
+    ((DebuggingTactics.assertAt((x:Expression) => s"Should be a boxed assignment: ${x.getClass}", isAssignment)(timeAssignmentPos) &
+      HilbertCalculus.assignb(timeAssignmentPos)
+     )
+     |
+      Idioms.nil
+    ) &
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER)
   })
 
@@ -261,6 +265,10 @@ object AxiomaticODESolver {
 
     tmpmsg(s"Implication is ${implication.prettyString}")
     tmpmsg(s"And modality is ${s(pos).prettyString}")
+
+    if(!implication.isFOL)
+      throw new AxiomaticODESolverExn("Could not solve the ODE axiomatically because the post-condition is non-arithmetic.")
+
     /*
      * Explanation:
      * The tactic in the next four lines creates a new lemma that proves `implication`, then uses that lemma to perform useAt rewriting on the
@@ -274,7 +282,7 @@ object AxiomaticODESolver {
      * @todo ProveAs should do this be default at the end of each execution, and should implicitly use a namespace that lazuUseAt et al knows about.
      */
     clearProveAsScope("_simplifyPostCondition") &
-    ProveAs("_simplifyPostCondition", implication, TactixLibrary.QE) &
+    ProveAs("_simplifyPostCondition", implication, TactixLibrary.QE | TactixLibrary.close) & //@note close will sometimes work when the post-condition is non-arithmetic...
     HilbertCalculus.lazyUseAt("_simplifyPostCondition", PosInExpr(1 :: Nil))(subPosition(pos, PosInExpr(1::Nil))) & //@todo weird positioning...
     clearProveAsScope("_simplifyPostCondition")
   })
