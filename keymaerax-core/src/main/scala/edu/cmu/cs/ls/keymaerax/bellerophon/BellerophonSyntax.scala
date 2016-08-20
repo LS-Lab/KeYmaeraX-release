@@ -539,11 +539,23 @@ case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends 
   *
   * @see [[Provable.apply(USubst)]]
   * @todo generalize inner to also AtPosition[E]
-  * @todo generalize to also allow value: Provable => Expression for `let j(x,y) = TBD in t` and have TBD computed from the Provable resulting after t.
   */
 case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends BelleExpr {
   require(abbr.kind == value.kind, "Abbreviation and value must be of same kind, but got abbr.kind=" + abbr.kind + " and value.kind=" + value.kind)
   override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
+}
+
+/**
+  * LetInspect(abbr, instantiator, inner) alias `let abbr := inspect instantiator in inner`
+  * postpones the choice for the definition of `abbr` until tactic `inner` finished on the Provable,
+  * and asks `instantiator` to choose a value for `abbr` based on that Provable at the end of `inner`.
+  * Resumes  to the outer proof by a uniform substitution of `instantiator(result)` for `abbr` of the resulting provable.
+  *
+  * @see [[Provable.apply(USubst)]]
+  * @todo generalize inner to also AtPosition[E]
+  */
+case class LetInspect(abbr: Expression, instantiator: Provable => Expression, inner: BelleExpr) extends BelleExpr {
+  override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
 
 case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {

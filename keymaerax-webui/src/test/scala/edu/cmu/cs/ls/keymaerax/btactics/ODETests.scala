@@ -62,6 +62,14 @@ class ODETests extends TacticTestBase {
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "DAauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DAauto(1)) shouldBe 'proved
+  }
+
+  it should "prove x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
   //@note: there's overlap as multiple methods are able to prove some of the following examples
   val list =
   // solvable cases
@@ -118,8 +126,8 @@ class ODETests extends TacticTestBase {
     if (fail.isEmpty)
       println("All examples proved successfully")
     else {
-      println("\n\nSuccesses: " + list.filter(x => !fail.contains(x)).mkString("\n"))
-      println("\n\nFailures: " + fail.mkString("\n"))
+      println("\n\nSuccesses:\n" + list.filter(x => !fail.contains(x)).mkString("\n"))
+      println("\n\nFailures:\n" + fail.mkString("\n"))
       fail shouldBe 'empty
     }
   }
