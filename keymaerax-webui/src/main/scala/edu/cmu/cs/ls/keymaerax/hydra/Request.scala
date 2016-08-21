@@ -153,10 +153,13 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     val fml = node.sequent.toFormula
     if (fml.isFOL) {
       try {
-        ToolProvider.cexTool().findCounterExample(fml) match {
-          //@todo return actual sequent, use collapsiblesequentview to display counterexample
-          case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-          case None => new CounterExampleResponse("cex.none") :: Nil
+        ToolProvider.cexTool() match {
+          case Some(cexTool) => cexTool.findCounterExample(fml) match {
+            //@todo return actual sequent, use collapsiblesequentview to display counterexample
+            case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+            case None => new CounterExampleResponse("cex.none") :: Nil
+          }
+          case None => new CounterExampleResponse("cex.nonfo") :: Nil
         }
       } catch {
         case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
@@ -178,7 +181,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
     //@note not a tactic because we don't want to change the proof tree just by simulating
     val fml = if (node.sequent.ante.nonEmpty) node.sequent.toFormula else { val Imply(True, succ) = node.sequent.toFormula; succ }
-    fml match {
+    if (ToolProvider.odeTool().isDefined) fml match {
       case Imply(initial, b@Box(prg, _)) =>
         // all symbols because we need frame constraints for constants
         val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
@@ -188,6 +191,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
         new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
       case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
     }
+    else new ErrorResponse("No simulation tool available, please configure Mathematica") :: Nil
   }
 
   private def addNonDetInitials(initial: Formula, vars: Set[NamedSymbol]): Formula = {
@@ -225,7 +229,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
       primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
     val time: Variable = Variable("t_", None, Real)
     //@note replace initial values with original variable, since we turn them into assignments
-    val solution = replaceFree(ToolProvider.odeTool().diffSol(ode, time, iv).get, iv.map(_.swap))
+    val solution = replaceFree(ToolProvider.odeTool().get.diffSol(ode, time, iv).get, iv.map(_.swap))
     val flatSolution = flattenConjunctions(solution).
       sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
     Compose(
@@ -263,12 +267,13 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
-    val s = ToolProvider.simulationTool()
-    if (s != null) {
-      val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
-      val simulation = s.simulate(initial, timedStateRelation, steps, n)
-      new SimulationResponse(simulation, stepDuration) :: Nil
-    } else new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
+    ToolProvider.simulationTool() match {
+      case Some(s) =>
+        val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
+        val simulation = s.simulate(initial, timedStateRelation, steps, n)
+        new SimulationResponse(simulation, stepDuration) :: Nil
+      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
+    }
   }
 }
 

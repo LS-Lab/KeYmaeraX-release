@@ -78,7 +78,7 @@ private object DifferentialTactics {
         }
         //@todo a witness of Reduce of >=0 would suffice
         println("Solve[" + condition + "==0" + "," + spooky + "]")
-        ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
+        ToolProvider.solverTool().getOrElse(throw new BelleError("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
           case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
             constructedGhost = Some(r)
             r

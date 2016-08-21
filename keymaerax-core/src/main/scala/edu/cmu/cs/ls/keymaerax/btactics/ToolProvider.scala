@@ -22,8 +22,8 @@ object ToolProvider extends ToolProvider {
   /** Configuration options for tools. */
   type Configuration = Map[String, String]
 
-  /* @note mutable state for switching out default tool providers, which defaults to just returning null */
-  private[this] var f: ToolProvider = new NullToolProvider()
+  /* @note mutable state for switching out default tool providers, which defaults to just returning None */
+  private[this] var f: ToolProvider = new NoneToolProvider()
 
   /** Returns the current tool provider. */
   def provider: ToolProvider = f
@@ -36,15 +36,15 @@ object ToolProvider extends ToolProvider {
 
   // convenience methods forwarding to the current factory
 
-  def qeTool(): QETool = f.qeTool()
+  def qeTool(): Option[QETool] = f.qeTool()
 
-  def odeTool(): DiffSolutionTool = f.odeTool()
+  def odeTool(): Option[DiffSolutionTool] = f.odeTool()
 
-  def cexTool(): CounterExampleTool = f.cexTool()
+  def cexTool(): Option[CounterExampleTool] = f.cexTool()
 
-  def simulationTool(): SimulationTool = f.simulationTool()
+  def simulationTool(): Option[SimulationTool] = f.simulationTool()
 
-  def solverTool(): SolutionTool = f.solverTool()
+  def solverTool(): Option[SolutionTool] = f.solverTool()
 
   def shutdown(): Unit = f.shutdown()
 
@@ -60,19 +60,19 @@ trait ToolProvider {
   def tools(): List[Tool]
 
   /** Returns a QE tool. */
-  def qeTool(): QETool
+  def qeTool(): Option[QETool]
 
   /** Returns an ODE tool. */
-  def odeTool(): DiffSolutionTool
+  def odeTool(): Option[DiffSolutionTool]
 
   /** Returns a counterexample tool. */
-  def cexTool(): CounterExampleTool
+  def cexTool(): Option[CounterExampleTool]
 
   /** Returns a simulation tool. */
-  def simulationTool(): SimulationTool
+  def simulationTool(): Option[SimulationTool]
 
   /** Returns an equation solver tool. */
-  def solverTool(): SolutionTool
+  def solverTool(): Option[SolutionTool]
 
   /** Shutdown the tools provided by this provider. After shutdown, the provider hands out null only. */
   def shutdown(): Unit
@@ -86,11 +86,11 @@ class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
   private[this] var theTool: T = tool
 
   override def tools(): List[Tool] = theTool :: Nil
-  override def qeTool(): QETool = theTool  match { case t: QETool => t case _ => null }
-  override def odeTool(): DiffSolutionTool = theTool  match { case t: DiffSolutionTool => t case _ => null }
-  override def cexTool(): CounterExampleTool = theTool  match { case t: CounterExampleTool => t case _ => null }
-  override def simulationTool(): SimulationTool = theTool  match { case t: SimulationTool => t case _ => null }
-  override def solverTool(): SolutionTool = theTool match { case t: SolutionTool => t case _ => null }
+  override def qeTool(): Option[QETool] = theTool  match { case t: QETool => Some(t) case _ => None }
+  override def odeTool(): Option[DiffSolutionTool] = theTool  match { case t: DiffSolutionTool => Some(t) case _ => None }
+  override def cexTool(): Option[CounterExampleTool] = theTool  match { case t: CounterExampleTool => Some(t) case _ => None }
+  override def simulationTool(): Option[SimulationTool] = theTool  match { case t: SimulationTool => Some(t) case _ => None }
+  override def solverTool(): Option[SolutionTool] = theTool match { case t: SolutionTool => Some(t) case _ => None }
   override def shutdown(): Unit = {
     if (theTool != null) {
       theTool.shutdown()
@@ -99,31 +99,31 @@ class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
   }
 }
 
-/** A tool provider that initializes tools to null.
+/** A tool provider without tools.
   * @author Stefan Mitsch
   */
-class NullToolProvider extends ToolProvider {
+class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
-  override def qeTool(): QETool = null
-  override def odeTool(): DiffSolutionTool = null
-  override def cexTool(): CounterExampleTool = null
-  override def simulationTool(): SimulationTool = null
-  override def solverTool(): SolutionTool = null
+  override def qeTool(): Option[QETool] = None
+  override def odeTool(): Option[DiffSolutionTool] = None
+  override def cexTool(): Option[CounterExampleTool] = None
+  override def simulationTool(): Option[SimulationTool] = None
+  override def solverTool(): Option[SolutionTool] = None
   override def shutdown(): Unit = {}
 }
 
-/** A tool provider that initializes QE tools to Polya, everything else to null.
+/** A tool provider that provides Polya as a QE tools, everything else is None.
   * @author Stefan Mitsch
   */
 class PolyaToolProvider extends SingleToolProvider({ val p = new Polya; p.init(Map()); p }) { }
 
 /** A tool provider that initializes tools to Mathematica.
-  * @param config
+  * @param config The Mathematica configuration (linkName, libDir).
   * @author Stefan Mitsch
   */
 class MathematicaToolProvider(config: Configuration) extends SingleToolProvider({ val m = new Mathematica(); m.init(config); m }) { }
 
-/** A tool provider that initializes QE tools to Z3, everything else to null.
+/** A tool provider that provides Z3 as QE tool, everything else is None.
   * @author Stefan Mitsch
   */
 class Z3ToolProvider extends SingleToolProvider({ val z = new Z3; z.init(Map()); z }) { }
