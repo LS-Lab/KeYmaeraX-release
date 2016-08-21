@@ -71,20 +71,21 @@ private object DifferentialTactics {
         assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
         println("Instantiate::\n" + pr)
         // induction step condition \forall x \forall ghost condition>=0
-        FormulaTools.kernel(pr.subgoals.head.succ.head) match {
-          case GreaterEqual(condition, Number(_/*@todo BigDecimal(0)*/)) =>
-            //@todo call Mathematica. And in fact a witness of Reduce of >=0 would suffice
-            println("Solve[" + condition + "==0" + "," + spooky + "]")
-            ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
-              case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=(" + r + ")*" + ghost);
-                constructedGhost = Some(r)
-                r
-              case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
-                throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
-              case Some(stuff) => println("Solve[" + condition + "==0" + "," + spooky + "]")
-                throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
-            }
-          case _ => throw new AssertionError("Unexpected shape " + pr)
+        val condition = FormulaTools.kernel(pr.subgoals.head.succ.head) match {
+          case Imply(domain, GreaterEqual(condition, Number(n))) if n==0 => condition
+          case GreaterEqual(condition, Number(n)) if n==0 => condition
+          case _ => throw new AssertionError("DGauto: Unexpected shape " + pr)
+        }
+        //@todo a witness of Reduce of >=0 would suffice
+        println("Solve[" + condition + "==0" + "," + spooky + "]")
+        ToolProvider.solverTool().solve(Equal(condition, Number(0)), spooky::Nil) match {
+          case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
+            constructedGhost = Some(r)
+            r
+          case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
+            throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
+          case Some(stuff) => println("Solve[" + condition + "==0" + "," + spooky + "]")
+            throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
         }
       }
       ,
