@@ -38,6 +38,14 @@ class ODETests extends TacticTestBase {
     proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
+  it should "DGauto x>0&a()>0->[{x'=-a()*x}]x>0" in withMathematica { qeTool =>
+    proveBy("x>0&a()>0->[{x'=-a()*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
+  it should "DGauto x>0&a>0->[{x'=-a*x}]x>0" in withMathematica { qeTool =>
+    proveBy("x>0&a>0->[{x'=-a*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
 
   "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
@@ -111,7 +119,17 @@ class ODETests extends TacticTestBase {
       // auto-ghost
       "x>0->[{x'=-x}]x>0" ::
       "x>0->[{x'=x}]x>0" ::
+      "x>0->[{x'=-5*x}]x>0" ::
+      "x>0->[{x'=5*x}]x>0" ::
+      "x>0->[{x'=x+1}]x>0" ::
       "x>0->[{x'=-x+1}]x>0" ::
+      "x>0&a()>0->[{x'=-a()*x}]x>0" ::
+      "x>0&a>0->[{x'=-a*x}]x>0" ::
+      "x>0&a()<0->[{x'=a()*x}]x>0" ::
+      "x>0&a<0->[{x'=a*x}]x>0" ::
+      "x>0&a()>0&c()<0->[{x'=a()*c()*x}]x>0" ::
+      "x>0&a>0&c<0->[{x'=a*c*x}]x>0" ::
+      "x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0" ::
       "x>0&a<0&b>=0->[{x'=a*x+b}]x>0" ::
       "x>0&a>0&b>=0->[{x'=a*x+b}]x>0" ::
   // conserved quantity
