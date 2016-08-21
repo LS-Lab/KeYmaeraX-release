@@ -43,30 +43,29 @@ private object DifferentialTactics {
 
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     //import TactixLibrary._
-    val quantity = seq.sub(pos) match {
-      case Some(Box(ODESystem(ode, _), Greater(a, b))) => Minus(a,b)
-      case Some(Box(ODESystem(ode, _), Less(a, b))) => Minus(b,a)
+    /** a-b with some simplifications */
+    def minus(a: Term, b: Term): Term = b match {
+      case Number(n) if n==0 => a
+      case _ => a match {
+        case Number(n) if n==0 => Neg(b)
+        case _ => Minus(a,b)
+      }
+    }
+    val quantity: Term = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => minus(a,b)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => minus(b,a)
       case e => throw new BelleError("DGauto does not support argument shape: " + e)
     }
     //@todo find a ghost that's not in ode
-    val ghost = Variable("y_")
-    val spooky = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
+    val ghost: Variable = Variable("y_")
+    val spooky: Term = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
       UnitFunctional("jj",Except(ghost),Real)
     else
       FuncOf(Function("jj",None,Unit,Real),Nothing) //Variable("jj")
-    //@todo should allocate space
+    //@todo should allocate space maybe or already actually by var in this lambda
     var constructedGhost: Option[Term] = None
-    val cleanup = "" by ((pos:Position,seq:Sequent) =>
-      // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
-      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction unsuccessful")), ghost), Number(0))),
-        Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
-      )(pos) <(
-        (close | QE) & done,
-        //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
-        implyR(pos) & diffInd()(pos) & QE & done
-        )
-    )
-    LetInspect(
+    // proper search & rescue tactic
+    val SandR: BelleExpr = LetInspect(
       spooky,
       (pr:Provable) => {
         assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
@@ -103,7 +102,21 @@ private object DifferentialTactics {
           skip
           )
         )
-    ) & QE & done | cleanup(pos)
+    ) & QE & done;
+    // fallback rescue tactic if proper misbehaves
+    val fallback: DependentPositionTactic = "" by ((pos:Position,seq:Sequent) => {
+      println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
+      // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction unsuccessful")), ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+      )(pos) <(
+        (close | QE) & done,
+        //@todo could optimize for RCF cache when doing the same decomposition as during SandR
+        //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
+        implyR(pos) & diffInd()(pos) & QE & done
+        )
+    });
+    SandR | fallback(pos)
   })
 
   /**
