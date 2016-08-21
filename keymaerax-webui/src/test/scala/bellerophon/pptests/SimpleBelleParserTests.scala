@@ -206,31 +206,31 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   //region Comma lists
 
-  "comma separatred list folding" should "work" in (withMathematica { implicit qeTool => {
+  "comma separatred list folding" should "work" in withMathematica { qeTool =>
     val t =
       """
         |nil<(nil, nil)
       """.stripMargin
     BelleParser(t) //should not cause an exception.
-  }})
+  }
 
-  it should "work for a tactic (e)" in (withMathematica { implicit qeTool => {
+  it should "work for a tactic (e)" in withMathematica { qeTool =>
     val t =
       """
         |nil<((nil), nil)
       """.stripMargin
     BelleParser(t) //should not cause an exception.
-  }})
+  }
 
-  it should "work for a tactic (e) in the final position" in (withMathematica { implicit qeTool => {
+  it should "work for a tactic (e) in the final position" in withMathematica { qeTool =>
     val t =
       """
         |nil<(nil, (nil))
       """.stripMargin
     BelleParser(t) //should not cause an exception.
-  }})
+  }
 
-  it should "work on tactic that caused original bug" in (withMathematica { implicit qeTool => {
+  it should "work on tactic that caused original bug" in withMathematica { qeTool =>
     val t = """implyR(1) &
               |loop({`x<=m`}, 1) <(
               |  MathematicaQE,
@@ -241,7 +241,7 @@ class SimpleBelleParserTests extends TacticTestBase {
               |  ))
               |)""".stripMargin
     BelleParser(t) //should not cause an exception.
-  }})
+  }
 
   //endregion
 

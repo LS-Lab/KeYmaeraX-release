@@ -25,7 +25,7 @@ import scala.language.postfixOps
 @SlowTest
 class StttTutorial extends TacticTestBase {
 
-  "Example 1" should "be provable" in withMathematica { implicit qeTool =>
+  "Example 1" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     val tactic = implyR('_) & andL('_) & DC("v>=0".asFormula)(1) <(
       /* use */ diffWeaken(1) & prop,
@@ -34,24 +34,24 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable with diffSolve" in withMathematica { implicit qeTool =>
+  it should "be provable with diffSolve" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     val tactic = implyR('_) & andL('_) & diffSolve(None)(1) & QE
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable with master" in withMathematica { implicit qeTool =>
+  it should "be provable with master" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  it should "be provable with diffInvariant" in withMathematica { implicit qeTool =>
+  it should "be provable with diffInvariant" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     val tactic = implyR('_) & andL('_) & diffInvariant("v>=0".asFormula)('R) & diffWeaken('R) & prop
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Example 1a" should "be provable" in withMathematica { implicit qeTool =>
+  "Example 1a" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
     val tactic = implyR('_) & (andL('_)*) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
       exhaustiveEqR2L('L, "x0=x".asFormula) & diffWeaken(1) & exhaustiveEqL2R('L, "x_0=x0".asFormula) & prop
@@ -59,18 +59,18 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Example 2" should "be provable with master and custom loop invariant" in withMathematica { implicit qeTool =>
+  "Example 2" should "be provable with master and custom loop invariant" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
     val Imply(_, Box(loop, _)) = s.succ.head
     proveBy(s, master(new ConfigurableGenerate(Map((loop, "v>=0".asFormula))))) shouldBe 'proved
   }
 
-  it should "be provable with master and loop invariant from file" in withMathematica { implicit qeTool =>
+  it should "be provable with master and loop invariant from file" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  it should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
+  it should "be provable with abstract loop invariant" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
 
     val tactic = implyR('_) & (andL('_)*) & loop("J(v)".asFormula)('R) <(
@@ -84,13 +84,13 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Example 3a" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
+  "Example 3a" should "be provable with master and loop invariant from file" in withMathematica { tool =>
     // // needs evolution domain at time 0
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example3b" should "find correct safety condition" in withMathematica { implicit tool =>
+  "Example3b" should "find correct safety condition" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.key"))
     val tactic = implyR('_) & (andL('_)*) & chase('R) & normalize & OnAll(diffSolve()('R) partial) & print("Foo")
     val intermediate = proveBy(s, tactic)
@@ -113,23 +113,23 @@ class StttTutorial extends TacticTestBase {
       IndexedSeq("v_0<=0|v_0>0&(t_<=0|t_>0&(((B<=0|(0 < B&B < t_^-1*v_0)&((S < x_0|(x_0<=S&S < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)&((v < -1*B*t_+v_0|v=-1*B*t_+v_0&((t__0 < 0|t__0=0&A<=0)|t__0>0))|v>-1*B*t_+v_0))|x>1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|S>=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|B=t_^-1*v_0&((S < x_0|(x_0<=S&S < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)&((v < 0|v=0&((t__0 < 0|t__0=0&A<=0)|t__0>0))|v>0))|x>1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|S>=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|B>t_^-1*v_0))".asFormula))
   }
 
-  "Example 4a" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
+  "Example 4a" should "be provable with master and loop invariant from file" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example 4b" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
+  "Example 4b" should "be provable with master and loop invariant from file" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example 4c" should "be provable with master and loop invariant from file" in withMathematica { implicit tool =>
+  "Example 4c" should "be provable with master and loop invariant from file" in withMathematica { tool =>
     // needs evolution domain at time 0
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example 5 with simple control" should "be provable" in withMathematica { implicit tool =>
+  "Example 5 with simple control" should "be provable" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
 
     val plant = print("plant") & composeb('R) & assignb('R) &
@@ -145,17 +145,17 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+  it should "be provable automatically with Mathematica" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example 5" should "be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+  "Example 5" should "be provable automatically with Mathematica" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  it should "be provable with chase etc" in withMathematica { implicit tool =>
+  it should "be provable with chase etc" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
     val tactic = implyR('R) & (andL('L)*) &
@@ -169,7 +169,7 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  ignore should "be provable with abstract loop invariant" in withMathematica { implicit qeTool =>
+  ignore should "be provable with abstract loop invariant" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
     val tactic = implyR('R) & (andL('L)*) &
@@ -184,29 +184,29 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Example 6" should "be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+  "Example 6" should "be provable automatically with Mathematica" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example 7" should "be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+  "Example 7" should "be provable automatically with Mathematica" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  ignore /*"Example 8"*/ should "Example 8 be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+  ignore /*"Example 8"*/ should "Example 8 be provable automatically with Mathematica" in withMathematica { qeTool =>
     // x' <= a*d
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example8.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "Example 9a" should "be provable" in withMathematica { implicit tool =>
+  "Example 9a" should "be provable" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.key"))
     val tactic = implyR('R) & (andL('L)*) & diffInd('full)('R)
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Example 9b" should "be provable" in withMathematica { implicit qeTool =>
+  "Example 9b" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.key"))
 
     val ode =
@@ -227,7 +227,7 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Example 10" should "be provable" in withMathematica { implicit tool =>
+  "Example 10" should "be provable" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.key"))
 
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,

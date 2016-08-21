@@ -98,7 +98,7 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "work with functions" in withMathematica { implicit tool =>
+  it should "work with functions" in withMathematica { tool =>
     proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
     proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
   }

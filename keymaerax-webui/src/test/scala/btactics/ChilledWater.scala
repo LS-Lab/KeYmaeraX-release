@@ -106,7 +106,7 @@ class ChilledWater extends TacticTestBase {
       )
     ) & OnAll(diffWeaken(1) & QE) & done
 
-  "Model 0" should "be provable" in withMathematica { implicit qeTool =>
+  "Model 0" should "be provable" in withMathematica { qeTool =>
     //val s = KeYmaeraXProblemParser(scala.io.Source.fromFile("/path/to/file").getLines().mkString)
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
     val inv = """(Tw < Tl) &
@@ -140,7 +140,7 @@ class ChilledWater extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Model 1" should "be provable" in withMathematica { implicit qeTool =>
+  "Model 1" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m1.kyx"))
     val inv = """(Tw < Tl) &
                 |    (Tl < Tlu() &

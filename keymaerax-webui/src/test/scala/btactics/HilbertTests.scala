@@ -41,7 +41,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "prove x>=5 -> [{x'=2&x<=9}]x<=10" in withMathematica { implicit qeTool =>
+  it should "prove x>=5 -> [{x'=2&x<=9}]x<=10" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}]x<=10".asFormula)),
       implyR(1) &
         DW(1) &
@@ -50,7 +50,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   //@todo not everything ported yet
-  it should "prove x>=5 -> [{x'=2}](x>=5)'" in withMathematica { implicit qeTool =>
+  it should "prove x>=5 -> [{x'=2}](x>=5)'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}](x>=5)'".asFormula)),
       implyR(1) &
         DE(1) &
@@ -62,7 +62,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "prove (x+2*y)'=x'+2*y'" in withMathematica { implicit qeTool =>
+  it should "prove (x+2*y)'=x'+2*y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       Dplus(1, 0::Nil) &
         Dvar(1, 0::0::Nil) &
@@ -72,7 +72,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "prove (y)'=y forward" in withMathematica { implicit qeTool =>
+  it should "prove (y)'=y forward" in withMathematica { qeTool =>
     val x = Variable("y")
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
@@ -82,99 +82,99 @@ class HilbertTests extends TacticTestBase {
       Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
   }
 
-  it should "derive (y)'=y'" in withMathematica { implicit qeTool =>
+  it should "derive (y)'=y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (x+y)'=x'+y'" in withMathematica { implicit qeTool =>
+  it should "derive (x+y)'=x'+y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (x*y)'=x'*y+x*y'" in withMathematica { implicit qeTool =>
+  it should "derive (x*y)'=x'*y+x*y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
+  it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (x^2)' >= 7 without crashing" in withMathematica{ implicit qeTool =>
+  it should "derive (x^2)' >= 7 without crashing" in withMathematica{ qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
       stepAt(1, 0::Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
   }
 
   //@todo we only support optimized
-  ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in withMathematica { implicit qeTool =>
+  ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   //@todo we only support optimized
-  ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in withMathematica { implicit qeTool =>
+  ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in withMathematica { implicit qeTool =>
+  it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (5*x+2*y)'=5*x'+2*y'" in withMathematica { implicit qeTool =>
+  it should "derive (5*x+2*y)'=5*x'+2*y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in withMathematica { implicit qeTool =>
+  it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
+  it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
+  it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
+  it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::1::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  it should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in withMathematica { implicit qeTool =>
+  it should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=7}](5*x>=6)'".asFormula)),
       derive(1,1::Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
   }
 
-  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
       derive(1,1::Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
   }
 
-  it should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
         DI(1) & (implyR(1) & andR(1)) <(
@@ -188,7 +188,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "prove/derive x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "prove/derive x>=5 -> [{x'=2}]x>=5" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
         DI(1) & (implyR(1) & andR(1)) <(
@@ -205,7 +205,7 @@ class HilbertTests extends TacticTestBase {
   //    ) shouldBe 'proved
   //  }
 
-  ignore should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in withMathematica { implicit qeTool =>
+  ignore should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         DC("5<=x".asFormula)(1) & debug("after DC") &
@@ -216,7 +216,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  ignore should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in withMathematica { implicit qeTool =>
+  ignore should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         //@todo the problem is that DI should be used in show prereq branch of useAt instead of defaulting to master
@@ -227,7 +227,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  ignore should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  ignore should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & //ind
         useAt("[;] compose")(1) &
@@ -238,7 +238,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "prove x>0 -> [x:=x+1;]x>0" in withMathematica { implicit qeTool =>
+  it should "prove x>0 -> [x:=x+1;]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [x:=x+1;]x>0".asFormula, step(1, 1::Nil) & QE) shouldBe 'proved
   }
 
@@ -283,37 +283,37 @@ class HilbertTests extends TacticTestBase {
       useAt("[;] compose", PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  "Chase" should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withMathematica { implicit qeTool =>
+  "Chase" should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
-  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { implicit qeTool =>
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
-  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
-  it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { implicit qeTool =>
+  it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
-  it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { implicit qeTool =>
+  it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
-  it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withMathematica { implicit qeTool =>
+  it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1".asFormula)),
       // chaseWide(3) works like an update calculus
       chase(3,3)(1) &
@@ -321,7 +321,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) &
         chase(3,3)(1) &
@@ -332,7 +332,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
+  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
     proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
@@ -344,7 +344,7 @@ class HilbertTests extends TacticTestBase {
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
   }
 
-  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & chase(1) &
         //@todo need to locate diffInd to after update prefix
@@ -360,7 +360,7 @@ class HilbertTests extends TacticTestBase {
     done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
-  it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { implicit qeTool =>
+  it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { qeTool =>
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (basicImpl)
     done shouldBe 'proved
     done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
@@ -382,37 +382,37 @@ class HilbertTests extends TacticTestBase {
     done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.succ.head)), IndexedSeq(ctx(basic.conclusion.ante.head)))
   }
 
-  it should "prove y<2 & x>5 |- y<2 & x>2 from x>5 |- x>2" in withMathematica { implicit qeTool => shouldCMon(Context("y<2 & ⎵".asFormula))}
-  it should "prove x>5 & y<2 |- x>2 & y<2 from x>5 |- x>2" in withMathematica { implicit qeTool => shouldCMon(Context("⎵ & y<2".asFormula))}
-  it should "prove x<99 -> x>5 |- x<99 -> x>2 from x>5 |- x>2" in withMathematica { implicit qeTool => shouldCMon(Context("x<99 -> ⎵".asFormula))}
-  it should "prove x<99 | x>5 |- x<99 | x>2 from x>5 |- x>2" in withMathematica { implicit qeTool => shouldCMon(Context("x<99 | ⎵".asFormula))}
-  it should "prove in monotone context x<99 | _ & y<2" in withMathematica { implicit qeTool => shouldCMon(Context("x<99 | ⎵ & y<2".asFormula))}
-  it should "prove in monotone context (x<99 | _) & y<2" in withMathematica { implicit qeTool => shouldCMon(Context("(x<99 | ⎵) & y<2".asFormula))}
-  it should "prove in monotone context x<7 -> (x<99 | _) & y<2" in withMathematica { implicit qeTool => shouldCMon(Context("x<7 -> (x<99 | ⎵) & y<2".asFormula))}
-  it should "prove in monotone context x<y -> x<7 -> (x<99 | x<10 -> (_ & z=2 | x=5 & y=3)) & y<2" in withMathematica { implicit qeTool => shouldCMon(Context("x<y -> x<7 -> (x<99 | x<10 -> (⎵ & z=2 | x=5 & y=3)) & y<2".asFormula))}
-  it should "prove in monotone context \\forall y _" in withMathematica { implicit qeTool => shouldCMon(Context("\\forall y ⎵".asFormula))}
-  it should "prove in monotone context \\forall x _" in withMathematica { implicit qeTool => shouldCMon(Context("\\forall x ⎵".asFormula))}
-  it should "prove in monotone context \\exists y _" in withMathematica { implicit qeTool => shouldCMon(Context("\\exists y ⎵".asFormula))}
-  it should "prove in monotone context \\exists x _" in withMathematica { implicit qeTool => shouldCMon(Context("\\exists x ⎵".asFormula))}
-  it should "prove in monotone context !!\\exists x _" in withMathematica { implicit qeTool => shouldCMon(Context("!!\\exists x ⎵".asFormula))}
-  it should "prove in monotone context ![a:=2;]!\\exists x _" in withMathematica { implicit qeTool => shouldCMon(Context("![a:=2;]!\\exists x ⎵".asFormula))}
-  it should "prove in monotone context \\forall y (_ | x<y)" in withMathematica { implicit qeTool => shouldCMon(Context("\\forall y (⎵ | x<y)".asFormula))}
-  it should "prove in monotone context \\forall x (_ | x<y)" in withMathematica { implicit qeTool => shouldCMon(Context("\\forall x (⎵ | x<y)".asFormula))}
-  it should "prove in monotone context \\exists y (_ | x<y)" in withMathematica { implicit qeTool => shouldCMon(Context("\\exists y (⎵ | x<y)".asFormula))}
-  it should "prove in monotone context \\exists x (_ | x<y)" in withMathematica { implicit qeTool => shouldCMon(Context("\\exists x (⎵ | x<y)".asFormula))}
-  it should "prove in antimonotone context _ -> y<2" in withMathematica { implicit qeTool => shouldCMonA(Context("⎵ -> y<2".asFormula))}
-  it should "prove in antimonotone context _ -> y<2 & x<10" in withMathematica { implicit qeTool => shouldCMonA(Context("⎵ -> y<2 & x<10".asFormula))}
-  it should "prove in antimonotone context (_ -> y<2) & x<10" in withMathematica { implicit qeTool => shouldCMonA(Context("(⎵ -> y<2) & x<10".asFormula))}
-  it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))}
-  it should "prove in antimonotone context (<x:=5;>_ -> y<2) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMonA(Context("(<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))}
-  it should "prove in antimonotone context (a=3|<x:=5;>_ -> y<2) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMonA(Context("(a=3|<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))}
-  it should "prove in antimonotone context (<x:=5;>_&a=3 -> y<2) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMonA(Context("(<x:=5;>⎵&a=3 -> y<2) & x<10 | x=7".asFormula))}
-  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7" in withMathematica { implicit qeTool => shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
+  it should "prove y<2 & x>5 |- y<2 & x>2 from x>5 |- x>2" in withMathematica { qeTool => shouldCMon(Context("y<2 & ⎵".asFormula))}
+  it should "prove x>5 & y<2 |- x>2 & y<2 from x>5 |- x>2" in withMathematica { qeTool => shouldCMon(Context("⎵ & y<2".asFormula))}
+  it should "prove x<99 -> x>5 |- x<99 -> x>2 from x>5 |- x>2" in withMathematica { qeTool => shouldCMon(Context("x<99 -> ⎵".asFormula))}
+  it should "prove x<99 | x>5 |- x<99 | x>2 from x>5 |- x>2" in withMathematica { qeTool => shouldCMon(Context("x<99 | ⎵".asFormula))}
+  it should "prove in monotone context x<99 | _ & y<2" in withMathematica { qeTool => shouldCMon(Context("x<99 | ⎵ & y<2".asFormula))}
+  it should "prove in monotone context (x<99 | _) & y<2" in withMathematica { qeTool => shouldCMon(Context("(x<99 | ⎵) & y<2".asFormula))}
+  it should "prove in monotone context x<7 -> (x<99 | _) & y<2" in withMathematica { qeTool => shouldCMon(Context("x<7 -> (x<99 | ⎵) & y<2".asFormula))}
+  it should "prove in monotone context x<y -> x<7 -> (x<99 | x<10 -> (_ & z=2 | x=5 & y=3)) & y<2" in withMathematica { qeTool => shouldCMon(Context("x<y -> x<7 -> (x<99 | x<10 -> (⎵ & z=2 | x=5 & y=3)) & y<2".asFormula))}
+  it should "prove in monotone context \\forall y _" in withMathematica { qeTool => shouldCMon(Context("\\forall y ⎵".asFormula))}
+  it should "prove in monotone context \\forall x _" in withMathematica { qeTool => shouldCMon(Context("\\forall x ⎵".asFormula))}
+  it should "prove in monotone context \\exists y _" in withMathematica { qeTool => shouldCMon(Context("\\exists y ⎵".asFormula))}
+  it should "prove in monotone context \\exists x _" in withMathematica { qeTool => shouldCMon(Context("\\exists x ⎵".asFormula))}
+  it should "prove in monotone context !!\\exists x _" in withMathematica { qeTool => shouldCMon(Context("!!\\exists x ⎵".asFormula))}
+  it should "prove in monotone context ![a:=2;]!\\exists x _" in withMathematica { qeTool => shouldCMon(Context("![a:=2;]!\\exists x ⎵".asFormula))}
+  it should "prove in monotone context \\forall y (_ | x<y)" in withMathematica { qeTool => shouldCMon(Context("\\forall y (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\forall x (_ | x<y)" in withMathematica { qeTool => shouldCMon(Context("\\forall x (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\exists y (_ | x<y)" in withMathematica { qeTool => shouldCMon(Context("\\exists y (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\exists x (_ | x<y)" in withMathematica { qeTool => shouldCMon(Context("\\exists x (⎵ | x<y)".asFormula))}
+  it should "prove in antimonotone context _ -> y<2" in withMathematica { qeTool => shouldCMonA(Context("⎵ -> y<2".asFormula))}
+  it should "prove in antimonotone context _ -> y<2 & x<10" in withMathematica { qeTool => shouldCMonA(Context("⎵ -> y<2 & x<10".asFormula))}
+  it should "prove in antimonotone context (_ -> y<2) & x<10" in withMathematica { qeTool => shouldCMonA(Context("(⎵ -> y<2) & x<10".asFormula))}
+  it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in withMathematica { qeTool => shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context (<x:=5;>_ -> y<2) & x<10 | x=7" in withMathematica { qeTool => shouldCMonA(Context("(<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context (a=3|<x:=5;>_ -> y<2) & x<10 | x=7" in withMathematica { qeTool => shouldCMonA(Context("(a=3|<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context (<x:=5;>_&a=3 -> y<2) & x<10 | x=7" in withMathematica { qeTool => shouldCMonA(Context("(<x:=5;>⎵&a=3 -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7" in withMathematica { qeTool => shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
 
   lazy val basicImpl = TactixLibrary.proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)),
     TactixLibrary.QE)
 
-  it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica { implicit qeTool =>
+  it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica { qeTool =>
     println("Starting random contexts\n\n")
     for (i <- 1 to randomTrials) {
       val ctx = rand.nextFormulaContext(randomComplexity)
@@ -448,68 +448,68 @@ class HilbertTests extends TacticTestBase {
     proveBy(input, CEat(fact, C)(pos, inExpr.pos)).subgoals should contain only
       new Sequent(IndexedSeq(), IndexedSeq(result))
 
-  "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in withMathematica { implicit qeTool =>
+  "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in withMathematica { qeTool =>
     shouldReduceTo("0*x+1<=3".asFormula, 1, PosInExpr(0::Nil), "1<=3".asFormula)
   }
 
-  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, 1, PosInExpr(0::1::0::Nil), "x<5 & 1<=3 | x>=2".asFormula)
   }
 
-  it should "reduce \\forall x 0*x+1<=3 to \\forall x 1<=3" in withMathematica { implicit qeTool =>
+  it should "reduce \\forall x 0*x+1<=3 to \\forall x 1<=3" in withMathematica { qeTool =>
     shouldReduceTo("\\forall x 0*x+1<=3".asFormula, 1, PosInExpr(0::0::Nil), "\\forall x 1<=3".asFormula)
   }
 
-  ignore should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+  ignore should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     shouldReduceTo("x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula, 1, PosInExpr(0::1::0::0::Nil), "x<5 & \\forall x 1<=3 | x>=2".asFormula)
   }
 
-  it should "reduce [x:=7;]0*x+1<=3 to [x:=7;]1<=3" in withMathematica { implicit qeTool =>
+  it should "reduce [x:=7;]0*x+1<=3 to [x:=7;]1<=3" in withMathematica { qeTool =>
     shouldReduceTo("[x:=7;]0*x+1<=3".asFormula, 1, PosInExpr(1::0::Nil), "[x:=7;]1<=3".asFormula)
   }
 
-  it should "reduce [x:=7;?0*x+1<=3;]x<9 to [x:=7;?1<=3;]x<9" in withMathematica { implicit qeTool =>
+  it should "reduce [x:=7;?0*x+1<=3;]x<9 to [x:=7;?1<=3;]x<9" in withMathematica { qeTool =>
     shouldReduceTo("[x:=7;?0*x+1<=3;]x<9".asFormula, 1, PosInExpr(0::1::0::0::Nil), "[x:=7;?1<=3;]x<9".asFormula)
   }
 
-  it should "reduce [x:=0*x+1;]x<9 to [x:=1;]x<9" in withMathematica { implicit qeTool =>
+  it should "reduce [x:=0*x+1;]x<9 to [x:=1;]x<9" in withMathematica { qeTool =>
     shouldReduceTo("[x:=0*x+1;]x<9".asFormula, 1, PosInExpr(0::1::Nil), "[x:=1;]x<9".asFormula)
   }
 
-  ignore should "reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" in withMathematica { implicit qeTool =>
+  ignore should "reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" in withMathematica { qeTool =>
     shouldReduceTo("[x:=7;x:=0*x+1;]x<9".asFormula, 1, PosInExpr(0::1::1::Nil), "[x:=7;x:=1;]x<9".asFormula)
   }
 
-  it should "reduce [{x' = 7 & 0*x+1<2}]x>=2 to [{x' = 7 & 1<2}]x>=2" in withMathematica { implicit qeTool =>
+  it should "reduce [{x' = 7 & 0*x+1<2}]x>=2 to [{x' = 7 & 1<2}]x>=2" in withMathematica { qeTool =>
     shouldReduceTo("[{x' = 7 & 0*x+1<2}]x>=2".asFormula, 1, PosInExpr(0::1::0::Nil), "[{x' = 7 & 1<2}]x>=2".asFormula)
   }
 
-  ignore should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in withMathematica { implicit qeTool =>
+  ignore should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in withMathematica { qeTool =>
     shouldReduceTo("[{x' = 0*x+1 & 5=5}]x>=2".asFormula, 1, PosInExpr(0::0::1::Nil), "[{x' = 1 & 5=5}]x>=2".asFormula)
   }
 
 
-  "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in withMathematica { implicit qeTool =>
+  "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in withMathematica { qeTool =>
     shouldReduceTo("x^2<4".asFormula, 1, PosInExpr(Nil), "-2<x&x<2".asFormula, basicEquiv)
   }
 
-  it should "reduce !(x^2<4) to !(-2<x&x<2)" in withMathematica { implicit qeTool =>
+  it should "reduce !(x^2<4) to !(-2<x&x<2)" in withMathematica { qeTool =>
     shouldReduceTo("!x^2<4".asFormula, 1, PosInExpr(0::Nil), "!(-2<x&x<2)".asFormula, basicEquiv)
   }
 
-  it should "reduce x<5 & x^2<4 | x>=2 to x<5 & (-2<x&x<2) | x>=2" in withMathematica { implicit qeTool =>
+  it should "reduce x<5 & x^2<4 | x>=2 to x<5 & (-2<x&x<2) | x>=2" in withMathematica { qeTool =>
     shouldReduceTo("x<5 & x^2<4| x>=2".asFormula, 1, PosInExpr(0::1::Nil), "x<5 & (-2<x&x<2) | x>=2".asFormula, basicEquiv)
   }
 
-  it should "reduce x<5 & \\forall x x^2<4 | x>=2 to x<5 & \\forall x (-2<x&x<2) | x>=2" in withMathematica { implicit qeTool =>
+  it should "reduce x<5 & \\forall x x^2<4 | x>=2 to x<5 & \\forall x (-2<x&x<2) | x>=2" in withMathematica { qeTool =>
     shouldReduceTo("x<5 & \\forall x x^2<4| x>=2".asFormula, 1, PosInExpr(0::1::0::Nil), "x<5 & \\forall x (-2<x&x<2) | x>=2".asFormula, basicEquiv)
   }
 
-  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, 1, PosInExpr(0::1::Nil), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
   }
 
-  it should "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in withMathematica { implicit qeTool =>
+  it should "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in withMathematica { qeTool =>
     val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
     shouldReduceTo("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula, 1, PosInExpr(), "x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula, basicEquiv, C)
   }
@@ -620,7 +620,7 @@ class HilbertTests extends TacticTestBase {
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
   }
 
-  it should "use ^' derive power to forward (x^2)'=0 to 2*x^(2-1)*(x)'=0" in withMathematica { implicit qeTool =>
+  it should "use ^' derive power to forward (x^2)'=0 to 2*x^(2-1)*(x)'=0" in withMathematica { qeTool =>
     useFor("^' derive power")(SuccPosition(1, 0::Nil)) (
       Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(2*x^(2-1))*(x)'=0".asFormula))
