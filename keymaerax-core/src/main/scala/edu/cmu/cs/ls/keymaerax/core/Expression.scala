@@ -64,13 +64,13 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   * Expressions of differential dynamic logic.
   * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
   *
-  * 1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
+  * 1. [[Term terms]] are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
   *
-  * 2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
+  * 2. [[Formula formulas]] are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
   *
-  * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
+  * 3. [[Program hybrid programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
   *
-  * 4. differential programs are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
+  * 4. [[DifferentialProgram differential programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
   *
   * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
   * @author Andre Platzer
@@ -78,6 +78,10 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
   * @see [[http://symbolaris.com/logic/dL.html Syntax of differential dynamic logic]]
+  * @see [[Term]]
+  * @see [[Formula]]
+  * @see [[Program]]
+  * @see [[DifferentialProgram]]
   */
 sealed trait Expression {
   /** What kind of an expression this is, e.g., [[TermKind]], [[FormulaKind]], [[ProgramKind]]. */
@@ -184,20 +188,24 @@ sealed trait SpaceDependent extends StateDependent {
   * Terms of differential dynamic logic.
   *
   * Terms are of the form
+  *   - [[AtomicTerm]] atomic terms are not composed of other terms
   *     - `x` variable as [[Variable]], including differential symbol `x'` as [[DifferentialSymbol]]
-  *     - `f(e)` function application as [[FuncOf]]([[Function]], [[Term]])
   *     - `5` number literals as [[Number]]
+  *     - `F` nullary functional as [[UnitFunctional]]
+  *     - `.` dot as reserved nullary function symbol [[DotTerm]] for term argument placeholders
+  *     - Nothing for empty arguments [[Nothing]] for nullary functions
+  *   - [[ApplicationOf]] terms that are function applications
+  *     - `f(e)` function application as [[FuncOf]]([[Function]], [[Term]])
+  *   - [[UnaryCompositeTerm]] unary composite terms composed of one child term
   *     - `-e` negation as [[Neg]]([[Term]])
+  *     - `(e)'` differential as [[Differential]]([[Term]])
+  *   - [[BinaryCompositeTerm]] binary composite terms composed of two children terms
   *     - `e+d` addition as [[Plus]]([[Term]], [[Term]])
   *     - `e-d` subtraction as [[Minus]]([[Term]], [[Term]])
   *     - `e*d` multiplication as [[Times]]([[Term]], [[Term]])
   *     - `e/d` division as [[Divide]]([[Term]], [[Term]])
   *     - `e^d` power as [[Power]]([[Term]], [[Term]])
-  *     - (e)'` differential as [[Differential]]([[Term]])
-  *     - `F` nullary functional as [[UnitFunctional]]
-  *     - `.` dot as reserved nullary function symbol [[DotTerm]] for term argument placeholders
   *     - `(e,d)` for pair as [[Pair]] for arguments
-  *     - Nothing for empty arguments [[Nothing]] for nullary functions
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#termParser]]
   * @see [[http://symbolaris.com/logic/dL.html Syntax of differential dynamic logic]]
@@ -355,22 +363,29 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   * Formulas of differential dynamic logic.
   *
   * Formulas are of the form
-  *     - `e>=d` comparisons as [[GreaterEqual]]([[Term]],[[Term]]) and likewise [[Equal]], [[NotEqual]], [[Greater]], [[LessEqual]], [[Less]]
-  *     - `p(e)` predicate application as [[PredOf([[Function]], [[Term]])
-  *     - `P{Q}` predicational application or quantifier symbol as [[PredicationalOf([[Function]], [[Formula]])
+  *   - [[AtomicFormula]] atomic formulas that are not composed of other formulas
   *     - `true` truth as [[True]] and `false` as [[False]]
+  *     - `P` nullary predicational as [[UnitPredicational]]
+  *     - `_` dot as reserved nullary predicational [[DotFormula]] for formula argument placeholders
+  *   - [[ComparisonFormula]] are [[AtomicFormula]] composed of two terms but not composed of formulas
+  *     - `e>=d` comparisons as [[GreaterEqual]]([[Term]],[[Term]]) and likewise [[Equal]], [[NotEqual]], [[Greater]], [[LessEqual]], [[Less]]
+  *   - [[ApplicationOf]] predicate applications
+  *     - `p(e)` predicate application as [[PredOf]]([[Function]], [[Term]])
+  *     - `P{Q}` predicational application or quantifier symbol as [[PredicationalOf]]([[Function]], [[Formula]])
+  *   - [[UnaryCompositeFormula]] unary composite formulas composed of one child formula
   *     - `!P` logical negation as [[Not]]([[Formula]])
+  *     - `(P)'` differential formula as [[DifferentialFormula]]([[Formula]]])
+  *   - [[BinaryCompositeFormula]] binary composite formulas composed of a left and a right formula
   *     - `P&Q` conjunction as [[And]]([[Formula]]], [[Formula]]])
   *     - `P|Q` disjunction as [[Or]]([[Formula]]], [[Formula]]])
   *     - `P->Q` implication as [[Imply]]([[Formula]]], [[Formula]]])
   *     - `P<->Q` biimplication as [[Equiv]]([[Formula]]], [[Formula]]])
+  *   - [[Quantified]] quantified formulas quantifying a variable
   *     - `\forall x P` universal quantification as [[Forall]]([[Variable]]], [[Formula]]])
   *     - `\exists x P` existential quantification as [[Exists]]([[Variable]]], [[Formula]]])
+  *   - [[Modal]] modal formulas with a program and a formula child
   *     - `[a]P` box modality application for all runs as [[Box]]([[Program]]], [[Formula]]])
   *     - `⟨a⟩P` diamond modality application for some run as [[Diamond]]([[Program]]], [[Formula]]])
-  *     - (P)'` differential formula as [[DifferentialFormula]]([[Formula]]])
-  *     - `P` nullary predicational as [[UnitPredicational]]
-  *     - `_` dot as reserved nullary predicational [[DotFormula]] for formula argument placeholders
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
   */
@@ -545,14 +560,20 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { d
   * Hybrid programs of differential dynamic logic.
   *
   * Hybrid Programs are of the form
-  *     - `x:=e` assignment as [[Assign]]([[Variable]],[[Term]]) and likewise differential assignment `x':=e` as [[Assign]]([[DifferentialSymbol]],[[Term]])
-  *     - `x:=*` nondeterministic assignment as [[AssignAny]]([[Variable]]) and likewise nondeterministic ifferential assignment `x':=*` as [[AssignAny]]([[DifferentialSymbol]](
+  *   - [[AtomicProgram]] atomic programs that are not composed of other programs
+  *     - `x:=e` assignment as [[Assign]]([[Variable]],[[Term]])
+  *       and likewise differential assignment `x':=e` as [[Assign]]([[DifferentialSymbol]],[[Term]])
+  *     - `x:=*` nondeterministic assignment as [[AssignAny]]([[Variable]])
+  *       and likewise nondeterministic differential assignment `x':=*` as [[AssignAny]]([[DifferentialSymbol]])
   *     - `a` program constant as [[ProgramConst]]
   *     - `?P` test as [[Test]]([[Formula]])
+  *   - [[BinaryCompositeProgram]] binary composite programs composed of a left and right program
   *     - `a++b` nondeterministic choice as [[Choice]]([[Program]]], [[Program]]])
   *     - `a;b` sequential composition as [[Compose]]([[Program]]], [[Program]]])
+  *   - [[UnaryCompositeProgram]] unary composite programs composed of a child program
   *     - `{a}*` nondeterministic repetition as [[Loop]]([[Program]]])
   *     - `{a}^d` dual game as [[Dual]]([[Program]]])
+  *   - Special
   *     - `{c&Q}` differential equation system as [[ODESystem]]([[DifferentialProgram]], [[Formula]])
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
@@ -628,8 +649,10 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) exten
   * Differential programs of differential dynamic logic.
   *
   * Differential Programs are of the form
+  *   - [[AtomicDifferentialProgram]] atomic differential programs are not composed of other differential programs
   *     - `x'=e` atomic differential equation as [[AtomicODE]]([[DifferentialSymbol]],[[Term]])
   *     - `c` differential program constant as [[DifferentialProgramConst]]
+  *   - BinaryCompositeDifferentialProgram except it's the only composition for differential programs.
   *     - `c,d` differential product as [[DifferentialProduct]]([[DifferentialProgram]]], [[DifferentialProgram]]])
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]

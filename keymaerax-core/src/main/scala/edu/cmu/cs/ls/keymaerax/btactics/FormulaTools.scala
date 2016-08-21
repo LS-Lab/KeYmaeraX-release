@@ -111,4 +111,64 @@ object FormulaTools {
     pos
   }
 
+  /** Read off the set of all possible singularities coming from divisors or negative powers.
+    * @example {{{
+    *           singularities("x>5/b+2".asFormula)==Set(b)
+    *           singularities("x/y>z/2+8/(a+b) & [x:=a/c;]x+1/(3*d)>5/3".asFormula)==Set(y,a+b,c,3*d)
+    * }}}
+    */
+  def singularities(e: Expression): Set[Term] = e match {
+    case t: Term    => singularities(t)
+    case f: Formula => singularities(f)
+    case p: Program => singularities(p)
+  }
+
+  def singularities(term: Term): Set[Term] = term match {
+    case Nothing | DotTerm(_) | Number(_) => Set.empty
+    case _: Variable     => Set.empty
+    case _: UnitFunctional => Set.empty
+    case FuncOf(f,t)     => singularities(t)
+    // homomorphic cases
+    case f:UnaryCompositeTerm  => singularities(f.child)
+    case f@Divide(_,Number(n)) if n!=0 => singularities(f.left) ++ singularities(f.right)
+    case f:Divide                      => singularities(f.left) ++ singularities(f.right) + f.right
+    case f@Power(_,Number(n)) if n>=0  => singularities(f.left) ++ singularities(f.right)
+    case f@Power(_,Number(n)) if n<0   => singularities(f.left) ++ singularities(f.right) + f.left
+    case f:BinaryCompositeTerm         => singularities(f.left) ++ singularities(f.right)
+    case _ => throw new IllegalArgumentException("singularities of term " + term + " not implemented")
+  }
+
+  def singularities(formula: Formula): Set[Term] = formula match {
+    // base cases
+    case True | False         => Set.empty
+    case _: UnitPredicational | DotFormula => Set.empty
+    case PredOf(p,t)          => singularities(t)
+    case PredicationalOf(c,t) => singularities(t)
+    // pseudo-homomorphic cases
+    case f:ComparisonFormula  => singularities(f.left) ++ singularities(f.right)
+    // homomorphic cases
+    case f:UnaryCompositeFormula  => singularities(f.child)
+    case f:BinaryCompositeFormula => singularities(f.left) ++ singularities(f.right)
+    case f:Quantified             => singularities(f.child)
+    case f:Modal                  => singularities(f.program) ++ singularities(f.child)
+    case _ => throw new IllegalArgumentException("singularities of formula " + formula + " not implemented")
+  }
+
+  def singularities(program: Program): Set[Term] = program match {
+    case Assign(x,t)       => singularities(t)
+    case AssignAny(x)      => Set.empty
+    case Test(f)           => singularities(f)
+    case ODESystem(ode, h) => singularities(ode) ++ singularities(h)
+    // homomorphic cases
+    case f:UnaryCompositeProgram  => singularities(f.child)
+    case f:BinaryCompositeProgram => singularities(f.left) ++ singularities(f.right)
+    case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
+  }
+
+  private def singularities(program: DifferentialProgram): Set[Term] = program match {
+    case AtomicODE(xp,t)       => singularities(t)
+    case _:DifferentialProgramConst => Set.empty
+    case f:DifferentialProduct => singularities(f.left) ++ singularities(f.right)
+    case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
+  }
 }
