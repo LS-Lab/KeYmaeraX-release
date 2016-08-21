@@ -108,7 +108,7 @@ private object DifferentialTactics {
     val fallback: DependentPositionTactic = "" by ((pos:Position,seq:Sequent) => {
       println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
-      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction unsuccessful")), ghost), Number(0))),
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
         Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
       )(pos) <(
         (close | QE) & done,
@@ -563,7 +563,10 @@ private object DifferentialTactics {
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
-        cutR(Exists(y :: Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) < (
+        val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
+        if (!singular.isEmpty) println("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
+        insist(singular.isEmpty, "Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
+        cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a,y),b))), h), p)))(pos.checkSucc.top) < (
           /* use */ skip,
           /* show */ cohide(pos.top) &
           //@todo why is this renaming here? Makes no sense to me.
@@ -655,6 +658,8 @@ private object DifferentialTactics {
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
     */
+  //@todo replace this by an interface DifferentialProgram, Provable, because DG(DifferentialProgram) is called from here anyhow.
+  @deprecated("Use DA(DifferentialProgram, Provable) instead")
   def DA(y: Variable, a: Term, b: Term, auxEquiv: Provable): DependentPositionTactic =
     "DAbase" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&

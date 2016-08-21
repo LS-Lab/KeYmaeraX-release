@@ -189,12 +189,17 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val DI                 : DependentPositionTactic = namedUseAt("DI", "DI differential invariant")
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
-  private[btactics] def DGC(y:Variable, b:Term) = useAt("DG differential ghost constant", PosInExpr(0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq(
-      (Variable("y_",None,Real), y),
-      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
-    ))
-  )
+  private[btactics] def DGC(y:Variable, b:Term) =
+    useAt("DG differential ghost constant", PosInExpr(0::Nil),
+      (us:Subst)=>{
+        val singular = FormulaTools.singularities(b)
+        insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
+        us++RenUSubst(Seq(
+          (Variable("y_",None,Real), y),
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+        ))
+      }
+    )
 
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
