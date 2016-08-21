@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{FlatSpec, Matchers}
@@ -22,8 +23,7 @@ import scala.collection.immutable._
  */
 @SummaryTest
 @UsualTest
-class UnificationMatchTest extends FlatSpec with Matchers {
-  KeYmaera.init(Map.empty)
+class UnificationMatchTest extends SystemTestBase {
 
   private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
     if (us.isDefined) {
