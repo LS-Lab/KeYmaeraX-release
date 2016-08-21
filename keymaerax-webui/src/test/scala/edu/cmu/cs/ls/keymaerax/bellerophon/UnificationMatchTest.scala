@@ -17,7 +17,7 @@ import scala.collection.immutable._
 
 
 /**
- * Created by aplatzer on 7/28/15.
+ * Testing unifier and its limits.
   *
   * @author Andre Platzer
  */
@@ -25,19 +25,22 @@ import scala.collection.immutable._
 @UsualTest
 class UnificationMatchTest extends SystemTestBase {
 
+  val matcher = if (true) UnificationMatch else new FreshPostUnificationMatch
+
   private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
     if (us.isDefined) {
       println("Expression: " + e1)
       println("Expression: " + e2)
-      val s = UnificationMatch(e1, e2)
+      val s = matcher(e1, e2)
       println("Unified:  " + s)
       println("Expected: " + us.get)
-      s shouldBe (/*us.get,*/ RenUSubst(us.get))
+      s(e1) shouldBe e2
+      s shouldBe RenUSubst(us.get)
     } else {
       println("Expression: " + e1)
       println("Expression: " + e2)
       println("Expected: " + "<ununifiable>")
-      a [UnificationException] should be thrownBy UnificationMatch(e1, e2)
+      a [UnificationException] should be thrownBy matcher(e1, e2)
     }
   }
 
@@ -63,27 +66,6 @@ class UnificationMatchTest extends SystemTestBase {
       SubstitutionPair("f(.)".asTerm, "(.)^2+y".asTerm) :: Nil))
   }
 
-  it should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
-    //val dot = DotTerm(Tuple(Real, Real))
-    shouldUnify("3+f(x,y)".asTerm,
-      "3+(x^2+y)".asTerm, USubst(
-        SubstitutionPair(
-          //FuncOf(Function("f", None, Tuple(Real, Real), Real), dot),
-          "f(.(.,.))".asTerm,
-          //Plus(Power(Projection(dot, 0::Nil), Number(2)), Projection(dot, 1::Nil))
-          "π(.(.,.),1,0)^2+π(.(.,.),1,1)".asTerm) :: Nil
-      ))
-  }
-
-  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
-    shouldUnify("3+f(x,y,z)".asTerm,
-      "3+(x^y+z)".asTerm, USubst(
-        SubstitutionPair(
-          "f(.(.,.,.))".asTerm,
-          "π(.(.,.,.),1,0)^π(.(.,.,.),2,2)+π(.(.,.,.),2,3)".asTerm
-        ) :: Nil
-      ))
-  }
 
   "Unification formulas" should "unify p() with x^2+y>=0" in {
     shouldUnify("p()".asFormula, "x^2+y>=0".asFormula, USubst(
@@ -163,22 +145,6 @@ class UnificationMatchTest extends SystemTestBase {
     shouldMatch("p(x)".asFormula,
       "x>5".asFormula, RenUSubst(
         (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(5))) :: Nil
-      ))
-  }
-
-  it should "projection unify renaming and instance p(x,y) and x*y>5" taggedAs(IgnoreInBuildTest) in {
-    shouldMatch("p(x,y)".asFormula,
-      "x*y>5".asFormula, RenUSubst(
-        ("p(.(.,.))".asFormula,
-         "π(.(.,.),1,0)*π(.(.,.),1,1)>5".asFormula) :: Nil
-      ))
-  }
-
-  it should "projection unify renaming and instance p(x,y,z) and x*y>z" taggedAs(IgnoreInBuildTest) in {
-    shouldMatch("p(x,y,z)".asFormula,
-      "x*y>z".asFormula, RenUSubst(
-        ("p(.(.,.,.))".asFormula,
-         "π(.(.,.,.),1,0)*π(.(.,.,.),2,2)>π(.(.,.,.),2,3)".asFormula) :: Nil
       ))
   }
 
@@ -495,5 +461,44 @@ class UnificationMatchTest extends SystemTestBase {
     shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, RenUSubst(
       ("f()".asTerm, "7+x".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
+  }
+
+  "Projection unification" should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
+    //val dot = DotTerm(Tuple(Real, Real))
+    shouldUnify("3+f(x,y)".asTerm,
+      "3+(x^2+y)".asTerm, USubst(
+        SubstitutionPair(
+          //FuncOf(Function("f", None, Tuple(Real, Real), Real), dot),
+          "f(.(.,.))".asTerm,
+          //Plus(Power(Projection(dot, 0::Nil), Number(2)), Projection(dot, 1::Nil))
+          "π(.(.,.),1,0)^2+π(.(.,.),1,1)".asTerm) :: Nil
+      ))
+  }
+
+  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
+    shouldUnify("3+f(x,y,z)".asTerm,
+      "3+(x^y+z)".asTerm, USubst(
+        SubstitutionPair(
+          "f(.(.,.,.))".asTerm,
+          "π(.(.,.,.),1,0)^π(.(.,.,.),2,2)+π(.(.,.,.),2,3)".asTerm
+        ) :: Nil
+      ))
+  }
+
+
+  it should "projection unify renaming and instance p(x,y) and x*y>5" taggedAs(IgnoreInBuildTest) in {
+    shouldMatch("p(x,y)".asFormula,
+      "x*y>5".asFormula, RenUSubst(
+        ("p(.(.,.))".asFormula,
+          "π(.(.,.),1,0)*π(.(.,.),1,1)>5".asFormula) :: Nil
+      ))
+  }
+
+  it should "projection unify renaming and instance p(x,y,z) and x*y>z" taggedAs(IgnoreInBuildTest) in {
+    shouldMatch("p(x,y,z)".asFormula,
+      "x*y>z".asFormula, RenUSubst(
+        ("p(.(.,.,.))".asFormula,
+          "π(.(.,.,.),1,0)*π(.(.,.,.),2,2)>π(.(.,.,.),2,3)".asFormula) :: Nil
+      ))
   }
 }
