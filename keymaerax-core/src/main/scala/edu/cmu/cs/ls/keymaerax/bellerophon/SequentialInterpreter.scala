@@ -240,7 +240,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case BelleProvable(derivation, _) =>
               val backsubst: Provable = derivation(us)
               BelleProvable(provable(backsubst,0), lbl)
-            case e: BelleError => throw e.inContext(expr, "Let expected sub-derivation")
+            case e => throw new BelleError("Let expected sub-derivation")
           }
 
         case LetInspect(abbr, instantiator, inner) =>
@@ -254,11 +254,16 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val in: Provable = Provable.startProof(provable.subgoals.head)
           apply(inner, new BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
-              val value: Expression = instantiator(derivation)
-              val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
-              val backsubst: Provable = derivation(us)
-              BelleProvable(provable(backsubst,0), lbl)
-            case e: BelleError => throw e.inContext(expr, "LetInspect expected sub-derivation")
+              try {
+                val value: Expression = instantiator(derivation)
+                val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+                val backsubst: Provable = derivation(us)
+                BelleProvable(provable(backsubst, 0), lbl)
+              } catch {
+                case e: BelleError => throw e.inContext(expr, "LetInspect backsubstitution failed")
+                case e: ProverException => throw e.inContext(expr.toString, "LetInspect backsubstitution failed")
+              }
+            case e => throw new BelleError("LetInspect expected sub-derivation")
           }
 
         case t@USubstPatternTactic(children) => {
