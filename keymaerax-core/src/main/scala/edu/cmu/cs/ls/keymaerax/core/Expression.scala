@@ -561,8 +561,10 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { d
   *
   * Hybrid Programs are of the form
   *   - [[AtomicProgram]] atomic programs that are not composed of other programs
-  *     - `x:=e` assignment as [[Assign]]([[Variable]],[[Term]]) and likewise differential assignment `x':=e` as [[Assign]]([[DifferentialSymbol]],[[Term]])
-  *     - `x:=*` nondeterministic assignment as [[AssignAny]]([[Variable]]) and likewise nondeterministic ifferential assignment `x':=*` as [[AssignAny]]([[DifferentialSymbol]](
+  *     - `x:=e` assignment as [[Assign]]([[Variable]],[[Term]])
+  *       and likewise differential assignment `x':=e` as [[Assign]]([[DifferentialSymbol]],[[Term]])
+  *     - `x:=*` nondeterministic assignment as [[AssignAny]]([[Variable]])
+  *       and likewise nondeterministic differential assignment `x':=*` as [[AssignAny]]([[DifferentialSymbol]])
   *     - `a` program constant as [[ProgramConst]]
   *     - `?P` test as [[Test]]([[Formula]])
   *   - [[BinaryCompositeProgram]] binary composite programs composed of a left and right program
