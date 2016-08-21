@@ -25,20 +25,23 @@ import scala.language.postfixOps
 @SlowTest
 class StttTutorial extends TacticTestBase {
 
-  "Example 1" should "be provable" in withMathematica { qeTool =>
+  "Example 1" should "be provable" in withMathematica { qeTool => //withDatabase { db =>
+    //@todo tactic.prettyString does not reparse
+    //val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key")).mkString
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     val tactic = implyR('_) & andL('_) & DC("v>=0".asFormula)(1) <(
       /* use */ diffWeaken(1) & prop,
       /* show */ diffInd()(1)
       )
     proveBy(s, tactic) shouldBe 'proved
-  }
+    //db.proveBy(modelContent, tactic) shouldBe 'proved
+  }//}
 
-  it should "be provable with diffSolve" in withMathematica { qeTool =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
+  it should "be provable with diffSolve" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key")).mkString
     val tactic = implyR('_) & andL('_) & diffSolve(None)(1) & QE
-    proveBy(s, tactic) shouldBe 'proved
-  }
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
 
   it should "be provable with master" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
