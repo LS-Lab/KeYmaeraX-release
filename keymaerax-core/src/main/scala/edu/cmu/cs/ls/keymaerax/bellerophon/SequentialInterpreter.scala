@@ -261,7 +261,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 BelleProvable(provable(backsubst, 0), lbl)
               } catch {
                 case e: BelleError => throw e.inContext(expr, "LetInspect backsubstitution failed")
-                case e: ProverException => throw e.inContext(expr.toString, "LetInspect backsubstitution failed")
+                case e: ProverException => throw new BelleError("LetInspect backsubstitution failed", e).inContext(expr.toString, "LetInspect backsubstitution failed")
               }
             case e => throw new BelleError("LetInspect expected sub-derivation")
           }
