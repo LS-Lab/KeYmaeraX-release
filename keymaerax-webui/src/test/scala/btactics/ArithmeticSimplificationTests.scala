@@ -48,6 +48,16 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
   }
 
+  it should "forget useless stuff about ODEs" in withMathematica { tool =>
+    val tactic = TactixLibrary.implyR(1) & (andL('L)*) & ArithmeticSimplification.smartHide
+    val goal = "x>y & y>z & a > 0 & z > 0 -> [{x'=1}]x>0".asFormula
+    val result = proveBy(goal, tactic)
+    result.subgoals should have size 1
+    result.subgoals(0).ante.length shouldBe 3 //forget about a>0
+    result.subgoals(0).ante shouldNot contain ("a>0".asFormula)
+    proveBy(result.subgoals(0), diffInvariant("x>0".asFormula)(1) & diffWeaken(1) & QE) shouldBe 'proved
+  }
+
   "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {
     val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
     val result = proveBy("x=1 -> x=1 | y=1".asFormula, tactic)
@@ -58,6 +68,14 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
     val result = proveBy("x=1 -> x=1 | y=x".asFormula, tactic)
     result.subgoals(0).succ shouldBe result.subgoals(0).ante
+  }
+
+  it should "simplify x=1 ==> x-1,[y'=1}y>0 to x=1 ==> x=1" in {
+    val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
+    val result = proveBy("x=1 -> x=1 | [{y'=1}]y>0".asFormula, tactic)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1".asFormula
+    result.subgoals.head.succ should contain only "x=1".asFormula
   }
 
   "replaceTransform" should "work in the antecedent" in withMathematica { tool =>
