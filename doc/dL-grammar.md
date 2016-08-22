@@ -47,7 +47,7 @@ Operators are right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,{y'=2,z'=3}
 ==Types==
 
 It is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`
-
+It is considered an error to use divisions `e/d` without a nonzero divisor `d`.
 
 
 Contrast to Theory
@@ -63,19 +63,23 @@ with the visible `;` in P;P right-associative (and `++` being still right-associ
 References
 ----------
 
-1. André Platzer. 
+1. André Platzer.
+[A complete uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/s10817-016-9385-1).
+Journal of Automated Reasoning, 2016.
+
+2. André Platzer. 
 [A uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/978-3-319-21401-6_32). 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
 Extended version at [arXiv 1503.01981](http://arxiv.org/abs/1503.01981)
 
-2. André Platzer.
+3. André Platzer.
 [Logics of dynamical systems](http://dx.doi.org/10.1109/LICS.2012.13).
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
 
-3. André Platzer.
+4. André Platzer.
 [Differential dynamic logic for hybrid systems](http://dx.doi.org/10.1007/s10817-008-9103-8).
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
-4. André Platzer.
+5. André Platzer.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](http://dx.doi.org/10.1007/978-3-642-14509-4).
 Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
