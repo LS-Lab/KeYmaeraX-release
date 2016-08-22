@@ -214,6 +214,16 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.right.asInstanceOf[SaturateTactic].child shouldBe   TactixLibrary.andR(1)
   }
 
+  "doall combinator parser" should "parse doall(closeId)" in {
+    val tactic = BelleParser("doall(closeId)")
+    tactic shouldBe OnAll(TactixLibrary.closeId)
+  }
+
+  it should "parse combined tactics with parameters doall(closeId | closeTrue | andL(1))" in {
+    val tactic = BelleParser("doall(closeId | closeTrue | andL(1))")
+    tactic shouldBe OnAll(TactixLibrary.closeId | (TactixLibrary.closeT | TactixLibrary.andL(1)))
+  }
+
   //endregion
 
   //region Comma lists

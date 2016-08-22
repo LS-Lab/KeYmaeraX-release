@@ -173,10 +173,17 @@ object BelleParser extends (String => BelleExpr) {
       //endregion
 
       //region OnAll combinator
-      case r :+ BelleToken(ON_ALL, loc) :+ BelleToken(OPEN_PAREN, oParenLoc) :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(CLOSE_PAREN, cParenLoc) => {
-        val onAllExpr = OnAll(expr)
-        onAllExpr.setLocation(loc)
-        ParserState(r :+ ParsedBelleExpr(onAllExpr, loc.spanTo(cParenLoc)), st.input)
+      case r :+ BelleToken(IDENT(name), loc) if name == ON_ALL.img => st.input match {
+        case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
+          //@note find matching closing parenthesis, parse inner expr, then continue with remainder
+          var openParens = 1
+          val (inner, BelleToken(CLOSE_PAREN, cParenLoc) :: remainder) = tail.span({
+            case BelleToken(OPEN_PAREN, _) => openParens = openParens + 1; openParens > 0
+            case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
+            case _ => openParens > 0
+          } )
+          val innerExpr = parseTokenStream(inner)
+          ParserState(r :+ ParsedBelleExpr(OnAll(innerExpr), loc.spanTo(cParenLoc)), remainder)
       }
       //endregion
 
@@ -439,11 +446,10 @@ object BelleParser extends (String => BelleExpr) {
       if(commaExpected) removeCommas(r, !commaExpected)
       else throw ParseException(s"Expected argument but found comma.", commaPos)
     case arg :: r => arg.terminal match {
-      case terminal : TACTIC_ARGUMENT => arg +: removeCommas(r, !commaExpected)
-      case _ => {
+      case terminal: TACTIC_ARGUMENT => arg +: removeCommas(r, !commaExpected)
+      case _ =>
         assert(!isArgument(toks.head), "Inexhautive pattern matching in removeCommas.")
         throw ParseException(s"Expected tactic argument but found ${arg.terminal.img}", arg.location)
-      }
     }
     case Nil => Nil
   }
