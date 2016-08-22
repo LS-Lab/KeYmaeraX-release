@@ -69,14 +69,14 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "y>0".asFormula
   }
 
-  it should "work with ODEs" in withMathematica { implicit qeTool =>
+  it should "work with ODEs" in withMathematica { qeTool =>
     val result = proveBy("[{x'=2}]x>0".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x x>0".asFormula
   }
 
-  it should "work with ODEs followed by derived diff assigns" in withMathematica { implicit qeTool =>
+  it should "work with ODEs followed by derived diff assigns" in withMathematica { qeTool =>
     val result = proveBy("[{x'=2}][x':=2;]x'>0".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -84,21 +84,21 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[x':=2;]x'>0".asFormula
   }
 
-  it should "work with ODEs followed by diff assigns" in withMathematica { implicit qeTool =>
+  it should "work with ODEs followed by diff assigns" in withMathematica { qeTool =>
     val result = proveBy("[{x'=2}][x':=2;](x>0)'".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x [x':=2;](x>0)'".asFormula
   }
 
-  it should "work with ODEs followed by diff assigns, multi-var case" in withMathematica { implicit qeTool =>
+  it should "work with ODEs followed by diff assigns, multi-var case" in withMathematica { qeTool =>
     val result = proveBy("[{x'=2,y'=3,z'=4}][x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x \\forall y \\forall z [x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula
   }
 
-  it should "work with cyclic ODEs" in withMathematica { implicit qeTool =>
+  it should "work with cyclic ODEs" in withMathematica { qeTool =>
     val result = proveBy("[{x'=y,y'=z,z'=x^2&y>=0}](y>=0->[z':=x^2;][y':=z;][x':=y;]x'>=0)".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty

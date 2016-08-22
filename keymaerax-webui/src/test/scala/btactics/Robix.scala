@@ -25,7 +25,7 @@ import scala.language.postfixOps
 @SlowTest
 class Robix extends TacticTestBase {
 
-  "Static Safety" should "be provable" in withMathematica { implicit tool =>
+  "Static Safety" should "be provable" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs.key"))
 
     val invariant = """v >= 0
@@ -63,7 +63,7 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Passive Safety" should "be provable" in withMathematica { implicit qeTool =>
+  "Passive Safety" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
 
     val invariant = """v >= 0
@@ -107,7 +107,7 @@ class Robix extends TacticTestBase {
   // todo: robix proof with let inv=bla in ...
   // todo: also try to get distance letified...
 
-  it should "prove just the acceleration x arithmetic" in withMathematica { implicit qeTool =>
+  it should "prove just the acceleration x arithmetic" in withMathematica { qeTool =>
     val accArith = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> v=0|abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
 
     val tactic = (alphaRule*) & replaceTransform("ep".asTerm, "t".asTerm)(-8, "abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
@@ -123,7 +123,7 @@ class Robix extends TacticTestBase {
     proveBy(accArith, tactic) shouldBe 'proved
   }
 
-  it should "prove just the acceleration y arithmetic" in withMathematica { implicit qeTool =>
+  it should "prove just the acceleration y arithmetic" in withMathematica { qeTool =>
     val accArith = "A>=0&B>0&V()>=0&ep>0&v_0>=0&-B<=a&a<=A&abs(y_0-yo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))&-t*V()<=yo-yo_0&yo-yo_0<=t*V()&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep&v>=0->v=0|abs(y-yo)>v^2/(2*B)+V()*(v/B)".asFormula
 
     val tactic = (alphaRule*) &
@@ -140,7 +140,7 @@ class Robix extends TacticTestBase {
     proveBy(accArith, tactic) shouldBe 'proved
   }
 
-  "Passive Safety straight and curve" should "be provable" in withMathematica { implicit qeTool =>
+  "Passive Safety straight and curve" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key"))
 
     val invariant = """v >= 0
@@ -268,7 +268,7 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Passive Safety straight and curve using curvature" should "be provable" in withMathematica { implicit qeTool =>
+  "Passive Safety straight and curve using curvature" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature.key"))
 
     val invariant =
@@ -309,7 +309,7 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Passive Safety straight and curve using curvature with additional braking branch" should "be provable" in withMathematica { implicit qeTool =>
+  "Passive Safety straight and curve using curvature with additional braking branch" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature_lightbrake.key"))
 
     val invariant =
@@ -355,7 +355,7 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Passive orientation safety" should "be provable" in withMathematica { implicit qeTool =>
+  "Passive orientation safety" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafetyabs.key"))
     val invariant =
       """v>=0
@@ -520,7 +520,7 @@ class Robix extends TacticTestBase {
     proveBy(fml, tactic) shouldBe 'proved
   }
 
-  "Passive safety with curvature and uncertainty" should "prove" in withZ3 { implicit tool =>
+  "Passive safety with curvature and uncertainty" should "prove" in withZ3 { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature_uncertainty.key"))
 
     val invariant =

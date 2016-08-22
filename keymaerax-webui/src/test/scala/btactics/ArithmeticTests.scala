@@ -43,7 +43,8 @@ class ArithmeticTests extends TacticTestBase {
     //@note actual assertions are made by MockTool, expect a BelleError since MockTool returns false as QE answer
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(v_0>0&x_0 < s, a=v_0^2/(2*(s-x_0)), t_0=0
+      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
+                                         |Expected proved provable, but got Provable(v_0>0&x_0 < s, a=v_0^2/(2*(s-x_0)), t_0=0
                                                                             |  ==>  v>=0&t>=0&v=-1*a*t+v_0&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s
                                                                             |  from     ==>  false)""".stripMargin
   }
@@ -60,7 +61,8 @@ class ArithmeticTests extends TacticTestBase {
     ToolProvider.setProvider(new SingleToolProvider(tool))
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(x^2+y^2=r^2, r>0
+      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
+                                         |Expected proved provable, but got Provable(x^2+y^2=r^2, r>0
                                                                             |  ==>  y<=r
                                                                             |  from     ==>  false)""".stripMargin
   }
@@ -74,19 +76,20 @@ class ArithmeticTests extends TacticTestBase {
   it should "not support differential symbols" in withMathematica { tool =>
     the [BelleError] thrownBy { proveBy(
       Sequent(IndexedSeq(), IndexedSeq("5=5 | x' = 1'".asFormula)),
-      TactixLibrary.QE) } should have message "[Bellerophon Runtime] Expected proved provable, but got Provable(  ==>  5=5|x'=(1)'\n  from     ==>  5=5, x'=(1)')"
+      TactixLibrary.QE) } should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got Provable(  ==>  5=5|x'=(1)'\n  from     ==>  5=5, x'=(1)')"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq(), IndexedSeq("x' = y'".asFormula)),
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] Expected proved provable, but got Provable(  ==>  x'=y'\n  from     ==>  x'=y')"
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got Provable(  ==>  x'=y'\n  from     ==>  x'=y')"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a=a()".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] Expected proved provable, but got Provable(a=1, a()=2
+      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
+                                                                            |Expected proved provable, but got Provable(a=1, a()=2
                                                                             |  ==>  a=a()
                                                                             |  from     ==>  false)""".stripMargin
 
@@ -95,7 +98,7 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "work with functions" in withMathematica { implicit tool =>
+  it should "work with functions" in withMathematica { tool =>
     proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
     proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
   }

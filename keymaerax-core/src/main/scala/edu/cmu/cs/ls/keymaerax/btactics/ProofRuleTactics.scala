@@ -207,7 +207,7 @@ private object ProofRuleTactics {
           close(-1,1)
         )
       )
-      if (true /*DEBUG*/) println("contextualize.side " + side)
+      if (BelleExpr.DEBUG) println("contextualize.side " + side)
       TactixLibrary.CEat(side)(pos)
     })
 

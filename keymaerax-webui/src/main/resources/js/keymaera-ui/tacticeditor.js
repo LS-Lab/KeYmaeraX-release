@@ -108,6 +108,26 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             }
           };
 
+          rangy.init();
+
+          var savedSel = {};
+          var listener = function listener() {
+            console.log("Diff HTML changed")
+            if (savedSel.element !== undefined && savedSel.range !== undefined) {
+              rangy.getSelection().restoreCharacterRanges(savedSel.element, savedSel.range);
+            }
+          };
+
+          scope.$watch('tactic.diffHtml', listener);
+
+          scope.tacticChange = function(event) {
+            //@todo does not work with deletions
+            //@todo cursor flickering
+            savedSel.element = event.target;
+            savedSel.range = rangy.getSelection().saveCharacterRanges(event.target);
+            sequentProofData.tactic.tacticText = event.target.innerText;
+          }
+
           $(textcomplete).on({
             'textComplete:select': function(e, value) {
               scope.$apply(function() {
@@ -123,10 +143,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
           });
         },
         template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                    '<textarea class="k4-tacticeditor" ng-model="tactic.tacticText" rows="10" ng-shift-enter="executeTacticDiff()"></textarea>' +
-                  '</div></div>' +
-                  '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                    '<pre class="textdiff" processing-diff left-obj="tactic.lastExecutedTacticText" right-obj="tactic.tacticText" options="diffOptions"></pre>' +
+                    '<pre class="textdiff" contenteditable processing-diff ng-keyup="tacticChange($event)" ng-model="tactic.diffHtml" left-obj="tactic.lastExecutedTacticText" right-obj="tactic.tacticText" options="diffOptions" ng-shift-enter="executeTacticDiff()"></pre>' +
                   '</div></div>' +
                   '<div class="row"><div class="col-md-12"><button class="btn btn-default" ng-click="executeTacticDiff()">Run</button></div></div>'
     };

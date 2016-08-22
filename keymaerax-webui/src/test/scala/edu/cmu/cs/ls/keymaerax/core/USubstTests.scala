@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
@@ -30,9 +30,7 @@ import scala.language.postfixOps
 @SummaryTest
 @UsualTest
 @USubstTest
-class USubstTests extends FlatSpec with Matchers {
-  KeYmaera.init(Map.empty)
-
+class USubstTests extends SystemTestBase {
   val randomTrials = 50
   val randomComplexity = 20
   val rand = new RandomFormula()

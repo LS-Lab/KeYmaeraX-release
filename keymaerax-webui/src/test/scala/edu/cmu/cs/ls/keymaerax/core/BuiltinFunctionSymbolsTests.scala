@@ -15,17 +15,17 @@ import edu.cmu.cs.ls.keymaerax.tools.Z3
   */
 @UsualTest
 class BuiltinFunctionSymbolsTests extends TacticTestBase {
-  "max" should "be an interpreted function symbol for QE" in { withMathematica(implicit qeTool => {
+  "max" should "be an interpreted function symbol for QE" in  withMathematica { qeTool =>
     val f = "max(1, 2) = 2".asFormula
     val t = TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
-  })}
+  }
 
-  ignore should "work in counter-example generation" in { withMathematica(implicit qeTool => {
+  ignore should "work in counter-example generation" in withMathematica { qeTool =>
     val f = "max(a, 0) = a".asFormula
 //    val counterExample = qeTool.findCounterExample(f)
     val counterExample = new Z3().findCounterExample(f)
     counterExample shouldBe 'nonEmpty
     println(counterExample.last("a".asVariable))
-  })}
+  }
 }

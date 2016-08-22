@@ -35,7 +35,7 @@ class QETests extends TacticTestBase {
     result.subgoals.head.succ should contain only "false".asFormula
   }
 
-  it should "turn x^2>=0 |- y>1 into |- y>1" in withMathematica { implicit qeTool =>
+  it should "turn x^2>=0 |- y>1 into |- y>1" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x^2>=0".asFormula), IndexedSeq("y>1".asFormula)), ToolTactics.partialQE(qeTool))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty

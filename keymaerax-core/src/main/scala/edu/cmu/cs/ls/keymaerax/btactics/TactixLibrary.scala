@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
+import scala.math.BigDecimal
 
 /**
  * Tactix: Main tactic library with simple interface.
@@ -160,38 +161,27 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // differential equations
 
-/** ODE: try to prove a property of a differential equation automatically.
-  * @see [[diffSolve]]
-  * @todo @see [[diffCut]]
-  * @see [[diffInd]]
-  * @todo @see [[diffInvariant]]
-  * @see [[diffWeaken]]
-  * @see [[openDiffInd]]
-  * @todo @see [[DA]]
-  */
-def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
-  ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
-      (diffWeaken(pos) & QE) |
-        (if (seq.sub(pos) match {
-          case Some(Box(_: ODESystem, _: Greater)) => true
-          case Some(Box(_: ODESystem, _: Less)) => true
-          case _ => false})
-        // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) | diffSolve()(pos)
-        else
-        //@todo check degeneracy for split to > or =
-          diffInd()(pos)
-            //@todo | diffInvariant(cuts) | DA ...
-            | diffSolve()(pos)
-          ))
-    )(pos))
-})
+  /** ODE: try to prove a property of a differential equation automatically.
+    * @see [[diffSolve]]
+    * @todo @see [[diffCut]]
+    * @see [[diffInd]]
+    * @todo @see [[diffInvariant]]
+    * @see [[diffWeaken]]
+    * @see [[openDiffInd]]
+    * @todo @see [[DA]]
+    */
+  lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
+  /** DG/DA in automatic mode
+    * @see [[DA]] */
+  lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
   def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new DiffSolutionTool with QETool {
-    override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = ToolProvider.odeTool().diffSol(diffSys, diffArg, iv)
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().qeEvidence(formula)
+    override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
+      ToolProvider.odeTool().getOrElse(throw new BelleError("diffSol requires a DiffSolutionTool, but got None")).diffSol(diffSys, diffArg, iv)
+    override def qeEvidence(formula: Formula): (Formula, Evidence) =
+      ToolProvider.qeTool().getOrElse(throw new BelleError("qeEvidence requires a QETool, but got None")).qeEvidence(formula)
   })
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
@@ -293,11 +283,11 @@ def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {requ
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool())
+  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleError("QE requires a QETool, but got None")))
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not. */
-  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool())
+  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleError("partialQE requires a QETool, but got None")))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -341,8 +331,8 @@ def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {requ
   /** Transform an FOL formula into the formula 'to' [[ToolTactics.transform]].
     * A proof why that tranformation is acceptable will be shown on demand. */
   def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().qeEvidence(formula)
-    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = ToolProvider.cexTool().findCounterExample(formula)
+    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleError("transform requires a QETool, but got None")).qeEvidence(formula)
+    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = ToolProvider.cexTool().getOrElse(throw new BelleError("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
   })
 
   //
@@ -404,7 +394,7 @@ def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {requ
 
   /** Real-closed field arithmetic on a single formula without any extra smarts.
     * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool())
+  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleError("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -482,7 +472,7 @@ def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {requ
   def proveBy(goal: Formula, tactic: BelleExpr): Provable = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = ToolProvider.cexTool().findCounterExample(formula)
+  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleError("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
 
 
   ///

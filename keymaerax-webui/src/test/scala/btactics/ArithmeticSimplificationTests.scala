@@ -6,14 +6,14 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, SignAnalysis}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, DebuggingTactics, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._
@@ -25,28 +25,28 @@ import scala.language.postfixOps
 @SlowTest
 //@todo @IgnoreInBuildTest
 class ArithmeticSimplificationTests extends TacticTestBase {
-  "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in {withMathematica(implicit qeTool => {
+  "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in withMathematica { qeTool =>
     val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.smartHide
     val result = proveBy("x=1 & y=1 -> x=1".asFormula, tactic)
     result.subgoals(0).ante shouldBe result.subgoals(0).succ
-  })}
+  }
 
-  it should "not throw away transitivity info" in {withMathematica(implicit qeTool => {
+  it should "not throw away transitivity info" in withMathematica { qeTool =>
     val tactic = TactixLibrary.implyR(1) & (andL('L)*) & ArithmeticSimplification.smartHide
     val goal = "x=y & y=z & z > 0 -> x>0".asFormula
     val result = proveBy(goal, tactic)
     result.subgoals(0).ante.length shouldBe 3
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
-  })}
+  }
 
-  it should "forget useless stuff" in {withMathematica(implicit qeTool => {
+  it should "forget useless stuff" in withMathematica { qeTool =>
     val tactic = TactixLibrary.implyR(1) & (andL('L)*) & ArithmeticSimplification.smartHide
     val goal = "x>y & y>z & a > 0 & z > 0 -> x>0".asFormula
     val result = proveBy(goal, tactic)
     result.subgoals(0).ante.length shouldBe 3 //forget about a>0
     result.subgoals(0).ante.contains("a>0".asFormula) shouldBe false
     proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
-  })}
+  }
 
   "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {
     val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
@@ -70,16 +70,16 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       prop & transformEquality("t=ep".asFormula)(2) & closeId) shouldBe 'proved
   }
 
-  "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { implicit tool =>
+  "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { tool =>
     proveBy("abs(x-y)>=t -> abs(x-y+0)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
 
-  it should "prove abs(x-y)>=t -> abs(x-y)>=t+0" ignore withMathematica { implicit tool =>
+  it should "prove abs(x-y)>=t -> abs(x-y)>=t+0" ignore withMathematica { tool =>
     //@todo exhaustiveAbsSplit computes all abs positions before calling abs... but abs abbreviates both succ and ante if same
     proveBy("abs(x-y)>=t -> abs(x-y)>=t+0".asFormula, implyR(1) & ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
   }
 
-  it should "prove a Robix example" in withMathematica { implicit tool =>
+  it should "prove a Robix example" in withMathematica { tool =>
     val fml = "A>=0 & B>0 & V()>=0 & ep>0 & v_0>=0 & -B<=a & a<=A & abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())) & -t*V()<=xo-xo_0 & xo-xo_0<=t*V() & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula
     val tactic = (alphaRule*) &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
@@ -111,7 +111,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   it should "aggregate signs from seed" in {
     val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
-    val seed = SignAnalysis.aggregateSigns(SignAnalysis.seedSigns(s)) shouldBe Map(
+    SignAnalysis.aggregateSigns(SignAnalysis.seedSigns(s)) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
       "2*B*(m-x)-v^2".asTerm -> Map(Sign.Pos0 -> Set(SeqPos(-3))),
@@ -244,7 +244,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val signs = SignAnalysis.computeSigns(s.subgoals.head)
     val bounds = SignAnalysis.bounds(s.subgoals.head.succ, signs, SuccPos)
     println(bounds.mkString("\n"))
-    bounds.get(SeqPos(1).asInstanceOf[SuccPos]).get should contain theSameElementsAs Map(
+    bounds(SeqPos(1).asInstanceOf[SuccPos]) should contain theSameElementsAs Map(
       "x".asVariable -> Map(Bound.Lower -> Set()),
       "xo".asVariable -> Map(Bound.Upper -> Set()),
       "a".asVariable -> Map(Bound.Upper -> Set(SeqPos(-13))),

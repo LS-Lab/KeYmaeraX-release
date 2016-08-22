@@ -1,19 +1,65 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
+import java.io.File
+
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, Interpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
+import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstractionObj, ExtractTacticFromTrace}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
+import scala.collection.immutable._
 
 /**
  * Base class for tactic tests.
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   val theInterpreter = SequentialInterpreter()
+
+  /** Tests that want to record proofs in a database. */
+  class DbTacticTester {
+    private val db = {
+      val testLocation = File.createTempFile("testdb", ".sqlite")
+      val db = new SQLiteDB(testLocation.getAbsolutePath)
+      db.cleanup(testLocation.getAbsolutePath)
+      db
+    }
+
+    /** Prove sequent `s` using tactic  `t`. Record the proof in the database under the return value `proofId`. */
+    def proveBy(modelContent: String, t: BelleExpr): Provable = {
+      val modelName = ""
+      val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
+        case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
+        case _ => fail("Model content " + modelContent + " cannot be parsed")
+      }
+      db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
+        case Some(modelId) =>
+          val proofId = db.createProofForModel(modelId, "", "", "")
+          val trace = db.getExecutionTrace(proofId)
+          val globalProvable = trace.lastProvable
+          val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+            globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
+          SequentialInterpreter(listener :: Nil)(t, BelleProvable(Provable.startProof(s))) match {
+            case BelleProvable(provable, _) =>
+              extractTactic(proofId) shouldBe t
+              provable
+            case r => fail("Unexpected tactic result " + r)
+          }
+        case None => fail("Unable to create temporary model in DB")
+      }
+    }
+
+    /** Returns the tactic recorded for the proof `proofId`. */
+    def extractTactic(proofId: Int): BelleExpr = new ExtractTacticFromTrace(db).apply(proofId)
+  }
+
+  /** For tests that want to record proofs in the database. */
+  def withDatabase(testcode: DbTacticTester => Any): Unit = testcode(new DbTacticTester())
 
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
