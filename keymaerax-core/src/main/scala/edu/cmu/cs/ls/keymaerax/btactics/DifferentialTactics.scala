@@ -42,6 +42,7 @@ private object DifferentialTactics {
   })
 
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
@@ -69,7 +70,7 @@ private object DifferentialTactics {
       spooky,
       (pr:Provable) => {
         assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
-        println("Instantiate::\n" + pr)
+        if (BelleExpr.DEBUG) println("Instantiate::\n" + pr)
         // induction step condition \forall x \forall ghost condition>=0
         val condition = FormulaTools.kernel(pr.subgoals.head.succ.head) match {
           case Imply(domain, GreaterEqual(condition, Number(n))) if n==0 => condition
@@ -77,14 +78,14 @@ private object DifferentialTactics {
           case _ => throw new AssertionError("DGauto: Unexpected shape " + pr)
         }
         //@todo a witness of Reduce of >=0 would suffice
-        println("Solve[" + condition + "==0" + "," + spooky + "]")
+        if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
         ToolProvider.solverTool().getOrElse(throw new BelleError("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
-          case Some(Equal(l,r)) if l==spooky => println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
+          case Some(Equal(l,r)) if l==spooky => if (BelleExpr.DEBUG) println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
             constructedGhost = Some(r)
             r
-          case None => println("Solve[" + condition + "==0" + "," + spooky + "]")
+          case None => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
             throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
-          case Some(stuff) => println("Solve[" + condition + "==0" + "," + spooky + "]")
+          case Some(stuff) => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
             throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
         }
       }
@@ -106,7 +107,7 @@ private object DifferentialTactics {
     ) & QE & done;
     // fallback rescue tactic if proper misbehaves
     val fallback: DependentPositionTactic = "" by ((pos:Position,seq:Sequent) => {
-      println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
+      if (BelleExpr.DEBUG) println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
         Greater(Times(quantity, Power(ghost, Number(2))), Number(0))

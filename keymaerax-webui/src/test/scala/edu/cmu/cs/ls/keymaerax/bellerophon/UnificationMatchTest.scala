@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest, TodoTest}
 
 import scala.collection.immutable._
 
@@ -250,12 +250,14 @@ class UnificationMatchTest extends SystemTestBase {
       (Variable("x_"), Variable("y",Some(0))) :: Nil))
   }
 
-  it should "unify j()=x+y with s()=s()" in {
+  ignore should "unify j()=x+y with s()=s()" in {
+    //@note unification but not matching
     shouldUnify("s()=s()".asFormula, "j()=x+y".asFormula, USubst(
       SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
   }
 
-  it should "unify x+y=j() with s()=s()" in {
+  ignore should "unify x+y=j() with s()=s()" in {
+    //@note unification but not matching
     shouldUnify("s()=s()".asFormula, "x+y=j()".asFormula, USubst(
       SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
   }

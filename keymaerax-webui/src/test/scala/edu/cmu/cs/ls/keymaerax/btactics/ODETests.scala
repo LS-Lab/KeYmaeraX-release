@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
@@ -34,11 +34,11 @@ class ODETests extends TacticTestBase {
 //    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
 //  }
 
-  it should "DGauto x>0->[{x'=-x+1}]x>0" in withMathematica { qeTool =>
+  it should "DGauto x>0->[{x'=-x+1}]x>0" taggedAs(TodoTest) in withMathematica { qeTool =>
     proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
-  it should "DGauto x>0&a()>0->[{x'=-a()*x}]x>0" in withMathematica { qeTool =>
+  it should "DGauto x>0&a()>0->[{x'=-a()*x}]x>0" taggedAs(TodoTest) in withMathematica { qeTool =>
     proveBy("x>0&a()>0->[{x'=-a()*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
@@ -144,6 +144,19 @@ class ODETests extends TacticTestBase {
       "x>0&a>0&b>=0->[{x'=a*x+b}]x>0" ::
   // conserved quantity
       "x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c -> [{x1'=2*x1^4*x2+4*x1^2*x2^3-6*x1^2*x2, x2'=-4*x1^3*x2^2-2*x1*x2^4+6*x1*x2^2}] x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c" ::
+  // diffcut
+      "x>=0&v>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
+      // exams
+      "x>=1|x^3>=8->[{x'=x^4+x^2}](x>=1|x^3>=8)" ::
+      "x^3-4*x*y>=99->[{x'=4*x,y'=3*x^2-4*y}]x^3-4*x*y>=99" ::
+      "x^3-4*x*y=100->[{x'=4*x,y'=3*x^2-4*y}]x^3-4*x*y=100" ::
+      "x>=2&y>=22->[{x'=4*x^2,y'=x+y^4}]y>=22" ::
+      "w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9" ::
+      "x>=2&y=1->[{x'=x^2+y+x^4,y'=y^2+1}]x^3>=1" ::
+      "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
+      //"x>=2&y=1->[{x'=x^2*y^3+x^4*y,y'=y^2+2*y+1}]x^3>=8" ::
+      "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
+      "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" ::
       Nil
 
 
