@@ -760,9 +760,14 @@ object DerivationInfo {
   def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit}, "valid code name: " + id)}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
-  def ofCodeName(codeName:String): DerivationInfo = byCodeName.getOrElse(codeName.toLowerCase,
-    throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
-  )
+  def ofCodeName(codeName:String): DerivationInfo = {
+    assert(byCodeName != null, "byCodeName should not be null.")
+    assert(codeName != null, "codeName should not be null.")
+
+    byCodeName.getOrElse(codeName.toLowerCase,
+      throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
+    )
+  }
 
   def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
 }
