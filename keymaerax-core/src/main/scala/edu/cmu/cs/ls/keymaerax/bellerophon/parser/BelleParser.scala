@@ -76,6 +76,7 @@ object BelleParser extends (String => BelleExpr) {
         st.input.headOption match {
           case Some(BelleToken(OPEN_PAREN, oParenLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(IDENT(name), identLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
         }
