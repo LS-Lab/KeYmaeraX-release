@@ -173,6 +173,12 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
   }
 
+  it should "parse e & <(e) as well" in {
+    val result = BelleParser("andR(1) & <(andR(1))").asInstanceOf[SeqTactic]
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
+  }
+
 
 
   //endregion

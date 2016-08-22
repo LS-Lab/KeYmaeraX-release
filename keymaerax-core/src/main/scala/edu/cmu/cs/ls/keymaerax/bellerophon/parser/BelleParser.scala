@@ -63,6 +63,15 @@ object BelleParser extends (String => BelleExpr) {
     val stack : Stack[BelleItem] = st.stack
 
     stack match {
+      //@note This is a hack to support blah & <(blahs) without copying all of hte below cases.
+      //@todo Diable support for e<(e) entirely.
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR, seqCombinatorLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc) =>
+        ParserState(
+          r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc),
+          st.input
+        )
+
+      //region Seq combinator
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR, combatinorLoc) =>
         st.input.headOption match {
           case Some(BelleToken(OPEN_PAREN, oParenLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
@@ -75,6 +84,7 @@ object BelleParser extends (String => BelleExpr) {
           case Some(BelleToken(SEQ_COMBINATOR, nextSeqCombinatorLoc)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case _ => ParserState(r :+ ParsedBelleExpr(left & right, leftLoc.spanTo(rightLoc)), st.input)
         }
+      //endregion
 
       //region Either combinator
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(EITHER_COMBINATOR, combatinorLoc) => st.input.headOption match {
