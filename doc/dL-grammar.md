@@ -46,7 +46,7 @@ Operators are right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,{y'=2,z'=3}
 
 ==Types==
 
-It is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`
+It is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`.
 It is considered an error to use divisions `e/d` without a nonzero divisor `d`.
 
 
