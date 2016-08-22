@@ -31,11 +31,13 @@ object DifferentialHelper {
   }
   def timeVar(system: ODESystem): Option[Variable] = timeVar(system.ode)
 
+  /** Returns true if we're sure that t is equal to 1. Used to identify the "time" variable. */
   def isOne(t: Term) = t match {
     case n:Number => n==Number(1)
     case _ => false
   }
 
+  /** Returns all of the AtomicODE's in a system. */
   def atomicOdes(system: ODESystem): List[AtomicODE] = atomicOdes(system.ode)
   def atomicOdes(dp: DifferentialProgram): List[AtomicODE] = dp match {
     case DifferentialProgramConst(c, _) => ???
@@ -43,7 +45,7 @@ object DifferentialHelper {
     case ode: AtomicODE => ode :: Nil
   }
 
-
+  /** Sorts ODEs in dependency order; so v'=a, x'=v is sorted into x'=v,v'=a. */
   def sortAtomicOdes(odes : List[AtomicODE]) : List[AtomicODE] = {
     sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.x.equals(v)).get)
   }
@@ -67,7 +69,8 @@ object DifferentialHelper {
     }
   }
 
-  def isPrimedVariable(v : Variable, ode : Option[Program]) = ode match {
+  /** Returns true iff v occurs primed in the ode. */
+  def isPrimedVariable(v : Variable, ode : Option[Program]): Boolean = ode match {
     case Some(x) => StaticSemantics.boundVars(x).contains(v)
     case None => true //over-approximate set of initial conditions if no ODE is provided.
   }
@@ -90,7 +93,7 @@ object DifferentialHelper {
       case _ => Nil //@todo is it possible to allow set-valued initial conditiosn (e.g., inequalities, disjunctions, etc.)?
     })
 
-
+  /** Returns the list of primed variables occuring in an ODE. */
   def getPrimedVariables(ode : Program) : List[Variable] = ode match {
     case AtomicODE(pv, term) => pv.x :: Nil
     case ODESystem(ode, constraint) => getPrimedVariables(ode)
@@ -158,5 +161,7 @@ object DifferentialHelper {
       .toMap
   }
 
+  /** Retruens true if the ODE is a linear system.
+    * @todo unimplemented, always returns true.*/
   def isLinear(ode: DifferentialProgram) = true //@todo
 }
