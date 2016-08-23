@@ -154,7 +154,7 @@ trait SequentCalculus {
     }
   }
   //@note do not forward to closeIdWith (performance)
-  lazy val closeId           : DependentTactic = new DependentTactic("close id") {
+  lazy val closeId           : DependentTactic = new DependentTactic("closeId") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
@@ -166,14 +166,14 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("close true") {
+  lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("closeTrue") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
       ProofRuleTactics.closeTrue('R, True)
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("close false") {
+  lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("closeFalse") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
       ProofRuleTactics.closeFalse('L, False)

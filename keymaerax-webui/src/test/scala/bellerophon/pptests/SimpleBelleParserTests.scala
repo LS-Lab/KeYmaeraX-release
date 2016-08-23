@@ -173,6 +173,18 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
   }
 
+  it should "parse e & <(e) as well" in {
+    val result = BelleParser("andR(1) & <(andR(1))").asInstanceOf[SeqTactic]
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
+  }
+
+  it should "parse e & <(e,e)" in {
+    val result = BelleParser("andR(1) & <(andR(1), andR(1))").asInstanceOf[SeqTactic]
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))
+  }
+
 
 
   //endregion
@@ -200,6 +212,16 @@ class SimpleBelleParserTests extends TacticTestBase {
     val tactic = BelleParser("andR(1)+").asInstanceOf[SeqTactic]
     tactic.left shouldBe TactixLibrary.andR(1)
     tactic.right.asInstanceOf[SaturateTactic].child shouldBe   TactixLibrary.andR(1)
+  }
+
+  "doall combinator parser" should "parse doall(closeId)" in {
+    val tactic = BelleParser("doall(closeId)")
+    tactic shouldBe OnAll(TactixLibrary.closeId)
+  }
+
+  it should "parse combined tactics with parameters doall(closeId | closeTrue | andL(1))" in {
+    val tactic = BelleParser("doall(closeId | closeTrue | andL(1))")
+    tactic shouldBe OnAll(TactixLibrary.closeId | (TactixLibrary.closeT | TactixLibrary.andL(1)))
   }
 
   //endregion

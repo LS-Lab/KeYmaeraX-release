@@ -184,6 +184,22 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.asInstanceOf[BelleProvable].p.isProved shouldBe true
   }
 
+  it should "prove |- (1=1->1=1) & (2=2->2=2) with new < combinator" in {
+    //@note cannot use < in unit tests without fully qualifying the name, because Matchers also knows < operator
+    val tactic = andR(SuccPos(0)) & Idioms.<(
+      implyR(SuccPos(0)) & close,
+      implyR(SuccPos(0)) & close
+      )
+    val v = {
+      val f = "(1=1->1=1) & (2=2->2=2)".asFormula
+      BelleProvable(Provable.startProof(f))
+    }
+    val result = theInterpreter.apply(tactic, v)
+
+    result.isInstanceOf[BelleProvable] shouldBe true
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
+  }
+
   it should "handle cases were subgoals are added." in {
     val tactic = andR(SuccPos(0)) < (
       andR(SuccPos(0)) partial,

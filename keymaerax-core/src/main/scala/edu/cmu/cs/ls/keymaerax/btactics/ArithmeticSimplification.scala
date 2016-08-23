@@ -6,11 +6,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -23,9 +21,6 @@ import scala.annotation.tailrec
   */
 object ArithmeticSimplification {
   //region Tactics
-
-  val isArithmetic = TactixLibrary.assertT((s:Sequent) => s.toFormula.isFOL,
-    "Expected a sequent corresponding to a formula of first-order real arithemtic, but found non-arithmetic formulas in the sequent.")
 
   lazy val smartCoHideAt = new DependentPositionTactic("smartCoHideAt") {
     override def factory(pos: Position): DependentTactic = {
@@ -45,9 +40,8 @@ object ArithmeticSimplification {
 
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
-        isArithmetic &
-          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
+        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
       )
     }
   }
@@ -63,9 +57,8 @@ object ArithmeticSimplification {
 
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
-        isArithmetic &
-          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
+        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
       )
     }
   }

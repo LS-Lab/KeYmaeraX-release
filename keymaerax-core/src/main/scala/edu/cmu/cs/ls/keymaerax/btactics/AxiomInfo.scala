@@ -547,10 +547,10 @@ object DerivationInfo {
     new PositionTacticInfo("coHideR", "W", {case () => SequentCalculus.cohideR}),
     new PositionTacticInfo("closeFalse"
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
-      , {case () => ProofRuleTactics.closeFalse}),
+      , {case () => TactixLibrary.closeF}),
     new PositionTacticInfo("closeTrue"
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
-        ,{case () => ProofRuleTactics.closeTrue}),
+        ,{case () => TactixLibrary.closeT}),
     new PositionTacticInfo("skolemizeL", "skolem", {case () => ProofRuleTactics.skolemizeL}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
     new PositionTacticInfo("skolemize", "skolem", {case () => ProofRuleTactics.skolemize}),
@@ -558,15 +558,18 @@ object DerivationInfo {
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
 
+    // proof management tactics
+    new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
+
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
     new TwoPositionTacticInfo("equivRewriting", RuleDisplayInfo("equivRewriting", (List("&Gamma;", "∀X p(X) <-> q(X)"), List("p(Z)", "&Delta;")), List((List("&Gamma;", "∀X p(X) <-> q(X)"), List("q(Z)", "&Delta;")))), {case () => PropositionalTactics.equivRewriting}),
     new TwoPositionTacticInfo("instantiatedEquivRewriting", "instantiatedEquivRewriting", {case () => PropositionalTactics.instantiatedEquivRewriting}),
     //    new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
 //    new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
-    new TwoPositionTacticInfo("closeId",
+    new TacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => (ante: AntePosition, succ: SuccPosition) => TactixLibrary.close(ante.top, succ.top)}),
+      {case () => TactixLibrary.closeId}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
@@ -701,6 +704,9 @@ object DerivationInfo {
       (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
       List((List("&Gamma;", "t≥0"), List("[x:=sol(t)](q(x) → p(x))")))),
     {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
+    new PositionTacticInfo("DGauto",
+      "DGauto",
+      {case () => TactixLibrary.DGauto}, needsTool = true),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
     // DLBySubst
@@ -760,9 +766,14 @@ object DerivationInfo {
   def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit}, "valid code name: " + id)}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
-  def ofCodeName(codeName:String): DerivationInfo = byCodeName.getOrElse(codeName.toLowerCase,
-    throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
-  )
+  def ofCodeName(codeName:String): DerivationInfo = {
+    assert(byCodeName != null, "byCodeName should not be null.")
+    assert(codeName != null, "codeName should not be null.")
+
+    byCodeName.getOrElse(codeName.toLowerCase,
+      throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
+    )
+  }
 
   def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
 }

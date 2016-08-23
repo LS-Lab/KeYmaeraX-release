@@ -159,6 +159,8 @@ object Idioms {
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = (t partial) | nil
 
+  def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
+
   /** Mandatory change */
   def must(t: BelleExpr): BelleExpr = new DependentTactic("must") {
     override def computeExpr(before: Provable): BelleExpr = t & new BuiltInTactic(name) {
