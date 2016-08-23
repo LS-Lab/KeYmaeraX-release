@@ -160,7 +160,7 @@ class ODETests extends TacticTestBase {
       Nil
 
 
-  it should "prove a list of ODEs" in withMathematica { qeTool =>
+  it should "prove a list of ODEs" taggedAs(TodoTest) in withMathematica { qeTool =>
     var fail: List[String] = Nil
     for (ex <- list) {
       val fml = ex.asFormula
