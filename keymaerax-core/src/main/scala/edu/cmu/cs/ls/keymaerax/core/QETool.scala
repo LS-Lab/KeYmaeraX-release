@@ -9,6 +9,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 /**
   * Quantifier elimination tool.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
 trait QETool {
   /**
