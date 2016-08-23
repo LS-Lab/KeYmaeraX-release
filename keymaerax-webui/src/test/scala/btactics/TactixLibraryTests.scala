@@ -133,11 +133,7 @@ class TactixLibraryTests extends TacticTestBase {
     proof shouldBe 'proved
   }
 
-<<<<<<< HEAD
-  it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
-=======
   it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
->>>>>>> 8028e428889b880cead825ce43670244aaf9de9c
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:Provable) => pr.subgoals.head.succ.head match {
@@ -167,11 +163,7 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-<<<<<<< HEAD
-  it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuilt) in withMathematica{qeTool =>
-=======
   it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
->>>>>>> 8028e428889b880cead825ce43670244aaf9de9c
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:Provable) => pr.subgoals.head.succ.head match {
@@ -186,11 +178,7 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-<<<<<<< HEAD
-  it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuilt) in withMathematica{qeTool =>
-=======
   it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
->>>>>>> 8028e428889b880cead825ce43670244aaf9de9c
     val proof = proveBy("\\exists jj jj=(x+x*y)'".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:Provable) => pr.subgoals.head.succ.head match {
@@ -204,11 +192,7 @@ class TactixLibraryTests extends TacticTestBase {
     proof shouldBe 'proved
   }
 
-<<<<<<< HEAD
-  it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
-=======
   it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
->>>>>>> 8028e428889b880cead825ce43670244aaf9de9c
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:Provable) => pr.subgoals.head.succ.head match {
