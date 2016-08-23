@@ -202,6 +202,19 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.child.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
   }
 
+  ignore should "get precedence right" in {
+    //@todo parser get's it wrong
+    val tactic = BelleParser("andR(1) & andR(2)*")
+    tactic shouldBe a [SaturateTactic]
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
+  }
+
+  it should "parse fully parenthesized" in {
+    val tactic = BelleParser("andR(1) & (andR(2)*)")
+    tactic shouldBe a [SaturateTactic]
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
+  }
+
   "NTIMES repeat combinator parser" should "parse e^22" in {
     val tactic = BelleParser("andR(1)^22").asInstanceOf[RepeatTactic]
     tactic.child shouldBe   TactixLibrary.andR(1)
