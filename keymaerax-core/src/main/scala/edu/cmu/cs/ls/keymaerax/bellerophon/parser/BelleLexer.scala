@@ -107,6 +107,8 @@ object BelleLexer extends ((String) => List[BelleToken]) {
 
       //Positions
       case ABSOLUTE_POSITION.startPattern(positionString) => consumeTerminalLength(ABSOLUTE_POSITION(positionString), loc)
+      case LAST_SUCCEDENT.startPattern(_*) => consumeTerminalLength(LAST_SUCCEDENT, loc)
+      case LAST_ANTECEDENT.startPattern(_*) => consumeTerminalLength(LAST_ANTECEDENT, loc)
       case SEARCH_SUCCEDENT.startPattern(_*) => consumeTerminalLength(SEARCH_SUCCEDENT, loc)
       case SEARCH_ANTECEDENT.startPattern(_*) => consumeTerminalLength(SEARCH_ANTECEDENT, loc)
       case SEARCH_EVERYWHERE.startPattern(_*) => consumeTerminalLength(SEARCH_EVERYWHERE, loc)
