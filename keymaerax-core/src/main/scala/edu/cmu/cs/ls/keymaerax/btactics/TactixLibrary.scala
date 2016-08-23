@@ -237,7 +237,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @example
     * {{{
     * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-    *   DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & <(
+    *   DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
     *     QE,
     *     diffInd()(1, 1::Nil) & QE
     *   ))
@@ -336,7 +336,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   })
 
   //
-  /** onAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */
+  /** OnAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */
   def onAll(e: BelleExpr): BelleExpr = OnAll(e)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

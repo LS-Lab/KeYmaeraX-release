@@ -92,12 +92,12 @@ private object DifferentialTactics {
       ,
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
         Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
-      )(pos) & <(
+      )(pos) <(
         (close | QE) & done,
         diffInd()(pos ++ PosInExpr(1::Nil))
           & implyR(pos) // initial assumption
           & implyR(pos) // domain
-          & andR(pos) & <(
+          & andR(pos) <(
           // initial condition
           (close | QE) & done,
           // universal closure of induction step
@@ -111,7 +111,7 @@ private object DifferentialTactics {
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
         Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
-      )(pos) & <(
+      )(pos) <(
         (close | QE) & done,
         //@todo could optimize for RCF cache when doing the same decomposition as during SandR
         //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
@@ -458,7 +458,7 @@ private object DifferentialTactics {
 
   /** Turns a list of diff cuts (with possible 'old' ghost creation) tactics into nested DCs */
   private def nestDCs(dcs: Seq[BelleExpr]): BelleExpr = {
-    dcs.head & <(
+    dcs.head <(
       /* use */ (if (dcs.tail.nonEmpty) nestDCs(dcs.tail) partial else skip) partial,
       /* show */ skip
       )
@@ -517,7 +517,7 @@ private object DifferentialTactics {
     "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
       val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()('Rlast))
-      diffCut(formulas: _*)(pos) & <(diffIndAllButFirst:_*) partial
+      diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
     })
 
   /**
@@ -668,7 +668,7 @@ private object DifferentialTactics {
 
         val Equiv(p, _) = auxEquiv.conclusion.succ.head
 
-        cutR(p)(pos.checkSucc.top) & <(
+        cutR(p)(pos.checkSucc.top) <(
           skip,
           implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
             DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
