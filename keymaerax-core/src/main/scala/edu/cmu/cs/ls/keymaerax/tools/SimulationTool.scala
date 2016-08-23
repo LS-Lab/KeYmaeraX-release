@@ -15,6 +15,7 @@ object SimulationTool {
 
 /**
  * Simulation tool.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
  */
 trait SimulationTool {
   /**

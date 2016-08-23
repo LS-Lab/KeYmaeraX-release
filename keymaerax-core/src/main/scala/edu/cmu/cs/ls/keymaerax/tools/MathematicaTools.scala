@@ -211,7 +211,7 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
     val initialValues = diffSys.map(t => k2m(
       Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), iv(t._1))))
 
-    val input = new MExpr(MathematicaSymbols.DSolve,
+    val input = new MExpr(MathematicaSymbols.DSOLVE,
       Array[MExpr](
         new MExpr(Expr.SYM_LIST, (convertedDiffSys ++ initialValues).toArray),
         new MExpr(Expr.SYM_LIST, functions.toArray),
@@ -285,7 +285,7 @@ class MathematicaSolutionTool(override val link: MathematicaLink) extends BaseKe
     val eqs = k2m(equations)
     val v = vars.map(k2m)
 
-    val input = new MExpr(MathematicaSymbols.Solve,
+    val input = new MExpr(MathematicaSymbols.SOLVE,
       Array[MExpr](
         eqs,
         new MExpr(Expr.SYM_LIST, v.toArray)
@@ -298,6 +298,35 @@ class MathematicaSolutionTool(override val link: MathematicaLink) extends BaseKe
   }
 }
 
+/**
+  * A link to Mathematica using the JLink interface.
+  *
+  * @author Andre Platzer
+  */
+class MathematicaSimplificationTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with SimplificationTool {
+
+  override def simplify(expr: Formula, assumptions: List[Formula]): Formula =
+    simplify(expr.asInstanceOf[Expression], assumptions).asInstanceOf[Formula]
+
+  override def simplify(expr: Term, assumptions: List[Formula]): Term =
+    simplify(expr.asInstanceOf[Expression], assumptions).asInstanceOf[Term]
+
+  override def simplify(expr: Expression, assumptions: List[Formula]): Expression = {
+    val ex = k2m(expr)
+    val assuming = assumptions.map(k2m)
+
+    val input = new MExpr(MathematicaSymbols.FULLSIMPLIFY,
+      Array[MExpr](
+        ex,
+        new MExpr(Expr.SYM_LIST, assuming.toArray)
+      ))
+    val (_, result) = run(input)
+    result match {
+      case r: Expression => r
+      case _ => throw new ToolException("Mathematica did not successfuly simplify: " + expr + " under assumptions " + assumptions)
+    }
+  }
+}
 
 object SimulationM2KConverter extends M2KConverter[Simulation] {
 

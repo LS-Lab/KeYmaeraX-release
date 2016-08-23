@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Tool for computing the symbolic solution of a differential equation system.
  * @author smitsch
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
  */
 trait DiffSolutionTool {
   /**

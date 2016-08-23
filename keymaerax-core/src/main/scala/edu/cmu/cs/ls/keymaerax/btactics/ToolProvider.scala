@@ -32,7 +32,9 @@ object ToolProvider extends ToolProvider {
     * Set a new tool provider to be used from now on.
     * @param provider the tool provider to use in KeYmaera X from now on.
     */
-  def setProvider(provider: ToolProvider) = {f = provider}
+  def setProvider(provider: ToolProvider) = {
+    if (provider!=this) this.f = provider else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
+  }
 
   // convenience methods forwarding to the current factory
 
@@ -40,11 +42,13 @@ object ToolProvider extends ToolProvider {
 
   def odeTool(): Option[DiffSolutionTool] = f.odeTool()
 
+  def simplifierTool(): Option[SimplificationTool] = f.simplifierTool()
+
+  def solverTool(): Option[SolutionTool] = f.solverTool()
+
   def cexTool(): Option[CounterExampleTool] = f.cexTool()
 
   def simulationTool(): Option[SimulationTool] = f.simulationTool()
-
-  def solverTool(): Option[SolutionTool] = f.solverTool()
 
   def shutdown(): Unit = f.shutdown()
 
@@ -52,7 +56,7 @@ object ToolProvider extends ToolProvider {
 
 }
 
-/** A tool factory creates various tools.
+/** A tool factory creates various arithmetic and simulation tools.
   * @author Stefan Mitsch
   */
 trait ToolProvider {
@@ -65,20 +69,23 @@ trait ToolProvider {
   /** Returns an ODE tool. */
   def odeTool(): Option[DiffSolutionTool]
 
+  /** Returns an equation solver tool. */
+  def solverTool(): Option[SolutionTool]
+
+  /** Returns an arithmetic/logical simplification tool */
+  def simplifierTool(): Option[SimplificationTool]
+
   /** Returns a counterexample tool. */
   def cexTool(): Option[CounterExampleTool]
 
   /** Returns a simulation tool. */
   def simulationTool(): Option[SimulationTool]
 
-  /** Returns an equation solver tool. */
-  def solverTool(): Option[SolutionTool]
-
   /** Shutdown the tools provided by this provider. After shutdown, the provider hands out null only. */
   def shutdown(): Unit
 }
 
-/** A tool provider that points all tools to the specified `tool`
+/** A tool provider that points all tools to a single `tool`.
   * @author Stefan Mitsch
   */
 class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
@@ -89,6 +96,7 @@ class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
   override def qeTool(): Option[QETool] = theTool  match { case t: QETool => Some(t) case _ => None }
   override def odeTool(): Option[DiffSolutionTool] = theTool  match { case t: DiffSolutionTool => Some(t) case _ => None }
   override def cexTool(): Option[CounterExampleTool] = theTool  match { case t: CounterExampleTool => Some(t) case _ => None }
+  override def simplifierTool(): Option[SimplificationTool] = theTool  match { case t: SimplificationTool => Some(t) case _ => None }
   override def simulationTool(): Option[SimulationTool] = theTool  match { case t: SimulationTool => Some(t) case _ => None }
   override def solverTool(): Option[SolutionTool] = theTool match { case t: SolutionTool => Some(t) case _ => None }
   override def shutdown(): Unit = {
@@ -106,6 +114,7 @@ class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
   override def qeTool(): Option[QETool] = None
   override def odeTool(): Option[DiffSolutionTool] = None
+  override def simplifierTool(): Option[SimplificationTool] = None
   override def cexTool(): Option[CounterExampleTool] = None
   override def simulationTool(): Option[SimulationTool] = None
   override def solverTool(): Option[SolutionTool] = None

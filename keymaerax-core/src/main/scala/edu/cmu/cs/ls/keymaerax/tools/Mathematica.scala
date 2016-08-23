@@ -19,7 +19,7 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool with SolutionTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool with SolutionTool with SimplificationTool {
   // JLink, shared between tools
   private val link = new JLinkMathematicaLink
 
@@ -28,6 +28,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
   private val mODE = new MathematicaODETool(link)
   private val mSim = new MathematicaSimulationTool(link)
   private val mSolve = new MathematicaSolutionTool(link)
+  private val mSimplify = new MathematicaSimplificationTool(link)
 
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
@@ -48,6 +49,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     mCEX.shutdown()
     mODE.shutdown()
     mSim.shutdown()
+    mSolve.shutdown()
+    mSimplify.shutdown()
     //@note last, because we want to shut down all executors (tool threads) before shutting down the JLink interface
     link.shutdown()
     initialized = false
@@ -99,6 +102,9 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
   override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim.simulateRun(initial, stateRelation, steps)
 
   override def solve(equations: Formula, vars: List[Expression]): Option[Formula] = mSolve.solve(equations,vars)
+  override def simplify(expr: Expression, assumptions: List[Formula]): Expression = mSimplify.simplify(expr, assumptions)
+  override def simplify(expr: Formula, assumptions: List[Formula]): Formula = mSimplify.simplify(expr, assumptions)
+  override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
 
   /** Restarts the MathKernel with the current configuration */
   override def restart() = link.restart()

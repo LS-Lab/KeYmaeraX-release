@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Tool for computing the solution of an equation system.
  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
  */
 trait SolutionTool {
   /**

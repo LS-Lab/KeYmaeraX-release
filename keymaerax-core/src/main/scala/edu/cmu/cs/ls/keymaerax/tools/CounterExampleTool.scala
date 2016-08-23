@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, NamedSymbol, Term}
 
 /**
  * Quantifier elimination tool.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
  */
 trait CounterExampleTool {
   /**
