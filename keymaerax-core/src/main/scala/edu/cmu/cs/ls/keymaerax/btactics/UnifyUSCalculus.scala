@@ -379,7 +379,7 @@ trait UnifyUSCalculus {
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
         //@note cut instead of cutLR might be a quicker proof to avoid the equivify but changes positions which would be unfortunate.
-        debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) <(
+        debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) & <(
           //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
           //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
           /* use cut */ debug("    use cut") partial
@@ -402,7 +402,7 @@ trait UnifyUSCalculus {
       def implyStep(other: Expression): BelleExpr = {
         val cohide = p match {case p: SuccPosition => cohideR(p.top) case p: AntePosition => cohideR('Rlast)}
         DebuggingTactics.debug("useAt implyStep") &
-        cutLR(C(subst(other)))(p.topLevel) <(
+        cutLR(C(subst(other)))(p.topLevel) & <(
           /* use */ ident partial,
           /* show */ cohide & CMon(p.inExpr) & by(subst.toForward(fact))
           )
@@ -420,7 +420,7 @@ trait UnifyUSCalculus {
 
         case DotFormula if !p.isTopLevel =>
           val provedFact = TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head,True),
-            equivR(1) <(closeTrue(1) , cohideR(1) & by(fact)))
+            equivR(1) & <(closeTrue(1) , cohideR(1) & by(fact)))
           equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
 
         case Equiv(DotFormula, other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
@@ -500,8 +500,8 @@ trait UnifyUSCalculus {
                 //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
               }
 
-              cut(C(subst(prereq))) <(
-                /* use: result remains open */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
+              cut(C(subst(prereq))) & <(
+                /* use: result remains open */ cutR(C(subst(conclusion)))(p.checkSucc.top) & <(
                 hideL('Llast) partial,
                 cohide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) &
                   by(Provable.startProof(Imply(subst(prereq), subst(Context(remainder)(k))))(subst.toForward(fact), 0))
@@ -693,7 +693,7 @@ trait UnifyUSCalculus {
         val (ctx, _) = sequent.at(pos)
         val (cutPos: SuccPos, commute: BelleExpr) = pos match {case p: SuccPosition => (p.top, ident) case p: AntePosition => (SuccPos(sequent.succ.length), commuteEquivR(1))}
         val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
-        cutLR(ctxOther)(pos.top) <(
+        cutLR(ctxOther)(pos.top) & <(
           /* use */ ident,
           /* show */ cohideR(cutPos) & equivify & tactic(pos.inExpr) & commute &  by(fact)
           )
@@ -732,7 +732,7 @@ trait UnifyUSCalculus {
         val (posctx,c) = sequent.at(pos)
         val ctx = posctx(C)
         val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-        cutLR(ctx(other))(pos.top) <(
+        cutLR(ctx(other))(pos.top) & <(
           /* use */ ident partial,
           /* show */ cohideR(cutPos) & //assertT(0,1) &
           equivify & /*commuteEquivR(SuccPosition(0)) &*/
