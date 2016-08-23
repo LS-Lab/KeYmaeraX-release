@@ -189,7 +189,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   it should "assignbExists" in {
     val f = "\\exists kyxtime [{x'=v,kyxtime'=1&true}]1=1".asFormula
     val t = DLBySubst.assignbExists(Number(1))(1)
-    proveBy(f,t) shouldBe "[kyxtime:=1;][{x'=v,kyxtime'=1&true}]1=1".asFormula
+    loneSucc(proveBy(f,t)) shouldBe "[kyxtime:=1;][{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
 
   "assignb in context" should "work" in {
