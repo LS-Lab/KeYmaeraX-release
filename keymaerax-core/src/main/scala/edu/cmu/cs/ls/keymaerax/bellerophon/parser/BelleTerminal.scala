@@ -97,12 +97,14 @@ private object PARTIAL extends BelleTerminal("partial") {
 
 /** A dL expression. We allow both terms and formulas as arguments; e.g. in diffGhost. */
 private case class EXPRESSION(exprString: String) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
+  val undelimitedExprString = exprString.drop(2).dropRight(2)
+  
   val expression: Expression = {
     assert(exprString.startsWith("{`") && exprString.endsWith("`}"),
       s"EXPRESSION.regexp should ensure delimited expression begin and end with {` `}, but an EXPRESSION was constructed with argument: ${exprString}")
 
     //Remove delimiters and parse the expression.
-    KeYmaeraXParser(exprString.drop(2).dropRight(2))
+    KeYmaeraXParser(undelimitedExprString)
   }
 
   override def regexp = EXPRESSION.regexp
