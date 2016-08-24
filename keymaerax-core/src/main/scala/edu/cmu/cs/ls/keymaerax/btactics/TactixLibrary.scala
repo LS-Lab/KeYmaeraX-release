@@ -49,6 +49,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
+  /** Normalize to sequent form, customize branching with `beta`, customize simplification steps in antecedent/succedent with `stepL` and `stepR` */
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
     (OnAll(?(
               (alphaRule partial)
@@ -61,6 +62,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
                 | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial))*
     })
 
+  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
+  lazy val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
+
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   lazy val prop                    : BelleExpr = NamedTactic("prop", {
     (OnAll(?(
@@ -69,18 +73,24 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
             | ((betaRule partial) partial) partial) partial) partial) partial))*
   })
 
-  /** master: master tactic that tries hard to prove whatever it could */
+  /** master: master tactic that tries hard to prove whatever it could
+    * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     ((OnAll(?(
           (close
             | ((must(normalize) partial)
             | ((loop(gen)('L) partial)
             | ((loop(gen)('R) partial)
-            | ((diffSolve(None)('R) partial)
-            | ((diffInd() partial)
-            | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial))*) &
+            //| ((diffSolve(None)('R) partial)
+            //| ((diffInd() partial)
+            | ((ODE('R) partial)
+            | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial))*) &
       ?(OnAll(QE))
   }
+
+  /** auto: automatically try to prove the current goal if that succeeds.
+    * @see [[master]] */
+  def auto = master() & done
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -316,14 +326,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
   lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
-    if (hide) "Find Left and Replace Left with Right" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    if (hide) "allL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
   lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
-    if (hide) "Find Right and Replace Right with Left" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    if (hide) "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqR2L(pos) & hideL(pos, fml)
     })
     else EqualityTactics.exhaustiveEqR2L

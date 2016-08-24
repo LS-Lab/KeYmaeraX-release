@@ -1095,6 +1095,18 @@ class DifferentialTests extends TacticTestBase {
     proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), master()) shouldBe 'proved
   }
 
+  it should "diffSolve add time if not present and ask Mathematica" in withMathematica { tool =>
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), diffSolve()(1) & QE) shouldBe 'proved
+  }
+
+  it should "open diff ind x>b() |- [{x'=2}]x>b()" in withMathematica { tool =>
+    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe 'proved
+  }
+
+  it should "open diff ind x>b |- [{x'=2}]x>b" in withMathematica { tool =>
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), openDiffInd(1)) shouldBe 'proved
+  }
+
   it should "find solution for x'=v if None is provided" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0".asFormula), IndexedSeq("[{x'=v}]x>0".asFormula)),
       diffSolve()(1))

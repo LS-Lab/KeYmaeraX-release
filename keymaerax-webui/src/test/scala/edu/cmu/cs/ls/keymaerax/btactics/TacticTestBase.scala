@@ -30,7 +30,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       db
     }
 
-    /** Prove sequent `s` using tactic  `t`. Record the proof in the database under the return value `proofId`. */
+    /** Prove sequent `s` using tactic  `t`. Record the proof in the database and check that the recorded tactic is
+      * the provided tactic. */
     def proveBy(modelContent: String, t: BelleExpr): Provable = {
       val modelName = ""
       val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
