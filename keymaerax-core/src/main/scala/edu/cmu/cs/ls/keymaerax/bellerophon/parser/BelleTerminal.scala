@@ -61,7 +61,7 @@ private object N_TIMES {
 }
 
 
-private object US_MATCH extends BelleTerminal("US")
+private object US_MATCH extends BelleTerminal("USMatch")
 
 private object RIGHT_ARROW extends BelleTerminal("=>")
 
