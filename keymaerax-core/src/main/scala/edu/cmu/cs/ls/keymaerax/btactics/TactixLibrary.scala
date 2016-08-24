@@ -49,6 +49,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
+  /** Normalize to sequent form, customize branching with `beta`, customize simplification steps in antecedent/succedent with `stepL` and `stepR` */
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
     (OnAll(?(
               (alphaRule partial)
@@ -60,6 +61,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
                 | ((stepL partial)
                 | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial))*
     })
+
+  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
+  lazy val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   lazy val prop                    : BelleExpr = NamedTactic("prop", {
