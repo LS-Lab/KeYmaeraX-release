@@ -35,7 +35,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
             "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
           case SaturateTactic(t) => "(" + pp(t, indent) + ")" + op(e).terminal.img
           case b : BuiltInTactic => b.name
-          case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
+          case e: PartialTactic => pp(e.child, indent)
           case e: RepeatTactic => "(" + pp(e.child, indent) + ")^" + e.times
           case adp: AppliedDependentPositionTactic => adp.pt match {
             case e: DependentPositionWithAppliedInputTactic =>
