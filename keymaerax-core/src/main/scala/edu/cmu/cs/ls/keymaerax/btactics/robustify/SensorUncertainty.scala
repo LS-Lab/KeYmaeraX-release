@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.robustify
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, BelleValue, DependentTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.{DifferentialHelper, ProgramHelpers}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -28,12 +28,13 @@ import edu.cmu.cs.ls.keymaerax.core._
   */
 object SensorUncertainty {
   //@todo incorrect setup -- should be an applied DependentInputTactic.
-  def apply(sensor: Variable) : DependentTactic = "robustify.SensorUncertainty" by ((p:Provable) => {
-    assert(p.isProved, "Cannot robustify an unproven model.")
-    assert(shapeAnalysis(p, sensor), "The Provable's conclusion does not have the correct shape to robustify against sensor uncertainty.")
-
-    ???
-  })
+  def apply(sensor: Variable) : DependentTactic = new DependentTactic("robustify.SensorUncertainty") {
+    override def computeExpr(p: Provable): BelleExpr = {
+      assert(p.isProved, "Cannot robustify an unproven model.")
+      assert(shapeAnalysis(p, sensor), "The Provable's conclusion does not have the correct shape to robustify against sensor uncertainty.")
+      ???
+    }
+  }
 
   /** Returns true if the Provable's conclusion has the correct shape. */
   private def shapeAnalysis(p: Provable, sensor: Variable): Boolean =
