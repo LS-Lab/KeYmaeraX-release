@@ -85,6 +85,11 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     val dpt = tactic.asInstanceOf[DependentPositionTactic]
   }
 
+  it should "parse j(x) as a term or a formula depending on ArgInfo." in {
+    val formulaTactic = parser("Loop({`j(x)`})")
+    val termTactic = parser("diffGhost({`x`}, {`j(x)`}, {`j(x)`}, {`j(x)`})")
+  }
+
   "Propositional Examples" should "close p() -> p()" in {
     val tactic = parser("implyR(1) & TrivialCloser")
 //    val tactic = ExposedTacticsLibrary.tactics("implyR") & ExposedTacticsLibrary.tactics("TrivialCloser")
