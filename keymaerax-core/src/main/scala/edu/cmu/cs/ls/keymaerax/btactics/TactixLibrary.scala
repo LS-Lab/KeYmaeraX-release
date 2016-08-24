@@ -79,8 +79,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
             | ((loop(gen)('R) partial)
             //| ((diffSolve(None)('R) partial)
             //| ((diffInd() partial)
-            | (ODE partial)
-            | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial))*) &
+            | ((ODE partial)
+            | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial))*) &
       ?(OnAll(QE))
   }
 
