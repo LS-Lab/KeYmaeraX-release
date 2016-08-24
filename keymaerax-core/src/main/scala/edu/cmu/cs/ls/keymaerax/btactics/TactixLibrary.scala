@@ -69,18 +69,24 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
             | ((betaRule partial) partial) partial) partial) partial) partial))*
   })
 
-  /** master: master tactic that tries hard to prove whatever it could */
+  /** master: master tactic that tries hard to prove whatever it could
+    * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     ((OnAll(?(
           (close
             | ((must(normalize) partial)
             | ((loop(gen)('L) partial)
             | ((loop(gen)('R) partial)
-            | ((diffSolve(None)('R) partial)
-            | ((diffInd() partial)
+            //| ((diffSolve(None)('R) partial)
+            //| ((diffInd() partial)
+            | (ODE partial)
             | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial))*) &
       ?(OnAll(QE))
   }
+
+  /** auto: automatically try to prove the current goal if that succeeds.
+    * @see [[master]] */
+  def auto = master() & done
 
   /*******************************************************************
     * unification and matching based auto-tactics
