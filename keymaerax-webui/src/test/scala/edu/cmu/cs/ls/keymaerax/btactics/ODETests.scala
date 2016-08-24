@@ -58,6 +58,19 @@ class ODETests extends TacticTestBase {
     proveBy("x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
+  it should "DGauto x>0 |- [{x'=2}]x>0" taggedAs (TodoTest) in withMathematica { tool =>
+    //@note: ghost is y'=x*y for x*y^2>0
+    proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula)), DGauto(1)) shouldBe 'proved
+  }
+
+  it should "DGauto x>b() |- [{x'=2}]x>b()" taggedAs (TodoTest) in withMathematica { tool =>
+    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), DGauto(1)) shouldBe 'proved
+  }
+
+  it should "DGauto x>b |- [{x'=2}]x>b" taggedAs (TodoTest) in withMathematica { tool =>
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), DGauto(1)) shouldBe 'proved
+  }
+
 
   "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" taggedAs(SummaryTest) in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
@@ -110,6 +123,7 @@ class ODETests extends TacticTestBase {
       "x>0&v=1&a=2 -> [{x'=v,v'=a&v>=0}](x>0&v>=0)" ::
       "x>1&v=10&a=-2 -> [{x'=v,v'=a&v>=0}](x>1&v>=0)" ::
       "x>=1&v=10&a=-2 -> [{x'=v,v'=a&v>=0}](x>=1&v>=0)" ::
+      "x>b -> [{x'=2}]x>b" ::
       // open cases
       "x^2>5 -> [{x'=x^3}]x^2>5" ::
       "5<x^2 -> [{x'=x^3}]5<x^2" ::

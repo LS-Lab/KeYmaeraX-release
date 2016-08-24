@@ -24,23 +24,28 @@ private object DifferentialTactics {
 
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
-    ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
-      //@note diffWeaken will already inlcude all cases where V works, without much additional effort.
-      (diffWeaken(pos) & QE) |
-        (if (seq.sub(pos) match {
-          case Some(Box(_: ODESystem, _: Greater)) => true
-          case Some(Box(_: ODESystem, _: Less)) => true
-          case _ => false})
-        // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost
-          openDiffInd(pos) | DGauto(pos) | TactixLibrary.diffSolve()(pos)
-        else
-        //@todo check degeneracy for split to > or =
-          diffInd()(pos)
-            | DGauto(pos)
-            //@todo | diffInvariant(cuts) | DA ...
-            | TactixLibrary.diffSolve()(pos)
-          ))
-      )(pos))
+    TactixLibrary.invGenerator(seq,pos) match {
+      case Some(inv) => diffInvariant(inv)(pos) & ODE(pos)
+      case None =>
+        ((boxAnd(pos) & andR(pos)) *) & onAll(("" by ((pos: Position, seq: Sequent) =>
+          //@note diffWeaken will already inlcude all cases where V works, without much additional effort.
+          (diffWeaken(pos) & QE) |
+            (if (seq.sub(pos) match {
+              case Some(Box(_: ODESystem, _: Greater)) => true
+              case Some(Box(_: ODESystem, _: Less)) => true
+              case _ => false
+            })
+            // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
+              openDiffInd(pos) | DGauto(pos) | TactixLibrary.diffSolve()(pos)
+            else
+            //@todo check degeneracy for split to > or =
+              diffInd()(pos)
+                | DGauto(pos)
+                //@todo | diffInvariant(cuts) | DA ...
+                | TactixLibrary.diffSolve()(pos)
+              ))
+          ) (pos))
+    }
   })
 
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
