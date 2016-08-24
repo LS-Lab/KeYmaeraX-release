@@ -69,8 +69,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val prop                    : BelleExpr = NamedTactic("prop", {
     (OnAll(?(
           (close
-            | ((alphaRule partial)
-            | ((betaRule partial) partial) partial) partial) partial) partial))*
+            | ((alphaRule)
+            | ((betaRule) ) ) ) ) ))*
   })
 
   /** master: master tactic that tries hard to prove whatever it could
@@ -78,13 +78,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     ((OnAll(?(
           (close
-            | ((must(normalize) partial)
-            | ((loop(gen)('L) partial)
-            | ((loop(gen)('R) partial)
+            | ((must(normalize))
+            | ((loop(gen)('L) )
+            | ((loop(gen)('R) )
             //| ((diffSolve(None)('R) partial)
             //| ((diffInd() partial)
-            | ((ODE('R) partial)
-            | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial))*) &
+            | ((ODE('R) )
+            | (exhaustiveEqL2R('L) ) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE))
   }
 
@@ -386,23 +386,23 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  lazy val alphaRule: BelleExpr = (andL('_) partial) |
-    ((orR('_) partial) |
-      ((implyR('_) partial) |
-        ((notL('_) partial) |
-          (notR('_) partial)
-          partial)
-        partial)
-      partial)
+  lazy val alphaRule: BelleExpr = (andL('_) ) |
+    ((orR('_) ) |
+      ((implyR('_) ) |
+        ((notL('_) ) |
+          (notR('_) )
+          )
+        )
+      )
   /** Beta rules are propositional rules that split */
-  lazy val betaRule: BelleExpr = (andR('_) partial) |
-    ((orL('_) partial) |
-      ((implyL('_) partial) |
-        ((equivL('_) partial) |
-          (equivR('_) partial)
-          partial)
-        partial)
-      partial)
+  lazy val betaRule: BelleExpr = (andR('_) ) |
+    ((orL('_) ) |
+      ((implyL('_) ) |
+        ((equivL('_) ) |
+          (equivR('_) )
+          )
+        )
+      )
 
   /** Real-closed field arithmetic on a single formula without any extra smarts.
     * @see [[QE]] */
