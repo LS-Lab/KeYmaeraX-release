@@ -30,11 +30,11 @@ class ODETests extends TacticTestBase {
     proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
-//  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
-//    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
-//  }
+  //  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withMathematica { qeTool =>
+  //    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  //  }
 
-  it should "DGauto x>0->[{x'=-x+1}]x>0" taggedAs(TodoTest) in withMathematica { qeTool =>
+  it should "DGauto x>0->[{x'=-x+1}]x>0" taggedAs (TodoTest) in withMathematica { qeTool =>
     proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
@@ -46,12 +46,16 @@ class ODETests extends TacticTestBase {
     proveBy("x>0&a>0->[{x'=-a*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
-  it should "DGauto x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0" taggedAs(TodoTest) in withMathematica { qeTool =>
+  it should "DGauto x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0" taggedAs (TodoTest) in withMathematica { qeTool =>
     proveBy("x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
   it should "DGauto x>0->[{x'=-a*x,a'=4&a>0}]x>0" in withMathematica { qeTool =>
     proveBy("x>0->[{x'=-a*x,a'=4&a>0}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  }
+
+  it should "DGauto x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0" taggedAs (TodoTest) in withMathematica { qeTool =>
+    proveBy("x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
 
@@ -145,7 +149,7 @@ class ODETests extends TacticTestBase {
   // conserved quantity
       "x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c -> [{x1'=2*x1^4*x2+4*x1^2*x2^3-6*x1^2*x2, x2'=-4*x1^3*x2^2-2*x1*x2^4+6*x1*x2^2}] x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c" ::
   // diffcut
-      //"x>=0&v>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
+      //"x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
       // exams
       "x>=1|x^3>=8->[{x'=x^4+x^2}](x>=1|x^3>=8)" ::
       "x^3-4*x*y>=99->[{x'=4*x,y'=3*x^2-4*y}]x^3-4*x*y>=99" ::
@@ -163,7 +167,7 @@ class ODETests extends TacticTestBase {
     "x>0->[{x'=-x+1}]x>0" ::
     "x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0" ::
     "x>0&a<0&b>=0->[{x'=a*x+b}]x>0" ::
-    "x>=0&v>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
+    "x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
     "x>=2&y>=22->[{x'=4*x^2,y'=x+y^4}]y>=22" ::
     "x>=2&y=1->[{x'=x^2+y+x^4,y'=y^2+1}]x^3>=1" ::
     "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
@@ -175,7 +179,7 @@ class ODETests extends TacticTestBase {
     proveAll(list)
   }
 
-  it should "prove a list of ODEs some point in the future" taggedAs(TodoTest) in withMathematica { qeTool =>
+  it should "prove a list of ODEs with cuts after improving tactics" taggedAs(TodoTest) in withMathematica { qeTool =>
     proveAll(nops)
   }
 
