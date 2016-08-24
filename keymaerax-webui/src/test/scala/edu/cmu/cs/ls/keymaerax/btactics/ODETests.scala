@@ -4,12 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SummaryTest, TodoTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
@@ -59,7 +59,7 @@ class ODETests extends TacticTestBase {
   }
 
 
-  "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
+  "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" taggedAs(SummaryTest) in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
   it should "prove x>0 -> [{x'=x}]x>0 with lengthy tactic" in withMathematica { qeTool =>
@@ -96,7 +96,7 @@ class ODETests extends TacticTestBase {
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "prove x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { qeTool =>
+  it should "prove x>0 -> [{x'=-x}]x>0 by DA" taggedAs(SummaryTest) in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
