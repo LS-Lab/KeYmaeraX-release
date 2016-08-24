@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import DifferentialHelper._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
 
 /**

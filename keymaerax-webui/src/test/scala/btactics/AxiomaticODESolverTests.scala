@@ -17,7 +17,7 @@ import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryT
   * @author Nathan Fulton
   */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
-  import DifferentialHelper._
+  import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
   import Augmentors._
   import TacticFactory._
 

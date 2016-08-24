@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import TacticFactory._
 import Augmentors._
-import DifferentialHelper._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 
 /**
   * An Axiomatic ODE solver.
