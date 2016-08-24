@@ -496,6 +496,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
 }
 
 /** A partial tactic is allowed to leave its subgoals around as unproved */
+@deprecated("Replace with something else -- either assertProved or some sort of branch indicator?", "4.2")
 case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) extends BelleExpr {
   override def prettyString = label match {
     case Some(theLabel) => s"partial(${child.prettyString})@(${theLabel.prettyString})"
