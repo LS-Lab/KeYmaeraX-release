@@ -22,8 +22,8 @@ import scala.language.postfixOps
  */
 private object DifferentialTactics {
 
-  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
-    if (!isODE(seq,pos)) throw new BelleError("ODE only applies to differential equations")
+  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
     ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
       //@note diffWeaken will already inlcude all cases where V works, without much additional effort.
       (diffWeaken(pos) & QE) |
@@ -44,7 +44,6 @@ private object DifferentialTactics {
   })
 
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (!isODE(seq,pos)) throw new BelleError("DGauto only applies to differential equations")
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
@@ -234,26 +233,25 @@ private object DifferentialTactics {
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
     *
-    * @param qeTool Quantifier elimination tool for final QE step of tactic.
    * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
-   *             'none: behaves as DI rule per cheat sheet
-   *                    {{{
-   *                      G, q(x) |- p(x), D    G, q(x) |- [x'=f(x)&q(x)](p(x))', D
-   *                      ---------------------------------------------------------
-   *                                  G |- [x'=f(x)&q(x)]p(x), D
-   *                    }}}
-   *             'diffInd: behaves as diffInd rule per cheat sheet
-   *                    {{{
-   *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p(x')    @note derive on (p(x))' already done
-   *                      ----------------------------------------------
-   *                                  G |- [x'=f(x)&q(x)]p(x), D
-   *                    }}}
    *             'full: tries to close everything after diffInd rule
    *                    {{{
    *                        *
    *                      --------------------------
    *                      G |- [x'=f(x)&q(x)]p(x), D
    *                    }}}
+    *             'none: behaves as DI rule per cheat sheet
+    *                    {{{
+    *                      G, q(x) |- p(x), D    G, q(x) |- [x'=f(x)&q(x)](p(x))', D
+    *                      ---------------------------------------------------------
+    *                                  G |- [x'=f(x)&q(x)]p(x), D
+    *                    }}}
+    *             'diffInd: behaves as diffInd rule per cheat sheet
+    *                    {{{
+    *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p(x')    @note derive on (p(x))' already done
+    *                      ----------------------------------------------
+    *                                  G |- [x'=f(x)&q(x)]p(x), D
+    *                    }}}
    * @example{{{
    *         *
    *    ---------------------diffInd(qeTool, 'full)(1)
@@ -277,7 +275,7 @@ private object DifferentialTactics {
    * @incontext
    */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
-    require(auto == 'none || auto == 'diffInd || auto == 'full, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
+    require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && (sequent.sub(pos) match {
@@ -365,14 +363,11 @@ private object DifferentialTactics {
   val openDiffInd: DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc && pos.isTopLevel && (sequent.sub(pos) match {
-          case Some(Box(_: ODESystem, _: Greater)) => true
-          case Some(Box(_: ODESystem, _: Less)) => true
-          case _ => false
-        }), "openDiffInd only at ODE system in succedent with postcondition f>g or f<g, but got " + sequent.sub(pos))
+        require(pos.isSucc && pos.isTopLevel, "openDiffInd only at ODE system in succedent")
         val greater = sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => true
           case Some(Box(_: ODESystem, _: Less)) => false
+          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with postcondition f>g or f<g, but got " + sequent.sub(pos))
         }
         if (pos.isTopLevel) {
           val t = (
@@ -804,7 +799,7 @@ private object DifferentialTactics {
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
   lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Box(a, p)) =>
+    case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
       def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
