@@ -23,6 +23,7 @@ import scala.language.postfixOps
 private object DifferentialTactics {
 
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {require(pos.isTopLevel, "currently only top-level positions are supported")
+    if (!isODE(seq,pos)) throw new BelleError("ODE only applies to differential equations")
     ((boxAnd(pos) & andR(pos))*) & onAll(("" by ((pos:Position,seq:Sequent) =>
       //@note diffWeaken will already inlcude all cases where V works, without much additional effort.
       (diffWeaken(pos) & QE) |
@@ -43,6 +44,7 @@ private object DifferentialTactics {
   })
 
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    if (!isODE(seq,pos)) throw new BelleError("DGauto only applies to differential equations")
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
@@ -847,6 +849,16 @@ private object DifferentialTactics {
       }
     }, ode)
     primedSymbols
+  }
+
+  /** Indicates whether there is an ODE at the indicated position of a sequent */
+  private val isODE: (Sequent,Position)=>Boolean = (sequent,pos) => {
+    sequent.sub(pos) match {
+      case Some(Box(_: ODESystem, _))     => true
+      case Some(Diamond(_: ODESystem, _)) => true
+      case Some(e) => false
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
   }
 
   /** Indicates whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
