@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Generator
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.parser._
 import BelleLexer.TokenStream
 
@@ -63,7 +63,7 @@ object BelleParser extends (String => BelleExpr) {
     val stack : Stack[BelleItem] = st.stack
 
     stack match {
-      //@note This is a hack to support blah & <(blahs) without copying all of hte below cases.
+      //@note This is a hack to support "blah & <(blahs)" in addition to "blah <(blahs)" without copying all of branch cases.
       //@todo Diable support for e<(e) entirely.
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR, seqCombinatorLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc) =>
         ParserState(
@@ -239,7 +239,7 @@ object BelleParser extends (String => BelleExpr) {
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc), st.input)
           }
           else {
-            val (args, remainder) = parseArgumentList(st.input)
+            val (args, remainder) = parseArgumentList(name, st.input)
 
             //Do our best at computing the entire range of positions that is encompassed by the tactic application.
             val endLoc = remainder match {
@@ -419,7 +419,7 @@ object BelleParser extends (String => BelleExpr) {
     * @param input A TokenStream containing: arg :: "," :: arg :: "," :: arg :: "," :: ... :: ")" :: remainder
     * @return Parsed arguments and the remainder token string.
     */
-  private def parseArgumentList(input: TokenStream) : (List[TacticArg], TokenStream) = input match {
+  private def parseArgumentList(codeName: String, input: TokenStream) : (List[TacticArg], TokenStream) = input match {
     case BelleToken(OPEN_PAREN, oParenLoc) +: rest => {
       val (argList, closeParenAndRemainder) = rest.span(tok => tok.terminal != CLOSE_PAREN)
 
@@ -429,10 +429,17 @@ object BelleParser extends (String => BelleExpr) {
       assert(closeParenAndRemainder.head.terminal == CLOSE_PAREN)
       val remainder = closeParenAndRemainder.tail
 
-
       //Parse all the arguments.
-      val arguments = removeCommas(argList, false).map(parseArgumentToken)
-
+      var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
+      val arguments = removeCommas(argList, false).map(tok => tok match {
+        case BelleToken(terminal: EXPRESSION, _) => {
+          assert(DerivationInfo.hasCodeName(codeName), s"DerivationINfo should contain code name ${codeName} because it is called with expression arguments.")
+          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok)
+          nonPosArgCount = nonPosArgCount + 1
+          theArg
+        }
+        case _ => parseArgumentToken(None)(tok)
+      })
       (arguments, remainder)
     }
   }
@@ -454,7 +461,13 @@ object BelleParser extends (String => BelleExpr) {
     case Nil => Nil
   }
 
-  private def parseArgumentToken(tok : BelleToken) : TacticArg = tok.terminal match {
+  /**
+    *
+    * @param expectedType The expected type of the argument..
+    * @param tok The argument token that's currently being processed.
+    * @return The argument corresponding to the current token.
+    */
+  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok : BelleToken) : TacticArg = tok.terminal match {
     case terminal : TACTIC_ARGUMENT => terminal match {
       case ABSOLUTE_POSITION(posString) => Right(parseAbsolutePosition(posString, tok.location))
       case LAST_ANTECEDENT              => Right(LastAnte(0)) //@todo 0?
@@ -462,6 +475,32 @@ object BelleParser extends (String => BelleExpr) {
       case SEARCH_ANTECEDENT            => Right(Find.FindL(0, None)) //@todo 0?
       case SEARCH_SUCCEDENT             => Right(Find.FindR(0, None)) //@todo 0?
       case SEARCH_EVERYWHERE            => Right(new Find(0, None, AntePosition(1), exact = true)) //@todo 0?
+      case tok : EXPRESSION       => {
+        //@todo allow lists here as well. For now any consecutive list of formula arguments is parsed as a Seq[Formula]. See constructTactic.
+        import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+        //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
+        assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
+        expectedType.get match {
+          case ty:FormulaArg if(tok.expression.isInstanceOf[Formula]) => Left(tok.expression)
+          case ty:FormulaArg => try {
+            Left(tok.undelimitedExprString.asFormula)
+          } catch {
+            case exn: ParseException => throw new Exception(s"Could not parse ${tok.exprString} as a Formula, but a formula was expected. Error: ${exn}")
+          }
+          case ty:TermArg if(tok.expression.isInstanceOf[Term]) => Left(tok.expression)
+          case ty:TermArg => try {
+            Left(tok.undelimitedExprString.asTerm)
+          } catch {
+            case exn: ParseException => throw new Exception(s"Could not parse ${tok.exprString} as a Variable, but a term was expected. Error: ${exn}")
+          }
+          case ty:VariableArg if(tok.expression.isInstanceOf[Variable]) => Left(tok.expression)
+          case ty:VariableArg => try {
+            Left(tok.undelimitedExprString.asVariable)
+          } catch {
+            case exn: ParseException => throw new Exception(s"Could not parse ${tok.exprString} as a Variable, but a Variable was expected. Error: ${exn}")
+          }
+        }
+      }
       case tok : EXPRESSION       => Left(tok.expression) //@todo allow lists here as well. For now any consecutive list of formula arguments is parsed as a Seq[Formula]. See constructTactic.
       case _ => throw ParseException(s"Expected a tactic argument (Belle Expression or position locator) but found ${terminal.img}", tok.location)
     }

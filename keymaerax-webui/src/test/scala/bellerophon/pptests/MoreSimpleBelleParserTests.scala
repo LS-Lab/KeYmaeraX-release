@@ -12,7 +12,7 @@ import org.scalatest.{FlatSpec, Matchers}
   * coverage can't hurt.
   * @author Nathan Fulton
   */
-class MoreSimpleBelleParserTests extends FlatSpec with Matchers {
+class MoreSimpleBelleParserTests extends TacticTestBase {
   @deprecated("Switch to BelleParser", "4.2b1")
   private def oldParser(s: String): BelleExpr = BTacticParser(s).get
 
@@ -83,6 +83,11 @@ class MoreSimpleBelleParserTests extends FlatSpec with Matchers {
     val tactic = parser("Loop({`v >= 0`})")
     tactic.isInstanceOf[DependentPositionTactic] shouldBe true
     val dpt = tactic.asInstanceOf[DependentPositionTactic]
+  }
+
+  it should "parse j(x) as a term or a formula depending on ArgInfo." in {
+    val formulaTactic = parser("Loop({`j(x)`})")
+    val termTactic = parser("diffGhost({`x`}, {`j(x)`}, {`j(x)`}, {`j(x)`})")
   }
 
   "Propositional Examples" should "close p() -> p()" in {

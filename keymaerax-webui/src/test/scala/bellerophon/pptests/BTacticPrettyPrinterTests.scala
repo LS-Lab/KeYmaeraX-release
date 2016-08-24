@@ -2,6 +2,7 @@ package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -9,7 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
   * @author Nathan Fulton
   */
 @UsualTest
-class BTacticPrettyPrinterTests extends FlatSpec with Matchers {
+class BTacticPrettyPrinterTests extends TacticTestBase {
   val parser = BelleParser
 
   //@note this test case points out something that's kind-of a problem with our current setup -- print(parse(x)) != x even if parse(print(x)) = x.
