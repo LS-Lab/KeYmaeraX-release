@@ -12,7 +12,7 @@ import org.scalatest.{FlatSpec, Matchers}
   * coverage can't hurt.
   * @author Nathan Fulton
   */
-class MoreSimpleBelleParserTests extends FlatSpec with Matchers {
+class MoreSimpleBelleParserTests extends TacticTestBase {
   @deprecated("Switch to BelleParser", "4.2b1")
   private def oldParser(s: String): BelleExpr = BTacticParser(s).get
 
