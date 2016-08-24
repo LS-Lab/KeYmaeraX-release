@@ -50,12 +50,13 @@ private object SATURATE extends BelleTerminal("+") {
   override def regexp = "\\+".r
 }
 
-private case class N_TIMES(n:Int) extends BelleTerminal(s"^${n}") {
+private case class N_TIMES(n:Int) extends BelleTerminal(s"*$n") {
   assert(n >= 0)
   override def toString = s"NTIMES($n)"
+  override def regexp = s"\\*$n".r
 }
 private object N_TIMES {
-  def regexp  = """(\^\d*)""".r
+  def regexp  = """(\*\d+)""".r
   def startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 

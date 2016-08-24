@@ -227,8 +227,8 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
   }
 
-  "NTIMES repeat combinator parser" should "parse e^22" in {
-    val tactic = BelleParser("andR(1)^22").asInstanceOf[RepeatTactic]
+  "NTIMES repeat combinator parser" should "parse e*22" in {
+    val tactic = BelleParser("andR(1)*22").asInstanceOf[RepeatTactic]
     tactic.child shouldBe   TactixLibrary.andR(1)
     tactic.times shouldBe 22
   }
