@@ -3,11 +3,10 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
-import edu.cmu.cs.ls.keymaerax.core.{Number, ODESystem, Term, _}
+import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, Variable}
 
 /**
   * @todo move to formula tools? Or make this ProgramTools?
