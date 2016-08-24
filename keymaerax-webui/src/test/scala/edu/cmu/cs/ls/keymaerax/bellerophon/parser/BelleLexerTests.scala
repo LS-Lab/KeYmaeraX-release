@@ -17,7 +17,7 @@ class BelleLexerTests extends FlatSpec with Matchers {
     ("andR(1) <(QE, QE)", IDENT("andR") :: OPEN_PAREN :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: BRANCH_COMBINATOR :: OPEN_PAREN :: IDENT("QE") :: COMMA :: IDENT("QE") :: CLOSE_PAREN :: Nil) ::
     ("QE partial", IDENT("QE") :: PARTIAL :: Nil) ::
     ("partial(QE)", PARTIAL :: OPEN_PAREN :: IDENT("QE") :: CLOSE_PAREN :: Nil) ::
-    ("US({`p() -> q()`} => implyR(1))", US_MATCH :: OPEN_PAREN :: EXPRESSION("{`p() -> q()`}") :: RIGHT_ARROW :: IDENT("implyR") :: OPEN_PAREN :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: CLOSE_PAREN :: Nil) ::
+    ("USMatch({`p() -> q()`} => implyR(1))", US_MATCH :: OPEN_PAREN :: EXPRESSION("{`p() -> q()`}") :: RIGHT_ARROW :: IDENT("implyR") :: OPEN_PAREN :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: CLOSE_PAREN :: Nil) ::
     Nil
   }
 
