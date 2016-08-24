@@ -50,12 +50,13 @@ private object SATURATE extends BelleTerminal("+") {
   override def regexp = "\\+".r
 }
 
-private case class N_TIMES(n:Int) extends BelleTerminal(s"^${n}") {
+private case class N_TIMES(n:Int) extends BelleTerminal(s"*$n") {
   assert(n >= 0)
   override def toString = s"NTIMES($n)"
+  override def regexp = s"\\*$n".r
 }
 private object N_TIMES {
-  def regexp  = """(\^\d*)""".r
+  def regexp  = """(\*\d+)""".r
   def startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
@@ -85,10 +86,12 @@ private object ABSOLUTE_POSITION {
   def regexp = """(-?\d+(?:\.\d+)*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
+private object LAST_SUCCEDENT extends BelleTerminal("'Rlast") with TACTIC_ARGUMENT
+private object LAST_ANTECEDENT extends BelleTerminal("'Llast") with TACTIC_ARGUMENT
 private object SEARCH_SUCCEDENT extends BelleTerminal("'R") with TACTIC_ARGUMENT
 private object SEARCH_ANTECEDENT extends BelleTerminal("'L") with TACTIC_ARGUMENT
-private object SEARCH_EVERYWHERE extends BelleTerminal("'-") with TACTIC_ARGUMENT {
-  override def regexp = "'\\-".r
+private object SEARCH_EVERYWHERE extends BelleTerminal("'_") with TACTIC_ARGUMENT {
+  override def regexp = "'\\_".r
 }
 
 private object PARTIAL extends BelleTerminal("partial") {

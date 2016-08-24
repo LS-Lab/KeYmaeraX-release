@@ -470,9 +470,11 @@ object BelleParser extends (String => BelleExpr) {
   private def parseArgumentToken(expectedType: Option[ArgInfo])(tok : BelleToken) : TacticArg = tok.terminal match {
     case terminal : TACTIC_ARGUMENT => terminal match {
       case ABSOLUTE_POSITION(posString) => Right(parseAbsolutePosition(posString, tok.location))
+      case LAST_ANTECEDENT              => Right(LastAnte(0)) //@todo 0?
+      case LAST_SUCCEDENT               => Right(LastSucc(0)) //@todo 0?
       case SEARCH_ANTECEDENT            => Right(Find.FindL(0, None)) //@todo 0?
       case SEARCH_SUCCEDENT             => Right(Find.FindR(0, None)) //@todo 0?
-      case SEARCH_EVERYWHERE            => throw ParseException("Search Everywhere is not currently supported. Sorry!", tok.location)
+      case SEARCH_EVERYWHERE            => Right(new Find(0, None, AntePosition(1), exact = true)) //@todo 0?
       case tok : EXPRESSION       => {
         //@todo allow lists here as well. For now any consecutive list of formula arguments is parsed as a Seq[Formula]. See constructTactic.
         import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -499,6 +501,7 @@ object BelleParser extends (String => BelleExpr) {
           }
         }
       }
+      case tok : EXPRESSION       => Left(tok.expression) //@todo allow lists here as well. For now any consecutive list of formula arguments is parsed as a Seq[Formula]. See constructTactic.
       case _ => throw ParseException(s"Expected a tactic argument (Belle Expression or position locator) but found ${terminal.img}", tok.location)
     }
     case _ => throw ParseException("Encountered non-tactic-argument terminal when trying to parse a tactic argument", tok.location)

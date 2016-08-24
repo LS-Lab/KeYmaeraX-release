@@ -505,8 +505,9 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
-case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
-case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
+//@note saturate and repeat tactic fully parenthesize for parser
+case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*)" }
+case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*" + times + ")" }
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.

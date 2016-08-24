@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.parser.UnknownLocation
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
+import scala.language.postfixOps
+
 /**
   * Very simple positive unit tests for the Bellerophon parser. Useful for TDD and bug isolation but probably not
   * so useful for anything else.
@@ -43,6 +45,17 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("boxAnd('R)") shouldBe HilbertCalculus.boxAnd(Find.FindR(0, None))
   }
 
+  it should "parse a built-in argument with a 'Rlast position locator" in {
+    BelleParser("boxAnd('Rlast)") shouldBe HilbertCalculus.boxAnd(LastSucc(0))
+  }
+
+  it should "parse a built-in argument with a 'Llast position locator" in {
+    BelleParser("boxAnd('Llast)") shouldBe HilbertCalculus.boxAnd(LastAnte(0))
+  }
+
+  it should "parse a built-in argument with a '_ position locator" in {
+    BelleParser("boxAnd('_)") shouldBe HilbertCalculus.boxAnd(new Find(0, None, AntePosition(1), exact=true))
+  }
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
     BelleParser("diffInvariant({`1=1`}, 1)") shouldBe TactixLibrary.diffInvariant(Seq("1=1".asFormula) : _*)(1)
@@ -202,8 +215,20 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.child.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
   }
 
-  "NTIMES repeat combinator parser" should "parse e^22" in {
-    val tactic = BelleParser("andR(1)^22").asInstanceOf[RepeatTactic]
+  ignore should "get precedence right" in {
+    //@todo parser get's it wrong
+    val tactic = BelleParser("andR(1) & andR(2)*")
+    tactic shouldBe a [SaturateTactic]
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
+  }
+
+  it should "parse fully parenthesized" in {
+    val tactic = BelleParser("andR(1) & (andR(2)*)")
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
+  }
+
+  "NTIMES repeat combinator parser" should "parse e*22" in {
+    val tactic = BelleParser("andR(1)*22").asInstanceOf[RepeatTactic]
     tactic.child shouldBe   TactixLibrary.andR(1)
     tactic.times shouldBe 22
   }
