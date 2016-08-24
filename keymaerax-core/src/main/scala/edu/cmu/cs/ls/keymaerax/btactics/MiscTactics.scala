@@ -244,13 +244,6 @@ object TacticFactory {
       }
     }
 
-    /** Creates a dependent tactic while inspecting the provable */
-    def by(t: (Provable => BelleExpr)): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(provable: Provable): BelleExpr = {
-        t(provable)
-      }
-    }
-
     def byWithInputs(inputs: List[Expression], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
