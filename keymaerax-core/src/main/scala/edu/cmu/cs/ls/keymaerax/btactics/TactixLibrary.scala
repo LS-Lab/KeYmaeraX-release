@@ -204,6 +204,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see[[DifferentialTactics.diffCut]]
     * @see [[diffInvariant()]]
     */
+  @deprecated("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * @example
@@ -215,6 +216,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
+  @deprecated("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * @example
