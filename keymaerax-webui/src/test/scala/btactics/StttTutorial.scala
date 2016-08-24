@@ -280,15 +280,18 @@ class StttTutorial extends TacticTestBase {
         )
 
     //@todo tactic extraction/belle parser | combinator problem?
-    //db.proveBy(modelContent, tactic) shouldBe 'proved
+    db.proveBy(modelContent, tactic) shouldBe 'proved
     proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
   it should "be provable with multi-arg diff. invariant" in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.key")).mkString
 
-    def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
-      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) &
+    def ode(a: String) =
+      diffInvariant("c>=0".asFormula)('R) &
+      diffInvariant("dx^2+dy^2=1".asFormula)('R) &
+      diffInvariant(s"v=old(v)+$a*c".asFormula)('R) &
+      diffInvariant(s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) &
       exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & (andL('_)*) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
@@ -305,8 +308,7 @@ class StttTutorial extends TacticTestBase {
           )
         )
 
-    //@todo proves correctly, but doesn't extract correctly (multi-argument diffInvariant)
-    //db.proveBy(modelContent, tactic) shouldBe 'proved
+    db.proveBy(modelContent, tactic) shouldBe 'proved
     proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
