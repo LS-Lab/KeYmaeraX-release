@@ -40,9 +40,6 @@ object SensorUncertainty {
     p.conclusion.succ.length == 1 &&
     p.conclusion.ante.length == 0 &&
     (p.conclusion.succ.head match {
-      case Imply(precond, Loop(Box(program, conclusion))) =>
-        preconditionShapeAnalysis(sensor, precond).isDefined &&
-        programShapeAnalysis(sensor, program).isDefined
       case Imply(precond, Box(program, conclusion)) =>
         preconditionShapeAnalysis(sensor, precond).isDefined &&
         programShapeAnalysis(sensor, program).isDefined
@@ -64,7 +61,12 @@ object SensorUncertainty {
     * sequence of assignments.
     * @returns Some list of control branches that write to the sensor variable, or None if the program does not have the correct shape. */
   private def programShapeAnalysis(sensor: Variable, program: Program): Option[List[Program]] = {
-    val choices = ProgramHelpers.decomposeChoices(program)
+
+    val choices = program match {
+      //@todo This is wrong -- want to support {{blah ++ blah}; ODE}* but only support {blah ++ blah}*
+      case Loop(subprogram) => ProgramHelpers.decomposeChoices(program)
+      case _ => ProgramHelpers.decomposeChoices(program)
+    }
 
     //Each of the choices should be an optionally guarded assignment
     if(!choices.forall(ProgramHelpers.optionallyGuardedAssignments)) None
