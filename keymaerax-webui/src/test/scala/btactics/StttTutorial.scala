@@ -230,7 +230,8 @@ class StttTutorial extends TacticTestBase {
 
     val ode =
       // xr = (xm+S)/2
-      diffInvariant("xm<=x".asFormula, "5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2".asFormula)('R) &
+      diffInvariant("xm<=x".asFormula)('R) &
+      diffInvariant("5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2".asFormula)('R) &
       diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
@@ -244,7 +245,7 @@ class StttTutorial extends TacticTestBase {
       )
 
     //@todo tactic extraction/parsing does not work for this example yet (could not retrieve executable 1 from the database. Caused by: 1)
-    //db.proveBy(modelContent, tactic) shouldBe 'proved
+    db.proveBy(modelContent, tactic) shouldBe 'proved
     proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
