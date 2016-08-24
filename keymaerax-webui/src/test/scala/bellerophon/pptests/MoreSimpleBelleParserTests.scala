@@ -55,7 +55,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse either" in {
     val result = parser("nil | implyR").asInstanceOf[EitherTactic]
-    result.left.prettyString shouldBe  """partial(nil)"""
+    result.left.prettyString shouldBe  """nil"""
     result.right.prettyString shouldBe "implyR"
   }
 
