@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import testHelper.KeYmaeraXTestTags.TodoTest
 import testHelper.ParserFactory._
 
 import scala.collection.immutable._
@@ -86,7 +87,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
-  it should "be provable with abstract loop invariant" in withMathematica { qeTool => withDatabase { db =>
+  it should "be provable with abstract loop invariant" taggedAs(TodoTest) ignore withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key")).mkString
 
     val tactic = implyR('_) & (andL('_)*) & loop("J(v)".asFormula)('R) <(
@@ -97,8 +98,8 @@ class StttTutorial extends TacticTestBase {
       US(UnificationMatch("J(v)".asFormula, "v>=0".asFormula).usubst) &
       OnAll(close | QE)
 
-    //@todo tactic extraction/belle parser | combinator
-    //db.proveBy(modelContent, tactic) shouldBe 'proved
+    //@todo Rewrite the US tactic in terms of the Bellerophon language, not arbitrary scala code.
+    db.proveBy(modelContent, tactic) shouldBe 'proved
     proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
