@@ -159,7 +159,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[DLBySubst.loop]]
     */
   def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
-  /** loop=I: prove a property of a loop by induction, if the given generator finds a loop invariant
+  /** loop: prove a property of a loop by induction, if the given generator finds a loop invariant
     *
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {

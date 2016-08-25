@@ -38,7 +38,7 @@ object AxiomaticODESolver {
 
   def apply() = axiomaticSolve()
 
-  def axiomaticSolve() = "axiomaticSolve" by ((pos:Position, s:Sequent) => {
+  def axiomaticSolve() = "AxiomaticODESolver" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
     val ode = s(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
     val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1

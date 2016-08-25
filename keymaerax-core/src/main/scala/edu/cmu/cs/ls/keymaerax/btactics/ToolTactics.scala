@@ -36,7 +36,7 @@ private object ToolTactics {
     */
   def partialQE(qeTool: QETool) = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    Idioms.NamedTactic("QE",
+    Idioms.NamedTactic("pQE",
       toSingleFormula & rcf(qeTool)
     )
   }
