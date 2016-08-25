@@ -644,7 +644,7 @@ object DerivationInfo {
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
-    new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
+    //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
 
     // Differential tactics
@@ -711,7 +711,7 @@ object DerivationInfo {
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
     // DLBySubst
-    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+    //new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
 
     new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
 
@@ -840,6 +840,7 @@ sealed trait DerivationInfo {
   val numPositionArgs: Int = 0
   /** Whether the derivation expects the caller to provide it with a way to generate invariants */
   val needsGenerator: Boolean = false
+  override def toString: String = "DerivationInfo(" + canonicalName + "," + codeName + ")"
 }
 
 /** Meta-Information for a (derived) axiom or (derived) axiomatic rule */

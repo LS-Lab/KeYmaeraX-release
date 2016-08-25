@@ -280,8 +280,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   it should "work on tactic that caused original bug" in withMathematica { qeTool =>
     val t = """implyR(1) &
               |loop({`x<=m`}, 1) <(
-              |  MathematicaQE,
-              |  MathematicaQE,
+              |  QE,
+              |  QE,
               |  partial(composeb(1) & choiceb(1) & andR(1) <(
               |    assignb(1) & diffSolve(1) & nil,
               |    testb(1) & implyR(1) & diffSolve(1) & nil
