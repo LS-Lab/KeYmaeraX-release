@@ -99,7 +99,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     new DependentPositionTactic("assignb") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        if (INTERNAL) (useAt("[:=] assign")(pos) partial) | ((useAt("[:=] assign equality")(pos) partial) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
+        if (INTERNAL) (useAt("[:=] assign")(pos)) | ((useAt("[:=] assign equality")(pos)) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
         else DLBySubst.assignb(pos)
       }
     }
