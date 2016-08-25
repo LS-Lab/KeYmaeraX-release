@@ -22,6 +22,7 @@ import scala.language.postfixOps
  */
 private object DifferentialTactics {
 
+  /** @see [[TactixLibrary.ODE]] */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
     TactixLibrary.invGenerator(seq,pos) match {
@@ -48,6 +49,7 @@ private object DifferentialTactics {
     }
   })
 
+  /** @see [[TactixLibrary.DGauto]] */
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
@@ -235,50 +237,7 @@ private object DifferentialTactics {
     }
   }
 
-  /**
-   * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
-    *
-   * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
-   *             'full: tries to close everything after diffInd rule
-   *                    {{{
-   *                        *
-   *                      --------------------------
-   *                      G |- [x'=f(x)&q(x)]p(x), D
-   *                    }}}
-    *             'none: behaves as DI rule per cheat sheet
-    *                    {{{
-    *                      G, q(x) |- p(x), D    G, q(x) |- [x'=f(x)&q(x)](p(x))', D
-    *                      ---------------------------------------------------------
-    *                                  G |- [x'=f(x)&q(x)]p(x), D
-    *                    }}}
-    *             'diffInd: behaves as diffInd rule per cheat sheet
-    *                    {{{
-    *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p(x')    @note derive on (p(x))' already done
-    *                      ----------------------------------------------
-    *                                  G |- [x'=f(x)&q(x)]p(x), D
-    *                    }}}
-   * @example{{{
-   *         *
-   *    ---------------------diffInd(qeTool, 'full)(1)
-   *    x>=5 |- [{x'=2}]x>=5
-   * }}}
-   * @example{{{
-   *    x>=5, true |- x>=5    true |- [{x':=2}]x'>=0
-   *    --------------------------------------------diffInd(qeTool, 'diffInd)(1)
-   *    x>=5 |- [{x'=2}]x>=5
-   * }}}
-   * @example{{{
-   *    x>=5, true |- x>=5    x>=5, true |- [{x'=2}](x>=5)'
-   *    ---------------------------------------------------diffInd(qeTool, 'none)(1)
-   *    x>=5 |- [{x'=2}]x>=5
-   * }}}
-   * @example{{{
-   *    x>=5 |- [x:=x+1;](true -> x>=5&2>=0)
-   *    -------------------------------------diffInd(qeTool, 'full)(1, 1::Nil)
-   *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
-   * }}}
-   * @incontext
-   */
+  /** @see [[TactixLibrary.diffInd]] */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
     require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -350,21 +309,7 @@ private object DifferentialTactics {
   lazy val DIRule: DependentPositionTactic = diffInd('none)
   lazy val diffIndRule: DependentPositionTactic = diffInd('diffInd)
 
-  /**
-    * openDiffInd: Open Differential Invariant proves an open formula to be an invariant of a differential equation (by DIo, DW, DE, QE)
-    *
-    * @example{{{
-    *         *
-    *    ---------------------openDiffInd(1)
-    *    x^2>5 |- [{x'=x^3+x^4}]x^2>5
-    * }}}
-    * @example{{{
-    *         *
-    *    ---------------------openDiffInd(1)
-    *    x^3>5 |- [{x'=x^3+x^4}]x^3>5
-    * }}}
-    * @incontext
-    */
+  /** @see [[TactixLibrary.openDiffInd]] */
   val openDiffInd: DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -417,30 +362,7 @@ private object DifferentialTactics {
     }
   }
 
-  /**
-   * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
-   * used in the evolution domain constraint.
-    *
-    * @example{{{
-   *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
-   *         -----------------------------------------------diffCut("x>0".asFormula)(1)
-   *         x>0 |- [{x'=2}]x>=0
-   * }}}
-   * @example{{{
-   *         x>0, x_0=x |- [{x'=2&x>=x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>=x_0
-   *         -------------------------------------------------------------------diffCut("x>=old(x)".asFormula)(1)
-   *         x>0 |- [{x'=2}]x>=0
-   * }}}
-   * @example{{{
-   *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0&x>=x_0}]x>=0
-   *                x>0, v>=0 |- [{x'=v,v'=1}]v>=0
-   *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0}]x>=x_0
-   *         --------------------------------------------------diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1)
-   *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
-   * }}}
-   * @param formulas The formulas to cut in as evolution domain constraint.
-   * @return The tactic.
-   */
+  /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {nestDCs(formulas.map(ghostDC(_, pos, sequent)))})
 
@@ -491,31 +413,7 @@ private object DifferentialTactics {
     }
   }
 
-  /**
-   * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
-   * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
-   * formulas are differential invariants. Fails if diffInd cannot prove invariants.
-    *
-    * @example{{{
-   *         x>0 |- [{x'=2&x>0}]x>=0
-   *         ------------------------diffInvariant("x>0".asFormula)(1)
-   *         x>0 |- [{x'=2}]x>=0
-   * }}}
-   * @example{{{
-   *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0
-   *         ---------------------------------diffInvariant("x>old(x)".asFormula)(1)
-   *                x>0 |- [{x'=2}]x>=0
-   * }}}
-   * @example{{{
-   *         x>0, v>=0, x_0=x |- [{x'=v,v'=1 & v>=0&x>x_0}]x>=0
-   *         ---------------------------------------------------diffInvariant("v>=0".asFormula, "x>old(x)".asFormula)(1)
-   *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
-   * }}}
-   * @param formulas The differential invariants to cut in as evolution domain constraint.
-   * @return The tactic.
-   * @see [[diffCut]]
-   * @see [[diffInd]]
-   */
+  /** @see [[TactixLibrary.diffInvariant]] */
   def diffInvariant(formulas: Formula*): DependentPositionTactic =
     "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
@@ -546,22 +444,7 @@ private object DifferentialTactics {
     }
   }
 
-  /**
-   * Differential ghost. Adds an auxiliary differential equation y'=a*y+b
-    *
-    * @example{{{
-   *         |- \exists y [{x'=2,y'=0*y+1}]x>0
-   *         ---------------------------------- DG("y".asVariable, "0".asTerm, "1".asTerm)(1)
-   *         |- [{x'=2}]x>0
-   * }}}
-   * @example{{{
-   *         |- \exists y [{x'=2,y'=f()*y+g() & x>=0}]x>0
-   *         --------------------------------------------- DG("y".asVariable, "f()".asTerm, "g()".asTerm)(1)
-   *         |- [{x'=2 & x>=0}]x>0
-   * }}}
-   * @param ghost A differential program of the form y'=a*y+b.
-   * @return The tactic.
-   */
+  /** @see [[TactixLibrary.DG]] */
   def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" by ((pos: Position, sequent: Sequent) => {
     val (y, a, b) = parseGhost(ghost)
     sequent.sub(pos) match {
@@ -621,16 +504,7 @@ private object DifferentialTactics {
     }
   }
 
-  /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
-    * ghost of the form y'=a*y+b and postcondition replaced by r.
-    * {{{
-    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
-    * G |- [x'=f(x)&q(x)]p(x), D
-    * }}}
-    *
-    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
-    */
+  /** @see [[TactixLibrary.DA]] */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
     "DA2" by ((pos: Position) => {
       val (y,a,b) = parseGhost(ghost)
@@ -755,6 +629,7 @@ private object DifferentialTactics {
         )
   })
 
+  /** @see [[TactixLibrary.diffSolve]] */
   def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(tool: DiffSolutionTool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")

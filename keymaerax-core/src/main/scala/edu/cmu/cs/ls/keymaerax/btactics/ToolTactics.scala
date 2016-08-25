@@ -58,26 +58,7 @@ private object ToolTactics {
       )
   })
 
-  /**
-   * Transforms the FOL formula at position 'pos' into the formula 'to'. Uses QE to prove the transformation correct.
-   * @example {{{
-   *                           *
-   *                           --------------
-   *           a<b |- a<b      |- a<b -> b>a
-   *           ------------------------------ transform("a<b".asFormula)(1)
-   *           a<b |- b>a
-   * }}}
-   * * @example {{{
-   *                                         *
-   *                                    ---------------------
-   *           a+b<c, b>=0 |- a+b<c     b>=0 |- a+b<c -> a<c
-   *           ---------------------------------------------- transform("a+b<c".asFormula)(1)
-   *           a+b<c, b>=0 |- a<c
-   * }}}
-   * @param to The transformed formula.
-   * @param tool The tool to perform QE and obtain counter examples.
-   * @return The tactic
-   */
+  /** @see [[TactixLibrary.transform()]] */
   def transform(to: Formula)(tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel, "transform only at top level")
     require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
