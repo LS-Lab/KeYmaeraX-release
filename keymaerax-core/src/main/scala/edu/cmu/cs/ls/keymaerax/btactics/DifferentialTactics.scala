@@ -130,26 +130,7 @@ private object DifferentialTactics {
     SandR | fallback(pos)
   })
 
-  /**
-   * Differential effect: exhaustively extracts differential equations from an atomic ODE or an ODE system into
-   * differential assignments.
-   * {{{
-   *   G |- [{x'=f(||)&H(||)}][x':=f(||);]p(||), D
-   *   -------------------------------------------
-   *   G |- [{x'=f(||)&H(||)}]p(||), D
-   * }}}
-    *
-    * @example{{{
-   *    |- [{x'=1}][x':=1;]x>0
-   *    -----------------------DE(1)
-   *    |- [{x'=1}]x>0
-   * }}}
-   * @example{{{
-   *    |- [{x'=1, y'=x & x>0}][y':=x;][x':=1;]x>0
-   *    -------------------------------------------DE(1)
-   *    |- [{x'=1, y'=x & x>0}]x>0
-   * }}}
-   */
+  /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = if (RenUSubst.semanticRenaming) {
@@ -555,28 +536,9 @@ private object DifferentialTactics {
           )
     })
 
-  /**
-   * Syntactically derives a differential of a variable to a differential symbol.
-   * {{{
-   *   G |- x'=f, D
-   *   --------------
-   *   G |- (x)'=f, D
-   * }}}
-    *
-    * @example{{{
-   *   |- x'=1
-   *   ----------Dvariable(1, 0::Nil)
-   *   |- (x)'=1
-   * }}}
-   * @example{{{
-   *   |- [z':=1;]z'=1
-   *   ------------------Dvariable(1, 1::0::Nil)
-   *   |- [z':=1;](z)'=1
-   * }}}
-   * @incontext
-   * @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
-    *       Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
-   */
+  /** @see [[HilbertCalculus.Derive.Dvar]] */
+  //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
+  //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("Dvariable") {
     private val OPTIMIZED = true //@todo true
     private val axiom = AxiomInfo("x' derive var commuted")

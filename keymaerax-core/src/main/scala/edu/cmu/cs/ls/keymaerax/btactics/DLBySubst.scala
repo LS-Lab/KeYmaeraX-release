@@ -26,16 +26,7 @@ private object DLBySubst {
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
 
-  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
-    * {{{
-    *       p(||)
-    *   ----------- G
-    *    [a;]p(||)
-    * }}}
-    *
-    * @see [[monb]] with p(x)=True
-    * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
-    */
+  /** @see [[HilbertCalculus.G]] */
   lazy val G: BelleExpr = {
     val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(||)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
@@ -165,43 +156,7 @@ private object DLBySubst {
     }
   }
 
-  /**
-   * Box assignment by substitution assignment [v:=t();]p(v) <-> p(t()) (preferred),
-   * or by equality assignment [x:=f();]p(||) <-> \forall x (x=f() -> p(||)) as a fallback.
-   * Universal quantifiers are skolemized if applied at top-level in the succedent; they remain unhandled in the
-   * antecedent and in non-top-level context.
-    *
-    * @example{{{
-   *    |- 1>0
-   *    --------------------assignb(1)
-   *    |- [x:=1;]x>0
-   * }}}
-   * @example{{{
-   *           1>0 |-
-   *    --------------------assignb(-1)
-   *    [x:=1;]x>0 |-
-   * }}}
-   * @example{{{
-   *    x_0=1 |- [{x_0:=x_0+1;}*]x_0>0
-   *    ----------------------------------assignb(1)
-   *          |- [x:=1;][{x:=x+1;}*]x>0
-   * }}}
-   * @example{{{
-   *    \\forall x_0 (x_0=1 -> [{x_0:=x_0+1;}*]x_0>0) |-
-   *    -------------------------------------------------assignb(-1)
-   *                           [x:=1;][{x:=x+1;}*]x>0 |-
-   * }}}
-   * @example{{{
-   *    |- [y:=2;]\\forall x_0 (x_0=1 -> x_0=1 -> [{x_0:=x_0+1;}*]x_0>0)
-   *    -----------------------------------------------------------------assignb(1, 1::Nil)
-   *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
-   * }}}
-   * @see [[assignEquality]]
-   */
-  lazy val assignb: DependentPositionTactic =
-    "[:=] assign" by ((pos: Position) => (useAt("[:=] assign")(pos) partial) | (useAt("[:=] self assign")(pos) partial) | (assignEquality(pos) partial))
-
-  /**
+    /**
     * Equality assignment to a fresh variable.
     * Always introduces universal quantifier, which is already skolemized if applied at top-level in the
     * succedent; quantifier remains unhandled in the antecedent and in non-top-level context.
