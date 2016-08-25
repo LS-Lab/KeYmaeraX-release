@@ -673,10 +673,10 @@ private object DifferentialTactics {
 
         cutR(p)(pos.checkSucc.top) <(
           skip,
-          implyR(pos) & useAt(auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
+          implyR(pos) & useAt("TODODAbaseaux", auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
             DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
             existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
-            useAt(auxEquiv, PosInExpr(0::Nil))(pos ++ PosInExpr(1::Nil)) &
+            useAt("TODODAbaseaux", auxEquiv, PosInExpr(0::Nil))(pos ++ PosInExpr(1::Nil)) &
             existsR(pos ++ PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
           )
     })

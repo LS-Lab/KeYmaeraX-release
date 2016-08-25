@@ -20,6 +20,7 @@ import scala.collection.immutable.Set
  */
 @IgnoreInBuildTest
 class CodeNameChecker extends TacticTestBase with Matchers {
+  //@todo also reflect through all DerivedAxioms to check they've been added to AxiomInfo
   "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { qeTool =>
     val all = DerivationInfo.allInfo
     for (info <- all) {

@@ -869,6 +869,14 @@ object ProvableInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
     }
 
+  /** Retrieve meta-information on an inference by the given code name `codeName` */
+  def ofCodeName(codeName:String): ProvableInfo = {
+    DerivationInfo.ofCodeName(codeName) match {
+      case info: ProvableInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+    }
+  }
+
   val allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
 }
 

@@ -13,13 +13,12 @@ import scala.collection.immutable
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
+  * @see [[CodeNameChecker]]
  */
 @CheckinTest
 @SummaryTest
 @UsualTest
 class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
-
-  //@todo add a test case that runs through AxiomInfo.allInfos checking all its axioms
 
   private def check(lemma: Lemma): Sequent = {
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
