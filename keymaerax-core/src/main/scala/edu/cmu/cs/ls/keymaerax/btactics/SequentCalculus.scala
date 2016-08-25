@@ -57,14 +57,26 @@ trait SequentCalculus {
   val notR    : BuiltInRightTactic = "notR" by { (pr:Provable, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
   val andL    : BuiltInLeftTactic = "andL" by { (pr:Provable, pos:AntePosition) => pr(AndLeft(pos.checkTop), 0) }
-  /** Inverse of [[andL]] */
+  /** Inverse of [[andL]].
+    * {{{
+    *   G, G', G'', a&b  |- D
+    * -------------------------
+    *   G, a, G', b, G'' |- D
+    * }}}
+    */
   def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
   lazy val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   val andR    : BuiltInRightTactic = "andR" by { (pr:Provable, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
   val orL     : BuiltInLeftTactic = "orL" by { (pr:Provable, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
-  /** Inverse of [[orR]] */
+  /** Inverse of [[orR]].
+    * {{{
+    *   G |- D, D', D'', a | b
+    * -------------------------
+    *   G |- D, a, D', b, D''
+    * }}}
+    */
   def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
   lazy val orRi: DependentTactic = orRi()
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
@@ -73,7 +85,13 @@ trait SequentCalculus {
   val implyL  : BuiltInLeftTactic = "implyL" by { (pr:Provable, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   val implyR  : BuiltInRightTactic = "implyR" by { (pr:Provable, pos:SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
-  /** Inverse of [[implyR]] */
+  /** Inverse of [[implyR]].
+    * {{{
+    *   G, G' |- D, D', a -> b
+    * -------------------------
+    *   G, a, G' |- D, b, D'
+    * }}}
+    */
   def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
   lazy val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */

@@ -18,11 +18,7 @@ import scala.language.postfixOps
 private object PropositionalTactics {
   /**
    * Inverse of [[ProofRuleTactics.implyR]].
-   * {{{
-   *   G, G' |- D, D', a -> b
-   * -------------------------
-   *   G, a, G' |- D, b, D'
-   * }}}
+   *
  *
    * @author Nathan Fulton
    * @author Stefan Mitsch
@@ -45,12 +41,7 @@ private object PropositionalTactics {
 
   /**
    * Inverse of [[ProofRuleTactics.orR]].
-   * {{{
-   *   G |- D, D', D'', a | b
-   * -------------------------
-   *   G |- D, a, D', b, D''
-   * }}}
- *
+   *
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.orR]]
    */
@@ -74,11 +65,6 @@ private object PropositionalTactics {
 
   /**
    * Inverse of [[ProofRuleTactics.andL]].
-   * {{{
-   *   G, G', G'', a&b  |- D
-   * -------------------------
-   *   G, a, G', b, G'' |- D
-   * }}}
  *
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
