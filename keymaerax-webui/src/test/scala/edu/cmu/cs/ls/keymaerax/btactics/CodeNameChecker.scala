@@ -11,7 +11,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SummaryTest}
 import org.scalatest.{FlatSpec, Matchers}
 
-import scala.collection.immutable.Set
+import scala.collection.immutable.{Range, Set}
+import scala.reflect.runtime.{universe => ru}
 
 /**
  * Tests code names of tactics and AxiomInfo for compatibility for TacticExtraction.
@@ -34,6 +35,36 @@ class CodeNameChecker extends TacticTestBase with Matchers {
         case None => println("TEST(INFO): cannot instantiate belleExpr " + info.codeName + " alias " + info.canonicalName)
       }
     }
+  }
+
+  "Derived axioms" should "all be specified in AxiomInfo" in withMathematica { tool =>
+    val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val fns = lemmas.map(_.getName)
+
+    val mirror = ru.runtimeMirror(getClass.getClassLoader)
+    // access the singleton object
+    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val im = mirror.reflect(moduleMirror.instance)
+
+    //@note lazy vals have a "hidden" getter method that does the initialization
+    val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fieldMirrors = fields.map(im.reflectMethod)
+
+    var failures = 0
+    Range(0, fieldMirrors.length-1).foreach(idx => {
+      try {
+        val axiom = fieldMirrors(idx)().asInstanceOf[Lemma]
+        //println("Checking " + axiom.name)
+        try {
+          DerivationInfo.ofCodeName(axiom.name.getOrElse(fail("Derived axiom without name defined in " + fieldMirrors(idx).symbol.name)))
+        } catch {
+          case e: Throwable => println("TEST(WARNING): codeName of axiom " + axiom.name + " not found in DerivationInfo, should be added/changed to a consistent name")
+        }
+
+      } catch {
+        case e: Throwable => println("TEST(INFO): cannot instantiate derived axiom " + fieldMirrors(idx).symbol.name)
+      }
+    })
   }
 
   /** get some silly BelleExpr from info by feeding it its input in a type-compliant way. */
