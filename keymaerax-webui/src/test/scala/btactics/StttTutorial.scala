@@ -100,7 +100,6 @@ class StttTutorial extends TacticTestBase {
 
     //@todo Rewrite the US tactic in terms of the Bellerophon language, not arbitrary scala code.
     db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
   "Example 3a" should "be provable with master and loop invariant from file" in withMathematica { tool => withDatabase { db =>
@@ -244,9 +243,7 @@ class StttTutorial extends TacticTestBase {
         )
       )
 
-    //@todo tactic extraction/parsing does not work for this example yet (could not retrieve executable 1 from the database. Caused by: 1)
     db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
   "Example 10" should "be provable" in withMathematica { tool => withDatabase { db =>
@@ -270,7 +267,8 @@ class StttTutorial extends TacticTestBase {
         print("Base case") & speculativeQE,
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
-          printIndexed("Acc") & hideL(-9, "abs(y-ly)+v^2/(2*b) < lw".asFormula) & ode("a") &
+          //@todo position assertions not yet stored and extracted
+          printIndexed("Acc") & hideL(-9/*, "abs(y-ly)+v^2/(2*b) < lw".asFormula*/) & ode("a") &
             (alphaRule*) &
             printIndexed("Before replaceTransform") & replaceTransform("ep".asTerm, "c".asTerm)(-8) &
             prop & OnAll(speculativeQE),
@@ -279,9 +277,7 @@ class StttTutorial extends TacticTestBase {
           )
         )
 
-    //@todo tactic extraction/belle parser | combinator problem?
     db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
   }}
 
   it should "be provable with multi-arg diff. invariant" in withMathematica { tool => withDatabase { db =>

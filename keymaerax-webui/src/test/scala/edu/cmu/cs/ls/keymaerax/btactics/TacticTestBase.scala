@@ -2,10 +2,10 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, Interpreter, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstractionObj, ExtractTacticFromTrace}
+import edu.cmu.cs.ls.keymaerax.hydra.ExtractTacticFromTrace
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -23,39 +23,39 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
-    private val db = {
+    val db = {
       val testLocation = File.createTempFile("testdb", ".sqlite")
       val db = new SQLiteDB(testLocation.getAbsolutePath)
       db.cleanup(testLocation.getAbsolutePath)
       db
     }
 
+    /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
+    def createProof(modelContent: String): Int = {
+      val modelName = ""
+      db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
+        case Some(modelId) => db.createProofForModel(modelId, "", "", "")
+        case None => fail("Unable to create temporary model in DB")
+      }
+    }
+
     /** Prove sequent `s` using tactic  `t`. Record the proof in the database and check that the recorded tactic is
       * the provided tactic. */
     def proveBy(modelContent: String, t: BelleExpr): Provable = {
-      val modelName = ""
       val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
         case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
         case _ => fail("Model content " + modelContent + " cannot be parsed")
       }
-      db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
-        case Some(modelId) =>
-          val proofId = db.createProofForModel(modelId, "", "", "")
-          val trace = db.getExecutionTrace(proofId)
-          val globalProvable = trace.lastProvable
-          val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-            globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
-          SequentialInterpreter(listener :: Nil)(t, BelleProvable(Provable.startProof(s))) match {
-            case BelleProvable(provable, _) => {
-              val extractedTactic = extractTactic(proofId)
-              if(extractedTactic != t && extractTactic(proofId).prettyString == t.prettyString) {
-                System.err.println("WARNING: Tactics were not equal but their prettystrings were. Assuming this is Ok for now...")
-              } else extractedTactic shouldBe t
-              provable
-            }
-            case r => fail("Unexpected tactic result " + r)
-          }
-        case None => fail("Unable to create temporary model in DB")
+      val proofId = createProof(modelContent)
+      val trace = db.getExecutionTrace(proofId)
+      val globalProvable = trace.lastProvable
+      val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+        globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
+      SequentialInterpreter(listener :: Nil)(t, BelleProvable(Provable.startProof(s))) match {
+        case BelleProvable(provable, _) =>
+          extractTactic(proofId) shouldBe t
+          provable
+        case r => fail("Unexpected tactic result " + r)
       }
     }
 
