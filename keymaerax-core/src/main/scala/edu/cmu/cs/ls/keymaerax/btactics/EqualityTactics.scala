@@ -135,7 +135,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = "allL2R" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(lhs, rhs)) =>
       useAt("= commute")(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
   })

@@ -18,7 +18,7 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   //names over the actual tactic that was created at the end of the day.
   "built-in printer" should "print a built-in expr" in {
     val tactic = parser("nil")
-    BellePrettyPrinter(tactic) shouldBe "partial(nil)"
+    BellePrettyPrinter(tactic) shouldBe "nil"
   }
 
   it should "print e(1)" in {
@@ -38,21 +38,21 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   "seq printer" should "print e & e" in {
     val tactic = parser("nil & nil")
-    BellePrettyPrinter(tactic) shouldBe "partial(nil) & partial(nil)"
+    BellePrettyPrinter(tactic) shouldBe "nil & nil"
   }
 
   it should "print e & e & e" in {
     val tactic = parser("nil & (nil & nil)")
-    BellePrettyPrinter(tactic) shouldBe "partial(nil) & partial(nil) & partial(nil)"
+    BellePrettyPrinter(tactic) shouldBe "nil & nil & nil"
   }
 
   it should "print (e & e) & e" in {
     val tactic = parser("(nil & nil) & nil")
-    BellePrettyPrinter(tactic) shouldBe "(partial(nil) & partial(nil)) & partial(nil)"
+    BellePrettyPrinter(tactic) shouldBe "(nil & nil) & nil"
   }
 
   it should "print e | e" in {
     val tactic = parser("nil | nil")
-    BellePrettyPrinter(tactic) shouldBe "partial(nil) | partial(nil)"
+    BellePrettyPrinter(tactic) shouldBe "nil | nil"
   }
 }

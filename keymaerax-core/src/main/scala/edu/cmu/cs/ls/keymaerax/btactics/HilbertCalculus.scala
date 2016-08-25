@@ -99,7 +99,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     new DependentPositionTactic("assignb") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        if (INTERNAL) (useAt("[:=] assign")(pos) partial) | ((useAt("[:=] assign equality")(pos) partial) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
+        if (INTERNAL) (useAt("[:=] assign")(pos)) | ((useAt("[:=] assign equality")(pos)) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
         else DLBySubst.assignb(pos)
       }
     }
@@ -315,6 +315,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   // implementation
 
+  @deprecated("useAt(AxiomInfo,inst) instead or just useAt(axiomName,inst)")
   private[btactics] def namedUseAt(codeName: String, axiomName: String, inst: (Subst=>Subst) = us=>us) = new DependentPositionTactic(codeName) {
     assert(DerivationInfo.hasCodeName(codeName), s"$codeName is a tactic name but is not a DerivationInfo codeName.")
     if (DerivationInfo.ofCodeName(codeName).codeName.toLowerCase() != codeName.toLowerCase()) println("WARNING: codeName should be changed to a consistent name: " + codeName)

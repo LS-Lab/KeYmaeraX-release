@@ -187,10 +187,24 @@ trait UnifyUSCalculus {
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(lem.fact, key, inst)
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem.fact, key)
+  def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): DependentPositionTactic = {
+    if (lem.name.isDefined) {
+      val info = ProvableInfo.ofCodeName(lem.name.get)
+      if (info.provable == lem.fact)
+        useAt(info, key, inst)
+      else {
+        println("INFO: useAt(" + lem.name.get + ") has an incompatible lemma name, which may disable tactic extraction")
+        useAt("useAt", lem.fact, key, inst)
+      }
+    }
+    else {
+      println("INFO: useAt of an anonymous lemma may disable tactic extraction")
+      useAt("useAt", lem.fact, key, inst)
+    }
+  }
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Subst)=>us)
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
+  def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem, PosInExpr(0::Nil))
 
   /** Lazy useAt of a lemma by name. For use with ProveAs. */
   def lazyUseAt(lemmaName: String) : DependentPositionTactic =
@@ -202,8 +216,8 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key, inst)
-  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key)
+  def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(ProvableInfo(axiom), key, inst)
+  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(ProvableInfo(axiom), key)
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
@@ -221,7 +235,7 @@ trait UnifyUSCalculus {
     */
   def US(subst: USubst, fact: Provable): BuiltInTactic = by(fact(subst))
   /** US(subst, axiom) reduces the proof to the given axiom, whose uniform substitution instance under `subst` the current goal is. */
-  def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, AxiomInfo(axiom).provable)
+  def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, ProvableInfo(axiom).provable)
   //@todo document
   def US(subst: USubst): BuiltInTactic = new BuiltInTactic("US") {
     override def result(provable : Provable): Provable = provable(subst)
@@ -289,7 +303,10 @@ trait UnifyUSCalculus {
     */
   def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
 
-
+  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
+  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us)
+  private[btactics] def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = useAt("ANON", fact, key, us=>us)
+  private[btactics] def useAt(fact: Provable): DependentPositionTactic = useAt(fact, PosInExpr(0::Nil))
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.
     * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
@@ -332,7 +349,7 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
-  def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic("useAt") {
+  def useAt(codeName: String, fact: Provable, key: PosInExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic(codeName) {
     private val (keyCtx:Context[_],keyPart) = fact.conclusion.succ.head.at(key)
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -471,7 +488,7 @@ trait UnifyUSCalculus {
 
             val remKey: PosInExpr = key.child
             require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
-            UnifyUSCalculus.this.useAt(remFact, remKey, inst)(p)
+            UnifyUSCalculus.this.useAt("useAtRem", remFact, remKey, inst)(p)
           } catch {
             case err: Throwable =>
               //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
@@ -809,11 +826,11 @@ trait UnifyUSCalculus {
   def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(AxiomInfo(axiom).provable, key)
+  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(AxiomInfo(axiom).provable, key, inst)
+  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, inst)
 
   /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)

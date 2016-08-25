@@ -630,6 +630,12 @@ object DerivationInfo {
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
+    new InputPositionTacticInfo(
+      "transformEquality",
+      "transformEquality",
+      FormulaArg("equality") :: Nil,
+      {case () => (f:Formula) => ArithmeticSimplification.transformEquality(f)}),
+
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
     //@todo unify axiomatic rule and derived rules mond / mondtodo
@@ -644,7 +650,7 @@ object DerivationInfo {
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
-    new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
+    //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
 
     // Differential tactics
@@ -711,7 +717,7 @@ object DerivationInfo {
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
     // DLBySubst
-    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+    //new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
 
     new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
 
@@ -840,6 +846,7 @@ sealed trait DerivationInfo {
   val numPositionArgs: Int = 0
   /** Whether the derivation expects the caller to provide it with a way to generate invariants */
   val needsGenerator: Boolean = false
+  override def toString: String = "DerivationInfo(" + canonicalName + "," + codeName + ")"
 }
 
 /** Meta-Information for a (derived) axiom or (derived) axiomatic rule */
@@ -861,6 +868,14 @@ object ProvableInfo {
       case info: ProvableInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
     }
+
+  /** Retrieve meta-information on an inference by the given code name `codeName` */
+  def ofCodeName(codeName:String): ProvableInfo = {
+    DerivationInfo.ofCodeName(codeName) match {
+      case info: ProvableInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+    }
+  }
 
   val allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
 }

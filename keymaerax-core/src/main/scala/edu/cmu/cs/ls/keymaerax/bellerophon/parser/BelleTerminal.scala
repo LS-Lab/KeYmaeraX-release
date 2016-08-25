@@ -19,7 +19,7 @@ sealed abstract class BelleTerminal(val img: String) {
 }
 
 private case class IDENT(name: String) extends BelleTerminal(name) {
-  assert(name != "US" && name.toLowerCase != "partial")
+  assert(name != "USMatch" && name.toLowerCase != "partial")
   override def toString = s"IDENT($name)"
 }
 private object IDENT {

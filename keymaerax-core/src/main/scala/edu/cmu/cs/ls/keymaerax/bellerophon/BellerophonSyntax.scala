@@ -496,6 +496,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
 }
 
 /** A partial tactic is allowed to leave its subgoals around as unproved */
+@deprecated("Replace with something else -- either assertProved or some sort of branch indicator?", "4.2")
 case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) extends BelleExpr {
   override def prettyString = label match {
     case Some(theLabel) => s"partial(${child.prettyString})@(${theLabel.prettyString})"
@@ -561,6 +562,7 @@ case class LetInspect(abbr: Expression, instantiator: Provable => Expression, in
   override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
 
+@deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
 case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
   override def prettyString: String = s"proveAs(${lemmaName})"
 }

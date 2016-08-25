@@ -59,8 +59,11 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
       BelleParser.parseWithInvGen(exprString,Some(gen))
     } catch {
       case e : BParserException => throw TacticExtractionError(e.getMessage, e)
-      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing:" + db.getExecutable(step.executableId).belleExpr, e)
-      case t : Throwable => throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database", t)
+      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing (${e.getMessage}):" + db.getExecutable(step.executableId).belleExpr, e)
+      case t : Throwable => {
+        t.printStackTrace() //Super useful for debugging since TacticExtractionError seems to swallow its cause, or at least it doesn't always get printed out...
+        throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database because ${t}", t)
+      }
     }
     case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
   }

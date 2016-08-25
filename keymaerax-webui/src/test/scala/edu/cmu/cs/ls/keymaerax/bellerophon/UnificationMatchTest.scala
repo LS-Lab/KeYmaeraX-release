@@ -465,7 +465,7 @@ class UnificationMatchTest extends SystemTestBase {
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
-  "Projection unification" should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
+  "Projection unification" should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
     //val dot = DotTerm(Tuple(Real, Real))
     shouldUnify("3+f(x,y)".asTerm,
       "3+(x^2+y)".asTerm, USubst(
@@ -477,7 +477,7 @@ class UnificationMatchTest extends SystemTestBase {
       ))
   }
 
-  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest) in {
+  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
     shouldUnify("3+f(x,y,z)".asTerm,
       "3+(x^y+z)".asTerm, USubst(
         SubstitutionPair(
@@ -488,7 +488,7 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
 
-  it should "projection unify renaming and instance p(x,y) and x*y>5" taggedAs(IgnoreInBuildTest) in {
+  it should "projection unify renaming and instance p(x,y) and x*y>5" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
     shouldMatch("p(x,y)".asFormula,
       "x*y>5".asFormula, RenUSubst(
         ("p(.(.,.))".asFormula,
@@ -496,7 +496,7 @@ class UnificationMatchTest extends SystemTestBase {
       ))
   }
 
-  it should "projection unify renaming and instance p(x,y,z) and x*y>z" taggedAs(IgnoreInBuildTest) in {
+  it should "projection unify renaming and instance p(x,y,z) and x*y>z" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
     shouldMatch("p(x,y,z)".asFormula,
       "x*y>z".asFormula, RenUSubst(
         ("p(.(.,.,.))".asFormula,

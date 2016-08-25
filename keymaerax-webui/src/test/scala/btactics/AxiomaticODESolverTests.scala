@@ -112,17 +112,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     loneSucc(proveBy(f,t)) shouldBe ???
   }
 
-  //endregion
-
-  //region proveAs construct
-
-  "proveAs" should "prove as" in {
-    val f = "P() -> P()".asFormula
-    val t = ProveAs("piffp", f, TactixLibrary.implyR(1) & TactixLibrary.close) & HilbertCalculus.lazyUseAt("piffp")(1)
-    proveBy(f,t) shouldBe 'proved
-  }
-
-  it should "work in simplifyPostCondition" in withMathematica { qeTool =>
+  "simplifyPostCondition" should "work" in withMathematica { qeTool =>
     val f = "[{x'=1}](x=22 -> x>0)".asFormula
     val t = simplifyPostCondition(1)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=1&true}]22>0".asFormula
