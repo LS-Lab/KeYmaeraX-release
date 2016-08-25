@@ -78,19 +78,7 @@ protected object FOQuantifierTactics {
       existsByDuality(allInstantiate(quantified, instance))
 
 
-  /**
-   * Skolemization with bound renaming on demand.
-   * @example{{{
-   *     y>5   |- x^2>=0
-   *     --------------------------allSkolemize(1)
-   *     y>5   |- \forall x x^2>=0
-   * }}}
-   * @example Uniformly renames other occurrences of the quantified variable in the context on demand. {{{
-   *     x_0>0 |- x^2>=0
-   *     --------------------------allSkolemize(1)
-   *     x>0   |- \forall x x^2>=0
-   * }}}
-   */
+  /** @see [[SequentCalculus.allR]] */
   lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {

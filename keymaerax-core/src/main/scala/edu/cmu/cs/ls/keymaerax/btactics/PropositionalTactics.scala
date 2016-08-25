@@ -136,18 +136,7 @@ private object PropositionalTactics {
     }
   }
 
-  /**
-   * Modus ponens.
- *
-   * @example{{{
-   *      p, q, G |- D
-   *   ---------------- modusPonens
-   *   p, p->q, G |- D
-   * }}}
-   * @param assumption Position pointing to p
-   * @param implication Position pointing to p->q
-   * @return The tactic.
-   */
+  /** @see [[SequentCalculus.modusPonens()]] */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
