@@ -562,6 +562,7 @@ case class LetInspect(abbr: Expression, instantiator: Provable => Expression, in
   override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
 
+@deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
 case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
   override def prettyString: String = s"proveAs(${lemmaName})"
 }
