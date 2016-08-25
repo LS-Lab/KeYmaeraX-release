@@ -261,30 +261,21 @@ object AxiomaticODESolver {
     val modality = s.apply(pos).asInstanceOf[Modal]
     val Box(ode, Imply(evolutionDomain, originalConclusion)) = modality
 
-    val implication = Imply(simplifiedConclusion(evolutionDomain, originalConclusion), modality.child)
+    val newConclusion = simplifiedConclusion(evolutionDomain, originalConclusion)
+    val implication = Imply(newConclusion, modality.child)
 
-    tmpmsg(s"Implication is ${implication.prettyString}")
-    tmpmsg(s"And modality is ${s(pos).prettyString}")
+    tmpmsg(s"The implication ${implication.prettyString} needs to be valid because we need to co-hide all other formulas for CMon.")
+    tmpmsg(s"And modality is ${s.apply(pos).prettyString}")
 
+    //@todo support non-arithmetic post-conditions such as [ODE][more]arith
     if(!implication.isFOL)
       throw new AxiomaticODESolverExn("Could not solve the ODE axiomatically because the post-condition is non-arithmetic.")
 
-    /*
-     * Explanation:
-     * The tactic in the next four lines creates a new lemma that proves `implication`, then uses that lemma to perform useAt rewriting on the
-     * conclusion of the box modality. This is IMO much cleaner than the old approach of cutting in an equivalence and proving by G,K,etc. manually.
-     *
-     * This tactic uses the name "_simplifyPostCondition" for the lemma.
-     * This name must not exist must not exist prior to executing the tactic because the ProveAs tactic assumes the name is fresh.
-     * Therefore, we clear out any lemma with this name from the database both before *and* after running the proveAs.
-     * We clear out after for the obvious reason (the lemma's usage should be local). We clear out before as well in case
-     * there was some exception in an early execution of this tactic that resulting in the tactic not running to completion
-     * @todo ProveAs should do this be default at the end of each execution, and should implicitly use a namespace that lazuUseAt et al knows about.
-     */
-    clearProveAsScope("_simplifyPostCondition") &
-    ProveAs("_simplifyPostCondition", implication, TactixLibrary.QE | TactixLibrary.close) & //@note close will sometimes work when the post-condition is non-arithmetic...
-    HilbertCalculus.lazyUseAt("_simplifyPostCondition", PosInExpr(1 :: Nil))(subPosition(pos, PosInExpr(1::Nil))) & //@todo weird positioning...
-    clearProveAsScope("_simplifyPostCondition")
+    TactixLibrary.cutAt(newConclusion)(subPosition(pos, PosInExpr(1::Nil))) <(
+      Idioms.nil
+      ,
+      SequentCalculus.cohideR('Rlast) & TactixLibrary.CMon(PosInExpr(1::Nil)) & (TactixLibrary.QE | TactixLibrary.close) & DebuggingTactics.assertProved
+    )
   })
 
   private def simplifiedConclusion(evolutionDomain: Formula, originalConclusion: Formula): Formula = {
