@@ -303,6 +303,32 @@ class MathematicaSolutionTool(override val link: MathematicaLink) extends BaseKe
   *
   * @author Andre Platzer
   */
+class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with AlgebraTool {
+
+  override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
+    val t = k2m(term)
+    val d = k2m(div)
+    val v = k2m(x)
+
+    val input = new MExpr(MathematicaSymbols.POLYNOMIALQUOTIENTREMAINDER,
+      Array[MExpr](
+        t,
+        d,
+        v
+      ))
+    val (_, result) = run(input)
+    result match {
+      case quotRem: List[Term] if quotRem.length==2 => (quotRem(0), quotRem(1))
+      case r => throw new IllegalStateException("Unexpected output " + r)
+    }
+  }
+}
+
+/**
+  * A link to Mathematica using the JLink interface.
+  *
+  * @author Andre Platzer
+  */
 class MathematicaSimplificationTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with SimplificationTool {
 
   override def simplify(expr: Formula, assumptions: List[Formula]): Formula =

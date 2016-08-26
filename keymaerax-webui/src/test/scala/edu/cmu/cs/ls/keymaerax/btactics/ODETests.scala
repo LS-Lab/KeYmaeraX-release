@@ -35,6 +35,7 @@ class ODETests extends TacticTestBase {
   //  }
 
   it should "DGauto x>0->[{x'=-x+1}]x>0" taggedAs (TodoTest) in withMathematica { qeTool =>
+    //@note: ghost is y'=1/2*y for x*y^2>0
     proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 

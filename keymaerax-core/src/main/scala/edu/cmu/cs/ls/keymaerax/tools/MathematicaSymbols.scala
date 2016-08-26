@@ -60,6 +60,8 @@ private object MathematicaSymbols {
   def SOLVE = new MExpr(Expr.SYMBOL,  "Solve")
   def DSOLVE = new MExpr(Expr.SYMBOL,  "DSolve")
   def FULLSIMPLIFY = new MExpr(Expr.SYMBOL,  "FullSimplify")
+  def POLYNOMIALQUOTIENTREMAINDER = new MExpr(Expr.SYMBOL,  "PolynomialQuotientRemainder")
+
   def CHECK = new MExpr(Expr.SYMBOL, "Check")
   def EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")
   def ABORTED = new MExpr(Expr.SYMBOL, "$Aborted")
