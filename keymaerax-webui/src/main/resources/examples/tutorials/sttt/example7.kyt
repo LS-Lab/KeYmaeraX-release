@@ -1,0 +1,11 @@
+implyR(1) & (andL('L)*) & loop({`v >= 0 & x+v^2/(2*b) <= S`}, 1) & <(
+  QE,
+  QE,
+  composeb(1) & choiceb(1) & andR(1) & <(
+    composeb(1) & testb(1) & implyR(1) & composeb(1) & randomb(1) & allR(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & ODE(1) & QE,
+    choiceb(1) & andR(1) & <(
+      composeb(1) & testb(1) & implyR(1) & assignb(1) & composeb(1) & assignb(1) & ODE(1) & QE,
+      composeb(1) & randomb(1) & allR(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & ODE(1) & QE
+    )
+  )
+)

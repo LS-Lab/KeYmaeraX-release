@@ -28,7 +28,7 @@ object ArithmeticSpeculativeSimplification {
 
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
-  val speculativeQE: BelleExpr = "QE" by ((sequent: Sequent) => {
+  val speculativeQE: BelleExpr = "smartQE" by ((sequent: Sequent) => {
     (print("Trying abs...") & proveOrRefuteAbs & print("...abs done")) | speculativeQENoAbs
   })
 
