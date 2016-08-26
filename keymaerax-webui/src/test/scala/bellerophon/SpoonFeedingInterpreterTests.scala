@@ -89,7 +89,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }
 
   "Parsed tactic" should "record STTT tutorial example 1 steps" in withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key")).mkString
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val proofId = db.createProof(modelContent)
     def listener(tacticName: String, branch: Int) = {
       val trace = db.db.getExecutionTrace(proofId)
