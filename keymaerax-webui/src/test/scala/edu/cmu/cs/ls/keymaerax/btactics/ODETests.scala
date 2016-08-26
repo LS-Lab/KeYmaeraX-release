@@ -55,8 +55,8 @@ class ODETests extends TacticTestBase {
     proveBy("x>0->[{x'=-a*x,a'=4&a>0}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
-  it should "DGauto x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0" taggedAs (TodoTest) in withMathematica { qeTool =>
-    proveBy("x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+  it should "DGauto x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0" taggedAs (TodoTest) in withMathematica { qeTool =>
+    proveBy("x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
   it should "DGauto x>0 |- [{x'=2}]x>0" taggedAs (TodoTest) in withMathematica { tool =>
