@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent}
-import edu.cmu.cs.ls.keymaerax.hydra.ProofTree
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ProofTree}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -18,16 +18,19 @@ import scala.collection.immutable._
   */
 class SpoonFeedingInterpreterTests extends TacticTestBase {
 
+  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
+  def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int) = {
+    val trace = db.getExecutionTrace(proofId)
+    val globalProvable = trace.lastProvable
+    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
+  }
+
   "Atomic tactic" should "be simply forwarded to the inner interpreter" in withDatabase { db =>
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
 
-    val trace = db.db.getExecutionTrace(proofId)
-    val globalProvable = trace.lastProvable
-    def listener(tacticName: String, branch: Int) = new TraceRecordingListener(db.db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-    val interpreter = SpoonFeedingInterpreter(listener, SequentialInterpreter)
-
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
     interpreter(implyR(1), BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = false)
@@ -42,13 +45,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
 
-    def listener(tacticName: String, branch: Int) = {
-      val trace = db.db.getExecutionTrace(proofId)
-      val globalProvable = trace.lastProvable
-      new TraceRecordingListener(db.db, proofId, trace.executionId.toInt, trace.lastStepId,
-        globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-    }
-    val interpreter = SpoonFeedingInterpreter(listener, SequentialInterpreter)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     interpreter(implyR(1) & closeId, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
 
@@ -67,14 +64,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
 
-    def listener(tacticName: String, branch: Int) = {
-      val trace = db.db.getExecutionTrace(proofId)
-      val globalProvable = trace.lastProvable
-      new TraceRecordingListener(db.db, proofId, trace.executionId.toInt, trace.lastStepId,
-        globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-    }
-    val interpreter = SpoonFeedingInterpreter(listener, SequentialInterpreter)
-
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
     interpreter(implyR(1) & (andR(1) | closeId), BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
@@ -91,13 +81,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   "Parsed tactic" should "record STTT tutorial example 1 steps" in withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val proofId = db.createProof(modelContent)
-    def listener(tacticName: String, branch: Int) = {
-      val trace = db.db.getExecutionTrace(proofId)
-      val globalProvable = trace.lastProvable
-      new TraceRecordingListener(db.db, proofId, trace.executionId.toInt, trace.lastStepId,
-        globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-    }
-    val interpreter = SpoonFeedingInterpreter(listener, SequentialInterpreter)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tacticText = """implyR('R) & andL('L) & diffCut({`v>=0`}, 1) & <(diffWeaken(1) & prop, diffInd(1))"""
     val tactic = BelleParser(tacticText)
