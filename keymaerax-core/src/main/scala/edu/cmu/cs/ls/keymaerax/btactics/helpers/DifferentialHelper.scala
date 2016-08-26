@@ -6,7 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, Box, DifferentialFormula, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, True, Variable}
 
 /**
   * @todo move to formula tools? Or make this ProgramTools?
@@ -163,4 +164,16 @@ object DifferentialHelper {
   /** Retruens true if the ODE is a linear system.
     * @todo unimplemented, always returns true.*/
   def isLinear(ode: DifferentialProgram) = true //@todo
+
+
+  /** Computes the Lie derivative of the given `term` with respect to the differential equations `ode`.
+    * This implementation constructs by DI proof, so will be correct.
+    */
+  def lieDerivative(ode: DifferentialProgram, term: Term): Term = lieDerivative(ode, Equal(term, Number(0))) match {
+    case Equal(out, Number(n)) if n==0 => out
+  }
+  def lieDerivative(ode: DifferentialProgram, fml: Formula): Formula = {
+    TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.diffInd('diffInd)(1)).
+      subgoals(1).succ(0)
+  }
 }

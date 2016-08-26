@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.IndexedSeq
@@ -55,19 +56,55 @@ private object DifferentialTactics {
     //import TactixLibrary._
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
+      case Number(n) if n == 0 => a
+      case _ => a match {
+        case Number(n) if n == 0 => Neg(b)
+        case _ => Minus(a, b)
+      }
+    }
+    val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a, b), ode)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b, a), ode)
+      case e => throw new BelleError("DGauto does not support argument shape: " + e)
+    }
+    //@todo find a ghost that's not in ode
+    val ghost: Variable = Variable("y_")
+    require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
+    ("" by ((pos: Position, seq: Sequent) => {
+      // [x':=f(x)](quantity)'
+      val lie = DifferentialHelper.lieDerivative(ode, quantity)
+      val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
+        //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division
+        lie, Times(Number(-2), quantity), Variable("x"))._1
+      println("Need ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+      )(pos) < (
+        (close | QE) & done,
+        diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
+        )
+    }))(pos)
+  })
+
+  private def DGautoSandR: DependentPositionTactic = "" by ((pos:Position,seq:Sequent) => {
+    if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
+    //import TactixLibrary._
+    /** a-b with some simplifications */
+    def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n==0 => a
       case _ => a match {
         case Number(n) if n==0 => Neg(b)
         case _ => Minus(a,b)
       }
     }
-    val quantity: Term = seq.sub(pos) match {
-      case Some(Box(ODESystem(ode, _), Greater(a, b))) => minus(a,b)
-      case Some(Box(ODESystem(ode, _), Less(a, b))) => minus(b,a)
+    val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a,b), ode)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b,a), ode)
       case e => throw new BelleError("DGauto does not support argument shape: " + e)
     }
     //@todo find a ghost that's not in ode
     val ghost: Variable = Variable("y_")
+    require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
     val spooky: Term = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
       UnitFunctional("jj",Except(ghost),Real)
     else

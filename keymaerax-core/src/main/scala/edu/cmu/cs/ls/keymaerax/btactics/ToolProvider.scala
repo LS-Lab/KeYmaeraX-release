@@ -46,6 +46,8 @@ object ToolProvider extends ToolProvider {
 
   def solverTool(): Option[SolutionTool] = f.solverTool()
 
+  def algebraTool(): Option[AlgebraTool] = f.algebraTool()
+
   def cexTool(): Option[CounterExampleTool] = f.cexTool()
 
   def simulationTool(): Option[SimulationTool] = f.simulationTool()
@@ -71,6 +73,9 @@ trait ToolProvider {
 
   /** Returns an equation solver tool. */
   def solverTool(): Option[SolutionTool]
+
+  /** Returns an algebra tool for algebraic computations. */
+  def algebraTool(): Option[AlgebraTool]
 
   /** Returns an arithmetic/logical simplification tool */
   def simplifierTool(): Option[SimplificationTool]
@@ -99,6 +104,7 @@ class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
   override def simplifierTool(): Option[SimplificationTool] = theTool  match { case t: SimplificationTool => Some(t) case _ => None }
   override def simulationTool(): Option[SimulationTool] = theTool  match { case t: SimulationTool => Some(t) case _ => None }
   override def solverTool(): Option[SolutionTool] = theTool match { case t: SolutionTool => Some(t) case _ => None }
+  override def algebraTool(): Option[AlgebraTool] = theTool match { case t: AlgebraTool => Some(t) case _ => None }
   override def shutdown(): Unit = {
     if (theTool != null) {
       theTool.shutdown()
@@ -118,6 +124,7 @@ class NoneToolProvider extends ToolProvider {
   override def cexTool(): Option[CounterExampleTool] = None
   override def simulationTool(): Option[SimulationTool] = None
   override def solverTool(): Option[SolutionTool] = None
+  override def algebraTool(): Option[AlgebraTool] = None
   override def shutdown(): Unit = {}
 }
 
