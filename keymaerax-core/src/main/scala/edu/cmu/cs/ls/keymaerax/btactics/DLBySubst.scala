@@ -26,16 +26,7 @@ private object DLBySubst {
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
 
-  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
-    * {{{
-    *       p(||)
-    *   ----------- G
-    *    [a;]p(||)
-    * }}}
-    *
-    * @see [[monb]] with p(x)=True
-    * @note Unsound for hybrid games where [[monb]] and dualFree is used instead.
-    */
+  /** @see [[HilbertCalculus.G]] */
   lazy val G: BelleExpr = {
     val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(||)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
@@ -61,27 +52,7 @@ private object DLBySubst {
     )
   }
 
-  /**
-   * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
-   * of that modality.
-    *
-    * @example{{{
-   *           |- \forall x x>0
-   *         ------------------abstractionb(1)
-   *           |- [x:=2;]x>0
-   * }}}
-   * @example{{{
-   *           |- x>0 & z=1 -> [z:=y;]\forall x x>0
-   *         --------------------------------------abstractionb(1, 1::1::Nil)
-   *           |- x>0 & z=1 -> [z:=y;][x:=2;]x>0
-   * }}}
-   * @example{{{
-   *           |- x>0
-   *         ---------------abstractionb(1)
-   *           |- [y:=2;]x>0
-   * }}}
-   * @return the abstraction tactic.
-   */
+  /** @see [[TactixLibrary.abstractionb]] */
   def abstractionb: DependentPositionTactic = new DependentPositionTactic("abstractionb") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -185,43 +156,7 @@ private object DLBySubst {
     }
   }
 
-  /**
-   * Box assignment by substitution assignment [v:=t();]p(v) <-> p(t()) (preferred),
-   * or by equality assignment [x:=f();]p(||) <-> \forall x (x=f() -> p(||)) as a fallback.
-   * Universal quantifiers are skolemized if applied at top-level in the succedent; they remain unhandled in the
-   * antecedent and in non-top-level context.
-    *
-    * @example{{{
-   *    |- 1>0
-   *    --------------------assignb(1)
-   *    |- [x:=1;]x>0
-   * }}}
-   * @example{{{
-   *           1>0 |-
-   *    --------------------assignb(-1)
-   *    [x:=1;]x>0 |-
-   * }}}
-   * @example{{{
-   *    x_0=1 |- [{x_0:=x_0+1;}*]x_0>0
-   *    ----------------------------------assignb(1)
-   *          |- [x:=1;][{x:=x+1;}*]x>0
-   * }}}
-   * @example{{{
-   *    \\forall x_0 (x_0=1 -> [{x_0:=x_0+1;}*]x_0>0) |-
-   *    -------------------------------------------------assignb(-1)
-   *                           [x:=1;][{x:=x+1;}*]x>0 |-
-   * }}}
-   * @example{{{
-   *    |- [y:=2;]\\forall x_0 (x_0=1 -> x_0=1 -> [{x_0:=x_0+1;}*]x_0>0)
-   *    -----------------------------------------------------------------assignb(1, 1::Nil)
-   *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
-   * }}}
-   * @see [[assignEquality]]
-   */
-  lazy val assignb: DependentPositionTactic =
-    "[:=] assign" by ((pos: Position) => (useAt("[:=] assign")(pos) partial) | (useAt("[:=] self assign")(pos) partial) | (assignEquality(pos) partial))
-
-  /**
+    /**
     * Equality assignment to a fresh variable.
     * Always introduces universal quantifier, which is already skolemized if applied at top-level in the
     * succedent; quantifier remains unhandled in the antecedent and in non-top-level context.
@@ -255,28 +190,7 @@ private object DLBySubst {
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
   })
 
-  /**
-   * Generalize postcondition to C and, separately, prove that C implies postcondition.
-   * The operational effect of {a;b;}@generalize(f1) is generalize(f1).
-   * {{{
-   *   genUseLbl:        genShowLbl:
-   *   G |- [a]C, D      C |- B
-   *   -------------------------
-   *          G |- [a]B, D
-   * }}}
-    *
-    * @example{{{
-   *   genUseLbl:        genShowLbl:
-   *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
-   *   ------------------------------------generalize("x>1".asFormula)(1)
-   *   |- [x:=2;][y:=x;]y>1
-   * }}}
-   * @example{{{
-   *   genUseLbl:                      genShowLbl:
-   *   |- a=2 -> [z:=3;][x:=2;]x>1     x>1 |- [y:=x;]y>1
-   *   -------------------------------------------------generalize("x>1".asFormula)(1, 1::1::Nil)
-   *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
-   * }}}
+  /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
    */
   def generalize(c: Formula): DependentPositionTactic = new DependentPositionTactic("generalizeb") {
@@ -291,28 +205,7 @@ private object DLBySubst {
     }
   }
 
-  /**
-   * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
-   * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
-   * {{{
-   *   cutUseLbl:           cutShowLbl:
-   *   G |- [a](C->B), D    G |- [a]C, D
-   *   ---------------------------------
-   *          G |- [a]B, D
-   * }}}
-    *
-    * @example{{{
-   *   cutUseLbl:                       cutShowLbl:
-   *   |- [x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
-   *   -----------------------------------------------postCut("x>1".asFormula)(1)
-   *   |- [x:=2;][y:=x;]y>1
-   * }}}
-   * @example{{{
-   *   cutUseLbl:                                     cutShowLbl:
-   *   |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
-   *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
-   *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
-   * }}}
+  /** @see [[TactixLibrary.postCut()]]
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
@@ -323,32 +216,7 @@ private object DLBySubst {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
   }
 
-  /**
-   * Loop induction. Wipes conditions that contain bound variables of the loop.
-   * {{{
-   *   use:                        init:        step:
-   *   I, G\BV(a) |- p, D\BV(a)    G |- I, D    I, G\BV(a) |- [a]p, D\BV(a)
-   *   --------------------------------------------------------------------
-   *   G |- [{a}*]p, D
-   * }}}
-    *
-    * @example{{{
-   *   use:          init:         step:
-   *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
-   *   ------------------------------------------------I("x>1".asFormula)(1)
-   *   x>2 |- [{x:=x+1;}*]x>0
-   * }}}
-   * @example{{{
-   *   use:               init:              step:
-   *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
-   *   ---------------------------------------------------------------I("x>1".asFormula)(1)
-   *   x>2, y>0 |- [{x:=x+y;}*]x>0
-   * }}}
-   * @param invariant The invariant.
-   * @return The tactic.
-   * @see [[loopRule()]]
-   * @note Currently uses I induction axiom, which is unsound for hybrid games.
-   */
+  /** @see [[TactixLibrary.loop]] */
   def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
     (alphaRule*) & ("doLoop" byWithInput(invariant, (pos, sequent) => {
@@ -413,24 +281,7 @@ private object DLBySubst {
 //      )
   })
 
-  /**
-   * Introduces a ghost.
-    *
-    * @example{{{
-   *         |- [y_0:=y;]x>0
-   *         ----------------discreteGhost("y".asTerm)(1)
-   *         |- x>0
-   * }}}
-   * @example{{{
-   *         |- [z:=2;][y:=5;]x>0
-   *         ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
-   *         |- [z:=2;]x>0
-   * }}}
-   * @param t The ghost specification.
-   * @param ghost The ghost. If None, the tactic chooses a name by inspecting t (must be a variable then).
-   * @return The tactic.
-   * @incontext
-   */
+  /** @see [[TactixLibrary.discreteGhost()]] */
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = new DependentPositionTactic("discrete ghost") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {

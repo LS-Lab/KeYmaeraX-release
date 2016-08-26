@@ -161,7 +161,7 @@ object Idioms {
 
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
 
-  /** Mandatory change */
+  /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
   def must(t: BelleExpr): BelleExpr = new DependentTactic("must") {
     override def computeExpr(before: Provable): BelleExpr = t & new BuiltInTactic(name) {
       override def result(after: Provable): Provable = {
@@ -208,7 +208,7 @@ object TacticFactory {
    * @param name The tactic name.
    */
   implicit class TacticForNameFactory(val name: String) {
-    {
+    /*if (false)*/ {
       try {
         if (name != "ANON" && DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())
           println("WARNING: codeName should be changed to a consistent name: " + name + " vs. " + DerivationInfo.ofCodeName(name).codeName)

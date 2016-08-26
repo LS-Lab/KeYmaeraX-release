@@ -205,7 +205,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not touch other assignments flatly" in {
-    val result = proveBy(Sequent(IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), DLBySubst.assignb(1))
+    val result = proveBy(Sequent(IndexedSeq("x=1".asFormula, "[x:=2;]x=2".asFormula), IndexedSeq("[x:=3;]x>0".asFormula, "[x:=5;]x>6".asFormula, "x=7".asFormula)), HilbertCalculus.assignb(1))
     println(result)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=1".asFormula, "[x:=2;]x=2".asFormula)
