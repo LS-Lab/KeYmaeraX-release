@@ -6,8 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
-import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, Box, DifferentialFormula, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, True, Variable}
+import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, Box, DifferentialFormula, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, DifferentialSymbol, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, True, Variable}
 
 /**
   * @todo move to formula tools? Or make this ProgramTools?
@@ -173,7 +173,10 @@ object DifferentialHelper {
     case Equal(out, Number(n)) if n==0 => out
   }
   def lieDerivative(ode: DifferentialProgram, fml: Formula): Formula = {
-    TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.diffInd('diffInd)(1)).
+    TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.diffInd('diffInd)(1) <(
+      TactixLibrary.skip,
+      (TactixLibrary.Dassignb(1, 1::Nil)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol]))))
+    ).
       subgoals(1).succ(0)
   }
 }

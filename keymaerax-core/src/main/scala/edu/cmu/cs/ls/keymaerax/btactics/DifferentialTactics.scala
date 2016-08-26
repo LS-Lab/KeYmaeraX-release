@@ -51,7 +51,7 @@ private object DifferentialTactics {
   })
 
   /** @see [[TactixLibrary.DGauto]] */
-  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+  def DGautoc: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
@@ -86,7 +86,7 @@ private object DifferentialTactics {
     }))(pos)
   })
 
-  private def DGautoSandR: DependentPositionTactic = "" by ((pos:Position,seq:Sequent) => {
+  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
@@ -746,7 +746,7 @@ private object DifferentialTactics {
   }
 
   /** Computes the dimension of ODE at indicated position of a sequent */
-  private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
+  private[btactics] val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
     def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])
     sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => odeDim(ode)
