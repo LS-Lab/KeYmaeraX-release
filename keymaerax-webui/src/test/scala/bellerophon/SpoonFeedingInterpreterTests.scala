@@ -93,4 +93,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes.map(_.rule) shouldBe "" :: "implyR('R)" :: "andL('L)" :: "diffCut({`v>=0`},1)" :: "diffCut({`v>=0`},1)" :: "diffWeaken(1)" :: "diffInd(1)" :: "diffInd(1)" :: "prop" :: "" :: "" :: Nil
   }
 
+  it should "record STTT tutorial example 2 steps" in withMathematica { tool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyt")).mkString)
+    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 22
+    tree.nodes.map(_.rule) shouldBe "" :: "implyR(1)" :: "andL('L)" :: "andL('L)" :: "loop({`v>=0`},1)" ::
+      "loop({`v>=0`},1)" :: "loop({`v>=0`},1)" :: "composeb(1)" :: "choiceb(1)" :: "andR(1)" :: "andR(1)" ::
+      "assignb(1)" :: "choiceb(1)" :: "andR(1)" :: "andR(1)" :: "assignb(1)" :: "assignb(1)" :: "QE" :: "QE" ::
+      "ODE(1)" :: "ODE(1)" :: "ODE(1)" :: Nil
+
+  }}
 }

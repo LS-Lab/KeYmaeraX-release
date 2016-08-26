@@ -2,10 +2,10 @@ implyR(1) & (andL('L)*) & loop({`v >= 0`}, 1) & <(
   QE,
   QE,
   composeb(1) & choiceb(1) & andR(1) & <(
-    assignb(1) & ODE(1) & QE,
+    assignb(1) & ODE(1),
     choiceb(1) & andR(1) & <(
-      assignb(1) & ODE(1) & QE,
-      assignb(1) & ODE(1) & QE
+      assignb(1) & ODE(1),
+      assignb(1) & ODE(1)
     )
   )
 )
