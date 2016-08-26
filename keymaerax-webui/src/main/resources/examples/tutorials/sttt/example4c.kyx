@@ -1,0 +1,24 @@
+Functions.
+  R A.
+  R V.
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+    v <= V & A > 0
+ -> [
+      { {
+           ?v=V; a:=0;
+        ++ ?v!=V; a:=A;
+        }
+
+        {  {x' = v, v' = a & v <= V}
+        ++ {x' = v, v' = a & v >= V}}
+      }*@invariant(v <= V)
+    ] v <= V
+End.
