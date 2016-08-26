@@ -175,7 +175,7 @@ object DifferentialHelper {
   def lieDerivative(ode: DifferentialProgram, fml: Formula): Formula = {
     TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.diffInd('diffInd)(1) <(
       TactixLibrary.skip,
-      (TactixLibrary.Dassignb(1, 1::Nil)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol]))))
+      (TactixLibrary.Dassignb(1)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol]))))
     ).
       subgoals(1).succ(0)
   }

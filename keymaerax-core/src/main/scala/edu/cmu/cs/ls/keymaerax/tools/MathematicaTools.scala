@@ -318,8 +318,9 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
       ))
     val (_, result) = run(input)
     result match {
+      case Pair(quot,rem) => (quot, rem)
       case quotRem: List[Term] if quotRem.length==2 => (quotRem(0), quotRem(1))
-      case r => throw new IllegalStateException("Unexpected output " + r)
+      case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
 }

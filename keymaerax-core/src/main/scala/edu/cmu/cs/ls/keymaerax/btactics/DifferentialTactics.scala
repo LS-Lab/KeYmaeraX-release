@@ -51,7 +51,7 @@ private object DifferentialTactics {
   })
 
   /** @see [[TactixLibrary.DGauto]] */
-  def DGautoc: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
@@ -86,7 +86,7 @@ private object DifferentialTactics {
     }))(pos)
   })
 
-  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+  def DGautoSandR: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
     //import TactixLibrary._
     /** a-b with some simplifications */
