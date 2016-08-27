@@ -104,6 +104,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       case KLEENE_STAR.startPattern(_*) => consumeTerminalLength(KLEENE_STAR, loc)
       case SATURATE.startPattern(_*) => consumeTerminalLength(SATURATE, loc)
       case BRANCH_COMBINATOR.startPattern(_*) => consumeTerminalLength(BRANCH_COMBINATOR, loc)
+      case OPTIONAL.startPattern(_*) => consumeTerminalLength(OPTIONAL, loc)
 
       //Positions
       case ABSOLUTE_POSITION.startPattern(positionString) => consumeTerminalLength(ABSOLUTE_POSITION(positionString), loc)

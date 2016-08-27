@@ -249,6 +249,33 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe OnAll(TactixLibrary.closeId | (TactixLibrary.closeT | TactixLibrary.andL(1)))
   }
 
+  "Optional combinator" should "parse ?(closeId)" in {
+    val tactic = BelleParser("?(closeId)")
+    tactic shouldBe Idioms.?(TactixLibrary.closeId)
+  }
+
+  it should "bind stronger than seq. combinator" in {
+    val tactic = BelleParser("andR(1) & ?(closeId)")
+    tactic shouldBe SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.closeId))
+  }
+
+  it should "bind stronger than alt. combinator" in {
+    val tactic = BelleParser("andR(1) | ?(closeId)")
+    tactic shouldBe EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.closeId))
+  }
+
+  it should "bind stronger than saturation" in {
+    //@note this is debatable, but was easier to implement the moment
+    val tactic = BelleParser("?(andR(1))*")
+    tactic shouldBe SaturateTactic(Idioms.?(TactixLibrary.andR(1)))
+  }
+
+  it should "work in the beginning of a branch" in {
+    val tactic = BelleParser("andR(1) & <(?(closeId), ?(orR(1)))")
+    tactic shouldBe TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.closeId), Idioms.?(TactixLibrary.orR(1)))
+  }
+
+
   //endregion
 
   //region Comma lists

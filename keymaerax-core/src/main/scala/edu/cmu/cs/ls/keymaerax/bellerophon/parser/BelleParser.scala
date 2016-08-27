@@ -77,6 +77,7 @@ object BelleParser extends (String => BelleExpr) {
           case Some(BelleToken(OPEN_PAREN, oParenLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(IDENT(name), identLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(OPTIONAL, optCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
         }
@@ -92,6 +93,7 @@ object BelleParser extends (String => BelleExpr) {
         case Some(BelleToken(OPEN_PAREN, oParenLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(BelleToken(IDENT(name), identLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(BelleToken(PARTIAL, partialLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+        case Some(BelleToken(OPTIONAL, optCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
         case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
       }
@@ -188,6 +190,21 @@ object BelleParser extends (String => BelleExpr) {
       }
       //endregion
 
+      //region ? combinator
+      case r :+ BelleToken(OPTIONAL, loc) => st.input match {
+        case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
+          //@note find matching closing parenthesis, parse inner expr, then continue with remainder
+          var openParens = 1
+          val (inner, BelleToken(CLOSE_PAREN, cParenLoc) :: remainder) = tail.span({
+            case BelleToken(OPEN_PAREN, _) => openParens = openParens + 1; openParens > 0
+            case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
+            case _ => openParens > 0
+          } )
+          val innerExpr = parseTokenStream(inner)
+          ParserState(r :+ ParsedBelleExpr(Idioms.?(innerExpr), loc.spanTo(cParenLoc)), remainder)
+      }
+      //endregion
+
       //region Stars and Repitition
       case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(KLEENE_STAR, starLoc) => {
         val parsedExpr = SaturateTactic(expr)
@@ -277,6 +294,7 @@ object BelleParser extends (String => BelleExpr) {
 
       case Bottom =>
         if(st.input isEmpty) throw new Exception("Empty inputs are not parsable.")//ParserState(stack :+ FinalItem(), Nil) //Disallow empty inputs.
+        else if(isCombinator(st.input.head)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isIdent(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isOpenParen(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isPartial(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
@@ -319,6 +337,7 @@ object BelleParser extends (String => BelleExpr) {
     case BRANCH_COMBINATOR => true
     case KLEENE_STAR => true
     case SATURATE => true
+    case OPTIONAL => true
     case _ => false
   }
 
