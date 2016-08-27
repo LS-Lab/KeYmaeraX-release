@@ -51,7 +51,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @note Efficient source-level indexing implementation.
     * @see [[AxiomIndex]]
     */
-  lazy val stepAt: DependentPositionTactic = stepAt(AxiomIndex.axiomFor)
+  val stepAt: DependentPositionTactic = stepAt(AxiomIndex.axiomFor)
 
 
   //
@@ -69,7 +69,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[monb]] with p(x)=True
     * @see [[boxTrue]]
     */
-  lazy val G            : DependentPositionTactic = "G" by ((pos:Position) =>
+  val G            : DependentPositionTactic = "G" by ((pos:Position) =>
     SequentCalculus.cohideR(pos) & DLBySubst.G
     )
 

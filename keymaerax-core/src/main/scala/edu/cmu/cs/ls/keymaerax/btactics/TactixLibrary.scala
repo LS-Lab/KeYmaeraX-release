@@ -25,7 +25,7 @@ import scala.math.BigDecimal
   * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
   *
   * Main search tactics that combine numerous other tactics for automation purposes include:
-  *   - [[TactixLibrary.master()]] automatic proof search
+  *   - [[TactixLibrary.master]] automatic proof search
   *   - [[TactixLibrary.auto]] automatic proof search if that successfully proves the given property
   *   - [[TactixLibrary.normalize]] normalize to sequent normal form
   *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
@@ -50,7 +50,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val step               : DependentPositionTactic = "step" by ((pos: Position) =>
+  val step               : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
      else HilbertCalculus.stepAt(pos) partial)
@@ -72,10 +72,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  lazy val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
+  val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
-  lazy val prop                    : BelleExpr = NamedTactic("prop", {
+  val prop                    : BelleExpr = NamedTactic("prop", {
     (OnAll(?(
           (close
             | ((alphaRule)
