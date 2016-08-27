@@ -83,12 +83,11 @@ private object DLBySubst {
   }
 
   /**
-   * Introduces a self assignment [x:=x;]p(||) in front of p(||).
+    * Introduces a self assignment [x:=x;]p(||) in front of p(||).
     *
     * @param x The self-assigned variable.
-   * @return The tactic.
-   */
-  def selfAssign(x: Variable): DependentPositionTactic = "[:=] self assign inverse" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    */
+  def stutter(x: Variable): DependentPositionTactic = "stutter" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, f: Formula) =>
       val commute = if (pos.isAnte) commuteEquivR(1) else skip
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
@@ -117,7 +116,7 @@ private object DLBySubst {
 
             val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
-                  DebuggingTactics.print("Foo") & selfAssign(x0)(pos) & DebuggingTactics.print("Bar") & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
+                  DebuggingTactics.print("Foo") & stutter(x0)(pos) & DebuggingTactics.print("Bar") & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
                     eqR2L(-1)(pos.topLevel) & useAt("[:=] self assign")(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
@@ -180,7 +179,7 @@ private object DLBySubst {
     * @author Andre Platzer
     * @incontext
     */
-  lazy val assignEquality: DependentPositionTactic = "[:=] assign equality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val assignEquality: DependentPositionTactic = "assignEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     // [x:=f(x)]P(x)
     case Some(fml@Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)

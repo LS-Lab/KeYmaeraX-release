@@ -20,21 +20,21 @@ class DLTests extends TacticTestBase {
 
   // ordered up here since used indirectly in many places
   "self assign" should "introduce self assignments for simple formula" in {
-    val result = proveBy("x>0".asFormula, DLBySubst.selfAssign("x".asVariable)(1))
+    val result = proveBy("x>0".asFormula, DLBySubst.stutter("x".asVariable)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[x:=x;]x>0".asFormula
   }
 
   it should "introduce self assignments for simple formula in antecedent" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq()), DLBySubst.stutter("x".asVariable)(-1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[x:=x;]x>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "introduce self assignments in context in antecedent" in {
-    val result = proveBy(Sequent(IndexedSeq("[x:=2;]x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1, 1::Nil))
+    val result = proveBy(Sequent(IndexedSeq("[x:=2;]x>0".asFormula), IndexedSeq()), DLBySubst.stutter("x".asVariable)(-1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[x:=2;][x:=x;]x>0".asFormula
     result.subgoals.head.succ shouldBe empty
