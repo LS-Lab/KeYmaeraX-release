@@ -78,6 +78,7 @@ object BelleParser extends (String => BelleExpr) {
           case Some(BelleToken(IDENT(name), identLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(OPTIONAL, optCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(DONE, doneLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
         }
@@ -249,6 +250,16 @@ object BelleParser extends (String => BelleExpr) {
       }
       //endregion
 
+      //region done
+
+      case r :+ BelleToken(DONE, doneLoc) => {
+        val parsedExpr = TactixLibrary.done
+        parsedExpr.setLocation(doneLoc)
+        ParserState(r :+ ParsedBelleExpr(parsedExpr, doneLoc), st.input)
+      }
+
+      //endregion
+
       //region built-in tactics
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
@@ -289,15 +300,15 @@ object BelleParser extends (String => BelleExpr) {
       //endregion
 
       case r :+ BelleToken(EOF, eofLoc) =>
-        if(st.input isEmpty) ParserState(r, st.input)
+        if(st.input.isEmpty) ParserState(r, st.input)
         else throw ParseException("Internal parser error: did not expect to find EOF while input stream is unempty.", UnknownLocation)
 
       case Bottom =>
-        if(st.input isEmpty) throw new Exception("Empty inputs are not parsable.")//ParserState(stack :+ FinalItem(), Nil) //Disallow empty inputs.
+        if(st.input.isEmpty) throw new Exception("Empty inputs are not parsable.")//ParserState(stack :+ FinalItem(), Nil) //Disallow empty inputs.
         else if(isCombinator(st.input.head)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isIdent(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isOpenParen(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
-        else if(isPartial(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
+        else if(isProofStateToken(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
         else throw ParseException("Bellerophon programs should start with identifiers, open parens, or partials.", st.input.head.location)
 
       case r :+ ParsedBelleExpr(e, loc) => st.input.headOption match {
@@ -341,8 +352,9 @@ object BelleParser extends (String => BelleExpr) {
     case _ => false
   }
 
-  private def isPartial(toks: TokenStream) = toks.headOption match {
-    case Some(BelleToken(PARTIAL, partialLoc)) => true
+  private def isProofStateToken(toks: TokenStream) = toks.headOption match {
+    case Some(BelleToken(PARTIAL, _)) => true
+    case Some(BelleToken(DONE, _)) => true
     case _ => false
   }
 

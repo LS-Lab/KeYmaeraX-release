@@ -19,7 +19,7 @@ sealed abstract class BelleTerminal(val img: String) {
 }
 
 private case class IDENT(name: String) extends BelleTerminal(name) {
-  assert(name != "USMatch" && name.toLowerCase != "partial")
+  assert(name != "USMatch" && name.toLowerCase != "partial" && name.toLowerCase != "done")
   override def toString = s"IDENT($name)"
 }
 private object IDENT {
@@ -99,7 +99,11 @@ private object SEARCH_EVERYWHERE extends BelleTerminal("'_") with TACTIC_ARGUMEN
 }
 
 private object PARTIAL extends BelleTerminal("partial") {
-  override def regexp = "(?i)partial".r // allow case-insensitive use of the work partial.
+  override def regexp = "(?i)partial".r // allow case-insensitive use of the word partial.
+}
+
+private object DONE extends BelleTerminal("done") {
+  override def regexp = "(?i)done".r // allow case-insensitive use of the word done.
 }
 
 /** A dL expression. We allow both terms and formulas as arguments; e.g. in diffGhost. */
@@ -108,7 +112,7 @@ private case class EXPRESSION(exprString: String) extends BelleTerminal(exprStri
   
   val expression: Expression = {
     assert(exprString.startsWith("{`") && exprString.endsWith("`}"),
-      s"EXPRESSION.regexp should ensure delimited expression begin and end with {` `}, but an EXPRESSION was constructed with argument: ${exprString}")
+      s"EXPRESSION.regexp should ensure delimited expression begin and end with {` `}, but an EXPRESSION was constructed with argument: $exprString")
 
     //Remove delimiters and parse the expression.
     KeYmaeraXParser(undelimitedExprString)

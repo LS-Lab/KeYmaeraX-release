@@ -92,6 +92,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       //Stuff that could be confused as an identifier.
       case US_MATCH.startPattern(_*) => consumeTerminalLength(US_MATCH, loc)
       case PARTIAL.startPattern(_*) => consumeTerminalLength(PARTIAL, loc)
+      case DONE.startPattern(_*) => consumeTerminalLength(DONE, loc)
 
       //build-in tactics.
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)

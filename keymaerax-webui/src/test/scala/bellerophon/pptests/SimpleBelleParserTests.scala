@@ -332,4 +332,23 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   //endregion
+
+  //region Done tactics
+
+  "done tactic parser" should "parse closeId & done" in {
+    val tactic = BelleParser("closeId & done")
+    tactic shouldBe TactixLibrary.closeId & TactixLibrary.done
+  }
+
+  it should "parse done" in {
+    val tactic = BelleParser("done")
+    tactic shouldBe TactixLibrary.done
+  }
+
+  it should "parse in a branch" in {
+    val tactic = BelleParser("andR(1) & <(closeId & done, done)")
+    tactic shouldBe TactixLibrary.andR(1) & Idioms.<(TactixLibrary.closeId & TactixLibrary.done, TactixLibrary.done)
+  }
+
+  //endregion
 }
