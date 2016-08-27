@@ -161,7 +161,7 @@ object DifferentialHelper {
       .toMap
   }
 
-  /** Retruens true if the ODE is a linear system.
+  /** Returns true if the ODE is a linear system.
     * @todo unimplemented, always returns true.*/
   def isLinear(ode: DifferentialProgram) = true //@todo
 
@@ -172,10 +172,11 @@ object DifferentialHelper {
   def lieDerivative(ode: DifferentialProgram, term: Term): Term = lieDerivative(ode, Equal(term, Number(0))) match {
     case Equal(out, Number(n)) if n==0 => out
   }
+  //@todo performance: could consider replacing this by a direct recursive computation without proof.
   def lieDerivative(ode: DifferentialProgram, fml: Formula): Formula = {
     TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.diffInd('diffInd)(1) <(
       TactixLibrary.skip,
-      (TactixLibrary.Dassignb(1)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol]))))
+      TactixLibrary.Dassignb(1)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])))
     ).
       subgoals(1).succ(0)
   }
