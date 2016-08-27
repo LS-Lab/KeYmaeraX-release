@@ -16,24 +16,35 @@ import scala.language.postfixOps
 import scala.math.BigDecimal
 
 /**
- * Tactix: Main tactic library with simple interface.
- *
- * This library features all main tactic elements for most common cases, except sophisticated tactics.
- * Brief documentation for the tactics is provided inline in this interface file.
- *
- * For tactics implementing built-in rules such as sequent proof rules,
- * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
- *
- * @author Andre Platzer
- * @author Stefan Mitsch
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see [[HilbertCalculus]]
- * @see [[SequentCalculus]]
- * @see [[UnifyUSCalculus]]
- * @see [[DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
- */
+  * Tactix: Main tactic library with simple interface.
+  *
+  * This library features all main tactic elements for most common cases, except sophisticated tactics.
+  * Brief documentation for the tactics is provided inline in this interface file.
+  *
+  * For tactics implementing built-in rules such as sequent proof rules,
+  * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
+  *
+  * Main search tactics that combine numerous other tactics for automation purposes include:
+  *   - [[TactixLibrary.master()]] automatic proof search
+  *   - [[TactixLibrary.auto]] automatic proof search if that successfully proves the given property
+  *   - [[TactixLibrary.normalize]] normalize to sequent normal form
+  *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
+  *   - [[TactixLibrary.prop]] propositional logic proving
+  *   - [[TactixLibrary.QE]] prove real arithmetic
+  *   - [[TactixLibrary.ODE]] proving properties of differential equations
+  *   - [[TactixLibrary.step]] performs one canonical simplifying proof step
+  *   - [[TactixLibrary.chase]] chase the given formula away by automatic reduction proofs
+  *
+  * @author Andre Platzer
+  * @author Stefan Mitsch
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see [[HilbertCalculus]]
+  * @see [[SequentCalculus]]
+  * @see [[UnifyUSCalculus]]
+  * @see [[DerivedAxioms]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
+  */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Generates loop and differential invariants */
   var invGenerator: Generator[Formula] = new NoneGenerate()
