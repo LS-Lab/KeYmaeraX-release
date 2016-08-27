@@ -206,8 +206,10 @@ object TacticFactory {
    *  "[:=] assign" by (pos => useAt("[:=] assign")(pos))
    * }}}
    * @param name The tactic name.
+    *             Use the special name "ANON" to indicate that this is an anonymous inner tactic that needs no storage.
    */
   implicit class TacticForNameFactory(val name: String) {
+    if (name == "") throw new InternalError("Don't use empty name, use ANON for anonymous inner tactics")
     /*if (false)*/ {
       try {
         if (name != "ANON" && DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())

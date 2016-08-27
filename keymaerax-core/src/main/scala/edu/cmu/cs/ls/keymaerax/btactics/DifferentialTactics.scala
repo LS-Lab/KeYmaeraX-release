@@ -29,7 +29,7 @@ private object DifferentialTactics {
     TactixLibrary.invGenerator(seq,pos) match {
       case Some(inv) => diffInvariant(inv)(pos) & ODE(pos)
       case None =>
-        ((boxAnd(pos) & andR(pos)) *) & onAll(("" by ((pos: Position, seq: Sequent) =>
+        ((boxAnd(pos) & andR(pos)) *) & onAll(("ANON" by ((pos: Position, seq: Sequent) =>
           //@note diffWeaken will already inlcude all cases where V works, without much additional effort.
           (diffWeaken(pos) & QE) |
             (if (seq.sub(pos) match {
@@ -148,7 +148,7 @@ private object DifferentialTactics {
         )
     ) & QE & done;
     // fallback rescue tactic if proper misbehaves
-    val fallback: DependentPositionTactic = "" by ((pos:Position,seq:Sequent) => {
+    val fallback: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
       if (BelleExpr.DEBUG) println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
