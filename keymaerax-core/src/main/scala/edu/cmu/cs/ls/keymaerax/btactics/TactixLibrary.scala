@@ -234,7 +234,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     * @see [[DA]] */
-  lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGautoc
+  lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */

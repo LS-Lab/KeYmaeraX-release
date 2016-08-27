@@ -52,8 +52,7 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.DGauto]] */
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
-    //import TactixLibrary._
+    if (!ToolProvider.algebraTool().isDefined) throw new BelleError("DGAuto requires a AlgebraTool, but got None")
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n == 0 => a
@@ -70,25 +69,22 @@ private object DifferentialTactics {
     //@todo find a ghost that's not in ode
     val ghost: Variable = Variable("y_")
     require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
-    ("" by ((pos: Position, seq: Sequent) => {
-      // [x':=f(x)](quantity)'
-      val lie = DifferentialHelper.lieDerivative(ode, quantity)
-      val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
-        //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division
-        lie, Times(Number(-2), quantity), Variable("x"))._1
-      println("Need ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
-      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
-        Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
-      )(pos) < (
-        (close | QE) & done,
-        diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
-        )
-    }))(pos)
+    // [x':=f(x)](quantity)'
+    val lie = DifferentialHelper.lieDerivative(ode, quantity)
+    val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
+      //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division. Maybe foldLeft over all variables, feeding remainder into next quotientRemainder?
+      lie, Times(Number(-2), quantity), StaticSemantics.boundVars(ode).symbols.find(_.isInstanceOf[BaseVariable]).getOrElse(Variable("x")))._1
+    if (BelleExpr.DEBUG) println("Ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
+    DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
+      Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+    )(pos) < (
+      (close | QE) & done,
+      diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
+      )
   })
 
   def DGautoSandR: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
     if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
-    //import TactixLibrary._
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n==0 => a

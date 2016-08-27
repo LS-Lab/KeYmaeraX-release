@@ -10,7 +10,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Expression}
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
