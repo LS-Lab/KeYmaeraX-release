@@ -628,7 +628,8 @@ class HilbertTests extends TacticTestBase {
 
 
   "Interval chase" should "reduce x+y+z<=5" in withMathematica { qeTool =>
-    TactixLibrary.proveBy("x+y+z<=5".asFormula, intervalify(1)) shouldBe 'proved
+    val proof = TactixLibrary.proveBy("x+y+z<=5".asFormula, intervalify(1))
+    println(proof)
   }
 
   lazy val intervalify: DependentPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
