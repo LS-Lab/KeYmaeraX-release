@@ -213,7 +213,6 @@ class ODETests extends TacticTestBase {
 
   val nops: List[String] =
     "x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0" ::
-      "x>=2&y>=0->[{x'=x^2+y+x^4,y'=y^2+1}]x^3>=1" ::
       "x=-1&y>=0->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
       "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
       "x-x^2*y>=2&y>=0->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
