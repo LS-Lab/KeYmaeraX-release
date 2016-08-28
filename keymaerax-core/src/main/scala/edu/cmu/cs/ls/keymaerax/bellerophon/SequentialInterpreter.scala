@@ -73,6 +73,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           apply(valueDependentTactic, v)
         } catch {
           case e: BelleError => throw e.inContext(d, v.prettyString)
+            //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
           case e: Throwable => throw new BelleError("Unable to create dependent tactic", e).inContext(d, "")
         }
         case it: InputTactic[_] => try {
