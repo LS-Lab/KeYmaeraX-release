@@ -2,7 +2,7 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ProofTree}
@@ -78,6 +78,124 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.head.children.head.rule shouldBe "closeId"
   }
 
+  "Branch tactic" should "work top-level" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> x>0&x>=0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    //@todo no support for & done in spoon-feeding interpreter (closed goals vanish, so & done is on the next branch)
+    interpreter(implyR(1) & andR(1) & Idioms.<(closeId/* & done*/, skip),
+      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 7
+    tree.root.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
+    tree.root.children should have size 1
+    tree.root.children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula))
+    tree.root.children.head.rule shouldBe "implyR(1)"
+    tree.root.children.head.children should have size 2
+    tree.root.children.head.children(0).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
+    tree.root.children.head.children(0).rule shouldBe "andR(1)"
+    tree.root.children.head.children(0).children should have size 1
+    tree.root.children.head.children(0).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
+    tree.root.children.head.children(0).children.head.rule shouldBe "closeId"
+    tree.root.children.head.children(0).children.head.children shouldBe empty
+    tree.root.children.head.children(1).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.children.head.children(1).rule shouldBe "andR(1)"
+    tree.root.children.head.children(1).children should have size 1
+    tree.root.children.head.children(1).children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.children.head.children(1).children.head.rule shouldBe "nil"
+  }
+
+  it should "work top-level and support complicated branch tactics" in withMathematica { tool => withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> x>0&[{x'=1&x>=0}]x>=0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    //@todo no support for & done in spoon-feeding interpreter (closed goals vanish, so & done is on the next branch)
+    interpreter(implyR(1) & andR(1) & Idioms.<(closeId/* & done*/, diffWeaken(1) & prop),
+      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 7
+    tree.root.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&[{x'=1&x>=0}]x>=0".asFormula))
+    tree.root.children should have size 1
+    tree.root.children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&[{x'=1&x>=0}]x>=0".asFormula))
+    tree.root.children.head.rule shouldBe "implyR(1)"
+    tree.root.children.head.children should have size 2
+    tree.root.children.head.children(0).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
+    tree.root.children.head.children(0).rule shouldBe "andR(1)"
+    tree.root.children.head.children(0).children should have size 1
+    tree.root.children.head.children(0).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
+    tree.root.children.head.children(0).children.head.rule shouldBe "closeId"
+    tree.root.children.head.children(0).children.head.children shouldBe empty
+    tree.root.children.head.children(1).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x>=0}]x>=0".asFormula))
+    tree.root.children.head.children(1).rule shouldBe "andR(1)"
+    tree.root.children.head.children(1).children should have size 1
+    tree.root.children.head.children(1).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=0->x>=0".asFormula))
+    tree.root.children.head.children(1).children.head.rule shouldBe "diffWeaken(1)"
+    tree.root.children.head.children(1).children.head.children should have size 1
+    tree.root.children.head.children(1).children.head.children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
+    tree.root.children.head.children(1).children.head.children.head.rule shouldBe "prop"
+  }}
+
+  it should "work with nested branching when every branch is closed" ignore withMathematica { tool => withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0|x>1 -> x>0&x>=0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(closeId & done, QE & done), QE & done),
+      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 7
+    tree.root.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
+    tree.root.children should have size 1
+    tree.root.children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula))
+    tree.root.children.head.rule shouldBe "implyR(1)"
+    tree.root.children.head.children should have size 2
+    tree.root.children.head.children(0).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
+    tree.root.children.head.children(0).rule shouldBe "andR(1)"
+    tree.root.children.head.children(0).children should have size 1
+    tree.root.children.head.children(0).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
+    tree.root.children.head.children(0).children.head.rule shouldBe "closeId"
+    tree.root.children.head.children(0).children.head.children shouldBe empty
+    tree.root.children.head.children(1).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.children.head.children(1).rule shouldBe "andR(1)"
+    tree.root.children.head.children(1).children should have size 1
+    tree.root.children.head.children(1).children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.children.head.children(1).children.head.rule shouldBe "nil"
+  }}
+
+  //@todo need to compute branch indices in global provable, where branches are shifting and new ones created in-place+at the end of a provable
+  it should "work with nested branching when branches stay open" ignore withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0|x>1 -> x>0&x>=0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(closeId & done, skip), skip),
+      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 7
+    tree.root.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
+    tree.root.children should have size 1
+    tree.root.children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula))
+    tree.root.children.head.rule shouldBe "implyR(1)"
+    tree.root.children.head.children should have size 2
+    tree.root.children.head.children(0).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
+    tree.root.children.head.children(0).rule shouldBe "andR(1)"
+    tree.root.children.head.children(0).children should have size 1
+    tree.root.children.head.children(0).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
+    tree.root.children.head.children(0).children.head.rule shouldBe "closeId"
+    tree.root.children.head.children(0).children.head.children shouldBe empty
+    tree.root.children.head.children(1).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.children.head.children(1).rule shouldBe "andR(1)"
+    tree.root.children.head.children(1).children should have size 1
+    tree.root.children.head.children(1).children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.children.head.children(1).children.head.rule shouldBe "nil"
+  }
+
   "Parsed tactic" should "record STTT tutorial example 1 steps" in withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val proofId = db.createProof(modelContent)
@@ -99,6 +217,23 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyt")).mkString)
+    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 22
+    tree.nodes.map(_.rule) shouldBe "" :: "implyR(1)" :: "andL('L)" :: "andL('L)" :: "loop({`v>=0`},1)" ::
+      "loop({`v>=0`},1)" :: "loop({`v>=0`},1)" :: "composeb(1)" :: "choiceb(1)" :: "andR(1)" :: "andR(1)" ::
+      "assignb(1)" :: "choiceb(1)" :: "andR(1)" :: "andR(1)" :: "assignb(1)" :: "assignb(1)" :: "QE" :: "QE" ::
+      "ODE(1)" :: "ODE(1)" :: "ODE(1)" :: Nil
+
+  }}
+
+  it should "record STTT tutorial example 3a steps" ignore withMathematica { tool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyt")).mkString)
     interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
