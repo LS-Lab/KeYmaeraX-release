@@ -81,10 +81,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   val prop                    : BelleExpr = NamedTactic("prop", {
-    (OnAll(?(
-          (close
-            | ((alphaRule)
-            | ((betaRule) ) ) ) ) ))*
+    OnAll(?(
+      close
+        | (alphaRule
+        | betaRule) ))*
   })
 
   /** master: master tactic that tries hard to prove whatever it could
