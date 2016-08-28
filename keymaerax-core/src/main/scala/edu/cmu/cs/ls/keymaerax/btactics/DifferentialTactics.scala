@@ -23,31 +23,79 @@ import scala.language.postfixOps
  */
 private object DifferentialTactics {
 
+  /** A simple differential invariant generator. */
+  private val differentialInvariantGenerator: (Sequent,Position) => Iterator[Formula] = (sequent,pos) => {
+    //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
+    val (ode, post) = sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, post)) => (ode,post)
+      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+    }
+    val evos = DifferentialHelper.flattenAnds(List(ode.constraint))
+    (TactixLibrary.invGenerator(sequent,pos) match {
+      case Some(inv) if !evos.contains(inv) => List(inv).iterator
+      case Some(inv) if evos.contains(inv) => Iterator.empty
+      case None => Iterator.empty
+    }) ++ new Iterator[Formula] {
+      lazy val bounds = StaticSemantics.boundVars(ode.ode).symbols
+      lazy val frees = StaticSemantics.freeVars(post).symbols
+      // variables that are free in the postcondition and depend on bound in the ODE but not free in the evolution domain constraint, so missing knowledge.
+      //@todo
+      lazy val missing = frees.intersect(bounds)--StaticSemantics.freeVars(ode.constraint).symbols
+      lazy val candidates = DifferentialHelper.flattenAnds(post +: sequent.ante.toList).
+        // filter out constants
+        // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
+        // candidates with knowledge about missing variables
+        //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
+        filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(missing).isEmpty).
+        // new invariants only that aren't in the evolution domain constraint yet
+        filter(fml => !evos.contains(fml))
+      lazy val iterareHumanumEst = candidates.iterator
+      def hasNext: Boolean = iterareHumanumEst.hasNext
+      def next(): Formula = iterareHumanumEst.next()
+    }
+  }
+
   /** @see [[TactixLibrary.ODE]] */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
-    TactixLibrary.invGenerator(seq,pos) match {
-      case Some(inv) => diffInvariant(inv)(pos) & ODE(pos)
-      case None =>
-        ((boxAnd(pos) & andR(pos)) *) & onAll(("ANON" by ((pos: Position, seq: Sequent) =>
-          //@note diffWeaken will already inlcude all cases where V works, without much additional effort.
-          (diffWeaken(pos) & QE) |
-            (if (seq.sub(pos) match {
-              case Some(Box(_: ODESystem, _: Greater)) => true
-              case Some(Box(_: ODESystem, _: Less)) => true
-              case _ => false
-            })
-            // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-              openDiffInd(pos) | DGauto(pos) | TactixLibrary.diffSolve()(pos)
-            else
-            //@todo check degeneracy for split to > or =
-              diffInd()(pos)
-                | DGauto(pos)
-                //@todo | diffInvariant(cuts) | DA ...
-                | TactixLibrary.diffSolve()(pos)
-              ))
-          ) (pos))
-    }
+    (ChooseSome(
+      //@todo should memoize the results of the differential invariant generator
+      () => differentialInvariantGenerator(seq,pos),
+      (inv:Formula) => diffCut(inv)(pos) <(
+        // use cut
+        skip,
+        // show cut
+        diffInd()(pos) //ODE(pos)
+        ))
+      // if no differential invariant succeeded, just skip and go for a direct proof.
+      | skip) &
+      ((boxAnd(pos) & andR(pos)) *) & onAll(("ANON" by ((pos: Position, seq: Sequent) => {
+      val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+        case Some(Box(ode: ODESystem, post)) => (ode,post)
+        case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + seq)
+        case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + seq)
+      }
+      val bounds = StaticSemantics.boundVars(ode.ode).symbols
+      val frees = StaticSemantics.freeVars(post).symbols
+      //@note diffWeaken will already include all cases where V works, without much additional effort.
+      (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+        diffWeaken(pos) & QE else fail) |
+        (if (post match {
+          case  _: Greater => true
+          case _: Less => true
+          case _ => false
+        })
+        // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
+          openDiffInd(pos) | DGauto(pos) | TactixLibrary.diffSolve()(pos)
+        else
+        //@todo check degeneracy for split to > or =
+          diffInd()(pos)
+            | DGauto(pos)
+            //@todo | diffInvariant(cuts) | DA ...
+            | TactixLibrary.diffSolve()(pos)
+          )
+    })) (pos))
   })
 
   /** @see [[TactixLibrary.DGauto]] */
