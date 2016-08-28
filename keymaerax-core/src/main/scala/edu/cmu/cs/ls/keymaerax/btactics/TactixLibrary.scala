@@ -261,7 +261,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       ToolProvider.qeTool().getOrElse(throw new BelleError("qeEvidence requires a QETool, but got None")).qeEvidence(formula)
   })
 
-  /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
+  /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
+    * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
   lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
   /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
     * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
@@ -287,10 +288,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param formulas the list of formulas that will be cut into the differential equation in that order.
     *                 The formulas are typically shown to be differential invariants subsequently.
     *                 They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
+    * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[DC]]
     * @see [[diffInvariant()]]
     */
-  @deprecated("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
+  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
@@ -367,7 +369,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[diffCut]]
     * @see [[diffInd]]
     */
-  @deprecated("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
+  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: Open Differential Invariant proves an open formula to be an invariant of a differential equation (by DIo, DW, DE, QE)
@@ -513,6 +515,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** nil=skip is a no-op tactic that has no effect
     * @see [[done]] */
   val skip : BelleExpr = nil
+  /** fail is a tactic that always fails
+    * @see [[skip]] */
+  val fail : BelleExpr = assertT(seq=>false, "fail")
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done : BelleExpr = DebuggingTactics.assertProved
