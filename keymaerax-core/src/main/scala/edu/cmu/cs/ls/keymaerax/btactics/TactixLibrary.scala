@@ -17,12 +17,10 @@ import scala.math.BigDecimal
 
 /**
   * Tactix: Main tactic library with simple interface.
-  *
-  * This library features all main tactic elements for most common cases, except sophisticated tactics.
-  * Brief documentation for the tactics is provided inline in this interface file.
+  * This library features all main tactics for the most common cases.
   *
   * For tactics implementing built-in rules such as sequent proof rules,
-  * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
+  * elaborate documentation can be found in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
   *
   * Main search tactics that combine numerous other tactics for automation purposes include:
   *   - [[TactixLibrary.master]] automatic proof search
@@ -35,6 +33,11 @@ import scala.math.BigDecimal
   *   - [[TactixLibrary.step]] performs one canonical simplifying proof step
   *   - [[TactixLibrary.chase]] chase the given formula away by automatic reduction proofs
   *
+  * The tactic library also includes individual proof calculi:
+  *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
+  *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
+  *   - [[UnifyUSCalculus]]: Automatic unification-based Uniform Substitution Calculus with indexing.
+  *
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
@@ -43,10 +46,12 @@ import scala.math.BigDecimal
   * @see [[SequentCalculus]]
   * @see [[UnifyUSCalculus]]
   * @see [[DerivedAxioms]]
+  * @see [[AxiomInfo]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
+  * @see [[ToolProvider]]
   */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
-  /** Generates loop and differential invariants */
+  /** Default generator for loop invariants and differential invariants */
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
@@ -237,10 +242,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[diffSolve]]
     * @todo @see [[diffCut]]
     * @see [[diffInd]]
-    * @todo @see [[diffInvariant]]
+    * @see [[diffInvariant]]
     * @see [[diffWeaken]]
     * @see [[openDiffInd]]
-    * @todo @see [[DA]]
+    * @see [[DA]]
     */
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.

@@ -44,7 +44,7 @@ trait SequentCalculus {
   /** CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight CoHideRight]]) */
   val cohideR : BuiltInRightTactic = "cohideR" by { (pr:Provable, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  lazy val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
+  val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
   def cohide2: BuiltInTwoPositionTactic = "CoHide2" by {(pr:Provable, ante: Position, succ: Position) => {
       require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
@@ -65,7 +65,7 @@ trait SequentCalculus {
     * }}}
     */
   def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
-  lazy val andLi: DependentTactic = andLi()
+  val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   val andR    : BuiltInRightTactic = "andR" by { (pr:Provable, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
@@ -78,7 +78,7 @@ trait SequentCalculus {
     * }}}
     */
   def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
-  lazy val orRi: DependentTactic = orRi()
+  val orRi: DependentTactic = orRi()
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
   val orR     : BuiltInRightTactic = "orR" by { (pr:Provable, pos:SuccPosition) => pr(OrRight(pos.checkTop), 0) }
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
@@ -93,7 +93,7 @@ trait SequentCalculus {
     * }}}
     */
   def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
-  lazy val implyRi: DependentTactic = implyRi()
+  val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   val equivL  : BuiltInLeftTactic = "equivL" by { (pr:Provable, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
@@ -126,26 +126,26 @@ trait SequentCalculus {
     * }}}
     * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     */
-  lazy val allR               : DependentPositionTactic = FOQuantifierTactics.allSkolemize
+  val allR                    : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `term`. */
   def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
-  lazy val allL                     : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
+  val allL                          : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => allL(t)(pos)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
-  lazy val existsL                    : DependentPositionTactic = "existsL" by ((pos,seq) => FOQuantifierTactics.existsSkolemize(pos))
+  val existsL                         : DependentPositionTactic = "existsL" by ((pos,seq) => FOQuantifierTactics.existsSkolemize(pos))
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
-  lazy val existsR                    : DependentPositionTactic = "existsR" by ((pos,seq) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
+  val existsR                         : DependentPositionTactic = "existsR" by ((pos,seq) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
@@ -168,7 +168,7 @@ trait SequentCalculus {
     }
   def close(a: Int, s: Int)  : BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  lazy val closeIdWith: DependentPositionTactic = new DependentPositionTactic("close id") {
+  val closeIdWith: DependentPositionTactic = new DependentPositionTactic("close id") {
     /** Create the actual tactic to be applied at position pos */
     override def factory(pos:Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -183,7 +183,7 @@ trait SequentCalculus {
     }
   }
   //@note do not forward to closeIdWith (performance)
-  lazy val closeId           : DependentTactic = new DependentTactic("closeId") {
+  val closeId           : DependentTactic = new DependentTactic("closeId") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
@@ -195,14 +195,14 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("closeTrue") {
+  val closeT            : DependentTactic = new SingleGoalDependentTactic("closeTrue") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
       ProofRuleTactics.closeTrue('R, True)
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("closeFalse") {
+  val closeF            : DependentTactic = new SingleGoalDependentTactic("closeFalse") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
       ProofRuleTactics.closeFalse('L, False)
