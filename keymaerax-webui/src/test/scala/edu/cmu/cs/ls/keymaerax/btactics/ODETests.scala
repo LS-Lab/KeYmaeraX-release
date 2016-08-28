@@ -22,6 +22,19 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 class ODETests extends TacticTestBase {
+  "Pretest" should "autocut x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withMathematica { qeTool =>
+    TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+  it should "solve to prove x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0" in withMathematica {qeTool =>
+    TactixLibrary.proveBy("x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0".asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+  }
+
+  it should "DI to prove w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9" in withMathematica {qeTool =>
+    TactixLibrary.proveBy("w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+
   "openDiffInd" should "directly prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
@@ -110,8 +123,12 @@ class ODETests extends TacticTestBase {
     proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "prove x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0" taggedAs (TodoTest) in withMathematica { qeTool =>
+  it should "prove x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0" in withMathematica { qeTool =>
     proveBy("x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+  it should "cut to prove x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withMathematica { qeTool =>
+    TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
   //@note: there's overlap as multiple methods are able to prove some of the following examples
@@ -188,16 +205,21 @@ class ODETests extends TacticTestBase {
       //"x>=2&y=1->[{x'=x^2*y^3+x^4*y,y'=y^2+2*y+1}]x^3>=8" ::
       //"x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
       //"x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" ::
+      "x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0" ::
+      "x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
+      "x>=2&y>=22->[{x'=4*x^2,y'=x+y^4}]y>=22" ::
+      "x>=2&y>=0->[{x'=x^2+y+x^4,y'=y^2+1}]x^3>=1" ::
       Nil
 
   val nops: List[String] =
-      "x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0" ::
-    "x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0" ::
-    "x>=2&y>=22->[{x'=4*x^2,y'=x+y^4}]y>=22" ::
-    "x>=2&y=1->[{x'=x^2+y+x^4,y'=y^2+1}]x^3>=1" ::
-    "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
-    "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
-    "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" :: Nil
+    "x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0" ::
+      "x>=2&y>=0->[{x'=x^2+y+x^4,y'=y^2+1}]x^3>=1" ::
+      "x=-1&y>=0->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
+      "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
+      "x-x^2*y>=2&y>=0->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
+      "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
+      "x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" :: Nil
+      "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" :: Nil
 
 
   it should "prove a list of ODEs" in withMathematica { qeTool =>
