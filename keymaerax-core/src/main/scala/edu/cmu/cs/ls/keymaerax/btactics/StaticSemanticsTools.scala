@@ -141,12 +141,14 @@ object StaticSemanticsTools {
   /** Form some sort of directed transitive closure to obtain an approximate topological sort on each.   */
   private def transitivize(dep: immutable.Map[Variable,immutable.Set[Variable]]): immutable.Map[Variable,immutable.List[Variable]] = {
     //@todo performance: bottom-up dynamic programming would make this a quicker single pass, walking in topologically sorted order without recursion
-    def transitiveChase(x: Variable, d: immutable.List[Variable]): immutable.List[Variable] =
-        // prepends new transitive dependencies so that they get sorted in before stuff that caused those dependencies
-        d.flatMap(y => dep.get(y) match {
-          case Some(set) => (set--d).toList
-          case None => List.empty
-        }) ++ d
+    def transitiveChase(x: Variable, d: immutable.List[Variable]): immutable.List[Variable] = {
+      // prepends new transitive dependencies so that they get sorted in before stuff that caused those dependencies
+      val moreDeps = d.flatMap(y => dep.get(y) match {
+        case Some(set) => (set--d).toList
+        case None => List.empty
+      })
+      moreDeps.flatMap(y => transitiveChase(y,moreDeps ++ d)) ++ moreDeps ++ d
+    }
     dep.iterator.map(sp => sp._1->transitiveChase(sp._1, sp._2.to)).toMap
   }
 

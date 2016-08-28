@@ -175,14 +175,15 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
 
         case ChooseSome(options, e) =>
+          val ec = e.asInstanceOf[Formula=>BelleExpr]
           //@todo specialization to A=Formula should be undone
           val opts = options().asInstanceOf[Iterator[Formula]]
           var errors = ""
           while (opts.hasNext) {
-            val o = opts.next()
+            val o = opts.next().asInstanceOf[Formula]
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
             val someResult: Option[BelleValue] = try {
-              Some(apply(e.asInstanceOf[Formula=>BelleExpr](o.asInstanceOf[Formula]), v))
+              Some(apply(ec(o), v))
             } catch { case err: BelleError => errors += "in " + o + " " + err + "\n"; None }
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
             (someResult, e) match {

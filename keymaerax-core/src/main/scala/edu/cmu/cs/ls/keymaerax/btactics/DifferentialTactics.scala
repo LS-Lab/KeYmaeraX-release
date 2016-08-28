@@ -67,8 +67,8 @@ private object DifferentialTactics {
             StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty)).size
         )
       lazy val iterareHumanumEst = {
-        if (BelleExpr.DEBUG) println("among:     " + DifferentialHelper.flattenAnds(post +: sequent.ante.toList).distinct)
-        if (BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
+        if (true ||BelleExpr.DEBUG) println("among:     " + DifferentialHelper.flattenAnds(post +: sequent.ante.toList).distinct)
+        if (true ||BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
         if (true || BelleExpr.DEBUG) println("CANDIDATE: " + candidates)
         candidates.iterator
       }
@@ -112,7 +112,7 @@ private object DifferentialTactics {
     //@todo in fact even ChooseAll would work, just not recursively so.
     //@todo performance: repeat from an updated version of the same generator until saturation
     //@todo turn this into repeat
-    (?(ChooseSome(
+    (ChooseSome(
       //@todo should memoize the results of the differential invariant generator
       () => differentialInvariantGenerator(seq,pos),
       (inv:Formula) => if (false)
@@ -124,7 +124,7 @@ private object DifferentialTactics {
           // show diffCut, but don't use yet another diffCut
           noCut(pos) & done
           )
-    ))) & noCut(pos) |
+    )) & ODE(pos) | noCut(pos) |
       // if no differential cut succeeded, just skip and go for a direct proof.
       //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
       TactixLibrary.diffSolve()(pos)
