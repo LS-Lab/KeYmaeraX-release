@@ -1,7 +1,7 @@
 implyR(1) & (andL('L)*) & loop({`v<=V`}, 1) & <(
-  QE,
-  QE,
+  QE & done,
+  QE & done,
   composeb(1) & choiceb(1) & andR(1) & doall(
-    composeb(1) & testb(1) & implyR(1) & assignb(1) & ODE(1) & QE
+    composeb(1) & testb(1) & implyR(1) & assignb(1) & ODE(1) & QE & done
   )
 )
