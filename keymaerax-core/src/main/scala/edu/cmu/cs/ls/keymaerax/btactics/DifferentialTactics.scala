@@ -112,7 +112,7 @@ private object DifferentialTactics {
     //@todo in fact even ChooseAll would work, just not recursively so.
     //@todo performance: repeat from an updated version of the same generator until saturation
     //@todo turn this into repeat
-    ?(ChooseSome(
+    (?(ChooseSome(
       //@todo should memoize the results of the differential invariant generator
       () => differentialInvariantGenerator(seq,pos),
       (inv:Formula) => if (false)
@@ -122,9 +122,9 @@ private object DifferentialTactics {
           // use diffCut
           skip,
           // show diffCut, but don't use yet another diffCut
-          noCut(pos)
+          noCut(pos) & done
           )
-    )) & noCut(pos) |
+    ))) & noCut(pos) |
       // if no differential cut succeeded, just skip and go for a direct proof.
       //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
       TactixLibrary.diffSolve()(pos)
