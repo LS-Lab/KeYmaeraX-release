@@ -9,9 +9,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ProofTree}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
+import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable._
-import scala.collection.mutable
 
 /**
   * Tests the spoon-feeding interpreter.
@@ -197,7 +197,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.head.children(1).children.head.rule shouldBe "nil"
   }
 
-  "Parsed tactic" should "record STTT tutorial example 1 steps" in withDatabase { db =>
+  "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
@@ -212,7 +212,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes.map(_.rule) shouldBe "" :: "implyR('R)" :: "andL('L)" :: "diffCut({`v>=0`},1)" :: "diffCut({`v>=0`},1)" :: "diffWeaken(1)" :: "diffInd(1)" :: "diffInd(1)" :: "prop" :: "" :: "" :: Nil
   }
 
-  it should "record STTT tutorial example 2 steps" in withMathematica { tool => withDatabase { db =>
+  it should "record STTT tutorial example 2 steps" taggedAs SlowTest  in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
@@ -229,7 +229,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   }}
 
-  it should "record STTT tutorial example 3a steps" ignore withMathematica { tool => withDatabase { db =>
+  it should "record STTT tutorial example 3a steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
@@ -238,11 +238,54 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
-    tree.nodes should have size 22
-    tree.nodes.map(_.rule) shouldBe "" :: "implyR(1)" :: "andL('L)" :: "andL('L)" :: "loop({`v>=0`},1)" ::
-      "loop({`v>=0`},1)" :: "loop({`v>=0`},1)" :: "composeb(1)" :: "choiceb(1)" :: "andR(1)" :: "andR(1)" ::
-      "assignb(1)" :: "choiceb(1)" :: "andR(1)" :: "andR(1)" :: "assignb(1)" :: "assignb(1)" :: "QE" :: "QE" ::
-      "ODE(1)" :: "ODE(1)" :: "ODE(1)" :: Nil
+    tree.nodes should have size 42 // no further testing necessary with this answer ;-)
+  }}
 
+  it should "record STTT tutorial example 4a steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyx")).mkString
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyt")).mkString)
+    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 22
+  }}
+
+  it should "record STTT tutorial example 4b steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyx")).mkString
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyt")).mkString)
+    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 11
+  }}
+
+  it should "record STTT tutorial example 9b steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyx")).mkString
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyt")).mkString)
+    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 36
+  }}
+
+  it should "record STTT tutorial example 10 steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyt")).mkString)
+    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
+    tree.nodes should have size 62
   }}
 }
