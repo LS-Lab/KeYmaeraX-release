@@ -142,6 +142,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function (
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
   $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").success(function(data) {
+      $scope.modelId = modelid;
       $scope.tactic = data
   });
 

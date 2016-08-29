@@ -134,6 +134,7 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "pubLink" -> JsString(model.pubLink),
     "keyFile" -> JsString(model.keyFile),
     "title" -> JsString(model.title),
+    "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse(""))
   )
 }
