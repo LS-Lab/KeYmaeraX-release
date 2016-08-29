@@ -89,8 +89,10 @@ object AxiomaticODESolver {
       throw noDiamondsForNowExn
     else if(timeVar(ode).nonEmpty && atomicOdes(ode).last.xp.x != timeVar(ode).get)
       DebuggingTactics.error("Expected time var to occur at the end of the ODE.")
-    else if(!isLinear(ode)) //@todo implement this check.
-      DebuggingTactics.error("Expected ODE to be linear.")
+    else if(!isCanonicallyLinear(ode))
+      DebuggingTactics.error("Expected ODE to be linear and in correct order.")
+    else if(!anteHasInitConds(s.ante, ode))
+      DebuggingTactics.error("Expected sequent to have initial conditions for ODE.")
     else
       Idioms.nil
   })

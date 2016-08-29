@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import org.scalatest.PrivateMethodTester
@@ -192,6 +193,56 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   //endregion
 
+  //region The precondition check.
+
+  "isCanonicallyLinear" should "work" in {
+    val program = "{a'=a*b, b'=c, c'=d, d'=e}".asProgram.asInstanceOf[ODESystem].ode
+    DifferentialHelper.isCanonicallyLinear(program) shouldBe true
+  }
+
+  it should "work when false" in {
+    val program = "{a'=a*b, b'=c, c'=d, d'=c}".asProgram.asInstanceOf[ODESystem].ode
+    DifferentialHelper.isCanonicallyLinear(program) shouldBe false
+  }
+
+  //@todo find more elegant way to write these tests without throwing something other than a BelleUserGeneratedError.
+  "Precondition check" should "fail early when the ODE doesn't have the correct shape" in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    try {
+      proveBy(f, t)
+      throw new Exception("WRONG ERROR MESSAGE HERE")
+    }
+    catch {
+      case BelleUserGeneratedError(msg) => msg shouldBe "Expected ODE to be linear and in correct order."
+    }
+  }
+
+  it should "fail early when the ODE is in wrong order" in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=0&t=0 -> [{v'=a,x'=v,t'=1}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    try {
+      proveBy(f, t)
+      throw new Exception("WRONG ERROR MESSAGE HERE")
+    }
+    catch {
+      case BelleUserGeneratedError(msg) => msg shouldBe "Expected ODE to be linear and in correct order."
+    }
+  }
+
+  it should "fail when there aren't preconditions" in {
+    val f = "x=1&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    try {
+      proveBy(f, t)
+      throw new Exception("WRONG ERROR MESSAGE HERE")
+    }
+    catch {
+      case BelleUserGeneratedError(msg) => msg shouldBe "Expected sequent to have initial conditions for ODE."
+    }
+  }
+
+  //endregion
   //We're just looking for now errors during the diffGhost steps. This test is here to help isolate when both implementations are having troubles ghosting.
   "Original diff solve" should "work" in withMathematica { qet =>
     val model = "[{x'=v,v'=a}]1=1".asFormula
