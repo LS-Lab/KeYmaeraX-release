@@ -129,6 +129,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = Integrator.apply(initialConds, system)
     result shouldBe "x=a/2*t^2+2*t+1".asFormula :: "v=a*t+2".asFormula :: Nil
   }
+
+  "IntegratorDiffSolutionTool" should "work as a tool" in withMathematica { qe =>
+    val initialConds = conditionsToValues(extractInitialConditions(None)("x=x_0&v=v_0&a=a_0&t=t_0".asFormula)).mapValues[Variable](x => x.asInstanceOf[Variable])
+    val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
+    val result = new IntegratorDiffSolutionTool().diffSol(system.ode, "t".asVariable, initialConds)
+    println(result.get.asInstanceOf[And])
+  }
   //endregion
 
   "ODE Solver" should "not exploit soundness bugs" in withMathematica { qet =>
@@ -243,6 +250,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   //endregion
+
   //We're just looking for now errors during the diffGhost steps. This test is here to help isolate when both implementations are having troubles ghosting.
   "Original diff solve" should "work" in withMathematica { qet =>
     val model = "[{x'=v,v'=a}]1=1".asFormula
