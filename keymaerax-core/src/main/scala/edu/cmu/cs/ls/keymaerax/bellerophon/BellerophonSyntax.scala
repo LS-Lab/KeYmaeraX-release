@@ -523,8 +523,10 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
 case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
 /**
-  * ChooseSome(options, e)(BelleProvable(p)) proves `e(o)(p)` afte choosing some option `o` from `options` whose proof with `e` succeeds after supplying argument `o` to `e`.
-  * It's usually one of the first options `o` for which `e(o)(p)` does not fail.
+  * ChooseSome(options, e)(pr) proves `e(o)(pr)` after choosing some option `o` from `options`
+  * whose proof with tactic `e` succeeds after supplying argument `o` to `e`.
+  * It's usually one of the first options `o` for which `e(o)(pr)` does not fail.
+  * Fails if no choice from `options` made `e(o)(pr)` succeed.
   *
   * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
   * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently

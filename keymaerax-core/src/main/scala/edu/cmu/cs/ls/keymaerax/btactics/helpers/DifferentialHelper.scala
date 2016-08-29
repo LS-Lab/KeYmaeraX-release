@@ -9,6 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
 import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, Box, DifferentialFormula, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, DifferentialSymbol, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, True, Variable}
 
+import scala.collection.immutable
+
 /**
   * @todo move to formula tools? Or make this ProgramTools?
   * Created by nfulton on 7/14/16.
@@ -107,14 +109,14 @@ object DifferentialHelper {
     *
     * @param fs A list of formulas, possibly containing Ands.
     */
-  def flattenAnds(fs : List[Formula]) = fs.flatMap(decomposeAnds)
+  def flattenAnds(fs : immutable.List[Formula]) = fs.flatMap(decomposeAnds)
 
   /**
     *
     * @param f A formula.
     * @return A list of formulas with no top-level Ands.
     */
-  def decomposeAnds(f : Formula) : List[Formula] = f match {
+  def decomposeAnds(f : Formula) : immutable.List[Formula] = f match {
     case And(l,r) => decomposeAnds(l) ++ decomposeAnds(r)
     case _ => f :: Nil
   }

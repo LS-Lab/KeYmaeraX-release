@@ -16,30 +16,46 @@ import scala.language.postfixOps
 import scala.math.BigDecimal
 
 /**
- * Tactix: Main tactic library with simple interface.
- *
- * This library features all main tactic elements for most common cases, except sophisticated tactics.
- * Brief documentation for the tactics is provided inline in this interface file.
- *
- * For tactics implementing built-in rules such as sequent proof rules,
- * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
- *
- * @author Andre Platzer
- * @author Stefan Mitsch
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see [[HilbertCalculus]]
- * @see [[SequentCalculus]]
- * @see [[UnifyUSCalculus]]
- * @see [[DerivedAxioms]]
- * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
- */
+  * Tactix: Main tactic library with simple interface.
+  * This library features all main tactics for the most common cases.
+  *
+  * For tactics implementing built-in rules such as sequent proof rules,
+  * elaborate documentation can be found in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
+  *
+  * Main search tactics that combine numerous other tactics for automation purposes include:
+  *   - [[TactixLibrary.master]] automatic proof search
+  *   - [[TactixLibrary.auto]] automatic proof search if that successfully proves the given property
+  *   - [[TactixLibrary.normalize]] normalize to sequent normal form
+  *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
+  *   - [[TactixLibrary.prop]] propositional logic proving
+  *   - [[TactixLibrary.QE]] prove real arithmetic
+  *   - [[TactixLibrary.ODE]] proving properties of differential equations
+  *   - [[TactixLibrary.step]] performs one canonical simplifying proof step
+  *   - [[TactixLibrary.chase]] chase the given formula away by automatic reduction proofs
+  *
+  * The tactic library also includes individual proof calculi:
+  *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
+  *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
+  *   - [[UnifyUSCalculus]]: Automatic unification-based Uniform Substitution Calculus with indexing.
+  *
+  * @author Andre Platzer
+  * @author Stefan Mitsch
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see [[HilbertCalculus]]
+  * @see [[SequentCalculus]]
+  * @see [[UnifyUSCalculus]]
+  * @see [[DerivedAxioms]]
+  * @see [[AxiomInfo]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
+  * @see [[ToolProvider]]
+  */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
-  /** Generates loop and differential invariants */
+  /** Default generator for loop invariants and differential invariants */
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val step               : DependentPositionTactic = "step" by ((pos: Position) =>
+  val step               : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
      else HilbertCalculus.stepAt(pos) partial)
@@ -61,14 +77,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  lazy val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
+  val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
-  lazy val prop                    : BelleExpr = NamedTactic("prop", {
-    (OnAll(?(
-          (close
-            | ((alphaRule)
-            | ((betaRule) ) ) ) ) ))*
+  val prop                    : BelleExpr = NamedTactic("prop", {
+    OnAll(?(
+      close
+        | (alphaRule
+        | betaRule) ))*
   })
 
   /** master: master tactic that tries hard to prove whatever it could
@@ -226,10 +242,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[diffSolve]]
     * @todo @see [[diffCut]]
     * @see [[diffInd]]
-    * @todo @see [[diffInvariant]]
+    * @see [[diffInvariant]]
     * @see [[diffWeaken]]
     * @see [[openDiffInd]]
-    * @todo @see [[DA]]
+    * @see [[DA]]
     */
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
@@ -245,7 +261,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       ToolProvider.qeTool().getOrElse(throw new BelleError("qeEvidence requires a QETool, but got None")).qeEvidence(formula)
   })
 
-  /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
+  /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
+    * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
   lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
   /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
     * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
@@ -271,10 +288,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param formulas the list of formulas that will be cut into the differential equation in that order.
     *                 The formulas are typically shown to be differential invariants subsequently.
     *                 They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
+    * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[DC]]
     * @see [[diffInvariant()]]
     */
-  @deprecated("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
+  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
@@ -351,7 +369,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[diffCut]]
     * @see [[diffInd]]
     */
-  @deprecated("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
+  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: Open Differential Invariant proves an open formula to be an invariant of a differential equation (by DIo, DW, DE, QE)
@@ -497,6 +515,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** nil=skip is a no-op tactic that has no effect
     * @see [[done]] */
   val skip : BelleExpr = nil
+  /** fail is a tactic that always fails
+    * @see [[skip]] */
+  val fail : BelleExpr = assertT(seq=>false, "fail")
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done : BelleExpr = DebuggingTactics.assertProved

@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, TheType, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
@@ -625,4 +625,25 @@ class HilbertTests extends TacticTestBase {
       Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(2*x^(2-1))*(x)'=0".asFormula))
   }
+
+
+  "Interval chase" should "reduce x+y+z<=5" in withMathematica { qeTool =>
+    val proof = TactixLibrary.proveBy("x+y+z<=5".asFormula, intervalify(1))
+    println(proof)
+  }
+
+  lazy val intervalify: DependentPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
+    // base case //@todo check that right-hand side is transformed, too
+    case LessEqual(_:Variable, _) => Nil
+    case LessEqual(Plus(_,_), _) => "+<= up" :: Nil
+    case LessEqual(Minus(_,_), _) => "-<= up" :: Nil
+  },
+    (ax:String) => (us:Subst) => ax match {
+      case "+<= up" | "-<=up" => us ++ RenUSubst(
+        ("F_()".asTerm, FuncOf(Function("u",None,Real,Real), us("f_()".asTerm))) ::
+          ("G_()".asTerm, FuncOf(Function("u",None,Real,Real), us("g_()".asTerm))) ::
+          Nil)
+      case _ => us
+    }
+  )
 }

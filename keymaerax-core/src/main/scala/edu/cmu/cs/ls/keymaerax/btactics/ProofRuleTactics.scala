@@ -138,8 +138,9 @@ private object ProofRuleTactics {
     * @author Andre Platzer
     * @incontext
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
+    * @see [[UnifyUSCalculus.boundRename()]]
     */
-  def boundRenaming(what: Variable, repl: Variable): DependentPositionTactic = "BoundRenaming" by ((pos:Position, sequent:Sequent) =>
+  def boundRenaming(what: Variable, repl: Variable): DependentPositionTactic = "boundRename" by ((pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
       topBoundRenaming(what,repl)(pos)
     else {

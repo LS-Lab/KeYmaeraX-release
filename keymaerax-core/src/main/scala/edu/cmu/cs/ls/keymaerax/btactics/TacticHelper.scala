@@ -58,7 +58,7 @@ object TacticHelper {
       case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
     } else t
 
-  /** Returns a list of formulas that invariants should treat as invariants. */
+  /** Returns a list of formulas that are constants so should get as invariants for free by [[HilbertCalculus.V]]. */
   def propertiesOfConstants(s: Sequent, pos: SeqPos) : List[Formula] = {
     val constants : Set[Variable] = invariantSymbols(s, pos)
     s.ante.filter(f => (StaticSemantics.freeVars(f) -- constants).isEmpty).toList

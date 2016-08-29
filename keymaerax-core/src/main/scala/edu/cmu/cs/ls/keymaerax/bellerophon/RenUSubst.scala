@@ -21,15 +21,17 @@ object RenUSubst {
     URename(Variable("quark"), Variable("quark", Some(5)))(Variable("quark", Some(5))) == Variable("quark")
   } catch { case e: RenamingClashException => false }
 
+  /** Create a renaming uniform substitution from the given list of replacements. */
   def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = if (semanticRenaming)
       new URenAboveUSubst(subsDefsInput)
     else
       new DirectUSubstAboveURen(subsDefsInput)
     //  new USubstAboveURen(subsDefsInput)
 
-  def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.
-      map(sp=>(sp.what,sp.repl)))
-    def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
+  /** Create a (non-)renaming uniform substitution corresponding to the given ordinary uniform substitution. */
+  def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.map(sp=>(sp.what,sp.repl)))
+  /** Create a renaming (non-)substitution corresponding to the given ordinary uniform renaming. */
+  def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
   //@todo .distinct ? might depend on the use case
   private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
@@ -74,13 +76,16 @@ object RenUSubst {
 
 
 /**
-  * Renaming Uniform Substitution, combining URename and USubst.
+  * Renaming Uniform Substitution, combining [[URename]] and [[USubst]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
-  * where the Variable~>Variable replacements are by uniform renaming,
+  * where the `Variable~>Variable` replacements are by uniform renaming,
   * and the other replacements are by uniform substitution.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]]
   */
 sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   /** Returns true if there is no replacement. */
@@ -116,6 +121,11 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def ++(other: RenUSubst): RenUSubst = reapply((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
+  /** A renaming substitution pair for a renaming uniform substitution.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.SubstitutionPair]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]] */
   type RenUSubstRepl = (Expression,Expression)
 
   /** The uniform renaming part of this renaming uniform substitution */
