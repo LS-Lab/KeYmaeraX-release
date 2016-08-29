@@ -671,6 +671,21 @@ class MathematicaStatusResponse(configured : Boolean) extends Response {
   )
 }
 
+class ListExamplesResponse(examples: List[ExamplePOJO]) extends Response {
+  def getJson: JsValue = JsArray(
+    examples.map(e =>
+      JsObject(
+        "id" -> JsNumber(e.id),
+        "title" -> JsString(e.title),
+        "description" -> JsString(e.description),
+        "infoUrl" -> JsString(e.infoUrl),
+        "url" -> JsString(e.url),
+        "image" -> JsString(e.imageUrl)
+      )
+    ).toVector
+  )
+}
+
 
 /**
  * @return JSON that is directly usable by angular.treeview

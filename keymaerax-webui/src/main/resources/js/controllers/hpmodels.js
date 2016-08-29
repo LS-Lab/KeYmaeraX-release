@@ -69,6 +69,15 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           fr.readAsText(file);
      };
 
+     $scope.importRepo = function(repoUrl) {
+      $http.post("models/users/" + $cookies.get('userId') + "/importRepo", repoUrl).success(function(data) {
+        $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+          Models.addModels(data);
+          $route.reload();
+        });
+      })
+     }
+
      $scope.$watch('models',
         function () { return Models.getModels(); }
      );
@@ -79,7 +88,12 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal, $location, Models) {
   $scope.models = [];
   $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-      $scope.models = data
+      $scope.models = data;
+  });
+
+  $scope.examples = [];
+  $http.get("examplesList/").success(function(data) {
+      $scope.examples = data;
   });
 
   $scope.open = function (modelid) {

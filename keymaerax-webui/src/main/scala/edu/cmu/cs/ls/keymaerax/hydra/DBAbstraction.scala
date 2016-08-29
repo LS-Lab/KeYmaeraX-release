@@ -41,6 +41,9 @@ object DBAbstractionObj {
 
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
+/** A tutorial/case study example. */
+class ExamplePOJO(val id: Int, val title: String, val description: String, val infoUrl: String, val url: String, val imageUrl: String)
+
 /**
  * Data object for models.
   *

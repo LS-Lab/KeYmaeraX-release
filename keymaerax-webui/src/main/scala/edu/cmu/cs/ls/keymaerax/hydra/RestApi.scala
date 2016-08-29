@@ -175,6 +175,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}}}
 
+  val importExampleRepo = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { (userId) => { pathEnd {
+    post {
+      entity(as[String]) { repoUrl => {
+        val r = new ImportExampleRepoRequest(database, userId, repoUrl)
+        completeRequest(r, t)
+      }}
+    }
+  }}}
+
   val deleteModel = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "delete") { modelId => pathEnd {
     post {
       val r = new DeleteModelRequest(database, userId, modelId)
@@ -610,6 +619,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
+  val examples = path("examplesList" /) {
+    pathEnd {
+      get {
+        val request = new ListExamplesRequest(database)
+        completeRequest(request, EmptyToken())
+      }
+    }
+  }
+
   val runBelleTerm = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runBelleTerm") { (userId, proofId, nodeId) => { pathEnd {
     post {
       entity(as[String]) { params => {
@@ -693,6 +711,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathematicaStatus  ::
     mathConfSuggestion ::
     devAction          ::
+    examples           ::
     Nil
 
   /** Requests that need a session token parameter.
@@ -706,6 +725,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     deleteModel           ::
     createProof           ::
     proveFromTactic       ::
+    importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::
     proofList             ::
@@ -742,6 +762,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     exportSequent         ::
     exportFormula         ::
     logoff                ::
+    // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
 
   val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {

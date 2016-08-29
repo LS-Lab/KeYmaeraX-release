@@ -10,34 +10,27 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io._
-import java.nio.file.Path
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Locale}
-
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import _root_.edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.main.JsonSchemaFactory
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
 
-import scala.collection.immutable
-import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-import java.io.{File, FileInputStream, FileOutputStream}
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import java.io.{File, FileInputStream, FileOutputStream, FileNotFoundException}
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Locale}
 
-import scala.collection.immutable.List
+import scala.io.Source
+import scala.collection.immutable._
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -426,6 +419,18 @@ class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   }
 }
 
+class ListExamplesRequest(db: DBAbstraction) extends Request {
+  override def resultingResponses(): List[Response] = {
+    //@todo read from the database/some web page?
+    val examples = new ExamplePOJO(0, "STTT Tutorial",
+      "Automated stop sign braking for cars",
+      "/dashboard.html?#/tutorials",
+      "classpath:/examples/tutorials/sttt/sttt.json",
+      "/examples/tutorials/sttt/sttt.png") :: Nil
+    new ListExamplesResponse(examples) :: Nil
+  }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Models
@@ -459,6 +464,13 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getModelId = createdId match {
     case Some(s) => s
     case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
+  }
+}
+
+class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
+    new BooleanResponse(true) :: Nil
   }
 }
 
@@ -1008,7 +1020,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
     val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
-    val conclusion = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(conclusionFormula))
+    val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
     val isProved = provable.isProved && provable.conclusion == conclusion
