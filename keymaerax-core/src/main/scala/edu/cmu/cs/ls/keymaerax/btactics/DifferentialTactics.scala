@@ -67,6 +67,10 @@ private object DifferentialTactics {
         // candidates with knowledge about missing variables
         //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
         filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(missing).isEmpty).
+        //@todo postpone and try later candidates not covering all their dependencies (given the knowledge)
+//        filter(fml => {
+//          val fv=StaticSemantics.freeVars(fml).symbols
+//          !fv.flatMap(x=>deps.getOrElse(x,List.empty)).subsetOf(fv++knowledge)}).
         // sort by dependency order
         //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
         sortWith((a:Formula,b:Formula) =>
