@@ -562,7 +562,7 @@ object DerivationInfo {
 
     // proof management tactics
     new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
-    new TacticInfo("assertproved", "assertproved", {case () => DebuggingTactics.assertProved("")}), // turn into input tactic if message should be stored too
+    new TacticInfo("done", "done", {case () => TactixLibrary.done}), // turn into input tactic if message should be stored too
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
