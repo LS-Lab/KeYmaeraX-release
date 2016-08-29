@@ -163,9 +163,23 @@ object DifferentialHelper {
       .toMap
   }
 
-  /** Returns true if the ODE is a linear system.
-    * @todo unimplemented, always returns true.*/
-  def isLinear(ode: DifferentialProgram) = true //@todo
+  /** Returns true if the ODE is a linear system in dependency order. */
+  def isCanonicallyLinear(program: DifferentialProgram): Boolean = {
+    var primedSoFar : Set[Variable] = Set()
+    atomicOdes(program).forall(ode => {
+      val rhsVars = StaticSemantics.freeVars(ode.e).toSet
+      val returnValue =
+        if(primedSoFar.intersect(rhsVars).isEmpty) true
+        else false
+      primedSoFar = primedSoFar ++ Set(ode.xp.x)
+      returnValue
+    })
+  }
+
+  def anteHasInitConds(ante: IndexedSeq[Formula], ode: DifferentialProgram): Boolean = {
+    val initialConditions = conditionsToValues(ante.flatMap(extractInitialConditions(Some(ode))).toList).keySet
+    getPrimedVariables(ode).forall(initialConditions.contains)
+  }
 
 
   /** Computes the Lie derivative of the given `term` with respect to the differential equations `ode`.

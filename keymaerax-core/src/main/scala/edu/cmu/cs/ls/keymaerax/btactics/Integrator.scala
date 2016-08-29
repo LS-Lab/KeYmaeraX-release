@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
+import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 /**
   * Solves the initial value problem for systems of differential equations.
@@ -121,5 +122,20 @@ object Integrator {
       else
         throw new Exception("Expected that recurrences would be solved so that derivatives don't ever mention other primed variables.")
     }
+  }
+}
+
+class IntegratorDiffSolutionTool extends DiffSolutionTool {
+  /**
+    * Computes the symbolic solution of a differential equation in normal form.
+    *
+    * @param diffSys The system of differential equations of the form x' = theta & H.
+    * @param diffArg The name of the differential argument (dx/d diffArg = theta).
+    * @param iv      The initial values per derivative.
+    * @return The solution if found; None otherwise
+    */
+  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
+    assert(timeVar(diffSys).get == diffArg, "diffArg should be the ODE's time variable.")
+    Some(Integrator(iv, ODESystem(diffSys, True)).reduce[Formula]((l,r) => And(l,r)))
   }
 }
