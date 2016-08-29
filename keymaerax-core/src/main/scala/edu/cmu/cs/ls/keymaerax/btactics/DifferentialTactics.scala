@@ -60,15 +60,15 @@ private object DifferentialTactics {
         // sort by dependency order
         //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
         sortWith((a:Formula,b:Formula) =>
-        //@todo improve sorting to take dependency order into account. If x depends on y then y is smaller.
+        //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         //@todo improve sorting to take dependency cluster into account, too.
-          // smaller set of variables that it depends on means good idea to try first in dependency order
-          StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty)).size <
-            StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty)).size
+          // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
+          StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size <
+            StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size
         )
       lazy val iterareHumanumEst = {
-        if (true ||BelleExpr.DEBUG) println("among:     " + DifferentialHelper.flattenAnds(post +: sequent.ante.toList).distinct)
-        if (true ||BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
+        if (BelleExpr.DEBUG) println("among:     " + DifferentialHelper.flattenAnds(post +: sequent.ante.toList).distinct)
+        if (BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
         if (true || BelleExpr.DEBUG) println("CANDIDATE: " + candidates)
         candidates.iterator
       }

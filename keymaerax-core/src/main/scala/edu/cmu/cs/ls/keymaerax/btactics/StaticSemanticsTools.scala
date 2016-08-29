@@ -136,20 +136,43 @@ object StaticSemanticsTools {
   def transitiveDependencies(program: Program): immutable.Map[Variable,immutable.List[Variable]] = transitivize(dependencies(program))
   def transitiveDependencies(ode: DifferentialProgram): immutable.Map[Variable,immutable.List[Variable]] = transitivize(dependencies(ode))
 
+  /** Inverse of the dependency relation `deps` */
+  def inverseDependencies(deps: immutable.Map[Variable,immutable.List[Variable]]): immutable.Map[Variable,immutable.List[Variable]] = {
+    //deps.keysIterator.map(k => deps.iterator.foldLeft(List.empty[Variable])
+    //((l, kvp) => if (kvp._2.contains(k)) l :+ kvp._1 else l))
+    val foo: mutable.Map[Variable,mutable.ListBuffer[Variable]] = mutable.Map.empty
+    deps.keySet.foreach(k => foo += k->mutable.ListBuffer.empty)
+    deps.foreach(kvp => kvp._2.foreach(d => foo(d) += kvp._1))
+    foo.map(p => p._1 -> p._2.toList).toMap
+  }
+
+
   // implementation
 
   /** Form some sort of directed transitive closure to obtain an approximate topological sort on each.   */
   private def transitivize(dep: immutable.Map[Variable,immutable.Set[Variable]]): immutable.Map[Variable,immutable.List[Variable]] = {
     //@todo performance: bottom-up dynamic programming would make this a quicker single pass, walking in topologically sorted order without recursion
-    def transitiveChase(x: Variable, d: immutable.List[Variable]): immutable.List[Variable] = {
+    //@todo breadth-first search also gives more precise answer than depth-first
+//    def transitiveChase(proc: immutable.List[Variable], d: immutable.List[Variable]): immutable.List[Variable] =
+//    if (proc.isEmpty)
+//      d
+//    else {
+//      // prepends new transitive dependencies so that they get sorted in before stuff that caused those dependencies
+//      val moreDeps = (proc.flatMap(y => dep.get(y) match {
+//        case Some(set) => (set--d).toList ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+//        case None => List.empty
+//      }).distinct) ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+//      moreDeps.flatMap(y => transitiveChase(moreDeps,moreDeps ++ d)).distinct ++ moreDeps ++ d
+//    } ensuring(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
+    def transitiveChase(proc: immutable.List[Variable], d: immutable.List[Variable]): immutable.List[Variable] = {
       // prepends new transitive dependencies so that they get sorted in before stuff that caused those dependencies
-      val moreDeps = d.flatMap(y => dep.get(y) match {
-        case Some(set) => (set--d).toList
+      val moreDeps = (proc.flatMap(y => dep.get(y) match {
+        case Some(set) => (set--d).toList ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
         case None => List.empty
-      })
-      moreDeps.flatMap(y => transitiveChase(y,moreDeps ++ d)) ++ moreDeps ++ d
-    }
-    dep.iterator.map(sp => sp._1->transitiveChase(sp._1, sp._2.to)).toMap
+      }).distinct) ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+      (d ++ moreDeps ++ moreDeps.flatMap(y => transitiveChase(moreDeps,moreDeps ++ d)).distinct).distinct
+    } ensuring(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
+    dep.iterator.map(sp => sp._1->transitiveChase(sp._2.to, sp._2.to).reverse).toMap
   }
 
 
