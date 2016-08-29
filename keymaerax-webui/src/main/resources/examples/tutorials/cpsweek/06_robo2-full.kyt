@@ -1,0 +1,8 @@
+implyR(1) & (andL('L)*) & loop({`v^2 <= 2*b*(m-x)`}, 1) & <(
+  QE & done,
+  QE & done,
+  composeb(1) & choiceb(1) & andR(1) & <(
+    assignb(1) & composeb(1) & assignb(1) & ODE(1) & QE & done,
+    composeb(1) & testb(1) & implyR(1) & assignb(1) & composeb(1) & assignb(1) & ODE(1) & QE & done
+  )
+)

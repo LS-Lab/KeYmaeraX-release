@@ -4,8 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print,printIndexed}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, SubstitutionPair, USubst}
@@ -176,6 +177,12 @@ class CpsWeekTutorial extends TacticTestBase {
     proveBy(s, master()) shouldBe 'proved
   }
 
+  it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { tool =>
     def tactic(j: Formula) = implyR('R) & (andL('L)*) & loop(j)('R) <(
       print("Base case") & closeId,
@@ -213,11 +220,36 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals should have size 1
   }
 
+  it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyt")).mkString)
+    val result = db.proveBy(modelContent, tactic)
+    result.subgoals should have size 1
+  }}
+
   "Motzkin" should "be provable with DI+DW" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx"))
     val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & diffWeaken('R) & prop
     proveBy(s, tactic) shouldBe 'proved
   }
+
+  it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  "Damped oscillator" should "be provable with DI+DW" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx"))
+    val tactic = implyR('R) & diffInd('full)('R)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
 
   "Self crossing" should "be provable with DI+DW" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/10-diffinv-self-crossing.kyx"))

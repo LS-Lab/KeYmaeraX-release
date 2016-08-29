@@ -422,11 +422,18 @@ class MathematicaStatusRequest(db : DBAbstraction) extends Request {
 class ListExamplesRequest(db: DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
-    val examples = new ExamplePOJO(0, "STTT Tutorial",
-      "Automated stop sign braking for cars",
-      "/dashboard.html?#/tutorials",
-      "classpath:/examples/tutorials/sttt/sttt.json",
-      "/examples/tutorials/sttt/sttt.png") :: Nil
+    val examples =
+      new ExamplePOJO(0, "STTT Tutorial",
+        "Automated stop sign braking for cars",
+        "/dashboard.html?#/tutorials",
+        "classpath:/examples/tutorials/sttt/sttt.json",
+        "/examples/tutorials/sttt/sttt.png") ::
+      new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
+        "Proving ODEs",
+        "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
+        "classpath:/examples/tutorials/cpsweek/cpsweek.json",
+        "/examples/tutorials/cpsweek/cpsweek.png") ::
+      Nil
     new ListExamplesResponse(examples) :: Nil
   }
 }
