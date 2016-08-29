@@ -524,6 +524,20 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
   }
 }
 
+class ProveFromTacticRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val model = db.getModel(modelId)
+    model.tactic match {
+      case Some(tacticText) =>
+        val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic", "Proof from tactic", currentDate())
+        DatabasePopulator.executeTactic(db, model.keyFile, proofId, tacticText)
+        new CreatedIdResponse(proofId.toString) :: Nil
+      case None => ???
+    }
+
+  }
+}
+
 class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
   def resultingResponses() = {
     val proofs = db.getProofsForModel(modelId).map(proof =>

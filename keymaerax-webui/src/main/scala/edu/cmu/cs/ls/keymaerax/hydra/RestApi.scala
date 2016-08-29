@@ -240,6 +240,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val proveFromTactic = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proveFromTactic") { (userId, modelId) => { pathEnd {
+    post {
+      entity(as[String]) { x => {
+        val request = new ProveFromTacticRequest(database, userId, modelId)
+        completeRequest(request, t)
+      }}
+    }
+  }}}
+
   val proofListForModel = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
     get {
       val request = new ProofsForModelRequest(database, userId, modelId)
@@ -696,6 +705,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
+    proveFromTactic       ::
     deleteProof           ::
     proofListForModel     ::
     proofList             ::

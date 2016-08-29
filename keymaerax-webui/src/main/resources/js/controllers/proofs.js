@@ -17,6 +17,14 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
           });
   };
 
+  $scope.proveFromTactic = function(modelId) {
+    var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/proveFromTactic'
+    $http.post(uri, {}).success(function(data) {
+      var proofId = data.id;
+      $location.path('proofs/' + proofId);
+    });
+  }
+
   $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
 });
 
