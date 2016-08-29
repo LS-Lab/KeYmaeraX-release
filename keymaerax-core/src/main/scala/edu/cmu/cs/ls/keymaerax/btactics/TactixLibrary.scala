@@ -520,7 +520,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   val fail : BelleExpr = assertT(seq=>false, "fail")
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
-  val done : BelleExpr = DebuggingTactics.assertProved
+  val done : BelleExpr = DebuggingTactics.done
 
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term.

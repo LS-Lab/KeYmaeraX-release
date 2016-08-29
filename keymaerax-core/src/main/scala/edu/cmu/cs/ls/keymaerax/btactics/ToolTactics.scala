@@ -27,7 +27,7 @@ private object ToolTactics {
         (varExhaustiveEqL2R('L)*) &
         (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
       Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
-      DebuggingTactics.assertProved("QE was unable to prove: invalid formula")
+      DebuggingTactics.done("QE was unable to prove: invalid formula")
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 

@@ -194,7 +194,7 @@ object AxiomaticODESolver {
       case Box(ode, postcond) => {
         DifferentialTactics.diffCut(solnToCut)(pos) <(
           Idioms.nil,
-          DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos) & DebuggingTactics.assertProved
+          DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos) & DebuggingTactics.done
         )
       }
       case Diamond(ode, postcond) => throw noDiamondsForNowExn
@@ -250,7 +250,7 @@ object AxiomaticODESolver {
 
     //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
     s.apply(pos).asInstanceOf[Modal] match {
-      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(Idioms.nil, TactixLibrary.diffInd()(pos) & DebuggingTactics.assertProved)
+      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(Idioms.nil, TactixLibrary.diffInd()(pos) & DebuggingTactics.done)
       case Diamond(_,_) => throw noDiamondsForNowExn
     }
   })
@@ -276,7 +276,7 @@ object AxiomaticODESolver {
     TactixLibrary.cutAt(newConclusion)(subPosition(pos, PosInExpr(1::Nil))) <(
       Idioms.nil
       ,
-      SequentCalculus.cohideR('Rlast) & TactixLibrary.CMon(PosInExpr(1::Nil)) & (TactixLibrary.QE | TactixLibrary.close) & DebuggingTactics.assertProved
+      SequentCalculus.cohideR('Rlast) & TactixLibrary.CMon(PosInExpr(1::Nil)) & (TactixLibrary.QE | TactixLibrary.close) & DebuggingTactics.done
     )
   })
 
@@ -313,7 +313,7 @@ object AxiomaticODESolver {
         case Box(_, _) => {
           HilbertCalculus.useExpansionAt("DC differential cut")(pos) <(
             Idioms.nil, /* Branch with no ev dom contraint */
-            DifferentialTactics.diffInd()(1) & DebuggingTactics.assertProved /* Show precond of diff cut */
+            DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
             )
         }
         case Diamond(_,_) => throw noDiamondsForNowExn
@@ -373,7 +373,7 @@ object AxiomaticODESolver {
 
             //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
             TactixLibrary.cut(Forall(y_DE.xp.x::Nil, f)) <(
-              HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.assertProved
+              HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.done
               ,
               TactixLibrary.hide(pos) &
               DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate ${y_DE} from the ODE via an application of ${axiomName}.", ODE_DEBUGGER) &
