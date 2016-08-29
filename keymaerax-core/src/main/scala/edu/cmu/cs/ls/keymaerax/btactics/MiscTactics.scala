@@ -140,7 +140,7 @@ object DebuggingTactics {
 
   /** no-op tactic that raises an error if the provable is not proved */
   lazy val assertProved: BelleExpr = assertProved()
-  def assertProved(msg: String = ""): BelleExpr = new BuiltInTactic("assert proved") {
+  def assertProved(msg: String = ""): BelleExpr = new BuiltInTactic("assertproved") {
     override def result(provable : Provable): Provable =
       if (provable.isProved) provable
       else throw new BelleError((if (msg.nonEmpty) msg+"\n" else "") + "Expected proved provable, but got " + provable)
