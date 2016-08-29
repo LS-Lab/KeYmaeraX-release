@@ -23,6 +23,7 @@ import scala.collection.immutable.Map
  *  - header (.h): coefficients vectors
  * @author Ran Ji
  */
+@deprecated("Use is discouraged since Spiral imports KeYmaera X files.")
 class Hcol {
   private var constTbl : String = ""
   private var monitor : String  = ""
@@ -40,6 +41,7 @@ class Hcol {
   * Spiral generator.
   * @author Ran Ji
   */
+@deprecated("Use is discouraged since Spiral imports KeYmaera X files.")
 object SpiralGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
   def apply(kExpr: Expression, fileName: String): String = apply(kExpr, Nil, fileName)._1

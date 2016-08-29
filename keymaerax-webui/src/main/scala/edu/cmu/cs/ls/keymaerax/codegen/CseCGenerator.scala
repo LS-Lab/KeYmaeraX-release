@@ -13,7 +13,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
  * @author Ran Ji
  */
 
-class C {
+@deprecated("Use CGenerator instead.")
+private class C {
   private var allNames : List[String] = Nil
   private var localVarsDef : String = ""
   private var body : String = ""
@@ -30,6 +31,7 @@ class C {
   * Common-subexpression C generator
   * @author Ran Ji
   */
+@deprecated("Use CGenerator instead.")
 object CseCGenerator extends CodeGenerator {
   def apply(expr: Expression): String = apply(expr, "long double", Nil, "")
   def apply(expr: Expression, vars: List[Variable]): String = apply(expr, "long double", vars, "")

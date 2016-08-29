@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool, ToolEvidence}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CseCGenerator, SpiralGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -55,7 +55,6 @@ object KeYmaeraX {
       |  -noverify skip checking proof certificates after proof search
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
-      |  -cse      use common subexpression elimination in C code (not recommended)
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -kind     ctrl|model kind of monitor to generate
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
@@ -162,7 +161,6 @@ object KeYmaeraX {
       case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
       case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
       case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
-      case "-cse" :: tail => require(!map.contains('cse)); nextOption(map ++ Map('cse -> true), tail)
       case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
       // global options
       case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
@@ -482,9 +480,8 @@ object KeYmaeraX {
     val vars: List[Variable] =
       if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
       else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
-    val cseMode = options.contains('cse)
     val codegenStart = Platform.currentTime
-    val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
+    val output = CGenerator(inputFormula, vars, outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName + ".c")
     pw.write(stampHead(options))
