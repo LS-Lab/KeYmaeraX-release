@@ -26,7 +26,17 @@ private object DifferentialTactics {
 
   /** A simple differential invariant generator.
     * @author Andre Platzer */
-  private val differentialInvariantGenerator: (Sequent,Position) => Iterator[Formula] = (sequent,pos) => {
+  private val differentialInvariantGenerator: (Sequent,Position) => Iterator[Formula] = (sequent,pos) =>
+    sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, post)) => DifferentialHelper.flattenAnds(post +: sequent.ante.toList).iterator
+      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+    }
+
+  /** A dependency-optimized differential invariant generator using elementary candidates from `generator`.
+    * @author Andre Platzer */
+  private def differentialInvariantOrder(generator: (Sequent,Position) => Iterator[Formula]): (Sequent,Position) => Iterator[Formula] =
+    (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val (ode, post) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, post)) => (ode,post)
@@ -47,7 +57,7 @@ private object DifferentialTactics {
       // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
       lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).filter(x => !knowledge.contains(x))
       //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
-      lazy val candidates = DifferentialHelper.flattenAnds(post +: sequent.ante.toList).
+      lazy val candidates = generator(sequent,pos).toList.
         distinct.
         // new invariants only that aren't in the evolution domain constraint yet
         //@note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
@@ -114,7 +124,7 @@ private object DifferentialTactics {
     //@todo turn this into repeat
     (ChooseSome(
       //@todo should memoize the results of the differential invariant generator
-      () => differentialInvariantGenerator(seq,pos),
+      () => differentialInvariantOrder(differentialInvariantGenerator)(seq,pos),
       (inv:Formula) => if (false)
         diffInvariant(inv)(pos)
       else
