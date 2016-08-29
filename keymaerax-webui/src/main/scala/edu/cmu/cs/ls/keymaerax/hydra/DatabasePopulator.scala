@@ -27,7 +27,7 @@ object DatabasePopulator {
     val entries: JsArray = modelRepo.fields("entries").asInstanceOf[JsArray]
     entries.elements.map(_.asJsObject).foreach(e =>
       importModel(db, user,
-        e.fields("name").compactPrint,
+        e.fields("name").asInstanceOf[JsString].value,
         loadResource(e.fields("model").asInstanceOf[JsString].value),
         getOptionalField(e, "description"),
         getOptionalField(e, "title"),
