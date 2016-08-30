@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
 import scala.language.postfixOps
 import scala.reflect.runtime.{universe => ru}
@@ -134,18 +134,18 @@ object DerivedAxioms {
     val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
-    var failures = 0
+    var failures: mutable.Buffer[String] = mutable.Buffer()
     Range(0, fieldMirrors.length-1).foreach(idx => {
       try {
         fieldMirrors(idx)()
       } catch {
         case e: Throwable =>
-          failures = failures + 1
+          failures += fns(idx)
           println("WARNING: Failed to add derived lemma.")
           e.printStackTrace()
       }
     })
-    if (failures > 0) throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedLemmas deatabase.")
+    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.mkString("\n"))
   }
 
   // derived rules
