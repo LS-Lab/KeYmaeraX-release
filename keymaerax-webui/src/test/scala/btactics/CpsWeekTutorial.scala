@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -86,6 +87,13 @@ class CpsWeekTutorial extends TacticTestBase {
       print("Step") & normalize & diffSolve(None)('R) & QE
       )
     proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "stop after ODE to let users inspect a counterexample with false speed sb condition" in withMathematica { tool =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyt")).mkString)
+    val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
+    result.subgoals should have size 2
   }
 
   "Example 2" should "have expected open goal and a counter example" in withMathematica { tool =>
@@ -182,6 +190,14 @@ class CpsWeekTutorial extends TacticTestBase {
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
+
+  it should "find a hint for SB from parsed tactic" in withMathematica { qeTool =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyt")).mkString)
+    val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
+    result.subgoals should have size 2
+    result.subgoals.last.succ should contain only "ep<=0|ep>0&((v_0 < 0|v_0=0&(t_0 < ep&((t_<=0|(0 < t_&t_<=ep+-1*t_0)&(A<=0|A>0&((t < t_0+t_|t=t_0+t_&((v < A*t_|v=A*t_&(((x<=m|(m < x&x < 1/2*(2*m+A*t_^2))&((x_0 < 1/2*(-1*A*t_^2+2*x)|x_0=1/2*(-1*A*t_^2+2*x)&(b<=0|b>0&(t__0 < 0|t__0>0)))|x_0>1/2*(-1*A*t_^2+2*x)))|x=1/2*(2*m+A*t_^2)&((x_0 < m|x_0=m&(b<=0|b>0&(t__0 < 0|t__0>0)))|x_0>m))|x>1/2*(2*m+A*t_^2)))|v>A*t_))|t>t_0+t_)))|t_>ep+-1*t_0)|t_0>=ep))|v_0>0&(t_0 < ep&((t_<=0|(0 < t_&t_<=ep+-1*t_0)&(A < 0|A>=0&((t < t_0+t_|t=t_0+t_&((v < A*t_+v_0|v=A*t_+v_0&(((x<=m|(m < x&x < 1/2*(2*m+A*t_^2+2*t_*v_0))&((x_0 < 1/2*(-1*A*t_^2+-2*t_*v_0+2*x)|x_0=1/2*(-1*A*t_^2+-2*t_*v_0+2*x)&(b<=0|b>0&(t__0 < 0|t__0>0)))|x_0>1/2*(-1*A*t_^2+-2*t_*v_0+2*x)))|x=1/2*(2*m+A*t_^2+2*t_*v_0)&((x_0 < m|x_0=m&(b<=0|b>0&(t__0 < 0|t__0>0)))|x_0>m))|x>1/2*(2*m+A*t_^2+2*t_*v_0)))|v>A*t_+v_0))|t>t_0+t_)))|t_>ep+-1*t_0)|t_0>=ep))".asFormula
+  }
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { tool =>
     def tactic(j: Formula) = implyR('R) & (andL('L)*) & loop(j)('R) <(
