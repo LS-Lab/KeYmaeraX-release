@@ -43,6 +43,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   }
 
 
+
+
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
@@ -179,7 +181,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}
   it should "tactically prove box dual" in {check(boxAxiom)}
   it should "tactically prove <:=> assign" in {check(assigndAxiom)}
-  it should "tactically prove [:=] equational" in {check(assignbEquationalAxiom)}
+  it should "tactically prove [:=] equational" in withMathematica { qeTool => check(assignbEquationalAxiom)}
 //  it should "tactically prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
   it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "tactically prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
