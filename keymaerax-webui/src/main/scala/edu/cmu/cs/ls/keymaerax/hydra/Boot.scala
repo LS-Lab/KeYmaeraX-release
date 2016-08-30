@@ -121,8 +121,9 @@ object HyDRAInitializer {
 
 
     try {
-      val config = configFromDB(options, database)
-      val tool: Tool = createTool(options, config)
+      val preferredTool = preferredToolFromDB(database)
+      val config = configFromDB(options, database, preferredTool)
+      val tool: Tool = createTool(options, config, preferredTool)
       assert(tool.isInitialized, "Tool should be initialized after init()")
     } catch {
       //@todo add e to log here and in other places
@@ -150,8 +151,8 @@ object HyDRAInitializer {
     case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
   }
 
-  private def createTool(options: OptionMap, config: ToolProvider.Configuration): Tool = {
-    val tool: String = options.getOrElse('tool, "mathematica").toString
+  private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Tool = {
+    val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
       case "mathematica" => new MathematicaToolProvider(config)
       case "z3" => new Z3ToolProvider
@@ -161,13 +162,17 @@ object HyDRAInitializer {
     provider.tool
   }
 
-  private def configFromDB(options: OptionMap, db: DBAbstraction): ToolProvider.Configuration = {
-    val tool: String = options.getOrElse('tool, "mathematica").toString
+  private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
+    val tool: String = options.getOrElse('tool, preferredTool).toString
     tool.toLowerCase() match {
       case "mathematica" => mathematicaConfigFromDB(db)
       case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
+  }
+
+  private def preferredToolFromDB(db: DBAbstraction): String = {
+    db.getConfiguration("tool").config.getOrElse("qe", throw new Exception("No preferred tool"))
   }
 
   private def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
@@ -186,7 +191,7 @@ object HyDRAInitializer {
 
   private def getMathematicaLibDir(db: DBAbstraction): Option[String] = {
     val config = db.getConfiguration("mathematica").config
-    if (config.contains("jlinkLibDir")) Some(config.get("jlinkLibDir").get)
+    if (config.contains("jlinkLibDir")) Some(config("jlinkLibDir"))
     else None
   }
 }
@@ -201,17 +206,14 @@ object HyDRAServerConfig {
   val databaserServerConfig = database.getAllConfigurations.find(_.name == "serverconfig")
 
   val (isHosted:Boolean, host:String, port:Int) = databaserServerConfig match {
-    case Some(c) => {
+    case Some(c) =>
       assert(c.config.keySet.contains("host"), "If serverconfig configuration exists then it should have a 'host' key.")
       assert(c.config.keySet.contains("port"), "If serverconfig configuration exists then it should have a 'port' key.")
-
       val isHosted = c.config.get("isHosted") match {
         case Some(s) => s.equals("true")
         case None => false
       }
-
       (isHosted, c.config("host"), Integer.parseInt(c.config("port")))
-    }
     case None => (false, "127.0.0.1", 8090) //default values.
   }
 

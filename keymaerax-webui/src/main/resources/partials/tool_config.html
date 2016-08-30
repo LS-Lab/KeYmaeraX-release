@@ -1,0 +1,22 @@
+<h1>Tool Configuration</h1>
+
+<p>KeYmaera X uses backend tools to prove validity of real arithmetic formulas.
+   Z3 is shipped with KeYmaera X for your convenience.
+   Please select your preferred tool.
+</p>
+
+<form name="toolSelection">
+    <label for="toolSelect">Selected tool: </label>
+    <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
+        <option value="mathematica">Mathematica</option>
+        <option value="z3">Z3</option>
+    </select>
+</form>
+
+<div ng-if="tool==='mathematica'">
+    <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
+</div>
+
+<div ng-if="tool==='z3'">
+    <p>No configuration necessary.</p>
+</div>

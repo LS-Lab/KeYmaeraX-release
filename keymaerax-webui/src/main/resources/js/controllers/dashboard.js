@@ -24,13 +24,10 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
 
   $scope.noModalForHelpDialogHack = false;
 
-  $scope.mathematicaIsConfigured = true;
-  $http.get("/config/mathematicaStatus")
-      .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Could not retrieve Mathematica status")
-          else
-              $scope.mathematicaIsConfigured = data.configured;
-      });
+  $scope.toolIsConfigured = true;
+  $http.get("/config/toolStatus").success(function(data) {
+    $scope.toolIsConfigured = data.configured;
+  });
 
 
   $http.get('/users/' + $cookies.get('userId') + '/dashinfo')

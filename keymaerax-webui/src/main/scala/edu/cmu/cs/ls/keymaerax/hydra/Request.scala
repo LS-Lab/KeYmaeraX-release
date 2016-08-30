@@ -394,6 +394,23 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
   }
 }
 
+class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    //@todo more/different tools
+    new KvpResponse("tool", db.getConfiguration("tool").config("qe")) :: Nil
+  }
+}
+
+class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    //@todo more/different tools
+    assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
+    val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
+    db.updateConfiguration(toolConfig)
+    new KvpResponse("tool", tool) :: Nil
+  }
+}
+
 class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
@@ -415,8 +432,12 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
 class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
-    new MathematicaStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
+    new ToolStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
   }
+}
+
+class Z3StatusRequest(db : DBAbstraction) extends Request {
+  override def resultingResponses(): List[Response] = new ToolStatusResponse(true) :: Nil
 }
 
 class ListExamplesRequest(db: DBAbstraction) extends Request {

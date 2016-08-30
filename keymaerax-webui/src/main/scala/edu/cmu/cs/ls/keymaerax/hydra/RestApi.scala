@@ -591,6 +591,21 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
+  val tool = path("config" / "tool") {
+    pathEnd {
+      get {
+        val request = new GetToolRequest(database)
+        completeRequest(request, EmptyToken())
+      } ~
+      post {
+        entity(as[String]) { tool =>
+          val request = new SetToolRequest(database, tool)
+          completeRequest(request, EmptyToken())
+        }
+      }
+    }
+  }
+
   val mathematicaConfig = path("config" / "mathematica") {
     pathEnd {
       get {
@@ -611,10 +626,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
-  val mathematicaStatus = path("config" / "mathematicaStatus") {
+  val toolStatus = path("config" / "toolStatus") {
     pathEnd {
       get {
-        completeRequest(new MathematicaStatusRequest(database), EmptyToken())
+        database.getConfiguration("tool").config("qe") match {
+          case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
+          case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
+        }
       }
     }
   }
@@ -708,7 +726,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     kyxConfig          ::
     keymaeraXVersion   ::
     mathematicaConfig  ::
-    mathematicaStatus  ::
+    toolStatus         ::
+    tool               ::
     mathConfSuggestion ::
     devAction          ::
     examples           ::

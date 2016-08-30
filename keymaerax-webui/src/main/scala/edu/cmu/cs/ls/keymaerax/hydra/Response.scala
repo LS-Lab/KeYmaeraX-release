@@ -666,7 +666,7 @@ class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) ex
   )
 }
 
-class MathematicaStatusResponse(configured : Boolean) extends Response {
+class ToolStatusResponse(configured : Boolean) extends Response {
   def getJson: JsValue = JsObject(
     "configured" -> {if(configured) JsTrue else JsFalse}
   )

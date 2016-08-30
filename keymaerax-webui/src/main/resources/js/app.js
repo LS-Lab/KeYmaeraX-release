@@ -100,9 +100,9 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/dev.html',
         controller: 'DevCtrl'
       }).
-      when('/mathematica', {
-        templateUrl: 'partials/mathematica_config.html',
-        controller: 'MathematicaConfig'
+      when('/tools', {
+        templateUrl: 'partials/tool_config.html',
+        controller: 'ToolConfig'
       }).
       when('/license', {
                 templateUrl: 'partials/license_dialog.html',
