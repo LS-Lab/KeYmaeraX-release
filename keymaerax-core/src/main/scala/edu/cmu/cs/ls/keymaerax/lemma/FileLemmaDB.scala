@@ -58,6 +58,7 @@ class FileLemmaDB extends LemmaDBBase {
     if (!file(id).delete()) throw new IOException("File deletion for " + file(id) + " was not successful")
 
   override def deleteDatabase(): Unit = {
+    lemmadbpath.listFiles().foreach(_.delete())
     lemmadbpath.delete()
     //@note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
