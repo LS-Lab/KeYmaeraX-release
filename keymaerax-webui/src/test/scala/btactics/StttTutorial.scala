@@ -86,7 +86,7 @@ class StttTutorial extends TacticTestBase {
   "Example 2" should "be provable with master and custom loop invariant" in withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
     val Imply(_, Box(loop, _)) = KeYmaeraXProblemParser(modelContent)
-    db.proveBy(modelContent, master(new ConfigurableGenerate(Map((loop, "v>=0".asFormula))))) shouldBe 'proved
+    db.proveBy(modelContent, master(new ConfigurableGenerator(Map((loop, "v>=0".asFormula))))) shouldBe 'proved
   }}
 
   it should "be provable with master and loop invariant from file" in withMathematica { qeTool => withDatabase { db =>

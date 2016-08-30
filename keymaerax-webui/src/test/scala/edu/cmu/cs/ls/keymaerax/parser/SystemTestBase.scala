@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
+import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerator
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
@@ -18,7 +18,7 @@ class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-    val generator = new ConfigurableGenerate[Formula]()
+    val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
   }
 

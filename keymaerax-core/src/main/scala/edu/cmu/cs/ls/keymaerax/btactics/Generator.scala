@@ -12,42 +12,26 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.Position
  */
 
 /**
- * Invariant generators etc, where `apply` results in an object of type `A` to try.
- * Results do not have to be deterministic, e.g., calls to apply might advance to the next candidate.
-  * @todo change to (Sequent,Position) => Iterator[A] maybe?
-  * @todo add implementation for something like (Sequent, Position) => Stream[A] for example?
+ * Invariant generators etc, where `apply` results in an iterator over objects of type `A` to try.
+ * Results do not necessarily have to be deterministic.
   * @tparam A the type of results that are being generated.
   * @author Stefan Mitsch
  */
-trait Generator[A] extends ((Sequent, Position) => Option[A]) {
-  def peek(s: Sequent, p: Position): Option[A]
-}
+trait Generator[A] extends ((Sequent, Position) => Iterator[A])
 
-/** Singleton generator only providing a single fixed output `f` every time it is asked. */
-class Generate[A](f: A) extends Generator[A] {
-  def apply(s: Sequent, p: Position) = Some(f)
-  def peek(s: Sequent, p: Position) = Some(f)
-}
-
-/** Empty generator never providing any output */
-class NoneGenerate[A] extends Generator[A] {
-  def apply(s: Sequent, p: Position) = None
-  def peek(s: Sequent, p: Position) = None
+/** Generatora lways providing a fixed list as output. */
+case class FixedGenerator[A](list: List[A]) extends Generator[A] {
+  def apply(s: Sequent, p: Position) = list.iterator
 }
 
 /** Map-based generator providing output according to the fixed map `product` according to its program or whole formula.
   * @author Stefan Mitsch
   * */
-class ConfigurableGenerate[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator[A] {
+class ConfigurableGenerator[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator[A] {
   //@todo why p.top instead of p?
-  def apply(s: Sequent, p: Position) = s(p.top) match {
-    case Box(prg, _) => products.get(prg)
-    case Diamond(prg, _) => products.get(prg)
-    case _ => products.get(s(p.top))
-  }
-  def peek(s: Sequent, p: Position) = s(p.top) match {
-    case Box(prg, _) => products.get(prg)
-    case Diamond(prg, _) => products.get(prg)
-    case _ => products.get(s(p.top))
+  def apply(s: Sequent, p: Position): Iterator[A] = s(p.top) match {
+    case Box(prg, _) => products.get(prg).iterator
+    case Diamond(prg, _) => products.get(prg).iterator
+    case _ => products.get(s(p.top)).iterator
   }
 }

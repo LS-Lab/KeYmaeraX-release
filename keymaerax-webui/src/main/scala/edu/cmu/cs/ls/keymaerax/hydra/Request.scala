@@ -704,9 +704,9 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
           map{axiom => (
             DerivationInfo(axiom),
             UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-        val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+        val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
         val suggestedInput = generator(sequent, pos)
-        new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+        new ApplicableAxiomsResponse(axioms, if (suggestedInput.hasNext) Some(suggestedInput.next) else None) :: Nil
       case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
     }
   }
@@ -829,7 +829,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
-    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+    val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val node =

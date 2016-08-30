@@ -13,8 +13,8 @@ import org.scalatest.{FlatSpec, Matchers}
   * @author Nathan Fulton
   */
 class MoreSimpleBelleParserTests extends TacticTestBase {
-  @deprecated("Switch to BelleParser", "4.2b1")
-  private def oldParser(s: String): BelleExpr = BTacticParser(s).get
+//  @deprecated("Switch to BelleParser", "4.2b1")
+//  private def oldParser(s: String): BelleExpr = BTacticParser(s).get
 
   private def newParser(s: String): BelleExpr = BelleParser(s)
 

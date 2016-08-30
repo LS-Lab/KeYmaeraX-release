@@ -52,7 +52,7 @@ import scala.math.BigDecimal
   */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Default generator for loop invariants and differential invariants */
-  var invGenerator: Generator[Formula] = new NoneGenerate()
+  var invGenerator: Generator[Formula] = FixedGenerator(Nil)
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step               : DependentPositionTactic = "step" by ((pos: Position) =>
@@ -231,8 +231,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = loop(gen(sequent, pos).getOrElse(
+      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos),
         throw new BelleError("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
+      private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
 

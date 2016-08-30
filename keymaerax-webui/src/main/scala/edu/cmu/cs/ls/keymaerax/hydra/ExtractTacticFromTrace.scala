@@ -3,8 +3,9 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import TacticExtractionErrors._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, Generator, Idioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, Generator, Idioms, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
 class ExtractTacticFromTrace(db: DBAbstraction) {
   // Additional wrappers
@@ -45,7 +46,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 //      .filter(_ != node) //@todo remove this line... seems like a bug in ProofTree.
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
     val proof = db.getProofInfo(tree.proofId)
-    val gen = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+    val gen = new ConfigurableGenerator(db.getInvariants(proof.modelId))
     val thisTactic = tacticAt(gen, node)
 
     if (children.isEmpty || children.map(child => apply(tree)(child)).forall(_ == TactixLibrary.skip)) thisTactic
@@ -58,7 +59,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
       val exprString = db.getExecutable(step.executableId).belleExpr
       BelleParser.parseWithInvGen(exprString,Some(gen))
     } catch {
-      case e : BParserException => throw TacticExtractionError(e.getMessage, e)
+      case e : ParseException => throw TacticExtractionError(e.getMessage, e)
       case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing (${e.getMessage}):" + db.getExecutable(step.executableId).belleExpr, e)
       case t : Throwable => {
         t.printStackTrace() //Super useful for debugging since TacticExtractionError seems to swallow its cause, or at least it doesn't always get printed out...

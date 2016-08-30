@@ -116,7 +116,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-    val generator = new ConfigurableGenerate[Formula]()
+    val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
     TactixLibrary.invGenerator = generator
   }
@@ -125,7 +125,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def afterEach() = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
     ToolProvider.shutdown()
-    TactixLibrary.invGenerator = new NoneGenerate()
+    TactixLibrary.invGenerator = FixedGenerator(Nil)
   }
 
   /** Proves a formula using the specified tactic. Fails the test when tactic fails.

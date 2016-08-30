@@ -261,7 +261,7 @@ object KeYmaeraX {
 
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
-    val generator = new ConfigurableGenerate[Formula]()
+    val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
     TactixLibrary.invGenerator = generator
 
@@ -273,7 +273,7 @@ object KeYmaeraX {
 
   def shutdownProver() = {
     ToolProvider.shutdown()
-    TactixLibrary.invGenerator = new NoneGenerate()
+    TactixLibrary.invGenerator = FixedGenerator(Nil)
   }
 
   /** Exit gracefully */

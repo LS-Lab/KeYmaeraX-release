@@ -445,7 +445,7 @@ class DLTests extends TacticTestBase {
   "I gen" should "work on a simple example" in {
     val succ@Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
     val result = proveBy(Sequent(IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
-      loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(1))
+      loop(new ConfigurableGenerator[Formula](Map((prg, "x>1".asFormula))))(1))
 
     result.subgoals should have size 3
     // init
@@ -529,7 +529,7 @@ class DLTests extends TacticTestBase {
   it should "keep constant context" in {
     val succ@Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula
     val result = proveBy(Sequent(IndexedSeq("A>0".asFormula, "x>2".asFormula, "B>0".asFormula), IndexedSeq("C<1".asFormula, succ, "D<1".asFormula)),
-      loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(2))
+      loop(new ConfigurableGenerator[Formula](Map((prg, "x>1".asFormula))))(2))
 
     result.subgoals should have size 3
     // init

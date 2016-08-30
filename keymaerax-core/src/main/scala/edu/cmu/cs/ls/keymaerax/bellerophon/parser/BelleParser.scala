@@ -17,7 +17,7 @@ object BelleParser extends (String => BelleExpr) {
 
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
-  def parseWithInvGen(s: String, g:Option[Generator[Formula]] = None) = {
+  def parseWithInvGen(s: String, g:Option[Generator[Formula]] = None): BelleExpr = {
     invariantGenerator = g;
     parseTokenStream(BelleLexer(s))
   }

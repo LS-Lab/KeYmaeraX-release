@@ -44,11 +44,7 @@ private object DifferentialTactics {
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
     val evos = DifferentialHelper.flattenAnds(List(ode.constraint))
-    (TactixLibrary.invGenerator(sequent,pos) match {
-      case Some(inv) if !evos.contains(inv) => List(inv).iterator
-      case Some(inv) if evos.contains(inv) => Iterator.empty
-      case None => Iterator.empty
-    }) ++ new Iterator[Formula] {
+    TactixLibrary.invGenerator(sequent,pos) ++ new Iterator[Formula] {
       lazy val deps = StaticSemanticsTools.transitiveDependencies(ode.ode)
       lazy val bounds = StaticSemantics.boundVars(ode.ode).symbols
       lazy val frees = StaticSemantics.freeVars(post).symbols

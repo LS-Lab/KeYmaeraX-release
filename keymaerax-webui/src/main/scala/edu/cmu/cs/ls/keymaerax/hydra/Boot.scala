@@ -114,7 +114,7 @@ object HyDRAInitializer {
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     // connect invariant generator to tactix library
-    val generator = new ConfigurableGenerate[Formula]()
+    val generator = new ConfigurableGenerator[Formula]()
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
