@@ -152,7 +152,7 @@ object KeYmaeraX {
       case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
       case "-tool" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tool -> value), tail)
-        else optionErrorReporter("-qeTool")
+        else optionErrorReporter("-tool")
       // aditional options
       case "-mathkernel" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
