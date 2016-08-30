@@ -24,239 +24,6 @@ import scala.language.postfixOps
  */
 private object DifferentialTactics {
 
-  /** A simple differential invariant generator.
-    * @author Andre Platzer */
-  private val differentialInvariantGenerator: (Sequent,Position) => Iterator[Formula] = (sequent,pos) =>
-    sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, post)) => DifferentialHelper.flattenAnds(post +: sequent.ante.toList).iterator
-      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
-      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
-    }
-
-  /** A dependency-optimized differential invariant generator using elementary candidates from `generator`.
-    * @author Andre Platzer */
-  private def differentialInvariantOrder(generator: (Sequent,Position) => Iterator[Formula]): (Sequent,Position) => Iterator[Formula] =
-    (sequent,pos) => {
-    //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
-    val (ode, post) = sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, post)) => (ode,post)
-      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
-      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
-    }
-    val evos = DifferentialHelper.flattenAnds(List(ode.constraint))
-    TactixLibrary.invGenerator(sequent,pos) ++ new Iterator[Formula] {
-      lazy val deps = StaticSemanticsTools.transitiveDependencies(ode.ode)
-      lazy val bounds = StaticSemantics.boundVars(ode.ode).symbols
-      lazy val frees = StaticSemantics.freeVars(post).symbols
-      lazy val knowledge = StaticSemantics.freeVars(ode.constraint).symbols
-      // bound variables that free variables of the postcondition depend on but that are not yet free in the evolution domain constraint, so missing knowledge.
-      // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
-      lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).filter(x => !knowledge.contains(x))
-      //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
-      lazy val candidates = generator(sequent,pos).toList.
-        distinct.
-        // new invariants only that aren't in the evolution domain constraint yet
-        //@note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
-        filter(fml => fml!=post && !evos.contains(fml)).
-        // filter out constants
-        // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
-        // candidates with knowledge about missing variables
-        //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
-        filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(missing).isEmpty).
-        //@todo postpone and try later candidates not covering all their dependencies (given the knowledge)
-//        filter(fml => {
-//          val fv=StaticSemantics.freeVars(fml).symbols
-//          !fv.flatMap(x=>deps.getOrElse(x,List.empty)).subsetOf(fv++knowledge)}).
-        // sort by dependency order
-        //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
-        sortWith((a:Formula,b:Formula) =>
-        //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
-        //@todo improve sorting to take dependency cluster into account, too.
-          // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
-          StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size <
-            StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size
-        )
-      lazy val iterareHumanumEst = {
-        if (BelleExpr.DEBUG) println("among:     " + DifferentialHelper.flattenAnds(post +: sequent.ante.toList).distinct)
-        if (BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
-        if (true || BelleExpr.DEBUG) println("CANDIDATE: " + candidates)
-        candidates.iterator
-      }
-      def hasNext: Boolean = iterareHumanumEst.hasNext
-      def next(): Formula = iterareHumanumEst.next()
-    }
-  }
-
-  /** @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer */
-  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
-    val noCut = "ANON" by ((pos: Position) =>
-      ((boxAnd(pos) & andR(pos))*) & onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-      val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-        case Some(Box(ode: ODESystem, post)) => (ode,post)
-        case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + seq)
-        case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + seq)
-      }
-      val bounds = StaticSemantics.boundVars(ode.ode).symbols
-      val frees = StaticSemantics.freeVars(post).symbols
-      //@note diffWeaken will already include all cases where V works, without much additional effort.
-      (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-        diffWeaken(pos) & QE else fail) |
-        (if (post match {
-          case  _: Greater => true
-          case _: Less => true
-          case _ => false
-        })
-        // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-          openDiffInd(pos) | DGauto(pos)
-        else
-        //@todo check degeneracy for split to > or =
-          diffInd()(pos)
-            | DGauto(pos)
-            //@todo | diffInvariant(cuts) | DA ...
-          )
-    })) (pos))
-      )
-
-    //@todo in fact even ChooseAll would work, just not recursively so.
-    //@todo performance: repeat from an updated version of the same generator until saturation
-    //@todo turn this into repeat
-    (ChooseSome(
-      //@todo should memoize the results of the differential invariant generator
-      () => differentialInvariantOrder(differentialInvariantGenerator)(seq,pos),
-      (inv:Formula) => if (false)
-        diffInvariant(inv)(pos)
-      else
-        diffCut(inv)(pos) <(
-          // use diffCut
-          skip,
-          // show diffCut, but don't use yet another diffCut
-          noCut(pos) & done
-          )
-    )) & ODE(pos) | noCut(pos) |
-      // if no differential cut succeeded, just skip and go for a direct proof.
-      //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
-      TactixLibrary.diffSolve()(pos)
-  })
-
-  /** @see [[TactixLibrary.DGauto]]
-    * @author Andre Platzer */
-  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (!ToolProvider.algebraTool().isDefined) throw new BelleError("DGAuto requires a AlgebraTool, but got None")
-    /** a-b with some simplifications */
-    def minus(a: Term, b: Term): Term = b match {
-      case Number(n) if n == 0 => a
-      case _ => a match {
-        case Number(n) if n == 0 => Neg(b)
-        case _ => Minus(a, b)
-      }
-    }
-    val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
-      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a, b), ode)
-      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b, a), ode)
-      case e => throw new BelleError("DGauto does not support argument shape: " + e)
-    }
-    //@todo find a ghost that's not in ode
-    val ghost: Variable = Variable("y_")
-    require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
-    // [x':=f(x)](quantity)'
-    val lie = DifferentialHelper.lieDerivative(ode, quantity)
-    val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
-      //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division. Maybe foldLeft over all variables, feeding remainder into next quotientRemainder?
-      lie, Times(Number(-2), quantity), StaticSemantics.boundVars(ode).symbols.find(_.isInstanceOf[BaseVariable]).getOrElse(Variable("x")))._1
-    if (BelleExpr.DEBUG) println("Ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
-    DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
-      Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
-    )(pos) < (
-      (close | QE) & done,
-      diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
-      )
-  })
-
-  /** Search-and-rescue style DGauto.
-    * @author Andre Platzer
-    */
-  def DGautoSandR: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
-    /** a-b with some simplifications */
-    def minus(a: Term, b: Term): Term = b match {
-      case Number(n) if n==0 => a
-      case _ => a match {
-        case Number(n) if n==0 => Neg(b)
-        case _ => Minus(a,b)
-      }
-    }
-    val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
-      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a,b), ode)
-      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b,a), ode)
-      case e => throw new BelleError("DGauto does not support argument shape: " + e)
-    }
-    //@todo find a ghost that's not in ode
-    val ghost: Variable = Variable("y_")
-    require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
-    val spooky: Term = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
-      UnitFunctional("jj",Except(ghost),Real)
-    else
-      FuncOf(Function("jj",None,Unit,Real),Nothing) //Variable("jj")
-    //@todo should allocate space maybe or already actually by var in this lambda
-    var constructedGhost: Option[Term] = None
-    // proper search & rescue tactic
-    val SandR: BelleExpr = LetInspect(
-      spooky,
-      (pr:Provable) => {
-        assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
-        if (BelleExpr.DEBUG) println("Instantiate::\n" + pr)
-        // induction step condition \forall x \forall ghost condition>=0
-        val condition = FormulaTools.kernel(pr.subgoals.head.succ.head) match {
-          case Imply(domain, GreaterEqual(condition, Number(n))) if n==0 => condition
-          case GreaterEqual(condition, Number(n)) if n==0 => condition
-          case _ => throw new AssertionError("DGauto: Unexpected shape " + pr)
-        }
-        //@todo a witness of Reduce of >=0 would suffice
-        if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
-        ToolProvider.solverTool().getOrElse(throw new BelleError("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
-          case Some(Equal(l,r)) if l==spooky => if (BelleExpr.DEBUG) println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
-            constructedGhost = Some(r)
-            r
-          case None => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
-            throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
-          case Some(stuff) => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
-            throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
-        }
-      }
-      ,
-      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
-        Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
-      )(pos) <(
-        (close | QE) & done,
-        diffInd()(pos ++ PosInExpr(1::Nil))
-          & implyR(pos) // initial assumption
-          & implyR(pos) // domain
-          & andR(pos) <(
-          // initial condition
-          (close | QE) & done,
-          // universal closure of induction step
-          skip
-          )
-        )
-    ) & QE & done;
-    // fallback rescue tactic if proper misbehaves
-    val fallback: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
-      if (BelleExpr.DEBUG) println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
-      // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
-      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
-        Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
-      )(pos) <(
-        (close | QE) & done,
-        //@todo could optimize for RCF cache when doing the same decomposition as during SandR
-        //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
-        implyR(pos) & diffInd()(pos) & QE & done
-        )
-    });
-    SandR | fallback(pos)
-  })
-
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -793,6 +560,244 @@ private object DifferentialTactics {
       cohide(pos.top) & DW(1) & G(1)
   })
 
+  /** A simple differential invariant generator.
+    * @author Andre Platzer */
+  private val differentialInvariantGenerator: (Sequent,Position) => Iterator[Formula] = (sequent,pos) =>
+    sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, post)) => DifferentialHelper.flattenAnds(post +: sequent.ante.toList).iterator
+      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+    }
+
+  /** A dependency-optimized differential invariant generator using elementary candidates from `generator`.
+    * @author Andre Platzer */
+  private def differentialInvariantOrder(generator: (Sequent,Position) => Iterator[Formula]): (Sequent,Position) => Iterator[Formula] =
+  (sequent,pos) => {
+    //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
+    val (ode, post) = sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, post)) => (ode,post)
+      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+    }
+    val evos = DifferentialHelper.flattenAnds(List(ode.constraint))
+    TactixLibrary.invGenerator(sequent,pos) ++ new Iterator[Formula] {
+      lazy val deps = StaticSemanticsTools.transitiveDependencies(ode.ode)
+      lazy val bounds = StaticSemantics.boundVars(ode.ode).symbols
+      lazy val frees = StaticSemantics.freeVars(post).symbols
+      lazy val knowledge = StaticSemantics.freeVars(ode.constraint).symbols
+      // bound variables that free variables of the postcondition depend on but that are not yet free in the evolution domain constraint, so missing knowledge.
+      // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
+      lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).filter(x => !knowledge.contains(x))
+      //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
+      lazy val candidates = generator(sequent,pos).toList.
+        distinct.
+        // new invariants only that aren't in the evolution domain constraint yet
+        //@note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
+        filter(fml => fml!=post && !evos.contains(fml)).
+        // filter out constants
+        // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
+        // candidates with knowledge about missing variables
+        //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
+        filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(missing).isEmpty).
+        //@todo postpone and try later candidates not covering all their dependencies (given the knowledge)
+        //        filter(fml => {
+        //          val fv=StaticSemantics.freeVars(fml).symbols
+        //          !fv.flatMap(x=>deps.getOrElse(x,List.empty)).subsetOf(fv++knowledge)}).
+        // sort by dependency order
+        //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
+        sortWith((a:Formula,b:Formula) =>
+        //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
+        //@todo improve sorting to take dependency cluster into account, too.
+        // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
+        StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size <
+          StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size
+      )
+      lazy val iterareHumanumEst = {
+        if (BelleExpr.DEBUG) println("among:     " + DifferentialHelper.flattenAnds(post +: sequent.ante.toList).distinct)
+        if (BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
+        if (true || BelleExpr.DEBUG) println("CANDIDATE: " + candidates)
+        candidates.iterator
+      }
+      def hasNext: Boolean = iterareHumanumEst.hasNext
+      def next(): Formula = iterareHumanumEst.next()
+    }
+  }
+
+  /** @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer */
+  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
+    val noCut = "ANON" by ((pos: Position) =>
+      ((boxAnd(pos) & andR(pos))*) & onAll(("ANON" by ((pos: Position, seq: Sequent) => {
+        val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+          case Some(Box(ode: ODESystem, post)) => (ode,post)
+          case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + seq)
+          case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + seq)
+        }
+        val bounds = StaticSemantics.boundVars(ode.ode).symbols
+        val frees = StaticSemantics.freeVars(post).symbols
+        //@note diffWeaken will already include all cases where V works, without much additional effort.
+        (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+          diffWeaken(pos) & QE else fail) |
+          (if (post match {
+            case  _: Greater => true
+            case _: Less => true
+            case _ => false
+          })
+          // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
+            openDiffInd(pos) | DGauto(pos)
+          else
+          //@todo check degeneracy for split to > or =
+            diffInd()(pos)
+              | DGauto(pos)
+            //@todo | diffInvariant(cuts) | DA ...
+            )
+      })) (pos))
+      )
+
+    //@todo in fact even ChooseAll would work, just not recursively so.
+    //@todo performance: repeat from an updated version of the same generator until saturation
+    //@todo turn this into repeat
+    (ChooseSome(
+      //@todo should memoize the results of the differential invariant generator
+      () => differentialInvariantOrder(differentialInvariantGenerator)(seq,pos),
+      (inv:Formula) => if (false)
+        diffInvariant(inv)(pos)
+      else
+        diffCut(inv)(pos) <(
+          // use diffCut
+          skip,
+          // show diffCut, but don't use yet another diffCut
+          noCut(pos) & done
+          )
+    )) & ODE(pos) | noCut(pos) |
+      // if no differential cut succeeded, just skip and go for a direct proof.
+      //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
+      TactixLibrary.diffSolve()(pos)
+  })
+
+  /** @see [[TactixLibrary.DGauto]]
+    * @author Andre Platzer */
+  def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    if (!ToolProvider.algebraTool().isDefined) throw new BelleError("DGAuto requires a AlgebraTool, but got None")
+    /** a-b with some simplifications */
+    def minus(a: Term, b: Term): Term = b match {
+      case Number(n) if n == 0 => a
+      case _ => a match {
+        case Number(n) if n == 0 => Neg(b)
+        case _ => Minus(a, b)
+      }
+    }
+    val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a, b), ode)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b, a), ode)
+      case e => throw new BelleError("DGauto does not support argument shape: " + e)
+    }
+    //@todo find a ghost that's not in ode
+    val ghost: Variable = Variable("y_")
+    require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
+    // [x':=f(x)](quantity)'
+    val lie = DifferentialHelper.lieDerivative(ode, quantity)
+    val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
+      //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division. Maybe foldLeft over all variables, feeding remainder into next quotientRemainder?
+      lie, Times(Number(-2), quantity), StaticSemantics.boundVars(ode).symbols.find(_.isInstanceOf[BaseVariable]).getOrElse(Variable("x")))._1
+    if (BelleExpr.DEBUG) println("Ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
+    DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
+      Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+    )(pos) < (
+      (close | QE) & done,
+      diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
+      )
+  })
+
+  /** Search-and-rescue style DGauto.
+    * @author Andre Platzer
+    */
+  def DGautoSandR: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
+    if (!ToolProvider.solverTool().isDefined) throw new BelleError("DGAuto requires a SolutionTool, but got None")
+    /** a-b with some simplifications */
+    def minus(a: Term, b: Term): Term = b match {
+      case Number(n) if n==0 => a
+      case _ => a match {
+        case Number(n) if n==0 => Neg(b)
+        case _ => Minus(a,b)
+      }
+    }
+    val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a,b), ode)
+      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b,a), ode)
+      case e => throw new BelleError("DGauto does not support argument shape: " + e)
+    }
+    //@todo find a ghost that's not in ode
+    val ghost: Variable = Variable("y_")
+    require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
+    val spooky: Term = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
+      UnitFunctional("jj",Except(ghost),Real)
+    else
+      FuncOf(Function("jj",None,Unit,Real),Nothing) //Variable("jj")
+    //@todo should allocate space maybe or already actually by var in this lambda
+    var constructedGhost: Option[Term] = None
+    // proper search & rescue tactic
+    val SandR: BelleExpr = LetInspect(
+      spooky,
+      (pr:Provable) => {
+        assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
+        if (BelleExpr.DEBUG) println("Instantiate::\n" + pr)
+        // induction step condition \forall x \forall ghost condition>=0
+        val condition = FormulaTools.kernel(pr.subgoals.head.succ.head) match {
+          case Imply(domain, GreaterEqual(condition, Number(n))) if n==0 => condition
+          case GreaterEqual(condition, Number(n)) if n==0 => condition
+          case _ => throw new AssertionError("DGauto: Unexpected shape " + pr)
+        }
+        //@todo a witness of Reduce of >=0 would suffice
+        if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
+        ToolProvider.solverTool().getOrElse(throw new BelleError("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
+          case Some(Equal(l,r)) if l==spooky => if (BelleExpr.DEBUG) println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
+            constructedGhost = Some(r)
+            r
+          case None => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
+            throw new BelleError("DGauto could not solve conditions: " + condition + ">=0")
+          case Some(stuff) => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
+            throw new BelleError("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
+        }
+      }
+      ,
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
+      )(pos) <(
+        (close | QE) & done,
+        diffInd()(pos ++ PosInExpr(1::Nil))
+          & implyR(pos) // initial assumption
+          & implyR(pos) // domain
+          & andR(pos) <(
+          // initial condition
+          (close | QE) & done,
+          // universal closure of induction step
+          skip
+          )
+        )
+    ) & QE & done;
+    // fallback rescue tactic if proper misbehaves
+    val fallback: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
+      if (BelleExpr.DEBUG) println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
+      // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
+      DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleError("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
+        Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+      )(pos) <(
+        (close | QE) & done,
+        //@todo could optimize for RCF cache when doing the same decomposition as during SandR
+        //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
+        implyR(pos) & diffInd()(pos) & QE & done
+        )
+    });
+    SandR | fallback(pos)
+  })
+
+
+
+  // implementation helpers
+
+  @deprecated("Possible duplicate of DifferentialHelper.flattenAnds")
   private def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
@@ -804,6 +809,7 @@ private object DifferentialTactics {
     result
   }
 
+  //@todo possibly should ask StaticSemantics.boundVars(ode).filter(_.isInstanceOf[DifferentialSymbol)
   private def primedSymbols(ode: DifferentialProgram) = {
     var primedSymbols = Set[Variable]()
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
