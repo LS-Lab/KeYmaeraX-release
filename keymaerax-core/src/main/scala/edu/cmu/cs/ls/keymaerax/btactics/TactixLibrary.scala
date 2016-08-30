@@ -52,11 +52,12 @@ import scala.math.BigDecimal
   */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
   import Generator.Generator
-  /** Default generator for loop invariants and differential invariants */
+  /** Default generator for loop invariants and differential invariants to use.
+    * @see [[InvariantGenerator]] */
   var invGenerator: Generator[Formula] = FixedGenerator(Nil)
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  val step               : DependentPositionTactic = "step" by ((pos: Position) =>
+  val step          : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
      else HilbertCalculus.stepAt(pos) partial)
@@ -94,12 +95,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     ((OnAll(?(
           (close
             | ((must(normalize))
-            | ((loop(gen)('L) )
+            //| ((loop(gen)('L) )
             | ((loop(gen)('R) )
             //| ((diffSolve(None)('R) partial)
             //| ((diffInd() partial)
             | ((ODE('R) )
-            | (exhaustiveEqL2R('L) ) ) ) ) ) ) ) ))*) &
+            | (exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE))
   }
 
@@ -228,7 +229,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop()]]
     */
   def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
-  /** loop: prove a property of a loop by induction, if the given generator finds a loop invariant
+  /** loop: prove a property of a loop by induction, if the given invariant generator finds a loop invariant
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {

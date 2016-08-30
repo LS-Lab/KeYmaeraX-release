@@ -190,6 +190,7 @@ object StaticSemanticsTools {
     case Compose(a, b)     => merge(depend(a),depend(b))
     case Loop(a)           => depend(a)
     case Dual(a)           => depend(a)
+    case ode:DifferentialProgram => depend(ode)
   }
 
   private def depend(ode: DifferentialProgram): mutable.Map[Variable,immutable.Set[Variable]] = ode match {
@@ -201,7 +202,7 @@ object StaticSemanticsTools {
     case DifferentialProduct(a, b) => merge(depend(a),depend(b))
   }
 
-  //@todo performance optimize: mutable maps might make this faster
+  //@note performance optimize: mutable maps might make this faster
   private def merge[K,V](a: mutable.Map[K,immutable.Set[V]], b:mutable.Map[K,immutable.Set[V]]): mutable.Map[K,immutable.Set[V]] = {
     for ((k,v) <- b) {
       a.get(k) match {
