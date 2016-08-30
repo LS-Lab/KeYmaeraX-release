@@ -589,7 +589,6 @@ private object DifferentialTactics {
           //@todo check degeneracy for split to > or =
             diffInd()(pos)
               | DGauto(pos)
-            //@todo | diffInvariant(cuts) | DA ...
             )
       })) (pos))
       )
