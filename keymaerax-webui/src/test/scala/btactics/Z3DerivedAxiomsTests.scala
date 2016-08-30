@@ -41,13 +41,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withZ3 { qeTool =>
     //@note rather an invasive test
     LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
-
-    // allow exactly the axioms mentioned in the expected message to fail (unused so far)
-    the [Exception] thrownBy DerivedAxioms.prepopulateDerivedLemmaDatabase() should have message
-      """WARNING: Encountered 3 failures when trying to populate DerivedLemmas database. Unable to derive:
-        |notEqualElim
-        |greaterEqualElim
-        |greaterElim""".stripMargin
+    DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
@@ -155,9 +149,9 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove ! >=" in withZ3 { qeTool => check(notGreaterEqual)}
 
   /** Axioms for arithmetic in core (some not yet provable with Z3) */
-  it should "prove != elimination" ignore withZ3 { qeTool => check(notEqualElim)}
-  it should "prove >= elimination" ignore withZ3 { qeTool => check(greaterEqualElim)}
-  it should "prove > elimination" ignore withZ3 { qeTool => check(greaterElim)}
+//  it should "prove != elimination" ignore withZ3 { qeTool => check(notEqualElim)}
+//  it should "prove >= elimination" ignore withZ3 { qeTool => check(greaterEqualElim)}
+//  it should "prove > elimination" ignore withZ3 { qeTool => check(greaterElim)}
   it should "prove 1>0" in withZ3 { qeTool => check(oneGreaterZero)}
   it should "prove nonnegative squares" in withZ3 { qeTool => check(nonnegativeSquares)}
   it should "prove >2!=" in withZ3 { qeTool => check(greaterImpliesNotEqual)}

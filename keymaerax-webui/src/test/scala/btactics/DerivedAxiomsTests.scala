@@ -149,9 +149,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove ! >" in withMathematica { qeTool => check(notGreater)}
   it should "prove ! >=" in withMathematica { qeTool => check(notGreaterEqual)}
 
-  it should "prove != elimination" in withMathematica { qeTool => check(notEqualElim)}
-  it should "prove >= elimination" in withMathematica { qeTool => check(greaterEqualElim)}
-  it should "prove > elimination" in withMathematica { qeTool => check(greaterElim)}
+//  it should "prove != elimination" in withMathematica { qeTool => check(notEqualElim)}
+//  it should "prove >= elimination" in withMathematica { qeTool => check(greaterEqualElim)}
+//  it should "prove > elimination" in withMathematica { qeTool => check(greaterElim)}
   it should "prove 1>0" in withMathematica { qeTool => check(oneGreaterZero)}
   it should "prove nonnegative squares" in withMathematica { qeTool => check(nonnegativeSquares)}
   it should "prove >2!=" in withMathematica { qeTool => check(greaterImpliesNotEqual)}
