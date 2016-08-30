@@ -65,7 +65,7 @@ object KeYmaeraX {
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
-      |Web server options:
+      |Tool options:
       |  -tool mathematica|z3
       |
       |Copyright (c) Carnegie Mellon University.
@@ -96,7 +96,7 @@ object KeYmaeraX {
         codegen(options)
       else if (!options.get('mode).contains("ui") ) {
         try {
-          initializeProver(options)
+          initializeProver(if (options.contains('tool)) options else options ++ Map('tool -> "z3"))
 
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
@@ -150,6 +150,9 @@ object KeYmaeraX {
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
         else optionErrorReporter("-tactic")
       case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
+      case "-tool" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tool -> value), tail)
+        else optionErrorReporter("-qeTool")
       // aditional options
       case "-mathkernel" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
@@ -214,11 +217,35 @@ object KeYmaeraX {
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.scala\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
       case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
+      case "-tool" => println(noValueMessage + "Please use: -tool mathematica|z3\n\n" + usage); exit(1)
       case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage); exit(1)
     }
   }
 
   def initializeProver(options: OptionMap) = {
+    options('tool) match {
+      case "mathematica" => initMathematica(options)
+      case "z3" => initZ3(options)
+      case tool => throw new Exception("Unknown tool " + tool)
+    }
+
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+
+    val generator = new ConfigurableGenerator[Formula]()
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    TactixLibrary.invGenerator = generator
+
+    //@note just in case the user shuts down the prover from the command line
+    Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
+  }
+
+  /** Initializes Z3 from command line options. */
+  private def initZ3(options: OptionMap) = {
+    ToolProvider.setProvider(new Z3ToolProvider())
+  }
+
+  /** Initializes Mathematica from command line options, if present; else from default config */
+  private def initMathematica(options: OptionMap) = {
     assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
       "\n[Error] Please always use command line option -mathkernel and -jlink together," +
         "and specify the Mathematica link paths with:\n" +
@@ -226,8 +253,8 @@ object KeYmaeraX {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
 
     val mathematicaConfig =
-      if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options.get('mathkernel).get.toString,
-                                                                         "libDir" -> options.get('jlink).get.toString)
+      if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options('mathkernel).toString,
+        "libDir" -> options('jlink).toString)
       else DefaultConfiguration.defaultMathematicaConfig
 
     val linkNamePath = mathematicaConfig.get("linkName") match {
@@ -259,16 +286,7 @@ object KeYmaeraX {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-
-    val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
-    TactixLibrary.invGenerator = generator
-
-    ToolProvider.setProvider(new MathematicaToolProvider(DefaultConfiguration.defaultMathematicaConfig))
-
-    //@note just in case the user shuts down the prover from the command line
-    Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
+    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
   }
 
   def shutdownProver() = {
