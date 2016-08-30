@@ -12,12 +12,12 @@ import BelleLexer.TokenStream
   * @author Nathan Fulton
   */
 object BelleParser extends (String => BelleExpr) {
-  private var invariantGenerator : Option[Generator[Formula]] = None
+  private var invariantGenerator : Option[Generator.Generator[Formula]] = None
   private var DEBUG = false
 
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
-  def parseWithInvGen(s: String, g:Option[Generator[Formula]] = None): BelleExpr = {
+  def parseWithInvGen(s: String, g:Option[Generator.Generator[Formula]] = None): BelleExpr = {
     invariantGenerator = g;
     parseTokenStream(BelleLexer(s))
   }

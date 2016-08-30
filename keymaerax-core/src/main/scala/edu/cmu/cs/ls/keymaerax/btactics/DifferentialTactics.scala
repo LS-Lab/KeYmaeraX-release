@@ -560,9 +560,11 @@ private object DifferentialTactics {
       cohide(pos.top) & DW(1) & G(1)
   })
 
-  /** A simple differential invariant generator.
+  import Generator.Generator
+
+  /** A simplistic differential invariant generator.
     * @author Andre Platzer */
-  private val differentialInvariantGenerator: (Sequent,Position) => Iterator[Formula] = (sequent,pos) =>
+  private val differentialInvariantGenerator: Generator[Formula] = (sequent:Sequent,pos:Position) =>
     sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, post)) => DifferentialHelper.flattenAnds(post +: sequent.ante.toList).iterator
       case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
@@ -571,8 +573,8 @@ private object DifferentialTactics {
 
   /** A dependency-optimized differential invariant generator using elementary candidates from `generator`.
     * @author Andre Platzer */
-  private def differentialInvariantOrder(generator: (Sequent,Position) => Iterator[Formula]): (Sequent,Position) => Iterator[Formula] =
-  (sequent,pos) => {
+  private def differentialInvariantOrder(generator: Generator[Formula]): Generator[Formula] =
+  (sequent:Sequent,pos:Position) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val (ode, post) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, post)) => (ode,post)

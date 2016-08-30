@@ -9,12 +9,12 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term, Variable}
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Seq[Expression], PositionLocator]], generator: Option[Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Seq[Expression], PositionLocator]], generator: Option[Generator.Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown.")))
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
-          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator[Formula] => Any](theGenerator)
+          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](theGenerator)
           case None => throw new ReflectiveExpressionBuilderExn(s"Need a generator for tactic ${info.codeName} but none was provided.")
         }
       } else {
@@ -57,7 +57,7 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Seq[Expression], PositionLocator]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr = {
+  def apply(name: String, arguments: List[Either[Seq[Expression], PositionLocator]] = Nil, generator: Option[Generator.Generator[Formula]]) : BelleExpr = {
     if(!DerivationInfo.hasCodeName(name)) {
       throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
     }

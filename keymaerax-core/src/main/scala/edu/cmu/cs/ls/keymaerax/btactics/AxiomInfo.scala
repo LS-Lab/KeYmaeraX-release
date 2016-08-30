@@ -659,7 +659,7 @@ object DerivationInfo {
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
-    new TacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
+    new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),

@@ -54,7 +54,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     else thisTactic & BranchTactic(children.map(child => apply(tree)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
-  private def tacticAt(gen:Generator[Formula], node: TreeNode) : BelleExpr = node.endStep match {
+  private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode) : BelleExpr = node.endStep match {
     case Some(step) => try {
       val exprString = db.getExecutable(step.executableId).belleExpr
       BelleParser.parseWithInvGen(exprString,Some(gen))

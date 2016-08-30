@@ -51,6 +51,7 @@ import scala.math.BigDecimal
   * @see [[ToolProvider]]
   */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
+  import Generator.Generator
   /** Default generator for loop invariants and differential invariants */
   var invGenerator: Generator[Formula] = FixedGenerator(Nil)
 
