@@ -1,3 +1,11 @@
+<spinner name="tacticDialogProofLoadingSpinner" ng-cloak>
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">Proof is loading, please wait...</div>
+</spinner>
 <div class="modal-header">
     <h3 class="modal-title">Tactic for {{tactic.modelName}}</h3>
 </div>
@@ -13,7 +21,7 @@
 
     <h3>Proof Construction</h3>
     <pre><code>{{tactic.tacticBody}}</code></pre>
-    <button class="btn btn-primary" ng-click="proveFromTactic(modelId)" ng-controller="ModelProofCreateCtrl">Prove associated model</button>
+    <button class="btn btn-primary" ng-click="proveFromTactic(modelId, 'tacticDialogProofLoadingSpinner')" ng-controller="ModelProofCreateCtrl">Prove associated model</button>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="ok()">Close</button>
