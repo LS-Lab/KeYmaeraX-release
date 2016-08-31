@@ -17,13 +17,13 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
           });
   };
 
-  $scope.proveFromTactic = function(modelId, spinnerId) {
-    spinnerService.show(spinnerId);
+  $scope.proveFromTactic = function(modelId) {
+    spinnerService.show('modelListProofLoadingSpinner');
     var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/proveFromTactic'
     $http.post(uri, {}).success(function(data) {
       var proofId = data.id;
       $location.path('proofs/' + proofId);
-    }).finally(function() { spinnerService.hide(spinnerId); });
+    }).finally(function() { spinnerService.hide('modelListProofLoadingSpinner'); });
   }
 
   $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
