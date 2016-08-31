@@ -18,7 +18,7 @@ import scala.collection.immutable.Map
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-class Z3 extends ToolBase("Z3") with QETool with DiffSolutionTool with CounterExampleTool {
+class Z3 extends ToolBase("Z3") with QETool {
   private val z3 = new Z3Solver
 
   override def init(config: Map[String,String]) = {
@@ -30,18 +30,6 @@ class Z3 extends ToolBase("Z3") with QETool with DiffSolutionTool with CounterEx
     z3.qeEvidence(formula)
   }
 
-  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
-                       iv: Predef.Map[Variable, Variable]): Option[Formula] = {
-    throw new Exception("Solving differential equations not supported by Z3")
-  }
-
-  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = {
-    throw new Exception("Counterexample generation not yet implemented with Z3")
-  }
-
-  override def restart() = ???
-
-  override def shutdown() = {
-    initialized = false
-  }
+  override def restart() = { initialized = true }
+  override def shutdown() = { initialized = false }
 }

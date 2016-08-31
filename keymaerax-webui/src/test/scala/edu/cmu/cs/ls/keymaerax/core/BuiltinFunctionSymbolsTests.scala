@@ -23,8 +23,7 @@ class BuiltinFunctionSymbolsTests extends TacticTestBase {
 
   ignore should "work in counter-example generation" in withMathematica { qeTool =>
     val f = "max(a, 0) = a".asFormula
-//    val counterExample = qeTool.findCounterExample(f)
-    val counterExample = new Z3().findCounterExample(f)
+    val counterExample = qeTool.findCounterExample(f)
     counterExample shouldBe 'nonEmpty
     println(counterExample.last("a".asVariable))
   }
