@@ -139,7 +139,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     //@todo ODE does not have time at the point where we're asking the integrator
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyt")).mkString)
@@ -269,7 +269,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyt")).mkString)
@@ -290,7 +290,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  ignore should "be provable with abstract loop invariant" in withMathematica { qeTool =>
+  it should "be provable with abstract loop invariant" ignore withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx"))
 
     val tactic = implyR('R) & (andL('L)*) &
@@ -316,7 +316,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyt")).mkString)
@@ -334,7 +334,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyt")).mkString)

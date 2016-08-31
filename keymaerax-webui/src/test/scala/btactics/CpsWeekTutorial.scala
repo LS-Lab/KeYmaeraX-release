@@ -191,8 +191,7 @@ class CpsWeekTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
-    //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
