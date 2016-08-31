@@ -41,7 +41,7 @@ object AxiomaticODESolver {
   def axiomaticSolve() = "AxiomaticODESolver" by ((pos:Position, s:Sequent) => {
     val odePos = subPosition(pos, 0::Nil)
     val ode = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
-    val sizeOfTimeExplicitOde = if(timeVar(ode).nonEmpty) odeSize(ode) else odeSize(ode) + 1
+    val sizeOfTimeExplicitOde = odeSize(ode) + 1
 
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
     val timeAssignmentPos = subPosition(pos, PosInExpr(0::1::1::Nil))
@@ -87,8 +87,6 @@ object AxiomaticODESolver {
 
     if(modal.isInstanceOf[Diamond])
       throw noDiamondsForNowExn
-    else if(timeVar(ode).nonEmpty && atomicOdes(ode).last.xp.x != timeVar(ode).get)
-      DebuggingTactics.error("Expected time var to occur at the end of the ODE.")
     else if(!isCanonicallyLinear(ode))
       DebuggingTactics.error("Expected ODE to be linear and in correct order.")
     else if(!anteHasInitConds(s.ante, ode))
@@ -105,21 +103,16 @@ object AxiomaticODESolver {
     *
     * @see [[addTimeVar]] */
   val addTimeVarIfNecessary = TacticFactory.anon ((pos: Position, s:Sequent) => s.apply(pos) match {
-      case x:DifferentialProgram if timeVar(x).isEmpty => addTimeVar(pos)
-      case x:DifferentialProgram if timeVar(x).nonEmpty => Idioms.nil
-      case x:ODESystem if timeVar(x).isEmpty => addTimeVar(pos)
-      case x:ODESystem if timeVar(x).nonEmpty => Idioms.nil
+      case x:DifferentialProgram => addTimeVar(pos)
+      case x:ODESystem => addTimeVar(pos)
       case _ => throw AxiomaticODESolverExn(s"Expected DifferentialProgram or ODESystem but found ${s.apply(pos).getClass}")
   })
 
   val assertInitializedTimeVar = TacticFactory.anon ((pos: Position, s: Sequent) => {
-    val timer = (s.apply(pos) match {
-      case x: ODESystem => timeVar(x)
-      case x: DifferentialProgram => timeVar(x)
+    val timer = s.apply(pos) match {
+      case x: ODESystem => Variable(TIMEVAR)
+      case x: DifferentialProgram => Variable(TIMEVAR)
       case _ => throw AxiomaticODESolverExn(s"Expected differential program or ode system but found ${s.apply(pos).prettyString}")
-    }) match {
-      case Some(x) => x
-      case None => throw new AxiomaticODESolverExn(s"Expected to have a time var by now in ${s.apply(pos).prettyString}")
     }
     val initialConditions = conditionsToValues(s.ante.flatMap(extractInitialConditions(None)).toList)
 
@@ -137,8 +130,8 @@ object AxiomaticODESolver {
     */
   val addTimeVar = TacticFactory.anon ((pos: Position, s:Sequent) => {
     s.apply(pos) match {
-      case x:DifferentialProgram if timeVar(x).isEmpty => //ok
-      case x:ODESystem if timeVar(x).isEmpty => //ok
+      case x:DifferentialProgram => //ok
+      case x:ODESystem => //ok
       case _ => throw AxiomaticODESolverExn(s"setupTimeVar should only be called on differential programs without an existing time variable but found ${s.apply(pos)} of type ${s.apply(pos).getClass}.")
     }
 
@@ -174,7 +167,7 @@ object AxiomaticODESolver {
     val initialConditions = s.ante.flatMap(extractInitialConditions(None)).toList
 
     val nextEqn = sortAtomicOdes(atomicOdes(system))
-      .filter(eqn => !isOne(eqn.e))
+      .filter(eqn => eqn.xp.x != Variable(TIMEVAR))
       .filter(eqn => isUnsolved(eqn.xp.x, system))
       .head
 
@@ -182,7 +175,7 @@ object AxiomaticODESolver {
 
     //@todo switch completely to the new integrator, so that this is a single tactic instead of a saturated tactic.
     val solnToCut =
-      Integrator(conditionsToValues(initialConditions), system).find(eq => eq.left == nextEqn.xp.x)
+      Integrator(conditionsToValues(initialConditions), Variable(TIMEVAR), system).find(eq => eq.left == nextEqn.xp.x)
         .getOrElse(throw new Exception(s"Could not get integrated value for ${nextEqn.xp.x} using new integration logic."))
 
     tmpmsg(s"Solution for ${nextEqn.prettyString} is ${solnToCut}")
@@ -222,7 +215,6 @@ object AxiomaticODESolver {
   def isUnsolved(v : Variable, system : ODESystem) = {
     val odes = atomicOdes(system.ode)
     if(odes.find(_.xp.x.equals(v)).isEmpty) false //Variables that don't occur in the ODE are trivially already solved.
-    else if(timeVar(system.ode).equals(v)) false //Don't need to solve for the time var.
     //In non-special cases, check for a = evolution domain constraint in the ode.
     else {
       val vConstraints = odeConstraints(system).flatMap(decomposeAnds).find(_ match {
@@ -246,7 +238,7 @@ object AxiomaticODESolver {
     val system = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem]
 
     val lowerBound = Number(0) //@todo check that this is actually the lower bound. Lower bound could be symbolic.
-    val timer = timeVar(system).getOrElse(throw AxiomaticODESolverExn("Expected ODE System to already have a time variable when cutInTimeLB is called."))
+    val timer = Variable(TIMEVAR)
 
     //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
     s.apply(pos).asInstanceOf[Modal] match {

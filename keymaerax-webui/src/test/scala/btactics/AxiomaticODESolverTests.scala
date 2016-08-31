@@ -39,17 +39,17 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
   }
 
-  it should "work using my own time" in withMathematica { qeTool =>
+  it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(t+1*t_)^2+2*(t+1*t_)+1)^3>=1)".asFormula
+    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
   }
 
   it should "solve double integrator" in  withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
+    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1>=0)".asFormula
   }
 
   //@todo support non-arithmetic post-condition.
@@ -103,7 +103,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "cutInSolns" should "solve x'=y,t'=1" in withMathematica { qeTool =>
     val f = "x=0&y=0&t=0 -> [{x'=y, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(1)
-    loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*t+0}]x>=0".asFormula
+    loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*kyxtime+0}]x>=0".asFormula
   }
 
   //@todo fix.
@@ -126,8 +126,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Integrator.apply" should "world on x'=v, v'=a" in {
     val initialConds = conditionsToValues(extractInitialConditions(None)("x=1&v=2&a=3&t=0".asFormula))
     val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
-    val result = Integrator.apply(initialConds, system)
-    result shouldBe "x=a/2*t^2+2*t+1".asFormula :: "v=a*t+2".asFormula :: Nil
+    val result = Integrator.apply(initialConds, "t_".asVariable, system)
+    result shouldBe "x=a/2*t_^2+2*t_+1".asFormula :: "t=1*t_+0".asFormula :: "v=a*t_+2".asFormula :: Nil
   }
 
   "IntegratorDiffSolutionTool" should "work as a tool" in withMathematica { qe =>

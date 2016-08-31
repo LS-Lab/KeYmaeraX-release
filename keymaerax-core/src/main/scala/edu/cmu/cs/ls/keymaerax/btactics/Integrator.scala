@@ -22,13 +22,13 @@ object Integrator {
     * @param system The ODE system. @todo this could be a DifferentialProgram instead because we never use the contraint.
     * @return The solution as a list of equalities, one for each of the primed variables.
     */
-  def apply(initialValues: Map[Variable, Term], system: ODESystem): List[Equal] = {
+  def apply(initialValues: Map[Variable, Term], diffArg: Variable, system: ODESystem): List[Equal] = {
     val sortedOdes = sortAtomicOdes(atomicOdes(system))
     val primedVars = sortedOdes.map(ode => ode.xp.x)
     val initializedVars = initialValues.keySet
-    val timer = timeVar(system).getOrElse(throw new Exception("System needs a time variable."))
+    val timer = diffArg
 
-    assert(primedVars.filterNot(x => initializedVars contains x).isEmpty, "All primed vars should be initialized.")
+    assert(primedVars.forall(initializedVars.contains), "All primed vars should be initialized.")
 
     sortedOdes.foldLeft[List[Equal]](Nil)((solvedComponents, ode) => {
       if(timer == ode.xp.x)
@@ -49,11 +49,7 @@ object Integrator {
     * @todo untested
     */
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
-    //Ensure that diffArg is what the Integrator will consider to be the independent variable.
-    if(timeVar(diffSys) != diffArg)
-      throw new AxiomaticODESolver.AxiomaticODESolverExn(s"Expected ${diffArg.prettyString} to be the time variable of the system ${diffSys.prettyString}")
-
-    apply(iv, ODESystem(diffSys)).foldLeft[Formula](True)((fml, eqn) => And(fml, eqn)) match {
+    apply(iv, diffArg, ODESystem(diffSys)).foldLeft[Formula](True)((fml, eqn) => And(fml, eqn)) match {
       case True => None
       case And(l,r) => {
         //throw away the initial True
@@ -135,8 +131,7 @@ class IntegratorDiffSolutionTool extends ToolBase("IntegratorDiffSolutionTool") 
     * @return The solution if found; None otherwise
     */
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
-    assert(timeVar(diffSys).get == diffArg, "diffArg should be the ODE's time variable.")
-    Some(Integrator(iv, ODESystem(diffSys, True)).reduce[Formula]((l,r) => And(l,r)))
+    Some(Integrator(iv, diffArg, ODESystem(diffSys, True)).reduce[Formula]((l,r) => And(l,r)))
   }
 
   override def init(config: Map[String, String]): Unit = { initialized = true }

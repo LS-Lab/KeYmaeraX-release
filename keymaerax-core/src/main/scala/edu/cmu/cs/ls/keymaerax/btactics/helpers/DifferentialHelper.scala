@@ -16,29 +16,6 @@ import scala.collection.immutable
   * Created by nfulton on 7/14/16.
   */
 object DifferentialHelper {
-  /** Returns the unique time variable in diffProgram, or None if no time variable can be found.
-    *
-    * @throws AxiomaticODESolverExn whenever diffProgram contains more than one time variable
-    * @note this could be re-written as a tailrec fn. */
-  def timeVar(diffProgram: DifferentialProgram) : Option[Variable] = diffProgram match {
-    case x:AtomicODE if isOne(x.e)  => Some(x.xp.x)
-    case x:AtomicODE if !isOne(x.e) => None
-    case x:DifferentialProgramConst => None
-    case x:DifferentialProduct      => (timeVar(x.left), timeVar(x.right)) match {
-      case (None, None)       => None
-      case (None, Some(x))    => Some(x)
-      case (Some(x), None)    => Some(x)
-      case (Some(x), Some(y)) => throw AxiomaticODESolverExn(s"Expected one time variable but found many (${x} and ${y}) in ${diffProgram}")
-    }
-  }
-  def timeVar(system: ODESystem): Option[Variable] = timeVar(system.ode)
-
-  /** Returns true if we're sure that t is equal to 1. Used to identify the "time" variable. */
-  def isOne(t: Term) = t match {
-    case n:Number => n==Number(1)
-    case _ => false
-  }
-
   /** Returns all of the AtomicODE's in a system. */
   def atomicOdes(system: ODESystem): List[AtomicODE] = atomicOdes(system.ode)
   def atomicOdes(dp: DifferentialProgram): List[AtomicODE] = dp match {
