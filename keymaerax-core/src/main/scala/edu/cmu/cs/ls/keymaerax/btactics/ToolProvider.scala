@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
   *       initialized.
   * @author Stefan Mitsch
   * @see [[edu.cmu.cs.ls.keymaerax.tools]]
+  * @see [[edu.cmu.cs.ls.keymaerax.tools.ToolInterface]]
   */
 object ToolProvider extends ToolProvider {
 
@@ -60,6 +61,7 @@ object ToolProvider extends ToolProvider {
 
 /** A tool factory creates various arithmetic and simulation tools.
   * @author Stefan Mitsch
+  * @see [[edu.cmu.cs.ls.keymaerax.tools.ToolInterface]]
   */
 trait ToolProvider {
   /** The provided tools. */
