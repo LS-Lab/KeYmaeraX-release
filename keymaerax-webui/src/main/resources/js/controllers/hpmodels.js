@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models) {
+  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models, spinnerService) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
@@ -70,11 +70,12 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      };
 
      $scope.importRepo = function(repoUrl) {
+      spinnerService.show('caseStudyImportSpinner');
       $http.post("models/users/" + $cookies.get('userId') + "/importRepo", repoUrl).success(function(data) {
         $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
           Models.addModels(data);
           $route.reload();
-        });
+        }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
       })
      }
 
