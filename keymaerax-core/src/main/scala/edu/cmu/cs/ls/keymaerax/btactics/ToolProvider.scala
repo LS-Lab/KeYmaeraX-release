@@ -154,9 +154,9 @@ class MathematicaToolProvider(config: Configuration) extends PreferredToolProvid
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
-/** A tool provider that provides Z3 as QE tool, everything else is None.
+/** A tool provider that provides Z3 as QE tool and KeYmaera's own bundled diff. solution tool, everything else is None.
   * @author Stefan Mitsch
   */
-class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); z :: Nil }) {
+class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); val ode = new IntegratorDiffSolutionTool; ode.init(Map()); z :: ode :: Nil }) {
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }
