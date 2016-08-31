@@ -618,6 +618,8 @@ object DerivationInfo {
           (List("j(x)"),List("[a]j(x)")),
           (List("j(x)"),List("P"))))
       , List(FormulaArg("j(x)")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+    new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
+      List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),
 
     new InputPositionTacticInfo("generalizeb",
     RuleDisplayInfo("G[]",(List("&Gamma;"), List("[a]P", "&Delta;")),

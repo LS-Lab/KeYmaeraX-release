@@ -28,23 +28,24 @@ object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
-  /** Usage -help information, formatted to 80 characters width. */
+  /** Usage -help information.
+    * @note Formatted to 80 characters width. */
   val usage = "KeYmaera X Prover" + " " + VERSION +
     """
       |
       |Usage: java -Xss20M -jar keymaerax.jar
-      |  -prove filename -tactic filename [-out filename] |
-      |  -modelplex filename [-out filename] |
-      |  -codegen filename -format C [-vars var1,var2,..,varn] [-out file] |
-      |  -ui [filename] [web server options] |
-      |  -parse filename |
-      |  -bparse filename
+      |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
+      |  -modelplex filename.kyx [-out filename.kym] |
+      |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
+      |  -ui [web server options] |
+      |  -parse filename.kyx |
+      |  -bparse filename.kyt
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
-      |  -modelplex synthesize monitor from given file with ModelPlex tactic
+      |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
       |  -codegen   generate executable code from given file
-      |  -ui        start web user interface with optional file (if any) and arguments
+      |  -ui        start web user interface with optional arguments
       |  -parse     return error code !=0 if the input problem file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
       |
@@ -52,15 +53,15 @@ object KeYmaeraX {
       |  -tool mathematica|z3 choose which tool to use for arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -kind ctrl|model kind of monitor to generate with ModelPlex
+      |  -kind ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
-      |  -lax      enable lax mode with more flexible parser, printer, prover etc.
-      |  -strict   enable strict mode with no flexibility in prover
-      |  -debug    enable debug mode with more exhaustive messages
+      |  -lax      use lax mode with more flexible parser, printer, prover etc.
+      |  -strict   use strict mode with no flexibility in prover
+      |  -debug    use debug mode with more exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
-      |  -security enable security manager imposing some runtime security restrictions
+      |  -security use security manager imposing some runtime security restrictions
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
@@ -68,17 +69,19 @@ object KeYmaeraX {
       |Use option -license to show the license conditions.
       |""".stripMargin
 
+
   private def launched() {
     LAUNCH = true
     println("Launch flag was set.")
   }
   var LAUNCH: Boolean = false
 
+
   def main (args: Array[String]): Unit = {
-    println("KeYmaera X Prover " + VERSION + "\n" +
+    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
+    println("KeYmaera X Prover" + " " + VERSION + "\n" +
       "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
-    else if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       //@note 'commandLine is only passed in to preserve evidence of what generated the output.
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
