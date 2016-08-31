@@ -18,7 +18,7 @@ import scala.compat.Platform
 import scala.util.Random
 
 /**
- * Command-line interface for KeYmaera X.
+ * Command-line interface launcher for KeYmaera X.
  *
  * @author Stefan Mitsch
  * @author Andre Platzer
@@ -37,36 +37,32 @@ object KeYmaeraX {
       |  -modelplex filename [-out filename] |
       |  -codegen filename -format C [-vars var1,var2,..,varn] [-out file] |
       |  -ui [filename] [web server options] |
-      |  -parse [filename] |
-      |  -bparse [filename]
+      |  -parse filename |
+      |  -bparse filename
       |
       |Actions:
-      |  -prove     run KeYmaera X prover on given file with given tactic
-      |  -modelplex synthesize monitor from given file with ModelPlex prover tactic
-      |  -codegen   generate executable code from given file for given target language
+      |  -prove     run KeYmaera X prover on given problem file with given tactic
+      |  -modelplex synthesize monitor from given file with ModelPlex tactic
+      |  -codegen   generate executable code from given file
       |  -ui        start web user interface with optional file (if any) and arguments
-      |  -parse     return error code !=0 if the input model file does not parse
+      |  -parse     return error code !=0 if the input problem file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
       |
       |Additional options:
+      |  -tool mathematica|z3 choose which tool to use for arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -verify   generate and check the final proof certificate (recommended)
-      |  -noverify skip checking proof certificates after proof search
-      |  -interval guard reals by interval arithmetic in floating point (recommended)
-      |  -nointerval  skip interval arithmetic presuming no floating point errors
+      |  -kind ctrl|model kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
-      |  -kind     ctrl|model kind of monitor to generate
+      |  -interval guard reals by interval arithmetic in floating point (recommended)
+      |  -nointerval skip interval arithmetic presuming no floating point errors
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
-      |  -security enable security manager imposing some security restrictions
       |  -debug    enable debug mode with more exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
+      |  -security enable security manager imposing some runtime security restrictions
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
-      |
-      |Tool options:
-      |  -tool mathematica|z3
       |
       |Copyright (c) Carnegie Mellon University.
       |Use option -license to show the license conditions.
@@ -160,8 +156,6 @@ object KeYmaeraX {
       case "-jlink" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
         else optionErrorReporter("-jlink")
-      case "-verify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> true), tail)
-      case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
       case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
       case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
       case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
@@ -351,18 +345,11 @@ object KeYmaeraX {
 
     if (witness.isProved) {
       assert(witness.subgoals.isEmpty)
-      if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
-        val witnessStart: Long = Platform.currentTime
-        val proved = witness.proved
-        //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
-        assert(inputSequent == proved, "Proved the original problem and not something else")
-        val witnessDuration = Platform.currentTime - witnessStart
-        Console.println("[proof time       " + proofDuration + "ms]")
-        Console.println("[certificate time " + witnessDuration + "ms]")
-        println("Proof certificate: Passed")
-      } else {
-        println("Proof certificate: Skipped extraction of proof certificate from proof search\n (use -verify to generate and check proof certificate)")
-      }
+      val witnessStart: Long = Platform.currentTime
+      val proved = witness.proved
+      //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
+      assert(inputSequent == proved, "Proved the original problem and not something else")
+      val witnessDuration = Platform.currentTime - witnessStart
 
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
       val evidence = ToolEvidence(List(
@@ -531,15 +518,18 @@ object KeYmaeraX {
     * Instead we settle for preventing people from installing less-restrictive security managers and restricting
     * all writes to be inside the .keymaerax directory. */
   class KeYmaeraXSecurityManager extends SecurityManager {
-    val homeDir = System.getProperty("user.home")
-    val keymaerax = homeDir + "/.keymaerax"
+    private val homeDir = System.getProperty("user.home")
+    private val keymaerax = homeDir + "/.keymaerax"
 
     override def checkPermission(perm: Permission): Unit = {
       perm match {
+          //@todo should disallow writing reflection in .core.
+        case perm:ReflectPermission if "suppressAccessChecks"==perm.getName() =>
+          throw new SecurityException("suppressing access checks during reflection is forbidden")
         case _:ReflectPermission => ()
         case _:RuntimePermission =>
           if ("setSecurityManager".equals(perm.getName))
-            throw new SecurityException()
+            throw new SecurityException("Changing security manager is forbidden")
         case _:FilePermission =>
           val filePermission = perm.asInstanceOf[FilePermission]
           val name = filePermission.getName
@@ -563,7 +553,9 @@ object KeYmaeraX {
     "exit - quit the prover (or hit Ctrl-C any time).\n" +
     "help - will display this usage information.\n" +
     "Tactics will be reported back when a branch closes but may need cleanup.\n"
+
   /** KeYmaera C: A simple interactive command-line prover */
+  @deprecated("Use web UI instead")
   private def interactiveProver(root: Provable): Provable = {
     val commands = io.Source.stdin.getLines()
     println("KeYmaera X Interactive Command-line Prover\n" +
