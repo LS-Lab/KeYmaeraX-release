@@ -55,15 +55,17 @@
 
 <!-- Main jumbotron for a primary message or call to action -->
 <div class="jumbotron">
-    <div class="container">
-        <h1>KeYmaera X <a type="button" class="btn btn-info btn-lg" href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></h1>
+    <div class="container" ng-controller="ServerInfoCtrl">
+        <h1>KeYmaera X
+            <a ng-if="!isLocal" ng-cloak type="button" class="btn btn-info btn-lg"
+               href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></h1>
         <p>An aXiomatic Tactical Theorem Prover for Hybrid Systems</p>
     </div>
 </div>
 
 <div class="container">
     <!-- Example row of columns -->
-    <div class="row">
+    <div class="row" ng-controller="ServerInfoCtrl">
         <div class="col-md-6">
             <blockquote>
             <p>
@@ -74,12 +76,15 @@
             (dL) and provides tactics for a high degree of control over
             automated proof search.
             </p>
-            <p>
+            <p ng-if="!isLocal" ng-cloak>
               Sign in at the top of this page to get started online, or click 'Download' to install locally.
             </p>
+            <p ng-if="isLocal" ng-cloak>
+                Sign in at the top of this page.
+            </p>
             <p>
             </p>
-            <p style="color: red;" ng-show="!isLocal" ng-controller="ServerInfoCtrl" id="remoteOnlyWarning">
+            <p style="color: red;" ng-if="!isLocal" ng-cloak>
                 This publicly hosted instance of KeYmaera X is for <b>demonstration purposes only</b>.
                 Use a fresh password when creating an account and do not upload anything to this server that is sensitive in nature.
             </p>
