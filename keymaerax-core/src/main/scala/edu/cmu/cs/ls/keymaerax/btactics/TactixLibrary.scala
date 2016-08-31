@@ -94,19 +94,24 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     ((OnAll(?(
           (close
-            | ((must(normalize))
-            //| ((loop(gen)('L) )
-            | ((loop(gen)('R) )
-            //| ((diffSolve(None)('R) partial)
-            //| ((diffInd() partial)
-            | ((ODE('R) )
-            | (exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
+            | (must(normalize)
+            | (loop(gen)('R)
+            | (ODE('R)
+            | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
       ?(OnAll(QE))
   }
 
   /** auto: automatically try to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto = master() & done
+  def auto: BelleExpr = "auto" by {
+    ((OnAll(?(
+      (close
+        | (must(normalize)
+        | (loopauto('R)
+        | (ODE('R)
+        | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
+      ?(OnAll(QE)) & done
+  }
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -238,6 +243,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
+  /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
+    * @see [[loop(Formula)]] */
+  def loopauto: DependentPositionTactic = "loopauto" by ((pos:Position,seq:Sequent) =>
+    ChooseSome(
+      () => InvariantGenerator.loopInvariantGenerator(seq,pos),
+      (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
+    )
+    )
 
   // differential equations
 
