@@ -39,7 +39,7 @@ class ArithmeticTests extends TacticTestBase {
   "fullQE" should "apply equalities, transform to implication, and compute universal closure" in {
     val tool = new MockTool(
       "\\forall x_1 \\forall v_1 \\forall t_0 \\forall s_0 (v_1>0&x_1 < s_0&-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1>=0&t_0>=0->1/2*(-1*(v_1^2/(2*(s_0-x_1)))*t_0^2+2*t_0*v_1+2*x_1)+(-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1)^2/(2*(v_1^2/(2*(s_0-x_1))))<=s_0)".asFormula)
-    ToolProvider.setProvider(new SingleToolProvider(tool))
+    ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     //@note actual assertions are made by MockTool, expect a BelleError since MockTool returns false as QE answer
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
@@ -58,7 +58,7 @@ class ArithmeticTests extends TacticTestBase {
   it should "only apply equalities for variables" in {
     val tool = new MockTool(
       "\\forall y_0 \\forall x_0 \\forall r_0 (x_0^2+y_0^2=r_0^2&r_0>0->y_0<=r_0)".asFormula)
-    ToolProvider.setProvider(new SingleToolProvider(tool))
+    ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula

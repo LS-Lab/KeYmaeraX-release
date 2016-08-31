@@ -88,30 +88,39 @@ trait ToolProvider {
   /** Returns a simulation tool. */
   def simulationTool(): Option[SimulationTool]
 
-  /** Shutdown the tools provided by this provider. After shutdown, the provider hands out null only. */
+  /** Shutdown the tools provided by this provider. After shutdown, the provider hands out None only. */
   def shutdown(): Unit
 }
 
-/** A tool provider that points all tools to a single `tool`.
+/** A tool provider that picks appropriate special tools from the list of preferences, i.e., if multiple tools with
+  * the same trait appear in `toolPreferences`, the first will be picked for that trait.
   * @author Stefan Mitsch
   */
-class SingleToolProvider[T <: Tool](val tool: T) extends ToolProvider {
-  require(tool != null && tool.isInitialized, "Initialized tool expected")
-  private[this] var theTool: T = tool
+class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends ToolProvider {
+  require(toolPreferences != null && toolPreferences.nonEmpty && toolPreferences.forall(_.isInitialized), "Initialized tool expected")
 
-  override def tools(): List[Tool] = theTool :: Nil
-  override def qeTool(): Option[QETool] = theTool  match { case t: QETool => Some(t) case _ => None }
-  override def odeTool(): Option[DiffSolutionTool] = theTool  match { case t: DiffSolutionTool => Some(t) case _ => None }
-  override def cexTool(): Option[CounterExampleTool] = theTool  match { case t: CounterExampleTool => Some(t) case _ => None }
-  override def simplifierTool(): Option[SimplificationTool] = theTool  match { case t: SimplificationTool => Some(t) case _ => None }
-  override def simulationTool(): Option[SimulationTool] = theTool  match { case t: SimulationTool => Some(t) case _ => None }
-  override def solverTool(): Option[SolutionTool] = theTool match { case t: SolutionTool => Some(t) case _ => None }
-  override def algebraTool(): Option[AlgebraTool] = theTool match { case t: AlgebraTool => Some(t) case _ => None }
-  override def shutdown(): Unit = {
-    if (theTool != null) {
-      theTool.shutdown()
-      theTool = null.asInstanceOf[T]
-    }
+  private[this] lazy val qe: Option[Tool with QETool] = toolPreferences.find(_.isInstanceOf[QETool]).map(_.asInstanceOf[Tool with QETool])
+  private[this] lazy val ode: Option[Tool with DiffSolutionTool] = toolPreferences.find(_.isInstanceOf[DiffSolutionTool]).map(_.asInstanceOf[Tool with DiffSolutionTool])
+  private[this] lazy val cex: Option[Tool with CounterExampleTool] = toolPreferences.find(_.isInstanceOf[CounterExampleTool]).map(_.asInstanceOf[Tool with CounterExampleTool])
+  private[this] lazy val simplifier: Option[Tool with SimplificationTool] = toolPreferences.find(_.isInstanceOf[SimplificationTool]).map(_.asInstanceOf[Tool with SimplificationTool])
+  private[this] lazy val simulator: Option[Tool with SimulationTool] = toolPreferences.find(_.isInstanceOf[SimulationTool]).map(_.asInstanceOf[Tool with SimulationTool])
+  private[this] lazy val solver: Option[Tool with SolutionTool] = toolPreferences.find(_.isInstanceOf[SolutionTool]).map(_.asInstanceOf[Tool with SolutionTool])
+  private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
+
+  override def tools(): List[Tool] = toolPreferences
+  override def qeTool(): Option[QETool] = ensureInitialized(qe)
+  override def odeTool(): Option[DiffSolutionTool] = ensureInitialized(ode)
+  override def cexTool(): Option[CounterExampleTool] = ensureInitialized(cex)
+  override def simplifierTool(): Option[SimplificationTool] = ensureInitialized(simplifier)
+  override def simulationTool(): Option[SimulationTool] = ensureInitialized(simulator)
+  override def solverTool(): Option[SolutionTool] = ensureInitialized(solver)
+  override def algebraTool(): Option[AlgebraTool] = ensureInitialized(algebra)
+  override def shutdown(): Unit = toolPreferences.foreach(_.shutdown())
+
+  /** Ensures that the tool `t` is initialized (= not yet shutdown) before returning it; returns None for uninitialized tools. */
+  private def ensureInitialized[S <: Tool](tool: Option[S]): Option[S] = tool match {
+    case Some(t) if t.isInitialized => tool
+    case _ => None
   }
 }
 
@@ -133,15 +142,21 @@ class NoneToolProvider extends ToolProvider {
 /** A tool provider that provides Polya as a QE tools, everything else is None.
   * @author Stefan Mitsch
   */
-class PolyaToolProvider extends SingleToolProvider({ val p = new Polya; p.init(Map()); p }) { }
+class PolyaToolProvider extends PreferredToolProvider({ val p = new Polya; p.init(Map()); p :: Nil }) {
+  def tool(): Polya = tools().head.asInstanceOf[Polya]
+}
 
 /** A tool provider that initializes tools to Mathematica.
   * @param config The Mathematica configuration (linkName, libDir).
   * @author Stefan Mitsch
   */
-class MathematicaToolProvider(config: Configuration) extends SingleToolProvider({ val m = new Mathematica(); m.init(config); m }) { }
+class MathematicaToolProvider(config: Configuration) extends PreferredToolProvider({ val m = new Mathematica(); m.init(config); m :: Nil }) {
+  def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
+}
 
 /** A tool provider that provides Z3 as QE tool, everything else is None.
   * @author Stefan Mitsch
   */
-class Z3ToolProvider extends SingleToolProvider({ val z = new Z3; z.init(Map()); z }) { }
+class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); z :: Nil }) {
+  def tool(): Z3 = tools().head.asInstanceOf[Z3]
+}

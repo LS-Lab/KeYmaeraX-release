@@ -123,8 +123,7 @@ object HyDRAInitializer {
     try {
       val preferredTool = preferredToolFromDB(database)
       val config = configFromDB(options, database, preferredTool)
-      val tool: Tool = createTool(options, config, preferredTool)
-      assert(tool.isInitialized, "Tool should be initialized after init()")
+      createTool(options, config, preferredTool)
     } catch {
       //@todo add e to log here and in other places
       case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
@@ -151,7 +150,7 @@ object HyDRAInitializer {
     case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
   }
 
-  private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Tool = {
+  private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
       case "mathematica" => new MathematicaToolProvider(config)
@@ -159,7 +158,7 @@ object HyDRAInitializer {
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
     ToolProvider.setProvider(provider)
-    provider.tool
+    assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
   }
 
   private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
