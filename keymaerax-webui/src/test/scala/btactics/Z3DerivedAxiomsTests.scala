@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 
@@ -17,9 +17,7 @@ import scala.collection.immutable
   * @see [[DerivedAxiomsTests]]
   * @note Must be separate test suite from same tests withZ3, otherwise lazy vals in DerivedAxioms corrupt tests.
   */
-@CheckinTest
-@SummaryTest
-@UsualTest
+@IgnoreInBuildTest
 class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
 
   private def check(lemma: Lemma): Sequent = {
