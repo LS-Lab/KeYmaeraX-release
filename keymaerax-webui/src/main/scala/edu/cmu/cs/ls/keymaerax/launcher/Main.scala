@@ -21,19 +21,19 @@ import scala.collection.JavaConversions._
 object Main {
   def startServer(args: Array[String]) : Unit = {
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
-    try {
-//      throw new LemmbaDatabaseInitializationException("")
-//      LemmaDatabaseInitializer.initializeFromJAR
-    }
-    catch {
-      case e: LemmbaDatabaseInitializationException => {
-        println("!!! ERROR: Could not initialize database !!!)")
-        e.printStackTrace()
-        println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
-        edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
-//        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
-      }
-    }
+//    try {
+////      throw new LemmbaDatabaseInitializationException("")
+////      LemmaDatabaseInitializer.initializeFromJAR
+//    }
+//    catch {
+//      case e: LemmbaDatabaseInitializationException => {
+//        println("!!! ERROR: Could not initialize database !!!)")
+//        e.printStackTrace()
+//        println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
+//        edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
+////        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
+//      }
+//    }
     //@todo skip -ui -launch
     if(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
