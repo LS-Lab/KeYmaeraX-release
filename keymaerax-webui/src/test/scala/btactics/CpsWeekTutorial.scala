@@ -191,6 +191,13 @@ class CpsWeekTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
+  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+    //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   it should "find a hint for SB from parsed tactic" in withMathematica { qeTool =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyt")).mkString)
@@ -243,6 +250,13 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals should have size 1
   }}
 
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyt")).mkString)
+    val result = db.proveBy(modelContent, tactic)
+    result.subgoals should have size 1
+  }}
+
   "Motzkin" should "be provable with DI+DW" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx"))
     val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & diffWeaken('R) & prop
@@ -255,6 +269,12 @@ class CpsWeekTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
+  it should "be provable from parsed tactic Z3" in withZ3 { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   "Damped oscillator" should "be provable with DI+DW" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx"))
     val tactic = implyR('R) & diffInd('full)('R)
@@ -262,6 +282,12 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved

@@ -43,6 +43,12 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   it should "be provable with diffSolve" in withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val tactic = implyR('_) & andL('_) & diffSolve(None)(1) & QE
@@ -115,6 +121,12 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   "Example 3a" should "be provable with master and loop invariant from file" in withMathematica { tool => withDatabase { db =>
     // // needs evolution domain at time 0
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
@@ -122,6 +134,13 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+    //@todo ODE does not have time at the point where we're asking the integrator
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -177,12 +196,24 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   "Example 4b" should "be provable with master and loop invariant from file" in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyx")).mkString
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -195,6 +226,12 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -227,6 +264,13 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+    //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -272,6 +316,13 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
+  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+    //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
   "Example 7" should "be provable automatically with Mathematica" in withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyx")).mkString
     db.proveBy(modelContent, master()) shouldBe 'proved
@@ -283,7 +334,14 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  ignore /*"Example 8"*/ should "Example 8 be provable automatically with Mathematica" in withMathematica { qeTool =>
+  it should "be provable from parsed tactic with Z3" ignore withZ3 { qeTool => withDatabase { db =>
+    //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  "Example 8" should "be provable automatically with Mathematica" ignore withMathematica { qeTool =>
     // x' <= a*d
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example8.kyx"))
     proveBy(s, master()) shouldBe 'proved
@@ -296,6 +354,12 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -324,6 +388,12 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -390,6 +460,12 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withMathematica { qeTool => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyt")).mkString)
+    db.proveBy(modelContent, tactic) shouldBe 'proved
+  }}
+
+  it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
