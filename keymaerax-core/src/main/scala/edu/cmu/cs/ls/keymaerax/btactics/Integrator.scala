@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, Tool, ToolBase}
 
 /**
   * Solves the initial value problem for systems of differential equations.
@@ -125,7 +125,7 @@ object Integrator {
   }
 }
 
-class IntegratorDiffSolutionTool extends DiffSolutionTool {
+class IntegratorDiffSolutionTool extends ToolBase("IntegratorDiffSolutionTool") with DiffSolutionTool {
   /**
     * Computes the symbolic solution of a differential equation in normal form.
     *
@@ -138,4 +138,8 @@ class IntegratorDiffSolutionTool extends DiffSolutionTool {
     assert(timeVar(diffSys).get == diffArg, "diffArg should be the ODE's time variable.")
     Some(Integrator(iv, ODESystem(diffSys, True)).reduce[Formula]((l,r) => And(l,r)))
   }
+
+  override def init(config: Map[String, String]): Unit = { initialized = true }
+  override def restart(): Unit = { initialized = true }
+  override def shutdown(): Unit = { initialized = false }
 }
