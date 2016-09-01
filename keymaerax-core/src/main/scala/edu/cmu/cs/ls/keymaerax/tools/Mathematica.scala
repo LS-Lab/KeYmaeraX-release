@@ -105,7 +105,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
     */
   override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim.simulateRun(initial, stateRelation, steps)
 
-  override def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = mPDE.pdeSolve(diffSys)
+  /*override*/ def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = mPDE.pdeSolve(diffSys)
   override def solve(equations: Formula, vars: List[Expression]): Option[Formula] = mSolve.solve(equations,vars)
   override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = mAlgebra.quotientRemainder(term,div,x)
   override def groebnerBasis(polynomials: List[Term]): List[Term] = mAlgebra.groebnerBasis(polynomials)
