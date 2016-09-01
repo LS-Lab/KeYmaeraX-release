@@ -26,7 +26,7 @@ scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
       Some(prop)
     } catch {
       case e: Throwable =>
-        e.printStackTrace()
+        println("local.properties not found: please copy default.properties and adapt the paths to your system")
         None
     }
   }
