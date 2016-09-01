@@ -79,7 +79,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  val unfoldProgramNormalize = normalize(andR('R), step('L), step('R))
+  val unfoldProgramNormalize = "unfoldProgramNormalize" by normalize(andR('R), step('L), step('R))
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   val prop                    : BelleExpr = NamedTactic("prop", {
