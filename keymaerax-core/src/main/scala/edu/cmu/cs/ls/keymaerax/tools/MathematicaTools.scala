@@ -167,7 +167,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with ODESolverTool with DerivativeTool {
+class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with ODESolverTool with DerivativeTool {
 
   def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)

@@ -25,7 +25,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
 
   private val mQE = new MathematicaQETool(link)
   private val mCEX = new MathematicaCEXTool(link)
-  private val mODE = new MathematicaODETool(link)
+  private val mODE = new MathematicaODESolverTool(link)
   private val mSim = new MathematicaSimulationTool(link)
   private val mSolve = new MathematicaEquationSolverTool(link)
   private val mAlgebra = new MathematicaAlgebraTool(link)
