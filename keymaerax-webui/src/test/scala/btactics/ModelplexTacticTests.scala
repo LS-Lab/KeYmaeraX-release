@@ -624,7 +624,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "VSL controller (backward tactic from prefabricated conjecture)")
   }
 
-  ignore should "find correct controller monitor condition from input file" in {
+  it should "find correct controller monitor condition from input file" ignore {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model,
@@ -665,7 +665,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
     simplifiedResult.subgoals should have size 1
     simplifiedResult.subgoals.head.ante shouldBe empty
-    simplifiedResult.subgoals.head.succ should contain only "true".asFormula
+    simplifiedResult.subgoals.head.succ should contain only "((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=-B)&tpost()=t|xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1post()&a1post()<=A)&(((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&tpost()=t|x1>=xsl&(-B<=a1post()&a1post()<=A&a1post()<=(v1-vsl)/ep)&(((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&tpost()=t|(vslpost()>=0&xslpost()>=x1+(v1^2-vslpost()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1))&(v1>=0&0<=ep)&((x1post()=x1&v1post()=v1)&a1post()=a1)&tpost()=0".asFormula
 
     report(expected, foResult, "VSL controller monitor (forward chase without Opt. 1)")
     report(expected, opt1Result, "VSL controller monitor (forward chase with Opt. 1)")
