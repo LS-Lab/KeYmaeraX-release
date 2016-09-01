@@ -15,8 +15,10 @@ import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulatio
 
 import scala.collection.immutable
 
+@deprecated
 object ToolConversions {
 
+  //@todo duplicate with [[FormulaTools.conjuncts]]
   def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
