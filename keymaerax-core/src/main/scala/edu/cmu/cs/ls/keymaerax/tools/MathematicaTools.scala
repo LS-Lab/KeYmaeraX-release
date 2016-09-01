@@ -324,11 +324,41 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     }
   }
 
-  //@todo
-  override def groebnerBasis(polynomials: List[Term]): List[Term] = ???
+  override def groebnerBasis(polynomials: List[Term]): List[Term] = {
+    val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols.toList)
+    val input = new MExpr(MathematicaSymbols.GROEBNERBASIS,
+      Array[MExpr](
+        new MExpr(Expr.SYM_LIST, polynomials.map(k2m).toArray),
+        new MExpr(Expr.SYM_LIST, vars.map(k2m).toArray),
+        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
+          MathematicaSymbols.MONOMIALORDER, MathematicaSymbols.DEGREEREVERSELEXICOGRAPHIC
+        ))
+      ))
+    val (_, result) = run(input)
+    result match {
+      case r: List[Term] => r
+      case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
+    }
+  }
 
-  //@todo
-  override def polynomialReduce(polynomial: Term, GB: List[Term]): Term = ???
+  override def polynomialReduce(polynomial: Term, GB: List[Term]): Term = {
+    val vars = StaticSemantics.vars(polynomial).symbols.toList
+    val input = new MExpr(MathematicaSymbols.POLYNOMIALREDUCE,
+      Array[MExpr](
+        k2m(polynomial),
+        new MExpr(Expr.SYM_LIST, GB.map(k2m).toArray),
+        new MExpr(Expr.SYM_LIST, vars.map(k2m).toArray),
+        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
+          MathematicaSymbols.MONOMIALORDER, MathematicaSymbols.DEGREEREVERSELEXICOGRAPHIC
+        ))
+      ))
+    val (_, result) = run(input)
+    result match {
+        //@note could generally help to keep the cofactors in r(0) around for something
+      case r: List[Term] if r.length==2 => r(1)
+      case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
+    }
+  }
 }
 
 /**
