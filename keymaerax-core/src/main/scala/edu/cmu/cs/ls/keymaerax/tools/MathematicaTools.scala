@@ -288,10 +288,11 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
     val f = new MExpr(Expr.SYMBOL, "$f")
     val fall = new MExpr(f, vars)
     val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
-      case AtomicODE(DifferentialSymbol(x),t) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](
-        k2m(t),
-        new MExpr(MathematicaSymbols.D, Array[MExpr](fall, k2m(x)))
-      ))
+      case AtomicODE(DifferentialSymbol(x),t) =>
+        new MExpr(MathematicaSymbols.MULT, Array[MExpr](
+          k2m(t),
+          new MExpr(MathematicaSymbols.D, Array[MExpr](fall, k2m(x)))
+        ))
     })
     val pde = new MExpr(MathematicaSymbols.EQUALS,
       Array[MExpr](
