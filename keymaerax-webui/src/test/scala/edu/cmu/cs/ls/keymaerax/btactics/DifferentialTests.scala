@@ -541,7 +541,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2 & x>=0 | y<z}]x>0".asFormula
   }
 
-  ignore should "work in context" in withMathematica { qeTool =>
+  it should "work in context" ignore withMathematica { qeTool =>
     val result = proveBy("[x:=3;][{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1, 1::Nil))
 
     result.subgoals should have size 2
@@ -562,7 +562,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   //@todo requires better UnifyUSCalculus CMon ->
-  ignore should "cut in a simple formula in context" in withMathematica { qeTool =>
+  it should "cut in a simple formula in context" ignore withMathematica { qeTool =>
     val result = proveBy("x>0 -> [{x'=2}]x>=0".asFormula, diffCut("x>0".asFormula)(1, 1::Nil))
     result.subgoals should have size 2
     result.subgoals.head.ante shouldBe empty
@@ -636,6 +636,16 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2 & (x>=0 | y<z)}]x>=x_0".asFormula
   }
 
+  it should "auto-generate names for term-ghosts when special function old is used" in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
+      diffCut("x>=old(x^2+4)".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "old=x^2+4".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>=old}]x>=0".asFormula
+    result.subgoals(1).ante should contain only "old=x^2+4".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2 & (x>=0 | y<z)}]x>=old".asFormula
+  }
+
   it should "retain existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       diffCut("x>=old(x)".asFormula)(1))
@@ -667,7 +677,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   //@todo requires better UnifyUSCalculus CMon ->
-  ignore should "cut in a simple formula in context" in withMathematica { qeTool =>
+  it should "cut in a simple formula in context" ignore withMathematica { qeTool =>
     val result = proveBy("x>0 -> [{x'=2}]x>=0".asFormula, diffInvariant("x>0".asFormula)(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -741,7 +751,7 @@ class DifferentialTests extends TacticTestBase {
       derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe 'proved
   }
 
-  ignore should "let us prove variable [x':=5;](x+y)'>=0" in withMathematica { qeTool =>
+  it should "let us prove variable [x':=5;](x+y)'>=0" ignore withMathematica { qeTool =>
     //@note proof waited too long. Should have gone constant before diffind
     proveBy("[x':=5;](x+y)'>=0".asFormula,
       let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
@@ -752,7 +762,7 @@ class DifferentialTests extends TacticTestBase {
       derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE) shouldBe 'proved
   }
 
-  ignore should "let us prove variable [{x'=5}](x+y)'>=0" in withMathematica { qeTool =>
+  it should "let us prove variable [{x'=5}](x+y)'>=0" ignore withMathematica { qeTool =>
     //@note proof waited too long. Should have gone constant before diffind
     proveBy("[{x'=5}](x+y)'>=0".asFormula,
       let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
@@ -1015,7 +1025,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.last.succ should contain only "y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
   }
 
-  ignore should "work in a simple context" in withMathematica { tool =>
+  it should "work in a simple context" ignore withMathematica { tool =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::Nil)
     val result = proveBy(s, tactic)
@@ -1027,7 +1037,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.last.succ should contain only "y>0 & x*y>0 -> (a=2 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0))".asFormula
   }
 
-  ignore should "work in a complicated context" in {
+  it should "work in a complicated context" ignore {
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
     val result = proveBy(s, tactic)
