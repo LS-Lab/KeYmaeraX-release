@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import Augmentors._
 
@@ -74,7 +74,8 @@ object InvariantGenerator {
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
     //@todo performance: ++ is not quite as fast a lazy concatenation as it could be.
-    TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos)
+    TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos) ++
+      relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
 
   /** A loop invariant generator.
     * @author Andre Platzer */
@@ -102,5 +103,32 @@ object InvariantGenerator {
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
 
+  /** Inverse Characteristic Method differential invariant generator.
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
+    */
+  val inverseCharacteristicDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) => {
+    import FormulaTools._
+    if (!ToolProvider.algebraTool().isDefined) throw new BelleError("inverse characteristic method needs a computer algebra tool")
+    if (!ToolProvider.pdeTool().isDefined) throw new BelleError("inverse characteristic method needs a PDE Solver")
+    val (ode, constraint, post) = sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, post)) => (ode.ode,ode.constraint,post)
+      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+    }
+    val evos = if (constraint==True) Nil else DifferentialHelper.flattenAnds(List(constraint))
+    val solutions = ToolProvider.pdeTool().get.pdeSolve(ode)
+    if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
+    val polynomials = atomicFormulas(negationNormalForm(post)).collect({
+      case Equal(p,q)        => Minus(p,q)
+      case GreaterEqual(p,q) => Minus(p,q)
+      case LessEqual(p,q)    => Minus(q,p)
+    }).distinct
+    val algebra = ToolProvider.algebraTool().get
+    val GB = algebra.groebnerBasis(polynomials)
+    solutions.flatMap({case FuncOf(_, arg) => argumentList(arg)}).flatMap((inv:Term) => {
+      val initial = algebra.polynomialReduce(inv, GB)
+      //@todo could check that it's not a tautology using RCF
+      List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
+    })
+  }
 }
-
