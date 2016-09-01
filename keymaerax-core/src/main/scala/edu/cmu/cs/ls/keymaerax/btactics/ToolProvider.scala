@@ -43,6 +43,8 @@ object ToolProvider extends ToolProvider {
 
   def odeTool(): Option[DiffSolutionTool] = f.odeTool()
 
+  def pdeTool(): Option[PartialDiffSolutionTool] = f.pdeTool()
+
   def simplifierTool(): Option[SimplificationTool] = f.simplifierTool()
 
   def solverTool(): Option[SolutionTool] = f.solverTool()
@@ -73,6 +75,9 @@ trait ToolProvider {
   /** Returns an ODE tool. */
   def odeTool(): Option[DiffSolutionTool]
 
+  /** Returns a PDE tool. */
+  def pdeTool(): Option[PartialDiffSolutionTool]
+
   /** Returns an equation solver tool. */
   def solverTool(): Option[SolutionTool]
 
@@ -101,6 +106,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
 
   private[this] lazy val qe: Option[Tool with QETool] = toolPreferences.find(_.isInstanceOf[QETool]).map(_.asInstanceOf[Tool with QETool])
   private[this] lazy val ode: Option[Tool with DiffSolutionTool] = toolPreferences.find(_.isInstanceOf[DiffSolutionTool]).map(_.asInstanceOf[Tool with DiffSolutionTool])
+  private[this] lazy val pde: Option[Tool with PartialDiffSolutionTool] = toolPreferences.find(_.isInstanceOf[PartialDiffSolutionTool]).map(_.asInstanceOf[Tool with PartialDiffSolutionTool])
   private[this] lazy val cex: Option[Tool with CounterExampleTool] = toolPreferences.find(_.isInstanceOf[CounterExampleTool]).map(_.asInstanceOf[Tool with CounterExampleTool])
   private[this] lazy val simplifier: Option[Tool with SimplificationTool] = toolPreferences.find(_.isInstanceOf[SimplificationTool]).map(_.asInstanceOf[Tool with SimplificationTool])
   private[this] lazy val simulator: Option[Tool with SimulationTool] = toolPreferences.find(_.isInstanceOf[SimulationTool]).map(_.asInstanceOf[Tool with SimulationTool])
@@ -110,6 +116,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   override def tools(): List[Tool] = toolPreferences
   override def qeTool(): Option[QETool] = ensureInitialized(qe)
   override def odeTool(): Option[DiffSolutionTool] = ensureInitialized(ode)
+  override def pdeTool(): Option[PartialDiffSolutionTool] = ensureInitialized(pde)
   override def cexTool(): Option[CounterExampleTool] = ensureInitialized(cex)
   override def simplifierTool(): Option[SimplificationTool] = ensureInitialized(simplifier)
   override def simulationTool(): Option[SimulationTool] = ensureInitialized(simulator)
@@ -131,6 +138,7 @@ class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
   override def qeTool(): Option[QETool] = None
   override def odeTool(): Option[DiffSolutionTool] = None
+  override def pdeTool(): Option[PartialDiffSolutionTool] = None
   override def simplifierTool(): Option[SimplificationTool] = None
   override def cexTool(): Option[CounterExampleTool] = None
   override def simulationTool(): Option[SimulationTool] = None

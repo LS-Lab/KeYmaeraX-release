@@ -323,6 +323,12 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
       case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
+
+  //@todo
+  override def groebnerBasis(polynomials: List[Term]): List[Term] = ???
+
+  //@todo
+  override def polynomialReduce(polynomial: Term, GB: List[Term]): Term = ???
 }
 
 /**

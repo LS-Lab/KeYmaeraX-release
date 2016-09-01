@@ -50,6 +50,24 @@ trait SolutionTool extends ToolInterface {
 }
 
 /**
+  * Tool for computing the symbolic solution of a partial differential equation system.
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
+  */
+trait PartialDiffSolutionTool extends ToolInterface {
+  /**
+    * Computes the symbolic solution of the inverse characteristic partial differential equation corresponding to an ordinary differential equation.
+    * @param diffSys The system of differential equations of the form x'=theta,y'=eta.
+    * @return A list of solutions for `f` of the inverse characteristic PDE
+    *         {{{
+    *            theta*df/dx + eta*df/dy = 0
+    *         }}}
+    *         if found.
+    */
+  def pdeSolve(diffSys: DifferentialProgram): Iterator[Term]
+}
+
+/**
   * Quantifier elimination tool.
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
@@ -97,6 +115,19 @@ trait AlgebraTool extends ToolInterface {
     * }}}
     */
   def quotientRemainder(term: Term, div: Term, v: Variable): (Term, Term)
+
+  /**
+    * Computes the Gröbner Basis of the given set of polynomials (with respect to some fixed monomial order).
+    * @see [[polynomialReduce()]]
+    */
+  def groebnerBasis(polynomials: List[Term]): List[Term]
+
+  /**
+    * Computes the multi-variate polynomial reduction of `polynomial` divided with respect to the
+    * set of polynomials `GB`, which is guaranteed to be unique iff `GB` is a Gröbner basis.
+    * @see [[groebnerBasis()]]
+    */
+  def polynomialReduce(polynomial: Term, GB: List[Term]): Term
 }
 
 /**
