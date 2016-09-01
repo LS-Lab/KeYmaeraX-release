@@ -270,12 +270,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new ODESolverTool with QETool {
-    override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
-      ToolProvider.odeTool().getOrElse(throw new BelleError("diffSol requires a DiffSolutionTool, but got None")).odeSolve(diffSys, diffArg, iv)
-    override def qeEvidence(formula: Formula): (Formula, Evidence) =
-      ToolProvider.qeTool().getOrElse(throw new BelleError("qeEvidence requires a QETool, but got None")).qeEvidence(formula)
-  })
+  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = (ToolProvider.odeTool(), ToolProvider.qeTool()) match {
+    case (Some(odeTool), Some(qeTool)) =>
+      DifferentialTactics.diffSolve(solution)(new ODESolverTool with QETool {
+        override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
+          odeTool.odeSolve(diffSys, diffArg, iv)
+        override def qeEvidence(formula: Formula): (Formula, Evidence) =
+          qeTool.qeEvidence(formula)
+      })
+    case (None, _) => throw new BelleError("diffSol requires a DiffSolutionTool, but got None")
+    case (_, None) => throw new BelleError("qeEvidence requires a QETool, but got None")
+  }
+
+
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
     * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
