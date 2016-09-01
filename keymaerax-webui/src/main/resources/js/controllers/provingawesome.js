@@ -58,6 +58,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               if (response.data.type === 'taskresult') {
                 if ($scope.runningTask.nodeId === response.data.parent.id) {
                   sequentProofData.updateAgendaAndTree(response.data);
+                  sequentProofData.tactic.fetch(userId, proofId);
                 } else {
                   showMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
                     $scope.runningTask.nodeId + " but got " + response.data.parent.id);
@@ -70,6 +71,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               $rootScope.$emit('proof.message', err.data.textStatus);
             })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/extract')
+            .then(function (data) {
+              sequentProofData.tacticText = data.tacticText;
+            })
         },
         /* future rejected */ function(reason) {
           if (reason !== 'stopped') showMessage($uibModal, reason);
@@ -145,6 +150,24 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       sequentProofData.prune($scope.userId, $scope.proofId, topParent);
     };
 
+    $scope.exportSubgoal = function() {
+        var proofId = $routeParams.proofId;
+        var userId = $cookies.get('userId');
+        var nodeId = sequentProofData.agenda.selectedId();
+
+        var uri = 'proofs/user/export/' + userId + '/' + proofId + '/' + nodeId
+
+        $http.get(uri)
+            .then(function(response) {
+                if(response.data.errorThrown) {
+                    showCaughtErrorMessage($uibModal, response.data.message, response.data)
+                }
+                else {
+                    showVerbatimMessage($uibModal, "Exported Subgoal", response.data.sequent);
+                }
+            })
+    }
+
     $scope.doTactic = function(formulaId, tacticId) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
@@ -203,11 +226,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
-    $scope.doCustomTactic = function() {
+    $scope.onTacticScript = function(tacticText) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
-      var tacticText = $scope.customTactic;
       spinnerService.show('tacticExecutionSpinner');
       $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doCustomTactic', tacticText)
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
@@ -271,21 +293,21 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       })
     }
 
-    $scope.extractTactic = function() {
-      var proofId = $routeParams.proofId;
-      var userId = $cookies.get('userId');
-      $http.get('proofs/user/' + userId + '/' + proofId + '/extract').success(function (data) {
-        $uibModal.open({
-          templateUrl: 'templates/tacticExtracted.html',
-          controller: 'TacticExtractionCtrl',
-          size: 'lg',
-          resolve: {
-            tacticText: function () {
-              return data.tacticText;
-            }
-          }
+    $scope.downloadProblemSolution = function() {
+        var proofId = $routeParams.proofId;
+        var userId = $cookies.get('userId');
+        $http.get('proofs/user/' + userId + '/' + proofId + '/download').success(function (data) {
+            $uibModal.open({
+                templateUrl: 'templates/tacticExtracted.html',
+                controller: 'TacticExtractionCtrl',
+                size: 'lg',
+                resolve: {
+                    tacticText: function () {
+                        return data.fileContents;
+                    }
+                }
+            })
         })
-      })
     }
       
     //Save a name edited using the inline editor.

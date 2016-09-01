@@ -1,0 +1,17 @@
+implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw`}, 1) <(
+  QE & done,
+  QE & done,
+  chase('R) & normalize & <(
+    hideL(-9) & diffInvariant({`c>=0`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)+a*c`}, 1) &
+      diffInvariant({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) &
+      ((allR2L('Llast) & hideL('Llast))*2) & (andL('L)*) & diffWeaken(1) &
+      (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) &
+      transformEquality({`ep=c`}, -8) & prop & doall(smartQE & done),
+    diffInvariant({`c>=0`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)`}, 1) &
+      diffInvariant({`-c*v <= y - old(y) & y - old(y) <= c*v`}, 1) &
+      ((allR2L('Llast) & hideL('Llast))*2) & (andL('L)*) & diffWeaken(1) & prop & doall(smartQE & done),
+    diffInvariant({`c>=0`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)+a*c`}, 1) &
+      diffInvariant({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) &
+      ((allR2L('Llast) & hideL('Llast))*2) & (andL('L)*) & diffWeaken(1) & prop & doall(smartQE & done)
+  )
+)

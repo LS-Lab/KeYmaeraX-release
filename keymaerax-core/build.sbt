@@ -1,18 +1,15 @@
-import java.io.FileInputStream
+import java.io.{BufferedReader, FileInputStream, FileReader}
 import java.util.Properties
 
 name := "KeYmaeraX-Core"
 
-version := "4.2b1"
+version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
-assemblyJarName in assembly := "keymaerax-core-" + version.value + ".jar" 
+assemblyJarName in assembly := "keymaerax-core.jar" 
 
 scalaVersion := "2.11.7"
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
-
-//parser combinators are not longer included by default.
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.7"
 
@@ -29,7 +26,7 @@ scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
       Some(prop)
     } catch {
       case e: Throwable =>
-        e.printStackTrace()
+        println("local.properties not found: please copy default.properties and adapt the paths to your system")
         None
     }
   }

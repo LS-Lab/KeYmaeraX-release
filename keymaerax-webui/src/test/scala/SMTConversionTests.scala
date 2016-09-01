@@ -2,7 +2,6 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-import edu.cmu.cs.ls.keymaerax.codegen.CodeGenerationException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -14,140 +13,138 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
+  val converter = DefaultSMTConverter
+
   "Numbers" should "convert numbers" in {
-    SMTConverter("1 > 2".asFormula, "Z3") should be("(assert (not (> 1 2)))")
-    SMTConverter("1 > 2".asFormula, "Polya")  should be("(assert (not (> 1 2)))")
+    converter("1 > 2".asFormula) should be("(assert (not (> 1 2)))\n(check-sat)\n")
   }
 
   it should "convert legal big positive numbers" in {
-    SMTConverter("9223372036854775807 > 1".asFormula, "Z3") should be("(assert (not (> 9223372036854775807 1)))")
-    SMTConverter("9223372036854775807 > 1".asFormula, "Polya")  should be("(assert (not (> 9223372036854775807 1)))")
+    converter("9223372036854775807 > 1".asFormula) should be("(assert (not (> 9223372036854775807 1)))\n(check-sat)\n")
   }
 
   it should "convert legal big negative numbers" in {
-    SMTConverter("-9223372036854775807 < 1".asFormula, "Z3") should be("(assert (not (< (- 9223372036854775807) 1)))")
-    SMTConverter("-9223372036854775807 < 1".asFormula, "Polya")  should be("(assert (not (< (- 9223372036854775807) 1)))")
+    converter("-9223372036854775807 < 1".asFormula) should be("(assert (not (< (- 9223372036854775807) 1)))\n(check-sat)\n")
   }
 
-  it should "thorw exception in converting illegal big positive numbers" in {
-    a [SMTConversionException] should be thrownBy SMTConverter("9223372036854775808 > 1".asFormula, "Z3")
-    a [SMTConversionException] should be thrownBy SMTConverter("9223372036854775808 > 1".asFormula, "Polya")
+  it should "throw exception in converting illegal big positive numbers" in {
+    a [SMTConversionException] should be thrownBy converter("9223372036854775808 > 1".asFormula)
   }
 
-  it should "thorw exception in converting illegal big negative numbers" in {
-    a [SMTConversionException] should be thrownBy SMTConverter("-9223372036854775808 < 1".asFormula, "Z3")
-    a [SMTConversionException] should be thrownBy SMTConverter("-9223372036854775808 < 1".asFormula, "Polya")
+  it should "throw exception in converting illegal big negative numbers" in {
+    a [SMTConversionException] should be thrownBy converter("-9223372036854775808 < 1".asFormula)
   }
 
   "Variables" should "convert numbers" in {
-    SMTConverter("x > 2".asFormula, "Z3") should be ("(declare-fun x () Real)\n(assert (not (> x 2)))")
-    SMTConverter("x > 2".asFormula, "Polya") should be ("(declare-fun x () Real)\n(assert (not (> x 2)))")
+    converter("x > 2".asFormula) should be ("(declare-fun _x () Real)\n(assert (not (> _x 2)))\n(check-sat)\n")
   }
 
   it should "convert numbers complex" in {
-    SMTConverter("x > 2 & y < 3".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (and (> x 2) (< y 3))))")
-    SMTConverter("x > 2 & y < 3".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (and (> x 2) (< y 3))))")
+    converter("x > 2 & y < 3".asFormula) should be ("(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n"
+      + "(assert (not (and (> _x 2) (< _y 3))))\n(check-sat)\n")
   }
 
   it should "convert numbers const" in {
-    SMTConverter("x > a & y < x".asFormula, "Z3") should be("(declare-fun a () Real)\n"
-      + "(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(assert (not (and (> x a) (< y x))))")
-    SMTConverter("x > a & y < x".asFormula, "Polya") should be("(declare-fun a () Real)\n"
-      + "(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(assert (not (and (> x a) (< y x))))")
+    converter("x > a & y < x".asFormula) should be("(declare-fun _a () Real)\n"
+      + "(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n" + "(assert (not (and (> _x _a) (< _y _x))))\n(check-sat)\n")
   }
 
   "Constant function" should "convert" in {
-    SMTConverter("g() > 0".asFormula, "Z3") should be ("(declare-fun g () Real)\n"
-      + "(assert (not (> g 0)))")
-    SMTConverter("g() > 0".asFormula, "Polya") should be ("(declare-fun g () Real)\n"
-      + "(assert (not (> g 0)))")
+    converter("g() > 0".asFormula) should be ("(declare-fun _g () Real)\n"
+      + "(assert (not (> _g 0)))\n(check-sat)\n")
   }
 
   "Quantifiers" should "convert forall" in {
-    SMTConverter("\\forall x x>y()".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (forall ((x Real)) (> x y))))")
-    SMTConverter("\\forall x x>y()".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (forall ((x Real)) (> x y))))")
+    converter("\\forall x x>y()".asFormula) should be ("(declare-fun _x () Real)\n(declare-fun _y () Real)\n(assert (not (forall ((_x Real)) (> _x _y))))\n(check-sat)\n")
   }
 
   it should "convert exists" in {
-    SMTConverter("\\exists x x>y()".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (exists ((x Real)) (> x y))))")
-    SMTConverter("\\exists x x>y()".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (exists ((x Real)) (> x y))))")
+    converter("\\exists x x>y()".asFormula) should be ("(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n"
+      + "(assert (not (exists ((_x Real)) (> _x _y))))\n(check-sat)\n")
   }
 
   it should "convert nested qutifiers" in {
-    SMTConverter("\\forall x \\exists y x>y".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (forall ((x Real)) (exists ((y Real)) (> x y)))))")
-    SMTConverter("\\forall x \\exists y x>y".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
-      + "(assert (not (forall ((x Real)) (exists ((y Real)) (> x y)))))")
+    converter("\\forall x \\exists y x>y".asFormula) should be ("(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n"
+      + "(assert (not (forall ((_x Real)) (exists ((_y Real)) (> _x _y)))))\n(check-sat)\n")
   }
 
-  it should "convert complex qutifiers" in {
-    SMTConverter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (* x x) (* y y)) (* z z))))))")
-    SMTConverter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (* x x) (* y y)) (* z z))))))")
+  it should "convert complex quantifiers" in {
+    converter("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n" + "(declare-fun _z () Real)\n"
+      + "(assert (not (forall ((_x Real) (_y Real)) (exists ((_z Real)) (= (+ (^ _x 2) (^ _y 2)) (^ _z 2))))))\n(check-sat)\n")
   }
 
   "Exponentials" should "convert positive" in {
-    SMTConverter("3^3 > 1".asFormula, "Z3") should be  ("(assert (not (> (* 3 3 3) 1)))")
-    SMTConverter("3^3 > 1".asFormula, "Polya") should be  ("(assert (not (> (* 3 3 3) 1)))")
+    converter("3^3 > 1".asFormula) should be  ("(assert (not (> (^ 3 3) 1)))\n(check-sat)\n")
   }
 
   it should "convert negative" in {
-    SMTConverter("3^-2 < 1".asFormula, "Z3") should be ("(assert (not (< (/ 1 (* 3 3)) 1)))")
-    SMTConverter("3^-2 < 1".asFormula, "Polya") should be ("(assert (not (< (/ 1 (* 3 3)) 1)))")
+    converter("3^-2 < 1".asFormula) should be ("(assert (not (< (^ 3 (- 2)) 1)))\n(check-sat)\n")
   }
 
   it should "convert index 0" in {
-    SMTConverter("(x+y-z)^(1-1) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= 1 1)))")
-    SMTConverter("(x+y-z)^(1-1) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(declare-fun z () Real)\n(assert (not (= 1 1)))")
+    converter("(x+y-z)^(1-1) = 1".asFormula) should be ("(declare-fun _x () Real)\n(declare-fun _y () Real)\n(declare-fun _z () Real)\n(assert (not (= (^ (- (+ _x _y) _z) (- 1 1)) 1)))\n(check-sat)\n")
   }
 
   it should "convert base 0" in {
-    SMTConverter("(0+0)^(x+y-1) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= 0 1)))")
-    SMTConverter("(0+0)^(x+y-1) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n(declare-fun y () Real)\n(assert (not (= 0 1)))")
+    converter("(0+0)^(x+y-1) = 1".asFormula) should be ("(declare-fun _x () Real)\n(declare-fun _y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ _x _y) 1)) 1)))\n(check-sat)\n")
   }
 
-  it should "cause exception when converting fraction" in {
-    a [SMTConversionException] should be thrownBy SMTConverter("3^(-0.5) < 1".asFormula, "Z3")
-    a [SMTConversionException] should be thrownBy SMTConverter("3^(-0.5) < 1".asFormula, "Polya")
+  it should "convert fractions" in {
+    converter("3^(-0.5) < 1".asFormula) shouldBe "(assert (not (< (^ 3 (- 0.5)) 1)))\n(check-sat)\n"
   }
 
   it should "convert complex" in {
-    // Z3 and Polya gives different conversion results, both are sound
-    SMTConverter("(x+y-z)^3 = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (- (+ x y) z) (- (+ x y) z) (- (+ x y) z)) 1)))")
-    SMTConverter("(x+y-z)^3 = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z))) 1)))")
+    converter("(x+y-z)^3 = 1".asFormula) should be ("(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n" + "(declare-fun _z () Real)\n"
+      + "(assert (not (= (^ (- (+ _x _y) _z) 3) 1)))\n(check-sat)\n")
   }
 
   it should "convert complex 2" in {
-    // Z3 and Polya gives different conversion results, both are sound, Polya is better
-    SMTConverter("(x+x+x)^3 = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n"
-      + "(assert (not (= (* (+ (+ x x) x) (+ (+ x x) x) (+ (+ x x) x)) 1)))")
-    SMTConverter("(x+x+x)^3 = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n"
-      + "(assert (not (= (* (* 3 x) (* 3 x) (* 3 x)) 1)))")
+    converter("(x+x+x)^3 = 1".asFormula) should be ("(declare-fun _x () Real)\n(assert (not (= (^ (+ (+ _x _x) _x) 3) 1)))\n(check-sat)\n")
   }
 
-  it should "convert complex simplify index" in {
-    // Z3 and Polya gives different conversion results, both are sound
-    SMTConverter("(x+y-z)^(y*2-y-y+3) = 1".asFormula, "Z3") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (- (+ x y) z) (- (+ x y) z) (- (+ x y) z)) 1)))")
-    SMTConverter("(x+y-z)^(y*2-y-y+3) = 1".asFormula, "Polya") should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z))) 1)))")
+  it should "convert complex 3" in {
+    converter("(x+y-z)^(y*2-y-y+3) = 1".asFormula) should be ("(declare-fun _x () Real)\n" + "(declare-fun _y () Real)\n" + "(declare-fun _z () Real)\n"
+      + "(assert (not (= (^ (- (+ _x _y) _z) (+ (- (- (* _y 2) _y) _y) 3)) 1)))\n(check-sat)\n")
   }
 
   // complex
-  ignore should "try bouncing ball" in {
-    SMTConverter("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula, "Z3") should be ("")
-    SMTConverter("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula, "Polya") should be ("")
+  it should "convert bouncing ball" in {
+    converter("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula) should be (
+      """(declare-fun _H () Real)
+        |(declare-fun _c () Real)
+        |(declare-fun _g () Real)
+        |(declare-fun _h () Real)
+        |(declare-fun _h_2 () Real)
+        |(declare-fun _h_3 () Real)
+        |(declare-fun _kxtime_1 () Real)
+        |(declare-fun _kxtime_4 () Real)
+        |(declare-fun _kxtime_5 () Real)
+        |(declare-fun _v () Real)
+        |(declare-fun _v_2 () Real)
+        |(declare-fun _v_3 () Real)
+        |(declare-fun _v_5 () Real)
+        |(assert (not (=> (and (< _c 1) (and (>= _c 0) (and (>= _H 0) (and (> _g 0) (and (<= (^ _v 2) (* (* 2 _g) (- _H _h))) (and (>= _h 0) (and (= _kxtime_1 0) (and (= _h_2 _h) (and (= _v_2 _v) (and (= _kxtime_4 _kxtime_1) (and (= _v_3 (+ (* (* (- 1) _kxtime_5) _g) _v_2)) (and (= _h_3 (* (/ 1 2) (+ (+ (* (* (- 1) (^ _kxtime_5 2)) _g) (* 2 _h_2)) (* (* 2 _kxtime_5) _v_2)))) (and (>= _h_3 0) (and (>= _kxtime_5 _kxtime_4) (and (= _h_3 0) (= _v_5 (- (* _c _v_3)))))))))))))))))) (<= (^ _v_5 2) (* (* 2 _g) (- _H _h_3))))))
+        |(check-sat)
+        |""".stripMargin)
   }
 
-  ignore should "try bouncing ball constfun" in {
-    SMTConverter("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & kxtime_4()=kxtime_1 & v_3=-1*kxtime_5*g()+v_2() & h_3=1/2*(-1*kxtime_5^2*g()+2*h_2()+2*kxtime_5*v_2()) & h_3>=0 & kxtime_5>=kxtime_4() & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g()*(H-h_3)".asFormula, "Z3") should be ("")
-    SMTConverter("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula, "Polya") should be ("")
+  it should "convert bouncing ball constfun" in {
+    converter("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & kxtime_4()=kxtime_1 & v_3=-1*kxtime_5*g()+v_2() & h_3=1/2*(-1*kxtime_5^2*g()+2*h_2()+2*kxtime_5*v_2()) & h_3>=0 & kxtime_5>=kxtime_4() & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g()*(H-h_3)".asFormula) should be (
+      """(declare-fun _H () Real)
+        |(declare-fun _c () Real)
+        |(declare-fun _g () Real)
+        |(declare-fun _h () Real)
+        |(declare-fun _h_2 () Real)
+        |(declare-fun _h_3 () Real)
+        |(declare-fun _kxtime_1 () Real)
+        |(declare-fun _kxtime_4 () Real)
+        |(declare-fun _kxtime_5 () Real)
+        |(declare-fun _v () Real)
+        |(declare-fun _v_2 () Real)
+        |(declare-fun _v_3 () Real)
+        |(declare-fun _v_5 () Real)
+        |(assert (not (=> (and (< _c 1) (and (>= _c 0) (and (>= _H 0) (and (> _g 0) (and (<= (^ _v 2) (* (* 2 _g) (- _H _h))) (and (>= _h 0) (and (= _kxtime_1 0) (and (= _h_2 _h) (and (= _v_2 _v) (and (= _kxtime_4 _kxtime_1) (and (= _v_3 (+ (* (* (- 1) _kxtime_5) _g) _v_2)) (and (= _h_3 (* (/ 1 2) (+ (+ (* (* (- 1) (^ _kxtime_5 2)) _g) (* 2 _h_2)) (* (* 2 _kxtime_5) _v_2)))) (and (>= _h_3 0) (and (>= _kxtime_5 _kxtime_4) (and (= _h_3 0) (= _v_5 (- (* _c _v_3)))))))))))))))))) (<= (^ _v_5 2) (* (* 2 _g) (- _H _h_3))))))
+        |(check-sat)
+        |""".stripMargin)
   }
 }

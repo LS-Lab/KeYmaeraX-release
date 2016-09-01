@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-06-01
+  * @note Code Review: 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
 import scala.collection.immutable.Map
 
 /**
- * The KeYmaera tool.
+ * The KeYmaera X tool.
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
@@ -28,5 +28,8 @@ object KeYmaera extends ToolBase("KeYmaera") {
 
   override def restart() = {}
 
-  override def shutdown() = {}
+  override def shutdown() = {
+    PrettyPrinter.setPrinter(e => e.getClass.getName)
+    initialized = false
+  }
 }

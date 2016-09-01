@@ -105,10 +105,11 @@ class RandomReapplyTests extends FlatSpec with Matchers {
 
   def reapplied(term: Term): Term = term match {
     case n:Number => n
-    case x:Variable => Variable(x.name, x.index, x.sort)
     case xp:DifferentialSymbol => DifferentialSymbol(reapplied(xp.x).asInstanceOf[Variable])
+    case x:BaseVariable => Variable(x.name, x.index, x.sort)
     case FuncOf(f,t)     => FuncOf(f, reapplied(t))
-    case DotTerm => DotTerm
+    case f:UnitFunctional=> UnitFunctional(f.name, f.space, f.sort)
+    case d: DotTerm => d
     case Nothing => Nothing
     // homomorphic cases
     case f:UnaryCompositeTerm  => f.reapply(reapplied(f.child))
@@ -123,6 +124,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     case DotFormula => DotFormula
     case PredOf(p,t)          => PredOf(p, reapplied(t))
     case PredicationalOf(c,t) => PredicationalOf(c, reapplied(t))
+    case f:UnitPredicational=> UnitPredicational(f.name, f.space)
     // pseudo-homomorphic cases
     case f:ComparisonFormula  => f.reapply(reapplied(f.left), reapplied(f.right))
     // homomorphic cases
@@ -135,7 +137,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
 
   def reapplied(program: Program): Program = program match {
     case Assign(x,t)       => Assign(reapplied(x).asInstanceOf[Variable], reapplied(t))
-    case DiffAssign(x,t)   => DiffAssign(reapplied(x).asInstanceOf[DifferentialSymbol], reapplied(t))
+    //case DiffAssign(x,t)   => DiffAssign(reapplied(x).asInstanceOf[DifferentialSymbol], reapplied(t))
     case AssignAny(x)      => AssignAny(reapplied(x).asInstanceOf[Variable])
     case Test(f)           => Test(reapplied(f))
     case ProgramConst(a)   => ProgramConst(a)
@@ -143,7 +145,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     case ODESystem(ode, h) => ODESystem(reapplied(ode).asInstanceOf[DifferentialProgram], reapplied(h))
     case AtomicODE(xp, t)  => AtomicODE(reapplied(xp).asInstanceOf[DifferentialSymbol], reapplied(t))
     case DifferentialProduct(a, b)  => DifferentialProduct(reapplied(a).asInstanceOf[DifferentialProgram], reapplied(b).asInstanceOf[DifferentialProgram])
-    case DifferentialProgramConst(a) => DifferentialProgramConst(a)
+    case DifferentialProgramConst(a, s) => DifferentialProgramConst(a, s)
 
     // homomorphic cases
     case f:UnaryCompositeProgram  => f.reapply(reapplied(f.child))

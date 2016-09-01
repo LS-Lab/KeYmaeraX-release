@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 
 object BelleExpr {
   private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private[keymaerax] val RECHECK = System.getProperty("DEBUG", "false")=="true"
 }
 
 /**
@@ -31,12 +32,13 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
   /** this*: saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
-  def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
+  def * = SaturateTactic(this)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
-  def +@(annotation: BelleType) = this & (this*@annotation)
+  def + = this & this.*
   /** this*: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
-  def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
+  def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
+  @deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
@@ -55,7 +57,15 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def getLocation = location
 }
 
-abstract case class BuiltInTactic(name: String) extends BelleExpr {
+/** A BelleExpr that has a proper code name, so is not just used internally during application. */
+trait NamedBelleExpr extends BelleExpr {
+  /** The code name of this Belle Expression */
+  val name: String
+
+  override def prettyString = name
+}
+
+abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
   private[bellerophon] final def execute(provable: Provable): Provable = try {
     result(provable)
   } catch {
@@ -63,11 +73,8 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
     case t: Throwable => throw new BelleError(t.getMessage, t)
   }
   private[bellerophon] def result(provable : Provable): Provable
-  override def prettyString = name
 }
-case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr {
-  override def prettyString = name
-
+case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   //@todo make this an assert.
   if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
 }
@@ -177,6 +184,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     * @see [[Fixed]]
     */
   final def apply(seqIdx: Int, inExpr: List[Int], expected: Formula): T = apply(Fixed(Position(seqIdx, inExpr), Some(expected)))
+  final def apply(seqIdx: Int, inExpr: PosInExpr, expected: Formula): T = apply(seqIdx, inExpr.pos, expected)
   private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position(position)))
 
   /**
@@ -191,6 +199,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
    * @see [[Fixed]]
    */
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
+  final def apply(seqIdx: Int, inExpr: PosInExpr): T = apply(Fixed(Position(seqIdx, inExpr.pos)))
   /**
     * Returns the tactic at the position identified by `locator`.
     *
@@ -204,6 +213,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
     * @see [[apply(locator: PositionLocator)]]
     */
+  //@todo turn into properly type-checkable locator arguments without going crazy long.
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
@@ -253,29 +263,38 @@ trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] 
   final override def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
 
-abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic {override def prettyString = name}
+abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic with NamedBelleExpr
 
-abstract case class BuiltInLeftTactic(name: String) extends BelleExpr with PositionalTactic {
+abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: Provable, position:Position) = position match {
     case p: AntePosition => computeAnteResult(provable, p)
     case _ => throw new BelleError("LeftTactics can only be applied at a AntePos")
   }
 
   def computeAnteResult(provable: Provable, pos: AntePosition): Provable
-
-  override def prettyString = name
-
 }
 
-abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
+abstract case class BuiltInRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: Provable, position:Position) = position match {
     case p: SuccPosition => computeSuccResult(provable, p)
     case _ => throw new BelleError("RightTactics can only be applied at a SuccPos")
   }
 
   def computeSuccResult(provable: Provable, pos: SuccPosition) : Provable
+}
 
-  override def prettyString = name
+
+abstract case class DependentTwoPositionTactic(name: String) extends NamedBelleExpr {
+  override def prettyString: String = s"UnappliedTwoPositionTactic of name ${name}" //@todo
+
+  def computeExpr(p1: Position, p2: Position): DependentTactic
+
+  def apply(p1: Position, p2: Position) = AppliedDependentTwoPositionTactic(this, p1, p2)
+}
+
+case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: Position, p2: Position) extends BelleExpr {
+  /** pretty-printed form of this Bellerophon tactic expression */
+  override def prettyString: String = t.prettyString + "(" + p1 + "," + p2 + ")"
 }
 
 /**
@@ -340,23 +359,21 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
   override def prettyString = positionTactic.prettyString + "(" + locator.prettyString + ")"
 }
 
-abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
+abstract case class BuiltInTwoPositionTactic(name: String) extends NamedBelleExpr {
   /** @note this should be called from within interpreters, but not by end users. */
   def computeResult(provable : Provable, posOne: Position, posTwo: Position) : Provable
 
   /** Returns an explicit representation of the application of this tactic to the provided positions. */
-  final def apply(posOne: Position, posTwo: Position): AppliedTwoPositionTactic = AppliedTwoPositionTactic(this, posOne, posTwo)
+  final def apply(posOne: Position, posTwo: Position): AppliedBuiltinTwoPositionTactic = AppliedBuiltinTwoPositionTactic(this, posOne, posTwo)
   /** Returns an explicit representation of the application of this tactic to the provided positions.
     *
     * @note Convenience wrapper
     */
-  final def apply(posOne: Int, posTwo: Int): AppliedTwoPositionTactic = apply(Position(posOne), Position(posTwo))
-
-  override def prettyString = name
+  final def apply(posOne: Int, posTwo: Int): AppliedBuiltinTwoPositionTactic = apply(Position(posOne), Position(posTwo))
 }
 
 /** Motivation is similar to [[AppliedPositionTactic]], but for [[BuiltInTwoPositionTactic]] */
-case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
+case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
   final def computeResult(provable: Provable) : Provable = try {
     positionTactic.computeResult(provable, posOne, posTwo)
   } catch {
@@ -377,7 +394,7 @@ case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, po
  * @param name The name of the tactic.
  * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
-abstract case class DependentTactic(name: String) extends BelleExpr {
+abstract case class DependentTactic(name: String) extends NamedBelleExpr {
   def computeExpr(provable: Provable): BelleExpr = throw new BelleError("Not implemented")
   def computeExpr(e: BelleValue with BelleError): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
@@ -389,7 +406,6 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
     case be: BelleError => throw be
     case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
   }
-  override def prettyString: String = name
 }
 abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
   def computeExpr(sequent: Sequent): BelleExpr
@@ -401,22 +417,24 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
 /** DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
   *
   * @see [[AtPosition]] */
-abstract case class DependentPositionTactic(name: String) extends BelleExpr with AtPosition[DependentTactic] {
+abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr with AtPosition[DependentTactic] {
   override def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
 abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
+  //@todo extends NamedBelleExpr
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
 }
 
-abstract class DependentPositionWithAppliedInputTactic(private val n: String, val input: Expression) extends DependentPositionTactic(n) {
+abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Expression]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
-  override def prettyString: String = s"${pt.name}({`${pt.input.prettyString}`}, ${locator.prettyString})"
+  override def prettyString: String =
+    s"${pt.name}(${pt.inputs.map(input => s"{`${input.prettyString}`}").mkString(",")},${locator.prettyString})"
 }
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
@@ -478,6 +496,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
 }
 
 /** A partial tactic is allowed to leave its subgoals around as unproved */
+@deprecated("Replace with something else -- either assertProved or some sort of branch indicator?", "4.2")
 case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) extends BelleExpr {
   override def prettyString = label match {
     case Some(theLabel) => s"partial(${child.prettyString})@(${theLabel.prettyString})"
@@ -487,8 +506,9 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
-case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" }
-case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def prettyString = "(" + child.prettyString + ")*" + times }
+//@note saturate and repeat tactic fully parenthesize for parser
+case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*)" }
+case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*" + times + ")" }
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
@@ -503,8 +523,10 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
 case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
 /**
-  * ChooseSome(options, e)(BelleProvable(p)) proves `e(o)(p)` afte choosing some option `o` from `options` whose proof with `e` succeeds after supplying argument `o` to `e`.
-  * It's usually one of the first options `o` for which `e(o)(p)` does not fail.
+  * ChooseSome(options, e)(pr) proves `e(o)(pr)` after choosing some option `o` from `options`
+  * whose proof with tactic `e` succeeds after supplying argument `o` to `e`.
+  * It's usually one of the first options `o` for which `e(o)(pr)` does not fail.
+  * Fails if no choice from `options` made `e(o)(pr)` succeed.
   *
   * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
   * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently
@@ -522,11 +544,29 @@ case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends 
   *
   * @see [[Provable.apply(USubst)]]
   * @todo generalize inner to also AtPosition[E]
-  * @todo generalize to also allow value: Provable => Expression for `let j(x,y) = TBD in t` and have TBD computed from the Provable resulting after t.
   */
 case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends BelleExpr {
   require(abbr.kind == value.kind, "Abbreviation and value must be of same kind, but got abbr.kind=" + abbr.kind + " and value.kind=" + value.kind)
   override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
+}
+
+/**
+  * LetInspect(abbr, instantiator, inner) alias `let abbr := inspect instantiator in inner`
+  * postpones the choice for the definition of `abbr` until tactic `inner` finished on the Provable,
+  * and asks `instantiator` to choose a value for `abbr` based on that Provable at the end of `inner`.
+  * Resumes  to the outer proof by a uniform substitution of `instantiator(result)` for `abbr` of the resulting provable.
+  *
+  * @see [[Provable.apply(USubst)]]
+  * @todo generalize inner to also AtPosition[E]
+  * @note abbr should be fresh in the Provable
+  */
+case class LetInspect(abbr: Expression, instantiator: Provable => Expression, inner: BelleExpr) extends BelleExpr {
+  override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
+}
+
+@deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
+case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
+  override def prettyString: String = s"proveAs(${lemmaName})"
 }
 
 /**
@@ -535,7 +575,8 @@ case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends Be
 trait BelleValue {
   def prettyString: String = toString
 }
-case class BelleProvable(p : Provable, label: Option[BelleLabel] = None) extends BelleExpr with BelleValue {
+case class BelleProvable(p : Provable, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
+  if(label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
 }
@@ -559,8 +600,11 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** @todo eisegesis -- simple types */
+@deprecated("remove")
 trait BelleType
+@deprecated("remove")
 case class TheType() extends BelleType
 /** @todo Added because SequentTypes are needed for unification tactics. */
+@deprecated("remove")
 case class SequentType(s : Sequent) extends BelleType
 

@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, PosInExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
-import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._

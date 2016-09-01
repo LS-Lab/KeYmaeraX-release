@@ -2,7 +2,9 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import TacticExtractionErrors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, Generator, Idioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
 class ExtractTacticFromTrace(db: DBAbstraction) {
@@ -21,7 +23,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   //@todo deprecate this approach and prefer [[apply(tree)(node).prettyString]]
   def extractTextWithoutParsing(tree : ProofTree)(node: TreeNode) : String = {
     val thisTactic = node.endStep match {
-      case Some(step) => db.getExecutable(step.executableId).belleExpr.getOrElse(throw TacticExtractionError("Tactic extraction does not currently support non-Bellerophon tactic extraction"))
+      case Some(step) => db.getExecutable(step.executableId).belleExpr
       case None =>  "nil" //why is this correct behavior? //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
     }
 
@@ -43,27 +45,26 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val children = node.children
 //      .filter(_ != node) //@todo remove this line... seems like a bug in ProofTree.
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
+    val proof = db.getProofInfo(tree.proofId)
+    val gen = new ConfigurableGenerator(db.getInvariants(proof.modelId))
+    val thisTactic = tacticAt(gen, node)
 
-    val thisTactic = tacticAt(node)
-
-    if(children.length == 0) thisTactic
-    else if(children.length == 1) thisTactic & apply(tree)(children.head)
+    if (children.isEmpty || children.map(child => apply(tree)(child)).forall(_ == TactixLibrary.skip)) thisTactic
+    else if (children.length == 1) thisTactic & apply(tree)(children.head)
     else thisTactic & BranchTactic(children.map(child => apply(tree)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
-  private def tacticAt(node: TreeNode) : BelleExpr = node.endStep match {
+  private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode) : BelleExpr = node.endStep match {
     case Some(step) => try {
-      db.getExecutable(step.executableId).belleExpr match {
-        case Some(exprString) => BTacticParser(exprString) match {
-          case Some(expr) => expr
-          case None => throw new BParserException(s"Could not parse Bellerophon expression ${exprString}")
-        }
-        case None => throw TacticExtractionError("Tactic extraction does not currently support non-Bellerophon tactic extraction")
-      }
+      val exprString = db.getExecutable(step.executableId).belleExpr
+      BelleParser.parseWithInvGen(exprString,Some(gen))
     } catch {
-      case e : BParserException => throw TacticExtractionError(e.getMessage, e)
-      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing", e)
-      case t : Throwable => throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database", t)
+      case e : ParseException => throw TacticExtractionError(e.getMessage, e)
+      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing (${e.getMessage}):" + db.getExecutable(step.executableId).belleExpr, e)
+      case t : Throwable => {
+        t.printStackTrace() //Super useful for debugging since TacticExtractionError seems to swallow its cause, or at least it doesn't always get printed out...
+        throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database because ${t}", t)
+      }
     }
     case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
   }

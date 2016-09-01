@@ -22,4 +22,11 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     actualFileContent should include (expectedProof)
   }
 
+  it should "have usage information, formatted to 80 characters width" in {
+    val usage = KeYmaeraX.usage
+    val split = usage.split('\n')
+    for (line <- split) {
+      line.length<=80 shouldBe true
+    }
+  }
 }

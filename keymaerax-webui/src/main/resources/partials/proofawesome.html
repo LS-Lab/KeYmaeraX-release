@@ -152,26 +152,12 @@
                             <ul class="dropdown-menu">
                                 <!--<li><a ng-click="getCounterExample()">Counterexample</a></li>-->
                                 <li><a ng-click="simulate()">Simulate</a></li>
-                                <li><a ng-click="doTactic(undefined, 'pQE')">Find Assumptions</a></li>
+                                <li><a ng-click="doTactic(undefined, 'pQE')">Find assumptions</a></li>
+                                <li><a ng-click="exportSubgoal()">Export current subgoal</a></li>
+                                <li><a ng-click="downloadProblemSolution()">Download proof</a></li>
                             </ul>
                         </li>
                     </ul><br/>
-                    <form class="nav navbar-nav navbar-form navbar-right" role="search" ng-submit="doCustomTactic()">
-                        <div class="form-group">
-                            <input type="text" class="form-control" ng-model="customTactic" placeholder="Custom tactic">
-                        </div>
-                        <div class="btn-group">
-                            <button type="submit" class="btn btn-default">Execute</button>
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
-                                    aria-haspopup="true" aria-expanded="false">
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a ng-click="openTacticEditor()">Open Tactic Editor</a></li>
-                                <li><a ng-click="extractTactic()">Extract Tactic</a></li>
-                            </ul>
-                        </div>
-                    </form>
                 </div>
             </div>
             </div>
@@ -223,10 +209,31 @@
                                  on-tactic="doTactic(formulaId, tacticId)"
                                  on-input-tactic="doInputTactic(formulaId, tacticId, input)"
                                  on-two-position-tactic="doTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequentproof>
+
+                <!-- vertical gap between sequent and tactic editor to provide space for collapse/expand buttons -->
+                <div style="margin-top:20px;"></div>
+
+                <!-- Tactic -->
+                <div class="row" controller="TaskCtrl">
+                    <div class="col-md-12">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">Proof Programming</h3>
+                            </div>
+                            <div class="panel-body">
+                            <k4-tactic-editor user-id="userId" proof-id="proofId" node-id="task.id"
+                                              on-tactic="doTactic(formulaId, tacticId)"
+                                              on-tactic-script="onTacticScript(tacticText)">
+                            </k4-tactic-editor>
+                            </div>
+                        </div>
+                        <!-- could have further tabs: e.g., graphical tactic editor -->
+                    </div>
+                </div>
             </uib-tab>
         </uib-tabset>
     </div>
 </div>
-</div>
+
 </div>
 </div>

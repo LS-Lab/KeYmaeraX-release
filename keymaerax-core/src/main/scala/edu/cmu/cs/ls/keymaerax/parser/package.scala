@@ -180,15 +180,15 @@ import edu.cmu.cs.ls.keymaerax.core.CoreException
  * [[edu.cmu.cs.ls.keymaerax.core.Sequent.prettyString]]
  * {{{
  *   val parser = KeYmaeraXParser
- *   val sequent = Sequent(Nil, IndexedSeq(parse("x<22"), parse("x>0")), IndexedSeq(parse("[x:=x+1;]x<23")))
+ *   val sequent = Sequent(IndexedSeq(parse("x<22"), parse("x>0")), IndexedSeq(parse("[x:=x+1;]x<23")))
  *   println("Printed:  " + sequent.prettyString)
  * }}}
  *
  * @author Andre Platzer
- * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+ * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."
- * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]
  */

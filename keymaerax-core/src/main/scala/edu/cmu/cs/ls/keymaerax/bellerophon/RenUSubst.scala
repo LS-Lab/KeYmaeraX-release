@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.Predef.Pair
@@ -13,28 +13,35 @@ import scala.collection.immutable._
 
 object RenUSubst {
   //@note See UniformRenaming.semanticRenaming: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  private[keymaerax] val semanticRenaming = /*false &&*/ (try {
-    URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky"))
-    true
+  private[keymaerax] val semanticRenaming = false && (try {
+    URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky")) == ProgramConst("quarky")
   } catch { case e: RenamingClashException => false })
 
   private[bellerophon] val TRANSPOSITION = try {
-    URename(Variable("quark"), Variable("quark", Some(5)))(Variable("quark", Some(5)))
-    true
+    URename(Variable("quark"), Variable("quark", Some(5)))(Variable("quark", Some(5))) == Variable("quark")
   } catch { case e: RenamingClashException => false }
 
+  /** Create a renaming uniform substitution from the given list of replacements. */
   def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = if (semanticRenaming)
       new URenAboveUSubst(subsDefsInput)
     else
-      new USubstAboveURen(subsDefsInput)
-    def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.
-      map(sp=>(sp.what,sp.repl)))
-    def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
+      new DirectUSubstAboveURen(subsDefsInput)
+    //  new USubstAboveURen(subsDefsInput)
 
-  private def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
+  /** Create a (non-)renaming uniform substitution corresponding to the given ordinary uniform substitution. */
+  def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.map(sp=>(sp.what,sp.repl)))
+  /** Create a renaming (non-)substitution corresponding to the given ordinary uniform renaming. */
+  def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
+
+  //@todo .distinct ? might depend on the use case
+  private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
         map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
           (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable])})
+  private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.List[(Expression,Expression)]): immutable.List[(Variable,Variable)] =
+    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
+      map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
+        (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable])})
   private[bellerophon] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
     apply(renamingPartOnly(subsDefsInput))
 
@@ -43,8 +50,7 @@ object RenUSubst {
    * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
    */
   private[bellerophon] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
-    case DotTerm => DotTerm
-    case Anything => Anything
+    case d: DotTerm => d
     //case Nothing => {assert(sp._2 == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing} // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst             => a
@@ -54,6 +60,8 @@ object RenUSubst {
     case FuncOf(f: Function, _) => f
     case PredOf(p: Function, _) => p
     case x: Variable => x
+    case p: UnitPredicational => p
+    case f: UnitFunctional => f
     case _ => throw new ProverException("Nonsubstitutable expression " + sp)
   }
   /**
@@ -68,17 +76,24 @@ object RenUSubst {
 
 
 /**
-  * Renaming Uniform Substitution, combining URename and USubst.
+  * Renaming Uniform Substitution, combining [[URename]] and [[USubst]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
-  * where the Variable~>Variable replacements are by uniform renaming,
+  * where the `Variable~>Variable` replacements are by uniform renaming,
   * and the other replacements are by uniform substitution.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]]
   */
 sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
-  /** automatically filter out identity substitution no-ops */
+  /** Returns true if there is no replacement. */
+  def isEmpty = subsDefsInput.isEmpty
+
+  /** Renaming part, with identity renaming no-ops filtered out. */
   protected final val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
+  /** Substitution part, with identity substitution no-ops filtered out. */
   protected final val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => try {SubstitutionPair(sp._1, sp._2)} catch {case ex: ProverException => throw ex.inContext("(" + sp._1 + "~>" + sp._2 + ")")})
   } catch {case ex: ProverException => throw ex.inContext("RenUSubst{" + subsDefsInput.mkString(", ") + "}")}
@@ -89,7 +104,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts: List[Expression] = subsDefsInput.map(_._1).toList
-    if (lefts.distinct.size != lefts.size) throw new ProverException("conflict: no duplicate substitutions for the same substitutee\n" + this)
+    if (lefts.distinct.size != lefts.size) throw new ProverException("conflict: no duplicate substitutions for the same substitutee\n" + "RenUSubst(" + subsDefsInput + ")\n" + this + "\nreplaces: " + lefts)
   }
 
   /**
@@ -106,6 +121,11 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def ++(other: RenUSubst): RenUSubst = reapply((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
+  /** A renaming substitution pair for a renaming uniform substitution.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.SubstitutionPair]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]] */
   type RenUSubstRepl = (Expression,Expression)
 
   /** The uniform renaming part of this renaming uniform substitution */
@@ -115,7 +135,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def getRenamingTactic: BelleExpr = rens.foldLeft[BelleExpr](Idioms.ident)((t,sp)=> t &
     //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
     //@note permutations would help simplify matters here since they are their own inverse.
-    ProofRuleTactics.uniformRenaming(sp._2, sp._1))
+    TactixLibrary.uniformRename(sp._2, sp._1))
 
 
   /**
@@ -129,6 +149,9 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable
+
+  /** This RenUSubst implemented strictly from the core. */
+  val toCore: Expression => Expression
 
   /** The first step that will be performed first toward the bottom of the proof. */
   private[bellerophon] def firstFlush: RenUSubst
@@ -157,7 +180,6 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
         throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
   }
-
 }
 
 /**
@@ -197,6 +219,8 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
+  val toCore = (e:Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
+
   private[bellerophon] def firstFlush: RenUSubst = renaming
 
   override def toString: String = super.toString + "USubstAboveRen"
@@ -212,6 +236,109 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
 }
 
 /**
+  * Direct implementation of: Renaming Uniform Substitution that, in Sequent direction, first runs a uniform renaming and on the result subsequently the uniform substituion.
+  * {{{
+  *   s(RG) |- s(RD)
+  *   -------------- USubst
+  *     RG  |- RD
+  *   -------------- URen
+  *      G  |- D
+  * }}}
+  * Semantic renaming may be supported if need be.
+  *
+  * DirectUSubstAboveURen is a direct implementation in tactics land of a joint renaming and substitution algorithm.
+  * It uses a single direct fast [[USubstRen]] for internal applications via [[DirectUSubstAboveURen.apply()]]
+  * but schedules separate uniform substitutions and uniform renamings to the core when asked.
+  * The first fast pass supports semantic renaming, which is useful during unification to "apply" renamings already to predicationals without clash.
+  * The final core pass does not support semantic renaming, but is only needed for the final unifier.
+  *
+  * @param subsDefsInput
+  * @note reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent uniform renaming no longer has nonrenamable program constants since no semantic renaming.
+  */
+// US: uniform substitution to instantiate all symbols especially program constants to become renamable
+// UR: uniform renaming to rename preexisting variables to the present axioms
+final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
+  //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
+  override def equals(e: Any): Boolean = e match {
+    case a: DirectUSubstAboveURen => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
+    //rens == a.rens && subsDefs == a.subsDefs
+    case _ => false
+  }
+
+  override def hashCode: Int = 67 * rens.hashCode() + subsDefs.hashCode()
+
+  def reapply(subs: immutable.Seq[(Expression,Expression)]) = new DirectUSubstAboveURen(subs)
+
+
+  /** All renamings at once */
+  private val renall = MultiRename(rens)
+  /** The effective USubstRen consisting of the renaming and the renamed substitution,
+    * since the core substitution will be above the core renaming in the end. */
+  protected val effective: USubstRen = try {
+    USubstRen(rens ++
+      (subsDefs.map(sp => try {
+        Predef.assert(!(sp.what.isInstanceOf[Variable]), "already filtered renaming part elsewhere")
+        (sp.what, renall(sp.repl))}
+      catch {case ex: ProverException => throw ex.inContext("(" + sp + ")")}))
+    )
+  } catch {case ex: ProverException => throw ex.inContext("DirectUSubstAboveURen{" + subsDefsInput.mkString(", ") + "}")}
+
+
+  // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
+  // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+  def toTactic(form: Sequent): SeqTactic = throw new UnsupportedOperationException("not implemented") //@todo getRenamingTactic & ProofRuleTactics.US(usubst, form)
+
+  val toForward: Provable => Provable = fact => {
+    val replaced = fact(usubst)
+    Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
+    // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
+    rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+  }
+
+  val toCore: Expression => Expression = e => {
+    val replaced = usubst(e)
+    Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
+    // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
+    //rens.foldLeft(replaced)((expr,sp)=>URename(sp._1,sp._2)(expr))
+    renall.toCore(replaced)
+  }
+
+  private[bellerophon] def firstFlush: RenUSubst = renaming
+
+  override def toString: String = "DirectUSubstAboveRen{" + subsDefs.mkString(", ") + ";" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + "}"
+
+  //@todo could optimize empty usubst or empty rens to be just identity application right away
+  def apply(t: Term): Term = new Predef.Ensuring({ effective(t)
+  }) ensuring (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
+
+  def apply(f: Formula): Formula = new Predef.Ensuring({ effective(f)
+  }) ensuring (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
+
+  def apply(p: Program): Program = new Predef.Ensuring({ effective(p)
+  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+
+  def apply(p: DifferentialProgram): DifferentialProgram = new Predef.Ensuring({ effective(p)
+  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+
+  /** Check that same result as from core if both defined */
+  private def sameAsCore(e: Expression, r: Expression): Boolean = {
+    if (BelleExpr.RECHECK) try {
+      if (r == toCore(e))
+        true
+      else {
+        Predef.print("fast result: " + r + "\ncore result: " + toCore(e) + "\nrenusubst:   " + this + "\neffective:   " + effective + "\napplied to:  " + e)
+        false
+      }
+    } catch {
+      // the core refuses semantic renaming so cannot compare
+      case ignore: RenamingClashException => true
+    }
+    else true
+  }
+}
+
+
+/**
   * Renaming Uniform Substitution that, in Sequent direction, first runs a uniform substitution and on the result subsequently the uniform renaming.
   * {{{
   *   R(s(G)) |- R(s(D))
@@ -222,7 +349,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
   * }}}
   * @param subsDefsInput
   */
-final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
+private final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
   //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
     case a: URenAboveUSubst => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
@@ -245,6 +372,8 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
       (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }
 
+  val toCore = (e:Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
+
   private[bellerophon] def firstFlush: RenUSubst = substitution
 
   override def toString: String = super.toString + "URenAboveUSubst"
@@ -258,3 +387,4 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
 
   def apply(p: DifferentialProgram): DifferentialProgram = try {usubst(rens.foldLeft(p)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
 }
+

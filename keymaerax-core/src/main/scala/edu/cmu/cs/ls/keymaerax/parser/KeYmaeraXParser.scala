@@ -6,7 +6,7 @@
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
   *
   * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -25,7 +25,7 @@ private[parser] sealed trait Item
 private[parser] case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
   override def toString = tok.toString
 }
-object UnknownToken extends Token(PSEUDO, UnknownLocation)
+private[parser] object UnknownToken extends Token(PSEUDO, UnknownLocation)
 /** Expressions that are partially parsed on the parser item stack. */
 private[parser] case class Expr(expr: Expression) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
@@ -57,7 +57,7 @@ private[parser] case class Error(msg: String, loc: Location, st: String) extends
 
 /** Expected inputs */
 private[parser] trait Expected
-object Expected {
+private object Expected {
   /** Terminal input expected */
   private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected {
     override def toString: String = ParseException.tokenDescription(tok)
@@ -67,20 +67,21 @@ object Expected {
 private[parser] case class ExpectNonterminal(nonterm: String) extends Expected {
   override def toString: String = nonterm
 }
-object BINARYTERMOP extends ExpectNonterminal("<BinaryTermOp>")
-object BINARYFORMULAOP extends ExpectNonterminal("<BinaryFormulaOp>")
-object BINARYPROGRAMOP extends ExpectNonterminal("<BinaryProgramOp>")
-object FIRSTTERM extends ExpectNonterminal("<BeginningOfTerm>")
-object FIRSTFORMULA extends ExpectNonterminal("<BeginningOfFormula>")
-object FIRSTPROGRAM extends ExpectNonterminal("<BeginningOfProgram>")
-object FIRSTEXPRESSION extends ExpectNonterminal("<BeginningOfExpression>")
-object FOLLOWSTERM extends ExpectNonterminal("<FollowsTerm>")
-object FOLLOWSFORMULA extends ExpectNonterminal("<FollowsFormula>")
-object FOLLOWSPROGRAM extends ExpectNonterminal("<FollowsProgram>")
-object FOLLOWSEXPRESSION extends ExpectNonterminal("<FollowsExpression>")
-object FOLLOWSIDENT extends ExpectNonterminal("<FollowsIdentifier>")
+private object BINARYTERMOP extends ExpectNonterminal("<BinaryTermOp>")
+private object BINARYFORMULAOP extends ExpectNonterminal("<BinaryFormulaOp>")
+private object BINARYPROGRAMOP extends ExpectNonterminal("<BinaryProgramOp>")
+private object FIRSTTERM extends ExpectNonterminal("<BeginningOfTerm>")
+private object FIRSTFORMULA extends ExpectNonterminal("<BeginningOfFormula>")
+private object FIRSTPROGRAM extends ExpectNonterminal("<BeginningOfProgram>")
+private object FIRSTEXPRESSION extends ExpectNonterminal("<BeginningOfExpression>")
+private object FOLLOWSTERM extends ExpectNonterminal("<FollowsTerm>")
+private object FOLLOWSFORMULA extends ExpectNonterminal("<FollowsFormula>")
+private object FOLLOWSPROGRAM extends ExpectNonterminal("<FollowsProgram>")
+private object FOLLOWSEXPRESSION extends ExpectNonterminal("<FollowsExpression>")
+private object FOLLOWSIDENT extends ExpectNonterminal("<FollowsIdentifier>")
+private object ANYIDENT extends ExpectNonterminal("<Identifier>")
 /** Pseudo-nonterminal encoding that there's other possible expectations beyond what's listed */
-object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
+private object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
 
 /**
  * KeYmaera X parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
@@ -99,6 +100,7 @@ object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
  */
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
+  import OpSpec.func
 
   /** This default parser. */
   val parser = this
@@ -106,19 +108,19 @@ object KeYmaeraXParser extends Parser {
   /** Lax mode where the parser is a little flexible about accepting input. */
   private[parser] val LAX = System.getProperty("LAX", "true")=="true"
 
-  private[parser] val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private[parser] val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   private val parseErrorsAsExceptions = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
-    val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
+    val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode)
     //if (DEBUG) println("\t" + input)
     try { parse(tokenStream) }
     catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}
   }
 
-  def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
+  val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -135,32 +137,32 @@ object KeYmaeraXParser extends Parser {
   }
 
   private val PSEUDOTOK = UnknownToken
-  override def termParser: (String => Term) =
+  override val termParser: (String => Term) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
       case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput(input)
     }
 
-  override def formulaParser: (String => Formula) =
+  override val formulaParser: (String => Formula) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
       case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput(input)
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
-  private[parser] def formulaTokenParser: (TokenStream => Formula) =
+  private[parser] val formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
       case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
-  override def programParser: (String => Program) =
+  override val programParser: (String => Program) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
       case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
-  override def differentialProgramParser: (String => DifferentialProgram) =
+  override val differentialProgramParser: (String => DifferentialProgram) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
       case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
@@ -192,7 +194,10 @@ object KeYmaeraXParser extends Parser {
   /** Semantic analysis of expressions after parsing, returning errors if any or None. */
   def semanticAnalysis(e: Expression): Option[String] = {
     val symbols = try { StaticSemantics.symbols(e) }
-    catch {case ex: AssertionError => return Some("semantics: symbols computation error\n" + ex)}
+    catch {
+      case ex: AssertionError => return Some("semantics: symbols computation error\n" + ex)
+      case ex: CoreException => return Some("semantics: symbols computation error\n" + ex)
+    }
     val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
     assert(!DEBUG || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
     //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
@@ -212,11 +217,11 @@ object KeYmaeraXParser extends Parser {
   /** Elaborate `e` to the expected `kind` of a part of op by lifting defaulted types as needed or return None. */
   private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
-    case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
+    case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(func(f.name,f.index,f.domain,Bool), t))
     // lift misclassified defaulted predicate application to function application when required by context type.
-    case PredOf(f, t) if kind==TermKind => Some(FuncOf(Function(f.name,f.index,f.domain,Real), t))
+    case PredOf(f, t) if kind==TermKind => Some(FuncOf(func(f.name,f.index,f.domain,Real), t))
     // lift misclassified defaulted differential program constant
-    case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
+    case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name, AnyArg))
     // lift misclassified defaulted program constant
     case x: Variable if kind==ProgramKind && x.index==None => Some(ProgramConst(x.name))
     // lift misclassified defaulted term (p(x))' to formula as needed.
@@ -242,6 +247,12 @@ object KeYmaeraXParser extends Parser {
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
     // lift differential equations without evolution domain constraints to ODESystems
     case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => assert(!ode.isInstanceOf[ODESystem], "wrong kind"); Some(ODESystem(ode))
+
+    // space-dependent elaborations
+    case UnitPredicational(name, space)    if kind==TermKind => Some(UnitFunctional(name,space,Real))
+    case UnitFunctional(name, space, Real) if kind==FormulaKind => Some(UnitPredicational(name,space))
+//    case UnitPredicational(name, space)    if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
+//    case UnitFunctional(name, space, Real) if kind==DifferentialProgramKind => Some(DifferentialProgramConst(name,space))
     case _ => None
   }
 
@@ -288,13 +299,17 @@ object KeYmaeraXParser extends Parser {
 
   // parsing
 
+  //@todo the style of this parser should probably be rewritten to a more functional style close to the grammar with more inline shifting/reducing for improved clarity and speed
+
+  //@todo performance bottleneck
+  //@todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState): ParseState = {
-    val ParseState(s, input@(Token(la,_) :: rest)) = st
+    val ParseState(s, input@(Token(la,laloc) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
-      case r :+ Token(ASSIGN,loc1) :+ Token(STAR,loc2) =>
-        reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
+      case r :+ Token(ASSIGN,loc1) if la==STAR =>
+        reduce(shift(st), 2, Bottom :+ Token(ASSIGNANY, loc1--laloc), r)
 
       // nonproductive: special notation for annotations
       case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1) :+ Token(RPAREN,_) if isAnnotable(p) =>
@@ -345,17 +360,52 @@ object KeYmaeraXParser extends Parser {
       // ordinary identifiers outside quantifiers disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name,idx),_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN || la==LBRACE || la==PRIME) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
+        if (la==LPAREN || la==LBRACE || la==PRIME || la==LBANANA || la==LBARB) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
 
       // function/predicate symbols arity 0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 3, tok, Nothing, r)
 
-      // function/predicate symbols of argument ANYTHING
+
+      // nullary functional/predicational symbols of argument ANYTHING
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduceFuncOrPredOf(st, 4, tok, Anything, r)
+        reduceUnitFuncOrPredOf(st, 4, tok, AnyArg, r)
+
+      // nullary functional/predicational symbols of argument AnyArg
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Token(RBANANA,_)  =>
+        reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r)
+      // nullary functional/predicational symbols of argument Taboo
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
+        reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
+//      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
+//        shift(st)
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) =>
+        if (la==RBANANA || la.isInstanceOf[IDENT]) shift(st)
+        else error(st, List(RBANANA, ANYIDENT))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_:Variable) =>
+        if (la==RBANANA) shift(st)
+        else error(st, List(RBANANA))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_) =>
+        errormsg(st, "Identifier expected after state-dependent predicational/functional")
+
+      // DifferentialProgramConst symbols of argument AnyArg
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Token(RBARB,_)  =>
+        require(tok.index==None, "no index supported for DifferentialProgramConst")
+        reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r)
+      // DifferentialProgramConst symbols of argument Taboo
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(x:Variable) :+ Token(RBARB,_)  =>
+        require(tok.index==None, "no index supported for DifferentialProgramConst")
+        reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r)
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) =>
+        if (la==RBARB || la.isInstanceOf[IDENT]) shift(st)
+        else error(st, List(RBARB, ANYIDENT))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(_:Variable) =>
+        if (la==RBARB) shift(st)
+        else error(st, List(RBARB))
+      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(_) =>
+        errormsg(st, "Identifier expected after state-dependent DiffProgramConst")
 
       // function/predicate symbols arity>0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
@@ -370,39 +420,25 @@ object KeYmaeraXParser extends Parser {
       // DOT arity=0
       case r :+ Token(DOT,_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN) shift(st) else reduce(st, 1, DotTerm, r)
+        if (la==LPAREN) shift(st) else reduce(st, 1, DotTerm(), r)
 
       case r :+ Token(DOT,_) :+ (optok@Token(LPAREN,_)) :+ Token(RPAREN,_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduce(st, 3, DotTerm, r)
+        reduce(st, 3, DotTerm(), r)
 
       // DOT arity>0
       case r :+ Token(DOT,_) :+ (optok@Token(LPAREN,_)) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduce(st, 4, DotTerm(t1.sort), r)
 
-      // Projection
-      case r :+ Token(PROJ,_) :+ (optok@Token(LPAREN,_)) :+ Expr(t1:Pair) :+ Token(RPAREN,_) =>
-        def toList(d: Int, n: Int): List[Int] = n match {
-          case 0 if d==1 => 0::Nil
-          case 1 if d==1 => 1::Nil
-          case _ => (n%2)::toList(d-1, n/2)
-        }
-        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        val (depth, value) = t1.right match {
-          case Pair(Number(d), Number(v)) => (d.intValue(),v.intValue())
-          case _ => ???
-        }
-        reduce(st, 4, if (depth >= 1) Projection(t1.left, toList(depth, value).reverse) else t1.left, r)
-
       // predicational symbols arity>0
       case r :+ Token(IDENT(name,idx),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
-        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), f1), r)
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), f1), r)
         else error(st, List(FOLLOWSFORMULA))
 
       // predicational symbols arity>0: special elaboration case for misclassified c() as formula in P{c()}
       case r :+ Token(IDENT(name,idx),_) :+ (optok@Token(LBRACE,_)) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
-        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), elaborate(st, optok, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), elaborate(st, optok, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
         else error(st, List(FOLLOWSFORMULA))
 
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) =>
@@ -426,10 +462,7 @@ object KeYmaeraXParser extends Parser {
         else reduce(st, 1, Number(BigDecimal(value)), r)
 
 
-        // PERIOD to DOT conversion for convenience
-      case r :+ Token(PERIOD,loc) =>
-        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
-      case r :+ Token(tok@(PLACE|NOTHING|ANYTHING | TRUE|FALSE),_) =>
+      case r :+ Token(tok@(PLACE|NOTHING | TRUE|FALSE),_) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // differentials
@@ -684,6 +717,10 @@ object KeYmaeraXParser extends Parser {
         if (followsExpression(t, la) && la!=EOF) shift(st)
         else error(st, List(FOLLOWSEXPRESSION))
 
+      // Help lexer convert PERIOD to DOT for convenience
+      case r :+ Token(PERIOD,loc) =>
+        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
+
       // small stack cases
       case Bottom :+ Expr(t) =>
         if (la == EOF) accept(st, t)
@@ -735,21 +772,50 @@ object KeYmaeraXParser extends Parser {
      */
   private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input@(Token(la, _) :: rest)) = st
+    OpSpec.interpretedFuncSort(name.name) match {
+      case Some(Real) =>
+        reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+      case Some(Bool) =>
+        reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+      case None =>
+        if (termBinOp(la) || isTerm(st) && followsTerm(la))
+          reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
+          reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (followsFormula(la) && !followsTerm(la))
+          reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (followsTerm(la) && !followsFormula(la))
+          reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
+        //    else if (followsFormula(la))
+        //      reduce(st, consuming, PredOf(predFunc(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (followsTerm(la))
+          reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        else if (followsFormula(la))
+          reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else if (la == RPAREN) shift(st)
+        else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
+    }
+  }
+
+  private def reduceUnitFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Space, remainder: Stack[Item]): ParseState = {
+    val ParseState(s, input@(Token(la, _) :: rest)) = st
+    require(name.index==None, "no index supported for unit functional or unit predicational")
     if (termBinOp(la) || isTerm(st) && followsTerm(la))
-      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, UnitFunctional(name.name, arg, Real), remainder)
     else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
-      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, UnitPredicational(name.name, arg), remainder)
     else if (followsFormula(la) && !followsTerm(la))
-      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, UnitPredicational(name.name, arg), remainder)
     else if (followsTerm(la) && !followsFormula(la))
-      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, UnitFunctional(name.name, arg, Real), remainder)
     //@note the following cases are on plausibility so need ultimate elaboration to get back from misclassified
-//    else if (followsFormula(la))
-//      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+    //    else if (followsFormula(la))
+    //      reduce(st, consuming, PredOf(predFunc(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsTerm(la))
-      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, UnitFunctional(name.name, arg, Real), remainder)
     else if (followsFormula(la))
-      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, UnitPredicational(name.name, arg), remainder)
     else if (la == RPAREN) shift(st)
     else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
   }
@@ -765,7 +831,7 @@ object KeYmaeraXParser extends Parser {
 
   /** First(Term): Is la the beginning of a new term? */
   private def firstTerm(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
-    la==MINUS || la==LPAREN || la==DOT || la==PROJ ||
+    la==MINUS || la==LPAREN || la==DOT ||
     la==PERIOD      // from DotTerm
 
   /** First(Formula): Is la the beginning of a new formula? */
@@ -816,8 +882,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
-    case _: Variable => followsIdentifier(la) || /*if elaborated to program*/ followsProgram(la)
     case _: DifferentialSymbol => followsTerm(la) || la==ASSIGN
+    case _: Variable => followsIdentifier(la) || /*if elaborated to program*/ followsProgram(la)
     case FuncOf(_,_) => followsTerm(la) || /*elaboratable(FormulaKind, t)!=None &&*/ followsFormula(la) //@todo line irrelevant since followsTerm subsumes followsFormula
     case _: Term => followsTerm(la)
     case And(Equal(_:DifferentialSymbol, _), _) => followsFormula(la) || /*if elaborated to ODE*/ followsProgram(la)
@@ -830,7 +896,8 @@ object KeYmaeraXParser extends Parser {
   /** Follow(Identifier): Can la follow after an identifier? */
   private def followsIdentifier(la: Terminal): Boolean = followsTerm(la) ||
     la==LPAREN || la==PRIME ||
-    la==ASSIGN || la==ASSIGNANY || la==EOF || firstFormula(la) /* from \exists x ... */
+    la==ASSIGN || la==ASSIGNANY || la==EOF || firstFormula(la) /* from \exists x ... */ ||
+    la==LBANANA || la==LBARB
 
 
   // parser actions
@@ -962,7 +1029,6 @@ object KeYmaeraXParser extends Parser {
       // terms
       case sDotTerm.op => sDotTerm
       case sNothing.op => sNothing
-      case sAnything.op => sAnything
       case s:IDENT/*sVariable.op*/ => sVariable //@todo could also be FuncOf/PredOf if la==LPAREN but does not really change precedence
       case s:NUMBER/*sNumber.op*/ => sNumber
       //case t: FuncOf => sFuncOf
@@ -974,7 +1040,6 @@ object KeYmaeraXParser extends Parser {
       case sTimes.op => if (kinds==List(ProgramKind) || kinds==List(ExpressionKind))/*if (isProgram(st))*/ sLoop else sTimes
       case sDivide.op => sDivide
       case sPlus.op => sPlus
-      case sProjection.op => sProjection
 
       // formulas
       case sDotFormula.op => sDotFormula
@@ -1003,7 +1068,7 @@ object KeYmaeraXParser extends Parser {
       // programs
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
-      case sAssign.op => if (isDifferentialAssign(st)) sDiffAssign else sAssign
+      case sAssign.op => sAssign //if (isDifferentialAssign(st)) sDiffAssign else sAssign
       case sAssignAny.op => sAssignAny
       case sTest.op => sTest
       //      case p: ODESystem => sODESystem

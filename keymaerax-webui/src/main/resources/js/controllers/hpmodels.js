@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models) {
+  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models, spinnerService) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
@@ -69,6 +69,16 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           fr.readAsText(file);
      };
 
+     $scope.importRepo = function(repoUrl) {
+      spinnerService.show('caseStudyImportSpinner');
+      $http.post("models/users/" + $cookies.get('userId') + "/importRepo", repoUrl).success(function(data) {
+        $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+          Models.addModels(data);
+          $route.reload();
+        }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
+      })
+     }
+
      $scope.$watch('models',
         function () { return Models.getModels(); }
      );
@@ -79,7 +89,12 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal, $location, Models) {
   $scope.models = [];
   $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-      $scope.models = data
+      $scope.models = data;
+  });
+
+  $scope.examples = [];
+  $http.get("examplesList/").success(function(data) {
+      $scope.examples = data;
   });
 
   $scope.open = function (modelid) {
@@ -140,6 +155,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function (
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
   $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").success(function(data) {
+      $scope.modelId = modelid;
       $scope.tactic = data
   });
 

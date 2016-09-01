@@ -1,6 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -13,11 +12,11 @@ class ProofRuleTests extends TacticTestBase {
 
   "Axiomatic" should "support axiomatic rules" in {
     val result = proveBy(
-      Sequent(immutable.IndexedSeq("[a_;]p_(??)".asFormula), immutable.IndexedSeq("[a_;]q_(??)".asFormula)),
+      Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
       TactixLibrary.by("[] monotone", USubst(Nil)))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "p_(??)".asFormula
-    result.subgoals.head.succ should contain only "q_(??)".asFormula
+    result.subgoals.head.ante should contain only "p_(||)".asFormula
+    result.subgoals.head.succ should contain only "q_(||)".asFormula
   }
 
   it should "use the provided substitution for axiomatic rules" in {
@@ -26,8 +25,8 @@ class ProofRuleTests extends TacticTestBase {
       TactixLibrary.by("[] monotone",
         USubst(
           SubstitutionPair(ProgramConst("a_"), Test("x>5".asFormula))::
-          SubstitutionPair("p_(??)".asFormula, "x>2".asFormula)::
-          SubstitutionPair("q_(??)".asFormula, "x>0".asFormula)::Nil)))
+          SubstitutionPair("p_(||)".asFormula, "x>2".asFormula)::
+          SubstitutionPair("q_(||)".asFormula, "x>0".asFormula)::Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>2".asFormula
     result.subgoals.head.succ should contain only "x>0".asFormula
@@ -38,16 +37,20 @@ class ProofRuleTests extends TacticTestBase {
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ x_>0 -> z>0".asFormula)),
       TactixLibrary.by("all instantiate",
         USubst(
-          SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
+          SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
     result shouldBe 'proved
   }
 
   it should "support derived axioms" in {
+    val theSubst = USubst(SubstitutionPair(UnitPredicational("p_", AnyArg), Greater("x_".asVariable, "0".asTerm))::Nil)
+    val theAxiom = DerivedAxioms.notAll.fact
+
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asFormula)),
-      TactixLibrary.by("!all",
-        USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::Nil)))
+      TactixLibrary.by("!all", //(!\forall x (p(||))) <-> \exists x (!p(||))
+        theSubst))
+
     result shouldBe 'proved
   }
   import SequentCalculus._

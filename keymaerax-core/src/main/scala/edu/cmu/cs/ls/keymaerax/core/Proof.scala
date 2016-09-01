@@ -3,17 +3,18 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Sequent prover, proof rules, and axioms of KeYmaera X.
- * @note Soundness-critical: Only provide sound proof rule application mechanisms.
- * @author Andre Platzer
- * @author Jan-David Quesel
- * @author nfulton
- * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
- * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
- * @note Code Review: 2016-03-09
- */
+  * Sequent prover, proof rules, and axioms of KeYmaera X.
+  * @note Soundness-critical: Only provide sound proof rule application mechanisms.
+  * @author Andre Platzer
+  * @author Jan-David Quesel
+  * @author nfulton
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
+  * @note Code Review: 2016-08-17
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
@@ -29,140 +30,138 @@ import scala.collection.immutable
   */
 
 /**
- * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
- *
- * @see [[SeqPos.apply()]]
- */
+  * Position of a formula in a sequent, i.e. antecedent or succedent positions.
+  *
+  * @see [[SeqPos.apply()]]
+  * @see [[Sequent.apply()]]
+  * @see [[AntePos]]
+  * @see [[SuccPos]]
+  */
 sealed trait SeqPos {
   /** Whether this position is in the antecedent on the left of the sequent arrow */
-  def isAnte: Boolean
+  val isAnte: Boolean
   /** Whether this position is in the succedent on the right of the sequent arrow */
-  def isSucc: Boolean = !isAnte
+  val isSucc: Boolean
 
   /**
-   * The '''unsigned''' index into the antecedent or succedent list, respectively, '''0-indexed'''.
-   */
-  private[keymaerax] def getIndex: Int
+    * The '''unsigned''' index into the antecedent or succedent list, respectively, '''0-indexed'''.
+    */
+  private[keymaerax] val getIndex: Int
 
   /**
-   * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''.
-   *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
-   *  Positive numbers indicate succedent positions, 1, 2, 3.
-   *  Zero is a degenerate case indicating whole sequent 0.
-   */
-  final def getPos: Int = if (isSucc) getIndex+1 else {assert(isAnte); -(getIndex+1)}
+    * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''.
+    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+    *  Positive numbers indicate succedent positions, 1, 2, 3.
+    *  Zero is a degenerate case indicating whole sequent 0.
+    * @see [[SeqPos.apply()]]
+    */
+  final lazy val getPos: Int = if (isSucc) {assert(!isAnte); getIndex+1} else {assert(isAnte); -(getIndex+1)}
 
   override def toString: String = getPos.toString
 }
 
 /**
- * Antecedent Positions of formulas in a sequent.
- *
- * @param index the position 0-indexed in antecedent.
- */
+  * Antecedent Positions of formulas in a sequent, i.e. in the assumptions on the left of the sequent arrow.
+  *
+  * @param index the position 0-indexed in antecedent.
+  */
 case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
-  def isAnte: Boolean = true
+  val isAnte: Boolean = true
+  val isSucc: Boolean = !isAnte
   /** The position 0-indexed in antecedent. */
-  private[keymaerax] def getIndex: Int = index
+  private[keymaerax] val getIndex: Int = index
 }
 
 /**
- * Antecedent Positions of formulas in a sequent.
- *
- * @param index the position 0-indexed in succedent.
- */
+  * Antecedent Positions of formulas in a sequent, i.e. on the right of the sequent arrow.
+  *
+  * @param index the position 0-indexed in succedent.
+  */
 case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
-  def isAnte: Boolean = false
+  val isAnte: Boolean = false
+  val isSucc: Boolean = !isAnte
   /** The position 0-indexed in succedent. */
-  private[keymaerax] def getIndex: Int = index
+  private[keymaerax] val getIndex: Int = index
 }
 
 object SeqPos {
   /**
-   * Sequent position of signed index `signedPos` where positive is succedent and negative antecedent.
-   *
-   * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
-   *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
-   *  Positive numbers indicate succedent positions, 1, 2, 3.
-   *  Zero is a degenerate case indicating whole sequent 0.
-   * @see SeqPos#pos
-   */
+    * Sequent position of signed index `signedPos` where positive is succedent and negative antecedent.
+    *
+    * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
+    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+    *  Positive numbers indicate succedent positions, 1, 2, 3.
+    *  Zero is a degenerate case indicating whole sequent 0.
+    * @see [[SeqPos.getPos]]
+    */
   def apply(signedPos: Int): SeqPos =
     if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-(signedPos+1))}
 
 }
 
+
 /**
- * Sequent `ante |- succ` with antecedent ante and succedent succ.
- * {{{
- *   ante(0),ante(1),...,ante(n) |- succ(0),succ(1),...,succ(m)
- * }}}
- * This sequent is often pretty-printed with signed line numbers:
- * {{{
- *     -1: ante(0)
- *     -2: ante(1)
- *         ...
- * -(n+1): ante(n)
- *  ==> 1: succ(0)
- *      2: succ(1)
- *         ...
- *  (m+1): succ(m)
- * }}}
- * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
- * the disjunction of the formulas in `succ`.
- *
- * @param ante The ordered list of antecedents of this sequent whose conjunction is assumed.
- * @param succ The orderd list of succedents of this sequent whose disjunction needs to be shown.
- * @author Andre Platzer
- * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
- */
+  * Sequent `ante |- succ` with antecedent ante and succedent succ.
+  * {{{
+  *   ante(0),ante(1),...,ante(n) |- succ(0),succ(1),...,succ(m)
+  * }}}
+  * This sequent is often pretty-printed with signed line numbers:
+  * {{{
+  *     -1: ante(0)
+  *     -2: ante(1)
+  *         ...
+  * -(n+1): ante(n)
+  *  ==> 1: succ(0)
+  *      2: succ(1)
+  *         ...
+  *  (m+1): succ(m)
+  * }}}
+  * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
+  * the disjunction of the formulas in `succ`.
+  *
+  * @param ante The ordered list of antecedents of this sequent whose conjunction is assumed.
+  * @param succ The orderd list of succedents of this sequent whose disjunction needs to be shown.
+  * @author Andre Platzer
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+  */
 final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.IndexedSeq[Formula]) {
   /**
-   * Retrieves the formula in sequent at a given position.
-   *
-   * @param p the position of the formula
-   * @return the formula at the given position either from the antecedent or the succedent
-   */
-  def apply(p: SeqPos): Formula = {
-    if (p.isAnte) {
-      ante(p.getIndex)
-    } else {
-      assert (p.isSucc)
-      succ(p.getIndex)
-    }
+    * Retrieves the formula in sequent at a given position.
+    *
+    * @param pos the position of the formula
+    * @return the formula at the given position either from the antecedent or the succedent
+    */
+  def apply(pos: SeqPos): Formula = pos match {
+    case ap: AntePos => apply(ap)
+    case sp: SuccPos => apply(sp)
   }
 
-  //@todo enable quicker apply(AntePos) and apply(SuccPos) after resolving ambiguous implicit conversion from tactics.Position.
-//  /**
-//   * Retrieves the formula in sequent at a given succedent position.
-//   * @param pos the succedent position of the formula
-//   * @return the formula at the given position from the succedent
-//   * @note slightly faster version with the same result as #apply(SeqPos)
-//   */
-//  def apply(pos: AntePos): Formula = {
-//    ante(pos.getIndex)
-//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
-//
-//  /**
-//   * Retrieves the formula in sequent at a given antecedent position.
-//   * @param pos the antecedent position of the formula
-//   * @return the formula at the given position from the antecedent
-//   * @note slightly faster version with the same result as #apply(SeqPos)
-//   */
-//  def apply(pos: SuccPos): Formula = {
-//    succ(pos.getIndex)
-//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+  /**
+    * Retrieves the formula in sequent at a given succedent position.
+    * @param pos the succedent position of the formula
+    * @return the formula at the given position from the succedent
+    * @note slightly faster version with the same result as [[Sequent.apply(SeqPos)]]
+    */
+  def apply(pos: AntePos): Formula = ante(pos.getIndex)
+
+  /**
+    * Retrieves the formula in sequent at a given antecedent position.
+    * @param pos the antecedent position of the formula
+    * @return the formula at the given position from the antecedent
+    * @note slightly faster version with the same result as [[Sequent.apply(SeqPos)]]
+    */
+  def apply(pos: SuccPos): Formula = succ(pos.getIndex)
 
   // transformations giving copies of sequents
-  
+
   /**
-   * A copy of this sequent concatenated with given sequent s.
-   * Sequent(A,S) glue Sequent(B,T) == Sequent(A++B, S++T)
-   *
-   * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
-   * @return a copy of this sequent concatenated with s.
-   * Results in a least upper bound with respect to subsets of this and s.
-   */
+    * A copy of this sequent concatenated with given sequent s.
+    * Sequent(A,S) glue Sequent(B,T) == Sequent(A++B, S++T)
+    *
+    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
+    * @return a copy of this sequent concatenated with s.
+    * Results in a least upper bound with respect to subsets of this and s.
+    */
   def glue(s: Sequent): Sequent = {
     Sequent(ante ++ s.ante, succ ++ s.succ)
     } ensuring(r => this.subsequentOf(r) && s.subsequentOf(r)
@@ -172,56 +171,53 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     )
 
   /**
-   * A copy of this sequent with the indicated position replaced by the formula f.
-   *
-   * @param p the position of the replacement
-   * @param f the replacing formula
-   * @return a copy of this sequent with the formula at position p replaced by f.
-   */
-  def updated(p: SeqPos, f: Formula): Sequent = {
-    if (p.isAnte) {
-      Sequent(ante.updated(p.getIndex, f), succ)
-    } else {
-      assert(p.isSucc)
-      Sequent(ante, succ.updated(p.getIndex, f))
-    }
+    * A copy of this sequent with the indicated position replaced by the formula f.
+    *
+    * @param p the position of the replacement
+    * @param f the replacing formula
+    * @return a copy of this sequent with the formula at position p replaced by f.
+    */
+  def updated(p: SeqPos, f: Formula): Sequent = p match {
+    case sp: SuccPos => updated(sp, f)
+    case ap: AntePos => updated(ap, f)
   }
+  def updated(p: AntePos, f: Formula): Sequent = Sequent(ante.updated(p.getIndex, f), succ)
+  def updated(p: SuccPos, f: Formula): Sequent = Sequent(ante, succ.updated(p.getIndex, f))
 
   /**
-   * A copy of this sequent with the indicated position replaced by gluing the sequent s.
-   *
-   * @param p the position of the replacement
-   * @param s the sequent glued / concatenated to this sequent after dropping p.
-   * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
-   * @see #updated(Position,Formula)
-   * @see #glue(Sequent)
-   */
-  def updated(p: SeqPos, s: Sequent): Sequent = {
-    if (p.isAnte) {
-      Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
-    } else {
-      assert(p.isSucc)
-      Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
-    }
-  } ensuring(r=> if (p.isAnte)
-    r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s))
-  else
-    r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
-    "result after re-including updated formula is equivalent to " + this + " glue " + s
-    )
+    * A copy of this sequent with the indicated position replaced by gluing the sequent s.
+    *
+    * @param p the position of the replacement
+    * @param s the sequent glued / concatenated to this sequent after dropping p.
+    * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
+    * @see [[Sequent.updated(Position,Formula)]]
+    * @see [[Sequent.glue(Sequent)]]
+    */
+  def updated(p: SeqPos, s: Sequent): Sequent = p match {
+    case sp: SuccPos => updated(sp, s)
+    case ap: AntePos => updated(ap, s)
+  }
+  def updated(p: AntePos, s: Sequent): Sequent = {
+    Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
+  } ensuring(r=> r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
+    "result after re-including updated formula is equivalent to " + this + " glue " + s)
+  def updated(p: SuccPos, s: Sequent): Sequent = {
+    Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
+  } ensuring(r=> r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
+    "result after re-including updated formula is equivalent to " + this + " glue " + s)
 
   /**
-   * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
- *
-   * @note Used for contracts in the core.
-   */
+    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
+    *
+    * @note Used for contracts in the core.
+    */
   def subsequentOf(r: Sequent): Boolean = ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
-   * Check whether this sequent is the same as the given sequent r (considered as sets)
- *
-   * @note Used for contracts in the core.
-   */
+    * Check whether this sequent is the same as the given sequent r (considered as sets)
+    *
+    * @note Used for contracts in the core.
+    */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 
   override def toString: String =
@@ -242,179 +238,181 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   */
 
 /**
- * Provable(conclusion, subgoals) is the proof certificate representing certified provability of
- * `conclusion` from the premises in `subgoals`.
- * If `subgoals` is an empty list, then `conclusion` is provable.
- * Otherwise `conclusion` is provable from the set of all assumptions in `subgoals`.
- * {{{
- *    G1 |- D1 ... Gn |- Dn    (subgoals)
- *   -----------------------
- *            G |- D           (conclusion)
- * }}}
- *
- * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
- * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
- * @note soundness-critical logical framework.
- * @note Only private constructor calls for soundness
- * @note For soundness: No reflection to bybass constructor call privacy,
- *       nor reflection to bypass immutable val data structures.
- * @author Andre Platzer
- * @todo may want to split into different locality levels of subgoals
- * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
- * {{{
- *   import scala.collection.immutable._
- *   val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
- *   // conjecture
- *   val provable = Provable.startProof(verum)
- *   // construct a proof
- *   val proof = provable(CloseTrue(SuccPos(0)), 0)
- *   // check if proof successful
- *   if (proof.isProved) println("Successfully proved " + proof.proved)
- * }}}
- * @example Multiple Provable objects for subderivations obtained from different sources can also be merged
- * {{{
- *   // ... continuing other example
- *   val more = new Sequent(IndexedSeq(),
- *     IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
- *   // another conjecture
- *   val moreProvable = Provable.startProof(more)
- *   // construct another (partial) proof
- *   val moreProof = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
- *   // merge proofs by gluing their Provables together
- *   val mergedProof = moreProof(proof, 0)
- *   // check if proof successful
- *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
- * }}}
- * @example Proofs in backward tableaux sequent order are straight-forward
- * {{{
- *  import scala.collection.immutable._
- *  val fm = Greater(Variable("x"), Number(5))
- *  // |- x>5 -> x>5 & true
- *  val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
- *  // conjecture
- *  val finProvable = Provable.startProof(finGoal)
- *  // construct a proof
- *  val proof = finProvable(
- *    ImplyRight(SuccPos(0)), 0)(
- *      AndRight(SuccPos(0)), 0)(
- *      HideLeft(AntePos(0)), 1)(
- *      CloseTrue(SuccPos(0)), 1)(
- *      Close(AntePos(0), SuccPos(0)), 0)
- *  // proof of finGoal
- *  println(proof.proved)
- * }}}
- * @example Proofs in forward Hilbert order are straightforward with merging of branches
- * {{{
- *  import scala.collection.immutable._
- *  val fm = Greater(Variable("x"), Number(5))
- *  // proof of x>5 |- x>5 & true merges left and right branch by AndRight
- *  val proof = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
- *    AndRight(SuccPos(0)), 0) (
- *    // left branch: x>5 |- x>5
- *    Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
- *      Close(AntePos(0), SuccPos(0)), 0),
- *    0) (
- *    //right branch: |- true
- *    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
- *      CloseTrue(SuccPos(0)), 0)(
- *        // x>5 |- true
- *        Sequent(IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
- *    0) (
- *    // |- x>5 -> x>5 & true
- *    new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
- *    ImplyRight(SuccPos(0))
- *  )
- *  // proof of finGoal:  |- x>5 -> x>5 & true
- *  println(proof.proved)
- * }}}
- * @example Proofs in Hilbert-calculus style order can also be based exclusively on subsequent merging
- * {{{
- *  import scala.collection.immutable._
- *  val fm = Greater(Variable("x"), Number(5))
- *  // x>0 |- x>0
- *  val left = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
- *    Close(AntePos(0), SuccPos(0)), 0)
- *  // |- true
- *  val right = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
- *    CloseTrue(SuccPos(0)), 0)
- *  val right2 = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(True)))(
- *    HideLeft(AntePos(0)), 0) (right, 0)
- *  // gluing order for subgoals is irrelevant. Could use: (right2, 1)(left, 0))
- *  val merged = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
- *    AndRight(SuccPos(0)), 0) (
- *    left, 0)(
- *      right2, 0)
- *  // |- x>5 -> x>5 & true
- *  val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
- *  val proof = Provable.startProof(finGoal)(
- *    ImplyRight(SuccPos(0)), 0) (merged, 0)
- *  // proof of finGoal
- *  println(proof.proved)
- * }}}
- * @example Branching proofs in backward tableaux sequent order are straight-forward,
- *          yet might become more readable when closing branches right-to-left to keep explicit subgoals:
- * {{{
- *  // explicit proof certificate construction of |- !!p() <-> p()
- *  val proof = (Provable.startProof(
- *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
- *    (EquivRight(SuccPos(0)), 0)
- *    // right branch
- *      (NotRight(SuccPos(0)), 1)
- *      (NotLeft(AntePos(1)), 1)
- *      (Close(AntePos(0),SuccPos(0)), 1)
- *    // left branch
- *      (NotLeft(AntePos(0)), 0)
- *      (NotRight(SuccPos(1)), 0)
- *      (Close(AntePos(0),SuccPos(0)), 0)
- *  )
- * }}}
- */
+  * Provable(conclusion, subgoals) is the proof certificate representing certified provability of
+  * `conclusion` from the premises in `subgoals`.
+  * If `subgoals` is an empty list, then `conclusion` is provable.
+  * Otherwise `conclusion` is provable from the set of all assumptions in `subgoals`.
+  * {{{
+  *    G1 |- D1 ... Gn |- Dn    (subgoals)
+  *   -----------------------
+  *            G |- D           (conclusion)
+  * }}}
+  *
+  * Invariant: All Provables ever produced are locally sound,
+  * because only the prover kernel can create Provable objects and chooses not to use the globally sound uniform substitution rule.
+  *
+  * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
+  * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
+  * @note soundness-critical logical framework.
+  * @note Only private constructor calls for soundness
+  * @note For soundness: No reflection should bypass constructor call privacy,
+  *       nor reflection to bypass immutable val algebraic data types.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @author Andre Platzer
+  * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
+  * {{{
+  *   import scala.collection.immutable._
+  *   val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
+  *   // conjecture
+  *   val provable = Provable.startProof(verum)
+  *   // construct a proof
+  *   val proof = provable(CloseTrue(SuccPos(0)), 0)
+  *   // check if proof successful
+  *   if (proof.isProved) println("Successfully proved " + proof.proved)
+  * }}}
+  * @example Multiple Provable objects for subderivations obtained from different sources can also be merged
+  * {{{
+  *   // ... continuing other example
+  *   val more = new Sequent(IndexedSeq(),
+  *     IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
+  *   // another conjecture
+  *   val moreProvable = Provable.startProof(more)
+  *   // construct another (partial) proof
+  *   val moreProof = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
+  *   // merge proofs by gluing their Provables together
+  *   val mergedProof = moreProof(proof, 0)
+  *   // check if proof successful
+  *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
+  * }}}
+  * @example Proofs in backward tableaux sequent order are straight-forward
+  * {{{
+  *  import scala.collection.immutable._
+  *  val fm = Greater(Variable("x"), Number(5))
+  *  // |- x>5 -> x>5 & true
+  *  val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+  *  // conjecture
+  *  val finProvable = Provable.startProof(finGoal)
+  *  // construct a proof
+  *  val proof = finProvable(
+  *    ImplyRight(SuccPos(0)), 0)(
+  *      AndRight(SuccPos(0)), 0)(
+  *      HideLeft(AntePos(0)), 1)(
+  *      CloseTrue(SuccPos(0)), 1)(
+  *      Close(AntePos(0), SuccPos(0)), 0)
+  *  // proof of finGoal
+  *  println(proof.proved)
+  * }}}
+  * @example Proofs in forward Hilbert order are straightforward with merging of branches
+  * {{{
+  *  import scala.collection.immutable._
+  *  val fm = Greater(Variable("x"), Number(5))
+  *  // proof of x>5 |- x>5 & true merges left and right branch by AndRight
+  *  val proof = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+  *    AndRight(SuccPos(0)), 0) (
+  *    // left branch: x>5 |- x>5
+  *    Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
+  *      Close(AntePos(0), SuccPos(0)), 0),
+  *    0) (
+  *    //right branch: |- true
+  *    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
+  *      CloseTrue(SuccPos(0)), 0)(
+  *        // x>5 |- true
+  *        Sequent(IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
+  *    0) (
+  *    // |- x>5 -> x>5 & true
+  *    new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
+  *    ImplyRight(SuccPos(0))
+  *  )
+  *  // proof of finGoal:  |- x>5 -> x>5 & true
+  *  println(proof.proved)
+  * }}}
+  * @example Proofs in Hilbert-calculus style order can also be based exclusively on subsequent merging
+  * {{{
+  *  import scala.collection.immutable._
+  *  val fm = Greater(Variable("x"), Number(5))
+  *  // x>0 |- x>0
+  *  val left = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
+  *    Close(AntePos(0), SuccPos(0)), 0)
+  *  // |- true
+  *  val right = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
+  *    CloseTrue(SuccPos(0)), 0)
+  *  val right2 = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(True)))(
+  *    HideLeft(AntePos(0)), 0) (right, 0)
+  *  // gluing order for subgoals is irrelevant. Could use: (right2, 1)(left, 0))
+  *  val merged = Provable.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+  *    AndRight(SuccPos(0)), 0) (
+  *    left, 0)(
+  *      right2, 0)
+  *  // |- x>5 -> x>5 & true
+  *  val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+  *  val proof = Provable.startProof(finGoal)(
+  *    ImplyRight(SuccPos(0)), 0) (merged, 0)
+  *  // proof of finGoal
+  *  println(proof.proved)
+  * }}}
+  * @example Branching proofs in backward tableaux sequent order are straight-forward,
+  *          yet might become more readable when closing branches right-to-left to keep explicit subgoals:
+  * {{{
+  *  // explicit proof certificate construction of |- !!p() <-> p()
+  *  val proof = (Provable.startProof(
+  *    "!!p() <-> p()".asFormula)
+  *    (EquivRight(SuccPos(0)), 0)
+  *    // right branch
+  *      (NotRight(SuccPos(0)), 1)
+  *      (NotLeft(AntePos(1)), 1)
+  *      (Close(AntePos(0),SuccPos(0)), 1)
+  *    // left branch
+  *      (NotLeft(AntePos(0)), 0)
+  *      (NotRight(SuccPos(1)), 0)
+  *      (Close(AntePos(0),SuccPos(0)), 0)
+  *  )
+  * }}}
+  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
   /**
-   * Position types for the subgoals of a Provable.
-   */
+    * Position types for the subgoals of a Provable.
+    */
   type Subgoal = Int
 
   /**
-   * Checks whether this Provable proves its conclusion.
-   *
-   * @return true if conclusion is proved by this Provable,
-   *         false if subgoals are missing that need to be proved first.
-   * @note soundness-critical
-   */
+    * Checks whether this Provable proves its conclusion.
+    *
+    * @return true if conclusion is proved by this Provable,
+    *         false if subgoals are missing that need to be proved first.
+    * @note soundness-critical
+    */
   final def isProved: Boolean = subgoals.isEmpty
 
   /**
-   * What conclusion this Provable proves if isProved.
-   *
-   * @requires(isProved)
-   */
+    * What conclusion this Provable proves if isProved.
+    *
+    * @requires(isProved)
+    */
   final def proved: Sequent = {
-    insist(isProved, "Only Provables that have been proved have a proven conclusion " + this)
-    if (isProved) conclusion else throw new CoreException("ASSERT: Provables with remaining subgoals are not proved yet " + this)
+    if (isProved) conclusion else throw new CoreException("Only Provables that have been proved have a proven conclusion " + this)
   }
 
   /**
-   * Apply Rule: Apply given proof rule to the indicated subgoal of this Provable, returning the resulting Provable
-   * {{{
-   *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
-   *   ------------------------------------     =>     ---------------------------------------------------------------
-   *                  G |- D                                         G |- D
-   * }}}
-   * using the rule instance
-   * {{{
-   *   Gr1 |- Dr1  Gr2 |- Dr2 ... Grk |- Drk
-   *   ------------------------------------ (rule)
-   *                Gi |- Di
-   * }}}
-   *
-   * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
-   * @param subgoal which of our subgoals to apply the given proof rule to.
-   * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
-   * Will return a Provable with the same conclusion but an updated set of premises.
-   * @requires(0 <= subgoal && subgoal < subgoals.length)
-   * @note soundness-critical. And soundness needs Rule to be sealed.
-   */
+    * Apply Rule: Apply given proof rule to the indicated subgoal of this Provable, returning the resulting Provable
+    * {{{
+    *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
+    *   ------------------------------------     =>     ---------------------------------------------------------------
+    *                  G |- D                                         G |- D
+    * }}}
+    * using the rule instance
+    * {{{
+    *   Gr1 |- Dr1  Gr2 |- Dr2 ... Grk |- Drk
+    *   ------------------------------------ (rule)
+    *                Gi |- Di
+    * }}}
+    *
+    * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
+    * @param subgoal which of our subgoals to apply the given proof rule to.
+    * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
+    * Will return a Provable with the same conclusion but an updated set of premises.
+    * @requires(0 <= subgoal && subgoal < subgoals.length)
+    * @note soundness-critical. And soundness needs Rule to be sealed.
+    */
   final def apply(rule: Rule, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to an index " + subgoal + " that is within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
@@ -429,39 +427,38 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     r => rule(subgoals(subgoal)).toSet.subsetOf(r.subgoals.toSet), "All premises generated by rule application are new subgoals")
 
   /**
-   * Substitute subderivation as a proof of subgoal.
-   * Merge: Replace premise subgoal by the given subderivation.
-   * Use the given provable derivation in place of the indicated subgoal of this Provable, returning the resulting concatenated Provable.
-   *
-   * In particular, if subderivation.isProved, then the given subgoal will disappear,
-   * otherwise it will be replaced by the subgoals of subderivation
-   * (with the first subgoal of subderivation in place of subgoal and all other subgoals at the end).
-   *
-   * This function implements the substitution principle for hypotheses.
-   * {{{
-   *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
-   *   ------------------------------------     =>     ---------------------------------------------------------------
-   *                  G |- D                                         G |- D
-   * }}}
-   * using the given subderivation
-   * {{{
-   *   Gr1 |- Dr1  Gr2 |- Dr2 ... Grk |- Drk
-   *   ------------------------------------ (subderivation)
-   *                Gi |- Di
-   * }}}
-   *
-   * @param subderivation the Provable derivation that proves premise subgoal.
-   * @param subgoal the index of our subgoal that the given subderivation concludes.
-   * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using subderivation to show our subgoal.
-   * Will return a Provable with the same conclusion but an updated set of premises.
-   * @requires(0 <= subgoal && subgoal < subgoals.length)
-   * @requires(subderivation.conclusion == subgoals(subgoal))
-   * @note soundness-critical
-   */
+    * Substitute subderivation as a proof of subgoal.
+    * Merge: Replace premise subgoal by the given subderivation.
+    * Use the given provable derivation in place of the indicated subgoal of this Provable, returning the resulting concatenated Provable.
+    *
+    * In particular, if subderivation.isProved, then the given subgoal will disappear,
+    * otherwise it will be replaced by the subgoals of subderivation
+    * (with the first subgoal of subderivation in place of subgoal and all other subgoals at the end).
+    *
+    * This function implements the substitution principle for hypotheses.
+    * {{{
+    *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
+    *   ------------------------------------     =>     ---------------------------------------------------------------
+    *                  G |- D                                         G |- D
+    * }}}
+    * using the given subderivation
+    * {{{
+    *   Gr1 |- Dr1  Gr2 |- Dr2 ... Grk |- Drk
+    *   ------------------------------------ (subderivation)
+    *                Gi |- Di
+    * }}}
+    *
+    * @param subderivation the Provable derivation that proves premise subgoal.
+    * @param subgoal the index of our subgoal that the given subderivation concludes.
+    * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using subderivation to show our subgoal.
+    * Will return a Provable with the same conclusion but an updated set of premises.
+    * @requires(0 <= subgoal && subgoal < subgoals.length)
+    * @requires(subderivation.conclusion == subgoals(subgoal))
+    * @note soundness-critical
+    */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    insist(subderivation.conclusion == subgoals(subgoal), "substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
-    if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
+    if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
       case Nil =>
@@ -488,42 +485,42 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
-    * @see "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 2+1."
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
-  def apply(subst: USubst): Provable =
+  final def apply(subst: USubst): Provable =
     try {
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
-      //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 2."
-      //@note case isProved is covered by "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016. Theorem 1." and Theorem 2 without subgoals having same effect as Theorem 1. There is no difference between locally sound and globally sound if isProved so no subgoals.
-      insist(subst.freeVars.isEmpty || isProved || Rule.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
+      //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 27."
+      //@note case isProved is covered by "Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26." and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
+      insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
       new Provable(subst(conclusion), subgoals.map(s => subst(s)))
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
 
   // forward proofs (convenience)
 
   /**
-   * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
-   * This Provable with conclusion `G |- D` transforms as follows
-   * {{{
-   *     G1 |- D1 ... Gn |- Dn                  G1 |- D1 ... Gn |- Dn
-   *   -------------------------       =>     -------------------------
-   *            G |- D                              newConsequence
-   * }}}
-   * provided
-   * {{{
-   *            G |- D
-   *   ------------------------- rule
-   *         newConsequence
-   * }}}
-   *
-   * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
-   * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
-   * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
-   * Will return a Provable with the same subgoals but an updated conclusion.
-   * @note not soundness-critical derived function since implemented in terms of other apply functions
-   */
-  final def apply(newConsequence: Sequent, rule: Rule): Provable = {
+    * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
+    * This Provable with conclusion `G |- D` transforms as follows
+    * {{{
+    *     G1 |- D1 ... Gn |- Dn                  G1 |- D1 ... Gn |- Dn
+    *   -------------------------       =>     -------------------------
+    *            G |- D                              newConsequence
+    * }}}
+    * provided
+    * {{{
+    *            G |- D
+    *   ------------------------- rule
+    *         newConsequence
+    * }}}
+    *
+    * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
+    * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
+    * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
+    * Will return a Provable with the same subgoals but an updated conclusion.
+    * @note not soundness-critical derived function since implemented in terms of other apply functions
+    */
+  def apply(newConsequence: Sequent, rule: Rule): Provable = {
     //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
     insist(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " was expected to justify\n" + this.conclusion.prettyString + "\n-----------------------------" + rule + "??\n" + newConsequence.prettyString +
       "\n\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule instead led to " + rule(newConsequence) +
@@ -553,26 +550,26 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
-  final def apply(prolongation: Provable): Provable = {
+  def apply(prolongation: Provable): Provable = {
     //@note it really already works when prolongation.subgoal(0)==conclusion but it's somewhat surprising so disallowed.
     require(prolongation.subgoals.length==1, "Currently only for prolongations with exactly one subgoal\n" + this + "\nwith\n" + prolongation)
     prolongation(this, 0)
   } ensuring(r => r.conclusion == prolongation.conclusion && r.subgoals == subgoals, "Prolonging proof forward\n" + this + "\nwith\n" + prolongation)
 
   /**
-   * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
-   * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
-   *
-   * @param subgoal the index of our subgoal for which to return a new open Provable.
-   * @return an initial unfinished open Provable for the subgoal `i`:
-   * {{{
-   *    Gi |- Di
-   *   ----------
-   *    Gi |- Di
-   * }}}
-   * which is suitable for being merged back into this Provable for subgoal `i` subsequently.
-   * @note not soundness-critical only helpful for completeness-critical
-   */
+    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
+    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
+    *
+    * @param subgoal the index of our subgoal for which to return a new open Provable.
+    * @return an initial unfinished open Provable for the subgoal `i`:
+    * {{{
+    *    Gi |- Di
+    *   ----------
+    *    Gi |- Di
+    * }}}
+    * which is suitable for being merged back into this Provable for subgoal `i` subsequently.
+    * @note not soundness-critical only helpful for completeness-critical
+    */
   def sub(subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     Provable.startProof(subgoals(subgoal))
@@ -584,8 +581,16 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 }
 
 
-/** Starting new Provables to begin a proof */
+/** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules. */
 object Provable {
+  //@todo Code Review: it would be nice if LAX_MODE were false
+  private val LAX_MODE = System.getProperty("LAX", "true")=="true"
+  /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
+  private[this] val trustedTools: immutable.List[String] =
+  "edu.cmu.cs.ls.keymaerax.tools.Mathematica" :: "edu.cmu.cs.ls.keymaerax.tools.Z3" ::
+    (if (LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
+
+
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
   val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
@@ -603,7 +608,7 @@ object Provable {
     new Provable(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
   )
 
-  /** immutable list of locally sound axiomatic proof rules.
+  /** immutable list of Provables of locally sound axiomatic proof rules.
     * {{{
     *    Gi |- Di
     *   ---------- (axiomatic rule)
@@ -651,6 +656,23 @@ object Provable {
     startProof(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
   /**
+    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
+    *
+    * @param t The quantifier-elimination tool.
+    * @param f The formula.
+    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+    */
+  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
+    // Quantifier elimination determines (quantifier-free) equivalent of f.
+    val (equivalent, evidence) = t.qeEvidence(f)
+    //@note soundness-critical
+    val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
+      immutable.IndexedSeq())
+    Lemma(fact, Lemma.requiredEvidence(fact, evidence :: Nil), None)
+  }
+
+  /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
     *
     * @param conclusion the desired conclusion.
@@ -669,13 +691,13 @@ object Provable {
  */
 
 /**
- * Subclasses represent all proof rules.
- * A proof rule is ultimately a named mapping from sequents to lists of sequents.
- * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
- * to prove the current sequent (desired conclusion).
- *
- * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
- */
+  * Subclasses represent all proof rules.
+  * A proof rule is ultimately a named mapping from sequents to lists of sequents.
+  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
+  * to prove the current sequent (desired conclusion).
+  *
+  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
+  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   //@note If there were inherited contracts in Scala, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
@@ -686,72 +708,48 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   override def toString: String = name
 }
 
-private object Rule {
-  //@todo Code Review: LAX_MODE should be false
-  private[core] val LAX_MODE = System.getProperty("LAX", "true")=="true"
-}
-
 /*********************************************************************************
   * Categories of Proof Rules
   *********************************************************************************
   */
 
-//@todo Code Review: determine whether this categorization of proof rules is useful.
-
-/** A rule that tries closing a subgoal */
-trait ClosingRule extends Rule {}
-
 /** A rule applied to a position */
 trait PositionRule extends Rule {
-  /** The position (on the right) where this rule will be applied at */
-  def pos: SeqPos
+  /** The position where this rule will be applied at */
+  val pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
 /** A rule applied to a position in the antecedent on the left */
 trait LeftRule extends PositionRule {
   /** The position (on the left) where this rule will be applied at */
-  def pos: AntePos
+  val pos: AntePos
 }
 
 /** A rule applied to a position in the succedent on the right */
 trait RightRule extends PositionRule {
   /** The position (on the right) where this rule will be applied at */
-  def pos: SuccPos
-}
-
-/** An assumption rule, which is a position rule that has an additional position of an assumption. */
-trait AssumptionRule extends PositionRule {
-  /** The position of the assumption used for this rule when used at the position `pos` */
-  def assume: SeqPos
-  override def toString: String = name + " at " + pos + " assumption at " + assume
-}
-
-/** A rule applied to two positions. */
-trait TwoPositionRule extends Rule {
-  def pos1: SeqPos
-  def pos2: SeqPos
-  override def toString: String = name + " at " + pos1 + " and " + pos2
+  val pos: SuccPos
 }
 
 /*********************************************************************************
- * Proof Rules
- *********************************************************************************
- */
+  * Proof Rules
+  *********************************************************************************
+  */
 
 /*********************************************************************************
- * Structural Sequent Proof Rules
- *********************************************************************************
- */
+  * Structural Sequent Proof Rules
+  *********************************************************************************
+  */
 
 /**
- * Hide right.
- * {{{
- *    G |- D
- * ------------- (Weaken right)
- *    G |- p, D
- * }}}
- */
+  * Hide right.
+  * {{{
+  *    G |- D
+  * ------------- (Weaken right)
+  *    G |- p, D
+  * }}}
+  */
 case class HideRight(pos: SuccPos) extends RightRule {
   val name: String = "HideRight"
   /** weakening right = hide right */
@@ -777,14 +775,14 @@ case class HideLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * Exchange right rule reorders succedent.
- * {{{
- * G |- q, p, D
- * ------------- (Exchange right)
- * G |- p, q, D
- * }}}
- */
-case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRule {
+  * Exchange right rule reorders succedent.
+  * {{{
+  * G |- q, p, D
+  * ------------- (Exchange right)
+  * G |- p, q, D
+  * }}}
+  */
+case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends Rule {
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
@@ -792,14 +790,14 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
 }
 
 /**
- * Exchange left rule reorders antecedent.
- * {{{
- * q, p, G |- D
- * ------------- (Exchange left)
- * p, q, G |- D
- * }}}
- */
-case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
+  * Exchange left rule reorders antecedent.
+  * {{{
+  * q, p, G |- D
+  * ------------- (Exchange left)
+  * p, q, G |- D
+  * }}}
+  */
+case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
   val name: String = "ExchangeLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
@@ -807,19 +805,19 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRul
 }
 
 /*********************************************************************************
- * Sequent Proof Rules for identity/closing and cut
- *********************************************************************************
- */
+  * Sequent Proof Rules for identity/closing and cut
+  *********************************************************************************
+  */
 
 /**
- * Close / Identity rule
- * {{{
- *        *
- * ------------------ (Id)
- *   p, G |- p, D
- * }}}
- */
-case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with ClosingRule {
+  * Close / Identity rule
+  * {{{
+  *        *
+  * ------------------ (Id)
+  *   p, G |- p, D
+  * }}}
+  */
+case class Close(assume: AntePos, pos: SuccPos) extends Rule {
   val name: String = "Close"
   /** Close identity */
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -829,14 +827,14 @@ case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with Clos
 }
 
 /**
- * Close by true
- * {{{
- *       *
- * ------------------ (close true)
- *   G |- true, D
- * }}}
-*/
-case class CloseTrue(pos: SuccPos) extends RightRule with ClosingRule {
+  * Close by true
+  * {{{
+  *       *
+  * ------------------ (close true)
+  *   G |- true, D
+  * }}}
+  */
+case class CloseTrue(pos: SuccPos) extends RightRule {
   val name: String = "CloseTrue"
   /** close true */
   override def apply(s: Sequent): immutable.List[Sequent] = {
@@ -846,14 +844,14 @@ case class CloseTrue(pos: SuccPos) extends RightRule with ClosingRule {
 }
 
 /**
- * Close by false.
- * {{{
- *        *
- * ------------------ (close false)
- *   false, G |- D
- * }}}
- */
-case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
+  * Close by false.
+  * {{{
+  *        *
+  * ------------------ (close false)
+  *   false, G |- D
+  * }}}
+  */
+case class CloseFalse(pos: AntePos) extends LeftRule {
   val name: String = "CloseFalse"
   /** close false */
   override def apply(s: Sequent): immutable.List[Sequent] = {
@@ -864,15 +862,15 @@ case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
 
 
 /**
- * Cut in the given formula c.
- * {{{
- * G, c |- D     G |- D, c
- * ----------------------- (cut)
- *         G |- D
- * }}}
- *
- * @note c will be added at the end on the subgoals
- */
+  * Cut in the given formula c.
+  * {{{
+  * G, c |- D     G |- D, c
+  * ----------------------- (cut)
+  *         G |- D
+  * }}}
+  *
+  * @note c will be added at the end on the subgoals
+  */
 case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
   /** cut in the given formula c */
@@ -894,13 +892,13 @@ case class Cut(c: Formula) extends Rule {
  */
 
 /**
- * !R Not right.
- * {{{
- *   G, p |- D
- * ------------ (!R Not right)
- *   G |- !p, D
- * }}}
- */
+  * !R Not right.
+  * {{{
+  *   G, p |- D
+  * ------------ (!R Not right)
+  *   G |- !p, D
+  * }}}
+  */
 case class NotRight(pos: SuccPos) extends RightRule {
   val name: String = "Not Right"
   /** !R Not right */
@@ -911,13 +909,13 @@ case class NotRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * !L Not left.
- * {{{
- *   G |- D, p
- * ------------ (!L Not left)
- *  !p, G |- D
- * }}}
- */
+  * !L Not left.
+  * {{{
+  *   G |- D, p
+  * ------------ (!L Not left)
+  *  !p, G |- D
+  * }}}
+  */
 case class NotLeft(pos: AntePos) extends LeftRule {
   val name: String = "Not Left"
   /** !L Not left */
@@ -928,13 +926,13 @@ case class NotLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * &R And right
- * {{{
- * G |- p, D    G |- q, D
- * ---------------------- (&R And right)
- *   G |- p&q, D
- * }}}
- */
+  * &R And right
+  * {{{
+  * G |- p, D    G |- q, D
+  * ---------------------- (&R And right)
+  *   G |- p&q, D
+  * }}}
+  */
 case class AndRight(pos: SuccPos) extends RightRule {
   val name: String = "And Right"
   /** &R And right */
@@ -945,13 +943,13 @@ case class AndRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * &L And left.
- * {{{
- *   G, p, q |- D
- * --------------- (&L And left)
- *   p&q, G |- D
- * }}}
- */
+  * &L And left.
+  * {{{
+  *   G, p, q |- D
+  * --------------- (&L And left)
+  *   p&q, G |- D
+  * }}}
+  */
 case class AndLeft(pos: AntePos) extends LeftRule {
   val name: String = "And Left"
   /** &L And left */
@@ -962,13 +960,13 @@ case class AndLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * |R Or right.
- * {{{
- *   G |- D, p,q
- * --------------- (|R Or right)
- *   G |- p|q, D
- * }}}
- */
+  * |R Or right.
+  * {{{
+  *   G |- D, p,q
+  * --------------- (|R Or right)
+  *   G |- p|q, D
+  * }}}
+  */
 case class OrRight(pos: SuccPos) extends RightRule {
   val name: String = "Or Right"
   /** |R Or right */
@@ -979,13 +977,13 @@ case class OrRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * |L Or left.
- * {{{
- * p, G |- D     q, G |- D
- * ----------------------- (|L Or left)
- *   p|q, G |- D
- * }}}
- */
+  * |L Or left.
+  * {{{
+  * p, G |- D     q, G |- D
+  * ----------------------- (|L Or left)
+  *   p|q, G |- D
+  * }}}
+  */
 case class OrLeft(pos: AntePos) extends LeftRule {
   val name: String = "Or Left"
   /** |L Or left */
@@ -996,13 +994,13 @@ case class OrLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * ->R Imply right.
- * {{{
- *   G, p |- D, q
- * --------------- (->R Imply right)
- *   G |- p->q, D
- * }}}
- */
+  * ->R Imply right.
+  * {{{
+  *   G, p |- D, q
+  * --------------- (->R Imply right)
+  *   G |- p->q, D
+  * }}}
+  */
 case class ImplyRight(pos: SuccPos) extends RightRule {
   val name: String = "Imply Right"
   /** ->R Imply right */
@@ -1014,13 +1012,13 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
 
 
 /**
- * ->L Imply left.
- * {{{
- * G |- D, p    q, G |- D
- * ---------------------- (-> Imply left)
- *   p->q, G |- D
- * }}}
- */
+  * ->L Imply left.
+  * {{{
+  * G |- D, p    q, G |- D
+  * ---------------------- (-> Imply left)
+  *   p->q, G |- D
+  * }}}
+  */
 case class ImplyLeft(pos: AntePos) extends LeftRule {
   val name: String = "Imply Left"
   /** ->L Imply left */
@@ -1032,13 +1030,13 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * <->R Equiv right.
- * {{{
- * G, p |- D, q    G, q |- D, p
- * ----------------------------- (<->R Equiv right)
- *   G |- p<->q, D
- * }}}
- */
+  * <->R Equiv right.
+  * {{{
+  * G, p |- D, q    G, q |- D, p
+  * ----------------------------- (<->R Equiv right)
+  *   G |- p<->q, D
+  * }}}
+  */
 case class EquivRight(pos: SuccPos) extends RightRule {
   val name: String = "Equiv Right"
   /** <->R Equiv right */
@@ -1050,22 +1048,22 @@ case class EquivRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * <->L Equiv left.
- * {{{
- * p&q, G |- D    !p&!q, G |- D
- * ----------------------------- (<-> Equiv left)
- *   p<->q, G |- D
- * }}}
- * @note Positions remain stable when decomposed this way around.
- */
+  * <->L Equiv left.
+  * {{{
+  * p&q, G |- D    !p&!q, G |- D
+  * ----------------------------- (<-> Equiv left)
+  *   p<->q, G |- D
+  * }}}
+  * @note Positions remain stable when decomposed this way around.
+  */
 case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
   /** <->L Equiv left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
+    val Equiv(p,q) = s(pos)
     //@note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
-    immutable.List(s.updated(pos, And(a,b)),
-                   s.updated(pos, And(Not(a),Not(b))))
+    immutable.List(s.updated(pos, And(p,q)),
+                   s.updated(pos, And(Not(p),Not(q))))
   }
 }
 
@@ -1086,18 +1084,19 @@ object UniformRenaming {
 }
 
 /**
- * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
- * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
- *
- * @param what What variable to replace (along with its associated DifferentialSymbol).
- * @param repl The target variable to replace what with.
- * @requires repl is fresh in the sequent.
- * @author Andre Platzer
- * @see [[URename]]
- */
+  * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
+  * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
+  *
+  * @param what What variable to replace (along with its associated DifferentialSymbol).
+  * @param repl The target variable to replace what with.
+  * @requires repl is fresh in the sequent.
+  * @author Andre Platzer
+  * @see [[URename]]
+  */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
+  //@note soundness-critical: For uniform renaming purposes semantic renaming would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   private[this] val renaming: URename = URename(what, repl)
 
   override def toString: String = renaming.toString
@@ -1106,22 +1105,22 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
 }
 
 /**
- * Performs bound renaming renaming all occurrences of variable what
- * (and its associated DifferentialSymbol) to repl.
- *
- * @param what What variable (and its associated DifferentialSymbol) to replace.
- * @param repl The target variable to replace what with.
- * @param pos The position at which to perform a bound renaming.
- * @requires repl is fresh in the sequent.
- * @author Andre Platzer
- * @author Stefan Mitsch
- */
+  * Performs bound renaming renaming all occurrences of variable what
+  * (and its associated DifferentialSymbol) to repl.
+  *
+  * @param what What variable (and its associated DifferentialSymbol) to replace.
+  * @param repl The target variable to replace what with.
+  * @param pos The position at which to perform a bound renaming.
+  * @requires repl is fresh in the sequent.
+  * @author Andre Platzer
+  * @author Stefan Mitsch
+  */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   //@note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
-  private[this] val renaming = SyntacticURename(what, repl)
+  private[this] val renaming = URename(what, repl)
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
@@ -1142,46 +1141,47 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   } ensuring(r => r.getClass == f.getClass, "shape unchanged by bound renaming " + this)
 
   /**
-   * Check whether this renaming is admissible for expression e, i.e.
-   * the new name repl does not already occur (or the renaming was the identity).
-   *
-   * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
-   * @note This implementation currently errors if repl.sort!=Real
-   * @note what==repl identity case is not used in the prover but is sound.
-   * @note URename.TRANSPOSITION is irrelevant here, since repl can't occur when admissible.
-   */
+    * Check whether this renaming is admissible for expression e, i.e.
+    * the new name repl does not already occur (or the renaming was the identity).
+    *
+    * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
+    * @note This implementation currently errors if repl.sort!=Real
+    * @note what==repl identity case is not used in the prover but is sound.
+    * @note URename.TRANSPOSITION is irrelevant here, since repl can't occur when admissible.
+    */
   private def admissible(e: Expression): Boolean =
-    what == repl || StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
+    //@note StaticSemantics.symbols(e) has the same (diff)vars as StaticSemantics.vars(e) unless StateDependent occur, which cause a renaming clash though.
+    what == repl || StaticSemantics.vars(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
 }
 
 
 /*********************************************************************************
- * Skolemization Proof Rule
- *********************************************************************************
- */
+  * Skolemization Proof Rule
+  *********************************************************************************
+  */
 
 /**
- * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
- * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
- * {{{
- * G |- p(x), D
- * ----------------------- (Skolemize) provided x not in G,D
- * G |- \forall x p(x), D
- * }}}
- * Skolemize also handles '''existential''' quantifiers on the left.
- * {{{
- *           p(x), G |- D
- * ------------------------ (Skolemize) provided x not in G,D
- * \exists x p(x), G |- D
- * }}}
- *
- * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
- * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
- *      p(x)
- *  ---------------all generalize
- *  \forall x. p(x)
- * Kept because of the incurred cost.
- */
+  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
+  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+  * {{{
+  * G |- p(x), D
+  * ----------------------- (Skolemize) provided x not in G,D
+  * G |- \forall x p(x), D
+  * }}}
+  * Skolemize also handles '''existential''' quantifiers on the left.
+  * {{{
+  *           p(x), G |- D
+  * ------------------------ (Skolemize) provided x not in G,D
+  * \exists x p(x), G |- D
+  * }}}
+  *
+  * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
+  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
+  *      p(x)
+  *  ---------------all generalize
+  *  \forall x. p(x)
+  * Kept because of the incurred cost.
+  */
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
   override def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1195,43 +1195,12 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
       case _ => throw new InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
-    if (taboos.intersect(SetLattice[NamedSymbol](v)).isEmpty) immutable.List(s.updated(pos, phi))
+    if (taboos.intersect(SetLattice(v)).isEmpty) immutable.List(s.updated(pos, phi))
     else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
-        taboos.intersect(SetLattice[NamedSymbol](v)), v.toString, s.toString)
+        taboos.intersect(SetLattice(v)), v.toString, s.toString)
   }
 
 }
-
-/*********************************************************************************
- * Real Arithmetic
- *********************************************************************************
- */
-
-/** Real arithmetic */
-object RCF {
-  /** List of the class names of all external tools whose answers KeYmaera X would believe */
-  private[this] val trustedTools: immutable.List[String] =
-    "edu.cmu.cs.ls.keymaerax.tools.Mathematica" ::
-      (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Z3" :: "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
-
-  /**
-   * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
-   *
-   * @param t The quantifier-elimination tool.
-   * @param f The formula.
-   * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
-   */
-  def proveArithmetic(t: QETool, f: Formula): Lemma = {
-    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
-    // Quantifier elimination determines (quantifier-free) equivalent of f.
-    val (equivalent, evidence) = t.qeEvidence(f)
-    //@note soundness-critical
-    val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
-      immutable.IndexedSeq())
-    Lemma(fact, evidence :: Nil)
-  }
-}
-
 
 /*********************************************************************************
   * Hybrid Games
@@ -1239,22 +1208,22 @@ object RCF {
   */
 
 /**
- * Dual-free proves [a]true for dual-free a, i.e., if a is a hybrid system not a hybrid game.
- * {{{
- *       *
- * ------------------ (dual-free)
- *   G |- [a]true, D
- * }}}
- *
- * @note When using hybrid games axiomatization
- */
-final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
+  * Dual-free proves [a]true for dual-free a, i.e., if a is a hybrid system not a hybrid game.
+  * {{{
+  *       *
+  * ------------------ (dual-free)
+  *   G |- [a]true, D
+  * }}}
+  *
+  * @note When using hybrid games axiomatization
+  */
+final case class DualFree(pos: SuccPos) extends RightRule {
   val name: String = "dualFree"
   /** Prove [a]true by showing that a is dual-free */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     s(pos) match {
       case Box(a, True) if dualFree(a) => Nil
-      case _ => throw new InapplicableRuleException("DualFree is not applicable to " + s + " at " + pos, this, s)
+      case _ => throw new InapplicableRuleException("DualFree is not applicable to " + s + " at " + pos + " because a duality operator occurs", this, s)
     }
   } ensuring (s(pos).isInstanceOf[Box] && s(pos).asInstanceOf[Box].child==True && dualFree(s(pos).asInstanceOf[Box].program) && pos.isSucc && _.isEmpty, "closed if applicable")
 
@@ -1262,7 +1231,6 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   private def dualFree(program: Program): Boolean = program match {
     case a: ProgramConst             => false /* @note false Unless USubst rejects Duals as substitutues for ProgramConst */
     case Assign(x, e)                => true
-    case DiffAssign(DifferentialSymbol(x), e) => true
     case AssignAny(x)                => true
     case Test(f)                     => true /* even if f contains duals, since they're different nested games) */
     case ODESystem(a, h)             => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
@@ -1287,15 +1255,15 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   */
 
 /**
- * CoHide right.
- * {{{
- *     |- p
- * ------------- (CoHide right)
- *   G |- p, D
- * }}}
- *
- * @derived
- */
+  * CoHide right.
+  * {{{
+  *     |- p
+  * ------------- (CoHide right)
+  *   G |- p, D
+  * }}}
+  *
+  * @derived
+  */
 case class CoHideRight(pos: SuccPos) extends RightRule {
   val name: String = "CoHideRight"
   /** co-weakening right = co-hide right (all but indicated position) */
@@ -1325,16 +1293,16 @@ case class CoHideLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * CoHide2 hides all but the two indicated positions.
- * {{{
- *      p |- q
- * --------------- (CoHide2)
- *   p, G |- q, D
- * }}}
- *
- * @derived
- */
-case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
+  * CoHide2 hides all but the two indicated positions.
+  * {{{
+  *      p |- q
+  * --------------- (CoHide2)
+  *   p, G |- q, D
+  * }}}
+  *
+  * @derived
+  */
+case class CoHide2(pos1: AntePos, pos2: SuccPos) extends Rule {
   val name: String = "CoHide2"
   /** co-weakening = co-hide all but the indicated positions */
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1344,17 +1312,17 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
 
 
 /**
- * Cut in the given formula c in place of p on the right.
- * {{{
- * G |- c, D    G |- c->p, D
- * ------------------------- (Cut right)
- *        G |- p, D
- * }}}
- * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
- * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
- *
- * @derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
- */
+  * Cut in the given formula c in place of p on the right.
+  * {{{
+  * G |- c, D    G |- c->p, D
+  * ------------------------- (Cut right)
+  *        G |- p, D
+  * }}}
+  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
+  * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
+  *
+  * @derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
+  */
 case class CutRight(c: Formula, pos: SuccPos) extends Rule {
   val name: String = "cut Right"
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1364,18 +1332,18 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
 }
 
 /**
- * Cut in the given formula c in place of p on the left.
- * {{{
- * c, G |- D    G |- D, p->c
- * ------------------------- (Cut Left)
- *        p, G |- D
- * }}}
- * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
- * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
- *
- * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
- * @derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
- */
+  * Cut in the given formula c in place of p on the left.
+  * {{{
+  * c, G |- D    G |- D, p->c
+  * ------------------------- (Cut Left)
+  *        p, G |- D
+  * }}}
+  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
+  * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
+  *
+  * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
+  * @derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
+  */
 case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   val name: String = "cut Left"
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1386,15 +1354,15 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
 }
 
 /**
- * Commute equivalence right
- * {{{
- * G |- q<->p, D
- * ------------- (<->cR)
- * G |- p<->q, D
- * }}}
- *
- * @derived
- */
+  * Commute equivalence right
+  * {{{
+  * G |- q<->p, D
+  * ------------- (<->cR)
+  * G |- p<->q, D
+  * }}}
+  *
+  * @derived
+  */
 case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   val name: String = "CommuteEquivRight"
   def apply(s: Sequent): immutable.List[Sequent] = {

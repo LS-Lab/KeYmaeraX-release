@@ -31,4 +31,6 @@ class StringConverter(val s: String) {
   def asFormula: Formula = KeYmaeraXParser.formulaParser(s)
 
   def asProgram: Program = KeYmaeraXParser.programParser(s)
+
+  def asDifferentialProgram: DifferentialProgram = KeYmaeraXParser.differentialProgramParser(s)
 }

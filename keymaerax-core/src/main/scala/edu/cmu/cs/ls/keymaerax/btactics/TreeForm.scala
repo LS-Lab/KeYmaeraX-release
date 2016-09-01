@@ -29,9 +29,12 @@ object TreeForm {
         case Minus (t1, t2) => Tree(Operator("-", Some(2)), List(binaryTree(t1), binaryTree(t2)))
         case Neg (t1) => Tree(Operator("-", Some(2)), List(Tree(Constant(Number(0)), List()), binaryTree(t1)))
         case Differential(t1) => Tree(Operator("'", Some(1)), List(binaryTree(t1)))
-        case Variable (name, _, _) => Tree(Var(name), List())
+          //@todo this looses the index
+        case BaseVariable (name, _, _) => Tree(Var(name), List())
+        //@todo this looses the index
         case DifferentialSymbol (v) => Tree(DiffVar(v.name), List())
-        case FuncOf(Function(f, _, _,_), x) => Tree(Func(f), List(binaryTree(x)))
+          //@todo this looses the index and interpretedness
+        case FuncOf(Function(f, _, _,_,_), x) => Tree(Func(f), List(binaryTree(x)))
         case n@Number(_) => Tree(Constant(n), List())
       }
     }

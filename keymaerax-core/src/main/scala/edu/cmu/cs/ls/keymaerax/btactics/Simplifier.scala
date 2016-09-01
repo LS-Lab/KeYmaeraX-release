@@ -233,7 +233,7 @@ object Simplifier {
         val (ctx, t1:Term) = fml.at(pos)
         print("Trying to prove " + Equal(t1,t2))
         val eqProof = TactixLibrary.proveBy(Equal(t1, t2), e)
-        HilbertCalculus.useAt(HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0::Nil))(where)
+        HilbertCalculus.useAt("TODOmakeCE", HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0::Nil))(where)
       case None => TactixLibrary.nil
     }
   }
@@ -244,6 +244,6 @@ object Simplifier {
   })
 
   def simp(simps:List[Simplification] = defaultSimps):DependentPositionTactic = "simp" by ((pos, sequent) =>
-    simpOnce(simps)(pos) *@ TheType ())
+    ((simpOnce(simps)(pos))*))
 }
 

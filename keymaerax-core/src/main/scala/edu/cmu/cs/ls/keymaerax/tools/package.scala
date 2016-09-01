@@ -6,6 +6,12 @@ package edu.cmu.cs.ls.keymaerax
 
 /**
  * Arithmetic back-ends and arithmetic utilities for tactics, including an SMT interface.
+ *
+ *    - `[[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
+ *    - `[[edu.cmu.cs.ls.keymaerax.tools.Z3]]` - Z3 interface for real arithmetic.
+ *    - `[[edu.cmu.cs.ls.keymaerax.tools.Polya]]` - Polya interface for real arithmetic.
+ *    - `[[edu.cmu.cs.ls.keymaerax.tools.SMTConverter]]` - SMT converter for real arithmetic.
+ *
  * @todo Stub. Describe for real.
  */
 package object tools {

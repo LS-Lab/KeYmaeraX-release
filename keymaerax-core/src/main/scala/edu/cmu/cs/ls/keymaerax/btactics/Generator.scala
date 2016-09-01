@@ -9,39 +9,34 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.Position
 
 /**
  * Created by smitsch on 12/23/14.
- * @author Stefan Mitsch
  */
 
-/**
- * apply results in a formula to try.
- * Results do not have to be deterministic, e.g., calls to apply might advance to the next candidate.
- * Results can also be deterministic.
-  * @todo change to (Sequent,Position) => Iterator[A] maybe?
-  * @todo add implementation for something like (Sequent, Position) => Stream[A] for example?
- */
-trait Generator[A] extends ((Sequent, Position) => Option[A]) {
-  def peek(s: Sequent, p: Position): Option[A]
+/** Invariant generator
+  * @author Stefan Mitsch
+  * */
+object Generator {
+  /**
+    * Invariant generators etc, where `apply` results in an iterator over objects of type `A` to try.
+    * Results do not necessarily have to be deterministic.
+    * @tparam A the type of results that are being generated.
+    * @author Stefan Mitsch
+    */
+  type Generator[A] = ((Sequent, Position) => Iterator[A])
 }
 
-class Generate[A](f: A) extends Generator[A] {
-  def apply(s: Sequent, p: Position) = Some(f)
-  def peek(s: Sequent, p: Position) = Some(f)
+/** Generator always providing a fixed list as output. */
+case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
+  def apply(s: Sequent, p: Position) = list.iterator
 }
 
-class NoneGenerate[A] extends Generator[A] {
-  def apply(s: Sequent, p: Position) = None
-  def peek(s: Sequent, p: Position) = None
-}
-
-class ConfigurableGenerate[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator[A] {
-  def apply(s: Sequent, p: Position) = s(p.top) match {
-    case Box(prg, _) => products.get(prg)
-    case Diamond(prg, _) => products.get(prg)
-    case _ => products.get(s(p.top))
-  }
-  def peek(s: Sequent, p: Position) = s(p.top) match {
-    case Box(prg, _) => products.get(prg)
-    case Diamond(prg, _) => products.get(prg)
-    case _ => products.get(s(p.top))
+/** Map-based generator providing output according to the fixed map `product` according to its program or whole formula.
+  * @author Stefan Mitsch
+  * */
+class ConfigurableGenerator[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator.Generator[A] {
+  //@todo why p.top instead of p?
+  def apply(s: Sequent, p: Position): Iterator[A] = s(p.top) match {
+    case Box(prg, _) => products.get(prg).iterator
+    case Diamond(prg, _) => products.get(prg).iterator
+    case _ => products.get(s(p.top)).iterator
   }
 }

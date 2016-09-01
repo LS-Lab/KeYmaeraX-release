@@ -3,10 +3,12 @@
   'ngCookies',
   'ngSanitize',
   'ngAnimate',
+  'ngTextcomplete',
   'angularTreeview',
   'angularSpinners',
   'ui.tree',
   'cgBusy',
+  'diff-match-patch',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
   'ui.bootstrap.tooltip',
@@ -18,8 +20,11 @@
   'keymaerax.errorHandlers',
   'keymaerax.interceptors',
   'keymaerax.services',
+  //'keymaerax.ui.binding',
+  'keymaerax.ui.keyevents',
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
+  'keymaerax.ui.tacticeditor',
   'progressMeter',
   'proofProgressChart',
   'formula',
@@ -95,13 +100,13 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/dev.html',
         controller: 'DevCtrl'
       }).
-      when('/mathematica', {
-        templateUrl: 'partials/mathematica_config.html',
-        controller: 'MathematicaConfig'
+      when('/tools', {
+        templateUrl: 'partials/tool_config.html',
+        controller: 'ToolConfig'
       }).
       when('/license', {
                 templateUrl: 'partials/license_dialog.html',
-                controller: 'DashboardCtrl.License'
+                controller: 'ServerInfoCtrl'
       }).
       otherwise({
         redirectTo: '/dashboard'

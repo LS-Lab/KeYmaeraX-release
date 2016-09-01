@@ -4,21 +4,37 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Evidence}
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 import scala.collection.immutable
 
 /**
+  * Lemma format is as follows:
+  * {{{
+  *   Sequent.
+  *     Formula: <<formula>>
+  *     ...
+  *     ==>
+  *     Formula: <<formula>>
+  *     ...
+  *   Sequent.
+  *     ...
+  *   End.
+  *   Tool.
+  *     <<key>> """"<<value>>""""
+  *     ...
+  *   End.
+  * }}}
   * Created by smitsch on 7/03/15.
   * Modified by nfulton on 12/16/15 -- Lemmas are now more general.
   * @author Stefan Mitsch
   * @author Nathan Fulton
   */
-object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Sequent], Evidence)) {
+object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutable.List[Sequent], immutable.List[Evidence])) {
   /** the lemma name, the lemma conclusion, and the supporting evidence */
-  private type Lemma = (Option[String], List[Sequent], Evidence)
+  private type Lemma = (Option[String], List[Sequent], List[Evidence])
 
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
@@ -28,7 +44,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @return A list of named lemmas, each with tool evidence (tool input/output) occurring in the file.
     */
   def apply(input: String) : Lemma = try {
-    val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode())
+    val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
     if (DEBUG) println("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
     if (DEBUG) println("Declarations: " + decls)
@@ -54,7 +70,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
       throw new IllegalArgumentException("Expected only one lemma")
   }
 
-  def parseNextLemma(input: TokenStream): (Option[String], List[Sequent], Evidence, TokenStream) = {
+  def parseNextLemma(input: TokenStream): (Option[String], List[Sequent], List[Evidence], TokenStream) = {
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block.")
     require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
 
@@ -73,9 +89,9 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     val sequents = sequentTokens.map(sequentTokenParser)
     assert(sequents.nonEmpty, "Lemma should at least have a conclusion.")
 
-    val (evidence, remainder) = parseEvidence(remainderTokens.tail)
+    val (allEvidence, remainder) = parseAllEvidence(remainderTokens.tail)
 
-    (name, sequents, evidence, remainder)
+    (name, sequents, allEvidence, remainder)
   }
 
   private def splitAtTerminal(splitTerminal: Terminal, tokens: TokenStream): List[TokenStream] =
@@ -88,6 +104,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     else pre :+ l
   }
 
+  //@todo performance bottleneck
   private def sequentTokenParser(ts: TokenStream): Sequent = {
     require(ts.map(_.tok).contains(TURNSTILE))
 
@@ -108,29 +125,38 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     * @param input Token string for the lemma file.
     * @return A list of evidence (tool input/output).
     */
-  def parseEvidence(input: TokenStream): (Evidence, TokenStream) = {
+  def parseAllEvidence(input: TokenStream, prevEvidence: List[Evidence] = Nil): (List[Evidence], TokenStream) = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
-    require(input.head.tok.equals(TOOL_BEGIN), "expected Tool block but found " + input.head)
     val (evidence, remainder) = parseNextEvidence(input)
+    (evidence, remainder)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
-      (evidence, remainder)
+      (prevEvidence :+ evidence, remainder)
     else
-      throw new IllegalArgumentException("Expected only one tool evidence")
+      parseAllEvidence(remainder, prevEvidence :+ evidence)
   }
 
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
-    require(input.head.tok.equals(TOOL_BEGIN), "expected to begin with Tool block.")
+    val beginEvidenceTokens = Set(TOOL_BEGIN, HASH_BEGIN)
+    require(beginEvidenceTokens.contains(input.head.tok), s"expected to find a begin evidence block but found ${input.head.tok}")
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
       input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
 
-    val evidence = parseToolEvidenceLines(toolTokens)
+    val evidenceLines = parseEvidenceLines(toolTokens)
 
-    (ToolEvidence(evidence), remainderTokens.tail)
+    val evidence = input.head.tok match {
+      case TOOL_BEGIN => ToolEvidence(evidenceLines)
+      case HASH_BEGIN => {
+        assert(evidenceLines.head._1 == "hash")
+        HashEvidence(evidenceLines.head._2)
+      }
+    }
+
+    (evidence, remainderTokens.tail)
   }
 
-  def parseToolEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
+  def parseEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
     require(input.head.tok match { case IDENT(_, _) => true case _ => false }, "expected to begin with key.")
     require(input.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false }, "expected actual value.")
 

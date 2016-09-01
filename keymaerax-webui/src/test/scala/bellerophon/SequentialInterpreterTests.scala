@@ -75,17 +75,19 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "failover to right whenever a non-closing and non-partial tactic is provided on the left" in {
-    val tactic = implyR(1) | skip
-
-    shouldResultIn(
-      tactic,
-      "1=2 -> 1=2".asFormula,
-      Seq(Sequent(IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+    val tactic = implyR(1)& DebuggingTactics.done  | skip& DebuggingTactics.done
+    
+    a[Throwable] shouldBe thrownBy(
+      shouldResultIn(
+        tactic,
+        "1=2 -> 1=2".asFormula,
+        Seq(Sequent(IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+      )
     )
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
-    val tactic = implyR(1) | (skip & skip)
+    val tactic = implyR(1) & DebuggingTactics.done | (skip & skip) & DebuggingTactics.done
     val f = "1=2 -> 1=2".asFormula
     a[BelleError] should be thrownBy theInterpreter(tactic, BelleProvable(Provable.startProof(f))
     )
@@ -106,25 +108,25 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
-      OnAll(andR(SuccPos(0))) |
-      OnAll(implyR(SuccPos(0)) & close)
-    )*@TheType()
+          OnAll(andR(SuccPos(0))) |
+          OnAll(implyR(SuccPos(0)) & close)
+        )*
   }
 
   it should "prove x=2&y=3&z=4 |- z=4" in {
-    shouldClose(andL('_)*@TheType() &
+    shouldClose((andL('_)*) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
       assertE("z=4".asFormula, "z=4 not at -3")(-3) & close,
       Sequent(IndexedSeq("x=2&y=3&z=4".asFormula), IndexedSeq("z=4".asFormula)))
   }
 
   it should "repeat 0 times if not applicable" in {
-    shouldClose(andL('_)*@TheType() & close,
+    shouldClose((andL('_)*) & close,
       Sequent(IndexedSeq("x=2".asFormula), IndexedSeq("x=2".asFormula)))
   }
 
   it should "saturate until no longer applicable" in {
-    shouldClose(andL('Llast)*@TheType() &
+    shouldClose((andL('Llast)*) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
       assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close,
       Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
@@ -132,7 +134,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "not try right branch when used in combination with either combinator" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      ((andL('Llast)*@TheType() partial) | close)*@TheType())
+      (((andL('Llast)*) partial) | close)*)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
@@ -140,7 +142,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      andL('Llast)+@TheType())
+      (andL('Llast)+))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
@@ -148,12 +150,12 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "fail when not at least 1 repetition is possible" in {
     a [BelleError] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
-      andL('Llast)+@TheType())
+      (andL('Llast)+))
   }
 
   it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in {
     proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      ((andL('Llast)+@TheType() partial) | close)*@TheType()) shouldBe 'proved
+      (((andL('Llast)+) partial) | close)*) shouldBe 'proved
   }
 
   "must idiom" should "fail when no change occurs" in {
@@ -182,6 +184,22 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.asInstanceOf[BelleProvable].p.isProved shouldBe true
   }
 
+  it should "prove |- (1=1->1=1) & (2=2->2=2) with new < combinator" in {
+    //@note cannot use < in unit tests without fully qualifying the name, because Matchers also knows < operator
+    val tactic = andR(SuccPos(0)) & Idioms.<(
+      implyR(SuccPos(0)) & close,
+      implyR(SuccPos(0)) & close
+      )
+    val v = {
+      val f = "(1=1->1=1) & (2=2->2=2)".asFormula
+      BelleProvable(Provable.startProof(f))
+    }
+    val result = theInterpreter.apply(tactic, v)
+
+    result.isInstanceOf[BelleProvable] shouldBe true
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
+  }
+
   it should "handle cases were subgoals are added." in {
     val tactic = andR(SuccPos(0)) < (
       andR(SuccPos(0)) partial,
@@ -197,8 +215,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
     val tactic = andR(SuccPos(0)) < (
-      andR(SuccPos(0)),
-      implyR(SuccPos(0)) & close
+      andR(SuccPos(0)) & DebuggingTactics.done,
+      implyR(SuccPos(0)) & close & DebuggingTactics.done
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleError] shouldBe thrownBy(

@@ -20,7 +20,10 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       //Prefer the code name if one exists for this tactic.
 //      println("Looking for a code name for " + e)
       val info = TacticInfo.apply(e.prettyString)
-      if(info.belleExpr.asInstanceOf[BelleExpr] != e) throw new Exception("")
+      // @todo: I don't understand why asInstanceOf is used to determeine whether the codeName is usable, but in any case,
+      // anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName directly
+      // for those.
+      if(!info.needsGenerator && info.belleExpr.asInstanceOf[BelleExpr] != e) throw new Exception("")
       else info.codeName
     }
     catch {
@@ -30,12 +33,14 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case EitherTactic(l,r) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
           case BranchTactic(ts) => op(e).terminal.img +
             "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
-          case SaturateTactic(t, a) => "(" + pp(t, indent) + ")" + op(e).terminal.img
+          case SaturateTactic(t) => "(" + pp(t, indent) + ")" + op(e).terminal.img
           case b : BuiltInTactic => b.name
-          case e: PartialTactic => op(e).terminal.img + "(" + pp(e.child, indent) + ")"
+          case e: PartialTactic => pp(e.child, indent)
           case e: RepeatTactic => "(" + pp(e.child, indent) + ")^" + e.times
           case adp: AppliedDependentPositionTactic => adp.pt match {
-            case e: DependentPositionWithAppliedInputTactic => e.name + "(" + argPrinter(Left(e.input)) + ", " + argPrinter(Right(adp.locator)) + ")"
+            case e: DependentPositionWithAppliedInputTactic =>
+              val eargs = e.inputs.map(input => argPrinter(Left(input))).mkString(", ")
+              e.name + "(" + eargs + ", " + argPrinter(Right(adp.locator)) + ")"
             case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
           }
           case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
@@ -47,7 +52,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
 
             it.name + "(" + argPrinter(theArg) + ")"
           }
-          case _ => throw PrinterException(s"Do not no how to pretty-print ${e}")
+          case ProveAs(lemmaName, pos, e) => "proveAs"
+          case _ => throw PrinterException(s"Do not know how to pretty-print ${e}")
         }
     }
   }

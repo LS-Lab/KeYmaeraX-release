@@ -62,7 +62,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="index_bootstrap.html">KeYmaera X</a>
+            <a class="navbar-brand" href="/dashboard.html">KeYmaera X</a>
         </div>
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -71,7 +71,7 @@
                 <li ng-class="{active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
                 <!--<li><a href="#">Lemmas</a></li>-->
                 <!-- TODO nav pill shows how many updates where made to proofs since last logged in. Currently, it shows the number of OPEN proofs! -->
-                <li ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><span class="badge pull-right">{{ open_proof_count }}</span> Proofs</a></li>
+                <li ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><!--<span class="badge pull-right">{{ open_proof_count }}</span>-->Proofs</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <!--<li><a href="#">Profile</a></li>-->
@@ -87,7 +87,7 @@
                         <!--<li><a href="#">Examples</a></li>-->
                         <li><a href="dashboard.html?#/tutorials">Tutorials</a></li>
                         <li><a href="dashboard.html?#/usage">Using KeYmaera&#160;X</a></li>
-                        <li><a href="dashboard.html?#/mathematica">Mathematica Configuration</a></li>
+                        <li><a href="dashboard.html?#/tools">Backend Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license">License</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
@@ -108,16 +108,19 @@
                         <!--<li><a  ng-controller="DashboardCtrl">Shutdown KeYmaera X</a></li>-->
                     <!--</ul>-->
                 </li>
+                <li class="dropdown">
+                    <a ng-click="logoff()" title="Log off"/><i class="fa fa-sign-out"></i></a>
+                </li>
             </ul>
         </div><!--/.navbar-collapse -->
     </div>
 </div>
 
-<div class="container" ng-if="!mathematicaIsConfigured">
-    <div class="alert alert-warning" role="alert" id="mathematicaConfigurationAlert">
+<div class="container" ng-if="!toolIsConfigured" ng-cloak>
+    <div class="alert alert-warning" role="alert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Mathematica is not configured.
-        Most problems <b>will not be proved</b> and all the existing proofs that use Mathematica <b>will not be reloaded</b>. <a href="dashboard.html#/mathematica"><b>Configure now.</b></a>
+        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Backend tool is not configured.
+        Most problems <b>will not be proved</b> and all the existing proofs <b>will not be reloaded</b>. <a href="dashboard.html#/tools"><b>Configure now.</b></a>
     </div>
 </div>
 
@@ -138,6 +141,7 @@
 <!-- Placed at the end of the document so the pages load faster -->
 <script src="/js/jquery.min.js"></script>
 <script src="/js/jquery-ui.min.js"></script>
+<script src="/js/jquery-textcomplete/jquery.textcomplete.js"></script>
 <script src="/js/bootstrap/bootstrap.min.js"></script>
 <script src="/js/jasny-bootstrap.min.js"></script>
 <script src="/js/angular/angular.min.js"></script>
@@ -153,6 +157,12 @@
 <script src="/js/angular-ui-tree.js"></script>
 <script src="/js/angular-chart/Chart.js"></script>
 <script src="/js/angular-chart/angular-chart.js"></script>
+<script src="/js/angular-textcomplete/ng-textcomplete.js"></script>
+<script src="/js/google-diffmatchpatch/diff_match_patch.js"></script>
+<script src="/js/angular-diffmatchpatch/angular-diff-match-patch.js"></script>
+<!--<script src="/js/rangy/rangy-core.min.js"></script>
+<script src="/js/rangy/rangy-classapplier.min.js"></script>
+<script src="/js/rangy/rangy-textrange.min.js"></script>-->
 <script src="/js/app.js"></script>
 <!-- Load services -->
 <script src="/js/services/services.js"></script>
@@ -171,9 +181,9 @@
 <script src="/js/controllers/transformFormula.js"></script>
 <script src="/js/controllers/dashboard.js"></script>
 <script src="/js/controllers/dev.js"></script>
-<script src="/js/controllers/hacmstree.js"></script>
+<!--<script src="/js/controllers/hacmstree.js"></script>-->
 <script src="/js/controllers/hpmodels.js"></script>
-<script src="/js/controllers/mathematicaConfig.js"></script>
+<script src="/js/controllers/toolConfig.js"></script>
 <script src="/js/controllers/mathematicaConfig.js"></script>
 <script src="/js/controllers/proofRuleChoice.js"></script>
 <script src="/js/controllers/proofs.js"></script>
@@ -190,6 +200,8 @@
 
 <!-- KeYmaera UI
 ================================================== -->
+<!--<script src="js/keymaera-ui/contenteditable.js"></script>-->
+<script src="js/keymaera-ui/keyevents.js"></script>
 <script src="js/keymaera-ui/mouseevents.js"></script>
 <script src="js/keymaera-ui/progress-meter.js"></script>
 <script src="js/keymaera-ui/proof-progress-chart.js"></script>
@@ -199,6 +211,7 @@
 <script src="js/keymaera-ui/sequent.js"></script>
 <script src="js/keymaera-ui/sequentproof.js"></script>
 <script src="js/keymaera-ui/autohidealert.js"></script>
+<script src="js/keymaera-ui/tacticeditor.js"></script>
 
 </body>
 </html>

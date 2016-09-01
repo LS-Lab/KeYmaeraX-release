@@ -3,7 +3,7 @@
  * See LICENSE.txt for the conditions of this license.
  */
 /**
-  * @note Code Review: 2016-06-01
+  * @note Code Review: 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
@@ -14,8 +14,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
 
-import scala.reflect.ClassTag
-
 /**
   * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
   * to Mathematica Expr objects.
@@ -23,34 +21,23 @@ import scala.reflect.ClassTag
   * @author Nathan Fulton
  */
 object KeYmaeraToMathematica extends KeYmaeraToMathematica
-class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
+class KeYmaeraToMathematica extends K2MConverter[KExpr] {
 
   def m2k: M2KConverter[KExpr] = MathematicaToKeYmaera
 
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
    */
-  //@todo Code Review contract: convert back is identity, ask converse converter
-  //@solution: introduced traits/base traits that implement contract checking. here: convert without contract checking
-  def convert(e: KExpr): MExpr = {
-    insist(StaticSemantics.symbols(e).
-      map(s => (s.name.toLowerCase, s)).
-      filter({ case (n, s) => (n == "abs" || n == "min" || n == "max") && s.index.isEmpty }). //@note e.g., abs_idx is ok
-      forall({ case (_, s) => s match {
-        case Function("abs", None, Real, Real) => true
-        case Function("max", None, Tuple(Real, Real), Real) => true
-        case Function("min", None, Tuple(Real, Real), Real) => true
-        case _ => false
-      }}), "Special functions must have expected domain and sort (and must be functions)")
+  private[tools] def convert(e: KExpr): MExpr = {
+    insist(StaticSemantics.symbols(e).forall({case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true}),
+      "Interpreted functions must have expected domain and sort")
     insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
 
     e match {
       case t: Term => convertTerm(t)
       case f: Formula => convertFormula(f)
       case fn: Function =>
-        //@todo Code Review: prefixed name must be disjoint from other names in the containing term/formula -> Mathematica namespace `constFn`
-        //@solution uninterpreted function symbols are removed with tactics -> we disallow them here, constFn removed entirely.
-        // can remove this case during next code review (if we remove: can also remove overridden CEXK2MConverter.convert). Non-soundness critical CEX and Simulation tools can override
+        // can override in non-soundness critical converters (e.g., CEX and Simulation)
         throw new ConversionException("Uninterpreted function symbols are disallowed")
     }
   }
@@ -74,25 +61,22 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     t match {
       //@todo Code Review: clean up FuncOf conversion into two cases here
       //@solution: inlined and simplified the FuncOf cases, moved uniform name conversion into MathematicaNameConversion
-      case FuncOf(fn, child) => child match {
-        case _: Pair =>
-          assert(convertTerm(child).listQ(), "Converted pair expected to be a list, but was " + convertTerm(child))
-          new MExpr(toMathematica(fn), convertTerm(child).args())
-        case _ => new MExpr(toMathematica(fn), Array[MExpr](convertTerm(child)))
-      }
+      //@solution: distinguish between interpreted and uninterpreted function symbols
+      case FuncOf(fn, child) if fn.interpreted => convertFunction(interpretedSymbols(fn), child)
+      //@note Uninterpreted functions are mapped to namespace kyx` to avoid clashes with any interpreted names
+      case FuncOf(fn, child) if !fn.interpreted => convertFunction(toMathematica(fn), child)
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
       case Plus(l, r) => new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Minus(l, r) => new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Times(l, r) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Divide(l, r) => new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) => new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Number(n) if n.isValidInt || n.isValidLong => new MExpr(n.longValue())
+      case Number(n) if n.isValidLong => new MExpr(n.longValue())
       case Number(n) => new MExpr(n.underlying())
-      case Pair(l, r) =>
-        //@note converts nested pairs into nested lists
-        new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
-
       case t: Variable => toMathematica(t)
+      case Pair(l, r) =>
+        //@note converts nested pairs into nested lists of length 2 each
+        new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
     }
   }
 
@@ -113,33 +97,46 @@ class KeYmaeraToMathematica extends BaseK2MConverter[KExpr] {
     case False => MathematicaSymbols.FALSE
     case True => MathematicaSymbols.TRUE
     case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
-    case Exists(vs, phi) => convertQuantified(vs, phi, Exists.unapply, MathematicaSymbols.EXISTS)
-    case Forall(vs, phi) => convertQuantified(vs, phi, Forall.unapply, MathematicaSymbols.FORALL)
-    case _ => throw new ProverException("Don't know how to convert " + f + " of class " + f.getClass)
+    case exists: Exists => convertExists(exists)
+    case forall: Forall => convertForall(forall)
+    case _ => throw new ConversionException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
-  //@todo Code Review: Forall+Exists could be 1 conversion
-  //@solution: added parameters for unapplier (ua) and head symbol
-  /** Convert block of quantifiers into a single quantifier block, using unapply (ua) and matching head (FORALL/EXISTS) */
-  protected def convertQuantified[T <: Quantified](vs: Seq[NamedSymbol], f: Formula,
-                                                   ua: T => Option[(Seq[Variable], Formula)], head: MExpr): MExpr = {
-    require(head == MathematicaSymbols.EXISTS || head == MathematicaSymbols.FORALL,
-      "Expected either existential or universal quantifier as MExpr head")
-
-    /** Recursively collect quantified variables, return variables+quantified formula */
-    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: T): (Seq[NamedSymbol], Formula) = {
-      ua(candidate) match {
-        case Some((nextVs, nextf: T)) => collectVars(vsSoFar ++ nextVs, nextf)
-        case Some((nextVs, nextf)) => (vsSoFar ++ nextVs, nextf)
+  /** Converts a universally quantified formula. */
+  protected def convertForall(f: Quantified): MExpr = {
+    /** Recursively collect universally quantified variables, return variables+child formula */
+    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
+      candidate match {
+        case Forall(nextVs, nextf) => collectVars(vsSoFar ++ nextVs, nextf)
         case _ => (vsSoFar, candidate)
       }
     }
 
-    val (vars, formula) = f match {
-      case q: T => collectVars(vs, q)
-      case _ => (vs, f)
-    }
+    val (vars, formula) = collectVars(f.vars, f.child)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
-    new MExpr(head, Array[MExpr](variables, convertFormula(formula)))
+    new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
+  }
+
+  /** Converts an existentially quantified formula. */
+  protected def convertExists(f: Quantified): MExpr = {
+    /** Recursively collect existentially quantified variables, return variables+child formula */
+    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
+      candidate match {
+        case Exists(nextVs, nextf) => collectVars(vsSoFar ++ nextVs, nextf)
+        case _ => (vsSoFar, candidate)
+      }
+    }
+
+    val (vars, formula) = collectVars(f.vars, f.child)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
+    new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
+  }
+
+  /** Convert a function. */
+  private def convertFunction(head: MExpr, child: Term): MExpr = child match {
+    case _: Pair =>
+      assert(convertTerm(child).listQ(), "Converted pair expected to be a list, but was " + convertTerm(child))
+      new MExpr(head, convertTerm(child).args())
+    case _ => new MExpr(head, Array[MExpr](convertTerm(child)))
   }
 }

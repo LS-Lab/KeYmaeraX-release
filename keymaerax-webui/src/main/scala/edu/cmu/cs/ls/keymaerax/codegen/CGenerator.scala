@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 
 /**
+ * C code generator.
  * Created by ran on 6/16/15.
  * @author Ran Ji
  */
@@ -196,9 +197,9 @@ object CGenerator extends CodeGenerator {
    */
   private def getCalledFuncs(expr: Expression, vars: List[NamedSymbol]): Set[NamedSymbol] =
     StaticSemantics.symbols(expr)
-      .filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real)})
-      .filterNot((minFun: NamedSymbol) => {minFun == Function("min", None, Tuple(Real, Real), Real)})
-      .filterNot((maxFun: NamedSymbol) => {maxFun == Function("max", None, Tuple(Real, Real), Real)})
+      .filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real, true)})
+      .filterNot((minFun: NamedSymbol) => {minFun == Function("min", None, Tuple(Real, Real), Real, true)})
+      .filterNot((maxFun: NamedSymbol) => {maxFun == Function("max", None, Tuple(Real, Real), Real, true)})
       .diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
 
 
@@ -296,9 +297,9 @@ object CGenerator extends CodeGenerator {
         else nameIdentifier(fn)+"()"
       case FuncOf(fn, child) =>
         nameIdentifier(fn) match {
-          case "abs" => convertPredefFuncs("abs", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
-          case "min" => convertPredefFuncs("min", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
-          case "max" => convertPredefFuncs("max", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
+          case "abs" => assert(fn.interpreted); convertPredefFuncs("abs", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
+          case "min" => assert(fn.interpreted); convertPredefFuncs("min", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
+          case "max" => assert(fn.interpreted); convertPredefFuncs("max", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
           case _ => nameIdentifier(fn) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
         }
       case Pair(l, r)  => compileTerm(l, calledFuncs, cDataType) + ", " + compileTerm(r, calledFuncs, cDataType)

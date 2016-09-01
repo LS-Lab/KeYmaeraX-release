@@ -36,6 +36,67 @@ object FormulaTools {
   }
 
   /**
+    * Gets the (unquantified) kernel part of a quantified formula by peeling off quantifiers.
+    */
+  def kernel(formula: Formula): Formula = formula match {
+    case Forall(vars, p) => kernel(p)
+    case Exists(vars, p) => kernel(p)
+    case p => p
+  }
+
+  /** Convert nested pairs to a list of its deassociated non-pair arguments. */
+  def argumentList(term: Term): List[Term] = term match {
+    case Pair(a,b) => argumentList(a) ++ argumentList(b)
+    case a => List(a)
+  }
+
+  /** Negation-normal form transforms such that there are no nested negations and that
+    * negated atomic comparisons.
+    * Also removes implications/equivalences. */
+  def negationNormalForm(formula: Formula): Formula = formula match {
+    case formula: AtomicFormula => formula
+    case Not(g:AtomicFormula) => g match {
+      case Equal(a,b) => NotEqual(a,b)
+      case NotEqual(a,b) => Equal(a,b)
+      case Greater(a,b) => LessEqual(a,b)
+      case GreaterEqual(a,b) => Less(a,b)
+      case Less(a,b) => GreaterEqual(a,b)
+      case LessEqual(a,b) => Greater(a,b)
+    }
+    case Not(g:CompositeFormula) => g match {
+      case Not(f) => negationNormalForm(f)
+      case And(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(Not(q)))
+      case Or(p,q) => And(negationNormalForm(Not(p)), negationNormalForm(Not(q)))
+      case Imply(p,q) => And(negationNormalForm(p), negationNormalForm(Not(q)))
+      case Equiv(p,q) => Or(
+        And(negationNormalForm(p), negationNormalForm(Not(q))),
+        And(negationNormalForm(Not(p)), negationNormalForm(q))
+      )
+    }
+    case Imply(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(q))
+    case Equiv(p,q) => Or(
+      And(negationNormalForm(p), negationNormalForm(q)),
+      And(negationNormalForm(Not(p)), negationNormalForm(Not(q)))
+    )
+    case f:BinaryCompositeFormula => f.reapply(negationNormalForm(f.left), negationNormalForm(f.right))
+    case f:Quantified             => f.reapply(f.vars, negationNormalForm(f.child))
+    case f:Modal                  => f.reapply(f.program, negationNormalForm(f.child))
+    case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
+  }
+
+  /** Read off all atomic subformulas of `formula`.
+    * Will not descend into programs to find even further atomic formulas since they are not directly subformulas.
+    * @see [[negationNormalForm()]] */
+  def atomicFormulas(formula: Formula): List[AtomicFormula] = formula match {
+    case formula: AtomicFormula   => List(formula)
+    case f:UnaryCompositeFormula  => atomicFormulas(f.child)
+    case f:BinaryCompositeFormula => atomicFormulas(f.left) ++ atomicFormulas(f.right)
+    case f:Quantified             => atomicFormulas(f.child)
+    case f:Modal                  => atomicFormulas(f.child)
+    case _ => throw new IllegalArgumentException("atomicFormulas of formula " + formula + " not implemented")
+  }
+
+  /**
    * Returns the polarity of the subformula at position pos in formula.
    * @param formula The formula.
    * @param pos The position within formula for which the polarity is searched.
@@ -102,4 +163,64 @@ object FormulaTools {
     pos
   }
 
+  /** Read off the set of all possible singularities coming from divisors or negative powers.
+    * @example {{{
+    *           singularities("x>5/b+2".asFormula)==Set(b)
+    *           singularities("x/y>z/2+8/(a+b) & [x:=a/c;]x+1/(3*d)>5/3".asFormula)==Set(y,a+b,c,3*d)
+    * }}}
+    */
+  def singularities(e: Expression): Set[Term] = e match {
+    case t: Term    => singularities(t)
+    case f: Formula => singularities(f)
+    case p: Program => singularities(p)
+  }
+
+  def singularities(term: Term): Set[Term] = term match {
+    case Nothing | DotTerm(_) | Number(_) => Set.empty
+    case _: Variable     => Set.empty
+    case _: UnitFunctional => Set.empty
+    case FuncOf(f,t)     => singularities(t)
+    // homomorphic cases
+    case f:UnaryCompositeTerm  => singularities(f.child)
+    case f@Divide(_,Number(n)) if n!=0 => singularities(f.left) ++ singularities(f.right)
+    case f:Divide                      => singularities(f.left) ++ singularities(f.right) + f.right
+    case f@Power(_,Number(n)) if n>=0  => singularities(f.left) ++ singularities(f.right)
+    case f@Power(_,Number(n)) if n<0   => singularities(f.left) ++ singularities(f.right) + f.left
+    case f:BinaryCompositeTerm         => singularities(f.left) ++ singularities(f.right)
+    case _ => throw new IllegalArgumentException("singularities of term " + term + " not implemented")
+  }
+
+  def singularities(formula: Formula): Set[Term] = formula match {
+    // base cases
+    case True | False         => Set.empty
+    case _: UnitPredicational | DotFormula => Set.empty
+    case PredOf(p,t)          => singularities(t)
+    case PredicationalOf(c,t) => singularities(t)
+    // pseudo-homomorphic cases
+    case f:ComparisonFormula  => singularities(f.left) ++ singularities(f.right)
+    // homomorphic cases
+    case f:UnaryCompositeFormula  => singularities(f.child)
+    case f:BinaryCompositeFormula => singularities(f.left) ++ singularities(f.right)
+    case f:Quantified             => singularities(f.child)
+    case f:Modal                  => singularities(f.program) ++ singularities(f.child)
+    case _ => throw new IllegalArgumentException("singularities of formula " + formula + " not implemented")
+  }
+
+  def singularities(program: Program): Set[Term] = program match {
+    case Assign(x,t)       => singularities(t)
+    case AssignAny(x)      => Set.empty
+    case Test(f)           => singularities(f)
+    case ODESystem(ode, h) => singularities(ode) ++ singularities(h)
+    // homomorphic cases
+    case f:UnaryCompositeProgram  => singularities(f.child)
+    case f:BinaryCompositeProgram => singularities(f.left) ++ singularities(f.right)
+    case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
+  }
+
+  private def singularities(program: DifferentialProgram): Set[Term] = program match {
+    case AtomicODE(xp,t)       => singularities(t)
+    case _:DifferentialProgramConst => Set.empty
+    case f:DifferentialProduct => singularities(f.left) ++ singularities(f.right)
+    case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
+  }
 }

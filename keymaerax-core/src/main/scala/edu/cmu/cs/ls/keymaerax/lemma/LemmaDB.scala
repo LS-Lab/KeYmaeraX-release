@@ -2,9 +2,13 @@
   * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
   * See LICENSE.txt for the conditions of this license.
   */
+/**
+  * @note Code Review 2016-08-16
+  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
+import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 /**
   * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
@@ -18,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.core.Lemma
  * val lemmaDB = LemmaDBFactory.lemmaDB
  * // prove a lemma
  * val proved = TactixLibrary.proveBy(
- *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+ *    Sequent(IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
  *    orR(1) & close
  *  )
  * // store a lemma
@@ -38,9 +42,11 @@ trait LemmaDB {
    * Indicates whether or not this lemma DB contains a lemma with the specified ID.
  *
    * @param lemmaID Identifies the lemma.
+    *
+    *
    * @return True, if this lemma DB contains a lemma with the specified ID; false otherwise.
    */
-  def contains(lemmaID: LemmaID): Boolean
+  def contains(lemmaID: LemmaID): Boolean = get(lemmaID).isDefined
 
   /**
    * Returns the lemma with the given name or None if non-existent.
@@ -50,7 +56,9 @@ trait LemmaDB {
    * @ensures contains(lemmaID) && \result==Some(l) && l.name == lemmaID
    *         || !contains(lemmaID) && \result==None
    */
-  def get(lemmaID: LemmaID): Option[Lemma]
+  def get(lemmaID: LemmaID): Option[Lemma] = get(List(lemmaID)).flatMap(_.headOption)
+
+  def get(lemmaIDs: List[LemmaID]):Option[List[Lemma]]
 
   /**
    * Adds a new lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
@@ -62,6 +70,10 @@ trait LemmaDB {
    */
   def add(lemma: Lemma): LemmaID
 
+  /** Delete the lemma of the given identifier, throwing exceptions if that was unsuccessful.*/
+  def remove(name: LemmaID): Unit
 
+  /** Delete the whole lemma database */
   def deleteDatabase(): Unit
+
 }

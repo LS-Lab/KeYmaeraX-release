@@ -16,10 +16,10 @@ import scala.collection.immutable.Set
 object SubstitutionHelper {
   /** Return the result of replacing all free occurrences of `what` in formula `f` by `repl`. */
   def replaceFree(f: Formula)(what: Term, repl:Term): Formula =
-    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)
+    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], f)
   /** Return the result of replacing all free occurrences of `what` in formula `f` by `repl`. */
   def replaceFree(t: Term)(what: Term, repl:Term): Term =
-    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)
+    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], t)
   /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl`. */
   def replaceFree(seq: Sequent)(what: Term, repl:Term): Sequent =
     new Sequent(seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
@@ -33,14 +33,14 @@ class SubstitutionHelper(what: Term, repl: Term) {
    * @param u The taboo set.
    * @param p The program.
    */
-  private sealed case class USR(o: SetLattice[NamedSymbol],
-                                u: SetLattice[NamedSymbol],
+  private sealed case class USR(o: SetLattice[Variable],
+                                u: SetLattice[Variable],
                                 p: Program)
 
   /**
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
+  private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], t: Term): Term = {
     t match {
       // homomorphic cases
       case Neg(e) if t != what => Neg(usubst(o, u, e))
@@ -58,12 +58,12 @@ class SubstitutionHelper(what: Term, repl: Term) {
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
-      case d: DifferentialSymbol if d == what => repl
-      case d: DifferentialSymbol if d != what => d
+//      case d: DifferentialSymbol if d == what => repl
+//      case d: DifferentialSymbol if d != what => d
       case d: Differential if d == what => repl
       case d: Differential if d != what => d
-      case app@FuncOf(fn, theta) if !u.contains(fn) && app == what => repl
-      case app@FuncOf(fn, theta) if  u.contains(fn) || app != what => FuncOf(fn, usubst(o, u, theta))
+      case app@FuncOf(fn, theta) if /*!u.contains(fn) &&*/ app == what => repl
+      case app@FuncOf(fn, theta) if  /*u.contains(fn) ||*/ app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_) if t == what => repl
       case x: Atomic => x
@@ -73,7 +73,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
     }
   }
 
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], f: Formula): Formula = f match {
+  private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], f: Formula): Formula = f match {
     // homomorphic cases
     case Not(g) => Not(usubst(o, u, g))
     case And(l, r) => And(usubst(o, u, l), usubst(o, u, r))
@@ -102,9 +102,9 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
 
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = p match {
+  private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], p: Program): USR = p match {
     case Assign(x, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
-    case DiffAssign(d@DifferentialSymbol(x), e) => USR(o+x, u+x, DiffAssign(d, usubst(o, u, e)))
+    //case DiffAssign(d@DifferentialSymbol(x), e) => USR(o+x, u+x, DiffAssign(d, usubst(o, u, e)))
     case AssignAny(x) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
       //@todo double-check this case
@@ -129,14 +129,14 @@ class SubstitutionHelper(what: Term, repl: Term) {
    * @param p The ODE.
    * @return The substitution result.
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
+  private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], primed: Set[Variable], p: DifferentialProgram):
       DifferentialProgram = p match {
     case DifferentialProduct(a, b) => DifferentialProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
     case AtomicODE(d@DifferentialSymbol(x), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: DifferentialProgramConst => p
   }
 
-  private def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
+  private def primedVariables(ode: DifferentialProgram): Set[Variable] = ode match {
     case DifferentialProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case AtomicODE(DifferentialSymbol(x), _) => Set(x)
     case _: DifferentialProgramConst => Set.empty

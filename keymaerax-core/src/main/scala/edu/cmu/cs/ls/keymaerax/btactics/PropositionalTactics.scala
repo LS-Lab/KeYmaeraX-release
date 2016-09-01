@@ -3,23 +3,22 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
-
+import TacticFactory._
+import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.core
 
+import scala.annotation.tailrec
 import scala.language.postfixOps
 
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
  */
-object PropositionalTactics {
+private object PropositionalTactics {
   /**
    * Inverse of [[ProofRuleTactics.implyR]].
-   * {{{
-   *   G, G' |- D, D', a -> b
-   * -------------------------
-   *   G, a, G' |- D, b, D'
-   * }}}
+   *
  *
    * @author Nathan Fulton
    * @author Stefan Mitsch
@@ -42,12 +41,7 @@ object PropositionalTactics {
 
   /**
    * Inverse of [[ProofRuleTactics.orR]].
-   * {{{
-   *   G |- D, D', D'', a | b
-   * -------------------------
-   *   G |- D, a, D', b, D''
-   * }}}
- *
+   *
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.orR]]
    */
@@ -71,11 +65,6 @@ object PropositionalTactics {
 
   /**
    * Inverse of [[ProofRuleTactics.andL]].
-   * {{{
-   *   G, G', G'', a&b  |- D
-   * -------------------------
-   *   G, a, G', b, G'' |- D
-   * }}}
  *
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
@@ -133,18 +122,7 @@ object PropositionalTactics {
     }
   }
 
-  /**
-   * Modus ponens.
- *
-   * @example{{{
-   *      p, q, G |- D
-   *   ---------------- modusPonens
-   *   p, p->q, G |- D
-   * }}}
-   * @param assumption Position pointing to p
-   * @param implication Position pointing to p->q
-   * @return The tactic.
-   */
+  /** @see [[SequentCalculus.modusPonens()]] */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
@@ -179,4 +157,228 @@ object PropositionalTactics {
         )
     }
   }
+
+  //region Equivalence Rewriting
+
+  /**
+    * Performs equivalence rewriting in either direction at any top-level position in a sequent,
+    * leaving the original equivalence in place. Instantiates Forall-quantified equivalences so that they match
+    * the target position when necessary. If the quantified variable is not mentioned in the targetPos, then the quantified
+    * name is used.
+    *
+    * @todo these examples might be incorrect, and the description above might be incorrect. Correct explanation is "does whatever unification does", actually.
+    *       Although we might want to change that to not use unification...
+    *
+    * Examples:
+    * {{{
+    *   \forall x. p(x) <-> q() |- p(x)
+    *   --------------------------------- equivRewriting(-1,1)
+    *   \forall x. p(x) <-> q() |- q()
+    *
+    *   \forall x. p(x) <-> q() |- q()
+    *   --------------------------------- equivRewriting(-1,1)
+    *   \forall x. p(x) <-> q() |- p(z)
+    *
+    *   \forall x. p(x) <-> q(z), p(x) |-
+    *   --------------------------------- equivRewriting(-1,-2)
+    *   \forall x. p(x) <-> q(z), q(z) |-
+    *
+    *   \forall x. p(x) <-> q(z), q(z) |-
+    *   --------------------------------- equivRewriting(-1,-2)
+    *   \forall x. p(x) <-> q(z), p(z) |-
+    *
+    *   \forall x. p(x) <-> q(z), q(z) |-
+    *   --------------------------------- equivRewriting(-1,-2)
+    *   \forall x. p(x) <-> q(z), p(x) |-
+    * }}}
+    */
+    val equivRewriting = "equivRewriting" byTactic ((p: Provable, equivPos: Position, targetPos: Position) => {
+      assert(p.subgoals.length == 1, "Assuming one subgoal.")
+      val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
+      p.subgoals(0)(equivPos) match {
+        case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
+        case fa: Forall => {
+          /*
+         * Game plan:
+         *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
+         *   2. Cut in a new quantified equivalence
+         *   3. Perform instantiations on this new quantified equivalence.
+         *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
+         *   5. Hide the instantiated equivalence OR the original assumption.
+         */
+          //1
+          val instantiation = computeInstantiation(fa, target)
+
+          //2: input is p and output is postCut
+          val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
+          val cutExpr = TactixLibrary.cut(fa) <(
+            Idioms.nil,
+            TactixLibrary.close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
+          )
+
+          //3: input is postCut and output is instantiatedEquivalence
+          val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e:BelleExpr,x:Variable) => {
+            e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
+          })
+
+          //step 5.
+          val hidingTactic = if(targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
+
+          //4 & 5
+          instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
+        }
+      }
+    })
+
+  private def computeInstantiation(fa: Forall, target: Formula): RenUSubst = {
+    val allVars = vars(fa)
+    val equiv   = bodyOf(fa)
+
+    //@note it's important to only use the renaming; otherwise unification is too clever and comes up with predicate substitutions that cannot be achieved by instantiation alone.
+    val leftRenaming: Option[RenUSubst] = try {
+      val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming
+      if(renaming.isEmpty) None
+      else Some(new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming)
+    } catch {
+      case _:Throwable => None
+    } finally {
+      None //Maybe we actually should not catch quite everything here?
+    }
+
+    val rightRenaming: Option[RenUSubst] = try {
+      val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.right, target).renaming
+      if(renaming.isEmpty) None
+      else Some(renaming)
+    } catch {
+      case _:Throwable => None
+    } finally {
+      None //Maybe we actually should not catch quite everything here?
+    }
+
+    //First try to left-unify, then try to right-unify. I.e., default to left-rewriting when bot hare available.
+    //@note This is also the default behavior of instantiatedEquivRewriting, and the two should be consistent on defaults.
+    (leftRenaming, rightRenaming) match {
+      case (Some(subst), _)  => { println(s"Unified ${equiv.right} with ${target} under ${subst}"); subst }
+      case (None, Some(subst)) => { println(s"Unified ${equiv.left} with ${target} under ${subst}"); subst }
+      case _ => RenUSubst(Nil) //Try to go ahead with an empty renaming since it will work more often than not.
+    }
+  }
+  private def vars(fa: Forall): Seq[Variable] = fa.vars ++ (fa.child match {
+    case child: Forall => vars(child)
+    case e:Equiv => Nil
+    case _ => throw new Exception("Expted equiv.")
+  })
+  @tailrec
+  private def bodyOf(fa: Forall): Equiv = fa.child match {
+    case child:Forall => bodyOf(child)
+    case child:Equiv  => child
+    case _            => throw new Exception(s"Expected a universally quantified equivalence but found ${fa.child.getClass}")
+  }
+
+
+  /**
+    * Performs equivalence rewriting in either direction at any top-level position in a sequent,
+    * leaving the original equivalence in place.
+    *
+    * Examples:
+    * {{{
+    *   P<->Q |- Q
+    *   ----------- equivRewriting(-1, 1)
+    *   P<->Q |- P
+    * }}}
+    *
+    * {{{
+    *   P<->Q, Q |-
+    *   ------------ equivRewriting(-1, 1)
+    *   P<->Q, P |-
+    * }}}
+    *
+    * {{{
+    *   P<->Q, P |-
+    *   ------------ equivRewriting(-1, 1)
+    *   P<->Q, Q |-
+    * }}}
+    */
+  private def instantiatedEquivRewritingImpl(p: Provable, equivPos: Position, targetPos: Position) = {
+    import Augmentors._
+    assert(p.subgoals.length == 1, "Assuming one subgoal.")
+
+    //@note equivalence == target <-> other.
+    val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte) match {
+      case e:Equiv => e
+      case f:Formula => throw new Exception(s"Expected an Equiv but found ${f.prettyString}")
+    }
+    val targetValue : Formula = p.subgoals.head(targetPos.top)
+    val otherValue : Formula = if(equivalence.left == targetValue) equivalence.right else equivalence.left
+
+    val newEquivPos = AntePos(p.subgoals.head.ante.length)
+
+    //First constraint a sequent that we can close as long as we know which positions to target with CloseId
+    val postCut =
+      p.apply(Cut(equivalence), 0)
+        .apply(Close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
+        .apply(EquivLeft(newEquivPos), 0)
+        .apply(AndLeft(newEquivPos), 0)
+        .apply(AndLeft(newEquivPos), 1)
+
+    if(targetPos.isAnte) {
+      /*
+       * Positive subgoal (A&B) is the result branch. Cleanup as follows:
+       *    1. Ante reduces from
+       *          G, {target, other} |- D
+       *       to
+       *          G', other |- D
+       *       where G' is G with targetPos hidden, and {target, other} could occur in either direction.
+       *       I.e., we just hid both the original targetPos and the new targetPos that came from breaking up the And.
+       */
+      val positiveSubgoalCleanup = {
+        val redundantTargetPosition =
+          if (postCut.subgoals(0).ante.last == targetValue) AntePos(postCut.subgoals(0).ante.length - 1)
+          else AntePos(postCut.subgoals(0).ante.length - 2)
+
+        postCut
+          .apply(HideLeft(redundantTargetPosition), 0)
+          .apply(HideLeft(targetPos.checkAnte.top), 0)
+      }
+
+      /*
+       * Negative subgoal (!A&!B) closes:
+       *   1. Identify location of negated other of equivalence
+       *   2.
+       */
+      val negatedTargetPos =
+        if(positiveSubgoalCleanup.subgoals(1).ante.last == Not(targetValue))
+          AntePos(positiveSubgoalCleanup.subgoals(1).ante.length - 1)
+        else
+          AntePos(positiveSubgoalCleanup.subgoals(1).ante.length - 2)
+      val unNegatedTargetPos = SuccPos(positiveSubgoalCleanup.subgoals(1).succ.length)
+
+      positiveSubgoalCleanup
+        .apply(NotLeft(negatedTargetPos), 1)
+        .apply(Close(targetPos.checkAnte.top, unNegatedTargetPos), 1)
+    }
+    else { //targetPos is in the succedent.
+      val anteTargetPos =
+        if (postCut.subgoals(0).ante.last == targetValue) AntePos(postCut.subgoals(0).ante.length - 1)
+        else AntePos(postCut.subgoals(0).ante.length - 2)
+
+      val negatedOtherPos =
+        if (postCut.subgoals(1).ante.last == Not(otherValue)) AntePos(postCut.subgoals(1).ante.length - 1)
+        else AntePos(postCut.subgoals(1).ante.length - 2)
+
+      postCut
+        .apply(Close(anteTargetPos, targetPos.checkSucc.top), 0)
+        .apply(HideRight(targetPos.checkSucc.top), 0) //@note these are not position 0 instead of position 1 because the other goal has now closed.
+        .apply(NotLeft(negatedOtherPos), 0)
+        .apply(HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
+    }
+  }
+  val instantiatedEquivRewriting = "instantiatedEquivRewriting" by ((p: Provable, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
+  /** @todo explain why this exists and maybe find a better name. */
+  private def builtInEquivRewriting(equivPos: Position, targetPos: Position) = new BuiltInTactic("") {
+    override def result(p:Provable) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)
+  }
+
+  //endregion
+
 }

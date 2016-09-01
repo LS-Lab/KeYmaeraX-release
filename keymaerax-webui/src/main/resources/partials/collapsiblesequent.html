@@ -74,6 +74,10 @@
                            tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-exchange"></span></a>
                     </li>
+                    <li><a ng-click="exportFormula(f.id)"
+                           uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
+                        <span class="fa fa-clipboard"></span></a>
+                    </li>
                 </ul>
                 <div class="k4-formula-content pull-right">
                     <ul><li>{{f.id}}:</li></ul>
@@ -155,6 +159,10 @@
                         <a ng-click="transformFormula(f.id, f.formula, false)"
                            uib-tooltip="Transform" tooltip-placement="left" tooltip-popup-delay="5000">
                             <span class="fa fa-pencil"></span></a>
+                    </li>
+                    <li><a ng-click="exportFormula(f.id)"
+                           uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
+                        <span class="fa fa-clipboard"></span></a>
                     </li>
                 </ul>
                 <div class="k4-formula-content">

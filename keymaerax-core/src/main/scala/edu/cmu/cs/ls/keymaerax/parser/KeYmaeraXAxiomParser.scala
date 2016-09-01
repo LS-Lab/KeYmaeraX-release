@@ -21,7 +21,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
    * @return A list of named axioms occurring in the file.
    */
   def apply(input: String) : List[(String,Formula)] = {
-    val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode())
+    val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
     if (DEBUG) println("Tokens are: " + tokens)
     try {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)

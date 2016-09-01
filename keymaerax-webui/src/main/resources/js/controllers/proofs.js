@@ -1,35 +1,10 @@
 /**
  * Controllers for proof lists and proof information pages.
  */
-angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http, $cookies, $routeParams, $location) {
-  /*
-   * Creates a new proof using a default name, so that the user doesn't have to enter new input.
-   */
-  $scope.createDefaultProofForModel = function(modelId) {
-      var proofName        = "Untitled Proof"
-      var proofDescription = ""
-      var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createProof'
-      var dataObj          = {proofName : proofName, proofDescription : proofDescription}
-
-      $http.post(uri, dataObj).
-          success(function(data) {
-              var proofid = data.id
-              // we may want to switch to ui.router
-              $location.path('proofs/' + proofid);
-          }).
-          error(function(data, status, headers, config) {
-              console.log('Error starting new proof for model ' +modelId)
-          });
-  };
-  $scope.createDefaultProof = function() {
-    $scope.createDefaultProofForModel($routeParams.modelId)
-  };
-
-  $scope.createProof = function() {
-      var proofName        = $scope.proofName ? $scope.proofName : ""
-      var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
-      var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + $routeParams.modelId + '/createProof'
-      var dataObj          = {proofName : proofName, proofDescription : proofDescription}
+angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http, $cookies, $routeParams, $location, spinnerService) {
+  $scope.createProof = function(modelId, proofName, proofDescription) {
+      var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createProof'
+      var dataObj = {proofName: proofName, proofDescription: proofDescription}
 
       $http.post(uri, dataObj).
           success(function(data) {
@@ -41,6 +16,15 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
               console.log('Error starting new proof for model ' + $routeParams.modelId)
           });
   };
+
+  $scope.proveFromTactic = function(modelId) {
+    spinnerService.show('modelListProofLoadingSpinner');
+    var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/proveFromTactic'
+    $http.post(uri, {}).success(function(data) {
+      var proofId = data.id;
+      $location.path('proofs/' + proofId);
+    }).finally(function() { spinnerService.hide('modelListProofLoadingSpinner'); });
+  }
 
   $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
 });
@@ -115,6 +99,8 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
 
 /* Proof list for an individual model */
 angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function ($scope, $http, $cookies,$location, $routeParams, $route) {
+  $scope.modelId = $routeParams.modelId;
+
   $scope.openPrf = function(proofId) {
       $location.path('/proofs/' + proofId)
   }
@@ -125,24 +111,6 @@ angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function (
        $route.reload();
     });
   };
-
-  //Todo: should "inherit" this from the modelproofscreatectrl rather than copy/pasting here.
-  $scope.createProof = function() {
-      var proofName        = $scope.proofName ? $scope.proofName : ""
-      var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
-      var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + $routeParams.modelId + '/createProof'
-      var dataObj          = {proofName : proofName, proofDescription : proofDescription}
-
-      $http.post(uri, dataObj).
-          success(function(data) {
-              var proofid = data.id
-              // we may want to switch to ui.router
-              $location.path('proofs/' + proofid);
-          }).
-          error(function(data, status, headers, config) {
-              console.log('Error starting new proof for model ' + $routeParams.modelId)
-          });
-  }
 
   $scope.loadProof = function(proof) {
     proof.loadStatus = 'loading'

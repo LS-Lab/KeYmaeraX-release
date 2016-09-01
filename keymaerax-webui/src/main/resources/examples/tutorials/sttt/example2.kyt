@@ -1,0 +1,11 @@
+implyR(1) & (andL('L)*) & loop({`v >= 0`}, 1) & <(
+  QE & done,
+  QE & done,
+  composeb(1) & choiceb(1) & andR(1) & <(
+    assignb(1) & ODE(1) & done,
+    choiceb(1) & andR(1) & <(
+      assignb(1) & ODE(1) & done,
+      assignb(1) & ODE(1) & done
+    )
+  )
+)

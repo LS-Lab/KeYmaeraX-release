@@ -5,13 +5,14 @@
 /**
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @note Code Review 2015-08-24
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+ * @note Code Review 2016-08-02
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import scala.collection.immutable._
+import edu.cmu.cs.ls.keymaerax.core
 
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.Number
 
@@ -142,40 +143,50 @@ object OpSpec {
   import UnaryOpSpec.lUnaryOpSpecT
   import BinaryOpSpec.lBinaryOpSpec
 
-  // operator notation specifications
+  /** Interpreted symbols which are interpreted by tools or are defined to have a fixed semantics. */
+  private val interpretedSymbols: List[Function] = {
+    Function("abs",None,Real,Real,true) ::
+    Function("min",None,Tuple(Real,Real),Real,true) ::
+    Function("max",None,Tuple(Real,Real),Real,true) :: Nil
+  } ensuring(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
+  private val interpretation: Map[String,Function] = interpretedSymbols.map(f => (f.name -> f)).toMap
 
+  /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
+  private[parser] def func(name: String, index: Option[Int] = None, domain: Sort, sort: Sort): Function =
+  interpretation.get(name) match {
+    case None => Function(name,index,domain,sort)
+    case Some(r) =>
+      assert(r.interpreted, "interpreted function")
+      core.insist(r.name==name && r.index==index && r.domain==domain && r.sort==sort, "expected domain and sort " + Function(name,index,domain,sort).fullString)
+      r
+  }
+
+  /** The sort of an interpreted function or None if uninterpreted */
+  private[parser] def interpretedFuncSort(name: String): Option[Sort] = interpretation.get(name) match {
+    case None => None
+    case Some(f) => Some(f.sort)
+  }
+
+  // operator notation specifications
 
   // terms
   private val unterm = TermKind
   private val binterm = (TermKind,TermKind)
   val sDotTerm      = UnaryOpSpec[Term](DOT,       0, PrefixFormat, unterm, (e:Term) => DotTerm(e.sort))
   val sNothing      = UnitOpSpec (NOTHING,  0, Nothing)
-  val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
   val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
   val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
-  val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
+  val sUnitFunctional= UnitOpSpec(none,     0, name => UnitFunctional(name,AnyArg,Real))
+  val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(func(name, None, e.sort, Real), e))
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME,0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
-  val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,     5, PostfixFormat, unterm, Differential.apply _)
-  val sNeg          = UnaryOpSpec[Term] (MINUS,    59/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
+  val sNeg          = UnaryOpSpec[Term] (MINUS,    59/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPlus         = BinaryOpSpec[Term](PLUS,     60, LeftAssociative, binterm, Plus.apply _)
   val sMinus        = BinaryOpSpec[Term](MINUS,    60, LeftAssociative/*!*/, binterm, Minus.apply _)
-  val sProjection   = UnaryOpSpec[Term](PROJ,       0, PrefixFormat, unterm, (e:Term) => {
-    def toList(d: Int, n: Int): List[Int] = n match {
-      case 0 if d==1 => 0::Nil
-      case 1 if d==1 => 1::Nil
-      case _ => (n%2)::toList(d-1, n/2)
-    }
-    val (term, depth, value) = e match {
-      case Pair(t, Pair(Number(d), Number(v))) => (t, d.intValue(),v.intValue())
-      case _ => ???
-    }
-    Projection(term, toList(depth, value).reverse)
-  })
-
+  val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
 
   // formulas
   private val unfml = (FormulaKind)
@@ -187,8 +198,9 @@ object OpSpec {
   val sDotFormula   = UnitOpSpec(PLACE,                 0, DotFormula)
   val sTrue         = UnitOpSpec(TRUE,                  0, True)
   val sFalse        = UnitOpSpec(FALSE,                 0, False)
-  val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(Function(name, None, Real, Bool), e.asInstanceOf[Term]))
-  val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
+  val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(func(name, None, e.sort, Bool), e.asInstanceOf[Term]))
+  val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(func(name, None, e.sort, Bool), e.asInstanceOf[Formula]))
+  val sUnitPredicational= UnitOpSpec(none,              0, name => UnitPredicational(name,AnyArg))
   val sDifferentialFormula = UnaryOpSpec[Formula](PRIME,80, PostfixFormat, unfml, DifferentialFormula.apply _)
   val sEqual        = lBinaryOpSpec(EQ,                90, AtomicBinaryFormat, bintermfml, Equal.apply _)
   assert(sEqual>sMinus, "formulas bind weaker than their constituent terms")
@@ -216,13 +228,12 @@ object OpSpec {
   private val untermprog = unterm
   private val unfmlprog = (FormulaKind)
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
-  /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
-  val sNoneDone     = UnitOpSpec  (PSEUDO, Int.MinValue, _ => throw new AssertionError("Cannot construct NONE"))
+
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
-  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
+  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name, AnyArg))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
   assert(sAssign>sMinus, "atomic programs bind weaker than their constituent terms")
-  val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
+  //val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY,200, PostfixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
   val sTest         = lUnaryOpSpecF[Program](TEST,    200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
   assert(sTest>sEquiv, "tests bind weaker than their constituent formulas")
@@ -233,14 +244,17 @@ object OpSpec {
   val sLoop         = UnaryOpSpec[Program](STAR,      220, PostfixFormat, unprog, Loop.apply _)
   val sDual         = UnaryOpSpec[Program](DUAL,      220, PostfixFormat, unprog, Dual.apply _)
   val sCompose      = BinaryOpSpec[Program](SEMI,     230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
-  //valp: Compose     => OpNotation("",    230, RightAssociative)
   val sChoice       = BinaryOpSpec[Program](CHOICE,   250, RightAssociative, binprog, Choice.apply _)
+
+  // pseudo tokens
 
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
-  val sNoneUnfinished = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
+  val sNoneUnfinished = UnitOpSpec(PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
   val sNone         = sNoneUnfinished
+  /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
+  val sNoneDone     = UnitOpSpec  (PSEUDO, Int.MinValue, _ => throw new AssertionError("Cannot construct NONE"))
 
 
   /** The operator notation of the top-level operator of ``expr`` with opcode, precedence and associativity  */
@@ -248,13 +262,12 @@ object OpSpec {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
       //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
     // terms
-    case DotTerm         => sDotTerm
+    case DotTerm(_)      => sDotTerm
     case Nothing         => sNothing
-    case Anything        => sAnything
+    case t: DifferentialSymbol => sDifferentialSymbol
     case t: Variable     => sVariable
     case t: Number       => sNumber
     case t: FuncOf       => sFuncOf
-    case t: DifferentialSymbol => sDifferentialSymbol
     case t: Pair         => sPair
     case t: Differential => sDifferential
     case t: Neg          => sNeg
@@ -263,7 +276,7 @@ object OpSpec {
     case t: Divide       => sDivide
     case t: Plus         => sPlus
     case t: Minus        => sMinus
-    case t: Projection   => sProjection
+    case t: UnitFunctional => sUnitFunctional
 
     // formulas
     case DotFormula      => sDotFormula
@@ -287,12 +300,13 @@ object OpSpec {
     case f: Or           => sOr
     case f: Imply        => sImply
     case f: Equiv        => sEquiv
+    case f: UnitPredicational => sUnitPredicational
 
     // programs
     case p: ProgramConst => sProgramConst
     case p: DifferentialProgramConst => sDifferentialProgramConst
     case p: Assign       => sAssign
-    case p: DiffAssign   => sDiffAssign
+    //case p: DiffAssign   => sDiffAssign
     case p: AssignAny    => sAssignAny
     case p: Test         => sTest
     case p: ODESystem    => sODESystem

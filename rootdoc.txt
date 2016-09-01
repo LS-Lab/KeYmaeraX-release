@@ -5,7 +5,7 @@
 
   [[http://keymaeraX.org/]]
 
-  [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+  [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
 
 ==Package Structure==
 
@@ -13,6 +13,7 @@ Main documentation entry points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
       - `[[edu.cmu.cs.ls.keymaerax.core.Expression]]` - Differential dynamic logic expressions
+      - `[[edu.cmu.cs.ls.keymaerax.core.Sequent]]` - Sequents of formulas
       - `[[edu.cmu.cs.ls.keymaerax.core.Rule]]` - Proof rules
       - `[[edu.cmu.cs.ls.keymaerax.core.Provable]]` - Proof certificate
 
@@ -26,14 +27,36 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]]` - Tactic language expressions
       - `[[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]` - Sequential tactic interpreter
 
-  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation
+  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
 
-      - [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+      - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
       - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]` - Parser for concrete KeYmaera X syntax
       - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]` - Pretty printer for concrete KeYmaera X syntax
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser]]` - Parser for KeYmaera X problem files `.kyx`
 
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
+      - `[[edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB]]` - Lemma database stored in files
 
   - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
+      - `[[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.Z3]]` - Z3 interface for real arithmetic.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.Polya]]` - Polya interface for real arithmetic.
     
+Additional entry points and usage points for KeYmaera X API:
+
   - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
+
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
+
+==References==
+
+Full references are provided elsewhere [[http://keymaeraX.org/]], the main references are the following:
+
+1. André Platzer. 
+[[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. 
+Journal of Automated Reasoning, 2016.
+[[http://arxiv.org/abs/1601.06183 arXiv 1601.06183]]
+
+2. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
+[[http://dx.doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An axiomatic tactical theorem prover for hybrid systems]]. 
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 

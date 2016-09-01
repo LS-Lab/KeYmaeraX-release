@@ -6,7 +6,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -22,9 +21,6 @@ import scala.annotation.tailrec
   */
 object ArithmeticSimplification {
   //region Tactics
-
-  val isArithmetic = TactixLibrary.assertT((s:Sequent) => s.toFormula.isFOL,
-    "Expected a sequent corresponding to a formula of first-order real arithemtic, but found non-arithmetic formulas in the sequent.")
 
   lazy val smartCoHideAt = new DependentPositionTactic("smartCoHideAt") {
     override def factory(pos: Position): DependentTactic = {
@@ -44,9 +40,8 @@ object ArithmeticSimplification {
 
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
-        isArithmetic &
-          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
+        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
       )
     }
   }
@@ -62,9 +57,8 @@ object ArithmeticSimplification {
 
       //Build up a tactic that hides all non-relevant antecedent positions.
       PartialTactic(
-        isArithmetic &
-          DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-          toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
+        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
       )
     }
   }
@@ -92,21 +86,16 @@ object ArithmeticSimplification {
   /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch
     */
-  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic("transformEquality", equality) {
-    assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
-    val what = equality.asInstanceOf[Equal].left
-    val to   = equality.asInstanceOf[Equal].right
-
-    override def factory(pos: Position): DependentTactic = {
-      {"replaceTransform" by ((pos: Position, sequent: Sequent) => {
-        cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
-          skip,
-          if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-          else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-          )
-      })
-    }}.apply(pos)
-  }
+  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic =
+    "transformEquality" byWithInput (equality, (pos, sequent) => {
+      assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
+      val what = equality.asInstanceOf[Equal].left
+      val to   = equality.asInstanceOf[Equal].right
+      cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
+        skip,
+        if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+        else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+      )})
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
 //

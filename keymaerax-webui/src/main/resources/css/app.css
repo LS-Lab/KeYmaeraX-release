@@ -35,6 +35,23 @@ table .btn{
   margin-right: -3px;
 }
 
+.match,
+.textdiff span {
+  color: gray;
+}
+
+.ins,
+ins {
+  color: black;
+  /*background: #bbffbb;*/
+}
+
+.del,
+del {
+  color: black;
+  /*background: #ffbbbb;*/
+}
+
 .hl {background: transparent; }
 .hlhover {
     background-color:#7297A6;
@@ -64,6 +81,17 @@ table .btn{
 
 .tooltip-inner {
   max-width: none;
+}
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
+
+.k4-tacticeditor {
+  font-family:monospace;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .k4-drag {
@@ -169,6 +197,24 @@ table .btn{
   text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
 }
 
+.k4-examples-carousel {
+  border: solid black 1px;
+}
+
+.k4-examples-carousel-caption {
+  position: absolute;
+  right: 0%;
+  bottom: 0px;
+  left: 0%;
+  z-index: 10;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  color: #fff;
+  background-color:rgba(0, 0, 0, 0.7);
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+}
+
 .k4-nobreak {
   white-space: nowrap;
   display: inline-block;
@@ -180,6 +226,10 @@ table .btn{
 
 .popover .k4-tactic-popover-entry {
   width: 700px; /* @todo solve tactic popover layout problem for real */
+}
+
+.k4-narrowinput {
+  max-width: 30px;
 }
 
 .k4-sequentRulePremise {
@@ -390,6 +440,10 @@ table .btn{
   text-overflow: ellipsis;
 }
 
+.k4-formula-preformat {
+  white-space: pre-wrap;
+}
+
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
   opacity: 1;
   position: absolute;
@@ -526,4 +580,8 @@ table .btn{
 
 .error {
   boder-color: #FF0000;
+}
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
 }

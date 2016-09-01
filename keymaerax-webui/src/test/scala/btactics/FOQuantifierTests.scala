@@ -111,21 +111,21 @@ class FOQuantifierTests extends TacticTestBase {
     result shouldBe 'proved
   }
 
-  it should "diffWeaken ouch" in withMathematica { implicit qeTool =>
+  it should "diffWeaken ouch" in withMathematica { qeTool =>
     val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
       diffWeaken(1) & implyR(1) & diffWeaken(1) & prop)
     println(result)
     result shouldBe 'proved
   }
 
-  it should "diffWeaken before loopy" in withMathematica { implicit qeTool =>
+  it should "diffWeaken before loopy" in withMathematica { qeTool =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula,
       diffWeaken(1) & implyR(1) & loop("x>0".asFormula)(1) & master())
     println(result)
     result shouldBe 'proved
   }
 
-  it should "diffWeaken before semibound" in withMathematica { implicit qeTool =>
+  it should "diffWeaken before semibound" in withMathematica { qeTool =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula,
       diffWeaken(1) & master())
     println(result)
@@ -146,8 +146,7 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
-    //result.subgoals.head.ante should contain only "[{z'=5}]z>0".asFormula
-    result.subgoals.head.ante should contain only ("x=z".asFormula, "[{x'=5}]x>=0".asFormula)
+    result.subgoals.head.ante should contain only "\\forall x (x=z -> [{x'=5}]x>=0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -156,7 +155,7 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(IndexedSeq("\\forall y [{y'=5}]y>=0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("y=z".asFormula, "[{y'=5}]y>=0".asFormula)
+    result.subgoals.head.ante should contain only "\\forall y (y=z -> [{y'=5}]y>=0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -165,7 +164,7 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("y=z".asFormula, "[{y'=x & y>2}]y>0".asFormula)
+    result.subgoals.head.ante should contain only "\\forall y (y=z -> [{y'=x & y>2}]y>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -174,7 +173,7 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("y=z".asFormula, "y=0 -> [{y'=x & y>2}]y>0".asFormula)
+    result.subgoals.head.ante should contain only "\\forall y (y=z -> y=0 -> [{y'=x & y>2}]y>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -247,6 +246,15 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "a=2 -> !z>0".asFormula
     result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate variables bound in an ODE" in {
+    val result = proveBy(
+      Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
+      existsInstantiate()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=2,y'=0*y+1&true}]x>0".asFormula
   }
 
   "exists generalize" should "only generalize the specified occurrences of t" in {

@@ -7,7 +7,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
+import scala.collection.immutable
 import scala.collection.immutable._
+import Augmentors.FormulaAugmentor
 
 /**
  * Random formula generator and random term generator and random program generator
@@ -29,6 +31,10 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   private val shortProbability = 0.10
   private val randomReps = 500
 
+  private val funcNames = "ff" :: "gg" :: "hh" :: Nil
+  private val predNames = "pp" :: "qq" :: "rr" :: Nil
+  private val progNames = "aa" :: "bb" :: "cc" :: Nil
+
   def nextExpression(size: Int): Expression = rand.nextInt(4) match {
     case 0 => nextTerm(size)
     case 1 => nextFormula(size)
@@ -44,16 +50,23 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   def nextDifferentialProgram(size : Int): DifferentialProgram = nextDP(nextNames("z", size / 3 + 1), size)
 
+
   // dot generators default to no diffs
-  def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, true)
+  def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, dots=true, diffs=false, funcs=false)
 
-  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, true, true, true)
+  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, modals=true, dotTs=true, dotFs=true, diffs=false, funcs=false)
 
-  def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, true, false)
+  def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, dotTs=true, dotFs=false, diffs=false, funcs=false)
+
+  def nextDotExpression(size: Int): Expression = rand.nextInt(3) match {
+    case 0 => nextDotTerm(size)
+    case 1 => nextDotFormula(size)
+    case 2 => nextDotProgram(size)
+  }
 
   def nextFormulaContext(size : Int): Context[Formula] = {
     import Augmentors._
-    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, true, false, false, false)
+    val fml = nextF(nextNames("z", size / 3 + 1), 2*size, modals=true, dotTs=false, dotFs=false, diffs=false, funcs=false)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)
       val pos = nextPosition(size).inExpr
@@ -70,6 +83,77 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random proof of a random tautological sequents */
   def nextProvable(size: Int): Provable = nextPr(nextNames("z", size / 3 + 1), size)
+
+  /** Generate a random schematic instance of the given Formula `fml` of complexity `size`.
+    * @param renamed whether variables can have been renamed in the schematic instance generated.
+    * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.
+    * @param diffs whether differentials can be used in the schematic instance. */
+  def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false, diffs: Boolean = false): Formula = {
+    val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable]).
+      filter(x => builtins || !x.name.endsWith("_"))
+    // two different piles of variables to avoid accidental capture during the schematic instantiation
+    val vars = nextNames("z", size / 3 + 1)
+    val othervars = nextNames("y", size / 5 + 1)
+    val symbols = StaticSemantics.signature(fml)
+    //@todo make sure not to create diffs when the symbol occurs within another diff
+    val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
+      case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size) else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false)
+      case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=false)
+      // need to teach the term some manners such as no diffs if occurs in ODE
+      case p@UnitFunctional(_,AnyArg,_) => p->nextT(vars,size,dots=false,diffs=false,funcs=true)
+      case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=false)
+      case a: ProgramConst => a->nextP(vars,size)
+      case a: DifferentialProgramConst => a->nextDP(vars,size)
+      case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
+      case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false)
+      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
+      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false)
+      case ow => ow->ow
+    })
+    def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
+      if (repl._1==repl._2) f else FormulaAugmentor(f).replaceAll(repl._1, repl._2)
+    println("Replace all " + repls.mkString(", "))
+    // do all replacements repl to fml
+    val inst = repls.foldRight(fml) ((repl, f) => doRepl(f,repl))
+    inst
+    if (!renamed)
+      inst
+    else {
+      try {
+        val instvars = StaticSemantics.vars(inst).symbols
+        // random renamings of original ownvars from the axiom to some of allvars, including possibly ownvars again
+        // remove variables whose diff symbols occur to prevent accidentally creating duplicate ODEs by renaming
+        val allvars: List[Variable] = instvars.filter(x => x.isInstanceOf[BaseVariable] &&
+          !instvars.contains(DifferentialSymbol(x.asInstanceOf[BaseVariable]))
+        ).toList
+        val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable].asInstanceOf[Variable],
+          (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))))).to
+        val noncycrenamings = renamings.filter(sp => !renamings.exists(p => p._1 == sp._2))
+        val ren = MultiRename(noncycrenamings)
+        val renamedInst = ren(inst)
+        val other = try {
+          ren.toCore(inst)
+        } catch {
+          // exception can happen when MultiRename used semantic renaming
+          case ignore: Throwable => inst
+        }
+        if (other == renamedInst)
+          renamedInst
+        else {
+          // strangely, both renamings disagree
+          println("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+          throw new IllegalStateException("MultiRename disagrees with toCore renaming: " + ren + "\n of: " + inst)
+          // inst
+        }
+      } catch {
+        // for example (x')' disallowed at present
+        case ignore: CoreException => if (diffs)
+          nextSchematicInstance(fml, size, renamed=renamed, builtins=builtins, diffs=false)
+        else
+          throw ignore
+      }
+    }
+  }
 
   /** Generate a random (propositionally) provable formula */
   //def nextProved(size: Int): Sequent = nextProvable(size).conclusion
@@ -133,31 +217,32 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   // random generator implementations
 
-  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = nextT(vars, n, false)
-  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean) : Term = nextT(vars, n, dots, !dots, true)
+  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = nextT(vars, n, dots=false, diffs=true, funcs=true)
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean) : Term = nextT(vars, n, dots=dots, diffs= !dots, funcs=true)
 
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean, funcs: Boolean) : Term = {
     require(n>=0)
-    if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(1))
-    val r = rand.nextInt(if (dots) 98 else 88/*+1*/)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm()} else Number(BigDecimal(1))
+    val r = rand.nextInt(if (dots) 105 else 95/*+1*/)
     r match {
       case 0 => Number(BigDecimal(0))
         //@todo directly generate negative numbers too?
       case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
       case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
-      case it if 20 until 30 contains it => Plus(nextT(vars, n-1, dots, diffs, funcs), nextT(vars, n-1, dots, diffs, funcs))
-      case it if 30 until 40 contains it => Minus(nextT(vars, n-1, dots, diffs, funcs), nextT(vars, n-1, dots, diffs, funcs))
-      case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots, diffs, funcs), nextT(vars, n-1, dots, diffs, funcs))
-      case it if 50 until 55 contains it => val dividend = nextT(vars, n-1, dots, diffs, funcs); val divisor = nextT(vars, n-1, dots, diffs, funcs)
+      case it if 20 until 30 contains it => Plus(nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
+      case it if 30 until 40 contains it => Minus(nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
+      case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
+      case it if 50 until 55 contains it => val dividend = nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs); val divisor = nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs)
         //@todo avoid zero division better by checking for evaluation to zero as in x/(0+0)
         if (divisor==Number(0)) Divide(dividend, Number(1)) else Divide(dividend, divisor)
         //@todo avoid 0^0
-      case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots, diffs, funcs), Number(BigDecimal(rand.nextInt(6))))
+      case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs), Number(BigDecimal(rand.nextInt(6))))
       case it if (60 until 70 contains it) && diffs => DifferentialSymbol(vars(rand.nextInt(vars.length)))
-      case it if (70 until 80 contains it) && diffs => Differential(nextT(vars, n-1, dots, false, funcs))
-      case it if (80 until 84 contains it) && funcs => FuncOf(Function("gg",None,Unit,Real),Nothing)
-      case it if (84 until 88 contains it) && funcs => FuncOf(Function("ff",None,Real,Real), nextT(vars, n-1, dots, diffs, funcs))
-      case it if 88 until 200 contains it => assert(dots); DotTerm
+      case it if (70 until 80 contains it) && diffs => Differential(nextT(vars, n-1, dots=dots, diffs=false, funcs=funcs))
+      case it if (80 until 84 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length))+ "0",None,Unit,Real),Nothing)
+      case it if (84 until 88 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length)),None,Real,Real), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
+      case it if (88 until 95 contains it) && funcs => UnitFunctional(funcNames(rand.nextInt(funcNames.length)).toUpperCase,AnyArg,Real)
+      case it if 95 until 200 contains it => assert(dots); DotTerm()
       // cleanup case without diffs and funcs emphasizes nonzero constants and variables to make for more interesting polynomials etc.
       case it if (60 until 200 contains it) && (!diffs || !funcs) =>
         if (r%2==0) vars(rand.nextInt(vars.length)) else Number(BigDecimal(1+rand.nextInt(100)))
@@ -166,37 +251,37 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
 
-  def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = nextF(vars, n, true, false, false)
-  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean) : Formula = nextF(vars, n, modals, dotTs, dotFs, !(dotTs||dotFs))
-  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Formula = {
-    val funcs = true
+  def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = nextF(vars, n, modals=true, dotTs=false, dotFs=false)
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean) : Formula = nextF(vars, n, modals=modals, dotTs=dotTs, dotFs=dotFs, diffs= !(dotTs||dotFs), funcs=dotTs&&dotFs)
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean, funcs: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True
-      val r = rand.nextInt(if (dotFs) 320 else 310)
+      val r = rand.nextInt(if (dotFs) 330 else 320)
       r match {
         case 0 => False
         case 1 => True
-        case it if 2 until 10 contains it => Equal(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 10 until 20 contains it => Not(nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 20 until 30 contains it => And(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 30 until 40 contains it => Or(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 40 until 50 contains it => Imply(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 50 until 60 contains it => Equiv(nextF(vars, n-1, modals, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 60 until 70 contains it => NotEqual(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 70 until 80 contains it => GreaterEqual(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 80 until 90 contains it => LessEqual(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 90 until 100 contains it => Greater(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 100 until 110 contains it => Less(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs), nextF(vars, n-1, modals, dotTs, dotFs, diffs))
-        case it if (290 until 300 contains it) && diffs => DifferentialFormula(nextF(vars, n-1, false, false, false, false))
-        case it if 300 until 304 contains it => PredOf(Function("qq",None,Unit,Bool),Nothing)
-        case it if 304 until 308 contains it => PredOf(Function("pp",None,Real,Bool), nextT(vars, n-1, dotTs, diffs, funcs))
-        case it if 308 until 310 contains it => PredicationalOf(Function("PP",None,Bool,Bool), nextF(vars, n-1, modals, false, false, diffs))
-        case it if 310 until 400 contains it => assert(dotFs); DotFormula
-        case it if (0 to 400 contains it) && !diffs => GreaterEqual(nextT(vars, n-1, dotTs, diffs, funcs), nextT(vars, n-1, dotTs, diffs, funcs))
+        case it if 2 until 10 contains it => Equal(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if 10 until 20 contains it => Not(nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 20 until 30 contains it => And(nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 30 until 40 contains it => Or(nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 40 until 50 contains it => Imply(nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 50 until 60 contains it => Equiv(nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 60 until 70 contains it => NotEqual(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if 70 until 80 contains it => GreaterEqual(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if 80 until 90 contains it => LessEqual(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if 90 until 100 contains it => Greater(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if 100 until 110 contains it => Less(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs, funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs, funcs), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+        case it if (290 until 300 contains it) && diffs => DifferentialFormula(nextF(vars, n-1, false, false, false, false, false))
+        case it if (300 until 304 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length))+ "0",None,Unit,Bool),Nothing)
+        case it if (304 until 308 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length)),None,Real,Bool), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if (308 until 310 contains it) && funcs => PredicationalOf(Function(predNames(rand.nextInt(predNames.length)).toUpperCase + "1",None,Bool,Bool), nextF(vars, n-1, modals, false, false, diffs, funcs))
+        case it if (310 until 320 contains it) && funcs => UnitPredicational(predNames(rand.nextInt(predNames.length)).toUpperCase,AnyArg)
+        case it if 320 until 400 contains it => assert(dotFs); DotFormula
+        case it if (0 to 400 contains it) && (!diffs || !funcs) => GreaterEqual(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
   }
@@ -204,10 +289,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
 
-  def nextP(vars : IndexedSeq[Variable], n : Int) : Program = nextP(vars, n, false, false)
-  def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean) : Program = nextP(vars, n, dotTs, dotFs, !(dotTs || dotFs))
-  def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean, diffs: Boolean) : Program = {
-    val funcs = true
+  def nextP(vars : IndexedSeq[Variable], n : Int) : Program = nextP(vars, n, dotTs=false, dotFs=false)
+  def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean) : Program = nextP(vars, n, dotTs=dotTs, dotFs=dotFs, diffs= !(dotTs || dotFs), funcs=dotTs&&dotFs)
+  def nextP(vars : IndexedSeq[Variable], n : Int, dotTs: Boolean, dotFs: Boolean, diffs: Boolean, funcs: Boolean) : Program = {
     require(n>=0)
     if (n == 0 || rand.nextFloat()<=shortProbability) return Test(True)
     val r = rand.nextInt(200)
@@ -215,23 +299,24 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case 0 => Test(False)
       case 1 => Test(True)
       case it if 2 until 10 contains it => val v = vars(rand.nextInt(vars.length)); Assign(v, v)
-      case it if 10 until 20 contains it => Test(nextF(vars, n-1, true, dotTs, dotFs, diffs))
-      case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dotTs, diffs, funcs))
-      case it if (30 until 35 contains it) && diffs => DiffAssign(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dotTs, diffs, funcs))
+      case it if 10 until 20 contains it => Test(nextF(vars, n-1, true, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+      case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+      case it if (30 until 35 contains it) && diffs => Assign(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
       case it if 35 until 40 contains it => AssignAny(vars(rand.nextInt(vars.length)))
-      case it if (40 until 50 contains it) && diffs => ODESystem(nextDP(vars, n, dotTs), nextF(vars, n-1, true, dotTs, dotFs, diffs))
-      case it if 50 until 100 contains it => Choice(nextP(vars, n-1, dotTs, dotFs, diffs), nextP(vars, n-1, dotTs, dotFs, diffs))
-      case it if 100 until 150 contains it => Compose(nextP(vars, n-1, dotTs, dotFs, diffs), nextP(vars, n-1, dotTs, dotFs, diffs))
-      case it if (190 until 220 contains it) && isGame => Dual(nextP(vars, n-1, dotTs, dotFs, diffs))
-      case it if 150 until 200 contains it => Loop(nextP(vars, n-1, dotTs, dotFs, diffs))
-      case it if (1 until 200 contains it) && !diffs => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dotTs, diffs, funcs))
+      case it if (40 until 50 contains it) && diffs => ODESystem(nextDP(vars, n, dotTs=dotTs, funcs=funcs), nextF(vars, n-1, true, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+      case it if 50 until 100 contains it => Choice(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs), nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+      case it if 100 until 150 contains it => Compose(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs), nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+      case it if (190 until 220 contains it) && isGame => Dual(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+      case it if 150 until 190 contains it => Loop(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs))
+      case it if (190 until 200 contains it) && funcs => ProgramConst(progNames(rand.nextInt(progNames.length)))
+      case it if (1 until 200 contains it) && (!diffs || !funcs) => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
       case _ => throw new IllegalStateException("random number generator range for program generation produces the right range " + r)
     }
   }
 
-  private def nextDP(vars: IndexedSeq[Variable], n: Int): DifferentialProgram = nextDP(vars, n, false)
-  private def nextDP(vars: IndexedSeq[Variable], n: Int, dotTs: Boolean): DifferentialProgram =
-    nextODE(vars, n, 0, vars.length, dotTs)
+  private def nextDP(vars: IndexedSeq[Variable], n: Int): DifferentialProgram = nextDP(vars, n, dotTs=false, funcs=false)
+  private def nextDP(vars: IndexedSeq[Variable], n: Int, dotTs: Boolean, funcs: Boolean): DifferentialProgram =
+    nextODE(vars, n, 0, vars.length, dotTs=dotTs, funcs=funcs)
 
   /**
    * randomly generate an ODE paying attention to avoid duplicates.
@@ -239,20 +324,19 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
    * vars[lower..upper)
    * It just watches that both subintervals remain nonempty
    */
-  private def nextODE(vars : IndexedSeq[Variable], n : Int, lower: Int, upper: Int, dotTs: Boolean) : DifferentialProgram = {
-    val funcs = true
+  private def nextODE(vars : IndexedSeq[Variable], n : Int, lower: Int, upper: Int, dotTs: Boolean, funcs: Boolean) : DifferentialProgram = {
     require(n>=0)
     require(0<=lower && lower<upper && upper<=vars.length)
-    if (lower == upper-1) return AtomicODE(DifferentialSymbol(vars(lower)), nextT(vars, 0, dotTs, false, funcs))
+    if (lower == upper-1) return AtomicODE(DifferentialSymbol(vars(lower)), nextT(vars, 0, dots=dotTs, diffs=false, funcs=funcs))
     val v = lower + rand.nextInt(upper-lower)
     assert(lower <= v && v < upper)
     if (n == 0 || rand.nextFloat()<=shortProbability
-      || lower==v || v == upper-1) return AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, 0, dotTs, false, funcs))
+      || lower==v || v == upper-1) return AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, 0, dots=dotTs, diffs=false, funcs=funcs))
     val r = rand.nextInt(20)
     r match {
-      case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, n-1, dotTs, false, funcs))
+      case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, n-1, dots=dotTs, diffs=false, funcs=funcs))
       case it if 10 until 20 contains it =>
-        DifferentialProduct(nextODE(vars, n-1, lower, v, dotTs), nextODE(vars, n-1, v, upper, dotTs))
+        DifferentialProduct(nextODE(vars, n-1, lower, v, dotTs=dotTs, funcs=funcs), nextODE(vars, n-1, v, upper, dotTs=dotTs, funcs=funcs))
       case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
     }
   }

@@ -20,6 +20,16 @@ angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', 
           }
       });
 
+    $scope.isLocal = true;
+    $http.get('/isLocal')
+        .success(function(data) {
+            if(data.errorThrown) {
+                $scope.isLocal = false;
+                showCaughtErrorMessage($uibModal, data, "Could not determine if the KeYmaera X server is running locally")
+            }
+            $scope.isLocal = data.success;
+        });
+
   $scope.$emit('routeLoaded', {theview: 'dashboard'});
 }]);
 
@@ -33,3 +43,17 @@ angular.module('keymaerax.controllers').controller('LicenseDialogCtrl', ['$scope
     $uibModalInstance.close('accept');
   }
 }]);
+
+angular.module('keymaerax.controllers').controller('ServerOfflineDialogCtrl', ['$scope', '$http', '$uibModalInstance', '$interval', function ($scope, $http, $uibModalInstance, $interval) {
+  var heartbeat = $interval(function() {
+    console.log("Pinging server...")
+    $http.get("/isLocal").success(function(data) {
+      // close the modal every time, because the failing /isLocal request will open another dialog...
+      // when we're back online, we close the final window and it stays closed
+      $uibModalInstance.close();
+      $interval.cancel(heartbeat);
+      heartbeat = undefined;
+    });
+  }, 10000);
+
+}])

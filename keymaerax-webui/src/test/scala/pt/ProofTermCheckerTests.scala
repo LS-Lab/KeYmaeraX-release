@@ -91,7 +91,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     val instance = "[v:=1;]v=v <-> 1=1".asFormula
     val usubst = USubst(
       SubstitutionPair("t()".asTerm, "1".asTerm) ::
-      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Equal(DotTerm, DotTerm)) ::
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Equal(DotTerm(), DotTerm())) ::
       Nil
     )
 
@@ -109,16 +109,14 @@ class ProofTermCheckerTests extends TacticTestBase {
     val premiseTerm = FOLRConstant(premise)
 
     val c = Function("ctx_", None, Real, Real)
-    val cApp = FuncOf(c, DotTerm)
-    val f = Function("f_", None, Real, Real)
-    val fApp = FuncOf(f, Anything)
-    val g = Function("g_", None, Real, Real)
-    val gApp = FuncOf(g, Anything)
+    val cApp = FuncOf(c, DotTerm())
+    val fApp = UnitFunctional("f_", AnyArg, Real)
+    val gApp = UnitFunctional("g_", AnyArg, Real)
 
     val usubst = USubst(
       SubstitutionPair(fApp, "1+1".asTerm) ::
       SubstitutionPair(gApp, "2".asTerm) ::
-      SubstitutionPair(cApp, Plus(DotTerm, Number(1))) ::
+      SubstitutionPair(cApp, Plus(DotTerm(), Number(1))) ::
       Nil
     )
 

@@ -1,12 +1,14 @@
+import java.io.{BufferedReader, FileReader}
+
 name := "KeYmaeraX-Web"
 
-version := "4.2b1"
+version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
 
-assemblyJarName in assembly := "keymaerax-web-" + version.value + ".jar"
+assemblyJarName in assembly := "keymaerax-web.jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
@@ -18,21 +20,11 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 
 libraryDependencies += "org.pegdown" % "pegdown" % "1.5.0" % "test"      // (For Html Scalatest reports)
 
-libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test"
-
-//libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.7"
-
-/// mongodb driver
-
-libraryDependencies += "org.mongodb" %% "casbah" % "2.7.4"
-
 /// sqlite driver
 
 libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
 
 libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0"
-
-//libraryDependencies += "org.scalaquery" %% "scalaquery" % "0.9.5"
 
 libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.7.2"
 
@@ -63,8 +55,6 @@ libraryDependencies ++= {
     "com.github.fge"      % "json-schema-validator" % "2.2.6" // only update to even-numbered versions please.
   )
 }
-
-//libraryDependencies += "net.liftweb" % "lift-json" % "latest.release" 
 
 ////////////////////////////////////////////////////////////////////////////////
 // Continuous testing/running settgings (i.e., definiting behavior of the ~

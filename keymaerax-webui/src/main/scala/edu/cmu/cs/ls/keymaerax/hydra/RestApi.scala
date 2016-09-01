@@ -177,6 +177,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}}}
 
+  val importExampleRepo = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { (userId) => { pathEnd {
+    post {
+      entity(as[String]) { repoUrl => {
+        val r = new ImportExampleRepoRequest(database, userId, repoUrl)
+        completeRequest(r, t)
+      }}
+    }
+  }}}
+
   val deleteModel = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "delete") { modelId => pathEnd {
     post {
       val r = new DeleteModelRequest(database, userId, modelId)
@@ -235,6 +244,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val downloadProblemSolution = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "download") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new ExtractProblemSolutionRequest(database, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,9 +259,23 @@ trait RestApi extends HttpService with SLF4JLogging {
     post {
       entity(as[String]) { x => {
         val obj = x.parseJson
-        val proofName        = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
+        val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
+        val proofName = if (submittedProofName == "") {
+          val model = database.getModel(modelId)
+          model.name + ": Proof " + (model.numProofs + 1)
+        } else submittedProofName
         val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
+
         val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
+        completeRequest(request, t)
+      }}
+    }
+  }}}
+
+  val proveFromTactic = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proveFromTactic") { (userId, modelId) => { pathEnd {
+    post {
+      entity(as[String]) { x => {
+        val request = new ProveFromTacticRequest(database, userId, modelId)
         completeRequest(request, t)
       }}
     }
@@ -336,6 +366,18 @@ trait RestApi extends HttpService with SLF4JLogging {
       val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
       completeRequest(request, t)
     }
+  }}}
+
+  val exportSequent = (t: SessionToken) => path("proofs" / "user" / "export" / Segment / Segment / Segment) { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new ExportCurrentSubgoal(database, userId, proofId, nodeId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val exportFormula = (t: SessionToken) => path("proofs" / "user" / "exportformula" / Segment / Segment / Segment / Segment) { (userId, proofId, nodeId, formulaId) => { pathEnd {
+    val request = new ExportFormula(database, userId, proofId, nodeId, formulaId)
+    completeRequest(request, t)
   }}}
 
   val doAt = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
@@ -535,6 +577,16 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }
 
+
+  val logoff = (t: SessionToken) => path("user" / "logoff") { pathEnd { get {
+    t match {
+      case UsedToken(token, username) => SessionManager.remove(token)
+      case NewlyExpiredToken(token) => //Well, that was convienant.
+      case _ => //that works too.
+    }
+    complete("[]")
+  }}}
+
   val kyxConfig = path("kyxConfig") {
     pathEnd {
       get {
@@ -562,6 +614,21 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
+  val tool = path("config" / "tool") {
+    pathEnd {
+      get {
+        val request = new GetToolRequest(database)
+        completeRequest(request, EmptyToken())
+      } ~
+      post {
+        entity(as[String]) { tool =>
+          val request = new SetToolRequest(database, tool)
+          completeRequest(request, EmptyToken())
+        }
+      }
+    }
+  }
+
   val mathematicaConfig = path("config" / "mathematica") {
     pathEnd {
       get {
@@ -582,10 +649,22 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
-  val mathematicaStatus = path("config" / "mathematicaStatus") {
+  val toolStatus = path("config" / "toolStatus") {
     pathEnd {
       get {
-        completeRequest(new MathematicaStatusRequest(database), EmptyToken())
+        database.getConfiguration("tool").config("qe") match {
+          case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
+          case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
+        }
+      }
+    }
+  }
+
+  val examples = path("examplesList" /) {
+    pathEnd {
+      get {
+        val request = new ListExamplesRequest(database)
+        completeRequest(request, EmptyToken())
       }
     }
   }
@@ -670,9 +749,11 @@ trait RestApi extends HttpService with SLF4JLogging {
     kyxConfig          ::
     keymaeraXVersion   ::
     mathematicaConfig  ::
-    mathematicaStatus  ::
+    toolStatus         ::
+    tool               ::
     mathConfSuggestion ::
     devAction          ::
+    examples           ::
     Nil
 
   /** Requests that need a session token parameter.
@@ -685,6 +766,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
+    proveFromTactic       ::
+    importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::
     proofList             ::
@@ -712,6 +795,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskResult            ::
     stopTask              ::
     extractTactic         ::
+    downloadProblemSolution ::
     counterExample        ::
     setupSimulation       ::
     simulate              ::
@@ -719,6 +803,10 @@ trait RestApi extends HttpService with SLF4JLogging {
     dashInfo              ::
     modelplex             ::
     modelplexMandatoryVars::
+    exportSequent         ::
+    exportFormula         ::
+    logoff                ::
+    // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
 
   val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {

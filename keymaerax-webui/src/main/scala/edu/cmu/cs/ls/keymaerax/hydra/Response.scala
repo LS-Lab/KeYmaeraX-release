@@ -10,7 +10,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Expression}
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
@@ -135,6 +134,7 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "pubLink" -> JsString(model.pubLink),
     "keyFile" -> JsString(model.keyFile),
     "title" -> JsString(model.title),
+    "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse(""))
   )
 }
@@ -157,7 +157,7 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
-    "monitor" -> JSONConverter.convertFormula(monitor, "", "")
+    "monitor" -> JsString(monitor.prettyString)
   )
 }
 
@@ -175,6 +175,11 @@ class CreatedIdResponse(id : String) extends Response {
   def getJson = JsObject("id" -> JsString(id))
 }
 
+class PossibleAttackResponse(val msg: String) extends Response {
+  println(s"POSSIBLE ATTACK: ${msg}")
+  override def getJson: JsValue = new ErrorResponse(msg).getJson
+}
+
 class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response {
   lazy val writer = new StringWriter
   lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
@@ -183,6 +188,10 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
     "errorThrown" -> JsString(stacktrace),
     "type" -> JsString("error")
   )
+}
+
+class KvpResponse(val key: String, val value: String) extends Response {
+  override def getJson: JsValue = JsObject(key -> JsString(value))
 }
 
 class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends ErrorResponse(msg, exn) {
@@ -333,10 +342,14 @@ object Helpers {
          formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
         */
         val idx = if (isAnte) (-i)-1 else i+1
-        val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
+        val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=false)(fml))
+        val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=true)(fml))
         JsObject(
           "id" -> JsString(idx.toString),
-          "formula" -> fmlJson
+          "formula" -> JsObject(
+            "html" -> fmlHtml,
+            "string" -> fmlString
+          )
         )}.toVector)
     }
     JsObject(
@@ -667,9 +680,24 @@ class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) ex
   )
 }
 
-class MathematicaStatusResponse(configured : Boolean) extends Response {
+class ToolStatusResponse(configured : Boolean) extends Response {
   def getJson: JsValue = JsObject(
     "configured" -> {if(configured) JsTrue else JsFalse}
+  )
+}
+
+class ListExamplesResponse(examples: List[ExamplePOJO]) extends Response {
+  def getJson: JsValue = JsArray(
+    examples.map(e =>
+      JsObject(
+        "id" -> JsNumber(e.id),
+        "title" -> JsString(e.title),
+        "description" -> JsString(e.description),
+        "infoUrl" -> JsString(e.infoUrl),
+        "url" -> JsString(e.url),
+        "image" -> JsString(e.imageUrl)
+      )
+    ).toVector
   )
 }
 
@@ -754,6 +782,12 @@ class NodeResponse(tree : String) extends Response {
 class ExtractTacticResponse(tacticText: String) extends Response {
   def getJson = JsObject(
     "tacticText" -> JsString(tacticText)
+  )
+}
+
+class ExtractProblemSolutionResponse(tacticText: String) extends Response {
+  def getJson = JsObject(
+    "fileContents" -> JsString(tacticText)
   )
 }
 

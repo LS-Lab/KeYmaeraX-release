@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Locate Positions
@@ -16,6 +16,8 @@ import edu.cmu.cs.ls.keymaerax.core.Formula
  */
 sealed trait PositionLocator {
   def prettyString: String
+
+  def toPosition(p: Provable): Position = ??? //@todo Surely this already exists?!
 }
 
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */

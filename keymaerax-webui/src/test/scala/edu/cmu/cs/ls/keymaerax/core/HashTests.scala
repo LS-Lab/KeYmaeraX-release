@@ -22,7 +22,7 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
  */
 class HashTests extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  val randomTrials = 4000
+  val randomTrials = 1000
   val randomComplexity = 30
   val collectionSize = 2*randomTrials
   val rand = new RandomFormula()

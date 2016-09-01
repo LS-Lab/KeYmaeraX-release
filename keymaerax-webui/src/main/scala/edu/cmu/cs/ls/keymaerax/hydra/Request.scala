@@ -10,32 +10,30 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io._
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Locale}
-
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import _root_.edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.main.JsonSchemaFactory
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.core._
-import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, MathematicaComputationAbortedException, SimulationTool, Tool}
-
-import scala.collection.immutable
-import scala.io.Source
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-import java.io.{File, FileInputStream, FileOutputStream}
-
-import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
+import Augmentors._
+import edu.cmu.cs.ls.keymaerax.tools._
+
+import spray.json._
+import spray.json.DefaultJsonProtocol._
+
+
+import java.io.{File, FileInputStream, FileOutputStream, FileNotFoundException}
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Locale}
+
+import scala.io.Source
+import scala.collection.immutable._
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -151,10 +149,13 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     val fml = node.sequent.toFormula
     if (fml.isFOL) {
       try {
-        TactixLibrary.cexTool.findCounterExample(fml) match {
-          //@todo return actual sequent, use collapsiblesequentview to display counterexample
-          case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-          case None => new CounterExampleResponse("cex.none") :: Nil
+        ToolProvider.cexTool() match {
+          case Some(cexTool) => cexTool.findCounterExample(fml) match {
+            //@todo return actual sequent, use collapsiblesequentview to display counterexample
+            case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+            case None => new CounterExampleResponse("cex.none") :: Nil
+          }
+          case None => new CounterExampleResponse("cex.nonfo") :: Nil
         }
       } catch {
         case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
@@ -176,7 +177,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
     //@note not a tactic because we don't want to change the proof tree just by simulating
     val fml = if (node.sequent.ante.nonEmpty) node.sequent.toFormula else { val Imply(True, succ) = node.sequent.toFormula; succ }
-    fml match {
+    if (ToolProvider.odeTool().isDefined) fml match {
       case Imply(initial, b@Box(prg, _)) =>
         // all symbols because we need frame constraints for constants
         val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
@@ -186,6 +187,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
         new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
       case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
     }
+    else new ErrorResponse("No simulation tool available, please configure Mathematica") :: Nil
   }
 
   private def addNonDetInitials(initial: Formula, vars: Set[NamedSymbol]): Formula = {
@@ -223,7 +225,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
       primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
     val time: Variable = Variable("t_", None, Real)
     //@note replace initial values with original variable, since we turn them into assignments
-    val solution = replaceFree(TactixLibrary.odeTool.diffSol(ode, time, iv).get, iv.map(_.swap))
+    val solution = replaceFree(ToolProvider.odeTool().get.odeSolve(ode, time, iv).get, iv.map(_.swap))
     val flatSolution = flattenConjunctions(solution).
       sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
     Compose(
@@ -261,9 +263,8 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
-    //@HACK do not want to change the tool type in TactixLibrary
-    TactixLibrary.qeTool match {
-      case s: SimulationTool =>
+    ToolProvider.simulationTool() match {
+      case Some(s) =>
         val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
         val simulation = s.simulate(initial, timedStateRelation, steps, n)
         new SimulationResponse(simulation, stepDuration) :: Nil
@@ -396,6 +397,23 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
   }
 }
 
+class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    //@todo more/different tools
+    new KvpResponse("tool", db.getConfiguration("tool").config("qe")) :: Nil
+  }
+}
+
+class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    //@todo more/different tools
+    assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
+    val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
+    db.updateConfiguration(toolConfig)
+    new KvpResponse("tool", tool) :: Nil
+  }
+}
+
 class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
@@ -417,7 +435,30 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
 class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
-    new MathematicaStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
+    new ToolStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
+  }
+}
+
+class Z3StatusRequest(db : DBAbstraction) extends Request {
+  override def resultingResponses(): List[Response] = new ToolStatusResponse(true) :: Nil
+}
+
+class ListExamplesRequest(db: DBAbstraction) extends Request {
+  override def resultingResponses(): List[Response] = {
+    //@todo read from the database/some web page?
+    val examples =
+      new ExamplePOJO(0, "STTT Tutorial",
+        "Automated stop sign braking for cars",
+        "/dashboard.html?#/tutorials",
+        "classpath:/examples/tutorials/sttt/sttt.json",
+        "/examples/tutorials/sttt/sttt.png") ::
+      new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
+        "Proving ODEs",
+        "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
+        "classpath:/examples/tutorials/cpsweek/cpsweek.json",
+        "/examples/tutorials/cpsweek/cpsweek.png") ::
+      Nil
+    new ListExamplesResponse(examples) :: Nil
   }
 }
 
@@ -454,6 +495,13 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getModelId = createdId match {
     case Some(s) => s
     case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
+  }
+}
+
+class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
+    new BooleanResponse(true) :: Nil
   }
 }
 
@@ -515,7 +563,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
       case "controller" =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*@TheType())
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*)
         } catch {
           case _: Throwable => foResult
         }
@@ -547,6 +595,20 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
     //KeYmaeraInterface.addTask(proofId.get, keyFile)
 
     new CreatedIdResponse(proofId.get) :: Nil
+  }
+}
+
+class ProveFromTacticRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val model = db.getModel(modelId)
+    model.tactic match {
+      case Some(tacticText) =>
+        val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic", "Proof from tactic", currentDate())
+        DatabasePopulator.executeTactic(db, model.keyFile, proofId, tacticText)
+        new CreatedIdResponse(proofId.toString) :: Nil
+      case None => ???
+    }
+
   }
 }
 
@@ -691,14 +753,17 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
       return new ApplicableAxiomsResponse(Nil, None) :: Nil
     val proof = db.getProofInfo(proofId)
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    val subFormula = sequent.sub(pos).get
-    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
-      map{case axiom => (
-        DerivationInfo(axiom),
-        UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
-    val suggestedInput = generator(sequent, pos)
-    new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+    sequent.sub(pos) match {
+      case Some(subFormula) =>
+        val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
+          map{axiom => (
+            DerivationInfo(axiom),
+            UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
+        val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
+        val suggestedInput = generator(sequent, pos)
+        new ApplicableAxiomsResponse(axioms, if (suggestedInput.hasNext) Some(suggestedInput.next) else None) :: Nil
+      case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
+    }
   }
 }
 
@@ -720,6 +785,47 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
   }
 }
 
+class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
+      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+    }
+    else {
+      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+      tree.findNode(nodeId) match {
+        case Some(node) => {
+          val provable = Provable.startProof(node.sequent)
+          val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
+          new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
+        }
+        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
+      }
+    }
+  }
+}
+
+class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
+      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+    }
+    else {
+      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+      tree.findNode(nodeId) match {
+        case Some(node) => {
+          try {
+            val formula = node.sequent(SeqPos(formulaId.toInt))
+            new KvpResponse("formula", formula.prettyString) :: Nil
+          } finally {
+            new ErrorResponse(s"Could not find formula with formulaId ${formulaId} in node ${nodeId}")
+          }
+        }
+        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
+      }
+    }
+  }
+}
+
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
@@ -731,6 +837,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     val paramStrings: List[String] = inputs.map{
       case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula"))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }
@@ -777,7 +884,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
-    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+    val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val node =
@@ -824,7 +931,16 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
-      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).lastOption)
+      val latestExecutionStep = db.getExecutionSteps(proofId.toInt).sortBy(s => s.stepId).lastOption
+      //@note below is the conceptually correct implementation of latestExecutionStep, but getExecutionTrace doesn't work
+      //when there's not yet an associated profableId for the step (which is the case here since we are mid-step and the
+      //provable isn't computed yet).
+//      db.getExecutionTrace(proofId.toInt).lastStepId match {
+//        case Some(id) => db.getExecutionSteps(proofId.toInt, None).find(p => p.stepId == id)
+//        case None => None
+//      }
+
+      (!executor.contains(taskId) || executor.isDone(taskId), latestExecutionStep)
     }
     new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }
@@ -918,7 +1034,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         } else {
           // @todo This is a messy mix of the old trace (ID, Provables) and new trace (branch numbers). Perhaps add a new
           // data structure to avoid the messiness.
-          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.executableId, step.isUserExecuted) :: acc)
+          (updatedGoals, ExecutionStep(step.stepId, step.executionId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.executableId, step.isUserExecuted) :: acc)
         }
       }
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
@@ -966,7 +1082,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
     val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
-    val conclusion = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(conclusionFormula))
+    val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
     val isProved = provable.isProved && provable.conclusion == conclusion
@@ -1041,18 +1157,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
           //@todo figure out which of these are actually necessary.
           System.out.flush()
           System.err.flush()
-          DerivedAxioms.qeTool match {
-            case t: Tool => t.shutdown(); DerivedAxioms.qeTool = null;
-          }
-          TactixLibrary.qeTool match {
-            case t: Tool => t.shutdown(); TactixLibrary.qeTool = null;
-          }
-          TactixLibrary.odeTool match {
-            case t: Tool => t.shutdown(); TactixLibrary.odeTool = null;
-          }
-          TactixLibrary.cexTool match {
-            case t: Tool => t.shutdown(); TactixLibrary.cexTool = null;
-          }
+          ToolProvider.shutdown()
           System.out.flush()
           System.err.flush()
           HyDRAServerConfig.system.shutdown()
@@ -1082,6 +1187,16 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   override def resultingResponses(): List[Response] = {
     val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(proofId))
     new ExtractTacticResponse(exprText) :: Nil
+  }
+}
+
+class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(proofId))
+    val problem = db.getModel(db.getProofInfo(proofId).modelId).keyFile
+    new ExtractProblemSolutionResponse(problem + "\n" + "Solution.\n" + exprText + "\nEnd.") :: Nil
   }
 }
 

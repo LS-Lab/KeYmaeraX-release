@@ -5,7 +5,8 @@
 /**
  * Differential Dynamic Logic pretty-printer for concrete KeYmaera X notation.
  * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @note Code Review 2016-08-02
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -40,9 +41,9 @@ trait PrettyPrinter extends (Expression => String) {
    * The corresponding full-form pretty printer producing full parentheses.
    * @ensures parser(fullPrinter(expr)) == expr
    */
-  def fullPrinter: (Expression => String)
+  val fullPrinter: (Expression => String)
 
   /** A parser that can read the input that this pretty-printer produces */
-  def parser: Parser
+  val parser: Parser
 
 }

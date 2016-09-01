@@ -92,6 +92,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       //Stuff that could be confused as an identifier.
       case US_MATCH.startPattern(_*) => consumeTerminalLength(US_MATCH, loc)
       case PARTIAL.startPattern(_*) => consumeTerminalLength(PARTIAL, loc)
+      case DONE.startPattern(_*) => consumeTerminalLength(DONE, loc)
 
       //build-in tactics.
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
@@ -104,9 +105,12 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       case KLEENE_STAR.startPattern(_*) => consumeTerminalLength(KLEENE_STAR, loc)
       case SATURATE.startPattern(_*) => consumeTerminalLength(SATURATE, loc)
       case BRANCH_COMBINATOR.startPattern(_*) => consumeTerminalLength(BRANCH_COMBINATOR, loc)
+      case OPTIONAL.startPattern(_*) => consumeTerminalLength(OPTIONAL, loc)
 
       //Positions
       case ABSOLUTE_POSITION.startPattern(positionString) => consumeTerminalLength(ABSOLUTE_POSITION(positionString), loc)
+      case LAST_SUCCEDENT.startPattern(_*) => consumeTerminalLength(LAST_SUCCEDENT, loc)
+      case LAST_ANTECEDENT.startPattern(_*) => consumeTerminalLength(LAST_ANTECEDENT, loc)
       case SEARCH_SUCCEDENT.startPattern(_*) => consumeTerminalLength(SEARCH_SUCCEDENT, loc)
       case SEARCH_ANTECEDENT.startPattern(_*) => consumeTerminalLength(SEARCH_ANTECEDENT, loc)
       case SEARCH_EVERYWHERE.startPattern(_*) => consumeTerminalLength(SEARCH_EVERYWHERE, loc)

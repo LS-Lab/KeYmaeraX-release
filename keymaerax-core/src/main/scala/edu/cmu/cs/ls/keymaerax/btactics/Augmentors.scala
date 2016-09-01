@@ -60,15 +60,24 @@ object Augmentors {
       * @param condition the condition that the subexpression sought for has to satisfy.
       * @return The first position, or None if no subexpression satisfies `condition`.
       */
-    def find(condition: Term => Boolean): Option[PosInExpr] = {
-      var pos: Option[PosInExpr] = None
+    def find(condition: Term => Boolean): Option[(PosInExpr,Term)] = {
+      var pos: Option[(PosInExpr,Term)] = None
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-          if (condition(e.asInstanceOf[Term])) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+          if (condition(e.asInstanceOf[Term])) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
           else Left(None)
       }, term)
       pos
     }
+
+    /**
+      * Find the first (i.e., left-most) position of the given term `e`, if any.
+      * @return The first position, or None if `e` does not occur.
+      */
+    def find(e: Term): Option[PosInExpr] = find(t => e==t) match {case Some((pos,_))=>Some(pos) case None=>None}
+
+    /** The substitution pair `this~>other`. */
+    def ~>(other: Term): SubstitutionPair = SubstitutionPair(term, other)
   }
 
   /**
@@ -97,19 +106,40 @@ object Augmentors {
             override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
               // do not replace with invalid abbreviations in some obvious places
               case Forall(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
+              case Forall(x, q) if x.contains(what) && repl.isInstanceOf[Variable] =>
+                Right(Forall(x.map(v => if (v==what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
               case Exists(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
+              case Exists(x, q) if x.contains(what) && repl.isInstanceOf[Variable] =>
+                Right(Exists(x.map(v => if (v==what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
               case Box(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Box(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Box(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
               case Box(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Box(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Box(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
               case Diamond(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Diamond(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Diamond(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
               case Diamond(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Diamond(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
+                Right(Diamond(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
               case _ => Left(None)
             }
           }, fml) match {
             case Some(f) => f
           }
-        case fml: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+
+        case afml: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
           override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
-            if (f == what) Right(fml)
+            if (f == what) Right(afml)
+            else Left(None)
+        }, fml) match {
+          case Some(f) => f
+        }
+
+        case aprg: Program => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preP(q: PosInExpr, a: Program): Either[Option[StopTraversal], Program] =
+            if (a == what) Right(aprg)
             else Left(None)
         }, fml) match {
           case Some(f) => f
@@ -134,6 +164,11 @@ object Augmentors {
       }, fml)
       pos
     }
+    /**
+      * Find the first (i.e., left-most) position of the given expression `e`, if any.
+      * @return The first position, or None if `e` does not occur.
+      */
+    def find(e: Term): Option[PosInExpr] = find(t => e==t) match {case Some((pos,_))=>Some(pos) case None=>None}
     /**
       * Find the first (i.e., left-most) position of a subformula satisfying `condition`, if any.
       * @param condition the condition that the subformula sought for has to satisfy.
@@ -161,6 +196,9 @@ object Augmentors {
       }, fml)
       result
     }
+
+    /** The substitution pair `this~>other`. */
+    def ~>(repl: Formula): SubstitutionPair = SubstitutionPair(fml,repl)
   }
 
   /**
@@ -176,6 +214,9 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
+
+    /** The substitution pair `this~>other`. */
+    def ~>(repl: Program): SubstitutionPair = SubstitutionPair(prog,repl)
   }
 
   /**

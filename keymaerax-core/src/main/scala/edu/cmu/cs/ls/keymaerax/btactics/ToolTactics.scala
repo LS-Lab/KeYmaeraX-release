@@ -12,60 +12,58 @@ import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 import scala.language.postfixOps
 
 /**
- * Tactics that execute and use the output of tools.
+ * Implementation: Tactics that execute and use the output of tools.
  * Also contains tactics for pre-processing sequents.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-object ToolTactics {
+private object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = {
-    require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: QETool): BelleExpr = {
+    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
-      DebuggingTactics.recordQECall() &
-      alphaRule*@TheType() &
-      varExhaustiveEqL2R('L)*@TheType() &
-      tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
-      Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool)) &
-      DebuggingTactics.assertProved
+//      DebuggingTactics.recordQECall() &
+      (alphaRule*) &
+        (varExhaustiveEqL2R('L)*) &
+        (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
+      Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
+      DebuggingTactics.done("QE was unable to prove: invalid formula")
   )}
-  def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
+  def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(implicit qeTool: QETool) = {
-    require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    Idioms.NamedTactic("QE",
-      toSingleFormula & qeSuccedentHd(qeTool)
+  def partialQE(qeTool: QETool) = {
+    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+    Idioms.NamedTactic("pQE",
+      toSingleFormula & rcf(qeTool)
     )
   }
 
-  /**
-   * Transforms the FOL formula at position 'pos' into the formula 'to'. Uses QE to prove the transformation correct.
-   * @example {{{
-   *                           *
-   *                           --------------
-   *           a<b |- a<b      |- a<b -> b>a
-   *           ------------------------------ transform("a<b".asFormula)(1)
-   *           a<b |- b>a
-   * }}}
-   * * @example {{{
-   *                                         *
-   *                                    ---------------------
-   *           a+b<c, b>=0 |- a+b<c     b>=0 |- a+b<c -> a<c
-   *           ---------------------------------------------- transform("a+b<c".asFormula)(1)
-   *           a+b<c, b>=0 |- a<c
-   * }}}
-   * @param to The transformed formula.
-   * @param tool The tool to perform QE and obtain counter examples.
-   * @return The tactic
-   */
-  def transform(to: Formula)(implicit tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos, sequent) => {
+  /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
+  def rcf(qeTool: QETool) = TacticFactory.anon ((sequent: Sequent) => {
+    assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
+    require(sequent.succ.head.isFOL, "QE only on FOL formulas")
+
+    //Run QE and extract the resulting provable and equivalence
+    //@todo how about storing the lemma, but also need a way of finding it again
+    //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
+    val qeFact = core.Provable.proveArithmetic(qeTool, sequent.succ.head).fact
+    val Equiv(_, result) = qeFact.conclusion.succ.head
+
+    ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
+      (close | skip) partial,
+      equivifyR(1) & commuteEquivR(1) & by(qeFact)
+      )
+  })
+
+  /** @see [[TactixLibrary.transform()]] */
+  def transform(to: Formula)(tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel, "transform only at top level")
     require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
 
-    val modalHide = alphaRule*@TheType() & ("modalHide" by ((mhsequent: Sequent) => {
+    val modalHide = (alphaRule*) & ("modalHide" by ((mhsequent: Sequent) => {
       mhsequent.ante.indices.map(i => if (mhsequent(AntePos(i)).isFOL) skip else hide(AntePos(i))).reduceLeftOption(_&_).getOrElse(skip) &
       mhsequent.succ.indices.map(i => if (mhsequent(SuccPos(i)).isFOL) skip else hide(SuccPos(i))).reduceLeftOption(_&_).getOrElse(skip)
     }))
@@ -80,11 +78,12 @@ object ToolTactics {
     //@note assumes that modalHide is called first
     val smartHide = "smartHide" by ((shsequent: Sequent) => {
       val theCex = cex
+      val theCexVars = theCex.get.keySet.filter(x => x.isInstanceOf[Variable]).map(x => x.asInstanceOf[Variable])
       shsequent.ante.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCex.get.keySet).isEmpty) hide(AntePos(i))
+        if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCexVars).isEmpty) hide(AntePos(i))
         else skip).reduceLeftOption(_&_).getOrElse(skip) &
       shsequent.succ.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCex.get.keySet).isEmpty) hide(SuccPos(i))
+        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCexVars).isEmpty) hide(SuccPos(i))
         else skip).reduceLeftOption(_&_).getOrElse(skip)
     })
 
@@ -98,29 +97,12 @@ object ToolTactics {
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is a variable */
   private def varExhaustiveEqL2R: DependentPositionTactic =
-    "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
+    "Find Left and Replace Left with Right" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
     })
 
   /* Tries to close predicates by identity, hide if unsuccessful (QE cannot handle predicate symbols) */
-  private def tryClosePredicate: DependentPositionTactic = "Try close predicate" by ((pos, sequent) => sequent.sub(pos) match {
+  private def tryClosePredicate: DependentPositionTactic = "Try close predicate" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(p@PredOf(_, _)) => closeId | (hide(pos) partial)
   })
-
-  /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  private def qeSuccedentHd(qeTool : QETool) = new SingleGoalDependentTactic("QE") {
-    override def computeExpr(sequent: Sequent): BelleExpr  = {
-      assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
-      require(sequent.succ.head.isFOL, "QE only on FOL formulas")
-
-      //Run QE and extract the resulting provable and equivalence
-      val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
-      val Equiv(_, result) = qeFact.conclusion.succ.head
-
-      ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
-        (close | skip) partial,
-        equivifyR(1) & commuteEquivR(1) & by(qeFact)
-      )
-    }
-  }
 }

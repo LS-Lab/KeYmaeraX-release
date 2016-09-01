@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-06-01 (QETool parts and its dependencies only)
+  * @note Code Review: 2016-08-02
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
@@ -24,11 +24,12 @@ import scala.collection.immutable
  * @author Stefan Mitsch
  */
 trait MathematicaLink {
+  /** Runs Mathematica command `cmd` without safeguarding by exception checking for Mathematica results. */
   def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T)
+  /** Runs Mathematica command `cmd` converting back with `m2k` using tool `executor`, with Mathematica exception checking.
+    * @ensures cmd is freed and should not ever be used again.
+    */
   def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T)
-
-  //@todo Code Review: should probably be removed from the interface
-  //@solution: removed ready from interface, removed empty implementations from derived classes
 
   /** Cancels the current request.
     *
@@ -42,7 +43,11 @@ trait MathematicaLink {
   * Bridge for MathematicaLink, bundles tool executor (thread pools) with converters.
   */
 trait KeYmaeraMathematicaBridge[T] {
+  /** Runs Mathematica command `cmd` without safeguarding by exception checking for Mathematica results. */
   def runUnchecked(cmd: String): (String, T)
+  /** Runs Mathematica command `cmd`, with Mathematica exception checking.
+    * @ensures cmd is freed and should not ever be used again.
+    */
   def run(cmd: MExpr): (String, T)
 }
 
@@ -54,7 +59,7 @@ trait KeYmaeraMathematicaBridge[T] {
   */
 abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k2m: K2MConverter[T],
                                              val m2k: M2KConverter[T]) extends KeYmaeraMathematicaBridge[T] {
-  protected val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  protected val DEBUG = System.getProperty("DEBUG", "false")=="true"
   protected val mathematicaExecutor: ToolExecutor[(String, T)] = ToolExecutor.defaultExecutor()
 
   override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(cmd, m2k) }
@@ -69,9 +74,10 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
  * @author Stefan Mitsch
  */
 class JLinkMathematicaLink extends MathematicaLink {
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   //@todo really should be private -> fix SpiralGenerator
+  //@todo concurrent access to ml needs ml access to be synchronized everywhere or pooled or
   private[keymaerax] var ml: KernelLink = null
   private var linkName: String = null
   private var jlinkLibDir: Option[String] = None
@@ -98,24 +104,29 @@ class JLinkMathematicaLink extends MathematicaLink {
       ml = MathLinkFactory.createKernelLink(Array[String](
         "-linkmode", "launch",
         "-linkname", linkName + " -mathlink"))
-      ml.discardAnswer()
-      isActivated match {
-        case Some(true) => isComputing match {
-          case Some(true) => true // everything ok
-          case Some(false) => throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
-          case None => if (DEBUG) println("Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+      try {
+        ml.discardAnswer()
+        //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
+        isActivated match {
+          case Some(true) => isComputing match {
+            case Some(true) => true // everything ok
+            case Some(false) => throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+            case None => if (DEBUG) println("Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+          }
+          case Some(false) => throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
+          case None => if (DEBUG) println("Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
         }
-        case Some(false) => throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
-        case None => if (DEBUG) println("Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
+      } catch {
+        case e: UnsatisfiedLinkError =>
+          val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
+            "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
+            diagnostic
+          println(message)
+          throw e.initCause(new Error(message))
+        case e: MathLinkException => println("Mathematica J/Link errored " + e); throw e
       }
     } catch {
-      case e:UnsatisfiedLinkError =>
-        val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
-          "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
-          diagnostic
-        println(message)
-        throw e.initCause(new Error(message))
-      case e:MathLinkException => println("Mathematica J/Link errored " + e); throw e
+      case ex: Throwable => shutdown(); throw ex
     }
   }
 
@@ -157,7 +168,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     ml.synchronized {
       ml.evaluate(cmd)
       ml.waitForAnswer()
-      safeResult(ml.getExpr, res => (res.toString, m2k(res)))
+      importResult(ml.getExpr, res => (res.toString, m2k(res)))
     }
   }
 
@@ -181,49 +192,52 @@ class JLinkMathematicaLink extends MathematicaLink {
     * @param converter Converts Mathematica expressions to KeYmaera X expressions.
     * @tparam T The exact KeYmaera X expression type expected as result.
     * @return The result, as string and as KeYmaera X expression.
-    * @note Disposes cmd, do not use afterwards.
+    * @ensures cmd is freed and should not ever be used again.
     */
   protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
-    if (ml == null) throw new IllegalStateException("No MathKernel set")
-    //@todo Code Review: querIndex increment should be synchronized
-    //@solution: synchronized increment on global idx, then use local idx throughout instead; added a note to global queryIndex that all access must be synchronized
-    val qidx: Long = synchronized { queryIndex += 1; queryIndex }
-    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
-    // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-    val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
-    if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
-
-    val taskId = executor.schedule(_ => {
-      dispatch(checkErrorMsgCmd.toString)
-      getAnswer(qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
-    })
-
     try {
-      executor.wait(taskId) match {
-        case Some(Left(result)) => result
-        case Some(Right(throwable)) => throwable match {
-          case ex: MathematicaComputationAbortedException =>
-            executor.remove(taskId)
-            throw ex
-          case ex: Throwable =>
-            executor.remove(taskId, force = true)
-            throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
-        }
-        case None =>
-          //@note Thread is interrupted by another thread (e.g., UI button 'stop')
-          cancel()
-          executor.remove(taskId, force = true)
-          if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
-          throw new MathematicaComputationAbortedException(checkErrorMsgCmd.toString)
+      if (ml == null) throw new IllegalStateException("No MathKernel set")
+      val qidx: Long = synchronized {
+        queryIndex += 1; queryIndex
       }
-    } finally {
-      //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
-      //@note nested cmd is disposed automatically
-      indexedCmd.dispose()
-      checkErrorMsgCmd.dispose()
-    }
+      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
+      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
+      val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
+      try {
+        if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
+
+        val taskId = executor.schedule(_ => {
+          dispatch(checkErrorMsgCmd.toString)
+          getAnswer(qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
+        })
+
+        executor.wait(taskId) match {
+          case Some(Left(result)) => result
+          case Some(Right(throwable)) => throwable match {
+            case ex: MathematicaComputationAbortedException =>
+              executor.remove(taskId)
+              throw ex
+            case ex: Throwable =>
+              executor.remove(taskId, force = true)
+              throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+          }
+          case None =>
+            //@note Thread is interrupted by another thread (e.g., UI button 'stop')
+            cancel()
+            executor.remove(taskId, force = true)
+            if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
+            throw new MathematicaComputationAbortedException(checkErrorMsgCmd.toString)
+        }
+      } finally {
+        //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
+        //@note nested cmd is disposed automatically
+        checkErrorMsgCmd.dispose()
+      }
+      //@note during normal execution, this disposes cmd twice (once via checkErrorMsgCmd) but J/Link ensures us this would be acceptable.
+    } finally { cmd.dispose() }
   }
 
+  /** Send command `cmd` for evaluation to Mathematica kernel straight away */
   private def dispatch(cmd: String) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.evaluate(cmd)
@@ -239,21 +253,18 @@ class JLinkMathematicaLink extends MathematicaLink {
     * @return The result as string and converted to the expected result type.
     */
   private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
-    //@todo Properly dispose input in caller
-    //@solution sole caller run() disposes input (+ other Expr) now in a finally block after the answer is retrieved
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
-    safeResult(ml.getExpr,
+    importResult(ml.getExpr,
       res => {
+        //@todo check with MathematicaToKeYmaera.isAborted
         if (res == MathematicaSymbols.ABORTED) {
-          //@todo Code Review do not hand MExpr to exceptions
-          //@solution: exceptions accept message instead of Expr, cleaned up getAnswer interface (Expr not necessary)
           throw new MathematicaComputationAbortedException(ctx)
         } else if (res == MathematicaSymbols.EXCEPTION) {
           // an exception occurred
           ml.evaluate(fetchMessagesCmd)
           ml.waitForAnswer()
-          val txtMsg = safeResult(ml.getExpr, _.toString)
+          val txtMsg = importResult(ml.getExpr, _.toString)
           throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
         } else {
           val head = res.head
@@ -261,6 +272,7 @@ class JLinkMathematicaLink extends MathematicaLink {
             throw new IllegalStateException("Mathematica returned input as answer: " + res.toString)
           } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
+            //@todo check with MathematicaToKeYmaera.isAborted
             if (theResult == MathematicaSymbols.ABORTED) throw new MathematicaComputationAbortedException(ctx)
             else (theResult.toString, converter(theResult))
           } else {
@@ -279,12 +291,12 @@ class JLinkMathematicaLink extends MathematicaLink {
   private def getVersion: (String, String, String) = {
     ml.evaluate("$VersionNumber")
     ml.waitForAnswer()
-    val (major, minor) = safeResult(
+    val (major, minor) = importResult(
       ml.getExpr,
       version => { val versionParts = version.toString.split("\\."); (versionParts(0), versionParts(1)) })
     ml.evaluate("$ReleaseNumber")
     ml.waitForAnswer()
-    val release = safeResult(ml.getExpr, _.toString)
+    val release = importResult(ml.getExpr, _.toString)
     //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
     (major, minor, release)
   }
@@ -292,36 +304,36 @@ class JLinkMathematicaLink extends MathematicaLink {
   /** Checks if Mathematica is activated by querying the license expiration date */
   private def isActivated: Option[Boolean] = {
     val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
-    val version = getVersion
-
-    def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[Boolean] = {
-      val date: Array[MExpr] = version match {
-        case ("9", _, _) => licenseExpirationDate.args
-        case ("10", _, _) => licenseExpirationDate.args.head.args
-        case (major, minor, _) => if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
-      }
-      if (date == null) None
-      else try {
-        if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
-          //@note month in calendar is 0-based, in Mathematica it's 1-based
-          val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
-          val today = new Date()
-          Some(expiration.getTime.after(today))
-        } else if (date.length >= 1 && date(0).equals(infinity)) {
-          Some(true)
-        } else {
-          None
-        }
-      } catch {
-        case e: ExprFormatException => if (DEBUG) println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
-      }
-      //@note date disposed as part of licenseExpirationDate
-    }
-
-    ml.evaluate("$LicenseExpirationDate")
-    ml.waitForAnswer()
     try {
-      safeResult(ml.getExpr, licenseExpiredConverter)
+      val version = getVersion
+
+      def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[Boolean] = {
+        val date: Array[MExpr] = version match {
+          case ("9", _, _) => licenseExpirationDate.args
+          case ("10", _, _) => licenseExpirationDate.args.head.args
+          case (major, minor, _) => if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
+        }
+        if (date == null) None
+        else try {
+          if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+            //@note month in calendar is 0-based, in Mathematica it's 1-based
+            val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
+            val today = new Date()
+            Some(expiration.getTime.after(today))
+          } else if (date.length >= 1 && date(0).equals(infinity)) {
+            Some(true)
+          } else {
+            None
+          }
+        } catch {
+          case e: ExprFormatException => if (DEBUG) println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
+        }
+        //@note date disposed as part of licenseExpirationDate
+      }
+
+      ml.evaluate("$LicenseExpirationDate")
+      ml.waitForAnswer()
+      importResult(ml.getExpr, licenseExpiredConverter)
     } finally {
       infinity.dispose()
     }
@@ -332,7 +344,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     try {
       ml.evaluate("6*9")
       ml.waitForAnswer()
-      Some(safeResult(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
+      Some(importResult(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
     } catch {
       //@todo need better error reporting, this way it will never show up on UI
       case e: Throwable => if (DEBUG) println("WARNING: Mathematica may not be functional \n cause: " + e); None

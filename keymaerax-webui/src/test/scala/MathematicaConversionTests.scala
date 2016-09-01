@@ -17,8 +17,8 @@ import scala.collection.immutable._
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
-  var link: JLinkMathematicaLink = null
-  var ml : KeYmaeraMathematicaBridge[KExpr] = null //var so that we can instantiate within a test case.
+  var link: JLinkMathematicaLink = _
+  var ml : KeYmaeraMathematicaBridge[KExpr] = _ //var so that we can instantiate within a test case.
 
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
@@ -187,7 +187,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip x
     round trip Variable("y", None, Real)
     round trip Variable("xyzd", None, Real)
-    round trip Variable("_", None, Real)
+    //round trip Variable("_", None, Real)
     round trip Variable("x_", None, Real)
     round trip Variable("x", Some(0), Real)
     round trip Variable("x", Some(5), Real)
@@ -198,7 +198,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "commute crazy names" in {
     round trip Variable("x_", None, Real)
-    round trip Variable("_", None, Real)
+    //round trip Variable("_", None, Real)
     round trip FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real))
   }
 
@@ -255,21 +255,24 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     KeYmaeraToMathematica("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
   }
 
-  it should "insist on correct domain/sort of special functions" in {
-    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("abs"))
-    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("Abs"))
+  it should "distinguish uninterpreted names from interpreted ones by namespace" in {
+    KeYmaeraToMathematica(Variable("abs")) shouldBe new MExpr(Expr.SYMBOL, "kyx`abs")
+    KeYmaeraToMathematica(Variable("Abs")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Abs")
     a [CoreException] should be thrownBy KeYmaeraToMathematica("abs()".asTerm)
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("Abs(x)".asTerm)  // correct domain, but uppercase
+    KeYmaeraToMathematica("Abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
+    KeYmaeraToMathematica("abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
     a [CoreException] should be thrownBy KeYmaeraToMathematica("abs(x,y)".asTerm)
-    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("min"))
-    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("Min"))
+    KeYmaeraToMathematica(Variable("min")) shouldBe new MExpr(Expr.SYMBOL, "kyx`min")
+    KeYmaeraToMathematica(Variable("Min")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Min")
     a [CoreException] should be thrownBy KeYmaeraToMathematica("min(x)".asTerm)
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("Min(x,y)".asTerm)  // correct domain, but uppercase
+    KeYmaeraToMathematica("Min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
+    KeYmaeraToMathematica("min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     a [CoreException] should be thrownBy KeYmaeraToMathematica("min(x,y,z)".asTerm)
-    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("max"))
-    a [CoreException] should be thrownBy KeYmaeraToMathematica(Variable("Max"))
+    KeYmaeraToMathematica(Variable("max")) shouldBe new MExpr(Expr.SYMBOL, "kyx`max")
+    KeYmaeraToMathematica(Variable("Max")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Max")
     a [CoreException] should be thrownBy KeYmaeraToMathematica("max(x)".asTerm)
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("Max(x,y)".asTerm) // correct domain, but uppercase
+    KeYmaeraToMathematica("Max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
+    KeYmaeraToMathematica("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     a [CoreException] should be thrownBy KeYmaeraToMathematica("max(x,y,z)".asTerm)
   }
 }

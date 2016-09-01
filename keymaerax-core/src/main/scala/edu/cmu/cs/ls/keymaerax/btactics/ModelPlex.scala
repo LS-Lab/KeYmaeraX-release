@@ -55,7 +55,7 @@ object ModelPlex extends ModelPlexTrait {
     val mxInputFml = createMonitorSpecificationConjecture(formula, vars:_*)
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = kind match {
-      case 'ctrl => implyR(1) & controllerMonitorByChase(1) & optimizationOneWithSearch(1)*@TheType()
+      case 'ctrl => implyR(1) & controllerMonitorByChase(1) & (optimizationOneWithSearch(1)*)
       case 'model => modelplexAxiomaticStyle(useOptOne=true)(modelMonitorT)('R)
       case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
     }
@@ -105,7 +105,7 @@ object ModelPlex extends ModelPlexTrait {
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
     fml match {
       case Imply(assumptions, Box(prg, _)) =>
-        assert(StaticSemantics.boundVars(prg).symbols.forall(v => !v.isInstanceOf[Variable] || vars.contains(v.asInstanceOf[Variable])),
+        assert(StaticSemantics.boundVars(prg).symbols.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
           "all bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
             "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.toSet diff vars.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
@@ -197,7 +197,7 @@ object ModelPlex extends ModelPlexTrait {
                              (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = "Modelplex In-Place" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Imply(_, Diamond(_, _))) =>
-        implyR(pos) & ((debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))*@TheType()) &
+        implyR(pos) & ((debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))*) &
           debug("Done with transformation, now looking for quantifiers") &
           //?(atOutermostQuantifier(ToolTactics.partialQE)(pos)) &
           //?(ToolTactics.partialQE) &
@@ -355,8 +355,8 @@ object ModelPlex extends ModelPlexTrait {
       case _ => DebuggingTactics.error("Stop recursion")
     }
 
-    val left: BelleExpr = recurseOnFormula(pos + PosInExpr(0::Nil))
-    val right: BelleExpr = recurseOnFormula(pos + PosInExpr(1::Nil))
+    val left: BelleExpr = recurseOnFormula(pos ++ PosInExpr(0::Nil))
+    val right: BelleExpr = recurseOnFormula(pos ++ PosInExpr(1::Nil))
 
     ((here partial) | (((left partial) | (right partial)) partial)) partial
   })
@@ -367,7 +367,7 @@ object ModelPlex extends ModelPlexTrait {
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
         case Forall(_, _) =>
-          outermostPos = Some(p + pos)
+          outermostPos = Some(p ++ pos)
           Left(Some(ExpressionTraversal.stop))
         case _ => Left(None)
       }
@@ -458,7 +458,7 @@ object ModelPlex extends ModelPlexTrait {
 
   /** Simplifies reflexive comparisons and implications/conjunctions/disjunctions with true. */
   def simplify(): DependentTactic = "ModelPlex Simplify" by ((sequent: Sequent) => {
-    simplifyReflexivity & simplifyTrue*@TheType()
+    simplifyReflexivity & (simplifyTrue*)
   })
 
   /** Simplifies reflexive comparisons to true. */
@@ -507,9 +507,9 @@ object ModelPlex extends ModelPlexTrait {
     var positions: List[Position] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-        if (cond(e)) { positions = (pos + p) :: positions; Left(None) } else Left(None)
+        if (cond(e)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
       override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-        if (cond(t)) { positions = (pos + p) :: positions; Left(None) } else Left(None)
+        if (cond(t)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
     }, sequent(pos.top))
     positions
   }

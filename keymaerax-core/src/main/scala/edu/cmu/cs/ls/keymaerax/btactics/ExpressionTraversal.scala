@@ -57,10 +57,10 @@ object ExpressionTraversal {
    */
   object TraverseToPosition {
     def apply(t: PosInExpr, cont: ExpressionTraversalFunction): ExpressionTraversalFunction = new TraverseToPosition(t, cont, Set.empty)
-    def apply(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]): ExpressionTraversalFunction = new TraverseToPosition(t, cont, blacklist)
+    def apply(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[Variable]): ExpressionTraversalFunction = new TraverseToPosition(t, cont, blacklist)
   }
 
-  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]) extends ExpressionTraversalFunction {
+  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[Variable]) extends ExpressionTraversalFunction {
     override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
       if(p == t) traverse(p, cont, e) match {
           case Some(x: Formula) => Right(x)
@@ -157,15 +157,15 @@ object ExpressionTraversal {
     case Right(x) => Some(x)
   }
 
-  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p+0, f, a) match {
+  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p++0, f, a) match {
     case Some(na) => val res = c(na); matchZero(p, f, res)
     case None => None
   }
 
-  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p+0, f, a) match {
+  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p++0, f, a) match {
     case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
-      case Left(None) => traverse(p+1, f, b) match {
+      case Left(None) => traverse(p++1, f, b) match {
         case Some(nb) => matchZero(p, f, c(na, nb))
         case None => None
       }
@@ -175,13 +175,13 @@ object ExpressionTraversal {
   }
 
   //@todo this should never happen
-  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p+0, f, a) match {
+  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p++0, f, a) match {
     case Some(na) => in(f, p, const(na, b, c)) match {
       case Left(Some(_)) => None
-      case Left(None) => traverse(p+1, f, b) match {
+      case Left(None) => traverse(p++1, f, b) match {
         case Some(nb) => in(f, p, const(na, nb, c)) match {
           case Left(Some(_)) => None
-          case Left(None) => traverse(p+2, f, c) match {
+          case Left(None) => traverse(p++2, f, c) match {
             case Some(nc) => val res = const(na, nb, nc); matchZero(p, f, res)
             case None => None
           }
@@ -202,6 +202,7 @@ object ExpressionTraversal {
         case True => matchZero(p, f, e)
         case False => matchZero(p, f, e)
         case DotFormula => matchZero(p, f, e)
+        case _: UnitPredicational => matchZero(p, f, e)
         case PredOf(a, b) => matchOne(p, PredOf.apply(a, _: Term), f, b)
         case PredicationalOf(a, b) => matchOne(p, PredicationalOf.apply(a, _: Formula), f, b)
         case Equal(a, b) => matchTwo(p, Equal.apply(_: Term, _: Term), f, a, b)
@@ -223,10 +224,10 @@ object ExpressionTraversal {
 
         // Terms
         case Number(_) => matchZero(p, f, e)
-        case _: Variable => matchZero(p, f, e)
+        case _: BaseVariable => matchZero(p, f, e)
         case DotTerm => matchZero(p, f, e)
         case Nothing => matchZero(p, f, e)
-        case Anything => matchZero(p, f, e)
+        case _: UnitFunctional => matchZero(p, f, e)
         case FuncOf(a, b) => matchOne(p, FuncOf.apply(a, _: Term), f, b)
         case Differential(a) => matchOne(p, Differential.apply(_: Term), f, a)
         case DifferentialSymbol(a) => matchOne(p, DifferentialSymbol.apply(_: Variable), f, a)
@@ -240,10 +241,9 @@ object ExpressionTraversal {
 
         // Programs
         case ProgramConst(_) => matchZero(p, f, e)
-        case DifferentialProgramConst(_) => matchZero(p, f, e)
+        case DifferentialProgramConst(_,_) => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case AssignAny(a) => matchOne(p, AssignAny.apply, f, a)
-        case DiffAssign(a, b) => matchTwo(p, DiffAssign.apply, f, a, b)
         case Test(a) => matchOne(p, Test.apply, f, a)
         case Compose(a, b) => matchTwo(p, Compose.apply, f, a, b)
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)

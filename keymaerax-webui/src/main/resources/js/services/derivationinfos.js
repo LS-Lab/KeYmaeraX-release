@@ -60,6 +60,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
         return {
           ante: serviceDef.convertToInput(premise.ante, tactic),
           succ: serviceDef.convertToInput(premise.succ, tactic),
+          numInputs: tactic.derivation.input.length,
           isClosed: premise.isClosed
         };
       });
@@ -86,10 +87,10 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
         result[0] = {text: formula.slice(0, inputBoundaries[0].start), isInput: false};
         result[1] = serviceDef.createInput(formula, tactic, inputBoundaries[0]);
         for (var i = 1; i < inputBoundaries.length; i++) {
-          result[i+1] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
-          result[i+2] = createInput(formula, tactic, inputBoundaries[i]);
+          result[2*i] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
+          result[2*i+1] = serviceDef.createInput(formula, tactic, inputBoundaries[i]);
         }
-        result[inputBoundaries.length+1] = {
+        result[2*inputBoundaries.length] = {
           text: formula.slice(inputBoundaries[inputBoundaries.length-1].end, formula.length),
           isInput: false
         }

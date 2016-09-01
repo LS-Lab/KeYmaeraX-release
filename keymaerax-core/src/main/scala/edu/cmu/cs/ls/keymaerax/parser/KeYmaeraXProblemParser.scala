@@ -4,13 +4,16 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
 
 /**
- * Parses .kyx files.
+ * Parses .kyx KeYmaera X problem files.
  * @todo check sorts
+ * @author Nathan Fulton
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
@@ -18,10 +21,30 @@ object KeYmaeraXProblemParser {
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
       }
     }
     catch {case e: ParseException => throw e.inInput(input)}
+
+  /** Parses a file of the form Problem. ... End. Solution. ... End. */
+  def parseProblemAndTactic(input: String): (Formula, BelleExpr) = try {
+    firstNonASCIICharacter(input) match {
+      case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
+      case None => {
+        val parts = input.split("Solution.")
+        assert(parts.length == 2, "Expected a problem file followed by a single ``Solution`` section.")
+        val (problem, tactic) = (parts(0), parts(1))
+
+        assert(tactic.trim.endsWith("End."), "``Solution.`` does not have a closing ``End.``")
+
+        val belleExpr = BelleParser(tactic.trim.dropRight("End.".length))
+        val formula = apply(problem)
+
+        (formula, belleExpr)
+      }
+    }
+  }
+  catch {case e: ParseException => throw e.inInput(input)} //@todo properly offset Belle parse exceptions...
 
   /** Returns the location and value of the first non-ASCII character in a string. */
   private def firstNonASCIICharacter(s : String) : Option[(Location, Char)] = {
@@ -122,32 +145,34 @@ object KeYmaeraXDeclarationsParser {
    * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
    */
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort, Token)], expr: Expression): Boolean = {
-    StaticSemantics.signature(expr).forall(f => f match {
+    StaticSemantics.symbols(expr).forall({
       case f:Function =>
         val (declaredDomain,declaredSort, declarationToken) = decls.get((f.name,f.index)) match {
           case Some(d) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
-        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${declaredSort} but used where sort ${f.sort} was expected.", declarationToken.loc)
+        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declarationToken.loc)
         else if (f.domain != declaredDomain.get) {
           (f.domain, declaredDomain) match {
-            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${r} but used where domain ${f.domain} was expected.", declarationToken.loc)
+            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", declarationToken.loc)
             case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", declarationToken.loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
         }
         else true
-      case _ => true
-    }) &&
-    StaticSemantics.vars(expr).symbols.forall(x => x match {
       case x: Variable =>
         val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
-          case Some((None,d,token)) => (d, token)
+          case Some((None,sort,token)) => (sort, token)
+          case Some((Some(domain), sort, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
-        if(x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort ${declaredSort} but used where a ${x.sort} was expected.", declarationToken.loc)
+        if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declarationToken.loc)
         x.sort == declaredSort
-      case _ => true
+      case _: UnitPredicational => true //@note needs not be declared
+      case _: UnitFunctional => true //@note needs not be declared
+      case _: DotTerm => true //@note needs not be declared
+      case DifferentialSymbol(v) => decls.contains(v.name, v.index) //@note hence it is checked as variable already
+      case _ => false
     })
   }
 
@@ -175,7 +200,7 @@ object KeYmaeraXDeclarationsParser {
       val funSymbolsSection = funSymbolsTokens.tail
       (processDeclarations(funSymbolsSection, Map()), remainder.tail)
     }
-    else (Map(), tokens)
+    else (Map[(String, Option[Int]), (Option[Sort], Sort, Token)](), tokens)
   }
 
   def processVariables(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
@@ -250,16 +275,16 @@ object KeYmaeraXDeclarationsParser {
       "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head, splitAtRparen._2.head.loc, "parsing function domain sorts")
     val remainder = splitAtRparen._2.tail
 
-    val domain = domainElements.foldLeft(List[Sort]())((list, token) =>
+    val domain = domainElements.foldLeft(List[Sort]())((list: List[Sort], token: Token) =>
       if(token.tok.equals(COMMA)) list
-      else list :+ parseSort(token, of))
+      else list :+ parseSort(token, of)) //@todo clean up code and also support explicit association e.g. F((B, R), B)
 
     if(domain.isEmpty) {
       (Unit, remainder)
     }
     else {
       val fstArgSort = domain.head
-      val domainSort = domain.tail.foldLeft(fstArgSort)( (tuple, next) => Tuple(tuple, next) )
+      val domainSort = domain.tail.foldRight(fstArgSort)( (next, tuple) => Tuple(next, tuple) )
       (domainSort, remainder)
     }
   }

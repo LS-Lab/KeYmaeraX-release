@@ -3,11 +3,12 @@
  * See LICENSE.txt for the conditions of this license.
  */
 /**
- * Uniform Renaming for KeYmaera X
- * @author Andre Platzer
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @note Code Review: 2016-03-09
- */
+  * Uniform Renaming for KeYmaera X
+  * @author Andre Platzer
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @note Code Review: 2016-08-17
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
@@ -15,7 +16,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 
 /**
-  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
+  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa, but clash for program constants etc.
   * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
   * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
   * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
@@ -23,47 +24,15 @@ import scala.collection.immutable
   * @param repl The target variable to replace `what` with and vice versa.
   * @author Andre Platzer
   * @author smitsch
+  * @note soundness-critical
   * @see [[UniformRenaming]]
-  */
-final case class URename(what: Variable, repl: Variable) extends Renaming {
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  private[core] override val semanticRenaming: Boolean = true
-}
-
-/**
-  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
-  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
-  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
-  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
-  * @param what What variable to replace (along with its associated DifferentialSymbol).
-  * @param repl The target variable to replace `what` with and vice versa.
-  * @author Andre Platzer
-  * @author smitsch
   * @see [[BoundRenaming]]
   */
-final case class SyntacticURename(what: Variable, repl: Variable) extends Renaming {
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  //@note for bound renaming purposes this absolutely has to be false
-  private[core] override val semanticRenaming: Boolean = false
-}
+final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
+  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort: " + this)
+  //@note Unlike renaming x to z, renaming x' to z would be unsound in (x+y)'=x'+y'.
+  insist(what.isInstanceOf[BaseVariable] && repl.isInstanceOf[BaseVariable], "Renaming only supports base variables: " + this)
 
-/**
-  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
-  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
-  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
-  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
-  * @author Andre Platzer
-  * @author smitsch
- */
-sealed trait Renaming extends (Expression => Expression) {
-  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
-  /** What variable to replace (along with its associated DifferentialSymbol). */
-  val what: Variable
-  /** The target variable to replace `what` with and vice versa */
-  val repl: Variable
-
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
-  private[core] val semanticRenaming: Boolean
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
   private[core] val TRANSPOSITION: Boolean = true
 
@@ -91,27 +60,29 @@ sealed trait Renaming extends (Expression => Expression) {
   def apply(p: Program): Program = try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
 
   /**
-   * Apply uniform renaming everywhere in the sequent.
-   */
+    * Apply uniform renaming everywhere in the sequent.
+    */
   //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
   // implementation
 
-  /** Rename a variable (that occurs in the given context for error reporting purposes) */
+  /** Rename a variable and/or differential symbol x (that occurs in the given `context` for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable =
     if (x==what) repl
     else if (x==repl) if (TRANSPOSITION) what else throw new RenamingClashException("Replacement name " + repl.asString + " already occurs originally", this.toString, x.asString, context.prettyString)
-    else x
+    else x match {
+      case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y, context))
+      case x: BaseVariable => x
+    }
 
 
   private def rename(term: Term): Term = term match {
     case x: Variable                      => renameVar(x, term)
-    case DifferentialSymbol(x)            => DifferentialSymbol(renameVar(x, term))
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
-    case Anything | Nothing | DotTerm     => term
+    case Nothing | DotTerm(_)             => term
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))
@@ -124,12 +95,11 @@ sealed trait Renaming extends (Expression => Expression) {
     case Differential(e) =>  Differential(rename(e))
     // unofficial
     case Pair(l, r)   => Pair(rename(l),   rename(r))
+    case _: UnitFunctional => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
   }
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
-    case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
-    case DotFormula         => if (semanticRenaming) DotFormula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case True | False       => formula
 
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -158,12 +128,14 @@ sealed trait Renaming extends (Expression => Expression) {
 
     case Box(p, g)       => Box(rename(p), rename(g))
     case Diamond(p, g)   => Diamond(rename(p), rename(g))
+
+    case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case DotFormula              => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case _: UnitPredicational    => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
   }
 
   private def rename(program: Program): Program = program match {
-    case a: ProgramConst             => if (semanticRenaming) a else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
-    case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))
@@ -175,11 +147,14 @@ sealed trait Renaming extends (Expression => Expression) {
     case Compose(a, b)               => Compose(rename(a), rename(b))
     case Loop(a)                     => Loop(rename(a))
     case Dual(a)                     => Dual(rename(a))
+    case a: ProgramConst             => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
   }
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
-    case c: DifferentialProgramConst => if (semanticRenaming) c else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)      // homomorphic cases
+    // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
+    //
+    case c: DifferentialProgramConst => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)
   }
 }

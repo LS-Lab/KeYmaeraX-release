@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.annotation.tailrec
+
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
   * @author aplatzer
@@ -105,9 +107,9 @@ object UIIndex {
         }
         val rules = "abstractionb" :: "generalizeb" :: maybeSplit
         a match {
+          case Assign(DifferentialSymbol(_),_) => "[:=] assign" :: rules
           case _: Assign => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
-          case _: DiffAssign => "[':=] differential assign" :: rules
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
@@ -119,11 +121,11 @@ object UIIndex {
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
-            val tactics: List[String] = /*@todo diffSolve once done*/ "autoDiffSolve" :: "diffCut" :: "diffInd" :: "DIRule" ::  Nil
+            val tactics: List[String] = "ODE" :: /*@todo diffSolve once done*/ "autoDiffSolve" :: "diffCut" :: "diffInd" :: "DIRule" ::  Nil
             if (constraint == True)
-              (tactics :+ "DG differential ghost") ++ rules
+              (tactics :+ "diffGhost" :+ "DA4") ++ rules
             else
-              (tactics :+ "diffWeaken" :+ "DG differential ghost") ++ rules
+              (tactics :+ "diffWeaken" :+ "diffGhost" :+ "DA4") ++ rules
           case _ => rules
         }
 
@@ -206,11 +208,20 @@ object UIIndex {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
+      case (_: AntePosition, _, Some(fa: Forall), Some(_:Formula)) if(bodyIsEquiv(fa)) => "equivRewriting" :: Nil
+      case (_: AntePosition, _, Some(_: Equiv), Some(_: Formula)) => "instantiatedEquivRewriting" :: Nil //@note for applying function definitions.
       case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
       case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
       case _ => Nil
       //@todo more drag-and-drop support
     }
+  }
+
+  @tailrec
+  private def bodyIsEquiv(x: Forall): Boolean = x.child match {
+    case Forall(_, child:Forall) => bodyIsEquiv(child)
+    case Equiv(_,_) => true
+    case _ => false
   }
 
   def comfortOf(stepName: String): Option[String] = stepName match {

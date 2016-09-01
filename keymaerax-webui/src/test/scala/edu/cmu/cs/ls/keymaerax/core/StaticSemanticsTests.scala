@@ -158,8 +158,8 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
 
       withSafeClue("Random sequent " + outString + "\n\n" + randClue) {
         println(e)
-        StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b)
-        StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[NamedSymbol])((a, b) => a ++ b)
+        StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b)
+        StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b)
         StaticSemantics.symbols(e) shouldBe e.ante.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a, b) => a ++ b)
         StaticSemantics.signature(e) shouldBe e.ante.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.signature).foldRight(Set[NamedSymbol]())((a, b) => a ++ b)
       }

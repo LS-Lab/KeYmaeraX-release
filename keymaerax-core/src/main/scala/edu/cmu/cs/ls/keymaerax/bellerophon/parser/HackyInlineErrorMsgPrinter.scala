@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Location, Region, UnknownLocation}
   * @author Nathan Fulton
   */
 //@todo : @deprecated("This should be replaced with a proper pretty-printer that takes a bellexpr instead of a string and handles all locations properly", "4.1b2")
-object HackyInlineErrorMsgPrinter {
+private[keymaerax] object HackyInlineErrorMsgPrinter {
   def apply(input: String, location: Location, message: String) : String = {
     "\n" + (input.split("\n").zipWithIndex.foldLeft("")((result, next) => {
       if(next._2 == location.begin.line-1) {

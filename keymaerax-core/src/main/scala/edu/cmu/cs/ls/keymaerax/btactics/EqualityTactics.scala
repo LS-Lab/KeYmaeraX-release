@@ -12,9 +12,10 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
- * Tactics to rewrite equalities and introduce abbreviations.
+ * Implementation: Tactics to rewrite equalities and introduce abbreviations.
+  *
  */
-object EqualityTactics {
+private object EqualityTactics {
 
   /**
    * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).
@@ -56,46 +57,36 @@ object EqualityTactics {
     positions
   }
 
-  /**
-   * Rewrites a formula according to an equality appearing in the antecedent.
-   * @example{{{
-   *    x=0 |- 0*y=0, x+1>0
-   *    ---------------------eqL2R(-1)(1)
-   *    x=0 |- x*y=0, x+1>0
-   * }}}
-   * @param eqPos The position of the equality. If it points to a formula, it rewrites all occurrences of left in that formula.
-   *              If it points to a specific term, then only this term is rewritten.
-   * @return The tactic.
-   */
+  /** @see [[TactixLibrary.eqL2R]] */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos:Position, sequent:Sequent) => {
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = TacticFactory.anon ((pos:Position, sequent:Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
-        val condEquiv@Imply(_, Equiv(_, repl)) = sequent.sub(pos) match {
-          case Some(f: Formula) => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, SubstitutionHelper.replaceFree(f)(lhs, rhs)).asInstanceOf[Formula]))
-          case Some(t: Term) if t == lhs => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula]))
-          case Some(t: Term) if t != lhs => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, SubstitutionHelper.replaceFree(t)(lhs, rhs)).asInstanceOf[Formula]))
+        val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
+          case Some(f: Formula) =>
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
+              sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm())))
+          case Some(t: Term) if t == lhs =>
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula])),
+              sequent(pos.top).replaceAt(pos.inExpr, DotTerm()))
+          case Some(t: Term) if t != lhs =>
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
+              sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, DotTerm())))
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
-        val (equivifyCommute, closeWhere) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos)) else (equivifyR('Rlast), new LastSucc(0))
+        val (equivifyCommute, closeWhere, inverseImply) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos), implyRi(eqPos.top, pos.checkSucc.top)) else (equivifyR('Rlast), LastSucc(0), implyRi(eqPos.top, SuccPos(sequent.succ.length-1)))
         cut(condEquiv) <(
           /* use */ (implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeIdWith(closeWhere)) partial) partial) partial,
-          /* show */ cohide('Rlast) & byUS("const formula congruence")
+          /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(
+            (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
+            (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
+            (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
           )
     }
   })
 
-  /**
-   * Rewrites a formula according to an equality appearing in the antecedent.
-   * @example{{{
-   *    0=x |- 0*y=0, x+1>0
-   *    ---------------------eqR2L(-1)(1)
-   *    0=x |- x*y=0, x+1>0
-   * }}}
-   * @param eqPos The position of the equality.
-   * @return The tactic.
-   */
+  /** @see [[TactixLibrary.eqR2L]] */
   def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos).checkAnte)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = "eqR2L" by ((pos, sequent) => {
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
@@ -114,7 +105,7 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("Find Left and Replace Left with Right")
+  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("allL2R")
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
@@ -125,22 +116,13 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(lhs, rhs)) =>
-      useAt("= commute")(pos, fml) & exhaustiveEq("Find Right and Replace Right with Left")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
+      useAt("= commute")(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
   })
 
 
-  /**
-   * Abbreviates a term at a position to a variable.
-   * @example{{{
-   *   maxcd = max(c,d) |- a+b <= maxcd+e
-   *   ----------------------------------------abbrv(Variable("maxcd"))(1, 1::0::Nil)
-   *                    |- a+b <= max(c, d) + e
-   * }}}
-   * @param abbrvV The abbreviation.
-   * @return The tactic.
-   */
+  /** @see [[TactixLibrary.abbrv()]] */
   def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(t: Term) => abbrv(t, Some(abbrvV))
     case Some(e) => throw new BelleError("Expected a term at position " + pos + ", but got " + e)
@@ -166,8 +148,8 @@ object EqualityTactics {
         val v = abbrvV match {
           case Some(vv) => vv
           case None => t match {
-            case FuncOf(Function(n, _, _, sort), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
-            case Variable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+            case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+            case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
             case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
           }
         }
@@ -189,7 +171,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def abs: DependentPositionTactic = "abs" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
+    case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
       val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val absVar = Variable(fn, freshAbsIdx)
 
@@ -208,7 +190,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def minmax: DependentPositionTactic = "min/max" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
+    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val minmaxVar = Variable(fn, freshMinMaxIdx)
 
