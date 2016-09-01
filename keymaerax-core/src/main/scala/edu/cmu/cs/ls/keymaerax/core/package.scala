@@ -11,14 +11,14 @@ import scala.io.Source
   * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
   * ==============================================================================================
   *
-  * The KeYmaera X Kernel defines
+  * The KeYmaera X Kernel implements [[http://dx.doi.org/10.1007/s10817-016-9385-1 Differential Dynamic Logic]] and defines
   *
   *   - Syntax of
   * [[http://symbolaris.com/logic/dL.html differential dynamic logic]]:
   *     - [[edu.cmu.cs.ls.keymaerax.core.Expression Syntax of dL Expressions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics Static Semantics]]
   *
-  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]]:
+  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]] from
   *     - [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
@@ -27,13 +27,13 @@ import scala.io.Source
   *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.Lemma lemma data storage]],
   * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
   * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
-  * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]].
+  * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]] for sets of symbols.
   *
   * ==Usage Overview==
-  * The KeYmaera X Kernel package provides the ''soundness-critical core of KeYmaera X''.
+  * The KeYmaera X Kernel package provides the ''soundness-critical core of [[http://dx.doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X]]''.
   * It provides ways of constructing proofs that, by construction, can only be constructed using
   * the proof rules that the KeYmaera X Kernel provides.
-  * The [[[[edu.cmu.cs.ls.keymaerax.btactic proof tactics]] that KeYmaera X provides give you a more powerful and flexible and easier way of
+  * The [[edu.cmu.cs.ls.keymaerax.btactics proof tactics]] that KeYmaera X provides give you a more powerful and flexible and easier way of
   * constructing and searching for proofs, but they internally reduce to what is shown here.
   *
   * ===Constructing Proofs===
@@ -61,7 +61,7 @@ import scala.io.Source
   *
   * ===Combining Proofs===
   * Multiple Provable objects for subderivations obtained from different sources can also be merged
-  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
+  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply()]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
   * The above example can be continued to merge proofs as follows:
   * {{{
   *   // ... continued from above
@@ -89,13 +89,15 @@ import scala.io.Source
   * Expressions are categorized according to their kind by the syntactic categories
   * of the grammar of differential dynamic logic:
   *
-  *   1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
+  * 1. [[edu.cmu.cs.ls.keymaerax.core.Term terms]] are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
   *
-  *   2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
+  * 2. [[edu.cmu.cs.ls.keymaerax.core.Formula formulas]] are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
   *
-  *   3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
+  * 3. [[edu.cmu.cs.ls.keymaerax.core.Program hybrid programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
   *
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
+  * 4. [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram differential programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
+  *
+  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
   *
   * ===Static Semantics===
   * The static semantics of differential dynamic logic is captured in
@@ -103,7 +105,7 @@ import scala.io.Source
   * in terms of the [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#freeVars(edu.cmu.cs.ls.keymaerax.core.Expression) free variables]] and
   * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
   * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
+  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 2.4]]
   *
   *
   * ==Theorem Prover==
@@ -115,11 +117,11 @@ import scala.io.Source
   *
   * ===Axioms===
   * The axioms and axiomatic rules of differential dynamic logic can be looked up with
-  * [[edu.cmu.cs.ls.keymaerax.core.Axiom]] and [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]] respectively.
-  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]],
-  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]] and [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]] respectively.
+  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]],
+  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]]
   * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Sections 4 and 5.0]]
+  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Sections 4 and 5.0]]
   * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]].
   *
   * ===Uniform Substitutions===
@@ -127,11 +129,12 @@ import scala.io.Source
   * and likewise for function symbols f(.) and program constants.
   * Uniform substitutions and their application mechanism for differential dynamic logic
   * are implemented in [[edu.cmu.cs.ls.keymaerax.core.USubst]].
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 3.0]]
+  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
-  * The proof rule [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]] applies uniform substitutions as a proof rule.
-  * The [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]] generates uniform substitution instances of axiomatic rules.
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 4]]
+  * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubst)]],
+  * including uniform substitution instances of axioms or axiomatic rules.
+  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
   * ===Sequent Proof Rules===
   * All proof rules for differential dynamic logic, including the uniform substitution and bound variable renaming rules as well as
@@ -148,6 +151,7 @@ import scala.io.Source
   * Errors from the prover core are reported as exceptions of type [[edu.cmu.cs.ls.keymaerax.core.ProverException]]
   * whose main responsibility is to propagate problems in traceable ways to the user by augmenting them
   * with contextual information.
+  * The prover core throws exceptions of type [[edu.cmu.cs.ls.keymaerax.core.CoreException]].
   *
   * ===Set Lattice===
   * A data structure for sets (or rather lattice completions of sets) is provided in
