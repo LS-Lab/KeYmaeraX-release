@@ -614,6 +614,7 @@ private object DifferentialTactics {
       TactixLibrary.diffSolve()(pos)
   })
 
+
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {

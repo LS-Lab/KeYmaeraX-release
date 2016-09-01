@@ -44,6 +44,58 @@ object FormulaTools {
     case p => p
   }
 
+  /** Convert nested pairs to a list of its deassociated non-pair arguments. */
+  def argumentList(term: Term): List[Term] = term match {
+    case Pair(a,b) => argumentList(a) ++ argumentList(b)
+    case a => List(a)
+  }
+
+  /** Negation-normal form transforms such that there are no nested negations and that
+    * negated atomic comparisons.
+    * Also removes implications/equivalences. */
+  def negationNormalForm(formula: Formula): Formula = formula match {
+    case formula: AtomicFormula => formula
+    case Not(g:AtomicFormula) => g match {
+      case Equal(a,b) => NotEqual(a,b)
+      case NotEqual(a,b) => Equal(a,b)
+      case Greater(a,b) => LessEqual(a,b)
+      case GreaterEqual(a,b) => Less(a,b)
+      case Less(a,b) => GreaterEqual(a,b)
+      case LessEqual(a,b) => Greater(a,b)
+    }
+    case Not(g:CompositeFormula) => g match {
+      case Not(f) => negationNormalForm(f)
+      case And(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(Not(q)))
+      case Or(p,q) => And(negationNormalForm(Not(p)), negationNormalForm(Not(q)))
+      case Imply(p,q) => And(negationNormalForm(p), negationNormalForm(Not(q)))
+      case Equiv(p,q) => Or(
+        And(negationNormalForm(p), negationNormalForm(Not(q))),
+        And(negationNormalForm(Not(p)), negationNormalForm(q))
+      )
+    }
+    case Imply(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(q))
+    case Equiv(p,q) => Or(
+      And(negationNormalForm(p), negationNormalForm(q)),
+      And(negationNormalForm(Not(p)), negationNormalForm(Not(q)))
+    )
+    case f:BinaryCompositeFormula => f.reapply(negationNormalForm(f.left), negationNormalForm(f.right))
+    case f:Quantified             => f.reapply(f.vars, negationNormalForm(f.child))
+    case f:Modal                  => f.reapply(f.program, negationNormalForm(f.child))
+    case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
+  }
+
+  /** Read off all atomic subformulas of `formula`.
+    * Will not descend into programs to find even further atomic formulas since they are not directly subformulas.
+    * @see [[negationNormalForm()]] */
+  def atomicFormulas(formula: Formula): List[AtomicFormula] = formula match {
+    case formula: AtomicFormula   => List(formula)
+    case f:UnaryCompositeFormula  => atomicFormulas(f.child)
+    case f:BinaryCompositeFormula => atomicFormulas(f.left) ++ atomicFormulas(f.right)
+    case f:Quantified             => atomicFormulas(f.child)
+    case f:Modal                  => atomicFormulas(f.child)
+    case _ => throw new IllegalArgumentException("atomicFormulas of formula " + formula + " not implemented")
+  }
+
   /**
    * Returns the polarity of the subformula at position pos in formula.
    * @param formula The formula.
