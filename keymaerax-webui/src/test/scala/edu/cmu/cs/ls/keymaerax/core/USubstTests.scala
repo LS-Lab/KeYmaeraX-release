@@ -92,7 +92,7 @@ class USubstTests extends SystemTestBase {
     s(prem) should be ("x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula)
   }
 
-  ignore should "substitute with dot projection" in {
+  it should "substitute with dot projection" ignore {
     val p = Function("p", None, Tuple(Real, Real), Bool)
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
@@ -104,7 +104,7 @@ class USubstTests extends SystemTestBase {
     s(prem) should be ("x^y>=0 <-> !(!((-(-x))^(-(-(y)))>=0))".asFormula)
   }
 
-  ignore should "substitute with more complicated dot projection" in {
+  it should "substitute with more complicated dot projection" ignore {
     val p = Function("p", None, Tuple(Real, Tuple(Real, Real)), Bool)
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
@@ -117,6 +117,14 @@ class USubstTests extends SystemTestBase {
     val s = USubst(Seq(SubstitutionPair(PredOf(p, dot),
       GreaterEqual(Power("fst(.(.,.))".asTerm, FuncOf(f, Pair("fst(snd(.(.,(.,.))))".asTerm, "snd(snd(.(.,(.,.))))".asTerm))), Number(0)))))
     s(prem) should be ("x^f(y,z)>=0 <-> !(!((-(-x))^f(-(-(y)),z)>=0))".asFormula)
+  }
+
+  it should "substitute unary predicate with binary predicate" in {
+    val s = USubst(
+      SubstitutionPair("p(.)".asFormula, "r(.,g())".asFormula) ::
+      SubstitutionPair("f()".asTerm, "2*a^2".asTerm) :: Nil)
+    val prem = "\\forall x p(x) -> p(f())".asFormula
+    s(prem) shouldBe "\\forall x r(x,g()) -> r(2*a^2,g())".asFormula
   }
 
   it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
@@ -547,7 +555,7 @@ class USubstTests extends SystemTestBase {
     * generated with 20 random complexity
     * from seed -3583806640264782477L
     */
-  ignore should "instantiate crazy program in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate crazy program in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest ignore {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
       val prog = "{{z6'=0^2,z3'=0+(0+-50)&<?\\forall z6 [{{z4:=*;{{z7'=0,z6'=0&[{z2:=z2;{z2:=*;++?true;}}{{?true;z6:=*;++?true;}++{?true;?true;++{?true;}*}++{?true;}*++{?true;}*}]\\forall z3 (\\forall z4 true)'}z2:=z5';}*}{z5:=0;{{{z1:=z1;++?true;++{?true;?true;}*}{{z7'=0,z2'=0&\\forall z5 true}}*?true;++{{{?true;++?true;}*{{?true;}*++?true;}}{{?true;++z5:=0;}++{{?true;}*}*}}*}++?true;}?true;}*++{z6:=-30+0;++{{z5:=(0+z3)'-0;++z5:=(0+0-0/0)^0+z2+((gg()^4)'+ff(0));}++{{{{?true;?true;}*{z2'=28&true&true}++?true;}++z3:=z2;}++?true;}*}?\\forall z6 \\forall z4 true;}{{{{?true;}*}*++{z7'=0&z2*-97*(0)'>=(z4/(0-(0+0)))'}}*}*{?false;++{{{?true;}*++z7:=z7;}++z6:=*;}{?[{z1'=0&\\exists z1 <?true;>true}]\\exists z2 -97 < 0*0&<{{?true;}*}*++?true;++?true;++?true;>[{?true;++?true;}*]\\forall z2 <?true;>true;}*}}?<{{{{{{z3'=-12&\\exists z2 true}{?true;++?true;}*}*}*++z1:=-35;}?true;}*++?true;}++z6:=*;++?false;{{z2:=z2;++{{?true;?true;++{?true;}*}++?true;?true;++z3:=0;}*}{{{z5:=z5;}*++{?true;++?true;}{?true;}*}{{?true;}*{?true;++?true;}++?true;}}{z3:=*;++{z4:=0;}*{?true;?true;}{?true;++?true;}}++{{{{?true;}*}*++{?true;?true;++?true;}*}++{{?true;?true;}{?true;}*}*{{{?true;}*++{z6'=0&true}}++{?true;}*}}*}>\\forall z1 <{{{{{?true;}*++?true;++?true;}*}*{{?true;++?true;}*}*{{?true;}*}*z1:=*;}*++{{{{?true;?true;}*}*++z4:=*;}++{z6'=39&\\forall z3 <?true;>true|\\forall z4 [?true;]true}}?[{{?true;?true;}*}*][{?true;++?true;}*]\\exists z2 0>=0;}?(false&ff(z4) < (39-0*0)/-54)';>true;]0<=ff(z6);{{{{?[{?true;}*]\\exists z6 0=(55-z5)';++{z5:=z1';++{?true;}*?true;++?true;}{{{{{{?true;++?true;}++?true;}*++{z7'=0&[{?true;}*]\\forall z7 true}}++{?true;?true<->true;}*}{{{?true;?true;++{?true;}*}++{z7'=0,z5'=0,z2'=0&0=0}}?true;{z7'=0,z3'=0&true}{?true;++?true;}}*}*{z6:=z6;++{{z5:=*;++?[?true;]true;}{{?true;?true;}z1:=z1;}{?true;++?true;?true;}}?true;++{z2'=ff((0-0)^1)+25&z6'>z5'}}}z3:=z5';}++{{{{{{z4:=(93)';{?true;++?\\exists z6 true;}*}{{?true;++?true;?true;}++?true;}*{{{z3'=0&true}{z2'=0&true}}*}*}?true;}{{?true;++{?true;++z4:=*;{?true;++?true;?true;}}++z4:=z1/0;}++{{{?true;?true;}*z1:=*;{z7'=0&true}++z6:=0/0+0/0;}?true;}{{z4:=*;++z7:=*;}{z4:=z4;{?true;}*++{?true;?true;}*}}*}}{z7'=0&10-87<=0-z4-z1'}{?true;}*}{z3:=*;++{{{{?true;}*}*}*{{{?true;}*++{?true;}*}{?true;++{?true;}*}++{z2:=0;{?true;}*}*}}{{{{?true;++?true;}++z5:=0;}++?true;?true;++?true;}*++{{{?true;}*?true;?true;}{?true;++?true;}}z4:=0+0-0;}++{z3'=24&true}}{{z6'=0&(78^0)'>z7'}++{{{{?true;++?true;}{?true;}*++?true;}*}*{z6:=ff((0)')*(0*0)^0;++?true;++{?true;++?true;}*{?true;}*?true;?true;}}{{?true;}*++{{{z5:=0;}*{z4:=0;}*}?true;?0!=0;}{{{?true;?true;}?true;++{?true;++?true;}++{?true;}*}++{z3'=0,z1'=0&<?true;++?true;>(true|true)}}}}}*}{z1:=*;++?(gg()*(z4*(z3+z4)))^1/((ff(0-0+(0)'+(0+0)*(0*0))+0)/-17)^4!=(90)'-0;++{{z6'=0,z3'=0&[?true;++{{?true;?true;++?true;?true;}*}*++{?true;++{?true;++?true;}*}{{z2'=0-0&<?true;>true}}*][?true;]<{{?true;?true;}{?true;++?true;}}*++?[{?true;}*]qq();>(0/-13)^3 < z7}}*{{{{z7:=z7;}*++{{{?false;{?true;}*}z5:=0+0;}z1:=z2';}{?true;++{?true;++?true;}*++{?true;?true;}{?true;++?true;}}}{{{{z6'=0,z3'=8&true&true->true->true}}*}*++{{{{?true;}*}*{?true;?true;++{?true;}*}}?true;}*}}*++{{z5'=0,z3'=78&z2'>=0}}*{z7'=0&<?true;{z7'=0&[{?true;}*++{z4'=0,z3'=0&true}]true}>(((0*0=0-0<-><{?true;}*>\\forall z3 true)<->(gg()>=-86)')&(true|!<z4:=0;>0<=0))}}}++z4:=z2;}++z4:=*;++{?true;}*}*>(<{{{?true;?true;{{{{?true;}*}*{?true;}*}*{z4:=0*(0*0)'*(24^1)'+(0-(gg())'-z3');}*++?true;z4:=(93)';++z1:=z1';++{{z6'=0,z4'=0&[{?true;}*]true}{?true;?true;}*{{?true;}*}*}*{z5:=z5;++{?true;?true;++?true;}*++{{?true;}*}*{?true;?true;++{?true;}*}}}}{?true;++{{{{z6'=0-z5&ff(0)*(-10-z6)>=z5-35*z3}}*++?true;}++{{?[?true;]true|0>0;?true;z4:=z4;++{{z7:=z7;{?true;}*}*}*}{?true;{z1'=0&<?true;?true;>0!=0}}{?(true)';++?[?true;]true;}*}{{?true;?<?true;>true|0>0;++{z6:=*;{z4:=0;}*}?<?true;++?true;>0 < 0;}++z4:=0/(0+0)*-56^3;++{{?true;}*}*}}{z7:=ff((42)'+(0+0-0*0)');}*{?true;++z5:=z5;}++{z6:=ff((-74-0-(0*0+0))');{{{z4:=0;?true;}{{?true;}*}*}*++z6:=z6;}z2:=*;++{{{z2:=(z1)';}*}*}*}*}}*{z1:=z7;++{{?true;}*++{{{z7'=0,z1'=0&0-z5'-z2'>(z7)'}++?true;}++z4:=z4;{z7'=0,z2'=0&\\exists z5 z6'--11!=(0^2+(0-0))'/z1}}*}*}}*><{?true;{z3'=0,z2'=0&([{z6'=0,z2'=0&<{z2:=z2;++?true;++{?true;}*}*++{?true;?true;++?true;?true;}*{{?true;++?true;++?true;}++?true;}>(54-(z5+z5))^2=0}]\\exists z7 [?true;][{z1:=z1;}*++{?true;?true;}*++?true;?true;?true;]0+(z7-0*0)>z3*0*(0+0+gg()))'}{z5'=0&<{?ff((0-0)/(0+0))*((95)'+z1*0) < z6';++{{z6'=0,z1'=0&0^1+0>z7'}++z7:=z7;}?true;}*><?true;>(25/ff(0^3))'/((0-0)^4*(0*0+z3')*(9/(0*0)*73))+gg()>ff(0/z7)*(z6/(((0)'+(0+0))/z7+(0-0-0*0)'))}++{z1:=*;++?true;}{z4'=0&pp(((z3-50^1)^3)')}}*>0=z5-((58-50)'+z6)+0<-><{{?true;{{?true;}*++{{{{{{{?true;?true;++?true;?true;}++{?true;++?true;}++?true;++?true;}++{z4:=0;++?true;}{?true;?true;++?true;}}++?true;++{?true;++?true;++?true;}++{?true;}*++{?true;}*}*++?true;{{{?true;++?true;}*}*++z7:=*;}?true;}++?[{?true;{{?true;++?true;}++?true;?true;}}{?true;?true;}*?true;]<{z6:=0;++?true;?true;}{?true;}*{?true;++?true;}>0<=0;{{{{{?true;}*}*}*++{{?true;++?true;}++{?true;}*}*}*++z7:=z4*z5';++{?true;++?true;}*?<?true;>true;{?true;?true;++{?true;}*}}}++z3:=*;}++{z2:=z2';{{z7'=0&<{?true;?true;++z5:=z5;}++{?true;++?true;}++?true;++?true;>\\exists z3 <?true;?true;>0>0}}*++{{{{{?true;++?true;}{?true;++?true;}}*}*{?<{?true;}*>\\exists z5 true;++{z2'=87&true|true}++?true;}}*}*}++{z2'=0&<?true;>(93)'>-51}{{{z1'=0&<?true;>true}}*{{z1'=0&<z7:=0*0;>(\\forall z7 true&!true)}}*}{z4:=*;{{?true;++?true;}?true;?true;}z3:=*;++?true;}?true;z6:=z3*(0-0);{{{z5'=0&true}}*}*}}{{{z7'=0&true}}*++{z5:=z5;++{{z7'=0&ff(0*0)-(-15-z4)+gg()>0-58}++?true;}++z4:=z4;}{{{{{?true;}*{?true;?true;}?true;?true;}*++{?true;}*}z5:=2;{z6:=0;++z3:=9;}++z3:=*;}{{{z4'=(0+0)^0,z2'=0&true}z5:=*;}*++?true;{z1:=z1;++{z7:=0;++z1:=z1;}*{?true;++{?true;++?true;}++?true;?true;}}}}{{{z5:=*;++?true;++{?true;?true;++?true;?true;}++{?true;++?true;}?true;?true;}*}*++{{?true;++{{z5'=0/0&[?true;]true}?0=0;}?true;}{z6:=*;++{{?true;++?true;}z5:=0;++{?true;}*++?true;?true;}{?false;}*}}*}}*}*?true;>\\forall z6 (gg())'!=z4')}}*".asProgram
@@ -603,7 +611,7 @@ class USubstTests extends SystemTestBase {
     }
   }
 
-  ignore should "instantiate {?[{?true;}*]PP{⎵};}* in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate {?[{?true;}*]PP{⎵};}* in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest ignore {
     val prem1 = "(-z1)^2>=z4".asFormula
     val prem2 = "z4<=z1^2".asFormula
     val prem = Equiv(prem1, prem2)
@@ -664,7 +672,7 @@ class USubstTests extends SystemTestBase {
 	 generated with 20 random complexity
 	 from seed -3583806640264782477L
     */
-  ignore should "instantiate crazy program in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate crazy program in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest ignore {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
       val prem = Equiv(prem1, prem2)
@@ -760,7 +768,7 @@ class USubstTests extends SystemTestBase {
       pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
     }
     
-  ignore should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -775,7 +783,7 @@ class USubstTests extends SystemTestBase {
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
     
-  ignore should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "y+z".asTerm
       val term2 = "z+y".asTerm
@@ -802,7 +810,7 @@ class USubstTests extends SystemTestBase {
     }
   }
 
-  ignore should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "z1+z3*z2".asTerm
       val term2 = "z2*z3+z1".asTerm
@@ -829,7 +837,7 @@ class USubstTests extends SystemTestBase {
     }
   }
 
-  ignore should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "z1*z3-z2".asTerm
       val term2 = "z2-z4/z1".asTerm
@@ -890,7 +898,7 @@ class USubstTests extends SystemTestBase {
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+  it should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs KeYmaeraXTestTags.OptimisticTest ignore {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -924,7 +932,7 @@ class USubstTests extends SystemTestBase {
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+  it should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest ignore {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -941,7 +949,7 @@ class USubstTests extends SystemTestBase {
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  ignore should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs KeYmaeraXTestTags.USubstTest ignore {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -957,7 +965,7 @@ class USubstTests extends SystemTestBase {
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
     
-  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs KeYmaeraXTestTags.OptimisticTest ignore {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -974,7 +982,7 @@ class USubstTests extends SystemTestBase {
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
   
-  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest ignore {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -1054,7 +1062,7 @@ class USubstTests extends SystemTestBase {
   }
 
   
-  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs KeYmaeraXTestTags.OptimisticTest in {
+  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs KeYmaeraXTestTags.OptimisticTest ignore {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
