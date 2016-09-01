@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, DiffSolutionTool, CounterExampleTool, ToolBase}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ODESolverTool, CounterExampleTool, ToolBase}
 
 import scala.collection.immutable._
 

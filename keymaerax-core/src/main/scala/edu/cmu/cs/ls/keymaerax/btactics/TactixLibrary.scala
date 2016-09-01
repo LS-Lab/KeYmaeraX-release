@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ODESolverTool}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -270,9 +270,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new DiffSolutionTool with QETool {
-    override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
-      ToolProvider.odeTool().getOrElse(throw new BelleError("diffSol requires a DiffSolutionTool, but got None")).diffSol(diffSys, diffArg, iv)
+  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(new ODESolverTool with QETool {
+    override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
+      ToolProvider.odeTool().getOrElse(throw new BelleError("diffSol requires a DiffSolutionTool, but got None")).odeSolve(diffSys, diffArg, iv)
     override def qeEvidence(formula: Formula): (Formula, Evidence) =
       ToolProvider.qeTool().getOrElse(throw new BelleError("qeEvidence requires a QETool, but got None")).qeEvidence(formula)
   })

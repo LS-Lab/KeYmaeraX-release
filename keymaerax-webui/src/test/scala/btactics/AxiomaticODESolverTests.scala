@@ -133,7 +133,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "IntegratorDiffSolutionTool" should "work as a tool" in withMathematica { qe =>
     val initialConds = conditionsToValues(extractInitialConditions(None)("x=x_0&v=v_0&a=a_0&t=t_0".asFormula)).mapValues[Variable](x => x.asInstanceOf[Variable])
     val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
-    val result = new IntegratorDiffSolutionTool().diffSol(system.ode, "t".asVariable, initialConds)
+    val result = new IntegratorODESolverTool().odeSolve(system.ode, "t".asVariable, initialConds)
     println(result.get.asInstanceOf[And])
   }
   //endregion

@@ -41,13 +41,13 @@ object ToolProvider extends ToolProvider {
 
   def qeTool(): Option[QETool] = f.qeTool()
 
-  def odeTool(): Option[DiffSolutionTool] = f.odeTool()
+  def odeTool(): Option[ODESolverTool] = f.odeTool()
 
-  def pdeTool(): Option[PartialDiffSolutionTool] = f.pdeTool()
+  def pdeTool(): Option[PDESolverTool] = f.pdeTool()
 
   def simplifierTool(): Option[SimplificationTool] = f.simplifierTool()
 
-  def solverTool(): Option[SolutionTool] = f.solverTool()
+  def solverTool(): Option[EquationSolverTool] = f.solverTool()
 
   def algebraTool(): Option[AlgebraTool] = f.algebraTool()
 
@@ -73,13 +73,13 @@ trait ToolProvider {
   def qeTool(): Option[QETool]
 
   /** Returns an ODE tool. */
-  def odeTool(): Option[DiffSolutionTool]
+  def odeTool(): Option[ODESolverTool]
 
   /** Returns a PDE tool. */
-  def pdeTool(): Option[PartialDiffSolutionTool]
+  def pdeTool(): Option[PDESolverTool]
 
   /** Returns an equation solver tool. */
-  def solverTool(): Option[SolutionTool]
+  def solverTool(): Option[EquationSolverTool]
 
   /** Returns an algebra tool for algebraic computations. */
   def algebraTool(): Option[AlgebraTool]
@@ -105,22 +105,22 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   require(toolPreferences != null && toolPreferences.nonEmpty && toolPreferences.forall(_.isInitialized), "Initialized tool expected")
 
   private[this] lazy val qe: Option[Tool with QETool] = toolPreferences.find(_.isInstanceOf[QETool]).map(_.asInstanceOf[Tool with QETool])
-  private[this] lazy val ode: Option[Tool with DiffSolutionTool] = toolPreferences.find(_.isInstanceOf[DiffSolutionTool]).map(_.asInstanceOf[Tool with DiffSolutionTool])
-  private[this] lazy val pde: Option[Tool with PartialDiffSolutionTool] = toolPreferences.find(_.isInstanceOf[PartialDiffSolutionTool]).map(_.asInstanceOf[Tool with PartialDiffSolutionTool])
+  private[this] lazy val ode: Option[Tool with ODESolverTool] = toolPreferences.find(_.isInstanceOf[ODESolverTool]).map(_.asInstanceOf[Tool with ODESolverTool])
+  private[this] lazy val pde: Option[Tool with PDESolverTool] = toolPreferences.find(_.isInstanceOf[PDESolverTool]).map(_.asInstanceOf[Tool with PDESolverTool])
   private[this] lazy val cex: Option[Tool with CounterExampleTool] = toolPreferences.find(_.isInstanceOf[CounterExampleTool]).map(_.asInstanceOf[Tool with CounterExampleTool])
   private[this] lazy val simplifier: Option[Tool with SimplificationTool] = toolPreferences.find(_.isInstanceOf[SimplificationTool]).map(_.asInstanceOf[Tool with SimplificationTool])
   private[this] lazy val simulator: Option[Tool with SimulationTool] = toolPreferences.find(_.isInstanceOf[SimulationTool]).map(_.asInstanceOf[Tool with SimulationTool])
-  private[this] lazy val solver: Option[Tool with SolutionTool] = toolPreferences.find(_.isInstanceOf[SolutionTool]).map(_.asInstanceOf[Tool with SolutionTool])
+  private[this] lazy val solver: Option[Tool with EquationSolverTool] = toolPreferences.find(_.isInstanceOf[EquationSolverTool]).map(_.asInstanceOf[Tool with EquationSolverTool])
   private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
 
   override def tools(): List[Tool] = toolPreferences
   override def qeTool(): Option[QETool] = ensureInitialized(qe)
-  override def odeTool(): Option[DiffSolutionTool] = ensureInitialized(ode)
-  override def pdeTool(): Option[PartialDiffSolutionTool] = ensureInitialized(pde)
+  override def odeTool(): Option[ODESolverTool] = ensureInitialized(ode)
+  override def pdeTool(): Option[PDESolverTool] = ensureInitialized(pde)
   override def cexTool(): Option[CounterExampleTool] = ensureInitialized(cex)
   override def simplifierTool(): Option[SimplificationTool] = ensureInitialized(simplifier)
   override def simulationTool(): Option[SimulationTool] = ensureInitialized(simulator)
-  override def solverTool(): Option[SolutionTool] = ensureInitialized(solver)
+  override def solverTool(): Option[EquationSolverTool] = ensureInitialized(solver)
   override def algebraTool(): Option[AlgebraTool] = ensureInitialized(algebra)
   override def shutdown(): Unit = toolPreferences.foreach(_.shutdown())
 
@@ -137,12 +137,12 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
 class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
   override def qeTool(): Option[QETool] = None
-  override def odeTool(): Option[DiffSolutionTool] = None
-  override def pdeTool(): Option[PartialDiffSolutionTool] = None
+  override def odeTool(): Option[ODESolverTool] = None
+  override def pdeTool(): Option[PDESolverTool] = None
   override def simplifierTool(): Option[SimplificationTool] = None
   override def cexTool(): Option[CounterExampleTool] = None
   override def simulationTool(): Option[SimulationTool] = None
-  override def solverTool(): Option[SolutionTool] = None
+  override def solverTool(): Option[EquationSolverTool] = None
   override def algebraTool(): Option[AlgebraTool] = None
   override def shutdown(): Unit = {}
 }
@@ -165,6 +165,6 @@ class MathematicaToolProvider(config: Configuration) extends PreferredToolProvid
 /** A tool provider that provides Z3 as QE tool and KeYmaera's own bundled diff. solution tool, everything else is None.
   * @author Stefan Mitsch
   */
-class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); val ode = new IntegratorDiffSolutionTool; ode.init(Map()); z :: ode :: Nil }) {
+class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); val ode = new IntegratorODESolverTool; ode.init(Map()); z :: ode :: Nil }) {
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }

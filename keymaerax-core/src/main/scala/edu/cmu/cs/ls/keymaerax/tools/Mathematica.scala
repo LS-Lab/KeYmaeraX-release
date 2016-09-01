@@ -19,7 +19,7 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool with SimulationTool with DerivativeTool with SolutionTool with SimplificationTool with AlgebraTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool {
   // JLink, shared between tools
   private val link = new JLinkMathematicaLink
 
@@ -27,7 +27,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
   private val mCEX = new MathematicaCEXTool(link)
   private val mODE = new MathematicaODETool(link)
   private val mSim = new MathematicaSimulationTool(link)
-  private val mSolve = new MathematicaSolutionTool(link)
+  private val mSolve = new MathematicaEquationSolverTool(link)
   private val mAlgebra = new MathematicaAlgebraTool(link)
   private val mSimplify = new MathematicaSimplificationTool(link)
 
@@ -67,8 +67,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
    * @param iv Names of initial values per variable, e.g., x -> x_0
    * @return The solution, if found. None otherwise.
    */
-  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
-                       iv: Predef.Map[Variable, Variable]): Option[Formula] = mODE.diffSol(diffSys, diffArg, iv)
+  override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable,
+                        iv: Predef.Map[Variable, Variable]): Option[Formula] = mODE.odeSolve(diffSys, diffArg, iv)
 
   override def deriveBy(term: Term, v: Variable): Term = mODE.deriveBy(term, v)
 

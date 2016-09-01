@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
-import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, Tool, ToolBase}
+import edu.cmu.cs.ls.keymaerax.tools.{ODESolverTool, Tool, ToolBase}
 
 /**
   * Solves the initial value problem for systems of differential equations.
@@ -45,7 +45,8 @@ object Integrator {
   }
 
   /**
-    * Glue code that implements the [[edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool]] interface using the Integrator.
+    * Glue code that implements the [[edu.cmu.cs.ls.keymaerax.tools.ODESolverTool]] interface using the Integrator.
+ *
     * @todo untested
     */
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
@@ -121,7 +122,7 @@ object Integrator {
   }
 }
 
-class IntegratorDiffSolutionTool extends ToolBase("IntegratorDiffSolutionTool") with DiffSolutionTool {
+class IntegratorODESolverTool extends ToolBase("IntegratorDiffSolutionTool") with ODESolverTool {
   /**
     * Computes the symbolic solution of a differential equation in normal form.
     *
@@ -130,7 +131,7 @@ class IntegratorDiffSolutionTool extends ToolBase("IntegratorDiffSolutionTool") 
     * @param iv      The initial values per derivative.
     * @return The solution if found; None otherwise
     */
-  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
+  override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
     Some(Integrator(iv, diffArg, ODESystem(diffSys, True)).reduce[Formula]((l,r) => And(l,r)))
   }
 

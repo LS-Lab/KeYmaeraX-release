@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ODESolverTool}
 import PosInExpr.HereP
 import StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory

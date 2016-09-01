@@ -165,9 +165,9 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with DiffSolutionTool with DerivativeTool {
+class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with ODESolverTool with DerivativeTool {
 
-  def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
+  def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
 
   /**
@@ -279,7 +279,7 @@ class MathematicaODETool(override val link: MathematicaLink) extends BaseKeYmaer
   *
   * @author Andre Platzer
   */
-class MathematicaSolutionTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with SolutionTool {
+class MathematicaEquationSolverTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with EquationSolverTool {
 
   def solve(equations: Formula, vars: List[Expression]): Option[Formula] = {
     val eqs = k2m(equations)

@@ -16,7 +16,7 @@ trait ToolInterface
   * @author smitsch
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
-trait DiffSolutionTool extends ToolInterface {
+trait ODESolverTool extends ToolInterface {
   /**
     * Computes the symbolic solution of a differential equation in normal form.
     * @param diffSys The system of differential equations of the form x' = theta & H.
@@ -25,7 +25,7 @@ trait DiffSolutionTool extends ToolInterface {
     * @return The solution if found; None otherwise
     *         The solution should be a
     */
-  def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula]
+  def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula]
 }
 
 /**
@@ -33,7 +33,7 @@ trait DiffSolutionTool extends ToolInterface {
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
-trait SolutionTool extends ToolInterface {
+trait EquationSolverTool extends ToolInterface {
   /**
     * Computes the symbolic solution of an equation system.
     * @param equations The system of equations as a conjunction of equations.
@@ -54,7 +54,7 @@ trait SolutionTool extends ToolInterface {
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
-trait PartialDiffSolutionTool extends ToolInterface {
+trait PDESolverTool extends ToolInterface {
   /**
     * Computes the symbolic solution of the inverse characteristic partial differential equation corresponding to an ordinary differential equation.
     * @param diffSys The system of differential equations of the form x'=theta,y'=eta.
@@ -103,7 +103,7 @@ trait SimplificationTool extends ToolInterface {
 }
 
 /**
-  * Tool for algebraic computations.
+  * Tool for computer algebraic computations.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */

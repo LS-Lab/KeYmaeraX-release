@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import edu.cmu.cs.ls.keymaerax.tools.ODESolverTool
 
 import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
@@ -487,7 +487,7 @@ private object DifferentialTactics {
   })
 
   /** @see [[TactixLibrary.diffSolve]] */
-  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(tool: DiffSolutionTool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(tool: ODESolverTool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(odes: ODESystem, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
@@ -520,7 +520,7 @@ private object DifferentialTactics {
 
       val theSolution = solution match {
         case sol@Some(_) => sol
-        case None => tool.diffSol(odes.ode, time, iv)
+        case None => tool.odeSolve(odes.ode, time, iv)
       }
 
       val diffEqPos = SuccPos(sequent.succ.length-1) //@note introTime moves ODE to the end of the succedent
