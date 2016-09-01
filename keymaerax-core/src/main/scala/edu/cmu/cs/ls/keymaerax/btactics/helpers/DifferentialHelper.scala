@@ -72,8 +72,8 @@ object DifferentialHelper {
       case _ => Nil //@todo is it possible to allow set-valued initial conditiosn (e.g., inequalities, disjunctions, etc.)?
     })
 
-  /** Returns the list of primed variables occuring in an ODE. */
-  def getPrimedVariables(ode : Program) : List[Variable] = ode match {
+  /** Returns the list of variables that have differential equations in an ODE. */
+  def getPrimedVariables(ode: Program) : List[Variable] = ode match {
     case AtomicODE(pv, term) => pv.x :: Nil
     case ODESystem(ode, constraint) => getPrimedVariables(ode)
     case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)

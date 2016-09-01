@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
 import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 
@@ -275,6 +276,43 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
   }
 }
 
+/**
+  * A link to Mathematica using the JLink interface.
+  *
+  * @author Andre Platzer
+  */
+class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with PDESolverTool {
+
+  def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
+    val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
+    val f = new MExpr(Expr.SYMBOL, "$f")
+    val fall = new MExpr(f, vars)
+    val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
+      case AtomicODE(DifferentialSymbol(x),t) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](
+        k2m(t),
+        new MExpr(MathematicaSymbols.D, Array[MExpr](fall, k2m(x)))
+      ))
+    })
+    val pde = new MExpr(MathematicaSymbols.EQUALS,
+      Array[MExpr](
+        new MExpr(MathematicaSymbols.PLUS, characteristics.toArray),
+        k2m(Number(0))
+      )
+    )
+    val input = new MExpr(MathematicaSymbols.DSOLVE,
+      Array[MExpr](
+        pde,
+        fall,
+        new MExpr(Expr.SYM_LIST, vars)
+      ))
+    val (_, result) = run(input)
+    result match {
+        //@todo convert the List[List[Rule]] to just a list of the right hand sides similar to odeSolve.
+      case r: List[Term] => r.iterator
+      case r => throw new ToolException("Mathematica did not solve the PDE for : " + diffSys + "\n" + r)
+    }
+  }
+}
 
 /**
   * A link to Mathematica using the JLink interface.

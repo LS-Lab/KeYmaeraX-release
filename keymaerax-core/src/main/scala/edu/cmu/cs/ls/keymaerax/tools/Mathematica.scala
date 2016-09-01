@@ -19,13 +19,14 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
   // JLink, shared between tools
   private val link = new JLinkMathematicaLink
 
   private val mQE = new MathematicaQETool(link)
   private val mCEX = new MathematicaCEXTool(link)
   private val mODE = new MathematicaODESolverTool(link)
+  private val mPDE = new MathematicaPDESolverTool(link)
   private val mSim = new MathematicaSimulationTool(link)
   private val mSolve = new MathematicaEquationSolverTool(link)
   private val mAlgebra = new MathematicaAlgebraTool(link)
@@ -49,6 +50,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
     mQE.shutdown()
     mCEX.shutdown()
     mODE.shutdown()
+    mPDE.shutdown()
     mSim.shutdown()
     mSolve.shutdown()
     mAlgebra.shutdown()
@@ -103,6 +105,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
     */
   override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim.simulateRun(initial, stateRelation, steps)
 
+  override def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = mPDE.pdeSolve(diffSys)
   override def solve(equations: Formula, vars: List[Expression]): Option[Formula] = mSolve.solve(equations,vars)
   override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = mAlgebra.quotientRemainder(term,div,x)
   override def groebnerBasis(polynomials: List[Term]): List[Term] = mAlgebra.groebnerBasis(polynomials)
