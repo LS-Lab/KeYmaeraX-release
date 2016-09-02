@@ -6,7 +6,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog
 }]);
 
 angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog', ['$scope', function($scope) {
-  $scope.noModalForHelpDialogHack = true
+
 }]);
 
 angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['$scope', '$uibModalInstance', function($scope, $uibModalInstance, path) {
@@ -21,8 +21,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
   $scope.$on('routeLoaded', function (event, args) {
     $scope.theview = args.theview;
   });
-
-  $scope.noModalForHelpDialogHack = false;
 
   $scope.toolIsConfigured = true;
   $http.get("/config/toolStatus").success(function(data) {
