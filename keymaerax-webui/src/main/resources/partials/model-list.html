@@ -54,7 +54,7 @@
                     <div uib-slide ng-repeat="repo in examples track by repo.id" index="repo.id">
                         <img ng-src="{{repo.image}}" style="margin:auto;">
                         <div class="k4-examples-carousel-caption">
-                            <h4>{{repo.title}} <button class="btn btn-primary"
+                            <h4>{{repo.title}} <button class="btn btn-default"
                                                        ng-click="importRepo(repo.url)"
                                                        ng-controller="ModelUploadCtrl">Import</button></h4>
                             <p>{{repo.description}} <small><a ng-href="{{repo.infoUrl}}">Details...</a></small></p>
@@ -64,8 +64,13 @@
             </div>
     </div>
 
-    <!-- Table -->
-    <table class="table table-hover table-condensed" id="ModelList" ng-controller="ModelListCtrl">
+    <hr/>
+
+    <div class="row" ng-controller="ModelListCtrl">
+    <p class="col-md-12" ng-if="models.length <= 0" ng-cloak>
+        Your database does not contain models so far. Upload new models or import tutorial models above.
+    </p>
+    <table class="table table-hover table-condensed" id="ModelList" ng-if="models.length > 0" ng-cloak>
         <thead>
         <tr>
             <td>ID</td>
@@ -105,4 +110,5 @@
         </tr>
         </tbody>
     </table>
+    </div>
 </div>
