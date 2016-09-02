@@ -285,7 +285,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
 
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
     val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
-    val f = new MExpr(Expr.SYMBOL, "$f")
+    val f = new MExpr(Expr.SYMBOL, "f")
     val fall = new MExpr(f, vars)
     val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
       case AtomicODE(DifferentialSymbol(x),t) =>
@@ -304,9 +304,15 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
       Array[MExpr](
         pde,
         fall,
-        new MExpr(Expr.SYM_LIST, vars)
+        new MExpr(Expr.SYM_LIST, vars),
+        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
+          MathematicaSymbols.GENERATEDPARAMETERS,
+          new MExpr(MathematicaSymbols.FUNCTION, Array[MExpr](new MExpr(Expr.SYMBOL, "C")))
+        ))
       ))
+    println(input)
     val (_, result) = run(input)
+    println("\n" + result + "\n\n")
     result match {
         //@todo convert the List[List[Rule]] to just a list of the right hand sides similar to odeSolve.
       case r: List[Term] => r.iterator

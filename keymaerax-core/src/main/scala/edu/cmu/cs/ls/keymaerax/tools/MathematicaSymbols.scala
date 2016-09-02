@@ -54,6 +54,8 @@ private object MathematicaSymbols {
   def D = new MExpr(Expr.SYMBOL, "D")
   def RULE = new MExpr(Expr.SYMBOL, "Rule")
 
+  def FUNCTION = new MExpr(Expr.SYMBOL, "Function")
+
   def REDUCE = new MExpr(Expr.SYMBOL,  "Reduce")
   def RESOLVE = new MExpr(Expr.SYMBOL,  "Resolve")
   def REALS = new MExpr(Expr.SYMBOL, "Reals")
@@ -63,8 +65,12 @@ private object MathematicaSymbols {
   def POLYNOMIALQUOTIENTREMAINDER = new MExpr(Expr.SYMBOL,  "PolynomialQuotientRemainder")
   def POLYNOMIALREDUCE = new MExpr(Expr.SYMBOL, "PolynomialReduce")
   def GROEBNERBASIS = new MExpr(Expr.SYMBOL, "GroebnerBasis")
+
+  // options
+
   def MONOMIALORDER = new MExpr(Expr.SYMBOL, "MonomialOrder")
   def DEGREEREVERSELEXICOGRAPHIC = new MExpr(Expr.SYMBOL, "DegreeReverseLexicographic")
+  def GENERATEDPARAMETERS = new MExpr(Expr.SYMBOL, "GeneratedParameters")
 
   def CHECK = new MExpr(Expr.SYMBOL, "Check")
   def EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")
