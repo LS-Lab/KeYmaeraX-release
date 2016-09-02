@@ -19,25 +19,40 @@ angular.module('formula')
         link: function(scope, element, attrs) {
             scope.formulaAxiomsMap = {};
 
-            scope.formulaClick = function(formulaId, event) {
-              // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
-              event.stopPropagation();
-              scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
-            }
-
-            scope.formulaRightClick = function(formulaId, event) {
-              event.stopPropagation();
+            fetchFormulaAxioms = function(formulaId, axiomsHandler) {
               if (scope.formulaAxiomsMap[formulaId] === undefined) {
                 // axioms not fetched yet
                 derivationInfos.formulaDerivationInfos(scope.userId, scope.proofId, scope.nodeId, formulaId)
                   .then(function(response) {
                     scope.formulaAxiomsMap[formulaId] = response.data;
-                    scope.tacticPopover.open(formulaId);
+                    axiomsHandler.call();
                   });
               } else {
                 // tactic already cached
-                scope.tacticPopover.open(formulaId);
+                axiomsHandler.call();
               }
+            }
+
+            scope.formulaClick = function(formulaId, event) {
+              // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
+              event.stopPropagation();
+              $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
+                then(function(response) {
+                  if (response.data.length > 0) {
+                    scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
+                  } else {
+                    fetchFormulaAxioms(formulaId, function() {
+                      scope.tacticPopover.open(formulaId);
+                    });
+                  }
+              });
+            }
+
+            scope.formulaRightClick = function(formulaId, event) {
+              event.stopPropagation();
+              fetchFormulaAxioms(formulaId, function() {
+                scope.tacticPopover.open(formulaId);
+              });
             }
 
             scope.applyTactic = function(formulaId, tacticId) {
