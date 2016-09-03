@@ -19,7 +19,7 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool /*with PDESolverTool*/ {
   // JLink, shared between tools
   private val link = new JLinkMathematicaLink
 
