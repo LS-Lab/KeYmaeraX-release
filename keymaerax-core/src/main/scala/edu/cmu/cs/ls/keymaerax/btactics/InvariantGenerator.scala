@@ -77,8 +77,13 @@ object InvariantGenerator {
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
     //@todo performance: ++ is not quite as fast a lazy concatenation as it could be.
-    TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos) ++
-      relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+    TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos)
+  // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+
+  /** A more expensive extended differential invariant generator.
+    * @author Andre Platzer */
+  lazy val extendedDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
+    relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
 
   /** A loop invariant generator.
     * @author Andre Platzer */
@@ -119,8 +124,12 @@ object InvariantGenerator {
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
     val evos = if (constraint==True) Nil else DifferentialHelper.flattenAnds(List(constraint))
-    try {
-      val solutions = ToolProvider.pdeTool().get.pdeSolve(ode)
+    val solutions = try {
+      ToolProvider.pdeTool().get.pdeSolve(ode)
+    } catch {
+      case e: Exception => if (BelleExpr.DEBUG) println("inverseCharacteristic generation unsuccessful: " + e)
+        Nil.iterator
+    }
     if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
       case Equal(p,q)        => Minus(p,q)
@@ -134,9 +143,5 @@ object InvariantGenerator {
       //@todo could check that it's not a tautology using RCF
       List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
     })
-    } catch {
-      case e => println("inverseCharacteristic generation error: " + e)
-        Nil.iterator
-    }
   }
 }
