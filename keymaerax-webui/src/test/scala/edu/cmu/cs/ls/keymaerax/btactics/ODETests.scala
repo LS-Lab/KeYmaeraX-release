@@ -22,7 +22,11 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 class ODETests extends TacticTestBase {
-  "Pretest" should "autocut x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withMathematica { qeTool =>
+  "Pretest" should "PDEify x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" in withMathematica { qeTool =>
+    TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+  it should "autocut x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withMathematica { qeTool =>
     TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
@@ -224,13 +228,18 @@ class ODETests extends TacticTestBase {
       "x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" ::
       "x>=0&v>=0&a>=0->[{x'=v,v'=a,a'=a^2}]x>=0" ::
       "x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0" ::
+      // ITP'12
+      "x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" ::
+      "d1^2+d2^2=w()^2*p^2&d1=-w()*x2&d2=w()*x1 -> [{x1'=d1,x2'=d2,d1'=-w()*d2,d2'=w()*d1}](d1^2+d2^2=w()^2*p^2&d1=-w()*x2&d2=w()*x1)" ::
+      "d1^2+d2^2=w^2*p^2&d1=-w*x2&d2=w*x1 -> [{x1'=d1,x2'=d2,d1'=-w*d2,d2'=w*d1}](d1^2+d2^2=w^2*p^2&d1=-w*x2&d2=w*x1)" ::
       Nil
 
   val nops: List[String] =
       "x=-1&y>=0->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
       "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
       "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
-      "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" :: Nil
+      "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" ::
+        Nil
 
 
   it should "prove a list of ODEs" in withMathematica { qeTool =>

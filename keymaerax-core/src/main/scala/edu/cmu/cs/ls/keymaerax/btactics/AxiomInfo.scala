@@ -659,6 +659,7 @@ object DerivationInfo {
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
     new PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
     new PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
+    new PositionTacticInfo("unfoldProgramNormalize", "unfoldProgramNormalize", {case () => TactixLibrary.unfoldProgramNormalize}),
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
@@ -718,12 +719,12 @@ object DerivationInfo {
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
       {case () => AxiomaticODESolver.apply}, needsTool = true),
     new PositionTacticInfo("diffSolve",
-      RuleDisplayInfo("[′]R",
+      RuleDisplayInfo("solve",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
       {case () => TactixLibrary.diffSolve(None)}, needsTool = true), //@todo change the tactic back when we get a chance to implement the new one.
     new PositionTacticInfo("autoDiffSolve",
-    RuleDisplayInfo("[′]R",
+    RuleDisplayInfo("solve",
       (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
       List((List("&Gamma;", "t≥0"), List("[x:=sol(t)](q(x) → p(x))")))),
     {case () => TactixLibrary.diffSolve(None)}, needsTool = true),

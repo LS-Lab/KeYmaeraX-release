@@ -247,8 +247,11 @@ private object DifferentialTactics {
     if (ov.isEmpty) {
       DC(f)(pos)
     } else {
-      val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
-        val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
+      val ghosts: Set[((Term, Variable), BelleExpr)] = ov.map(old => {
+        val ghost = old match {
+          case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
+          case _ => TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+        }
         (old -> ghost,
           discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
       })
@@ -265,11 +268,11 @@ private object DifferentialTactics {
   }
 
   /** Returns a set of variables that are arguments to a special 'old' function */
-  private def oldVars(fml: Formula): Set[Variable] = {
-    var oldVars = Set[Variable]()
+  private def oldVars(fml: Formula): Set[Term] = {
+    var oldVars = Set[Term]()
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function("old", None, Real, Real, false), v: Variable) => oldVars += v; Left(None)
+        case FuncOf(Function("old", None, Real, Real, false), t: Term) => oldVars += t; Left(None)
         case _ => Left(None)
       }
     }, fml)
@@ -277,10 +280,10 @@ private object DifferentialTactics {
   }
 
   /** Replaces any old(.) with . in formula fml */
-  private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, Variable]): Formula = {
+  private def replaceOld(fml: Formula, ghostsByOld: Map[Term, Variable]): Formula = {
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function("old", None, Real, Real, false), v: Variable) => Right(ghostsByOld(v))
+        case FuncOf(Function("old", None, Real, Real, false), t: Term) => Right(ghostsByOld(t))
         case _ => Left(None)
       }
     }, fml) match {
@@ -596,7 +599,7 @@ private object DifferentialTactics {
     //@todo in fact even ChooseAll would work, just not recursively so.
     //@todo performance: repeat from an updated version of the same generator until saturation
     //@todo turn this into repeat
-    (ChooseSome(
+    ChooseSome(
       //@todo should memoize the results of the differential invariant generator
       () => InvariantGenerator.differentialInvariantGenerator(seq,pos),
       (inv:Formula) => if (false)
@@ -608,10 +611,24 @@ private object DifferentialTactics {
           // show diffCut, but don't use yet another diffCut
           noCut(pos) & done
           )
-    )) & ODE(pos) | noCut(pos) |
+    ) & ODE(pos) | noCut(pos) |
       // if no differential cut succeeded, just skip and go for a direct proof.
       //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
       TactixLibrary.diffSolve()(pos)
+/*|
+      ChooseSome(
+        //@todo should memoize the results of the differential invariant generator
+        () => InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos),
+        (inv:Formula) => if (false)
+          diffInvariant(inv)(pos)
+        else
+          diffCut(inv)(pos) <(
+            // use diffCut
+            skip,
+            // show diffCut, but don't use yet another diffCut
+            noCut(pos) & done
+            )
+      ) & ODE(pos) */
   })
 
 

@@ -12,6 +12,8 @@ import Augmentors._
 /** Invariant generators and differential invariant generators.
   * @author Andre Platzer
   * @see [[TactixLibrary.invGenerator]]
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
+  * @see Andre Platzer and Edmund M. Clarke. [[http://dx.doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]]. Formal Methods in System Design, 35(1), pp. 98-120, 2009
   */
 object InvariantGenerator {
   import Generator.Generator
@@ -47,6 +49,7 @@ object InvariantGenerator {
         // candidates with knowledge about missing variables
         //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
         filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(missing).isEmpty).
+        //@todo could check that it's not a tautology using RCF or check that it's not provable by DW
         //@todo postpone and try later candidates not covering all their dependencies (given the knowledge)
         //        filter(fml => {
         //          val fv=StaticSemantics.freeVars(fml).symbols
@@ -74,8 +77,13 @@ object InvariantGenerator {
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
     //@todo performance: ++ is not quite as fast a lazy concatenation as it could be.
-    TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos) ++
-      relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+    TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos)
+  // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+
+  /** A more expensive extended differential invariant generator.
+    * @author Andre Platzer */
+  lazy val extendedDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
+    relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
 
   /** A loop invariant generator.
     * @author Andre Platzer */
@@ -116,7 +124,12 @@ object InvariantGenerator {
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
     val evos = if (constraint==True) Nil else DifferentialHelper.flattenAnds(List(constraint))
-    val solutions = ToolProvider.pdeTool().get.pdeSolve(ode)
+    val solutions = try {
+      ToolProvider.pdeTool().get.pdeSolve(ode)
+    } catch {
+      case e: Exception => if (BelleExpr.DEBUG) println("inverseCharacteristic generation unsuccessful: " + e)
+        Nil.iterator
+    }
     if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
       case Equal(p,q)        => Minus(p,q)

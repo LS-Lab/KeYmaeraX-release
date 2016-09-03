@@ -43,19 +43,13 @@
                         {{proofName}}
                     </span>
                 </span>
-                <li class="nav">
+                <div class="nav">
                     <ul class="nav navbar-nav">
                         <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'unfoldProgramNormalize')"><span class="fa fa-magic"> Normalize</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
-                        <li><a ng-controller="ProofMessagesCtrl">
-                            <k4-auto-hide-alert message="proofMessage.text"
-                                                is-visible="proofMessage.isVisible" timeout="3000">
-                            </k4-auto-hide-alert>
-                            </a>
-                        </li>
                         <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
                     </ul>
                 </div>
@@ -157,7 +151,17 @@
                                 <li><a ng-click="downloadProblemSolution()">Download proof</a></li>
                             </ul>
                         </li>
-                    </ul><br/>
+                    </ul>
+                </div>
+                <div class="nav">
+                    <ul class="nav navbar-nav">
+                        <li ng-controller="ProofMessagesCtrl">
+                            <k4-auto-hide-alert message="proofMessage.text"
+                                                is-visible="proofMessage.isVisible" timeout="-1">
+                            </k4-auto-hide-alert>
+                        </li>
+
+                    </ul>
                 </div>
             </div>
             </div>

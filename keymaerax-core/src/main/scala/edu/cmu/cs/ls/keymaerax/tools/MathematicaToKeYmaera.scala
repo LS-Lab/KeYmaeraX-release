@@ -134,7 +134,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
   }
 
-  private def convertList(e: MExpr): Pair = {
+  protected def convertList(e: MExpr): Pair = {
     if (e.listQ) {
       assert(e.args.length == 2, "pairs are represented as lists of length 2 in Mathematica")
       Pair(convert(e.args().head).asInstanceOf[Term], convert(e.args().tail.head).asInstanceOf[Term])
@@ -153,7 +153,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   }
 
   /** Convert the arguments of a function and combine with fn into a FuncOf */
-  private def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
+  protected def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
     assert(args.length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + args)
     val arguments = args.map(convert).map(_.asInstanceOf[Term])
     FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))

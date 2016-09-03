@@ -828,6 +828,26 @@ class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: 
 
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
+class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position) extends UserRequest(userId) {
+  def resultingResponses(): List[Response] = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    val node = tree.findNode(nodeId) match {
+      case None => throw new ProverException("Invalid node " + nodeId)
+      case Some(n) => n
+    }
+
+    node.sequent.sub(pos) match {
+      case Some(fml: Formula) =>
+        UIIndex.theStepAt(fml, Some(pos)) match {
+          case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, None) :: Nil
+          case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
+        }
+      case _ => new ApplicableAxiomsResponse(Nil, None) :: Nil
+    }
+  }
+}
+
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,

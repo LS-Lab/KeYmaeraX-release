@@ -44,7 +44,10 @@ object FormulaTools {
     case p => p
   }
 
-  /** Convert nested pairs to a list of its deassociated non-pair arguments. */
+  /** Convert nested pairs to a list of its deassociated non-pair arguments.
+    * {{{
+    *   Pair->List[Term]
+    * }}} */
   def argumentList(term: Term): List[Term] = term match {
     case Pair(a,b) => argumentList(a) ++ argumentList(b)
     case a => List(a)

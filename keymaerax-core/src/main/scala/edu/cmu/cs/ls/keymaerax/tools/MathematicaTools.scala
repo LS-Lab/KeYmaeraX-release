@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, FormulaTools}
 import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
@@ -281,11 +281,11 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
   *
   * @author Andre Platzer
   */
-class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with PDESolverTool {
+class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new DiffUncheckedM2KConverter) with PDESolverTool {
 
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
     val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
-    val f = new MExpr(Expr.SYMBOL, "$f")
+    val f = new MExpr(Expr.SYMBOL, DiffUncheckedM2KConverter.PREFIX + "f")
     val fall = new MExpr(f, vars)
     val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
       case AtomicODE(DifferentialSymbol(x),t) =>
@@ -304,14 +304,60 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
       Array[MExpr](
         pde,
         fall,
-        new MExpr(Expr.SYM_LIST, vars)
+        new MExpr(Expr.SYM_LIST, vars),
+        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
+          MathematicaSymbols.GENERATEDPARAMETERS,
+          new MExpr(MathematicaSymbols.FUNCTION, Array[MExpr](new MExpr(Expr.SYMBOL, DiffUncheckedM2KConverter.PREFIX + "C")))
+        ))
       ))
     val (_, result) = run(input)
     result match {
-        //@todo convert the List[List[Rule]] to just a list of the right hand sides similar to odeSolve.
-      case r: List[Term] => r.iterator
+        //@note List[List[Rule]] are converted to Or of And of Equal where only the right side matters.
+      case r: Equal => List(r.right).iterator
+      case r: And => FormulaTools.conjuncts(r).map({case Equal(_,b) => b}).iterator
+      case r: Or => FormulaTools.disjuncts(r).flatMap(disj=>FormulaTools.conjuncts(disj).map{case Equal(_,b) => b}).iterator
       case r => throw new ToolException("Mathematica did not solve the PDE for : " + diffSys + "\n" + r)
     }
+  }
+}
+
+object DiffUncheckedM2KConverter {
+  val PREFIX = "xyk`"
+}
+
+/**
+  * Accept n-ary arguments as for PDESolve.
+  */
+private class DiffUncheckedM2KConverter extends UncheckedM2KConverter {
+
+  protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.get(e.head) match {
+    case Some(fn) => convertFunction(fn, e.args())
+    case None =>
+      toKeYmaera(e) match {
+        case fn: Function =>
+          insist(!fn.interpreted, "Expected uninterpreted function symbol, but got interpreted " + fn)
+          convertFunction(fn, e.args())
+        case result: Variable => result
+      }
+  }
+  private def toKeYmaera(e: MExpr): NamedSymbol = {
+    if (e.head.asString().startsWith(DiffUncheckedM2KConverter.PREFIX)) {
+      val name = e.head.asString().substring(DiffUncheckedM2KConverter.PREFIX.length)
+      val index = None
+      val fnDomain = convertFunctionDomain(e.args())
+      Function(name, index, fnDomain, Real, false)
+    } else {
+      MathematicaNameConversion.toKeYmaera(e)
+    }
+  }
+
+
+  protected def convertFunctionDomain(args: Array[MExpr]): Sort = {
+    Range(1,args.length).foldRight[Sort](Real)((i,t)=>Tuple(Real,t))
+  }
+  protected override def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
+    val arguments = args.map(convert).map(_.asInstanceOf[Term])
+    FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
   }
 }
 
@@ -344,7 +390,7 @@ class MathematicaEquationSolverTool(override val link: MathematicaLink) extends 
   *
   * @author Andre Platzer
   */
-class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) with AlgebraTool {
+class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new DiffUncheckedM2KConverter) with AlgebraTool {
 
   override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
     val t = k2m(term)
@@ -377,7 +423,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
       ))
     val (_, result) = run(input)
     result match {
-      case r: List[Term] => r
+      // turn nested Pair back into list of terms
+      case r: Term => FormulaTools.argumentList(r)
       case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
@@ -396,7 +443,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     val (_, result) = run(input)
     result match {
         //@note could generally help to keep the cofactors in r(0) around for something
-      case r: List[Term] if r.length==2 => r(1)
+      case r: Pair => r.right
       case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
     }
   }

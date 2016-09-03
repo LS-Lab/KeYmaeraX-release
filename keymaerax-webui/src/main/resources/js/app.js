@@ -105,7 +105,7 @@ keymaeraProofApp.config(['$routeProvider',
         controller: 'ToolConfig'
       }).
       when('/license', {
-                templateUrl: 'partials/license_dialog.html',
+                templateUrl: 'partials/license_page.html',
                 controller: 'ServerInfoCtrl'
       }).
       otherwise({
