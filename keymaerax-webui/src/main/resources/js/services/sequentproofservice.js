@@ -87,6 +87,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theTactic.tacticText = response.data.tacticText;
           theTactic.lastExecutedTacticText = theTactic.tacticText;
         });
+      },
+
+      reset: function() {
+        this.tacticText = "";
+        this.lastExecutedTacticText = "";
+        this.currentSuggestions = undefined;
       }
     },
 
