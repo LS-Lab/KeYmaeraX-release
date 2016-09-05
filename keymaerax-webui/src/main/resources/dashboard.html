@@ -87,14 +87,14 @@
                         <!--<li><a href="#">Examples</a></li>-->
                         <li><a href="dashboard.html?#/tutorials">Tutorials</a></li>
                         <li><a href="dashboard.html?#/usage">Using KeYmaera&#160;X</a></li>
-                        <li><a href="dashboard.html?#/tools">Backend Tool Configuration</a></li>
+                        <li><a href="dashboard.html?#/tools" ng-show="isLocal">Backend Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license">License</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/syntax">Hybrid Program Syntax and Semantics</a></li>
                         <li><a href="http://keymaerax.org/KeYmaeraX-sheet.pdf">KeYmaera&#160;X Cheat Sheet</a></li>
                         <li class="divider"></li>
-                        <li><a ng-click="extractdb()">Extract Database</a></li>
+                        <li><a ng-click="extractdb()" ng-show="isLocal">Extract Database</a></li>
                         <li class="divider"></li>
                         <li><a href="http://www.keymaerax.org">Download</a></li>
                         <!--<li><a href="#">Hybrid Program Semantics</a></li>-->
