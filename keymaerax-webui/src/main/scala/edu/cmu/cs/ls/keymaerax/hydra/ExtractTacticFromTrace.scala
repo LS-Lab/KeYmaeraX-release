@@ -9,10 +9,18 @@ import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
 class ExtractTacticFromTrace(db: DBAbstraction) {
   // Additional wrappers
-  def apply(proofId: Int): BelleExpr = apply(db.getExecutionTrace(proofId))
-  def apply(trace : ExecutionTrace) : BelleExpr  = {
+  def apply(trace: ExecutionTrace): BelleExpr  = {
     val tree = ProofTree.ofTrace(trace)
-    apply(tree)(tree.root)
+    assert(tree.root.startStep.isEmpty, "Root should not have a startStep")
+    val modelId = db.getProofInfo(trace.proofId).modelId
+    apply(modelId)(tree.root)
+  }
+
+  def getTacticString(trace: ExecutionTrace): String = {
+    val tree = ProofTree.ofTrace(trace)
+    assert(tree.root.startStep.isEmpty, "Root should not have a startStep")
+    val modelId = db.getProofInfo(trace.proofId).modelId
+    getTacticString(modelId, "  ")(tree.root)
   }
 
   //@todo deprecate this approach and prefer [[apply(tree)(node).prettyString]]
@@ -37,36 +45,43 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 
   /**
     * @note this could be tailrec.
-    * @param tree A proof tree
     * @return A structured Bellerophon tactic that constructs the proof tree.
     */
-  def apply(tree : ProofTree)(node: TreeNode) : BelleExpr = {
-    assert(tree.root.startStep.isEmpty, "Root should not have a startStep")
+  def apply(modelId: Int)(node: TreeNode): BelleExpr = {
     val children = node.children
-//      .filter(_ != node) //@todo remove this line... seems like a bug in ProofTree.
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
-    val proof = db.getProofInfo(tree.proofId)
-    val gen = new ConfigurableGenerator(db.getInvariants(proof.modelId))
+    val gen = new ConfigurableGenerator(db.getInvariants(modelId))
     val thisTactic = tacticAt(gen, node)
 
-    if (children.isEmpty || children.map(child => apply(tree)(child)).forall(_ == TactixLibrary.skip)) thisTactic
-    else if (children.length == 1) thisTactic & apply(tree)(children.head)
-    else thisTactic & BranchTactic(children.map(child => apply(tree)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
+    if (children.isEmpty) thisTactic
+    else if (children.length == 1) thisTactic & apply(modelId)(children.head)
+    else thisTactic & BranchTactic(children.map(child => apply(modelId)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
-  private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode) : BelleExpr = node.endStep match {
+  def getTacticString(modelId: Int, indent: String)(node: TreeNode): String = {
+    val children = node.children
+    assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
+    val thisTactic = tacticStringAt(node)
+
+    //@todo does pretty-printing
+    if (children.isEmpty) thisTactic
+    else if (children.length == 1) thisTactic + " & " + getTacticString(modelId, indent)(children.head)
+    else thisTactic + " & <(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
+  }
+
+  private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), Some(gen))
+
+  private def tacticStringAt(node: TreeNode): String = node.endStep match {
     case Some(step) => try {
-      val exprString = db.getExecutable(step.executableId).belleExpr
-      BelleParser.parseWithInvGen(exprString,Some(gen))
+      db.getExecutable(step.executableId).belleExpr
     } catch {
       case e : ParseException => throw TacticExtractionError(e.getMessage, e)
       case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing (${e.getMessage}):" + db.getExecutable(step.executableId).belleExpr, e)
-      case t : Throwable => {
+      case t : Throwable =>
         t.printStackTrace() //Super useful for debugging since TacticExtractionError seems to swallow its cause, or at least it doesn't always get printed out...
-        throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database because ${t}", t)
-      }
+        throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database because $t", t)
     }
-    case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
+    case None => Idioms.nil.toString //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
   }
 }
 

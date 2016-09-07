@@ -1171,7 +1171,7 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   private val proofId = Integer.parseInt(proofIdStr)
 
   override def resultingResponses(): List[Response] = {
-    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(proofId))
+    val exprText = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(proofId))
     new ExtractTacticResponse(exprText) :: Nil
   }
 }
@@ -1180,7 +1180,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) exten
   private val proofId = Integer.parseInt(proofIdStr)
 
   override def resultingResponses(): List[Response] = {
-    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(proofId))
+    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)))
     val problem = db.getModel(db.getProofInfo(proofId).modelId).keyFile
     new ExtractProblemSolutionResponse(problem + "\n" + "Solution.\n" + exprText + "\nEnd.") :: Nil
   }

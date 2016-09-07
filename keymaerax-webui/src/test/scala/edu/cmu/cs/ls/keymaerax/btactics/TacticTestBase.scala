@@ -60,7 +60,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
 
     /** Returns the tactic recorded for the proof `proofId`. */
-    def extractTactic(proofId: Int): BelleExpr = new ExtractTacticFromTrace(db).apply(proofId)
+    def extractTactic(proofId: Int): BelleExpr = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId))
   }
 
   /** For tests that want to record proofs in the database. */
