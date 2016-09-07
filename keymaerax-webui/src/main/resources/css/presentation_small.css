@@ -77,6 +77,23 @@ table .btn{
   margin-right: -3px;
 }
 
+.match,
+.textdiff span {
+  color: gray;
+}
+
+.ins,
+ins {
+  color: black;
+  /*background: #bbffbb;*/
+}
+
+.del,
+del {
+  color: black;
+  /*background: #ffbbbb;*/
+}
+
 .hl {background: transparent; }
 .hlhover {
     background-color:black;
@@ -108,6 +125,17 @@ table .btn{
 
 .tooltip-inner {
   max-width: none;
+}
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
+
+.k4-tacticeditor {
+  font-family:monospace;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .k4-drag {
