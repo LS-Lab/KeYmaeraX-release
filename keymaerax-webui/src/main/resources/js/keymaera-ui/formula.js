@@ -19,7 +19,7 @@ angular.module('formula')
         link: function(scope, element, attrs) {
             scope.formulaAxiomsMap = {};
 
-            fetchFormulaAxioms = function(formulaId, axiomsHandler) {
+            scope.fetchFormulaAxioms = function(formulaId, axiomsHandler) {
               if (scope.formulaAxiomsMap[formulaId] === undefined) {
                 // axioms not fetched yet
                 derivationInfos.formulaDerivationInfos(scope.userId, scope.proofId, scope.nodeId, formulaId)
@@ -41,7 +41,7 @@ angular.module('formula')
                   if (response.data.length > 0) {
                     scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
                   } else {
-                    fetchFormulaAxioms(formulaId, function() {
+                    scope.fetchFormulaAxioms(formulaId, function() {
                       scope.tacticPopover.open(formulaId);
                     });
                   }
@@ -50,7 +50,7 @@ angular.module('formula')
 
             scope.formulaRightClick = function(formulaId, event) {
               event.stopPropagation();
-              fetchFormulaAxioms(formulaId, function() {
+              scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
               });
             }
