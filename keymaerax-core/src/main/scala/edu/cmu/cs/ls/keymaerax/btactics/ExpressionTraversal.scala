@@ -225,7 +225,7 @@ object ExpressionTraversal {
         // Terms
         case Number(_) => matchZero(p, f, e)
         case _: BaseVariable => matchZero(p, f, e)
-        case DotTerm => matchZero(p, f, e)
+        case _: DotTerm => matchZero(p, f, e)
         case Nothing => matchZero(p, f, e)
         case _: UnitFunctional => matchZero(p, f, e)
         case FuncOf(a, b) => matchOne(p, FuncOf.apply(a, _: Term), f, b)

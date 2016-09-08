@@ -111,6 +111,10 @@ object DerivationInfo {
       , AxiomDisplayInfo("[*]", "[a*]P↔P∧[a][a*]P")
       , "iterateb", {case () => HilbertCalculus.iterateb}),
     new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
+    new CoreAxiomInfo("<d> dual"
+      , AxiomDisplayInfo(("<d>", "<d>"), "〈a^d〉P↔¬〈a〉¬P"), "duald", {case () => HilbertCalculus.duald}),
+    new DerivedAxiomInfo("[d] dual"
+      , AxiomDisplayInfo(("[d]", "[d]"), "[a^d]P↔¬[a]¬P"), "dualb", {case () => HilbertCalculus.dualb}),
   //@todo if hybrid games enabled
     //new CoreAxiomInfo("<d> dual", "<d>", "duald", {case () => HilbertCalculus.duald}),
     //new DerivedAxiomInfo("[d] dual", "[d]", "dualb", {case () => HilbertCalculus.dualb}),

@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo, RandomFormula}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
@@ -74,6 +74,7 @@ class USubstTests extends SystemTestBase {
   val qn_ = Function("q_", None, Real, Bool)
   val ap = ProgramConst("a")
   val ap_ = ProgramConst("a_")
+  val sys = SystemConst("a_")
   //val f1 = Function("f", None, Real, Real)
   val f1_ = Function("f_", None, Real, Real)
   //val g1 = Function("g", None, Real, Real)
@@ -310,7 +311,7 @@ class USubstTests extends SystemTestBase {
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val x = Variable("x_",None,Real)
     val fml = GreaterEqual(x, Number(0))
-    val prem = Provable.axioms("V vacuous")
+    val prem = ProvableInfo("V vacuous").provable
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
@@ -319,7 +320,7 @@ class USubstTests extends SystemTestBase {
   }
   it should "old clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
-    val prem = Provable.axiom("V vacuous")
+    val prem = DerivedAxiomInfo("V vacuous").formula
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
@@ -365,24 +366,24 @@ class USubstTests extends SystemTestBase {
 
   it should "not allow bound variables to occur free in V with assignment" taggedAs(AdvocatusTest) in {
     a[SubstitutionClashException] shouldBe thrownBy {
-      Provable.axioms("V vacuous")(USubst(
+      ProvableInfo("V vacuous").provable(USubst(
         SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
-          SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+          SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
     }
   }
 
   it should "not allow bound variables to occur free in V with ODE" taggedAs(AdvocatusTest) in {
     a[SubstitutionClashException] shouldBe thrownBy {
-      Provable.axioms("V vacuous")(USubst(
+      ProvableInfo("V vacuous").provable(USubst(
         SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
-          SubstitutionPair(ProgramConst("a"), "{x'=2}".asProgram) :: Nil))
+          SubstitutionPair(SystemConst("a"), "{x'=2}".asProgram) :: Nil))
     }
   }
 
   it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
-    val pr = Provable.axioms("V vacuous")(USubst(
+    val pr = ProvableInfo("V vacuous").provable(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
-        SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+        SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
     pr shouldBe 'proved
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula))
     // this should not prove x=0->[x:=5;]x=0
@@ -404,9 +405,9 @@ class USubstTests extends SystemTestBase {
   }
 
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
-    val pr = Provable.axioms("V vacuous")(USubst(
+    val pr = DerivedAxiomInfo("V vacuous").provable(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
-        SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+        SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
     pr shouldBe 'proved
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
     // this should not prove x=0->[x:=5;]x=0
@@ -485,8 +486,8 @@ class USubstTests extends SystemTestBase {
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(UnitPredicational("p_", AnyArg), fml),
-      SubstitutionPair(ap_, prog)))
-    val pr = Provable.rules("Goedel")(s)
+      SubstitutionPair(sys, prog)))
+    val pr = DerivedRuleInfo("Goedel").provable(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
@@ -496,8 +497,8 @@ class USubstTests extends SystemTestBase {
     val prog = "x:=x-1;".asProgram
     val s = USubst(
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml) ::
-      SubstitutionPair(ap_, prog) :: Nil)
-    val pr = Provable.rules("Goedel")(s)
+      SubstitutionPair(sys, prog) :: Nil)
+    val pr = DerivedRuleInfo("Goedel").provable(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Box(prog, fml)))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
@@ -732,7 +733,7 @@ class USubstTests extends SystemTestBase {
   it should "instantiate random programs in Goedel" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem = "(-z1)^2>=0".asFormula
-      val prog = rand.nextProgram(randomComplexity)
+      val prog = rand.nextSystem(randomComplexity)
       val conc = Box(prog, prem)
 
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
@@ -744,10 +745,10 @@ class USubstTests extends SystemTestBase {
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         val s = USubst(Seq(
-          SubstitutionPair(ap_, prog),
+          SubstitutionPair(sys, prog),
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem)
         ))
-        val pr = Provable.rules("Goedel")(s)
+        val pr = DerivedRuleInfo("Goedel").provable(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }

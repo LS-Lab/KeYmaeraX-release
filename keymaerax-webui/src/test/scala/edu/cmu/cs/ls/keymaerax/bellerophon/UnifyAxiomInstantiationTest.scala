@@ -7,6 +7,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, Suite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
@@ -16,8 +17,7 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
   * @author Andre Platzer
   */
 @SummaryTest
-class UnifyAxiomInstantiationTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  KeYmaera.init(Map.empty)
+class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   val randomTrials = 20
   val randomComplexity = 2
