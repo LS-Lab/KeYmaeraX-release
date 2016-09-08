@@ -864,12 +864,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
 
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
+    val proof = db.getProofInfo(proofId)
+    val closed = proof.closed
     if (closed) {
       return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
     }
-    val proof = db.getProofInfo(proofId)
-    val model = db.getModel(proof.modelId)
     val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
