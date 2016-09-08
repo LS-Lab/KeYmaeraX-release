@@ -33,7 +33,7 @@ object ModelPlex extends ModelPlexTrait {
    */
   def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula = formula match {
     case Imply(assumptions, Box(prg, _)) =>
-      val vars = StaticSemantics.boundVars(prg).symbols.filter(_.isInstanceOf[Variable]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
+      val vars = StaticSemantics.boundVars(prg).symbols.filter(v => v.isInstanceOf[Variable] && !v.isInstanceOf[DifferentialSymbol]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
       apply(sortedVars, kind, checkProvable)(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
