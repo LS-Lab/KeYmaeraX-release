@@ -75,22 +75,24 @@ object InvariantGenerator {
 
   /** A differential invariant generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
+  lazy val differentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
     //@todo performance: ++ is not quite as fast a lazy concatenation as it could be.
     TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(differentialInvariantCandidates)(sequent,pos)
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+  )
 
   /** A more expensive extended differential invariant generator.
     * @author Andre Platzer */
-  lazy val extendedDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) =>
+  lazy val extendedDifferentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
     relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+  )
 
   /** A loop invariant generator.
     * @author Andre Platzer */
-  lazy val loopInvariantGenerator: Generator[Formula] = (sequent,pos) =>
+  lazy val loopInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
     //@todo performance: ++ is not quite as fast a lazy concatenation as it could be.
     TactixLibrary.invGenerator(sequent,pos) ++ relevanceFilter(loopInvariantCandidates)(sequent,pos)
-
+  )
 
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
@@ -128,6 +130,7 @@ object InvariantGenerator {
       ToolProvider.pdeTool().get.pdeSolve(ode)
     } catch {
       case e: Exception => if (BelleExpr.DEBUG) println("inverseCharacteristic generation unsuccessful: " + e)
+        e.printStackTrace()
         Nil.iterator
     }
     if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
@@ -143,5 +146,29 @@ object InvariantGenerator {
       //@todo could check that it's not a tautology using RCF
       List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
     })
+  }
+
+
+  /** A cached invariant generator based on the candidates from `generator` that also remembers answers
+    * to speed up computations.
+    * @author Andre Platzer */
+  def cached(generator: Generator[Formula]): Generator[Formula] = {
+    var cache: scala.collection.mutable.Map[Box, List[Formula]] = new scala.collection.mutable.HashMap()
+    (sequent,pos) => {
+      val (box, system, constraint, post) = sequent.sub(pos) match {
+        case Some(box@Box(ode: ODESystem, post)) => (box, ode.ode, ode.constraint, post)
+        case Some(box@Box(system: Loop, post)) => (box, system, True, post)
+        case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
+        case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+      }
+      cache.get(box) match {
+        case Some(cached) => cached.iterator
+        case None =>
+          //@todo performance: this will eager-enumerate the full iterator for storage purposes. Could do lazy iteration by storing a lazy list, but that's more annoying.
+          val remember = generator(sequent,pos).toList
+          cache.put(box,remember)
+          remember.iterator
+      }
+    }
   }
 }

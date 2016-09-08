@@ -46,7 +46,6 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-
   "openDiffInd" should "directly prove x>0 -> [{x'=x}]x>0" in withMathematica { qeTool =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
@@ -145,6 +144,10 @@ class ODETests extends TacticTestBase {
 
   it should "cut to prove x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" in withMathematica { qeTool =>
     TactixLibrary.proveBy("x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+  it should "PDEify to prove x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" in withMathematica { qeTool =>
+    TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
   //@note: there's overlap as multiple methods are able to prove some of the following examples

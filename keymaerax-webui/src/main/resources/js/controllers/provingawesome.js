@@ -110,6 +110,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
+    sequentProofData.tactic.reset();
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Subsection on tree operations.
