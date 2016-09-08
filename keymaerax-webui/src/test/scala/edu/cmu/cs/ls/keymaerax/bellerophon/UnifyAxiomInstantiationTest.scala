@@ -255,7 +255,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     "DS& differential equation solution" ::
     //"c()' derive constant fn" :: //@todo would need to avoid all variables here
     "x' derive var" ::
-    "V vacuous" :: "vacuous all quantifier" ::
+    "VK vacuous" :: "V vacuous" :: "vacuous all quantifier" ::
     "const congruence" :: "const formula congruence" ::
     Nil
 
@@ -272,7 +272,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
         if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
           val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-            rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity, false)
+            rand.nextSchematicInstance(AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity, false)
           }
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {
@@ -338,7 +338,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
         if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
           val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-            rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
+            rand.nextSchematicInstance(AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
           }
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {
