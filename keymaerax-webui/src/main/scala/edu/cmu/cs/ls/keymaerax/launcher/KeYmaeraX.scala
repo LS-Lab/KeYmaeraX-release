@@ -35,7 +35,7 @@ object KeYmaeraX {
       |
       |Usage: java -Xss20M -jar keymaerax.jar
       |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
-      |  -modelplex filename.kyx [-out filename.kym] |
+      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym] |
       |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse filename.kyx |
@@ -53,7 +53,7 @@ object KeYmaeraX {
       |  -tool mathematica|z3 choose which tool to use for arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -kind ctrl|model what kind of monitor to generate with ModelPlex
+      |  -monitorKind ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
@@ -211,8 +211,8 @@ object KeYmaeraX {
     option match {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
-      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
+      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
+      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.scala\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
@@ -423,12 +423,12 @@ object KeYmaeraX {
     var outputFileName = inputFileName
     if(options.contains('out)) {
       val outputFileNameDotMx = options('out).toString
-      assert(outputFileNameDotMx.endsWith(".mx"),
-        "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .mx file. Please use: -out FILENAME.mx")
+      assert(outputFileNameDotMx.endsWith(".kym"),
+        "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .kym file. Please use: -out FILENAME.kym")
       outputFileName = outputFileNameDotMx.dropRight(3)
     }
 
-    val pw = new PrintWriter(outputFileName + ".mx")
+    val pw = new PrintWriter(outputFileName + ".kym")
 
     val kind =
       if (options.contains('monitorKind)) options('monitorKind).asInstanceOf[Symbol]
@@ -460,8 +460,8 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val inputFileNameDotMx = options('in).toString
-    assert(inputFileNameDotMx.endsWith(".mx"),
-      "\n[Error] Wrong file name " + inputFileNameDotMx + " used for -codegen! Code generator only handles .mx file. Please use: -codegen FILENAME.mx")
+    assert(inputFileNameDotMx.endsWith(".kym"),
+      "\n[Error] Wrong file name " + inputFileNameDotMx + " used for -codegen! Code generator only handles .kym file. Please use: -codegen FILENAME.kym")
     val input = scala.io.Source.fromFile(inputFileNameDotMx).mkString
     val inputFormula = KeYmaeraXParser(input)
     val inputFileName = inputFileNameDotMx.dropRight(3)
