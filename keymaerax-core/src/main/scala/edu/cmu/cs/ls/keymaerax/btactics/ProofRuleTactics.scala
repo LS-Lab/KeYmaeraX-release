@@ -248,13 +248,6 @@ private object ProofRuleTactics {
     }
   }
 
-  def dualFree = new BuiltInRightTactic("DualFree") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
-      requireOneSubgoal(provable, name)
-      provable(core.DualFree(pos.top), 0)
-    }
-  }
-
   /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
   @deprecated("Use SequentCalculus.close(0,0) instead")
   private[btactics] def trivialCloser = new BuiltInTactic("TrivialCloser") {

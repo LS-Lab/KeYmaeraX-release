@@ -192,10 +192,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
-    * @see [[boxTrue]]
     */
-    //@todo useAt except with dualFree as the tactic to prove the global prereq [a]true.
   lazy val V                  : DependentPositionTactic = useAt("V vacuous")
+  /** VK: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`
+    * and provided `[a]true` proves, e.g., since `a` is a hybrid system.
+    */
+  lazy val VK                 : DependentPositionTactic = useAt("VK vacuous")
 
   //
   // differential equations
@@ -354,12 +356,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   // def ind
 
-  /** dualFree: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
-  val dualFree                : PositionalTactic = ProofRuleTactics.dualFree
-  /** boxTrue: proves `[a]true` as directly as possible.
-    * @see [[dualFree]] */
-  //@todo could do boxTrue = dualFree | master
-  val boxTrue                 : PositionalTactic = dualFree
+  /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
+  val boxTrue                : DependentPositionTactic = useAt("[]T system")
 
 
   /*******************************************************************

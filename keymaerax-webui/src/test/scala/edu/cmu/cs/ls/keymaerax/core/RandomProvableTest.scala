@@ -41,25 +41,26 @@ class RandomProvableTest extends FlatSpec with Matchers {
 //      e(e.sub(sub), sub) shouldBe e
     }
 
-  "Dual-free" should "work on random formulas if no dual operators occur" in {
-    val dual = try {
-      Dual(Test(False))
-      false
-    } catch {
-      case _ => true
-    }
-    if (dual) {
-      for (i <- 1 to randomTrials) {
-        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
-        val e = Box(rand.nextProgram(randomComplexity), True)
-        if (e.find(prg=>prg.isInstanceOf[Dual])==None)
-          Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
-      }
-    } else {
-      for (i <- 1 to randomTrials) {
-        val e = Box(rand.nextProgram(randomComplexity), True)
-        Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
-      }
-    }
-  }
+//  "Dual-free" ignore should "work on random formulas if no dual operators occur" in {
+    //@todo use boxTrue instead of DualFree
+//    val dual = try {
+//      Dual(Test(False))
+//      false
+//    } catch {
+//      case _ => true
+//    }
+//    if (dual) {
+//      for (i <- 1 to randomTrials) {
+//        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
+//        val e = Box(rand.nextProgram(randomComplexity), True)
+//        if (e.find(prg=>prg.isInstanceOf[Dual])==None)
+//          Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
+//      }
+//    } else {
+//      for (i <- 1 to randomTrials) {
+//        val e = Box(rand.nextProgram(randomComplexity), True)
+//        Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
+//      }
+//    }
+//  }
 }

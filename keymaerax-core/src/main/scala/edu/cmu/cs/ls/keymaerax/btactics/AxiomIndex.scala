@@ -92,8 +92,11 @@ object AxiomIndex {
          | "const congruence" | "const formula congruence" => reverseReduction
 
     /* @todo Adapt for hybrid games */
-    case "V vacuous" => assert(Provable.axiom(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
+    case "VK vacuous" =>
+      (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
+    case "V vacuous" => //assert(Provable.axiom(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
       (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
+    case "[]T system" => (PosInExpr(Nil), Nil)
     case "K modal modus ponens" => (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
     case "I induction" => (PosInExpr(1::Nil), /*PosInExpr(0::Nil)::*/PosInExpr(1::1::Nil)::PosInExpr(1::Nil)::Nil)
     // derived

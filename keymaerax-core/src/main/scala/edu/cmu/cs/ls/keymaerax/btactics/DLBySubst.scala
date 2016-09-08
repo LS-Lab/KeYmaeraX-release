@@ -28,9 +28,9 @@ private object DLBySubst {
 
   /** @see [[HilbertCalculus.G]] */
   lazy val G: BelleExpr = {
-    val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(||)".asFormula)))
+    val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};]p_(||)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
-    if (isGame)
+    if (false && isGame) //@note true changes the shape maybe?
       USubstPatternTactic(
         (pattern, (ru:RenUSubst) =>
           cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
@@ -40,7 +40,7 @@ private object DLBySubst {
               hideL(-1, True)
               partial
             ,
-            dualFree(2)
+            hide(1) & boxTrue(1)
             ))::Nil)
     else
       USubstPatternTactic(

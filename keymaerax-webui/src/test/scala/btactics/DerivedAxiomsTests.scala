@@ -40,6 +40,26 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
 
+  "Derived Rule" should "prove allG" in withMathematica { qeTool => allGeneralize.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
+  ) }
+
+  it should "prove Goedel" in withMathematica { qeTool => Goedel.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
+  ) }
+
+  it should "prove CT" in withMathematica { qeTool => CTtermCongruence.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
+  ) }
+
+  it should "prove [] monotone" in withMathematica { qeTool => boxMonotone.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
+  ) }
+
+  it should "prove [] monotone 2" in withMathematica { qeTool => boxMonotone2.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
+  ) }
+
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
@@ -52,6 +72,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove !<>" in {check(notDiamond)}
   ignore should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxAxiom)}
+  it should "prove V vacuous" in {check(vacuousAxiom)}
 //  it should "prove K1" in {check(K1)}
 //  it should "prove K2" in {check(K2)}
   //@todo nrf it should "prove box split" in {check(boxAnd)}
@@ -205,19 +226,4 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove min" in withMathematica { qeTool => check(minDef)}
   it should "tactically prove max" in withMathematica { qeTool => check(maxDef)}
 
-  "Derived Rule" should "prove allG" in withMathematica { qeTool => allGeneralize.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
-
-  it should "prove CT" in withMathematica { qeTool => CTtermCongruence.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
-  ) }
-
-  it should "prove [] monotone" in withMathematica { qeTool => boxMonotone.fact.subgoals shouldBe List(
-      Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
-  ) }
-
-  it should "prove [] monotone 2" in withMathematica { qeTool => boxMonotone2.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
 }

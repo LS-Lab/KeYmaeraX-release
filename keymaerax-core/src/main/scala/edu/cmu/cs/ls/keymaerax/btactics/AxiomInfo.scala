@@ -118,9 +118,15 @@ object DerivationInfo {
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
     new CoreAxiomInfo("I induction", "I", "induction", {case () => ???}),
-    new CoreAxiomInfo("V vacuous"
+    new CoreAxiomInfo("VK vacuous"
+      , AxiomDisplayInfo("VK", "(p→[a]p)←[a]T")
+      , "VK", {case () => HilbertCalculus.VK}),
+    new DerivedAxiomInfo("V vacuous"
       , AxiomDisplayInfo("V", "p→[a]p")
-      , "V", {case () => TactixLibrary.V}),
+      , "V", {case () => HilbertCalculus.V}),
+    new CoreAxiomInfo("[]T system"
+      , AxiomDisplayInfo("[]T", "[a]true")
+      , "boxTrue", {case () => HilbertCalculus.boxTrue}),
 
     // differential equation axioms
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
@@ -527,10 +533,6 @@ object DerivationInfo {
       , RuleDisplayInfo("V++", (List("&Gamma;", "[a]P"), List("&Delta;"))
       , List((List("&Gamma; \\ a", "P"), List("&Delta;"))))
       , {case () => TactixLibrary.abstractionb}),
-    new PositionTacticInfo("dualFree"
-      , RuleDisplayInfo(("[]⊤", "[]T"), (List("&Gamma;"),List("[a]⊤","&Delta;")),
-        List())
-      , {case () => HilbertCalculus.dualFree}),
 
     new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => SequentCalculus.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", ("↔CR", "<->CR"), {case () => SequentCalculus.commuteEquivR}),
@@ -739,14 +741,17 @@ object DerivationInfo {
 
     // Derived axiomatic rules
     new DerivedRuleInfo("all generalization"
-      , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall p_(||)"::Nil), SequentDisplay(Nil, "p_(||)"::Nil)::Nil)
+      , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall x P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
       , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
     new DerivedRuleInfo("[] monotone"
-      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(||)"::Nil, "[a;]q_(||)"::Nil), SequentDisplay("p_(||)"::Nil, "q_(||)"::Nil)::Nil)
+      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]P"::Nil, "[a;]Q"::Nil), SequentDisplay("P"::Nil, "Q"::Nil)::Nil)
       , "monb", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
     new DerivedRuleInfo("[] monotone 2"
-      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]q_(||)"::Nil, "[a;]p_(||)"::Nil), SequentDisplay("p_(||)"::Nil, "q_(||)"::Nil)::Nil)
+      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]Q"::Nil, "[a;]P"::Nil), SequentDisplay("Q"::Nil, "P"::Nil)::Nil)
       , "monb2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
+    new DerivedRuleInfo("Goedel"
+      , RuleDisplayInfo(SimpleDisplayInfo("G", "G"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
+      , "Goedel", {case () => HilbertCalculus.useAt(DerivedAxioms.Goedel)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
       , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
