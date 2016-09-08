@@ -167,9 +167,48 @@ object DerivedAxioms {
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
         byUS(boxMonotone) & hide(-1) partial
         ,
-        dualFree(2) //closeT
+        hide(1) & boxTrue(1)
         )
   )
+
+  /**
+    * Rule "Goedel".
+    * Premise p(||)
+    * Conclusion [a;]p(||)
+    * End.
+    * {{{
+    *       p(||)
+    *   ----------- G
+    *    [a{|^@|};]p(||)
+    * }}}
+    * @NOTE Unsound for hybrid games
+    * @derived from M and [a]true
+    */
+  lazy val Goedel = derivedRule("Goedel",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
+    cut("[a_{|^@|};]true".asFormula) <(
+      // use
+      byUS(boxMonotone) & hide(-1) partial
+      ,
+      // show
+      hide(1) & boxTrue(1)
+      )
+  )
+
+  /**
+    * {{{
+    *   Axiom "V vacuous".
+    *  p() -> [a{|^@|};]p()
+    * End.
+    * }}}
+    * @note unsound for hybrid games
+    */
+  lazy val vacuousAxiom = derivedAxiom("V vacuous",
+    Sequent(IndexedSeq(), IndexedSeq("p() -> [a{|^@|};]p()".asFormula)),
+    useAt("VK vacuous", PosInExpr(1::Nil))(1) &
+    boxTrue(1)
+  )
+
 
   /**
     * Rule "CT term congruence".
@@ -459,17 +498,18 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val boxDiamondPropagation = {
     boxAnd //@note access dependency hidden in CMon, so that it is added to the lemma database
     derivedAxiom("[]~><> propagation",
-      Sequent(IndexedSeq(), IndexedSeq("([a_;]p_(||) & <a_;>q_(||)) -> <a_;>(p_(||) & q_(||))".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("([a_{|^@|};]p_(||) & <a_{|^@|};>q_(||)) -> <a_{|^@|};>(p_(||) & q_(||))".asFormula)),
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::1::Nil) &
         useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
-        cut("[a_;]p_(||) & [a_;]!(p_(||)&q_(||)) -> [a_;]!q_(||)".asFormula) <(
+        cut("[a_{|^@|};]p_(||) & [a_{|^@|};]!(p_(||)&q_(||)) -> [a_{|^@|};]!q_(||)".asFormula) <(
           /* use */ prop,
           /* show */ hideR(1) &
-          cut("[a_;](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
+          cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
             /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi() & CMon(PosInExpr(1::Nil)) & prop,
             /* show */ implyR(1) & TactixLibrary.boxAnd(1) & prop
             )
@@ -488,7 +528,7 @@ object DerivedAxioms {
     * @internal
     */
   private lazy val K1 = TactixLibrary.proveBy(//derivedAxiom("K1",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) -> [a_;]p_(||) & [a_;]q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)".asFormula)),
     implyR(1) & andR(1) <(
       useAt(boxSplitLeft, PosInExpr(0::Nil))(-1) & close,
       useAt(boxSplitRight, PosInExpr(0::Nil))(-1) & close
@@ -502,18 +542,19 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
     *      @internal
     */
   private lazy val K2 = TactixLibrary.proveBy(//derivedAxiom("K2",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(||) & [a_;]q_(||) -> [a_;](p_(||)&q_(||))".asFormula)),
-    cut(/*(9)*/"([a_;](q_(||)->p_(||)&q_(||)) -> ([a_;]q_(||) -> [a_;](p_(||)&q_(||))))  ->  (([a_;]p_(||) & [a_;]q_(||)) -> [a_;](p_(||)&q_(||)))".asFormula) <(
-      /* use */ cut(/*(6)*/"[a_;](q_(||) -> (p_(||)&q_(||)))  ->  ([a_;]q_(||) -> [a_;](p_(||)&q_(||)))".asFormula) <(
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};]p_(||) & [a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))".asFormula)),
+    cut(/*(9)*/"([a_{|^@|};](q_(||)->p_(||)&q_(||)) -> ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))))  ->  (([a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)) -> [a_{|^@|};](p_(||)&q_(||)))".asFormula) <(
+      /* use */ cut(/*(6)*/"[a_{|^@|};](q_(||) -> (p_(||)&q_(||)))  ->  ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||)))".asFormula) <(
       /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
-      /* show */ cut(/*(8)*/"([a_;]p_(||) -> [a_;](q_(||) -> p_(||)&q_(||)))  ->  (([a_;](q_(||)->p_(||)&q_(||)) -> ([a_;]q_(||) -> [a_;](p_(||)&q_(||))))  ->  (([a_;]p_(||) & [a_;]q_(||)) -> [a_;](p_(||)&q_(||))))".asFormula) <(
-      /* use */ cut(/*(5)*/"[a_;]p_(||) -> [a_;](q_(||) -> p_(||)&q_(||))".asFormula) <(
+      /* show */ cut(/*(8)*/"([a_{|^@|};]p_(||) -> [a_{|^@|};](q_(||) -> p_(||)&q_(||)))  ->  (([a_{|^@|};](q_(||)->p_(||)&q_(||)) -> ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))))  ->  (([a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)) -> [a_{|^@|};](p_(||)&q_(||))))".asFormula) <(
+      /* use */ cut(/*(5)*/"[a_{|^@|};]p_(||) -> [a_{|^@|};](q_(||) -> p_(||)&q_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
       /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt(implyTautology.fact)(1, 1::Nil) & V(1) & close
       ),
@@ -529,9 +570,10 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val Kand = derivedAxiom("K modal modus ponens &",
-    Sequent(IndexedSeq(), IndexedSeq("[a;](p_(||)->q_(||)) & [a;]p_(||) -> [a;]q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};](p_(||)->q_(||)) & [a{|^@|};]p_(||) -> [a{|^@|};]q_(||)".asFormula)),
     useAt(andImplies.fact, PosInExpr(0::Nil))(1) &
     byUS("K modal modus ponens")
   )
@@ -555,10 +597,11 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K3 p. 28
     */
   lazy val boxAnd = derivedAxiom("[] split",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) <-> [a_;]p_(||)&[a_;]q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) <-> [a_{|^@|};]p_(||)&[a_{|^@|};]q_(||)".asFormula)),
     equivR(1) <(
       useAt(K1, PosInExpr(1::Nil))(1) & close,
       useAt(K2, PosInExpr(1::Nil))(1) & close
@@ -572,9 +615,10 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val boxImpliesAnd = derivedAxiom("[] conditional split",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](P_(||)->Q_(||)&R_(||)) <-> [a_;](P_(||)->Q_(||)) & [a_;](P_(||)->R_(||))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](P_(||)->Q_(||)&R_(||)) <-> [a_{|^@|};](P_(||)->Q_(||)) & [a_{|^@|};](P_(||)->R_(||))".asFormula)),
     useAt(implyDistAndAxiom.fact, PosInExpr(0::Nil))(1, 0::1::Nil) &
     useAt(boxAnd.fact, PosInExpr(0::Nil))(1, 0::Nil) &
     byUS(equivReflexiveAxiom)
@@ -591,9 +635,9 @@ object DerivedAxioms {
     *      @internal
     */
   private lazy val boxSplitLeft = TactixLibrary.proveBy(//derivedAxiom("[] split left",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) -> [a_;]p_(||)".asFormula)),
-    cut(/*(2)*/"[a_;](p_(||)&q_(||) -> p_(||))".asFormula) <(
-      /* use */ cut(/*(4)*/"[a_;](p_(||)&q_(||)->p_(||)) -> ([a_;](p_(||)&q_(||)) -> [a_;]p_(||))".asFormula) <(
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]p_(||)".asFormula)),
+    cut(/*(2)*/"[a_{|^@|};](p_(||)&q_(||) -> p_(||))".asFormula) <(
+      /* use */ cut(/*(4)*/"[a_{|^@|};](p_(||)&q_(||)->p_(||)) -> ([a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]p_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
@@ -608,9 +652,10 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val diamondOr = derivedAxiom("<> split",
-    Sequent(IndexedSeq(), IndexedSeq("<a_;>(p_(||)|q_(||)) <-> <a_;>p_(||)|<a_;>q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<a_{|^@|};>(p_(||)|q_(||)) <-> <a_{|^@|};>p_(||)|<a_{|^@|};>q_(||)".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
@@ -645,9 +690,9 @@ object DerivedAxioms {
     *      @internal
     */
   private lazy val boxSplitRight = TactixLibrary.proveBy(//derivedAxiom("[] split right",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) -> [a_;]q_(||)".asFormula)),
-    cut(/*7*/"[a_;](p_(||)&q_(||) -> q_(||))".asFormula) <(
-      /* use */ cut(/*(8)*/"[a_;](p_(||)&q_(||)->q_(||)) -> ([a_;](p_(||)&q_(||)) -> [a_;]q_(||))".asFormula) <(
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]q_(||)".asFormula)),
+    cut(/*7*/"[a_{|^@|};](p_(||)&q_(||) -> q_(||))".asFormula) <(
+      /* use */ cut(/*(8)*/"[a_{|^@|};](p_(||)&q_(||)->q_(||)) -> ([a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]q_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),

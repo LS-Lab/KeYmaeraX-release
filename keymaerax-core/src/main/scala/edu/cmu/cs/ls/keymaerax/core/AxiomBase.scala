@@ -106,25 +106,7 @@ private[core] object AxiomBase {
         */
       ("ind induction",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
-          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
-      /* UNSOUND FOR HYBRID GAMES */
-      /**
-        * Rule "Goedel".
-        * Premise p(||)
-        * Conclusion [a{|^@|};]p(||)
-        * End.
-        * {{{
-        *       p(||)
-        *   ----------- G
-        *    [a{|^@|};]p(||)
-        * }}}
-        * @NOTE Unsound for hybrid games
-        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
-        * @todo turn into a derived rule from M and [a]true
-        */
-      ("Goedel",
-        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
-          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Box(sys, pany)))))
+          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany)))))
     )
   }
 
