@@ -221,22 +221,25 @@ private object DLBySubst {
     (alphaRule*) & ("doLoop" byWithInput(invariant, (pos, sequent) => {
        sequent.sub(pos) match {
           case Some(b@Box(Loop(a), p)) =>
-            val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
-            val q =
-              if (consts.size > 1) And(invariant, consts.reduceRight(And))
-              else if (consts.size == 1) And(invariant, consts.head)
-              else And(invariant, True)
-            cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
-              /* c */ useAt("I induction")(pos) & andR(pos) <(
+            if (!FormulaTools.dualFree(a)) loopRule(invariant)(pos)
+            else {
+              val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+              val q =
+                if (consts.size > 1) And(invariant, consts.reduceRight(And))
+                else if (consts.size == 1) And(invariant, consts.head)
+                else And(invariant, True)
+              cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
+                /* c */ useAt("I induction")(pos) & andR(pos) <(
                 andR(pos) <(ident /* indInit */, ((andR(pos) <(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) partial(initCase),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
                   andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & ProofRuleTactics.trivialCloser) partial
-              ) partial,
-              /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
+                ) partial,
+                /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
                 (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)
-            )
-        }}))(pos)})
+                )
+            }
+       }}))(pos)})
   /**
     * Loop induction wiping all context.
     * {{{
@@ -249,6 +252,7 @@ private object DLBySubst {
     * @param invariant The invariant.
     */
   def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
+    //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
     val alast = AntePosition(sequent.ante.length)

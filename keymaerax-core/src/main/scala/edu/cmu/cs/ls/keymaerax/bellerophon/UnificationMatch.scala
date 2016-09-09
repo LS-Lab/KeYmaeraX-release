@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, FormulaTools, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -348,7 +348,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
     case a: ProgramConst             => unifier(e1, e2)
-    case a: SystemConst              => if (dualFree(e2)) unifier(e1, e2) else throw new UnificationException(e1.toString, e2.toString, "hybrid games with duals not allowed for SystemConst")
+    case a: SystemConst              => if (FormulaTools.dualFree(e2)) unifier(e1, e2) else throw new UnificationException(e1.toString, e2.toString, "hybrid games with duals not allowed for SystemConst")
     case Assign(x, t)                => e2 match {case Assign(x2,t2) => unifies(x,t, x2,t2) case _ => ununifiable(e1,e2)}
     case AssignAny(x)                => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                     => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}
@@ -359,20 +359,6 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case Compose(a, b)               => e2 match {case Compose(a2,b2)   => unifies(a,b, a2,b2) case _ => ununifiable(e1,e2)}
     case Loop(a)                     => e2 match {case Loop(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
     case Dual(a)                     => e2 match {case Dual(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
-  }
-
-  /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
-  private def dualFree(program: Program): Boolean = program match {
-    case a: ProgramConst => false
-    case a: SystemConst  => true
-    case Assign(x, e)    => true
-    case AssignAny(x)    => true
-    case Test(f)         => true /* even if f contains duals, since they're different nested games) */
-    case ODESystem(a, h) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
-    case Choice(a, b)    => dualFree(a) && dualFree(b)
-    case Compose(a, b)   => dualFree(a) && dualFree(b)
-    case Loop(a)         => dualFree(a)
-    case Dual(a)         => false
   }
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */

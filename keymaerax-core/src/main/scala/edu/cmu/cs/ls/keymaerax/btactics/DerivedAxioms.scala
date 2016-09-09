@@ -1622,6 +1622,24 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{
+    *   Axiom "[d] dual".
+    *    [{a;}^@]p(||) <-> ![a;]!p(||)
+    *   End.
+    * }}}
+    * @derived
+    */
+  lazy val dualbAxiom = derivedAxiom("[d] dual",
+    Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> ![a;]!p(||)".asFormula)),
+    useExpansionAt("[] box")(1, 0::Nil) &
+      useAt("<d> dual")(1, 0::0::Nil) &
+      useAt("[] box")(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  // differentials
+
+  /**
     * {{{Axiom "x' derive var commuted".
     *    (x_') = (x_)'
     * End.
@@ -1700,6 +1718,7 @@ object DerivedAxioms {
   //    useAt("* commute")(1, 1::Nil) &
   //    by(Dlinear)
   //)
+
 
   // real arithmetic
 

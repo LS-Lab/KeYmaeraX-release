@@ -226,4 +226,19 @@ object FormulaTools {
     case f:DifferentialProduct => singularities(f.left) ++ singularities(f.right)
     case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
   }
+
+  /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
+  def dualFree(program: Program): Boolean = program match {
+    case a: ProgramConst => false
+    case a: SystemConst  => true
+    case Assign(x, e)    => true
+    case AssignAny(x)    => true
+    case Test(f)         => true /* even if f contains duals, since they're different nested games) */
+    case ODESystem(a, h) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
+    case Choice(a, b)    => dualFree(a) && dualFree(b)
+    case Compose(a, b)   => dualFree(a) && dualFree(b)
+    case Loop(a)         => dualFree(a)
+    case Dual(a)         => false
+  }
+
 }
