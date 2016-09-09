@@ -66,7 +66,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case app@FuncOf(fn, theta) if  /*u.contains(fn) ||*/ app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_) if t == what => repl
-      case x: Atomic => x
+      case x: AtomicTerm => x
       case Pair(l, r) if t != what => Pair(usubst(o, u, l), usubst(o, u, r))
       case Pair(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
@@ -98,7 +98,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
     // uniform substitution base cases
     case PredOf(fn, theta) => PredOf(fn, usubst(o, u, theta))
     case DifferentialFormula(g) => DifferentialFormula(usubst(o, u, g))
-    case x: Atomic => x
+    case x: AtomicFormula => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
 
@@ -118,6 +118,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
       USR(q.intersect(r), v++w, Choice(as, bs))
     case Loop(a) => val USR(q, v, _) = usubst(o, u, a); val USR(r, w, as) = usubst(o, v, a); USR(o, w, Loop(as))
+    case Dual(a) => val USR(q, v, as) = usubst(o, u, a); USR(q, v, Dual(as))
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }
 
