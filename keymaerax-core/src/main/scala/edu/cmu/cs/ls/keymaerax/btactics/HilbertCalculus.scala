@@ -157,7 +157,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val assignd            : DependentPositionTactic = new DependentPositionTactic("assignd") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        useAt("<:=> assign")(pos) | useAt("<:=> assign equality")(pos)
+        useAt("<:=> assign")(pos) | (if (pos.isSucc) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos))
       }
     }
   }

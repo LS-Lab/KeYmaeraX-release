@@ -767,6 +767,18 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "<:=> assign equality all".
+    *    <x:=f();>p(||) <-> \forall x (x=f() -> p(||))
+    * End.
+    * }}}
+    */
+  lazy val assigndEqualityAllAxiom = derivedAxiom("<:=> assign equality all",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\forall x_ (x_=f_() -> p_(||))".asFormula)),
+    useAt(assignDual2Axiom.fact, PosInExpr(0::Nil))(1, 0::Nil) &
+      byUS("[:=] assign equality")
+  )
+
+  /**
     * {{{Axiom "<:=> assign".
     *    <v:=t();>p(v) <-> p(t())
     * End.
@@ -794,6 +806,21 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> [x_:=f();]p(x_)".asFormula)),
     useAt(assigndAxiom.fact)(1, 0::Nil) &
       useAt("[:=] assign")(1, 1::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom ":= assign dual 2".
+    *    <x:=f();>p(||) <-> [x:=f();]p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assignDual2Axiom = derivedAxiom(":= assign dual 2",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula)),
+    useAt("[:=] assign equality exists")(1, 1::Nil) &
+      useAt("<:=> assign equality")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 

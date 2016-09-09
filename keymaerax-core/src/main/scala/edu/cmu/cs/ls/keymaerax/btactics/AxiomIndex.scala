@@ -39,7 +39,7 @@ object AxiomIndex {
     case "<> diamond" | "[] box" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign" | "<:=> assign" | "[':=] differential assign" | "<':=> differential assign" => directReduction
     case "[:=] assign equational" | "<:=> assign equational" |
-         "[:=] assign equality" | "<:=> assign equality" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
+         "[:=] assign equality" | "<:=> assign equality" | "<:=> assign equality all" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
     case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[:*] assign nondet" | "<:*> assign nondet" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
     case "[?] test"    | "<?> test"    => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
@@ -229,7 +229,7 @@ object AxiomIndex {
       }
 
       case Diamond(a, _) => a match {
-        case _: Assign => "<:=> assign" :: "<:=> assign equality" :: Nil
+        case _: Assign => "<:=> assign" :: "<:=> assign equality all" :: "<:=> assign equality" :: Nil
         case _: AssignAny => "<:*> assign nondet" :: Nil
         case _: Test => "<?> test" :: Nil
         case _: Compose => "<;> compose" :: Nil

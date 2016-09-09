@@ -85,6 +85,7 @@ object DerivationInfo {
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
+    new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}),
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
@@ -357,6 +358,7 @@ object DerivationInfo {
       , AxiomDisplayInfo(("¬¬","!!"), "(¬¬p↔p")
       , "doubleNegation", {case () => useAt(DerivedAxioms.doubleNegationAxiom)}),
     new DerivedAxiomInfo(":= assign dual", ":=D", "assignDual", {case () => useAt(DerivedAxioms.assignDualAxiom)}),
+    new DerivedAxiomInfo(":= assign dual 2", ":=D", "assignDual2", {case () => useAt(DerivedAxioms.assignDual2Axiom)}),
     new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", "vacuousAssignb", {case () => useAt(DerivedAxioms.vacuousAssignbAxiom)}),
     new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", "vacuousAssignd", {case () => useAt(DerivedAxioms.vacuousAssigndAxiom)}),
     new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", {case () => useAt(DerivedAxioms.loopApproxb)}),
