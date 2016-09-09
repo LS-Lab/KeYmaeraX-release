@@ -46,6 +46,7 @@ object AxiomIndex {
     case "[++] choice" | "<++> choice" => binaryDefault
     case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "[d] dual"    | "<d> dual" | "[d] dual direct"    | "<d> dual direct"    => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
 
     case "DW"              => (PosInExpr(Nil), Nil)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
@@ -206,7 +207,7 @@ object AxiomIndex {
         case _: Test => "[?] test" :: Nil
         case _: Compose => "[;] compose" :: Nil
         case _: Choice => "[++] choice" :: Nil
-        case _: Dual => "[d] dual" :: Nil
+        case _: Dual => "[d] dual direct" :: Nil
         //@note Neither "loop" nor "[*] iterate" are automatic if invariant generator wrong and infinite unfolding useless.
 //        case _: Loop => "loop" :: "[*] iterate" :: Nil
         //@note This misses the case where differential formulas are not top-level, but strategically that's okay. Also strategically, DW can wait until after DE.
@@ -234,7 +235,7 @@ object AxiomIndex {
         case _: Test => "<?> test" :: Nil
         case _: Compose => "<;> compose" :: Nil
         case _: Choice => "<++> choice" :: Nil
-        case _: Dual => "<d> dual" :: Nil
+        case _: Dual => "<d> dual direct" :: Nil
         case _: Loop => "<*> iterate" :: unknown
         case _: ODESystem => println("AxiomIndex for <ODE> still missing. Use tactic ODE"); unknown
         case _ => Nil
