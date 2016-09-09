@@ -1663,6 +1663,33 @@ object DerivedAxioms {
       useAt("[] box")(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
+  /**
+    * {{{
+    *   Axiom "[d] dual direct".
+    *    [{a;}^@]p(||) <-> <a;>p(||)
+    *   End.
+    * }}}
+    * @derived
+    */
+  lazy val dualbDirectAxiom = derivedAxiom("[d] dual direct",
+    Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
+    useExpansionAt("<> diamond")(1, 1::Nil) &
+      byUS(dualbAxiom.fact)
+  )
+
+  /**
+    * {{{
+    *   Axiom "<d> dual direct".
+    *    <{a;}^@>p(||) <-> [a;]p(||)
+    *   End.
+    * }}}
+    * @derived
+    */
+  lazy val dualdDirectAxiom = derivedAxiom("<d> dual direct",
+    Sequent(IndexedSeq(), IndexedSeq("<{a;}^@>p(||) <-> [a;]p(||)".asFormula)),
+    useExpansionAt("[] box")(1, 1::Nil) &
+      byUS("<d> dual")
+  )
 
   // differentials
 
