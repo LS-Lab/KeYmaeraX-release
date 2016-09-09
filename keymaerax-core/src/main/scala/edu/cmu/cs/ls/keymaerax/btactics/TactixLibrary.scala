@@ -59,23 +59,22 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step          : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
-    (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
-     else HilbertCalculus.stepAt(pos) partial)
-    | (assignb(pos) partial))
+    if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
+    else HilbertCalculus.stepAt(pos))
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
   /** Normalize to sequent form, customize branching with `beta`, customize simplification steps in antecedent/succedent with `stepL` and `stepR` */
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
     (OnAll(?(
-              (alphaRule partial)
+              alphaRule
                 | (closeId
-                | ((allR('R) partial)
-                | ((existsL('L) partial)
+                | (allR('R)
+                | (existsL('L)
                 | (close
-                | ((beta partial)
-                | ((stepL partial)
-                | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial))*
+                | (beta
+                | (stepL
+                | (stepR))))))))))*
     })
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
@@ -756,6 +755,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
     case (True, false) => Some("closeTrue")
     case (False, true) => Some("closeFalse")
+    // prefer simplification over left-right-swaps
+    case (Not(Box(_,Not(_))), _) => Some("<> diamond")
+    case (Not(Diamond(_,Not(_))), _) => Some("[] box")
     case (_: Not, true) => Some("notL")
     case (_: Not, false) => Some("notR")
     case (_: And, true) => Some("andL")
