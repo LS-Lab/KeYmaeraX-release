@@ -117,8 +117,10 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove !| deMorgan" in {check(notOr)}
   it should "prove !-> deMorgan" in {check(notImply)}
   it should "prove !<-> deMorgan" in {check(notEquiv)}
+  it should "prove -> converse" in {check(converseImply)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
+  it should "prove Kd diamond modus ponens" in {check(KdAxiom)}
   it should "prove PC1" in {check(PC1)}
   it should "prove PC2" in {check(PC2)}
   it should "prove PC3" in {check(PC3)}

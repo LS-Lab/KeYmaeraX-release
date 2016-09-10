@@ -492,6 +492,22 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{
+    *   Axiom "Kd diamond modus ponens".
+    *     [a{|^@|};](p(||)->q(||)) -> (<a{|^@|};>p(||) -> <a{|^@|};>q(||))
+    *   End.
+    * }}}
+    */
+  lazy val KdAxiom = derivedAxiom("Kd diamond modus ponens",
+    Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};](p(||)->q(||)) -> (<a{|^@|};>p(||) -> <a{|^@|};>q(||))".asFormula)),
+    useExpansionAt("<> diamond")(1, 1::0::Nil) &
+      useExpansionAt("<> diamond")(1, 1::1::Nil) &
+      useAt(converseImply.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(converseImply.fact, PosInExpr(0::Nil))(1, 0::1::Nil) &
+      byUS("K modal modus ponens")
+  )
+
+  /**
     * {{{Axiom "[]~><> propagation".
     *    [a;]p(||) & <a;>q(||) -> <a;>(p(||) & q(||))
     * End.
@@ -1226,6 +1242,14 @@ object DerivedAxioms {
     * }}}
     */
   lazy val implySelf = derivedAxiom("-> self", Sequent(IndexedSeq(), IndexedSeq("(p_() -> p_()) <-> true".asFormula)), prop)
+
+  /**
+    * {{{Axiom "-> converse".
+    *    (p() -> q()) <-> (!q() -> !p())
+    * End.
+    * }}}
+    */
+  lazy val converseImply = derivedAxiom("-> converse", Sequent(IndexedSeq(), IndexedSeq("(p_() -> q_()) <-> (!q_() -> !p_())".asFormula)), prop)
 
   /**
     * {{{Axiom "!& deMorgan".
