@@ -175,14 +175,13 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
-      val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
+      val fileContents = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
       val formula = KeYmaeraXProblemParser(fileContents)
       println(KeYmaeraXPrettyPrinter(formula))
       println("Parsed file successfully")
       sys.exit(0)
-    }
-    catch {
-      case e : Exception =>
+    } catch {
+      case e: Throwable =>
         if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
@@ -191,15 +190,18 @@ object KeYmaeraX {
   }
 
   private def parseBelleTactic(fileName: String) = {
-    val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
     try {
+      initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
+      val fileContents: String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
       BelleParser(fileContents)
       println("Parsed file successfully")
       sys.exit(0)
     } catch {
-      case _: Exception =>
-          println("Failed to parse file.")
-          sys.exit(-1)
+      case e: Throwable =>
+        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
+        println(e)
+        println("Failed to parse file")
+        sys.exit(-1)
     }
   }
 
