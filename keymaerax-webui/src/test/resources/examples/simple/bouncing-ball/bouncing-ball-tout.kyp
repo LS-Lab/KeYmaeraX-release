@@ -32,25 +32,9 @@ Problem.
     ]
     (h>=0 & h<=H)
 End.""""
-  tactic """"import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
-import scala.language.postfixOps
-
-class BouncingBallTacticGenerator extends (() => BelleExpr) {
-
-  def apply() = {
-    implyR(1) & (andL('L)*) & loop("v^2<=2*g()*(H-h) & h>=0".asFormula)(1) <(
-      QE,
-      QE,
-      composeb(1) & choiceb(1, 1::Nil) & testb(1, 1::0::Nil) & composeb(1, 1::1::Nil) &
-        testb(1, 1::1::Nil) & assignb(1, 1::1::1::Nil) & debug("Foo") & diffSolve()(1) & QE
-      )
-  }
-
-}
-""""
+  tactic """"implyR(1) & (andL('L)*) & loop({`v^2<=2*g()*(H-h) & h>=0`}, 1) & <(
+  QE & done,
+  QE & done,
+  composeb(1) & choiceb(1.1) & testb(1.1.0) & composeb(1.1.1) & testb(1.1.1) & assignb(1.1.1.1) & ODE(1) & done)""""
   proof """"""""
 End.
