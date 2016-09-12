@@ -152,9 +152,6 @@ object DerivationInfo {
         List((List("&Gamma;", "P"),List("&Delta;")),
           (List("&Gamma;", "Q"),List("&Delta;"))))
       , {case () => SequentCalculus.orL}),
-    new PositionTacticInfo("orR"
-      , RuleDisplayInfo(("∨R", "|R"), (List("&Gamma;"),List("P∨Q","&Delta;")), List((List("&Gamma;"),List("P","Q","&Delta;"))))
-      , {case () => SequentCalculus.orR}),
     new PositionTacticInfo("implyR"
       , RuleDisplayInfo(("→R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
       , {case () => SequentCalculus.implyR}),
@@ -278,7 +275,10 @@ object DerivationInfo {
 
   //
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
-    new TacticInfo("nil", "nil", {case () => Idioms.nil}),
+    new TacticInfo("close", "close", {case () => SequentCalculus.close}),
+    new PositionTacticInfo("orR1", "orR1", {case () => SequentCalculus.orR1}),
+    new PositionTacticInfo("orR2", "orR2", {case () => SequentCalculus.orR2}),
+    new PositionTacticInfo("nil", "nil", {case () => Idioms.nil}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),

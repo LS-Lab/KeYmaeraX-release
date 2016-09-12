@@ -239,10 +239,12 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
 
   /** Alpha rules are propositional rules that do not split */
   lazy val alphaRule: BelleExpr = (andL('_) ) |
-    ((orR('_) ) |
-      ((implyR('_) ) |
-        ((notL('_) ) |
-          (notR('_) )
+    ((orR1('_) ) |
+      ((orR2('_)) |
+        ((implyR('_) ) |
+          ((notL('_) ) |
+            (notR('_) )
+            )
           )
         )
       )

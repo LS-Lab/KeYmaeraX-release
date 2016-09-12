@@ -298,6 +298,10 @@ object TacticFactory {
         t(provable, pos1, pos2)
       }
     }
+
+    def by(t: Provable => Provable): BuiltInTactic = new BuiltInTactic(name) {
+      override def result(provable: Provable) = t(provable)
+    }
   }
 
   def anon(t: ((Position, Sequent) => BelleExpr)) = "ANON" by t

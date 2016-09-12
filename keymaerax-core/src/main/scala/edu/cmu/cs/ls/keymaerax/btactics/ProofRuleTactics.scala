@@ -276,14 +276,14 @@ private object ProofRuleTactics {
     }
   }
 
-  def closeTrue = new BuiltInRightTactic("CloseTrue") {
+  def closeTrue = new BuiltInRightTactic("closeTrue") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable, name)
       provable(core.CloseTrue(pos.top), 0)
     }
   }
 
-  def closeFalse = new BuiltInLeftTactic("CloseFalse") {
+  def closeFalse = new BuiltInLeftTactic("closeFalse") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable, name)
       provable(core.CloseFalse(pos.top), 0)

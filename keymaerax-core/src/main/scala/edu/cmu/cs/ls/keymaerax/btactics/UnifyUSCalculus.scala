@@ -947,7 +947,7 @@ trait UnifyUSCalculus {
 
           case Or(e, c) if !symbols(e).contains(DotFormula) =>
             (Provable.startProof(Sequent(ante, succ))
-            (OrRight(SuccPos(0)), 0)
+            (OrR1(), 0)
             (OrLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(0)), 0)
               // right branch
@@ -956,7 +956,7 @@ trait UnifyUSCalculus {
 
           case Or(c, e) if !symbols(e).contains(DotFormula) =>
             (Provable.startProof(Sequent(ante, succ))
-            (OrRight(SuccPos(0)), 0)
+            (OrR2(), 0)
             (OrLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 1)
               // right branch

@@ -70,17 +70,9 @@ trait SequentCalculus {
   val andR    : BuiltInRightTactic = "andR" by { (pr:Provable, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
   val orL     : BuiltInLeftTactic = "orL" by { (pr:Provable, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
-  /** Inverse of [[orR]].
-    * {{{
-    *   G |- D, D', D'', a | b
-    * -------------------------
-    *   G |- D, a, D', b, D''
-    * }}}
-    */
-  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
-  val orRi: DependentTactic = orRi()
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
-  val orR     : BuiltInRightTactic = "orR" by { (pr:Provable, pos:SuccPosition) => pr(OrRight(pos.checkTop), 0) }
+  val orR1 : BuiltInRightTactic = "orR1" by { (pr:Provable, pos:SuccPosition) => pr(OrR1(), 0) }
+  val orR2 : BuiltInRightTactic = "orR2" by { (pr:Provable, pos:SuccPosition) => pr(OrR2(), 0) }
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
   val implyL  : BuiltInLeftTactic = "implyL" by { (pr:Provable, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
@@ -166,7 +158,8 @@ trait SequentCalculus {
   // closing
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  lazy val close             : BelleExpr         = closeId | closeT | closeF
+  lazy val close             : BelleExpr         = closeId | closeT('R) | closeF('L)
+
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@todo improve efficiency by avoiding the unnecessary cohide2 step
   //@todo compare with ProofRuleTactics.close
@@ -206,19 +199,8 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  val closeT            : DependentTactic = new SingleGoalDependentTactic("closeTrue") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
-      ProofRuleTactics.closeTrue('R, True)
-    }
-  }
-  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  val closeF            : DependentTactic = new SingleGoalDependentTactic("closeFalse") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
-      ProofRuleTactics.closeFalse('L, False)
-    }
-  }
+  val closeT            : DependentPositionTactic = "closeTrue" by ((p:Position,s:Sequent) => ProofRuleTactics.closeTrue(p, True))
+  val closeF            : DependentPositionTactic = "closeFalse" by ((p:Position,s:Sequent) => ProofRuleTactics.closeFalse(p, False))
 
   // derived propositional
 

@@ -959,20 +959,21 @@ case class AndLeft(pos: AntePos) extends LeftRule {
   }
 }
 
-/**
-  * |R Or right.
-  * {{{
-  *   G |- D, p,q
-  * --------------- (|R Or right)
-  *   G |- p|q, D
-  * }}}
-  */
-case class OrRight(pos: SuccPos) extends RightRule {
-  val name: String = "Or Right"
-  /** |R Or right */
-  def apply(s: Sequent): immutable.List[Sequent] = {
+case class OrR1() extends Rule {
+  val name: String = "Or Right Left Projection"
+  def apply(s:Sequent): immutable.List[Sequent] = {
+    val pos = SuccPos(0)
     val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))))
+  }
+}
+
+case class OrR2() extends Rule {
+  val name: String = "Or Right Right Projection"
+  def apply(s:Sequent): immutable.List[Sequent] = {
+    val pos = SuccPos(0)
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(q))))
   }
 }
 

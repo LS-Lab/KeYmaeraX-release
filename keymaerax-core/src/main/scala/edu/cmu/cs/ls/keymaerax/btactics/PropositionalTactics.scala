@@ -40,30 +40,6 @@ private object PropositionalTactics {
   }
 
   /**
-   * Inverse of [[ProofRuleTactics.orR]].
-   *
-   * @author Stefan Mitsch
-   * @see [[ProofRuleTactics.orR]]
-   */
-  lazy val orRi: DependentTactic = orRi()
-  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = new SingleGoalDependentTactic("inverse or right") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(pos1 != pos2, "Two distinct positions required")
-      require(sequent.succ.length > pos1.getIndex && sequent.succ.length > pos2.getIndex,
-        "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has succ size " + sequent.succ.length)
-      val left = sequent.succ(pos1.getIndex)
-      val right = sequent.succ(pos2.getIndex)
-      val cutUsePos = AntePos(sequent.ante.length)
-      cut(Or(left, right)) <(
-        /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
-        /* show */
-          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2)) partial
-          else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1)) partial
-        )
-    }
-  }
-
-  /**
    * Inverse of [[ProofRuleTactics.andL]].
  *
    * @author Stefan Mitsch
@@ -112,7 +88,7 @@ private object PropositionalTactics {
       // list all cases explicitly, hide appropriate formulas in order to not blow up branching
       (((notL(-1) & notR(1) & assertT(1, 1) partial)
         | ((andL(-1) & andR(1) <((close | (hideL(-2) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
-        | ((orR(1) & orL(-1) <((close | (hideR(2) partial)) partial, (close | (hideR(1) partial)) partial) & assertT(1, 1) partial)
+        | ((orL(-1) <((orR1(1) | ((close | (hideR(2) partial)) partial)) partial, (orR2(1) | ((close | (hideR(1) partial)) partial) partial)) & assertT(1, 1) partial)
         | ((implyR(1) & implyL(-1) <((close | (hideR(1) partial)) partial, (close | (hideL('Llast) partial)) partial) & assertT(1, 1) partial)
         | ((allR(1) & allL(-1) partial)
         | (existsL(-1) & existsR(1) partial)
