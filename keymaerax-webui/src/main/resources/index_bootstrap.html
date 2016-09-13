@@ -8,7 +8,7 @@
     <meta name="author" content="Logical Systems Lab, Carnegie Mellon University">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>KeYmaera X</title>
+    <title>KeYmaera I</title>
 
     <!-- Bootstrap core CSS -->
     <link href="css/bootstrap.css" rel="stylesheet" type="text/css">
@@ -32,7 +32,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#">KeYmaera X</a>
+            <a class="navbar-brand" href="#">KeYmaera I</a>
         </div>
         <div class="navbar-collapse collapse">
             <form class="navbar-form navbar-right" role="form" ng-submit="processLogin()">
@@ -54,10 +54,10 @@
 <!-- Main jumbotron for a primary message or call to action -->
 <div class="jumbotron">
     <div class="container">
-        <h1>KeYmaera X
+        <h1>KeYmaera I
             <a ng-if="!isLocal" ng-cloak type="button" class="btn btn-info btn-lg"
                href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></h1>
-        <p>An aXiomatic Tactical Theorem Prover for Hybrid Systems</p>
+        <p>An Intuitionistic Theorem Prover</p>
     </div>
 </div>
 
@@ -66,14 +66,7 @@
     <div class="row">
         <div class="col-md-6">
             <blockquote>
-            <p>
-            KeYmaera&#160;X is a theorem prover for specifying and
-            verifying correctness properties of <i>hybrid systems</i>
-            (systems that mix discrete and continuous dynamics).
-            KeYmaera&#160;X implements <i>differential dynamic logic</i>
-            (dL) and provides tactics for a high degree of control over
-            automated proof search.
-            </p>
+
             <p ng-if="!isLocal" ng-cloak>
               Sign in at the top of this page to get started online, or click 'Download' to install locally.
             </p>
@@ -89,68 +82,13 @@
             </blockquote>
         </div>
         <div class="col-md-2"></div>
-        <div class="col-md-4">
-            <uib-carousel id="carousel-example-generic" interval="5000">
-                <uib-slide active="true">
-                    <img ng-src="images/help/proofTree.png" alt="Proof tree view" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Proof Tree</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/proofSuggestions.png" alt="Proof suggestions" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Proof Suggestions</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/proofByBrowsing.png" alt="Proof by browsing" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Proof by Browsing</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/proofByPointing.png" alt="Proof by pointing" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Proof by Pointing</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/proofFound.png" alt="Proof found" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Proof Found!</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/modelList.png" alt="Model list" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Model List</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/modelDetails.png" alt="Model details" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <h4>Model Details</h4>
-                    </div>
-                </uib-slide>
-                <uib-slide>
-                    <img ng-src="images/help/proofList.png" alt="Proof list" style="margin:auto;">
-                    <div class="carousel-caption">
-                        <p>Proof list</p>
-                    </div>
-                </uib-slide>
-            </uib-carousel>
-        </div>
     </div>
 
 </div> <!-- /container -->
 
 <div class="footer">
     <div class="container">
-        <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
-            <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
-            <span ng-if="!versionInfoAvailable">(could not retrieve version information from KeYmaeraX.org).</span>
-            <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
+        <p class="text-muted">KeYmaera I
             &copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2016</p>
     </div>
 </div>
