@@ -50,17 +50,6 @@
             </div>
             <div class="col-md-2"></div>
             <div class="col-md-4">
-                <div uib-carousel class="k4-examples-carousel" active="active" interval="5000">
-                    <div uib-slide ng-repeat="repo in examples track by repo.id" index="repo.id">
-                        <img ng-src="{{repo.image}}" style="margin:auto;">
-                        <div class="k4-examples-carousel-caption">
-                            <h4>{{repo.title}} <button class="btn btn-default"
-                                                       ng-click="importRepo(repo.url)"
-                                                       ng-controller="ModelUploadCtrl">Import</button></h4>
-                            <p>{{repo.description}} <small><a ng-href="{{repo.infoUrl}}">Details...</a></small></p>
-                        </div>
-                    </div>
-                </div>
             </div>
     </div>
 
