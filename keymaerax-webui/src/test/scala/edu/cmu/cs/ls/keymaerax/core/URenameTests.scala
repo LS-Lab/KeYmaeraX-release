@@ -111,6 +111,11 @@ class URenameTests extends TacticTestBase {
     }
   }
 
+  "Bound Renaming" should "refuse to rename = x -> y when formula cares about x'" in {
+    val fml = Diamond(Assign(Variable("x"), DifferentialSymbol(BaseVariable("x"))),Equal(Variable("x"), DifferentialSymbol(BaseVariable("x"))))
+    val result = BoundRenaming(Variable("x"),Variable("y"),SuccPos(1))(fml)
+    a [RenamingClashException] shouldBe thrownBy{BoundRenaming(Variable("x"),Variable("y"),SuccPos(1))(fml)}
+  }
   //@todo test similar unsound conclusions from other semantic renaming
 
 
