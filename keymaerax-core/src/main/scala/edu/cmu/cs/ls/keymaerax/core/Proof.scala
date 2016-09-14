@@ -1131,6 +1131,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
       case Forall(vars, g) if vars==immutable.IndexedSeq(what) => Forall(immutable.IndexedSeq(repl), renaming(g))
       case Exists(vars, g) if vars==immutable.IndexedSeq(what) => Exists(immutable.IndexedSeq(repl), renaming(g))
       //@note e is not in scope of x so is, unlike g, not affected by the renaming
+      case Box    (Assign(x, e), g) if x==what => Box    (Assign(repl, e), renaming(g))
       case Diamond(Assign(x, e), g) if x==what => Diamond(Assign(repl, e), renaming(g))
       case _ => throw new RenamingClashException("Bound renaming only to bound variables " +
         what + " is not bound by a quantifier or single assignment", this.toString, f.prettyString)
