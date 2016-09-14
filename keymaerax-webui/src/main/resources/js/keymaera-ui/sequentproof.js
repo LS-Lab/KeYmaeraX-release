@@ -161,6 +161,15 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         event.target.focus();
       }
 
+      scope.highlightStepPosition = function(nodeId, highlight) {
+        var parent = sequentProofData.proofTree.nodesMap[nodeId];
+        var fstChild = sequentProofData.proofTree.nodesMap[parent.children[0]];
+        var posId = fstChild.rule.pos.replace(/\./g, "\\,");
+        var element = $("#seq_"+nodeId + " #fml_"+posId);
+        if (highlight) element.addClass("k4-highlight-steppos");
+        else element.removeClass("k4-highlight-steppos");
+      }
+
       flatPath = function(item) {
         var result = [];
         $.each(item.deduction.sections, function(i, v) { $.merge(result, v.path); });

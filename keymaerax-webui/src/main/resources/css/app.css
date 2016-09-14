@@ -444,6 +444,13 @@ del {
   white-space: pre-wrap;
 }
 
+.k4-highlight-steppos {
+  border-bottom: black solid;
+}
+.k4-highlight-steppos > span {
+  border-bottom: white dotted;
+}
+
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
   opacity: 1;
   position: absolute;
