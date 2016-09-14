@@ -450,6 +450,15 @@ del {
 .k4-highlight-steppos > span {
   border-bottom: white dotted;
 }
+.k4-highlight-steppos-modality {
+  border-bottom: black solid;
+}
+.k4-highlight-steppos-modality > span:first-child {
+  border-bottom: black solid;
+}
+.k4-highlight-steppos-modality > span {
+  border-bottom: white dotted;
+}
 
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
   opacity: 1;

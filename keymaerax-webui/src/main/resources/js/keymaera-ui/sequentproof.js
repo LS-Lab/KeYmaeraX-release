@@ -166,8 +166,10 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var fstChild = sequentProofData.proofTree.nodesMap[parent.children[0]];
         var posId = fstChild.rule.pos.replace(/\./g, "\\,");
         var element = $("#seq_"+nodeId + " #fml_"+posId);
-        if (highlight) element.addClass("k4-highlight-steppos");
-        else element.removeClass("k4-highlight-steppos");
+        if (highlight) {
+          if (element.text().startsWith("[") || element.text().startsWith("&lt;")) element.addClass("k4-highlight-steppos-modality");
+          else element.addClass("k4-highlight-steppos");
+        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-modality");
       }
 
       flatPath = function(item) {
