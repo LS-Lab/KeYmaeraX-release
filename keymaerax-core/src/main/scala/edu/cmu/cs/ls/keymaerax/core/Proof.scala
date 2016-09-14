@@ -1131,7 +1131,6 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
       case Forall(vars, g) if vars==immutable.IndexedSeq(what) => Forall(immutable.IndexedSeq(repl), renaming(g))
       case Exists(vars, g) if vars==immutable.IndexedSeq(what) => Exists(immutable.IndexedSeq(repl), renaming(g))
       //@note e is not in scope of x so is, unlike g, not affected by the renaming
-      case Box    (Assign(x, e), g) if x==what => Box    (Assign(repl, e), renaming(g))
       case Diamond(Assign(x, e), g) if x==what => Diamond(Assign(repl, e), renaming(g))
       case _ => throw new RenamingClashException("Bound renaming only to bound variables " +
         what + " is not bound by a quantifier or single assignment", this.toString, f.prettyString)
@@ -1142,7 +1141,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
 
   /**
     * Check whether this renaming is admissible for expression e, i.e.
-    * the new name repl does not already occur (or the renaming was the identity).
+    * the new name repl and primed version of old name what do not already occur (or the renaming was the identity).
     *
     * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
     * @note This implementation currently errors if repl.sort!=Real
@@ -1151,7 +1150,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
     */
   private def admissible(e: Expression): Boolean =
     //@note StaticSemantics.symbols(e) has the same (diff)vars as StaticSemantics.vars(e) unless StateDependent occur, which cause a renaming clash though.
-    what == repl || StaticSemantics.vars(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
+    what == repl || StaticSemantics.vars(e).intersect(Set(repl, DifferentialSymbol(repl), DifferentialSymbol(what))).isEmpty
 }
 
 
