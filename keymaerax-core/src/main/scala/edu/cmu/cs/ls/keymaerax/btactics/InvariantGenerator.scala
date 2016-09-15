@@ -130,7 +130,7 @@ object InvariantGenerator {
       ToolProvider.pdeTool().get.pdeSolve(ode)
     } catch {
       case e: Exception => if (BelleExpr.DEBUG) println("inverseCharacteristic generation unsuccessful: " + e)
-        e.printStackTrace()
+        //e.printStackTrace()
         Nil.iterator
     }
     if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
