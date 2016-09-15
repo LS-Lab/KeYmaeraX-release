@@ -53,7 +53,7 @@ object StaticSemantics {
     *
     * @param fv Free names (maybe read)
     * @param bv Bound names (maybe written)
-    * @note The core uses bv only used in [[BoundRenaming]].
+    * @note The core does not uses bv.
     */
   sealed case class VCF(fv: SetLattice[Variable],
                         bv: SetLattice[Variable]) {
