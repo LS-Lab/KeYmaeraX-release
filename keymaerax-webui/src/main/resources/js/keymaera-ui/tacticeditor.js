@@ -86,8 +86,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             intros = $.map(intros, function(e, i) {
               var trimmed = e[1].trim();
               //@note charAt(0) without trailing nil, at end with trailing nil
-              //return trimmed.charAt(0) == '&' ? trimmed.substring(1, trimmed.length) : trimmed;
-              return trimmed.charAt(trimmed.length-1) == '&' ? trimmed.substring(0, trimmed.length-1) : trimmed;
+              return trimmed.charAt(0) == '&' ? trimmed.substring(1, trimmed.length) : trimmed;
+              //return trimmed.charAt(trimmed.length-1) == '&' ? trimmed.substring(0, trimmed.length-1) : trimmed;
             })
 
             //@todo what if more than 1 intro?

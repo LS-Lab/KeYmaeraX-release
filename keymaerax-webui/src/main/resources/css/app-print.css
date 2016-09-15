@@ -1,5 +1,5 @@
 :root{
-  --lsblue:#16303A;             /* A dark blue (almost var(--lsmain)) */
+  --lsblue:#16303A;             /* A dark blue (almost black) */
   --lslightblue:#2E6579;        /* Blue (matte) */
   --lsverylightblue:#4699B9;    /* Blue (light matte) */
   --lssuperlightblue:#BACBD9;   /* Blue (matte, almost white) */
@@ -21,6 +21,23 @@ a {
     color: var(--lsmain);
 }
 
+.navbar-inverse {
+  background-color: var(--lssuperlightblue);
+  border-color: var(--lsblue);
+}
+.navbar-inverse .navbar-brand {
+  color: var(--lsmain);
+  font-weight: bold;
+}
+.navbar-inverse .navbar-text {
+  color: var(--lsmain);
+  font-weight: bold;
+}
+.navbar-inverse .navbar-nav > li > a {
+  color: var(--lsmain);
+  font-weight: bold;
+}
+
 .editable-click:hover, a.editable-click:hover {
     text-decoration: none;
     color: var(--lsmain);
@@ -34,17 +51,17 @@ a {
 }
 
 body {
-  font-size: 16px;
+  font-size: 20px;
   color: var(--lsmain);
   background-color: var(--lsmainback);
 }
 
 .dropdown-menu {
-  font-size: 14px;
+  font-size: 18px;
 }
 
 pre {
-  font-size: 18px;
+  font-size: 22px;
 }
 
 /*
@@ -90,7 +107,7 @@ table .btn{
 
 .match,
 .textdiff span {
-  color: gray;
+  color: var(--lslightblue);
 }
 
 .ins,
@@ -115,7 +132,7 @@ del {
   z-index: 2;
   color: var(--lsmainback);
   background-color: var(--lslightblue);
-  border-color: var(--lsblue);
+  border-color: #var(--lsblue);
 }
 .list-group-item.active .list-group-item-text,
 .list-group-item.active:hover .list-group-item-text,
@@ -129,7 +146,7 @@ del {
 
 .popover {
   max-width: none;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .tooltip-inner {
@@ -356,7 +373,7 @@ del {
   border-top: none;
   border-right: none;
   border-bottom: thin solid var(--lsmain);
-  margin: 0 0 0 6em;
+  margin: 0 0 0 4em;
 }
 
 /* must be after k4-proofrow: overrides border styling */
@@ -373,7 +390,7 @@ del {
   padding: 0 0 0 0;
   margin: -1.4ex 0 0 0.5em;
   text-align: right;
-  width: 6em;
+  width: 3.5em;
   display: block;
   position: absolute;
   left: 0;
@@ -395,7 +412,7 @@ del {
   overflow-x: hidden;
   text-overflow: clip;
   text-align: right;
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .k4-proofrow .k4-prooficon {
@@ -492,6 +509,9 @@ del {
 .k4-highlight-steppos-modality > span:first-child {
   border-bottom: var(--lsmain) solid;
 }
+.k4-highlight-steppos-modality > span:first-child > span {
+  border-bottom: var(--lsmainback) dotted;
+}
 .k4-highlight-steppos-modality > span {
   border-bottom: var(--lsmainback) dotted;
 }
@@ -508,7 +528,7 @@ del {
   background: var(--lssuperlightblue);
   border: 1px solid var(--lsblue);
   padding: 4px 4px 4px 4px;
-  color: var(--lsmain);
+  color: var(--lsblue);
 }
 .k4-formula.hover .k4-formula-content:before, .k4-formula:hover .k4-formula-content:before {
     display: none;
@@ -584,14 +604,14 @@ del {
   background: var(--lslightblue);
 }
 .k4-formula > ul:first-child li:hover a {
-  color: var(--lsmain);
+  color: var(--lsblue);
 }
 .k4-formula .k4-formula-content {
   padding: 4px 4px 4px 4px;
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
   display: table-cell;
-  font-size: 22px;
+  font-size: 26px;
 }
 .k4-formula .k4-formula-content-abbreviate {
   padding: 4px 4px 4px 4px;
@@ -603,7 +623,7 @@ del {
  *  Overridden UI-Tree
  */
 .tree-node {
-    border: 0px solid var(--lsmain);
+    border: 0px solid #var(--lsmain);
     color: var(--lsmain);
     font-weight: normal;
     font-size: small;

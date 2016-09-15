@@ -10,6 +10,7 @@
                     <input ng-class="{'k4-narrowinput': premise.numInputs > 2}" type="text" name="{{antePart.text}}"
                            placeholder="{{antePart.placeholder}}"
                            ng-model="antePart.value" ng-model-options="{getterSetter: true}"
+                           ng-enter="applyInputTactic(tacticPopover.formulaId(), tactic)"
                            ng-if="!premise.isClosed && antePart.isInput" required/>
                 </span>
                 {{$last ? '' : ','}}
@@ -25,6 +26,7 @@
                     <input ng-class="{'k4-narrowinput': premise.numInputs > 2}" type="text" name="{{succPart.text}}"
                            placeholder="{{succPart.placeholder}}"
                            ng-model="succPart.value" ng-model-options="{getterSetter: true}"
+                           ng-enter="applyInputTactic(tacticPopover.formulaId(), tactic)"
                            ng-if="!premise.isClosed && succPart.isInput" required/>
                 </span>
                 {{$last ? '' : ','}}

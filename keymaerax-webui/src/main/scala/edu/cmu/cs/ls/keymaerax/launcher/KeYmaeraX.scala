@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 
 import scala.collection.immutable
@@ -175,14 +175,13 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
-      val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
+      val fileContents = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
       val formula = KeYmaeraXProblemParser(fileContents)
       println(KeYmaeraXPrettyPrinter(formula))
       println("Parsed file successfully")
       sys.exit(0)
-    }
-    catch {
-      case e : Exception =>
+    } catch {
+      case e: Throwable =>
         if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
@@ -191,15 +190,18 @@ object KeYmaeraX {
   }
 
   private def parseBelleTactic(fileName: String) = {
-    val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
     try {
+      initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
+      val fileContents: String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
       BelleParser(fileContents)
       println("Parsed file successfully")
       sys.exit(0)
     } catch {
-      case _: Exception =>
-          println("Failed to parse file.")
-          sys.exit(-1)
+      case e: Throwable =>
+        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
+        println(e)
+        println("Failed to parse file")
+        sys.exit(-1)
     }
   }
 
@@ -211,7 +213,7 @@ object KeYmaeraX {
       case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
-      case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.scala\n\n" + usage); exit(1)
+      case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
       case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
       case "-tool" => println(noValueMessage + "Please use: -tool mathematica|z3\n\n" + usage); exit(1)
@@ -306,39 +308,43 @@ object KeYmaeraX {
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
    *
    * @param options The prover options.
-   * @todo tactic should default to master and builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
    */
   def prove(options: OptionMap) = {
     require(options.contains('in), usage)
-    require(options.contains('tactic), usage)
 
-    val tacticFileNameDotScala = options.get('tactic).get.toString
-    //assert(tacticFileNameDotScala.endsWith(".scala"),
-    //  "\n[Error] Wrong file name " + tacticFileNameDotScala + " used for -tactic! KeYmaera X only reads .scala tactic file. Please use: -tactic FILENAME.scala")
-    val tacticSource = scala.io.Source.fromFile(tacticFileNameDotScala).mkString
-
-    val tacticGenClasses = new ScalaTacticCompiler().compile(tacticSource)
-    assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
-    val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[(()=> BelleExpr)]
-    val tactic = tacticGenerator()
-
-    // KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))
-    val inputFileNameDotKey = options.get('in).get.toString
-    assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
-      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key or .kyx files. Please use: -prove FILENAME.[key/kyx]")
-    val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
-    val inputModel = KeYmaeraXProblemParser(input)
-    val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
-    val inputFileName = inputFileNameDotKey.dropRight(4)
-    var outputFileName = inputFileName
-    if(options.contains('out)) {
-      val outputFileNameDotProof = options.get('out).get.toString
-      assert(outputFileNameDotProof.endsWith(".proof"),
-        "\n[Error] Wrong file name " + outputFileNameDotProof + " used for -out! KeYmaera X only produces proof evidence as .proof file. Please use: -out FILENAME.proof")
-      outputFileName = outputFileNameDotProof.dropRight(6)
+    val (tactic: BelleExpr, tacticSource: String) = options.get('tactic) match {
+      case Some(t) =>
+        val fileName = t.toString
+        val source = scala.io.Source.fromFile(fileName).mkString
+        if (fileName.endsWith(".scala")) {
+          val tacticGenClasses = new ScalaTacticCompiler().compile(source)
+          assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
+          val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[(()=> BelleExpr)]
+          (tacticGenerator(), source)
+        } else if (fileName.endsWith(".kyt")) {
+          (BelleParser(source), source)
+        } else {
+          ???
+          //@todo builtin tactic names at least from ExposedTacticsLibrary should be accepted (without file extension)
+        }
+      case None => TactixLibrary.auto
     }
 
-    val pw = new PrintWriter(outputFileName + ".proof")
+    // KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))
+    val inputFileName = options('in).toString
+    assert(inputFileName.endsWith(".key") || inputFileName.endsWith(".kyx"),
+      "\n[Error] Wrong file name " + inputFileName + " used for -prove! KeYmaera X only proves .key or .kyx files. Please use: -prove FILENAME.[key/kyx]")
+    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputModel = KeYmaeraXProblemParser(input)
+    val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+    var outputFileName = inputFileName.dropRight(4) + ".kyp"
+    if(options.contains('out)) {
+      outputFileName = options('out).toString
+      assert(outputFileName.endsWith(".kyp"),
+        "\n[Error] Wrong file name " + outputFileName + " used for -out! KeYmaera X only produces proof evidence as .kyp file. Please use: -out FILENAME.kyp")
+    }
+
+    val pw = new PrintWriter(outputFileName)
 
     val proofStart: Long = Platform.currentTime
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
@@ -358,7 +364,7 @@ object KeYmaeraX {
       val evidence = ToolEvidence(List(
         "tool" -> "KeYmaera X",
         "model" -> input,
-        "tactic" -> scala.io.Source.fromFile(tacticFileNameDotScala).mkString,
+        "tactic" -> tacticSource,
         "proof" -> "" //@todo serialize proof
       )) :: Nil
 

@@ -605,7 +605,10 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
   def resultingResponses() = {
     val items = db.agendaItemsForProof(proofId.toInt)
     val closed = db.getProofInfo(proofId).closed
-    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items, proofFinished = closed))
+    val proofTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items, proofFinished = closed)
+    val (_ :: leaves) = proofTree.leavesAndRoot
+    val leavesWithPositions = leaves.map(n => (n, RequestHelper.stepPosition(db, n)))
+    val response = new AgendaAwesomeResponse(proofId, proofTree.root, leavesWithPositions, proofTree.leaves)
     response :: Nil
   }
 }
@@ -664,7 +667,8 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
     tree.findNode(nodeId).flatMap(_.parent) match {
       case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
       case Some(parent) =>
-        val response = new ProofTaskParentResponse(parent)
+        val positionLocator = RequestHelper.stepPosition(db, parent)
+        val response = new ProofTaskParentResponse(parent, positionLocator)
         response :: Nil
     }
   }
@@ -682,7 +686,8 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
     }
     /* To start with, always send the whole path. */
     val parentsRemaining = 0
-    val response = new GetPathAllResponse(path.reverse, parentsRemaining)
+    val pathWithPos = path.map(n => (n, RequestHelper.stepPosition(db, n)))
+    val response = new GetPathAllResponse(pathWithPos.reverse, parentsRemaining)
     response :: Nil
   }
 }
@@ -691,7 +696,7 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
   def resultingResponses() = {
     val closed = db.getProofInfo(proofId).closed
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-    val node = tree.nodes.find({case node => node.id.toString == nodeId})
+    val node = tree.nodes.find(_.id.toString == nodeId)
     node match {
       case None => throw new Exception("Node not found")
       case Some(node) =>
@@ -705,7 +710,8 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
             done = true
           }
         }
-          new GetBranchRootResponse(currNode) :: Nil
+        val positionLocator = RequestHelper.stepPosition(db, currNode)
+        new GetBranchRootResponse(currNode, positionLocator) :: Nil
     }
   }
 }
@@ -864,12 +870,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
 
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
+    val proof = db.getProofInfo(proofId)
+    val closed = proof.closed
     if (closed) {
       return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
     }
-    val proof = db.getProofInfo(proofId)
-    val model = db.getModel(proof.modelId)
     val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
@@ -963,8 +968,9 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
         case Some(Left(BelleProvable(_, _))) =>
           val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
           val parentNode = finalTree.findNode(nodeId).get
+          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
-          new TaskResultResponse(parentNode, parentNode.children, progress = true)
+          new TaskResultResponse(parentNode, parentNode.children, positionLocator, progress = true)
         case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
@@ -1188,4 +1194,20 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) exten
 
 class MockRequest(resourceName: String) extends Request {
   override def resultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
+}
+
+object RequestHelper {
+  /** Queries the database for the position where the tactic that created the node `node` was applied. */
+  def stepPosition(db: DBAbstraction, node: TreeNode): Option[PositionLocator] = {
+    node.startStep match {
+      case Some(step) =>
+        BelleParser(db.getExecutable(step.executableId).belleExpr) match {
+          case pt: AppliedPositionTactic => Some(pt.locator)
+          case pt: AppliedDependentPositionTactic => Some(pt.locator)
+          case _ => None
+        }
+      case None => None
+    }
+  }
+
 }

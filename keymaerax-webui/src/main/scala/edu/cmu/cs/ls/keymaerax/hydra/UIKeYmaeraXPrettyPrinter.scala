@@ -27,7 +27,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     .replaceAllLiterally("&", "&#8743;")
     .replaceAllLiterally("!", "&not;")
     .replaceAllLiterally("|", "&#8744;")
-    .replaceAllLiterally("->", "→")
+    .replaceAllLiterally("->", "&rarr;")
     .replaceAllLiterally("<->", "&#8596;")
     .replaceAllLiterally("<=", "&leq;")
     .replaceAllLiterally("!=", "&ne;")
@@ -44,13 +44,19 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     .replaceAllLiterally(HTML_OPEN, "<")
     .replaceAllLiterally(HTML_CLOSE, ">")
 
-  protected override def emit(q: PosInExpr, s: String): String = wrap(topId + "," + q.pos.mkString(","), s)
+  protected override def emit(q: PosInExpr, s: String): String = wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s)
+
+  protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
+    case t: Power =>
+      wrapLeft(t, pp(q++0, t.left)) + "$#@@$sup$@@#$" + wrapRight(t, pp(q++1, t.right)) + "$#@@$/sup$@@#$"
+    case _ => super.pp(q, term)
+  })
 
 //  private def wrap(id: String, content: String): String =
 //    HTML_OPEN + "term id=\"" + id + "\"" + HTML_CLOSE + content + HTML_OPEN + "/term" + HTML_CLOSE
 
   private def wrap(id: String, content: String): String =
-    if (plainText) content
+    if (plainText) s"""${HTML_OPEN}span id="fml_$id"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE"""
     else s"""${HTML_OPEN}span ng-class="{'hl':true, 'hlhover':isFormulaHighlighted('$id')}" id="$id"
         |  ng-mouseover="$$event.stopPropagation();highlightFormula('$id')"
         |  ng-mouseleave="$$event.stopPropagation();highlightFormula(undefined)"

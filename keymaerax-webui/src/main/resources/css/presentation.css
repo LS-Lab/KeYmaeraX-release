@@ -1,31 +1,43 @@
+:root{
+  --lsblue:#16303A;             /* A dark blue (almost black) */
+  --lslightblue:#2E6579;        /* Blue (matte) */
+  --lsverylightblue:#4699B9;    /* Blue (light matte) */
+  --lssuperlightblue:#BACBD9;   /* Blue (matte, almost white) */
+  --lsgreen:#5ECEF9;            /* Blue (bright) */
+  --lslightgreen:#54B9DF;       /* Blue (bright 2) */
+  --lsmain:black;
+  --lsmainback:white;
+}
+
+
 /*
 High-contrast color and bigger fonts
 */
 a {
-  color: black;
+  color: var(--lsmain);
   text-decoration: none;
 }
 
 .navbar-default .navbar-nav > li > a {
-    color: black;
+    color: var(--lsmain);
 }
 
 .editable-click:hover, a.editable-click:hover {
     text-decoration: none;
-    color: black;
-    border-bottom-color: black;
+    color: var(--lsmain);
+    border-bottom-color: var(--lsmain);
 }
 
 .editable-click, a.editable-click {
     text-decoration: none;
-    color: black;
-    border-bottom: dashed 1px black;
+    color: var(--lsmain);
+    border-bottom: dashed 1px var(--lsmain);
 }
 
 body {
   font-size: 18px;
-  color: black;
-  background-color: white;
+  color: var(--lsmain);
+  background-color: var(--lsmainback);
 }
 
 .dropdown-menu {
@@ -59,15 +71,15 @@ End Color
   display: block;
 }
 input[readonly] {
-  background-color: white !important;
+  background-color: var(--lsmainback) !important;
   cursor: text !important;
 }
 
 code {
   padding: 2px 4px;
   font-size: 90%;
-  color: black;
-  background-color: #f9f2f4;
+  color: var(--lsmain);
+  background-color: var(--lsmainback);
   border-radius: 4px;
 }
 
@@ -77,24 +89,39 @@ table .btn{
   margin-right: -3px;
 }
 
+.match,
+.textdiff span {
+  color: gray;
+}
+
+.ins,
+ins {
+  color: var(--lsmain);
+}
+
+.del,
+del {
+  color: var(--lsmain);
+}
+
 .hl {background: transparent; }
 .hlhover {
-    background-color:black;
-    color: white;
+    background-color:var(--lsmain);
+    color: var(--lsmainback);
 }
 
 .list-group-item.active,
 .list-group-item.active:hover,
 .list-group-item.active:focus {
   z-index: 2;
-  color: #fff;
-  background-color: #7297A6;
-  border-color: #2F3640;
+  color: var(--lsmainback);
+  background-color: var(--lslightblue);
+  border-color: var(--lsblue);
 }
 .list-group-item.active .list-group-item-text,
 .list-group-item.active:hover .list-group-item-text,
 .list-group-item.active:focus .list-group-item-text {
-  color: #e1edf7;
+  color: var(--lssuperlightblue);
 }
 
 .container {
@@ -110,13 +137,28 @@ table .btn{
   max-width: none;
 }
 
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
+
+.k4-axiom-key {
+  font-weight: bold;
+}
+
+.k4-tacticeditor {
+  font-family:monospace;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .k4-drag {
-  border-bottom: 1px dashed #000;
+  border-bottom: 1px dashed var(--lsmain);
   padding-bottom: 3px;
 }
 
 .k4-drag-over {
-  border: 1px dashed #000;
+  border: 1px dashed var(--lsmain);
   padding: 3px;
 }
 
@@ -140,8 +182,8 @@ table .btn{
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background-color: #BACBD9;
-  border: solid 3px #4D6473;
+  background-color: var(--lssuperlightblue);
+  border: solid 3px var(--lsblue);
   opacity: 0.6;
   position: absolute;
   top: 0;
@@ -174,7 +216,7 @@ table .btn{
 
 .spinner-overlay {
   opacity: .75;
-  background-color: #4D6473;
+  background-color: var(--lsblue);
   width: calc(100% + 10px);
   height: calc(100% + 30px);
   position: absolute;
@@ -188,7 +230,7 @@ table .btn{
   position: absolute;
   top: calc(50% + 45px);
   left: calc(50% - 100px);
-  color: #fff;
+  color: var(--lsmainback);
   z-index: 10;
 }
 
@@ -207,7 +249,7 @@ table .btn{
   z-index: 10;
   padding-top: 20px;
   padding-bottom: 20px;
-  color: #fff;
+  color: var(--lsmainback);
   background-color:rgba(0, 0, 0, 0.7);
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
@@ -278,7 +320,7 @@ table .btn{
   height: 15px;
   font-size: x-small;
   border: none;
-  color: black;
+  color: var(--lsmain);
   display: list-item;
 }
 
@@ -301,7 +343,7 @@ table .btn{
   height: 3ex;
   font-size: x-small;
   border: none;
-  color: black;
+  color: var(--lsmain);
   display: block;
   white-space: nowrap;
   overflow-x: hidden;
@@ -314,7 +356,7 @@ table .btn{
   border-left: none;
   border-top: none;
   border-right: none;
-  border-bottom: thin solid black;
+  border-bottom: thin solid var(--lsmain);
   margin: 0 0 0 6em;
 }
 
@@ -341,7 +383,7 @@ table .btn{
   height: 3ex;
   font-size: x-small;
   border: none;
-  color: black;
+  color: var(--lsmain);
   display: inline-block;
   white-space: nowrap;
   width: 6.5em;
@@ -411,7 +453,7 @@ table .btn{
     padding-top: 6px;
 	padding-bottom: 6px;
 	text-shadow:0 1px 1px rgba(255, 255, 255, 0.75);
-	border:1px solid #dddddd;
+	border:1px solid var(--lsverylightblue);
 	border-top-width:0;
 	-webkit-border-radius:7px;
 	border-radius:7px;
@@ -435,19 +477,39 @@ table .btn{
   text-overflow: ellipsis;
 }
 
+.k4-formula-preformat {
+  white-space: pre-wrap;
+}
+
+.k4-highlight-steppos {
+  border-bottom: var(--lsmain) solid;
+}
+.k4-highlight-steppos > span {
+  border-bottom: var(--lsmainback) dotted;
+}
+.k4-highlight-steppos-modality {
+  border-bottom: var(--lsmain) solid;
+}
+.k4-highlight-steppos-modality > span:first-child {
+  border-bottom: var(--lsmain) solid;
+}
+.k4-highlight-steppos-modality > span {
+  border-bottom: var(--lsmainback) dotted;
+}
+
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
   opacity: 1;
   position: absolute;
   left: 0px; /* -79px with text */
   top: 0px;
   z-index: 100;
-  color: black;
+  color: var(--lsmain);
 }
 .k4-formula.hover .k4-formula-content, .k4-formula:hover .k4-formula-content {
-  background: #BACBD9;
-  border: 1px solid #4D6473;
+  background: var(--lssuperlightblue);
+  border: 1px solid var(--lsblue);
   padding: 4px 4px 4px 4px;
-  color: black;
+  color: var(--lsmain);
 }
 .k4-formula.hover .k4-formula-content:before, .k4-formula:hover .k4-formula-content:before {
     display: none;
@@ -466,7 +528,7 @@ table .btn{
 .k4-formula-content > ul:first-child li {
   font-size: x-small;
   border: none;
-  color: black;
+  color: var(--lsmain);
   display: list-item;
   width: 2em;
 }
@@ -495,10 +557,10 @@ table .btn{
 }
 .k4-formula > ul:first-child li {
   height: 15px;
-  border: 1px solid #4D6473;
+  border: 1px solid var(--lsblue);
   display: list-item;
   margin: 0 -1px;
-  background: #BACBD9;
+  background: var(--lssuperlightblue);
   border-top-left-radius: 3px;
   border-bottom-left-radius: 3px;
   width: 20px; /* 100px with text */
@@ -513,17 +575,17 @@ table .btn{
   margin-right: 8px;
 }
 .k4-formula > ul:first-child li a {
-  color: black;
+  color: var(--lsmain);
   padding: 0 0 0 0px; /* padding: 0 5px 0 10px; */
   display: block;
   line-height: 13px;
   font-size: 10px;
 }
 .k4-formula > ul:first-child li:hover {
-  background: #7297A6;
+  background: var(--lslightblue);
 }
 .k4-formula > ul:first-child li:hover a {
-  color: black;
+  color: var(--lsmain);
 }
 .k4-formula .k4-formula-content {
   padding: 4px 4px 4px 4px;
@@ -542,15 +604,15 @@ table .btn{
  *  Overridden UI-Tree
  */
 .tree-node {
-    border: 0px solid #black;
-    color: black;
+    border: 0px solid var(--lsmain);
+    color: var(--lsmain);
     font-weight: normal;
     font-size: small;
 }
 .tree-node-selected {
-    border: 1px solid #4D6473;
-    color: black;
-    background: #BACBD9;
+    border: 1px solid var(--lsblue);
+    color: var(--lsmain);
+    background: var(--lssuperlightblue);
     font-weight: bold;
     font-size: small;
 }
@@ -559,8 +621,8 @@ table .btn{
 }
 .tree-handle {
     padding: 10px;
-    background: #4D6473;
-    color: #FFF;
+    background: var(--lsblue);
+    color: var(--lsmainback);
     margin-right: 10px;
 }
 
@@ -568,10 +630,10 @@ table .btn{
  * Errors on input fields.
  */
 .k4-invalid-input {
-  border-color: #FF0000;
+  border-color: var(--lsblue);
   border-width: 1px;
 }
 
 .error {
-  boder-color: #FF0000;
+  boder-color: var(--lsblue);
 }
