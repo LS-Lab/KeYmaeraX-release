@@ -1151,7 +1151,8 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
     */
   private def admissible(e: Expression): Boolean =
     //@note StaticSemantics.symbols(e) has the same (diff)vars as StaticSemantics.vars(e) unless StateDependent occur, which cause a renaming clash though.
-    what == repl || StaticSemantics.vars(e).intersect(Set(repl, DifferentialSymbol(repl), DifferentialSymbol(what))).isEmpty
+    what == repl || StaticSemantics.vars(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty &&
+      !StaticSemantics.freeVars(e).contains(DifferentialSymbol(what))
 }
 
 
