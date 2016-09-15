@@ -59,8 +59,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step          : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
-    if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
-    else HilbertCalculus.stepAt(pos))
+    (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
+     else HilbertCalculus.stepAt(pos))
+    | assignb(pos))
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
