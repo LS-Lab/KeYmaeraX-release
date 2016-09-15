@@ -140,6 +140,10 @@ del {
   display: none !important;
 }
 
+.k4-axiom-key {
+  font-weight: bold;
+}
+
 .k4-tacticeditor {
   font-family:monospace;
   display: block;
