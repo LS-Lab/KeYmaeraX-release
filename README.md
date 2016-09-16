@@ -25,7 +25,7 @@ Ensure that the following software is installed
 
 Building
 ========
-To compile KeYmaera X from source code, install the above software and install
+To compile KeYmaera X from source code, install the above software and also install
 - [Scala Build Tool sbt](http://www.scala-sbt.org)
   (Version 0.13 or greater recommended. Other versions may work).
   If you are using IntelliJ, this comes with the Scala plugin.
@@ -49,12 +49,12 @@ To compile KeYmaera X from source code, install the above software and install
 If the jar does not start because of an error `no manifest found`, then first run `sbt clean`.
 In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
 
-4) To find out how to use KeYmaera X from command line instead of the web user interface, run
+4) To find out how to use KeYmaera X from command line instead of the web user interface, run:
 
     java -Xss20M -jar keymaerax.jar -help
 
 5) API documentation is provided at http://keymaeraX.org/scaladoc
-  while local documentation will be generated in the `target/scala-2.11/unidoc` directory:
+  while local documentation will be generated in the directory `target/scala-2.11/unidoc` with:
 
     sbt unidoc
 
