@@ -53,13 +53,13 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   }
 
   protected override def emit(q: PosInExpr, s: String): String = {
-    val plain = topExpr match {
+    val plain = plainText || (topExpr match {
       case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None).isEmpty
       case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None).isEmpty
-    }
+    })
     // emit complicated span only for elements with actual
     //@note problematic for drag&drop
-    wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s, plainText || plain)
+    wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s, plain)
   }
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
