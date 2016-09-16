@@ -1,1 +1,1 @@
-angular.module('keymaerax.controllers', ['ngCookies', 'angularTreeview', 'ui.bootstrap', 'keymaerax.services']);
+angular.module('keymaerax.controllers', ['ngCookies', 'ui.bootstrap', 'keymaerax.services']);
