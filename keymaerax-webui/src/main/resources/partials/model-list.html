@@ -1,4 +1,4 @@
-<div class="panel panel-default">
+<div class="panel panel-default"> <!-- ModelListCtrl per app.js -->
     <spinner name="modelListProofLoadingSpinner" ng-cloak>
         <div class="spinner-overlay"></div>
         <div class="spinner">
@@ -49,7 +49,7 @@
                 </form>
             </div>
             <div class="col-md-2"></div>
-            <div class="col-md-4" ng-controller="ModelListCtrl">
+            <div class="col-md-4">
                 <div uib-carousel class="k4-examples-carousel" active="active" interval="5000">
                     <div uib-slide ng-repeat="repo in examples track by repo.id" index="repo.id">
                         <img ng-src="{{repo.image}}" style="margin:auto;">
@@ -66,7 +66,7 @@
 
     <hr/>
 
-    <div class="row" ng-controller="ModelListCtrl">
+    <div class="row">
     <p class="col-md-12" ng-if="models.length <= 0" ng-cloak>
         Your database does not contain models so far. Upload new models or import tutorial models above.
     </p>
