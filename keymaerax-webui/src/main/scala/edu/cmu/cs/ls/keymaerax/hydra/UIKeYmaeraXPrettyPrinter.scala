@@ -6,8 +6,9 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 object UIKeYmaeraXPrettyPrinter {
   /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
@@ -22,7 +23,13 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   private val HTML_OPEN = "$#@@$"
   private val HTML_CLOSE = "$@@#$"
 
-  override def apply(expr: Expression): String = stringify(expr)
+  private var topExpr: Expression = _
+  //@note just to get isAnte right for UIIndex
+  private val pos: Position = if (topId.startsWith("-")) AntePosition(1) else SuccPosition(1)
+
+  override def apply(expr: Expression): String = {
+    topExpr=expr
+    stringify(expr)
     //@todo custom OpSpec?
     .replaceAllLiterally("&", "&#8743;")
     .replaceAllLiterally("!", "&not;")
@@ -43,8 +50,17 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     .replaceAllLiterally(">", "&gt;")
     .replaceAllLiterally(HTML_OPEN, "<")
     .replaceAllLiterally(HTML_CLOSE, ">")
+  }
 
-  protected override def emit(q: PosInExpr, s: String): String = wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s)
+  protected override def emit(q: PosInExpr, s: String): String = {
+    val plain = topExpr match {
+      case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None).isEmpty
+      case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None).isEmpty
+    }
+    // emit complicated span only for elements with actual
+    //@note problematic for drag&drop
+    wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s, plainText || plain)
+  }
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
     case t: Power =>
@@ -52,30 +68,34 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _ => super.pp(q, term)
   })
 
-//  private def wrap(id: String, content: String): String =
-//    HTML_OPEN + "term id=\"" + id + "\"" + HTML_CLOSE + content + HTML_OPEN + "/term" + HTML_CLOSE
-
-  private def wrap(id: String, content: String): String =
-    if (plainText) s"""${HTML_OPEN}span id="fml_$id"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE"""
+  private def wrap(id: String, content: String, plain: Boolean): String =
+    if (plain) s"""${HTML_OPEN}span id="fml_$id"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE"""
     else s"""${HTML_OPEN}span ng-class="{'hl':true, 'hlhover':isFormulaHighlighted('$id')}" id="$id"
         |  ng-mouseover="$$event.stopPropagation();highlightFormula('$id')"
         |  ng-mouseleave="$$event.stopPropagation();highlightFormula(undefined)"
-        |  k4-droppable on-drop="dndSink('$id').formulaDrop(dragData)"
-        |  on-drag-enter="dndSink('$id').formulaDragEnter(dragData)"
-        |  on-drag-leave="dndSink('$id').formulaDragLeave(dragData)"
         |  ng-click="formulaClick('$id', $$event)"
         |  ng-right-click="formulaRightClick('$id', $$event)"
-        |  uib-tooltip-template="'templates/formulaDndTooltipTemplate.html'"
-        |  tooltip-placement="bottom"
-        |  tooltip-trigger="none" tooltip-is-open="dndTooltip.isOpen('$id')"
         |  uib-popover-template="'templates/axiomPopoverTemplate.html'"
         |  popover-is-open="tacticPopover.isOpen('$id')"
         |  popover-trigger="none"
         |  popover-append-to-body="true"
         |  popover-placement="auto bottom"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE""".stripMargin
 
+  //@note drop
+  //   k4-droppable on-drop="dndSink('$id').formulaDrop(dragData)"
+
+  //@note drag&drop tooltip
+  //  on-drag-enter="dndSink('$id').formulaDragEnter(dragData)"
+  //  on-drag-leave="dndSink('$id').formulaDragLeave(dragData)"
+  //  uib-tooltip-template="'templates/formulaDndTooltipTemplate.html'"
+  //  tooltip-placement="bottom"
+  //  tooltip-trigger="none" tooltip-is-open="dndTooltip.isOpen('$id')"
+
+
   //@todo
   override def apply(seq: Sequent): String = ???
+
+
 
   // symmetric space depending on left/right/both having parentheses
   protected override def spaceLeft(t: BinaryComposite, leftPrint: String): String = (skipParensLeft(t), skipParensRight(t)) match {
