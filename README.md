@@ -23,9 +23,13 @@ Ensure that the following software is installed
   If you are using IntelliJ, this comes with the Scala plugin.
   http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
+  (version 10+ recommended. Other versions may work.
+  The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
+  Otherwise [https://github.com/Z3Prover/z3](Z3) is automatically used for arithmetic.)
 
-1) To compile KeYmaera X from source code, use the Scala Build Tool:
+Building
+========
+1) To compile KeYmaera X from source code, install the above software and use the Scala Build Tool:
 
     sbt compile
 
@@ -48,7 +52,7 @@ If the jar does not start because of an error `no manifest found`, then first ru
 In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
 
 5) API documentation is provided at http://keymaeraX.org/scaladoc
-  It will be generated in the `target/scala-2.11/unidoc` directory by running:
+  while local documentation will be generated in the `target/scala-2.11/unidoc` directory:
 
     sbt unidoc
 
