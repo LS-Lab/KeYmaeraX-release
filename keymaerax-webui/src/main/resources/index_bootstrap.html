@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="loginApp">
+<html lang="en" ng-app="loginApp" ng-controller="ServerInfoCtrl">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -53,7 +53,7 @@
 
 <!-- Main jumbotron for a primary message or call to action -->
 <div class="jumbotron">
-    <div class="container" ng-controller="ServerInfoCtrl">
+    <div class="container">
         <h1>KeYmaera X
             <a ng-if="!isLocal" ng-cloak type="button" class="btn btn-info btn-lg"
                href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></h1>
@@ -63,7 +63,7 @@
 
 <div class="container">
     <!-- Example row of columns -->
-    <div class="row" ng-controller="ServerInfoCtrl">
+    <div class="row">
         <div class="col-md-6">
             <blockquote>
             <p>
@@ -145,7 +145,7 @@
 
 </div> <!-- /container -->
 
-<div class="footer" ng-controller="ServerInfoCtrl">
+<div class="footer">
     <div class="container">
         <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
             <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
