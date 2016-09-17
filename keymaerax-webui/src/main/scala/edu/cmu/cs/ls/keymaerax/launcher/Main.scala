@@ -48,15 +48,15 @@ object Main {
   //@todo set via -log command line option
   private var logFile = false
   def main(args : Array[String]) : Unit = {
-    val isFirstLaunch = if(args.length >= 1) {
+    val isFirstLaunch = if (args.length >= 1) {
       !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
     } else true
 
-    if(isFirstLaunch) {
+    if (isFirstLaunch) {
       val java : String = javaLocation
-      val keymaera : String = jarLocation
+      val keymaeraxjar : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
     }
     else {
       exitIfDeprecated()
@@ -75,14 +75,14 @@ object Main {
     val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
     val lemmadb          = new File(cacheLocation + File.separator + "lemmadb")
 
-    if(!cacheDirectory.exists()) {
-      if(!cacheDirectory.mkdirs()) {
+    if (!cacheDirectory.exists()) {
+      if (!cacheDirectory.mkdirs()) {
         throw new Exception(s"Could not create the directory ${cacheDirectory.getAbsolutePath}. Please check your file system permissions.")
       }
     }
 
-    if(!cacheVersionFile.exists()) {
-      if(!cacheVersionFile.createNewFile())
+    if (!cacheVersionFile.exists()) {
+      if (!cacheVersionFile.createNewFile())
         throw new Exception(s"Could not create the file ${cacheVersionFile.getAbsolutePath}. Please check your file system permissions.")
       clearCache(new File(cacheLocation))
     }
@@ -169,7 +169,7 @@ object Main {
 
 
   private def runCmd(cmd: List[String]) = {
-    launcherLog("Running command: " + cmd)
+    launcherLog("Running command: " + cmd.mkString(" "))
 
     val pb = new ProcessBuilder(cmd)
     var pollOnStd = false
