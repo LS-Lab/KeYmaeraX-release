@@ -1,18 +1,19 @@
 <div class="row">
 <div class="col-md-12">
-<spinner name="tacticExecutionSpinner" ng-cloak="">
-    <div class="spinner-overlay"></div>
-    <div class="spinner">
+<spinner name="tacticExecutionSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+    <div class="tactic-spinner">
         <div class="spinner-double-bounce1"></div>
         <div class="spinner-double-bounce2"></div>
     </div>
-    <div class="spinner-please-wait">
-        <p>Tactic is executing, please wait...</p>
-        <p>{{runningTask.lastStep}}</p>
+    <div class="tactic-spinner-please-wait">
+        <p>Tactic {{runningTask.lastStep}} is executing, please wait...</p>
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
+    </div>
 </spinner>
-<spinner name="proofLoadingSpinner" ng-cloak="">
+<spinner name="proofLoadingSpinner" ng-cloak>
     <div class="spinner-overlay"></div>
     <div class="spinner">
         <div class="spinner-double-bounce1"></div>
@@ -20,7 +21,7 @@
     </div>
     <div class="spinner-please-wait">Proof is loading, please wait...</div>
 </spinner>
-<spinner name="counterExampleSpinner" ng-cloak="">
+<spinner name="counterExampleSpinner" ng-cloak>
     <div class="spinner-overlay"></div>
     <div class="spinner">
         <div class="spinner-double-bounce1"></div>
