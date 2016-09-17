@@ -116,7 +116,7 @@ del {
   z-index: 2;
   color: var(--lsmainback);
   background-color: var(--lslightblue);
-  border-color: var(--lsblue;
+  border-color: var(--lsblue);
 }
 .list-group-item.active .list-group-item-text,
 .list-group-item.active:hover .list-group-item-text,
