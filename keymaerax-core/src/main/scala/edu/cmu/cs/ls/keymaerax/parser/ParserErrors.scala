@@ -72,10 +72,13 @@ object ParseException {
   def apply(msg: String, cause: Throwable): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "", cause)
 
-  def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException = if (state.la.tok == EOF)
-    new ParseException(msg, unmatched.loc, unmatched.toString, "", state.topString, state.toString /*, cause*/)
+  def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException =
+    imbalancedError(msg, unmatched, "", state)
+
+  def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState): ParseException = if (state.la.tok == EOF)
+    new ParseException(msg, unmatched.loc, unmatched.toString, expect, state.topString, state.toString /*, cause*/)
   else
-    new ParseException(msg + "\nunmatched: :" + unmatched + " at " + unmatched.loc, state.location, state.la.toString, "", state.topString, state.toString /*, cause*/)
+    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, unmatched.loc--state.location, state.la.toString, expect, state.topString, state.toString /*, cause*/)
 
   private[parser] def tokenDescription(tok: Token): String = tokenDescription(tok.tok)
   private[parser] def tokenDescription(tok: Terminal): String = tok.img + " (" + tok + ")"

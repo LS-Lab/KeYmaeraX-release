@@ -169,7 +169,7 @@ object Main {
 
 
   private def runCmd(cmd: List[String]) = {
-    launcherLog("Running command: " + cmd.mkString(" "))
+    launcherLog("Running command:\n" + cmd.mkString(" "))
 
     val pb = new ProcessBuilder(cmd)
     var pollOnStd = false
