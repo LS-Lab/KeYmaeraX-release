@@ -224,7 +224,13 @@
                     <div class="col-md-12">
                         <div class="panel panel-default">
                             <div class="panel-heading">
-                                <h3 class="panel-title">Proof Programming</h3>
+                                <div class="row">
+                                    <div class="col-md-2"><h3 class="panel-title">Proof Programming</h3></div>
+                                    <div class="col-md-9 k4-abbreviate"
+                                         uib-tooltip="Edit tactic below (execute with 'shift-enter' or click 'Run')"
+                                         tooltip-placement="top-left">Execute on current branch: {{tactic.tacticDiff}}</div>
+                                    <div class="col-md-1"><button class="btn btn-default pull-right" ng-click="executeTacticDiff()">Run</button></div>
+                                </div>
                             </div>
                             <div class="panel-body">
                             <k4-tactic-editor user-id="userId" proof-id="proofId" node-id="task.id"

@@ -72,7 +72,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             }
           ]);
 
-          scope.executeTacticDiff = function() {
+          scope.computeTacticDiff = function() {
             dmp = new DiffMatchPatch();
             diffs = dmp.diff_main(scope.tactic.lastExecutedTacticText, scope.tactic.tacticText);
             dmp.Diff_EditCost = scope.diffOptions.editCost;
@@ -91,7 +91,11 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             })
 
             //@todo what if more than 1 intro?
-            scope.onTacticScript({tacticText: intros[0]});
+            return intros[0];
+          }
+
+          scope.executeTacticDiff = function() {
+            scope.onTacticScript({tacticText: scope.computeTacticDiff()});
           };
 
           scope.diffOptions = {
@@ -109,6 +113,10 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
               }
             }
           };
+
+          scope.$watch('tactic.tacticText', function(newValue, oldValue) {
+            scope.tactic.tacticDiff = scope.computeTacticDiff();
+          });
 
 //          rangy.init();
 //
@@ -146,10 +154,6 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
         },
         template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
                     '<textarea class="k4-tacticeditor" ng-model="tactic.tacticText" rows="10" ng-shift-enter="executeTacticDiff()"></textarea>' +
-                      '</div></div>' +
-                      '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                      '<pre class="textdiff" processing-diff left-obj="tactic.lastExecutedTacticText" right-obj="tactic.tacticText" options="diffOptions"></pre>' +
-                  '</div></div>' +
-                  '<div class="row"><div class="col-md-12"><button class="btn btn-default" ng-click="executeTacticDiff()">Run</button></div></div>'
+                  '</div></div>'
     };
   }]);

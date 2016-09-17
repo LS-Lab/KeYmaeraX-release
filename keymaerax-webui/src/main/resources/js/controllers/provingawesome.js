@@ -106,6 +106,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
+    $scope.tactic = sequentProofData.tactic;
     sequentProofData.tactic.reset();
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -276,6 +277,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         }
       })
     }
+
+    $scope.executeTacticDiff = function() {
+      $scope.onTacticScript($scope.tactic.tacticDiff);
+    };
 
     $scope.simulate = function() {
       $uibModal.open({
