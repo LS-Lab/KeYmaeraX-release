@@ -158,7 +158,7 @@ trait SequentCalculus {
   // closing
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  lazy val close             : BelleExpr         = closeId | closeT('R) | closeF('L)
+  lazy val close             : BelleExpr         = "close" by (closeId | closeT('R) | closeF('L))
 
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@todo improve efficiency by avoiding the unnecessary cohide2 step
