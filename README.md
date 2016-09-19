@@ -18,27 +18,29 @@ The easiest way to run KeYmaera X is to download binaries
 Ensure that the following software is installed
 - [Java Development Kit JDK](https://java.com/download)
   (version 1.8+ recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ are also compatible with Java 1.8)
+- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
+  (version 10+ recommended. Other versions may work.
+  The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
+  Otherwise [https://github.com/Z3Prover/z3](Z3) is automatically used for arithmetic.)
+
+Building
+========
+To compile KeYmaera X from source code, install the above software and also install
 - [Scala Build Tool sbt](http://www.scala-sbt.org)
   (Version 0.13 or greater recommended. Other versions may work).
   If you are using IntelliJ, this comes with the Scala plugin.
   http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
-- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
 
-1) To compile KeYmaera X from source code, use the Scala Build Tool:
+1) Compile KeYmaera X with the Scala Build Tool:
 
     sbt compile
 
-2) Reinitialize the lemma database by deleting the KeYmaera X cache in your home directory, running the lemma initialization as follows.
+2) Reinitialize the lemma database by deleting the KeYmaera X cache in your home directory and run the lemma initialization as follows:
 
     rm -rf ~/.keymaerax/cache
     sbt "test-only edu.cmu.cs.ls.keymaerax.btactics.DerivedAxiomsTests"
 
-3) To test your installation, you can run the full regression test case suite:
-
-    sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
-
-4) The Web UI web user interface of KeYmaera X can be started as follows:
+3) The Web UI web user interface of KeYmaera X can be started as follows:
 
     sbt assembly
     java -jar keymaerax.jar
@@ -47,14 +49,18 @@ Ensure that the following software is installed
 If the jar does not start because of an error `no manifest found`, then first run `sbt clean`.
 In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
 
+4) To find out how to use KeYmaera X from command line instead of the web user interface, run:
+
+    java -Xss20M -jar keymaerax.jar -help
+
 5) API documentation is provided at http://keymaeraX.org/scaladoc
-  It will be generated in the `target/scala-2.11/unidoc` directory by running:
+  while local documentation will be generated in the directory `target/scala-2.11/unidoc` with:
 
     sbt unidoc
 
-6) To find out how to use KeYmaera X from command line instead of the web user interface, run
+6) To test your installation, you can run the full regression test suite:
 
-    java -Xss20M -jar keymaerax.jar -help
+    sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 
 ##### FAQ: Build Problems
 ===================

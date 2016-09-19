@@ -71,10 +71,6 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               $rootScope.$emit('proof.message', err.data.textStatus);
             })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/extract')
-            .then(function (data) {
-              sequentProofData.tacticText = data.tacticText;
-            })
         },
         /* future rejected */ function(reason) {
           if (reason !== 'stopped') showMessage($uibModal, reason);
@@ -110,6 +106,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
+    $scope.tactic = sequentProofData.tactic;
     sequentProofData.tactic.reset();
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -280,6 +277,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         }
       })
     }
+
+    $scope.executeTacticDiff = function() {
+      $scope.onTacticScript($scope.tactic.tacticDiff);
+    };
 
     $scope.simulate = function() {
       $uibModal.open({

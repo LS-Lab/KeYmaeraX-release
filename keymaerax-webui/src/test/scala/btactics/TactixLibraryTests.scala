@@ -205,4 +205,33 @@ class TactixLibraryTests extends TacticTestBase {
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
     proof shouldBe 'proved
   }
+
+  "Normalize" should "prove simple formula" in {
+    val f = "y>0 -> [x:=y;]x>0".asFormula
+    proveBy(f, normalize) shouldBe 'proved
+  }
+
+  it should "unfold simple formula" in {
+    val f = "y>0 -> [x:=2;]x>0".asFormula
+    val proof = proveBy(f, normalize)
+    proof.subgoals should have size 1
+    proof.subgoals.head.ante should contain only "y>0".asFormula
+    proof.subgoals.head.succ should contain only "2>0".asFormula
+  }
+
+  it should "unfold simple formula when other formulas are around" in {
+    val f = "y>0 -> y>=0 | [x:=2;]x>0".asFormula
+    val proof = proveBy(f, normalize)
+    proof.subgoals should have size 1
+    proof.subgoals.head.ante should contain only "y>0".asFormula
+    proof.subgoals.head.succ should contain only ("y>=0".asFormula, "2>0".asFormula)
+  }
+
+  it should "unfold with ODE when other formulas are around" in {
+    val f = "y>0 -> y>=0 | [x:=2;{x'=3}]x>0".asFormula
+    val proof = proveBy(f, normalize)
+    proof.subgoals should have size 1
+    proof.subgoals.head.ante should contain only ("y>0".asFormula, "x=2".asFormula)
+    proof.subgoals.head.succ should contain only ("y>=0".asFormula, "[{x'=3}]x>0".asFormula)
+  }
 }

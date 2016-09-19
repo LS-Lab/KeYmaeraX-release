@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="keymaeraProofApp">
+<html lang="en" ng-app="loginApp" ng-controller="ServerInfoCtrl">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -17,9 +17,7 @@
     <!-- Custom styles for this template -->
     <link href="css/jumbotron.css" rel="stylesheet">
     <link href="css/sticky-footer-navbar.css" rel="stylesheet">
-    <link href="css/uitree.css" rel="stylesheet">
     <link href="css/xeditable.css" rel="stylesheet" type="text/css">
-    <link href="css/angular-chart.min.css" rel="stylesheet" type="text/css">
 
 </head>
 
@@ -55,7 +53,7 @@
 
 <!-- Main jumbotron for a primary message or call to action -->
 <div class="jumbotron">
-    <div class="container" ng-controller="ServerInfoCtrl">
+    <div class="container">
         <h1>KeYmaera X
             <a ng-if="!isLocal" ng-cloak type="button" class="btn btn-info btn-lg"
                href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></h1>
@@ -65,7 +63,7 @@
 
 <div class="container">
     <!-- Example row of columns -->
-    <div class="row" ng-controller="ServerInfoCtrl">
+    <div class="row">
         <div class="col-md-6">
             <blockquote>
             <p>
@@ -147,7 +145,7 @@
 
 </div> <!-- /container -->
 
-<div class="footer" ng-controller="ServerInfoCtrl">
+<div class="footer">
     <div class="container">
         <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
             <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
@@ -163,33 +161,16 @@
 <!-- Placed at the end of the document so the pages load faster -->
 <script src="/js/jquery.min.js"></script>
 <script src="/js/jquery-ui.min.js"></script>
-<script src="/js/jquery-textcomplete/jquery.textcomplete.js"></script>
 <script src="/js/bootstrap/bootstrap.min.js"></script>
-<script src="/js/jasny-bootstrap.min.js"></script>
 <script src="/js/angular/angular.min.js"></script>
 <script src="/js/angular/angular-sanitize.min.js"></script>
 <script src="/js/angular/angular-cookies.min.js"></script>
 <script src="/js/angular/angular-route.min.js"></script>
 <script src="/js/angular/angular-animate.min.js"></script>
-<script src="/js/angular-busy.min.js"></script>
-<script src="/js/angular.treeview.js"></script>
-<script src="/js/angular-spinners/angular-spinners.min.js"></script>
-<script src="/js/xeditable.min.js"></script> <!-- for inline editing -->
 <script src="/js/angular/bootstrap/ui-bootstrap-tpls-1.1.0.min.js" ></script>
-<script src="/js/angular-ui-tree.js"></script>
-<script src="/js/angular-chart/Chart.js"></script>
-<script src="/js/angular-chart/angular-chart.js"></script>
-<script src="/js/google-diffmatchpatch/diff_match_patch.js"></script>
-<script src="/js/angular-diffmatchpatch/angular-diff-match-patch.js"></script>
-<script src="/js/angular-textcomplete/ng-textcomplete.js"></script>
-<!--<script src="/js/rangy/rangy-core.min.js"></script>
-<script src="/js/rangy/rangy-classapplier.min.js"></script>
-<script src="/js/rangy/rangy-textrange.min.js"></script>-->
-<script src="/js/app.js"></script>
+<script src="/js/loginApp.js"></script>
 <!-- Load services -->
 <script src="/js/services/services.js"></script>
-<script src="/js/services/sequentproofservice.js"></script>
-<script src="/js/services/derivationinfos.js"></script>
 <script src="/js/services/session.js"></script>
 <!-- Load interceptors -->
 <script src="/js/controllers/interceptors.js"></script>
@@ -199,34 +180,8 @@
 <!-- Load individual controllers -->
 <script src="/js/controllers/factories.js"></script>
 <script src="/js/controllers/errorReport.js"></script>
-<script src="/js/controllers/counterExample.js"></script>
-<script src="/js/controllers/transformFormula.js"></script>
-<script src="/js/controllers/dashboard.js"></script>
-<script src="/js/controllers/dev.js"></script>
-<!--<script src="/js/controllers/hacmstree.js"></script>-->
-<script src="/js/controllers/hpmodels.js"></script>
-<script src="/js/controllers/toolConfig.js"></script>
-<script src="/js/controllers/mathematicaConfig.js"></script>
-<script src="/js/controllers/proofRuleChoice.js"></script>
-<script src="/js/controllers/proofs.js"></script>
-<script src="/js/controllers/provingawesome.js"></script>
 <script src="/js/controllers/login.js"></script>
 <script src="/js/controllers/serverinfo.js"></script>
-
-<!-- KeYmaera UI
-================================================== -->
-<!--<script src="js/keymaera-ui/contenteditable.js"></script>-->
-<script src="js/keymaera-ui/keyevents.js"></script>
-<script src="js/keymaera-ui/mouseevents.js"></script>
-<script src="js/keymaera-ui/progress-meter.js"></script>
-<script src="js/keymaera-ui/proof-progress-chart.js"></script>
-<script src="js/keymaera-ui/formula.js"></script>
-<script src="js/keymaera-ui/mathjaxbind.js"></script>
-<script src="js/keymaera-ui/mathjaxformula.js"></script>
-<script src="js/keymaera-ui/sequent.js"></script>
-<script src="js/keymaera-ui/sequentproof.js"></script>
-<script src="js/keymaera-ui/autohidealert.js"></script>
-<script src="js/keymaera-ui/tacticeditor.js"></script>
 
 </body>
 </html>

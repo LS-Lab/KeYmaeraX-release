@@ -25,6 +25,8 @@ import spray.json._
   */
 object UpdateChecker {
 
+
+
   def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
     downloadDBVersion() match {
       case Some(oldestAcceptableDBVersion) =>
@@ -40,7 +42,7 @@ object UpdateChecker {
     * or else None if we could not determine the most recent version (e.g., because we have no network connection).
     */
   def getVersionStatus() : Option[(Boolean, String)] = {
-    downloadCurrentVersion() match {
+    downloadCurrentVersion match {
       case Some(current) => Some((current == edu.cmu.cs.ls.keymaerax.core.VERSION, current))
       case None          => None
     }
@@ -75,13 +77,14 @@ object UpdateChecker {
   }
 
   /** Returns the current version # in keymaerax.org/version.json, or None if the contents cannot be downloaded/parsed. */
-  private def downloadCurrentVersion() : Option[String] = {
+  private lazy val downloadCurrentVersion: Option[String] = {
     try {
       val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
-      if(json.asJsObject.getFields("version").isEmpty)
+      val version = json.asJsObject.getFields("version")
+      if (version.isEmpty)
         throw new Exception("version.json does not contain a version key.")
       else {
-        val versionString = json.asJsObject.getFields("version").last.toString.replace("\"", "")
+        val versionString = version.last.toString.replace("\"", "")
         Some(versionString)
       }
     }

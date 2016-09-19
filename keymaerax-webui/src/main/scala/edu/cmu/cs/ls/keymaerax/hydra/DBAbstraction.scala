@@ -207,6 +207,8 @@ trait DBAbstraction {
   def deleteProof(proofId: Int) : Boolean
 
   //Proofs and Proof Nodes
+  def isProofClosed(proofId: Int): Boolean
+
   def getProofInfo(proofId: Int): ProofPOJO
 
   def getProofInfo(proofId: String): ProofPOJO = getProofInfo(proofId.toInt)

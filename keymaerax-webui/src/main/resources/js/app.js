@@ -4,10 +4,7 @@
   'ngSanitize',
   'ngAnimate',
   'ngTextcomplete',
-  'angularTreeview',
   'angularSpinners',
-  'ui.tree',
-  'cgBusy',
   'diff-match-patch',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
@@ -25,15 +22,10 @@
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
   'keymaerax.ui.tacticeditor',
-  'progressMeter',
-  'proofProgressChart',
   'formula',
-  'mathjaxformula',
-  'mathjaxbind',
   'sequent',
   'sequentproof',
-  'xeditable',
-  'chart.js'
+  'xeditable'
 ], function($rootScopeProvider) {
   $rootScopeProvider.digestTtl(1000);
 });
@@ -91,10 +83,6 @@ keymaeraProofApp.config(['$routeProvider',
         //templateUrl: 'partials/proof-detail.html',
         templateUrl: 'partials/proofawesome.html',
         controller: 'ProofCtrl'
-      }).
-      when('/prooftree/:proofId', {
-        templateUrl: 'partials/prooftree-hacms.html',
-        controller: 'HACMSTreeCtrl'
       }).
       when('/dev', {
         templateUrl: 'partials/dev.html',
