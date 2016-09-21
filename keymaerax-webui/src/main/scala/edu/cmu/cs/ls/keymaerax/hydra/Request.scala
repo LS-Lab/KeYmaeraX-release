@@ -359,7 +359,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
 class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
-    val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+    val contents : String = Source.fromInputStream(reader).getLines().mkString("\n")
     val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
 
     // TODO provide classes and spray JSON protocol to convert
@@ -383,7 +383,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5) :: Nil
+    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
   }
 
   private def osKeyOf(osName: String): String = {
