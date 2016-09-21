@@ -430,7 +430,7 @@ object KeYmaeraX {
       val outputFileNameDotMx = options('out).toString
       assert(outputFileNameDotMx.endsWith(".kym"),
         "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .kym file. Please use: -out FILENAME.kym")
-      outputFileName = outputFileNameDotMx.dropRight(3)
+      outputFileName = outputFileNameDotMx.dropRight(4)
     }
 
     val pw = new PrintWriter(outputFileName + ".kym")
