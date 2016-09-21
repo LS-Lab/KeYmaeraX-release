@@ -56,6 +56,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
             .then(function(response) {
               if (response.data.type === 'taskresult') {
+                $rootScope.$emit('proof.message', "");
                 if ($scope.runningTask.nodeId === response.data.parent.id) {
                   sequentProofData.updateAgendaAndTree(response.data);
                   sequentProofData.tactic.fetch(userId, proofId);
@@ -73,6 +74,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
         },
         /* future rejected */ function(reason) {
+          $rootScope.$emit('proof.message', "");
           if (reason !== 'stopped') showMessage($uibModal, reason);
           spinnerService.hide('tacticExecutionSpinner');
         }

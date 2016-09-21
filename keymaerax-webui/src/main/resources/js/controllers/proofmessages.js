@@ -13,7 +13,7 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
 
   $rootScope.$on('proof.message', function(event, message) {
     $scope.proofMessage.text = message;
-    $scope.proofMessage.isVisible = true;
+    $scope.proofMessage.isVisible = (message !== "");
   });
 
 })
