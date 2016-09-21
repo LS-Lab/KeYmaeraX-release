@@ -1,7 +1,7 @@
 <h1>Your Proofs</h1>
 <div class="panel panel-default">
     <!-- Default panel contents -->
-    <div class="panel-heading">Proofs for User</div>
+    <div class="panel-heading">All Proofs</div>
 
     <!-- Table -->
     <table class="table table-hover table-condensed">
@@ -27,19 +27,8 @@
                 <span ng-if="proof.status === false" class="fa fa-pencil"> In Progress</span>
             </td>
             <td>
-                <div class="btn-group" uib-dropdown>
-                    <a ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"> Open</span></a>
-                    <a uib-dropdown-toggle>
-                        <span class="caret"></span>
-                        <span class="sr-only">Proof actions</span>
-                    </a>
-                    <ul uib-dropdown-menu role="menu" aria-labelledby="proof-open-split-button">
-                        <li role="menuitem"><a ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a></li>
-                        <li role="menuitem"><a ng-click="deleteProof(proof)"><span class="fa fa-trash"></span> Delete</a></li>
-                        <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
-                        <li><a href="#">Delete</a></li>-->
-                    </ul>
-                </div>
+                <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
+                <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>
         </tbody>
