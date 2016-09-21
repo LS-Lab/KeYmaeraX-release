@@ -22,8 +22,6 @@ import scala.language.postfixOps
 @SlowTest
 class ChilledWater extends TacticTestBase {
 
-  private val specialNormalize = normalize(andR('R), step('L), step('R))
-
   def DAcleanup(msg: String): BelleExpr = skip <(
     /* base case */ printIndexed(msg + "b4 QE") & QE & done,
     /* induction: diff*y^2>0 -> [{ode}]diff*y^2>0 */ printIndexed(msg + "b4 diffInd") &
@@ -123,15 +121,15 @@ class ChilledWater extends TacticTestBase {
       QE & done,
       boxAnd(1) & andR(1) <(
         /* Tw < Tl */
-        chase(1) & specialNormalize & twLessTl & done,
+        chase(1) & unfoldProgramNormalize & twLessTl & done,
         boxAnd(1) & andR(1) <(
           /* Tl < Tlu() */
-          chase(1) & specialNormalize & tlLessTlu & done,
+          chase(1) & unfoldProgramNormalize & tlLessTlu & done,
           boxAnd(1) & andR(1) <(
             /* a() <= Tw */
-            chase(1) & specialNormalize & aLessEqualTw & done,
+            chase(1) & unfoldProgramNormalize & aLessEqualTw & done,
             /* all the propositional minutia */
-            chase(1) & specialNormalize & propRest & done
+            chase(1) & unfoldProgramNormalize & propRest & done
             )
           )
         )
@@ -155,7 +153,7 @@ class ChilledWater extends TacticTestBase {
       // reduce the proof to the proof of Model 0
       boxAnd(1) & andR(1) <(
         /* Tw < Tl */
-        chase(1) & specialNormalize <(
+        chase(1) & unfoldProgramNormalize <(
           skip,
           skip,
           /* new branch */
@@ -168,7 +166,7 @@ class ChilledWater extends TacticTestBase {
           ) & twLessTl & done,
         boxAnd(1) & andR(1) <(
           /* Tl < Tlu() */
-          chase(1) & specialNormalize <(
+          chase(1) & unfoldProgramNormalize <(
             skip,
             skip,
             /* new branch */
@@ -181,7 +179,7 @@ class ChilledWater extends TacticTestBase {
           ) & tlLessTlu & done,
           boxAnd(1) & andR(1) <(
             /* a() <= Tw */
-            chase(1) & specialNormalize <(
+            chase(1) & unfoldProgramNormalize <(
               skip,
               skip,
               /* new branch */
@@ -194,7 +192,7 @@ class ChilledWater extends TacticTestBase {
               skip
               ) & aLessEqualTw & done,
             /* all the propositional minutia */
-            chase(1) & specialNormalize <(
+            chase(1) & unfoldProgramNormalize <(
               skip,
               skip,
               /* new branch */
