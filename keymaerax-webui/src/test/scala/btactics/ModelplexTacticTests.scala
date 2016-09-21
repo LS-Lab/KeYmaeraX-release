@@ -193,7 +193,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/modelplex/watertank/watertank.key"
     val vars = "f,l,c"
-    val outputFileName = File.createTempFile("watertank", ".mx").getAbsolutePath
+    val outputFileName = File.createTempFile("watertank", ".kym").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-monitorKind", "ctrl", "-out", outputFileName))
 
     val expectedFileContent = "(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost()&lpost()=l)&cpost()=0".asFormula
@@ -451,7 +451,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
     val vars = "xo,yo,dxo,dyo,x,y,dx,dy,v,w,a,r,t"
-    val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
+    val outputFileName = File.createTempFile("passivesafetyabs", ".kym").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-monitorKind", "ctrl", "-out", outputFileName))
 
     val expectedFileContent = "dxopost()^2+dyopost()^2<=V^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|(-B<=apost()&apost()<=A)&rpost()!=0&wpost()*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V))|abs(y-yopost())>v^2/(2*B)+V*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V)))&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=wpost())&apost()=apost())&rpost()=rpost())&tpost()=0)".asFormula
