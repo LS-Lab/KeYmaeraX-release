@@ -472,16 +472,19 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           try {
             shape match {
               case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
-                pt.factory(pos).computeExpr(v)
+                pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
               case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
                 tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
-              case Some(f) if exact && f == provable.subgoals(goal)(pos.top) => pt.factory(pos).computeExpr(v)
+              case Some(f) if exact && f == provable.subgoals(goal)(pos.top) =>
+                pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
               case Some(f) if exact && f != provable.subgoals(goal)(pos.top) =>
                 tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
-              case None => pt.factory(pos).computeExpr(v)
+              case None =>
+                pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
             }
           } catch {
-            case e: Throwable =>
+            // also advance if computeExpr already throws a BelleError
+            case e: BelleError =>
               val newCause = if (cause == null) new BelleError(s"Dependent position tactic ${pt.prettyString} is not " +
                 s"applicable at ${pos.prettyString}", e)
               else new CompoundException(
@@ -490,7 +493,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
           }
         } else throw cause
-      case _ => pt.factory(pos).computeExpr(v) // cannot search recursively, because don't know when to abort
+      case _ => pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
     }
   }
 }

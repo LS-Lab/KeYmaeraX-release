@@ -379,6 +379,22 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>0".asFormula
   }
 
+  it should "skolemize simple at any succedent position" in {
+    val s = Sequent(IndexedSeq(), IndexedSeq("y>0".asFormula, "\\forall x x>0".asFormula))
+    val result = proveBy(s, allSkolemize(2))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only ("y>0".asFormula, "x>0".asFormula)
+  }
+
+  it should "skolemize simple at any succedent position with position locator" in {
+    val s = Sequent(IndexedSeq(), IndexedSeq("y>0".asFormula, "\\forall x x>0".asFormula))
+    val result = proveBy(s, allSkolemize('R))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only ("y>0".asFormula, "x>0".asFormula)
+  }
+
   it should "skolemize with boundrenaming when variable to skolemize is there already" in {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
     result.subgoals should have size 1

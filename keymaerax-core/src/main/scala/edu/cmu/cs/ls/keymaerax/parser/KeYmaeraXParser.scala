@@ -731,6 +731,8 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la)) shift(st)
         else if (la==EOF) throw ParseException("Empty input is not a well-formed expression ", st, List(FIRSTEXPRESSION)) else error(st, List(FIRSTEXPRESSION))
 
+      // error handling message extras
+
       case rest :+ (tok@Token(RPAREN,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LPAREN).isDefined =>
         throw ParseException.imbalancedError("Imbalanced parenthesis", tok, st)
 
@@ -747,7 +749,10 @@ object KeYmaeraXParser extends Parser {
         //Try to make a good error message.
         goodErrorMessage(st) match {
           case Some(msg) => throw ParseException(s"${msg}", st)
-          case None => throw ParseException(s"Syntax error (or incomplete parser missing an item).\nWe could not generate a nice error message for stack: ${st.stack}", st)
+          case None => imbalancedParentheses(st) match {
+            case Some(exc) => throw exc
+            case None => throw ParseException(s"Syntax error (or incomplete parser missing an item).\nWe could not generate a nice error message for stack: ${st.stack}", st)
+          }
         }
         //@todo cases should be completed to complete the parser items, but it's easier to catch-all and report legible parse error.
 
@@ -756,9 +761,40 @@ object KeYmaeraXParser extends Parser {
     }
   }
 
-  private def goodErrorMessage(st : ParseState) : Option[String] = st.stack.top match {
+  // error message handling
+
+  private def goodErrorMessage(st: ParseState): Option[String] = st.stack.top match {
     case Token(edu.cmu.cs.ls.keymaerax.parser.RBOX, _) => Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")
     case _ => None
+  }
+
+  private def imbalancedParentheses(st: ParseState): Option[ParseException] = {
+    var brace = 0
+    var paren = 0
+    var box = 0
+    //@note dia is an approximation because 2<8 might be misunderstood during parse.
+    var dia = 0
+    var stack = st.stack
+    while (!stack.isEmpty) {
+      val (rest :+ t) = stack
+      t match {
+        case tok@Token(RBRACE,_) => brace = brace + 1
+        case tok@Token(LBRACE,_) => if (brace>0) brace = brace - 1
+            else return Some(ParseException.imbalancedError("Imbalanced parentheses led to unclosed {", tok, "}", st))
+        case tok@Token(RPAREN,_) => paren = paren + 1
+        case tok@Token(LPAREN,_) => if (paren>0) paren = paren - 1
+            else return Some(ParseException.imbalancedError("Imbalanced parentheses led to unclosed (", tok, ")", st))
+        case tok@Token(RBOX,_)   => box = box + 1
+        case tok@Token(LBOX,_)   => if (box>0) box = box - 1
+            else return Some(ParseException.imbalancedError("Imbalanced parentheses led to unclosed [", tok, "]", st))
+        case tok@Token(RDIA,_)   => dia = dia + 1
+        case tok@Token(LDIA,_)   => if (dia>0) dia = dia - 1
+            else return Some(ParseException.imbalancedError("Imbalanced parentheses might have led to unclosed <", tok, ">", st))
+        case _ =>
+      }
+      stack = rest
+    }
+    None
   }
 
   // stack helper

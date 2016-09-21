@@ -20,7 +20,7 @@ import scala.annotation.tailrec
   */
 object UIIndex {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {

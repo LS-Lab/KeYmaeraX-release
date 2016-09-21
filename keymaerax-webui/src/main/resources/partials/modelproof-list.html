@@ -1,23 +1,11 @@
 <div class="panel panel-default">
     <!-- Default panel contents -->
-    <div class="panel-heading">Proofs for Model</div>
+    <div class="panel-heading">Proofs of Model {{modelId}}</div>
     <div class="panel-body">
         <div class="row">
             <!-- upload form -->
             <div class="col-md-6">
                 <form novalidate class="simple-form" ng-submit="createProof(modelId, '', '')" ng-controller="ModelProofCreateCtrl">
-                    <!--
-                    <div class="input-group">
-                        <label for="proofName">Proof Name</label>
-                        <input type="text" ng-model="proofName" id="proofName" class="form-control" />
-                    </div>
-
-                    <div class="input-group">
-                        <label for="proofDescription">Proof Description</label>
-                        <input type="text" ng-model="proofDescription" id="proofDescription" class="form-control" />
-                    </div>
-                    -->
-
                     <div class="input-group">
                         <input type="submit" value="Create New Proof" class="form-control" />
                     </div>
@@ -50,25 +38,8 @@
                 <span ng-if="proof.status === false"> In Progress</span>
             </td>
             <td>
-                <div class="button-group" uib-dropdown>
-                <a ng-if="proof.loadStatus === 'loaded'" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
-                <a ng-if="proof.loadStatus === 'notloaded'" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
-                <a ng-if="proof.loadStatus === 'loading'"><i class="fa fa-circle-o-notch fa-spin"></i> Reproving...</a>
-                <a uib-dropdown-toggle>
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </a>
-                <ul role="menu" uib-dropdown-menu>
-                    <li role="menuitem">
-                        <a ng-if="proof.loadStatus === 'loaded'" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
-                        <a ng-if="proof.loadStatus === 'notloaded'" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
-                        <a ng-if="proof.loadStatus === 'loading'"><i class="fa fa-circle-o-notch fa-spin"></i> Reproving...</a>
-                        <a ng-click="deleteProof(proof)"><span class="fa fa-trash"></span> Delete</a>
-                    </li>
-                    <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
-                    <li><a href="#">Delete</a></li>-->
-                </ul>
-                </div>
+                <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
+                <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>
         </tbody>

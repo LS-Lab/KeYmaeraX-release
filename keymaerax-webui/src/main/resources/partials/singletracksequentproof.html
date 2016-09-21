@@ -45,6 +45,8 @@
                 <!-- proof rule -->
                 <span class="k4-proofrule"
                       tooltip-placement="right"
+                      ng-mouseover="highlightStepPosition(step, true)"
+                      ng-mouseleave="highlightStepPosition(step, false)"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
                       popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
@@ -52,7 +54,7 @@
                 </span>
             </li>
         </ul>
-        <div class="col-md-12 k4-goalwithsiblings">
+        <div class="col-md-12 k4-goalwithsiblings" id="seq_{{step}}">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"></k4-sequent>
@@ -97,6 +99,8 @@
                 </span>
                 <!-- proof rule -->
                 <span class="k4-proofrule"
+                      ng-mouseover="highlightStepPosition(step, true)"
+                      ng-mouseleave="highlightStepPosition(step, false)"
                       tooltip-placement="right"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
@@ -105,7 +109,7 @@
                 </span>
             </li>
         </ul>
-        <div class="col-md-12">
+        <div class="col-md-12" id="seq_{{step}}">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"></k4-sequent>

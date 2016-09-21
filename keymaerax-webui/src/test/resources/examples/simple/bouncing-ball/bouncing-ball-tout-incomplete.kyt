@@ -1,0 +1,4 @@
+implyR(1) & (andL('L)*) & loop({`v^2<=2*g()*(H-h) & h>=0`}, 1) & <(
+  QE & done,
+  QE & done,
+  nil)

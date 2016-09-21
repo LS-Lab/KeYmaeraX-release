@@ -53,7 +53,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val gen = new ConfigurableGenerator(db.getInvariants(modelId))
     val thisTactic = tacticAt(gen, node)
 
-    if (children.isEmpty) thisTactic
+    if (children.isEmpty || children.forall(_.endStep.isEmpty)) thisTactic
     else if (children.length == 1) thisTactic & apply(modelId)(children.head)
     else thisTactic & BranchTactic(children.map(child => apply(modelId)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
@@ -64,7 +64,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val thisTactic = tacticStringAt(node)
 
     //@todo does pretty-printing
-    if (children.isEmpty) thisTactic
+    if (children.isEmpty || children.forall(_.endStep.isEmpty)) thisTactic
     else if (children.length == 1) thisTactic + " & " + getTacticString(modelId, indent)(children.head)
     else thisTactic + " & <(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }

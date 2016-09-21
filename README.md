@@ -5,74 +5,70 @@ KeYmaera X is a theorem prover for differential dynamic logic (dL), a logic for 
 
 Advanced proof search features---and user-defined tactics in particular---are difficult to check for soundness. To admit extension and experimentation in proof search without reducing trust in the prover, KeYmaera X is built up from a small trusted kernel. The prover kernel contains a list of sound dL axioms that are instantiated using a uniform substitution proof rule. Isolating all soundness-critical reasoning to this prover kernel obviates the intractable task of ensuring that each new proof search algorithm is implemented correctly. Experiments suggest that a single layer of tactics on top of the prover kernel provides a rich language for implementing novel and sophisticated proof search techniques.
 
+More information and precompiled binaries are available at:
   http://keymaeraX.org/
-
-Branches
-========
-
-- `master` is the branch for active ongoing developments of KeYmaera X.
-- [The Repository's Releases Page](https://github.com/LS-Lab/KeYmaeraX-release/releases) lists all tagged stable releases.
-
-Dependencies
-============
-- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
-- [Java Development Kit JDK](https://java.com/download)
-  (version 1.8+ recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is also compatible with Java 1.8)
-- [Scala Build Tool sbt](http://www.scala-sbt.org)
-  (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
-- [Scala 2.11.7](http://www.scala-lang.org)
-  (sbt will download this automatically)
 
 Installation
 ============
-
-The easiest way to run KeYmaera X is to download the `keymaerax.jar` binary file from
-
-  http://keymaeraX.org/
-
-and run it via
+The easiest way to run KeYmaera X is to download binaries 
+[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and run it via
 
     java -jar keymaerax.jar
 
-If this results in the error `Invalid or corrupt jarfile` then update to Java 1.8 or run it via
-
-    java -Xss20M -cp keymaerax.jar KeYmaeraX
-
-The easiest way to run KeYmaera X from source is to install its dependencies and build it via Scala Build Tool sbt:
-
-    * Install the dependencies (see Dependencies section)
-    * Point the JLINK_JAR_LOCATION environment variable to Mathematic's JLink.jar file (see FAQ)
-    * Follow the build instructions in the Building section
+Ensure that the following software is installed
+- [Java Development Kit JDK](https://java.com/download)
+  (version 1.8+ recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ are also compatible with Java 1.8)
+- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
+  (version 10+ recommended. Other versions may work.
+  The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
+  Otherwise [https://github.com/Z3Prover/z3](Z3) is automatically used for arithmetic.)
 
 Building
 ========
+To compile KeYmaera X from source code, install the above software and also install
+- [Scala Build Tool sbt](http://www.scala-sbt.org)
+  (Version 0.13 or greater recommended. Other versions may work).
+  If you are using IntelliJ, this comes with the Scala plugin.
+  http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-KeYmaera X uses the Scala Build Tool (sbt). Installation instructions are available
-at the link following:
-
-http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
-
-Detailed instructions are available at that website as well. Briefly, type
+1) Compile KeYmaera X with the Scala Build Tool:
 
     sbt compile
 
-to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries, including Scala itself. 
-
-After compilation (re-)initialize the lemma database by first deleting the KeYmaera X cache in your home directory, and then run the test suite initializing the lemma database as follows.
+2) Reinitialize the lemma database by deleting the KeYmaera X cache in your home directory and run the lemma initialization as follows:
 
     rm -rf ~/.keymaerax/cache
     sbt "test-only edu.cmu.cs.ls.keymaerax.btactics.DerivedAxiomsTests"
 
-To run the regression test case suite, type, for example,
+3) The Web UI web user interface of KeYmaera X can be started as follows:
+
+    sbt assembly
+    java -jar keymaerax.jar
+    open http://localhost:8090/
+
+If the jar does not start because of an error `no manifest found`, then first run `sbt clean`.
+In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
+
+4) To find out how to use KeYmaera X from command line instead of the web user interface, run:
+
+    java -Xss20M -jar keymaerax.jar -help
+
+5) API documentation is provided at http://keymaeraX.org/scaladoc
+  while local documentation will be generated in the directory `target/scala-2.11/unidoc` with:
+
+    sbt unidoc
+
+6) To test your installation, you can run the full regression test suite:
 
     sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 
 ##### FAQ: Build Problems
 ===================
-The build file uses default paths to the Mathematica JLink JAR for MacOS and Mathematica 10 (see default.properties).
-If those are not suitable for your setup, create a file 'local.properties' in the same directory as default.properties
-(project root) and provide the location of JLink.jar with a property mathematica.jlink.path=YOUR_LOCAL_PATH_TO_JLINKJAR
+The build file uses default paths to the Mathematica JLink JAR for MacOS and Mathematica 10 (see file `default.properties`).
+If those are not suitable for your setup, create a file `local.properties` in the same directory as `default.properties`
+(project root) and provide the location of JLink.jar with a property
+
+    mathematica.jlink.path=YOUR_LOCAL_PATH_TO_JLINKJAR
 
 If, at any time, you run into problems during the compilation process, use `sbt clean` for a fresh start to remove stale files. If the problems persist, use `sbt clean` followed by `sbt reload`. On a few computers you may have to edit your environment variables, e.g., `~/.bashrc` or  `~/.profile` to include something like
 
@@ -86,40 +82,16 @@ https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 ##### FAQ: Run Problems
 =================
 
-If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
+If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then update to Java 1.8 (and to Mathematic 10+)
+or run KeYmaera X via
+
+    java -Xss20M -cp keymaerax.jar KeYmaeraX
+
+If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`.
 You could also try removing or renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
 
+Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10.
 
-Generating API Documentation
-============================
-
-KeYmaera X API Documentation is generated via Scaladoc and available at:
-  
-   http://keymaeraX.org/scaladoc
-
-To generate unified scaladoc for all subprojects locally, run:
-
-    sbt unidoc
-
-Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
-For instance `target/scala-2.11/unidoc`.
-
-To generate just the core KeYmaera X API documentation files locally, run:
-
-    sbt doc
-
-Documentation will be generated for each subproject in the 
-`target/scala-x.xx/api` directory of the subproject. 
-For instance, `keymaerax-core/target/scala-2.11/api` for the core subproject.
-
-Main documentation to read for KeYmaera X API:
-
-    http://keymaeraX.org/doc/dL-grammar.md - concrete syntax for input language Differential Dynamic Logic
-    edu.cmu.cs.ls.keymaerax.core.package   - KeYmaera X kernel, proof certificates, main data structures
-    edu.cmu.cs.ls.keymaerax.parser.package - Parser and pretty printer with concrete syntax and notation
-    edu.cmu.cs.ls.keymaerax.btactics.package - Tactic library
-    edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary - Main tactic library for most common cases
-    edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX - command-line launcher for KeYmaera X
 
 IntelliJ IDEA Development Environment
 =====================================
@@ -161,37 +133,6 @@ Run Configurations Drop-down in Toolbar
 ##### IntelliJ FAQ
 ============
 If, at any time, you run into problems during the compilation process in IntelliJ, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. This is necessary for IntelliJ to find JLink.jar. IntelliJ keeps forgetting about it, so you may have to check repeatedly. If the problems persist, do `File->Invalidate Caches / Restart`.
-
-Front End
-=========
-
-The Web UI web user interface front end of KeYmaera X can be started as follows:
-
-    sbt assembly
-    java -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar
-    open http://localhost:8090/
-
-The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
-In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
-
-For development purposes, the Web UI can be run from an IDE by selecting as the Main class if you pass its JVM the option `-Xss20M`:
-
-    keymaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra/NoSSLBoot.scala
-
-Note that using the launcher/Main class won't work in IntelliJ but NoSSLBoot.scala must be used instead.
-
-Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9.
-It is recommended to use Mathematica 10.
-
-KeYmaera X is successfully started when you see the following console output
-
-    Bound to 127.0.0.1:8090
-
-To find out how to use KeYmaera X from command line, do `sbt clean assembly` and run
-
-    java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-web.jar -help
-
-Make sure you have Java 1.8 for using the command line like this. Java 1.7 and earlier versions may limit functionality.
 
 Command Line Execution and Templates
 ====================================
@@ -254,25 +195,6 @@ The project is split into two subprojects, `keymaerax-core` for the core functio
     target/scala-2.11/classes/ - Target directory for sbt compilation.    
     target/scala-2.11/unidoc/ - Target directory for sbt unidoc documentation.    
 
-Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated according to functionality:
-
-    .core        - KeYmaera X Kernel: Soundness-critical core
-    .lemma       - Lemma mechanism (non-critical)
-    .bellerophon - Tactic language, framework and tactic interpreter
-    .btactics    - Tactic library
-    .parser      - Parsing and pretty printing
-    .pt          - Proof checker for proof terms
-    .tactics     - Older scheduled tactic framework, including tactic implementations and the scheduler
-    .tools       - Arithmetic back-ends
-
-The additional packages in the directory `keymaerax-webui/src/main/scala` are separated into:
-
-    .api     - Scala API for proof and tactics management etc.
-    .codegen - Code generation tools to generate C-Code etc.
-    .hydra   - HyDRA Hybrid Distributed Reasoning Architecture server with REST API and database
-    .launcher - KeYmaera X command line launcher with main program
-    .tacticsinterface - Interface to the actics exposed to the web UI and REST API. Tactic combinator parser.
-
 Test Cases
 ==========
 
@@ -317,16 +239,19 @@ Differential dynamic logic and its Hilbert-type and sequent proof calculi have b
 1. André Platzer. 
 [A complete uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/s10817-016-9385-1). 
 Journal of Automated Reasoning, 2016.
-[arXiv 1601.06183](http://arxiv.org/abs/1601.06183)
 
-2. André Platzer. 
+Based on: André Platzer. 
 [A uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/978-3-319-21401-6_32). 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
 Extended version at [arXiv 1503.01981](http://arxiv.org/abs/1503.01981)
 
-3. André Platzer.
+2. André Platzer.
 [Logics of dynamical systems](http://dx.doi.org/10.1109/LICS.2012.13).
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
+
+3. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
+[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 4. André Platzer.
 [Differential dynamic logic for hybrid systems](http://dx.doi.org/10.1007/s10817-008-9103-8).
@@ -340,24 +265,17 @@ Springer, 2010. 426 p. ISBN 978-3-642-14508-7.
 [Differential dynamic logic for verifying parametric hybrid systems](http://dx.doi.org/10.1007/978-3-540-73099-6_17).
 In Nicola Olivetti, editor, Automated Reasoning with Analytic Tableaux and Related Methods, International Conference, TABLEAUX 2007, Aix en Provence, France, July 3-6, 2007, Proceedings, volume 4548 of LNCS, pages 216-232. Springer, 2007. 
 
-The prover KeYmaera X itself is described in
-
-7. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
-[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
-In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
-
 The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are described and specified in
 
-8. André Platzer.
+7. André Platzer.
 [The structure of differential invariants and differential cut elimination](http://dx.doi.org/10.2168/LMCS-8(4:16)2012).
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems, which, along with its proof calculus, are described and specified in
 
-9. André Platzer. 
+8. André Platzer. 
 [Differential game logic](http://dx.doi.org/10.1145/2817824). 
 ACM Trans. Comput. Log., 17(1), 2015.
-[arXiv:1408.1980](http://arxiv.org/abs/1408.1980)
 
 10. André Platzer.
 [A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
@@ -388,10 +306,7 @@ Background material and more material can be found at
 
 http://keymaeraX.org/
 
-http://www.cs.cmu.edu/~aplatzer/pub/
-
-http://symbolaris.com/info/KeYmaera.html
-
+http://www.ls.cs.cmu.edu/publications.html
 
 Contact
 =======

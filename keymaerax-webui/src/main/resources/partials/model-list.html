@@ -1,4 +1,4 @@
-<div class="panel panel-default">
+<div class="panel panel-default"> <!-- ModelListCtrl per app.js -->
     <spinner name="modelListProofLoadingSpinner" ng-cloak>
         <div class="spinner-overlay"></div>
         <div class="spinner">
@@ -49,7 +49,7 @@
                 </form>
             </div>
             <div class="col-md-2"></div>
-            <div class="col-md-4" ng-controller="ModelListCtrl">
+            <div class="col-md-4">
                 <div uib-carousel class="k4-examples-carousel" active="active" interval="5000">
                     <div uib-slide ng-repeat="repo in examples track by repo.id" index="repo.id">
                         <img ng-src="{{repo.image}}" style="margin:auto;">
@@ -66,7 +66,7 @@
 
     <hr/>
 
-    <div class="row" ng-controller="ModelListCtrl">
+    <div class="row">
     <p class="col-md-12" ng-if="models.length <= 0" ng-cloak>
         Your database does not contain models so far. Upload new models or import tutorial models above.
     </p>
@@ -90,23 +90,11 @@
             </td>
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td ng-model="model">
-                <div class="btn-group" uib-dropdown>
-                <a ng-href="dashboard.html?#/models/{{ model.id }}/proofs" ng-if="model.numProofs > 0">Show proofs</a>
-                <a ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" ng-if="model.numProofs === 0">Start new proof</a>
-                <a uib-dropdown-toggle>
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </a>
-                <ul uib-dropdown-menu role="menu" ng-model="model">
-                    <li role="menuitem"><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show proofs</a></li>
-                    <li role="menuitem"><a ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')">Start new proof</a></li>
-                    <li role="menuitem" ng-if="model.hasTactic"><a ng-controller="ModelProofCreateCtrl" ng-click="proveFromTactic(model.id)">Prove from tactic</a></li>
-                    <li role="menuitem"><a ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)"><span class="fa fa-trash"></span> Delete this model</a></li>
-                    <li role="menuitem"><a ng-controller="ModelListCtrl" ng-click="modelplex(model.id)"><span class="fa fa-shield"></span> Generate monitor</a></li>
-                    <!--<li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>-->
-                    <!--<li ng-if="model.tactic != ''"><a ng-click="runPreloadedProof(model)" ng-controller="ModelUploadCtrl">Prove with tactic</a></li>-->
-                </ul>
-                </div>
+                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
+                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!model.hasTactic}" ng-controller="ModelProofCreateCtrl" ng-click="proveFromTactic(model.id)" uib-tooltip="Prove from tactic"><i class="fa fa-cog"></i></a>
+                <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
             </td>
         </tr>
         </tbody>

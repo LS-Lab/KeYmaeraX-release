@@ -1,0 +1,62 @@
+/*
+ *	Robot must stop within distance delta at goal.
+ *  
+ *  Robot 
+ * 	- must stop within distance delta of goal
+ *  - can only drive straight and forward
+ *  - ensures progress towards goal 
+ * 
+ *  Liveness property:
+ *  - Robot can stop at goal
+ *
+ */
+
+Functions.
+	R ep.			 		/* time limit for control decisions */
+ 	R b.					/* braking */
+	R A.					/* acceleration -b <= a <= A */
+	R Delta.			/* goal area size */
+	R Vmax.       /* robot cannot go faster than this */
+End.
+
+ProgramVariables.
+	R xr.		/* robot position: x */
+	R vr.		/* robot translational velocity */
+	R ar.		/* robot translational acceleration */
+	R xg.		/* goal position */
+	R t.		/* control cycle time */
+	R T.		/* global time */
+End.
+
+Problem.
+	  vr = 0
+	& xr < xg - Delta /* robot not at goal initially */
+	& A > 0
+	& b > 0
+	& ep > 0
+	& Vmax >= 2*A*ep
+	& Delta > Vmax*ep + (Vmax)^2/(2*b) /* goal must be large enough that robot can start driving and still stop inside */
+	& T > ep + (xg - Delta - xr)/(A*ep) + ep + Vmax/b /* acc. duration + travel duration + realize to stop + stopping duration */
+	  -> [
+  			{	{
+  			     /* in the goal area: brake or stay stopped */
+  			     ?xr > xg - Delta; {ar := -b; ++ ?vr = 0; ar := 0;}
+  			     /* else */
+  				++ ?xr <= xg - Delta;
+  				   {  /* if robot can stop from higher speed before leaving goal area then accelerate */
+  				      ?xr + vr^2/(2*b) + (A/b + 1)*(A/2*ep^2 + ep*vr) < xg + Delta & vr+A*ep <= Vmax; ar := A;
+  				      /* else coast until at goal */
+  				   ++ ?xr + vr^2/(2*b) + (A/b + 1)*(A/2*ep^2 + ep*vr) >= xg + Delta | vr+A*ep > Vmax; ar := 0;
+  				   }
+          }
+				  /* dynamics */
+				  t := 0;
+				  {xr' = vr, vr' = ar, t' = 1, T'=-1 & t <= ep & vr >= 0}
+			  }*
+			@invariant(0 <= vr & vr <= Vmax & xr + vr^2/(2*b) < xg + Delta
+				& (xg - Delta < xr -> (vr = 0 | T >= vr/b))
+				& (xr <= xg - Delta -> (vr >= A*ep & T > (xg - Delta - xr)/(A*ep) + ep + Vmax/b) /* travel + realize to stop + stopping */
+				                     | (vr <= A*ep & T > ep-vr/A + (xg - Delta - xr)/(A*ep) + ep + Vmax/b)) /* acc. + travel + realize to stop + stopping */
+			)
+		] (xr < xg + Delta & (T <= 0 -> (xg - Delta < xr & vr = 0)))
+End.

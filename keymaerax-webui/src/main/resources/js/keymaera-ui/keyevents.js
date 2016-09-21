@@ -15,3 +15,18 @@ angular.module('keymaerax.ui.keyevents')
       });
     };
   }]);
+
+angular.module('keymaerax.ui.keyevents')
+  .directive('ngEnter', ['$parse', function($parse) {
+    return function(scope, element, attrs) {
+      var fn = $parse(attrs.ngEnter);
+      element.bind('keypress keyup', function(event) {
+        scope.$apply(function() {
+          if (event.which == 13) {
+            event.preventDefault();
+            fn(scope, {$event:event});
+          }
+        });
+      });
+    };
+  }]);

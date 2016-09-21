@@ -183,6 +183,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=1}]x>0".asFormula
   }
 
+  it should "work with ODE as part of step" in {
+    val result = proveBy("[x:=x+1;][{x'=1}]x>0".asFormula, step(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=x_0+1".asFormula
+    result.subgoals.head.succ should contain only "[{x'=1}]x>0".asFormula
+  }
+
   it should "work when must-bound before ODE, even if it is somewhere in propositional context" in {
     val result = proveBy("[x:=1;](y>2 -> \\forall x [{x'=1}]x>0)".asFormula, assignb(1))
     result.subgoals should have size 1

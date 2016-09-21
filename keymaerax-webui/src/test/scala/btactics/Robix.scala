@@ -566,4 +566,21 @@ class Robix extends TacticTestBase {
       ) & print("Proof done")
     proveBy(s, tactic) shouldBe 'proved
   }
+
+  "Reach goal before deadline expires" should "be provable" in withZ3 { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/reachgoal_boxliveness_deadline.kyx"))
+
+    val invariant = """0 <= vr & vr <= Vmax & xr + vr^2/(2*b) < xg + Delta
+                      |				& (xg - Delta < xr -> (vr = 0 | T >= vr/b))
+                      |				& (xr <= xg - Delta -> (vr >= A*ep & T > (xg - Delta - xr)/(A*ep) + ep + Vmax/b) /* travel + realize to stop + stopping */
+                      |				                     | (vr <= A*ep & T > ep-vr/A + (xg - Delta - xr)/(A*ep) + ep + Vmax/b)) /* acc. + travel + realize to stop + stopping */""".stripMargin.asFormula
+
+    val tactic = implyR('R) & (andL('L)*) & loop(invariant)(1) & Idioms.<(
+      print("Base case") & QE & done,
+      print("Use case") & QE & done,
+      print("Induction step") & chase('R) & normalize(andR('R), skip, skip) & OnAll(ODE('R) & QE & done)
+    )
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
 }

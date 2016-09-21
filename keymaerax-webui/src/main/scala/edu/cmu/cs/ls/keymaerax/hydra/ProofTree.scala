@@ -51,7 +51,7 @@ object ProofTree {
     }
   }
 
-  def ofTrace(trace:ExecutionTrace, agendaItems: List[AgendaItemPOJO] = Nil, proofFinished:Boolean = false, includeUndos:Boolean = false): ProofTree = {
+  def ofTrace(trace:ExecutionTrace, agendaItems: () => List[AgendaItemPOJO] = () => Nil, proofFinished:Boolean = false, includeUndos:Boolean = false): ProofTree = {
     var currentNodeId = 1
 
     def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep], isFake:Boolean = false): TreeNode = {
@@ -61,7 +61,7 @@ object ProofTree {
     }
 
     def goalToItem(allNodes: List[TreeNode], goal: TreeNode):AgendaItem = {
-      val item = agendaItemForNode(allNodes, goal.id.toString, agendaItems)
+      val item = agendaItemForNode(allNodes, goal.id.toString, agendaItems())
       val itemName = item.map(_.displayName).getOrElse("Unnamed Goal")
       AgendaItem(goal.id.toString, itemName, trace.proofId, goal)
     }

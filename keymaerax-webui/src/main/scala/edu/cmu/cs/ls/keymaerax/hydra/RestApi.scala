@@ -339,7 +339,7 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
   def parseFormulaId(id:String): Position = {
-    val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
+    val (idx :: inExprs) = id.split(',').toList.map(_.toInt)
     try { Position(idx, inExprs) }
     catch {
       case e: IllegalArgumentException =>
