@@ -10,7 +10,7 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content-abbreviate k4-abbreviate">
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
+                    <k4-formula class="pull-right" user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="true"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
@@ -91,8 +91,8 @@
                 </div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
-                <div class="k4-formula-content pull-right">
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
+                <div class="k4-formula-content col-md-12">
+                    <k4-formula class="pull-right" user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="false"></k4-formula>
                 </div>
             </div>
