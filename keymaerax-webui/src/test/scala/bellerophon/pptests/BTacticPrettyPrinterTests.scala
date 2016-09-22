@@ -45,4 +45,7 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   "Operator precedence" should "parenthesize saturate *" in { roundTrip("implyR(1) & (andL('L)*)") }
 
   it should "parenthesize repeat *times" in { roundTrip("implyR(1) & (andL('L)*2)") }
+
+  it should "parenthesize partial" in { roundTrip("implyR(1) & (andL(1) partial)") }
+
 }
