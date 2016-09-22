@@ -133,7 +133,7 @@ angular.module('formula')
             }
 
             scope.isFormulaHighlighted = function(formulaId) {
-              return sequentProofData.formulas.highlighted == formulaId;
+              return scope.highlight && (sequentProofData.formulas.highlighted == formulaId);
             }
 
             var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;

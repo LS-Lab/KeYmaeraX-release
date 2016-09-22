@@ -94,7 +94,7 @@
                             on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-md-12 k4-formula" ng-if="readOnly">
+            <div class="col-md-12 k4-formula nohover" ng-if="readOnly">
                 <div class="k4-formula-content col-md-12">
                     <k4-formula class="pull-right" user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="false"></k4-formula>
@@ -141,7 +141,7 @@
                      tooltip-placement="bottom"
                      tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()">&#8866;</div>
             </div>
-            <div class="col-md-12 k4-formula" ng-if="readOnly">
+            <div class="col-md-12 k4-formula nohover" ng-if="readOnly">
                 <div class="k4-formula-content">&#8866;</div>
             </div>
         </div>
@@ -179,7 +179,7 @@
                                 on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-md-12 k4-formula" ng-if="readOnly">
+            <div class="col-md-12 k4-formula nohover" ng-if="readOnly">
                 <div class="row k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="false"></k4-formula>
@@ -188,7 +188,7 @@
             </div>
         </div>
         <div class="row k4-flexrow" ng-if="sequent.succ.length === 0">
-            <div class="col-md-12 k4-formula">
+            <div class="col-md-12 k4-formula nohover">
                 <div class="k4-formula-content">false</div>
             </div>
         </div>
