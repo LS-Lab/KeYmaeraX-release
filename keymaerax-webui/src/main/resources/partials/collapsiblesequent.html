@@ -2,7 +2,9 @@
 
     <!-- Expand button -->
     <div class="col-md-1">
-        <a ng-click="collapsed = !collapsed"><span class="fa fa-caret-right"></span></a>
+        <a ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
+            <span class="fa fa-caret-right"></span>
+        </a>
     </div>
 
     <!-- Collapsed antecedent, also readonly -->
@@ -47,7 +49,9 @@
 
     <!-- Collapse button -->
     <div class="col-md-1">
-        <a ng-click="collapsed = !collapsed"><small><span class="fa fa-caret-down"></span></small></a>
+        <a ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
+            <small><span class="fa fa-caret-down"></span></small>
+        </a>
     </div>
 
     <!-- Antecedent -->
