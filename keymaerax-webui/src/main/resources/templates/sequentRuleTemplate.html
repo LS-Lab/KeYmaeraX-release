@@ -16,7 +16,7 @@
                 {{$last ? '' : ','}}
             </span>
         </span>
-        <span class="col-md-1">&#8866;</span>
+        <span class="col-md-1">&#10230;</span>
         <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
             <span ng-repeat="succ in premise.succ">
                 <span ng-repeat="succPart in succ">
@@ -57,7 +57,7 @@
             <div class="col-md-4 k4-nobreak k4-sequentRuleAnte">
                 <span ng-repeat="ante in tactic.derivation.conclusion.ante"><span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
             </div>
-            <div class="col-md-1">&#8866;</div>
+            <div class="col-md-1">&#10230;</div>
             <div class="col-md-7 k4-nobreak k4-sequentRuleSucc">
                 <span class="k4-nobreak" ng-repeat="succ in tactic.derivation.conclusion.succ"><span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
             </div>

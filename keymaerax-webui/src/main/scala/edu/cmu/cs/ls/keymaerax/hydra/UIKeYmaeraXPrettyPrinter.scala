@@ -34,7 +34,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     .replaceAllLiterally("&", "&#8743;")
     .replaceAllLiterally("!", "&not;")
     .replaceAllLiterally("|", "&#8744;")
-    .replaceAllLiterally("->", "&rarr;")
+    .replaceAllLiterally("->", "⊃")
     .replaceAllLiterally("<->", "&#8596;")
     .replaceAllLiterally("<=", "&leq;")
     .replaceAllLiterally("!=", "&ne;")

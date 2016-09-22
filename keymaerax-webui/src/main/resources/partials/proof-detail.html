@@ -76,7 +76,7 @@ function handle(json) {
       if($.isArray(c)) {
           var left = handle(c[0]);
           var right = handle(c[1]);
-          items.push(span(json.id, left + " → " + right));
+          items.push(span(json.id, left + " ⊃ " + right));
       }
   } else if(json.name == "equiv") {
       var c = json.children;
@@ -238,7 +238,7 @@ function translateSequent(proofId, nId, s) {
 	s.ante.forEach(function(f) {
 	    res = res + translateFormula(proofId, nId, f) + "<br>";
 	});
-	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, '" + proofId + "','" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> &#8866; </span><br>";
+	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, '" + proofId + "','" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> &#10230; </span><br>";
 	s.succ.forEach(function(f) {
 	    res = res + translateFormula(proofId, nId, f) + "<br>";
 	});

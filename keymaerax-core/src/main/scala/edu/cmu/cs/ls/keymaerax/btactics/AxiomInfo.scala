@@ -153,10 +153,10 @@ object DerivationInfo {
           (List("&Gamma;", "Q"),List("&Delta;"))))
       , {case () => SequentCalculus.orL}),
     new PositionTacticInfo("implyR"
-      , RuleDisplayInfo(("→R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
+      , RuleDisplayInfo(("⊃R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
       , {case () => SequentCalculus.implyR}),
     new PositionTacticInfo("implyL"
-      , RuleDisplayInfo(("→L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
+      , RuleDisplayInfo(("⊃L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
         List((List("&Gamma;","P→Q"),List("&Delta;")),
           (List("&Gamma;"),List("Q"))))
       , {case () => SequentCalculus.implyL}),

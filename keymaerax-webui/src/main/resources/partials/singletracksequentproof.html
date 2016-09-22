@@ -197,7 +197,7 @@
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
             <span ng-if="proofTree.nodesMap[sibling].sequent.ante.length > 1">...</span>
         </span>
-        <span>&#8866;</span>
+        <span>&#10230;</span>
         <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.succ | limitTo:-1">
             <span ng-if="proofTree.nodesMap[sibling].sequent.succ.length > 1">... </span>
             <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"

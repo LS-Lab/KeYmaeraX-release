@@ -25,7 +25,7 @@
     <div class="col-md-1">
         <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula k4-flexcell">
-                <div class="k4-formula-content-abbreviate">&#8866;</div>
+                <div class="k4-formula-content-abbreviate">&#10230;</div>
             </div>
         </div>
     </div>
@@ -59,24 +59,9 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(f.id,'step')"
-                           uib-tooltip="Step" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-step-forward"></span></a>
-                    </li>
                     <li><a ng-click="onTactic(f.id,'hideL')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
-                    </li>
-                    <li ng-if="isFOL(f.formula)">
-                        <a ng-click="transformFormula(f.id, f.formula, true)"
-                           uib-tooltip="Transform" tooltip-placement="left" tooltip-popup-delay="5000">
-                            <span class="fa fa-pencil"></span></a>
-                    </li>
-                    <li ng-if="f.formula.name === 'equals'">
-                        <a ng-click="onTactic(f.id,'allL2R')"
-                           uib-tooltip="Replace all occurrences of left-hand side with right-hand side"
-                           tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-exchange"></span></a>
                     </li>
                     <li><a ng-click="exportFormula(f.id)"
                            uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
@@ -108,26 +93,6 @@
         <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(undefined, 'master')"
-                           uib-tooltip="Auto" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-magic"></span></a>
-                    </li>
-                    <li><a ng-click="onTactic(undefined, 'prop')"
-                           uib-tooltip="Exhaustive propositional reasoning" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-forward"></span></a>
-                    </li>
-                    <li><a ng-click="onTactic(undefined, 'QE')"
-                           uib-tooltip="Quantifier elimination" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-calculator"></span></a>
-                    </li>
-                    <li><a ng-click="onTactic(undefined, 'normalize')"
-                           uib-tooltip="Auto without QE" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-ban"></span></a>
-                    </li>
-                    <li><a ng-click="getCounterExample()"
-                           uib-tooltip="Find counterexample" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-search"></span></a>
-                    </li>
                     <li><a ng-click="openInputTacticDialog('cut')"
                            uib-tooltip="Cut" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-scissors"></span></a>
@@ -139,10 +104,10 @@
                      on-drag-leave="turnstileDragLeave(dragData)"
                      uib-tooltip="Rewrite all occurrences of the equality left-hand side into the right-hand side everywhere in the sequent"
                      tooltip-placement="bottom"
-                     tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()">&#8866;</div>
+                     tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()">&#10230;</div>
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly">
-                <div class="k4-formula-content">&#8866;</div>
+                <div class="k4-formula-content">&#10230;</div>
             </div>
         </div>
     </div>
@@ -152,18 +117,9 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(f.id,'step')"
-                           uib-tooltip="Step" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-step-forward"></span></a>
-                    </li>
                     <li><a ng-click="onTactic(f.id,'hideR')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
-                    </li>
-                    <li ng-if="isFOL(f.formula)">
-                        <a ng-click="transformFormula(f.id, f.formula, false)"
-                           uib-tooltip="Transform" tooltip-placement="left" tooltip-popup-delay="5000">
-                            <span class="fa fa-pencil"></span></a>
                     </li>
                     <li><a ng-click="exportFormula(f.id)"
                            uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
