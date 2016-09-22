@@ -2,8 +2,10 @@ package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
+
 
 /**
   * Tests BelleExpr pretty printing, for expected string representation plus roundtrip identity with parser.
@@ -41,6 +43,12 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   it should "print e | e" in { roundTrip("nil | nil") }
 
   "doall" should "print e & doall(e)" in { roundTrip("andR(1) & doall(andL(1))") }
+
+  "transform" should "print with formula" in {
+    val tactic = TactixLibrary.transform("x>0".asFormula)(1)
+    BellePrettyPrinter(tactic) shouldBe "transform({`x>0`}, 1)"
+    roundTrip("transform({`x>0`}, 1)")
+  }
 
   "Operator precedence" should "parenthesize saturate *" in { roundTrip("implyR(1) & (andL('L)*)") }
 
