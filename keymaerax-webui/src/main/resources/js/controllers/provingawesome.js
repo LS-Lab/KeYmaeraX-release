@@ -29,7 +29,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                       size: 'md',
                       resolve: {
                           proofId: function() { return $scope.proofId; },
-                          status: function() { return data.status }
+                          proofName: function() { return $scope.proofName; },
+                          status: function() { return data.status; },
+                          proofData: function() { return sequentProofData; }
                       }
                   });
               } else {
@@ -330,16 +332,30 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $cookies, $uibModalInstance, proofId) {
+        function($scope, $http, $cookies, $uibModalInstance, FileSaver, Blob, proofId, proofName, proofData) {
     $scope.validatedProofStatus = 'closed'
+
+    $scope.proofData = proofData;
+    proofData.tactic.fetch($cookies.get('userId'), proofId);
+
+    $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/validatedStatus").then(function(response) {
+      $scope.validatedProofStatus = response.data.status;
+      $scope.provedConclusion = response.data.provedConclusion;
+    });
 
     $scope.cancel = function() {
         $uibModalInstance.dismiss('cancel');
     };
 
-    $scope.validateProof = function() {
-      $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/validatedStatus").success(function(data) {
-        $scope.validatedProofStatus = data.status
+    $scope.downloadTactic = function() {
+      var data = new Blob([proofData.tactic.lastExecutedTacticText], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, proofName + '.kyt');
+    }
+
+    $scope.downloadLemma = function() {
+      $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/lemma").then(function(response) {
+        var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+        FileSaver.saveAs(data, proofName + '.kyp');
       });
     }
 });

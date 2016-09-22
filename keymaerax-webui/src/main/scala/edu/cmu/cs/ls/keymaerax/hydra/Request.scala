@@ -1079,7 +1079,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
     val isProved = provable.isProved && provable.conclusion == conclusion
-    new ProofVerificationResponse(proofId, isProved) :: Nil
+    new ProofVerificationResponse(proofId, provable.conclusion, isProved) :: Nil
   }
 }
 
@@ -1180,6 +1180,24 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   override def resultingResponses(): List[Response] = {
     val exprText = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(proofId))
     new ExtractTacticResponse(exprText) :: Nil
+  }
+}
+
+class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val proofInfo = db.getProofInfo(proofIdStr)
+    val model = db.getModel(proofInfo.modelId)
+    val trace = db.getExecutionTrace(proofId)
+    val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
+    val provable = trace.lastProvable
+    val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> model.keyFile,
+      "tactic" -> tactic
+    )) :: Nil)
+    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(proofInfo.name)).toString) :: Nil
   }
 }
 

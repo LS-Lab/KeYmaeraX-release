@@ -225,8 +225,10 @@ class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId
 class ProofProgressResponse(proofId: String, isClosed: Boolean)
   extends ProofStatusResponse(proofId, if(isClosed) "closed" else "open")
 
-class ProofVerificationResponse(proofId: String, isVerified: Boolean)
-  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed")
+class ProofVerificationResponse(proofId: String, conclusion: Sequent, isVerified: Boolean)
+  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed") {
+  override def getJson = JsObject(super.getJson.fields + ("provedConclusion" -> JsString(conclusion.toString)))
+}
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {
   def getJson = JsObject(
