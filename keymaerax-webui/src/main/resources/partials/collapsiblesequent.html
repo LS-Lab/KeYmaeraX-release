@@ -79,9 +79,10 @@
                         <span class="fa fa-clipboard"></span></a>
                     </li>
                 </ul>
-                <div class="k4-formula-content pull-right">
+                <div class="k4-formula-content col-md-12">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
+                    <k4-formula class="pull-right"
+                            k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
                             formula="f.formula" highlight="true" collapsed="false"
                             on-tactic="onTactic(formulaId, tacticId)"
