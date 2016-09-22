@@ -75,4 +75,4 @@ object ReflectiveExpressionBuilder {
 }
 
 
-class ReflectiveExpressionBuilderExn(msg: String) extends Exception(msg)
+class ReflectiveExpressionBuilderExn(msg: String, cause: Throwable = null) extends Exception(msg, cause)
