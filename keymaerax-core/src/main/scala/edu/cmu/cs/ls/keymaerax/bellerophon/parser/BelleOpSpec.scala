@@ -38,6 +38,7 @@ object BelleOpSpec {
   val repeat   = (i: Int) => BelleRepeatOpSpec(N_TIMES(i), 300, false, (child: BelleExpr, times: Int, annotation: BelleType) => RepeatTactic.apply(child, times))
   val branch   = BelleBranchingOpSpec(BRANCH_COMBINATOR, 100, false, BranchTactic.apply)
   val partial  = BelleUnaryOpSpec(PARTIAL, 100, false)
+  val onall    = BelleUnaryOpSpec(ON_ALL, 100, false)
   val usubst   = BelleUSubstOpSpec(US_MATCH, 100, false, USubstPatternTactic.apply)
 
   def op(e : BelleExpr): BelleOpSpec = e match {
@@ -47,6 +48,7 @@ object BelleOpSpec {
     case e:RepeatTactic   => repeat(e.times)
     case e:PartialTactic  => partial
     case e:BranchTactic => branch
+    case e:OnAll => onall
     case e:USubstPatternTactic => usubst
     case e:BuiltInTactic       => base
     case e:AppliedPositionTactic => base

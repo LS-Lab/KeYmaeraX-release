@@ -6,7 +6,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
 /**
+  * Tests BelleExpr pretty printing, for expected string representation plus roundtrip identity with parser.
   * @author Nathan Fulton
+  * @author Stefan Mitsch
   */
 @UsualTest
 class BTacticPrettyPrinterTests extends TacticTestBase {
@@ -37,6 +39,8 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   it should "print (e & e) & e" in { roundTrip("(nil & nil) & nil") }
 
   it should "print e | e" in { roundTrip("nil | nil") }
+
+  "doall" should "print e & doall(e)" in { roundTrip("andR(1) & doall(andL(1))") }
 
   "Operator precedence" should "parenthesize saturate *" in { roundTrip("implyR(1) & (andL('L)*)") }
 
