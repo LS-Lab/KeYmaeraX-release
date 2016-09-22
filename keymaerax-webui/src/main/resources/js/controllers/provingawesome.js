@@ -58,7 +58,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
             .then(function(response) {
               if (response.data.type === 'taskresult') {
-                $rootScope.$emit('proof.message', "");
+                $rootScope.$emit('proof.message', { textStatus: "", errorThrown: "" });
                 if ($scope.runningTask.nodeId === response.data.parent.id) {
                   sequentProofData.updateAgendaAndTree(response.data);
                   sequentProofData.tactic.fetch(userId, proofId);
@@ -71,12 +71,12 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               }
             })
             .catch(function(err) {
-              $rootScope.$emit('proof.message', err.data.textStatus);
+              $rootScope.$emit('proof.message', err.data);
             })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
         },
         /* future rejected */ function(reason) {
-          $rootScope.$emit('proof.message', "");
+          $rootScope.$emit('proof.message', { textStatus: "", errorThrown: "" });
           if (reason !== 'stopped') showMessage($uibModal, reason);
           spinnerService.hide('tacticExecutionSpinner');
         }
@@ -182,7 +182,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit("proof.message", err.data.textStatus);
+          $rootScope.$emit("proof.message", err.data);
         });
     }
 
@@ -197,7 +197,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit("proof.message", err.data.textStatus);
+          $rootScope.$emit("proof.message", err.data);
         });
     }
 
@@ -210,7 +210,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit("proof.message", err.data.textStatus);
+          $rootScope.$emit("proof.message", err.data);
         });
     }
 
@@ -224,7 +224,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       request.then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit('proof.message', err.data.textStatus);
+          $rootScope.$emit('proof.message', err.data);
         });
     }
 
@@ -240,7 +240,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
                 console.error("Error while executing custom tactic: " + err.data.textStatus);
                 spinnerService.hide('tacticExecutionSpinner');
                 //For custom tactics, show the tactic message and also the little yellow status bar.
-                $rootScope.$emit('proof.message', err.data.textStatus);
+                $rootScope.$emit('proof.message', err.data);
                 showCaughtTacticErrorMessage($uibModal, err.data.errorThrown, err.data.textStatus, err.data.tacticMsg)
             }
             else {

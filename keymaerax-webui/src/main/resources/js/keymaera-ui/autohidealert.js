@@ -5,7 +5,8 @@ angular.module('keymaerax.ui.directives').directive('k4AutoHideAlert', function(
     scope: {
       timeout: '@',
       isVisible: '=',
-      message: '='
+      message: '=',
+      details: '='
     },
     link: link,
     restrict: 'E',

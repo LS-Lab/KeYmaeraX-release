@@ -85,10 +85,10 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                 if (formula.formula.name === 'equals') {
                   scope.onApplyTactic({formulaId: formula.id, tacticId: 'allL2R'})
                 } else {
-                  $rootScope.$emit('proof.message', 'Drop formulas of the form "lhs=rhs" only')
+                  $rootScope.$emit('proof.message', { textStatus: 'Drop formulas of the form "lhs=rhs" only', errorThrown: "" })
                 }
               } else {
-                $rootScope.$emit('proof.message', 'Drop antecedent formulas only')
+                $rootScope.$emit('proof.message', { textStatus: 'Drop antecedent formulas only', errorThrown: "" })
               }
             }
 
