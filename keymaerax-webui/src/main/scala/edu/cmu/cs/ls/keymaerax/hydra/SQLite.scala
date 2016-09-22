@@ -15,7 +15,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core._
@@ -493,7 +493,7 @@ object SQLite {
         val executableId =
           (Executables.map({case exe => (exe.belleexpr) })
             returning Executables.map(_._Id.get))
-          .insert(Some(expr.prettyString))
+          .insert(Some(BellePrettyPrinter(expr)))
         nInserts = nInserts + 1
         executableId
       })
