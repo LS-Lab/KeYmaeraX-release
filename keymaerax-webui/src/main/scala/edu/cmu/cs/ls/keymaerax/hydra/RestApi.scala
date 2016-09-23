@@ -244,6 +244,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val extractLemma = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "lemma") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new ExtractLemmaRequest(database, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
   val downloadProblemSolution = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "download") { (userId, proofId) => { pathEnd {
     get {
       val request = new ExtractProblemSolutionRequest(database, proofId)
@@ -803,6 +810,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskResult            ::
     stopTask              ::
     extractTactic         ::
+    extractLemma          ::
     downloadProblemSolution ::
     counterExample        ::
     setupSimulation       ::

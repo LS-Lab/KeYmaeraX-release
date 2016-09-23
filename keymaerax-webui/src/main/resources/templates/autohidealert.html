@@ -1,4 +1,12 @@
 <div class="alert alert-warning alert-dismissible k4-narrowalert" role="alert" ng-show="isVisible" ng-cloak>
     <button type="button" class="close" ng-click="isVisible=false;"><i class="fa fa-close"></i></button>
     <i class="fa fa-exclamation-triangle"></i> {{message}}
+    <span ng-if="details !== undefined && details !== ''"
+          uib-popover-template="'proofmessagedetails.html'"
+          popover-placement="auto bottom" popover-trigger="click"
+          style="border-bottom: 1px dashed;">Details</span>
 </div>
+
+<script type="text/ng-template" id="proofmessagedetails.html">
+    <pre style="width:500px;overflow:scroll;">{{details}}</pre>
+</script>

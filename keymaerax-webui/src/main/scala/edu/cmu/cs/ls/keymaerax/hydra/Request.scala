@@ -362,7 +362,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
 class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
-    val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+    val contents : String = Source.fromInputStream(reader).getLines().mkString("\n")
     val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
 
     // TODO provide classes and spray JSON protocol to convert
@@ -386,7 +386,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5) :: Nil
+    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
   }
 
   private def osKeyOf(osName: String): String = {
@@ -1113,7 +1113,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
     val isProved = provable.isProved && provable.conclusion == conclusion
-    new ProofVerificationResponse(proofId, isProved) :: Nil
+    new ProofVerificationResponse(proofId, provable.conclusion, isProved) :: Nil
   }
 }
 
@@ -1214,6 +1214,24 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   override def resultingResponses(): List[Response] = {
     val exprText = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(proofId))
     new ExtractTacticResponse(exprText) :: Nil
+  }
+}
+
+class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val proofInfo = db.getProofInfo(proofIdStr)
+    val model = db.getModel(proofInfo.modelId)
+    val trace = db.getExecutionTrace(proofId)
+    val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
+    val provable = trace.lastProvable
+    val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> model.keyFile,
+      "tactic" -> tactic
+    )) :: Nil)
+    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(proofInfo.name)).toString) :: Nil
   }
 }
 

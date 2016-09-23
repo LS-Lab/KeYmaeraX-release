@@ -2,28 +2,25 @@
     <h3 class="modal-title"><i class="fa fa-graduation-cap"></i> Congratulations: Proof Found</h3>
 </div>
 <div class="modal-body">
-    <!--<pre>-->
-       <!--<k4-mathjaxformula ng-if="formula" formula="formula.formula" delimiter="inline"></k4-mathjaxformula>-->
-    <!--</pre>-->
     <p>
         All goals in your proof agenda have been closed.
-        You can now let KeYmaera&#160;X assemble and validate the resulting proof.
     </p>
 
     <!-- TODO Display proof statistics -->
 
-    <p>
-        Proof Status:
-        <span ng-if="validatedProofStatus === 'closed'"> Found</span>
-        <span ng-if="validatedProofStatus === 'proved'"> <i class="fa fa-check"></i> Validated</span>
-        <button class="btn btn-primary pull-right" ng-if="validatedProofStatus === 'closed'" ng-click="validateProof()">
-            <i class="fa fa-cogs"></i> Validate Proof
-        </button>
-    </p>
+    <h4>Proved Conclusion</h4>
+    <div>
+        <pre style="overflow:scroll;height:50px;"><code>{{provedConclusion}}</code></pre>
+    </div>
 
-    <!-- TODO After checking the proof, download a certificate -->
+    <h4>Tactic to Reproduce the Proof</h4>
+    <div>
+        <pre style="overflow:scroll;height:200px;"><code>{{proofData.tactic.lastExecutedTacticText}}</code></pre>
+    </div>
 
 </div>
 <div class="modal-footer">
+    <button class="btn btn-default" ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
+    <button class="btn btn-default" ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>
