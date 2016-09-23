@@ -376,9 +376,8 @@ object BelleParser extends (String => BelleExpr) {
 
     try {
       ReflectiveExpressionBuilder(name, newArgs, invariantGenerator)
-    }
-    catch {
-      case e : ReflectiveExpressionBuilderExn => throw new ReflectiveExpressionBuilderExn(e.getMessage + s" Encountered while parsing ${name}")
+    } catch {
+      case e: ReflectiveExpressionBuilderExn => throw new ReflectiveExpressionBuilderExn(e.getMessage + s" Encountered while parsing $name", e)
     }
   }
 

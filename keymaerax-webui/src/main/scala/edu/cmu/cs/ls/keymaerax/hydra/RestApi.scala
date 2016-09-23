@@ -21,6 +21,8 @@ import spray.routing
 import spray.util.LoggingContext
 import spray.http.StatusCodes.{Unauthorized, Forbidden}
 
+import scala.language.postfixOps
+
 class RestApiActor extends Actor with RestApi {
   implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
     case e: Throwable => ctx =>
@@ -198,6 +200,27 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val modelplex = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment) { (modelId, monitorKind) => pathEnd {
+    get {
+      parameters('vars.as[String] ?) { vars => {
+        val theVars: List[String] = vars match {
+          case Some(v) => v.parseJson match {
+            case a: JsArray => a.elements.map({ case JsString(s) => s}).toList
+          }
+          case None => List.empty
+        }
+        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, theVars)
+        completeRequest(r, t)
+    }}}
+  }}}
+
+  val modelplexMandatoryVars = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "mandatoryVars") { modelId => pathEnd {
+    get {
+      val r = new ModelPlexMandatoryVarsRequest(database, userId, modelId)
+      completeRequest(r, t)
+    }
+  }}}
+
   //Because apparently FTP > modern web.
   val userModel2 = (t : SessionToken) => userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
   {pathEnd {
@@ -217,6 +240,13 @@ trait RestApi extends HttpService with SLF4JLogging {
   val extractTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (userId, proofId) => { pathEnd {
     get {
       val request = new ExtractTacticRequest(database, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val extractLemma = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "lemma") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new ExtractLemmaRequest(database, proofId)
       completeRequest(request, t)
     }
   }}}
@@ -780,12 +810,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskResult            ::
     stopTask              ::
     extractTactic         ::
+    extractLemma          ::
     downloadProblemSolution ::
     counterExample        ::
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
     dashInfo              ::
+    modelplex             ::
+    modelplexMandatoryVars::
     exportSequent         ::
     exportFormula         ::
     logoff                ::

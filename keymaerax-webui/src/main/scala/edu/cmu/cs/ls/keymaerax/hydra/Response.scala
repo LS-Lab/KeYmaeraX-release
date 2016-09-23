@@ -146,6 +146,20 @@ class GetModelTacticResponse(model : ModelPOJO) extends Response {
   )
 }
 
+class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) extends Response {
+  def getJson = JsObject(
+    "modelid" -> JsString(model.modelId.toString),
+    "mandatoryVars" -> JsArray(vars.map(v => JsString(v.prettyString)).toVector)
+  )
+}
+
+class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
+  def getJson = JsObject(
+    "modelid" -> JsString(model.modelId.toString),
+    "monitor" -> JsString(monitor.prettyString)
+  )
+}
+
 class LoginResponse(flag:Boolean, userId:String, sessionToken : Option[String]) extends Response {
   def getJson = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
@@ -225,8 +239,10 @@ class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId
 class ProofProgressResponse(proofId: String, isClosed: Boolean)
   extends ProofStatusResponse(proofId, if(isClosed) "closed" else "open")
 
-class ProofVerificationResponse(proofId: String, isVerified: Boolean)
-  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed")
+class ProofVerificationResponse(proofId: String, conclusion: Sequent, isVerified: Boolean)
+  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed") {
+  override def getJson = JsObject(super.getJson.fields + ("provedConclusion" -> JsString(conclusion.toString)))
+}
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {
   def getJson = JsObject(
@@ -650,14 +666,21 @@ class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : 
 
 //@todo these are a mess.
 class MathematicaConfigSuggestionResponse(os: String, version: String, kernelPath: String, kernelName: String,
-                                          jlinkPath: String, jlinkName: String) extends Response {
+                                          jlinkPath: String, jlinkName: String,
+                                          allSuggestions: List[(String, String, String, String, String)]) extends Response {
+
+  private def convertSuggestion(info: (String, String, String, String, String)): JsValue = JsObject(
+    "version" -> JsString(info._1),
+    "kernelPath" -> JsString(info._2),
+    "kernelName" -> JsString(info._3),
+    "jlinkPath" -> JsString(info._4),
+    "jlinkName" -> JsString(info._5)
+  )
+
   def getJson: JsValue = JsObject(
     "os" -> JsString(os),
-    "version" -> JsString(version),
-    "kernelPath" -> JsString(kernelPath),
-    "kernelName" -> JsString(kernelName),
-    "jlinkPath" -> JsString(jlinkPath),
-    "jlinkName" -> JsString(jlinkName)
+    "suggestion" -> convertSuggestion((version, kernelPath, kernelName, jlinkPath, jlinkName)),
+    "allSuggestions" -> JsArray(allSuggestions.map(convertSuggestion):_*)
   )
 }
 

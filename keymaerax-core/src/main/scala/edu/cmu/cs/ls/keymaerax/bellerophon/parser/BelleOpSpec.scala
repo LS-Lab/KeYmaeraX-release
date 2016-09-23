@@ -33,20 +33,22 @@ object BelleOpSpec {
   val base     = BelleUnitOpSpec(none, 0, false, (s:String) => ???)
   val seq      = BelleBinaryOpSpec(SEQ_COMBINATOR,    200, false)
   val either   = BelleUnaryOpSpec(EITHER_COMBINATOR, 220, false)
-  val star     = BelleUnaryOpSpec(KLEENE_STAR,        100, false)
-  val saturate = BelleSaturatingOpSpec(SATURATE, 100, false, (child: BelleExpr, annotation: BelleType) => SaturateTactic.apply(child))
-  val repeat   = BelleRepeatOpSpec(SATURATE, 100, false, (child: BelleExpr, times: Int, annotation: BelleType) => RepeatTactic.apply(child, times))
+  val star     = BelleUnaryOpSpec(KLEENE_STAR,        300, false)
+  val saturate = BelleSaturatingOpSpec(SATURATE, 300, false, (child: BelleExpr, annotation: BelleType) => SaturateTactic.apply(child))
+  val repeat   = (i: Int) => BelleRepeatOpSpec(N_TIMES(i), 300, false, (child: BelleExpr, times: Int, annotation: BelleType) => RepeatTactic.apply(child, times))
   val branch   = BelleBranchingOpSpec(BRANCH_COMBINATOR, 100, false, BranchTactic.apply)
-  val partial  = BelleUnaryOpSpec(PARTIAL, 100, false)
+  val partial  = BelleUnaryOpSpec(PARTIAL, 300, false)
+  val onall    = BelleUnaryOpSpec(ON_ALL, 100, false)
   val usubst   = BelleUSubstOpSpec(US_MATCH, 100, false, USubstPatternTactic.apply)
 
   def op(e : BelleExpr): BelleOpSpec = e match {
     case e:SeqTactic      => seq
     case e:EitherTactic   => either
     case e:SaturateTactic => star
-    case e:RepeatTactic   => repeat
+    case e:RepeatTactic   => repeat(e.times)
     case e:PartialTactic  => partial
     case e:BranchTactic => branch
+    case e:OnAll => onall
     case e:USubstPatternTactic => usubst
     case e:BuiltInTactic       => base
     case e:AppliedPositionTactic => base

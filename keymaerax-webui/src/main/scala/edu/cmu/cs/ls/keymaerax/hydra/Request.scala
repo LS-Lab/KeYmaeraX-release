@@ -13,17 +13,20 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
 
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+
 
 import java.io.{File, FileInputStream, FileOutputStream, FileNotFoundException}
 import java.text.SimpleDateFormat
@@ -359,7 +362,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
 class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
-    val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+    val contents : String = Source.fromInputStream(reader).getLines().mkString("\n")
     val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
 
     // TODO provide classes and spray JSON protocol to convert
@@ -383,7 +386,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5) :: Nil
+    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
   }
 
   private def osKeyOf(osName: String): String = {
@@ -540,6 +543,37 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
     new GetModelTacticResponse(model) :: Nil
   }
 }
+
+class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) :: Nil
+  }
+}
+
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, additionalVars: List[String]) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+      ++ additionalVars.map(_.asVariable)).toList
+    val modelplexInput = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val monitor = monitorKind match {
+      case "controller" =>
+        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+        try {
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*)
+        } catch {
+          case _: Throwable => foResult
+        }
+    }
+
+    if (monitor.subgoals.size == 1) new ModelPlexResponse(model, monitor.subgoals.head.toFormula) :: Nil
+    else new ErrorResponse("ModelPlex failed") :: Nil
+  }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Proofs of models
@@ -1079,7 +1113,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
     val isProved = provable.isProved && provable.conclusion == conclusion
-    new ProofVerificationResponse(proofId, isProved) :: Nil
+    new ProofVerificationResponse(proofId, provable.conclusion, isProved) :: Nil
   }
 }
 
@@ -1180,6 +1214,24 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   override def resultingResponses(): List[Response] = {
     val exprText = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(proofId))
     new ExtractTacticResponse(exprText) :: Nil
+  }
+}
+
+class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val proofInfo = db.getProofInfo(proofIdStr)
+    val model = db.getModel(proofInfo.modelId)
+    val trace = db.getExecutionTrace(proofId)
+    val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
+    val provable = trace.lastProvable
+    val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> model.keyFile,
+      "tactic" -> tactic
+    )) :: Nil)
+    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(proofInfo.name)).toString) :: Nil
   }
 }
 

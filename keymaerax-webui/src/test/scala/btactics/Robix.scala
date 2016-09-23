@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
@@ -12,9 +14,13 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 
 import scala.language.postfixOps
+import scala.reflect.runtime._
+import scala.tools.reflect.ToolBox
 
 /**
  * Robix test cases.
@@ -69,8 +75,8 @@ class Robix extends TacticTestBase {
     val invariant = """v >= 0
                       | & dx^2+dy^2 = 1
                       | & r != 0
-                      | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V()*(v/B)
-                      |          | abs(y-yo) > v^2 / (2*B) + V()*(v/B))""".stripMargin.asFormula
+                      | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V*(v/B)
+                      |          | abs(y-yo) > v^2 / (2*B) + V*(v/B))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
       "t>=0".asFormula,
@@ -78,8 +84,8 @@ class Robix extends TacticTestBase {
       s"v = old(v) + $a*t".asFormula,
       s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
+      "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")

@@ -59,7 +59,7 @@ private object ToolTactics {
   })
 
   /** @see [[TactixLibrary.transform()]] */
-  def transform(to: Formula)(tool: QETool with CounterExampleTool): DependentPositionTactic = "transform" by ((pos: Position, sequent: Sequent) => {
+  def transform(to: Formula)(tool: QETool with CounterExampleTool): DependentPositionWithAppliedInputTactic = "transform" byWithInput (to, (pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel, "transform only at top level")
     require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
 

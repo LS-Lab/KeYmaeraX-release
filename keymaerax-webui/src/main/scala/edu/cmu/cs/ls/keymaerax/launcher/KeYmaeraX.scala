@@ -35,7 +35,7 @@ object KeYmaeraX {
       |
       |Usage: java -Xss20M -jar keymaerax.jar
       |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
-      |  -modelplex filename.kyx [-out filename.kym] |
+      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym] |
       |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse filename.kyx |
@@ -53,7 +53,7 @@ object KeYmaeraX {
       |  -tool mathematica|z3 choose which tool to use for arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -kind ctrl|model what kind of monitor to generate with ModelPlex
+      |  -monitorKind ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
@@ -121,8 +121,8 @@ object KeYmaeraX {
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
-      case "-help" :: _ => {println(usage); exit(1)}
-      case "-license" :: _ => {println(license); exit(1)}
+      case "-help" :: _ => println(usage); exit(1)
+      case "-license" :: _ => println(license); exit(1)
       // actions
       case "-parse" :: value :: tail =>
         parseProblemFile(value); ???
@@ -145,6 +145,9 @@ object KeYmaeraX {
       case "-vars" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else optionErrorReporter("-vars")
+      case "-monitorKind" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitorKind -> Symbol(value)), tail)
+        else optionErrorReporter("-monitorKind")
       case "-tactic" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
         else optionErrorReporter("-tactic")
@@ -210,8 +213,8 @@ object KeYmaeraX {
     option match {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
-      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
+      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
+      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
@@ -311,7 +314,6 @@ object KeYmaeraX {
    */
   def prove(options: OptionMap) = {
     require(options.contains('in), usage)
-
     val (tactic: BelleExpr, tacticSource: String) = options.get('tactic) match {
       case Some(t) =>
         val fileName = t.toString
@@ -416,29 +418,29 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
-    val inputFileNameDotKey = options.get('in).get.toString
+    val inputFileNameDotKey = options('in).toString
     assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
       "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key or .kyx files. Please use: -modelplex FILENAME.[key/kyx]")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
-    val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
+    val verifyOption = options.getOrElse('verify, false).asInstanceOf[Boolean]
     val inputFileName = inputFileNameDotKey.dropRight(4)
     var outputFileName = inputFileName
     if(options.contains('out)) {
-      val outputFileNameDotMx = options.get('out).get.toString
-      assert(outputFileNameDotMx.endsWith(".mx"),
-        "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .mx file. Please use: -out FILENAME.mx")
-      outputFileName = outputFileNameDotMx.dropRight(3)
+      val outputFileNameDotMx = options('out).toString
+      assert(outputFileNameDotMx.endsWith(".kym"),
+        "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .kym file. Please use: -out FILENAME.kym")
+      outputFileName = outputFileNameDotMx.dropRight(4)
     }
 
-    val pw = new PrintWriter(outputFileName + ".mx")
+    val pw = new PrintWriter(outputFileName + ".kym")
 
     val kind =
-      if (options.contains('kind)) options.get('kind).get.asInstanceOf[Symbol]
+      if (options.contains('monitorKind)) options('monitorKind).asInstanceOf[Symbol]
       else 'model
 
     val outputFml = if (options.contains('vars))
-      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
+      ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
     else
       ModelPlex(inputModel, kind, verifyOption)
     val output = KeYmaeraXPrettyPrinter(outputFml)
@@ -462,9 +464,9 @@ object KeYmaeraX {
   def codegen(options: OptionMap) = {
     require(options.contains('in), usage)
 
-    val inputFileNameDotMx = options.get('in).get.toString
-    assert(inputFileNameDotMx.endsWith(".mx"),
-      "\n[Error] Wrong file name " + inputFileNameDotMx + " used for -codegen! Code generator only handles .mx file. Please use: -codegen FILENAME.mx")
+    val inputFileNameDotMx = options('in).toString
+    assert(inputFileNameDotMx.endsWith(".kym"),
+      "\n[Error] Wrong file name " + inputFileNameDotMx + " used for -codegen! Code generator only handles .kym file. Please use: -codegen FILENAME.kym")
     val input = scala.io.Source.fromFile(inputFileNameDotMx).mkString
     val inputFormula = KeYmaeraXParser(input)
     val inputFileName = inputFileNameDotMx.dropRight(3)
@@ -486,13 +488,13 @@ object KeYmaeraX {
     //@note codegen in C format only
     var outputFileName = inputFileName
     if(options.contains('out)) {
-      val outputFileNameDotC = options.get('out).get.toString
+      val outputFileNameDotC = options('out).toString
       assert(outputFileNameDotC.endsWith(".c"),
         "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
       outputFileName = outputFileNameDotC.dropRight(2)
     }
     val vars: List[Variable] =
-      if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
+      if(options.contains('vars)) options('vars).asInstanceOf[Array[Variable]].toList
       else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
     val codegenStart = Platform.currentTime
     val output = CGenerator(inputFormula, vars, outputFileName)
@@ -533,7 +535,7 @@ object KeYmaeraX {
     override def checkPermission(perm: Permission): Unit = {
       perm match {
           //@todo should disallow writing reflection in .core.
-        case perm:ReflectPermission if "suppressAccessChecks"==perm.getName() =>
+        case perm:ReflectPermission if "suppressAccessChecks"==perm.getName =>
           throw new SecurityException("suppressing access checks during reflection is forbidden")
         case _:ReflectPermission => ()
         case _:RuntimePermission =>

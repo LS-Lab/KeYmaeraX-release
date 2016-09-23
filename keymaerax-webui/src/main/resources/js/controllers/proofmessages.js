@@ -3,6 +3,7 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
 
   $scope.proofMessage = {
     text: "",
+    details: "",
     isVisible: false
   }
 
@@ -12,8 +13,9 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
   });
 
   $rootScope.$on('proof.message', function(event, message) {
-    $scope.proofMessage.text = message;
-    $scope.proofMessage.isVisible = true;
+    $scope.proofMessage.text = message.textStatus;
+    $scope.proofMessage.details = message.errorThrown;
+    $scope.proofMessage.isVisible = (message.textStatus !== "");
   });
 
 })

@@ -1823,6 +1823,14 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom ">= reflexive".
+    *    s() >= s()
+    * End.
+    * }}}
+    */
+  lazy val greaterEqualReflex = derivedAxiom(">= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() >= s_()".asFormula)), QE)
+
+  /**
     * {{{Axiom "* commute".
     *   (f()*g()) = (g()*f())
     * End.

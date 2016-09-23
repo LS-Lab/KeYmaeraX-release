@@ -331,6 +331,11 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.child shouldBe TactixLibrary.andR(1)
   }
 
+  it should "parse with expected precedence" in {
+    BelleParser("andL(-1) & (andR(1) partial)") shouldBe SeqTactic(TactixLibrary.andL(-1), PartialTactic(TactixLibrary.andR(1)))
+    BelleParser("andL(-1) & andR(1) partial") shouldBe PartialTactic(SeqTactic(TactixLibrary.andL(-1), TactixLibrary.andR(1)))
+  }
+
   //endregion
 
   //region Done tactics
