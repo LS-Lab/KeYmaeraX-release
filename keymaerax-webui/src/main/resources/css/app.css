@@ -525,7 +525,7 @@ del {
 .k4-formula:not(.nohover):hover .k4-formula-content {
   background: var(--lssuperlightblue);
   border: 1px solid var(--lsblue);
-  padding: 4px 4px 4px 4px;
+  padding: 3px; /* 3px+1px border = 4px padding of .k4-formula .k4-formula-content */
 }
 .k4-formula:not(.nohover):hover .k4-formula-content:before {
     display: none;
