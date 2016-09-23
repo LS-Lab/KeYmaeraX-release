@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import org.scalatest.PrivateMethodTester
@@ -18,14 +19,10 @@ import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryT
   * @author Nathan Fulton
   */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
-  import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
-  import Augmentors._
-  import TacticFactory._
-
-  val dgc = PrivateMethod[DependentPositionTactic]('DGC)
+  private val dgc = PrivateMethod[DependentPositionTactic]('DGC)
 
   //region integration tests
-  "axiomatic ode solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+  "Axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
@@ -53,7 +50,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   //@todo support non-arithmetic post-condition.
-  ignore should "not fail if the post-condition is non-arithmetic." taggedAs(TodoTest) in withMathematica { qeTool =>
+  it should "not fail if the post-condition is non-arithmetic." taggedAs(TodoTest) ignore withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     println(proveBy(f,t))
@@ -69,7 +66,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->((j/2)/3*(kyxtime+1*t_)^3+(3/2)*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
   }
 
-  "axiomatic ode solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+  "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.debug("About to QE on", true) & TactixLibrary.QE()
     proveBy(f, t) shouldBe 'proved
@@ -93,27 +90,27 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //region unit tests
 
   //@todo exists monotone
-  "setupTimeVar" should "work when time exists" in {
+  "SetupTimeVar" should "work when time exists" in {
     val system = "[{x'=v}]1=1".asFormula
     val tactic = addTimeVarIfNecessary
     val result = proveBy(system, tactic(SuccPosition(1, 0::Nil)))
     loneSucc(result) shouldBe "[{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
 
-  "cutInSolns" should "solve x'=y,t'=1" in withMathematica { qeTool =>
+  "CutInSolns" should "solve x'=y,t'=1" in withMathematica { qeTool =>
     val f = "x=0&y=0&t=0 -> [{x'=y, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(1)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*kyxtime+0}]x>=0".asFormula
   }
 
   //@todo fix.
-  ignore should "solve single time dependent eqn" taggedAs(TodoTest) in withMathematica { qeTool =>
+  it should "solve single time dependent eqn" taggedAs(TodoTest) ignore withMathematica { qeTool =>
     val f = "x=0&y=0&t=0 -> [{x'=t, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(1)*)
     loneSucc(proveBy(f,t)) shouldBe ???
   }
 
-  "simplifyPostCondition" should "work" in withMathematica { qeTool =>
+  "SimplifyPostCondition" should "work" in withMathematica { qeTool =>
     val f = "[{x'=1}](x=22 -> x>0)".asFormula
     val t = simplifyPostCondition(1)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=1&true}]22>0".asFormula
@@ -190,7 +187,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     loneSucc(proveBy(f,t)) shouldBe "[kyxtime:=1;][{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
 
-  "assignb in context" should "work" in {
+  "Assignb in context" should "work" in {
     val f = "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[kyxtime:=kyxtime+1*t_;](v*kyxtime+1)^3>=1)".asFormula
     val pos = SuccPosition(SuccPos(0), PosInExpr(0::1::1::Nil)) //Also tests this as the appropriate position. See [[AxiomaticODESolver.apply]]'s definition of "timeAssignmentPos"
     val t = DebuggingTactics.debugAt("At that position is: ", true)(pos) & HilbertCalculus.assignb(pos)
@@ -202,7 +199,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   //region The precondition check.
 
-  "isCanonicallyLinear" should "work" in {
+  "IsCanonicallyLinear" should "work" in {
     val program = "{a'=a*b, b'=c, c'=d, d'=e}".asProgram.asInstanceOf[ODESystem].ode
     DifferentialHelper.isCanonicallyLinear(program) shouldBe true
   }
