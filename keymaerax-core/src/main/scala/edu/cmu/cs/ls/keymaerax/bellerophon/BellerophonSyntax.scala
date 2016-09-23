@@ -492,6 +492,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
                 cause)
               tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
           }
+        } else if (cause == null) {
+          throw new BelleError(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}")
         } else throw cause
       case _ => pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
     }
