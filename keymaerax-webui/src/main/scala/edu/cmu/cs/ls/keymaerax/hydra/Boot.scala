@@ -118,22 +118,6 @@ object HyDRAInitializer {
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
-
-
-    try {
-      val preferredTool = preferredToolFromDB(database)
-      val config = configFromDB(options, database, preferredTool)
-      createTool(options, config, preferredTool)
-    } catch {
-      //@todo add e to log here and in other places
-      case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
-        println("You should configure settings in the UI and restart KeYmaera X.")
-        println("Or specify the paths to the libraries for your system explicitly from command line by running\n" +
-          "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
-        println("Current configuration:\n" + edu.cmu.cs.ls.keymaerax.tools.diagnostic)
-        e.printStackTrace()
-    }
-
     try {
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
@@ -150,49 +134,6 @@ object HyDRAInitializer {
     case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
   }
 
-  private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
-    val tool: String = options.getOrElse('tool, preferredTool).toString
-    val provider = tool.toLowerCase() match {
-      case "mathematica" => new MathematicaToolProvider(config)
-      case "z3" => new Z3ToolProvider
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
-    ToolProvider.setProvider(provider)
-    assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
-  }
-
-  private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
-    val tool: String = options.getOrElse('tool, preferredTool).toString
-    tool.toLowerCase() match {
-      case "mathematica" => mathematicaConfigFromDB(db)
-      case "z3" => Map.empty
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
-  }
-
-  private def preferredToolFromDB(db: DBAbstraction): String = {
-    db.getConfiguration("tool").config.getOrElse("qe", throw new Exception("No preferred tool"))
-  }
-
-  private def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
-    getMathematicaLinkName(db) match {
-      case Some(l) => getMathematicaLibDir(db) match {
-        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir)
-        case None => Map("linkName" -> l)
-      }
-      case None => DefaultConfiguration.defaultMathematicaConfig
-    }
-  }
-
-  private def getMathematicaLinkName(db: DBAbstraction): Option[String] = {
-    db.getConfiguration("mathematica").config.get("linkName")
-  }
-
-  private def getMathematicaLibDir(db: DBAbstraction): Option[String] = {
-    val config = db.getConfiguration("mathematica").config
-    if (config.contains("jlinkLibDir")) Some(config("jlinkLibDir"))
-    else None
-  }
 }
 
 /** Config vars needed for server setup. */
