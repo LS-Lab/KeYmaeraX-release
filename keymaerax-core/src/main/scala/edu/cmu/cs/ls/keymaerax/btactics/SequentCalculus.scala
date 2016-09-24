@@ -151,6 +151,17 @@ trait SequentCalculus {
     case Some(t: Term) => existsR(t)(pos)
   })
 
+  // Previously in HilbertCalculus
+  /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val allV               : DependentPositionTactic = useAt("vacuous all quantifier", us => us)
+  /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val existsV            : DependentPositionTactic = useAt("vacuous exists quantifier", us => us)
+  //@todo document and unclear what it really does depending on the index
+  lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
+
+  //@todo document and unclear what it really does depending on the index
+  lazy val existsE : DependentPositionTactic = useAt("exists eliminate", us => us)
+
 
   // closing
 

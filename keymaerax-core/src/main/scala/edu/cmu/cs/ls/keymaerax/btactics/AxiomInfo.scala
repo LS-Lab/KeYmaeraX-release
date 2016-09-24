@@ -75,9 +75,9 @@ object DerivationInfo {
 
     // first-order logic quantifiers
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => ???}),
-    new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => HilbertCalculus.allDist}),
-    new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => HilbertCalculus.allV}),
-    new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => HilbertCalculus.existsV}),
+    new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => SequentCalculus.allDist}),
+    new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => SequentCalculus.allV}),
+    new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => SequentCalculus.existsV}),
 
     // more
     new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
@@ -86,7 +86,7 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => posnil}),
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => posnil}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
-    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
+    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => SequentCalculus.existsE}),
 
     new DerivedAxiomInfo("!& deMorgan"
       , AxiomDisplayInfo(("¬∧", "!&"), "<span class=\"k4-axiom-key\">¬(p∧q)</span>↔(¬p|¬q)")
