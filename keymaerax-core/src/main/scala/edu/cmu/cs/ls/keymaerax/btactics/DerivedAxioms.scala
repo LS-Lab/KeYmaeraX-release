@@ -253,6 +253,7 @@ object DerivedAxioms {
     *
     * @Derived
     */
+  /* TODO prove without using existsDualAxiom (which is not valid in IL)
   lazy val existsGeneralize = derivedAxiom("exists generalize",
     Sequent(IndexedSeq(), IndexedSeq("p_(f()) -> (\\exists x_ p_(x_))".asFormula)),
     useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -261,6 +262,7 @@ object DerivedAxioms {
       useAt("all instantiate", PosInExpr(0::Nil))(-2) &
       prop
   )
+  */
 
   /**
     * {{{Axiom "vacuous exists quantifier".
@@ -270,6 +272,7 @@ object DerivedAxioms {
     *
     * @Derived
     */
+  /* TODO prove without using existsDual and doubleNegation axioms (which are not valid in IL)
   lazy val vacuousExistsAxiom = derivedAxiom("vacuous exists quantifier",
     Sequent(IndexedSeq(), IndexedSeq("(\\exists x_ p_()) <-> p_()".asFormula)),
     useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -277,6 +280,7 @@ object DerivedAxioms {
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
+  */
 
   /**
     * {{{Axiom "& commute".
@@ -415,6 +419,7 @@ object DerivedAxioms {
     *
     * @Derived
     */
+  /* TODO uncomment when existsGeneralize is fixed
   lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p_(x_)) -> (\\exists x_ p_(x_))".asFormula)),
     implyR(1) &
@@ -422,6 +427,7 @@ object DerivedAxioms {
       useAt("all instantiate")(-1) &
       closeId
   )
+  */
 
   /**
     * {{{Axiom "->true".
