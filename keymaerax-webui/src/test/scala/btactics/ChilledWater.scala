@@ -138,6 +138,87 @@ class ChilledWater extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  it should "be provable with ODE" in withMathematica { qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
+    val inv = """(Tw < Tl) &
+                |    (Tl < Tlu() &
+                |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
+                |    (l=1 -> v=1) &              /* If the load is on, the valve is open.        */
+                |    (v=0 -> l=0) &              /* If the valve is closed, the load is off.     */
+                |    (l=0 | l=1) &
+                |    (v=1 | v=0) &
+                |    (v=1 -> Tw=a()))""".stripMargin.asFormula
+
+    //@note Solve sometimes returns Log[...], which triggers a conversion exception.
+    // Seems to occur reliably when asked without the diff. cuts, but still sometimes with the diff. cuts.
+    // Once it occurs, it comes up a bunch...
+    // -> invariant generator some unstable ordering? it's not the caches fault (alone)
+    // -> some more suspicions after debugging: transitiveDependencies and relevanceFilter mix Maps and iterators
+    // -> the DGs are not done in the same order
+    // -> in those cases where the tactic succeeds, it did not ask inverseCharacteristicDifferentialInvariantGenerator...
+
+    // also: should be able to replace all diffInvariant with diffCut
+    val odeTlLessTlu = printIndexed("case split on model non-det. choices") <(
+      /* v:=1;Tw:=a(), here we need to actually exploit h()/r()+a()<Tlu() */
+      skip,
+      /* ?l=0;v:=0; */
+      diffCut("Tw<Tl".asFormula)(1), //@note now we know sign of Tl' plus Tl<Tlu initially
+      /* ?v=1;l:=0; */
+      diffInvariant("Tw=a()".asFormula)(1),
+      /* l:=0; */
+      orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+        /* v=1 */
+        diffInvariant("Tw=a()".asFormula)(1),
+        /* v=0 */
+        diffCut("Tw<Tl".asFormula)(1)
+        )
+      ) & OnAll(ODE('R)) & done
+
+    //@note works just as the above odeTlLessTlu, but when combining them together we reliably run into Log[...]
+    val odeALessEqualTw = skip <(
+      /* v:=1;Tw:=a; */ diffInvariant("Tw=a()".asFormula)(1),
+      /* ?l=0;v:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1),
+      /* ?v=1;l:=1; */ diffInvariant("Tw=a()".asFormula)(1),
+      /* l:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+        skip,
+        orL(FindL(0, Some("v=1|v=0".asFormula))),
+        skip
+        )
+      ) & OnAll(ODE('R)) & done
+
+    //@note and once again
+    val odePropRest = skip <(
+      diffCut("Tw=a()".asFormula)(1),
+      skip, //@note evolution domain already strong enough without additional diff. cut
+      diffCut("Tw=a()".asFormula)(1),
+      orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+        diffCut("Tw=a()".asFormula)(1),
+        skip //@note evolution domain already strong enough without additional diff. cut
+        )
+      ) & OnAll(ODE('R)) & done
+
+    val tactic = implyR('_) & (andL('_)*) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
+      QE & done,
+      QE & done,
+      boxAnd(1) & andR(1) <(
+        /* Tw < Tl */
+        chase(1) & unfoldProgramNormalize & OnAll(ODE('R)) /* twLessTl */ & done,
+        boxAnd(1) & andR(1) <(
+          /* Tl < Tlu() */
+          chase(1) & unfoldProgramNormalize & tlLessTlu & done,
+          boxAnd(1) & andR(1) <(
+            /* a() <= Tw */
+            chase(1) & unfoldProgramNormalize & aLessEqualTw & done,
+            /* all the propositional minutia */
+            chase(1) & unfoldProgramNormalize & propRest & done
+            )
+          )
+        )
+      )
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   "Model 1" should "be provable" in withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m1.kyx"))
     val inv = """(Tw < Tl) &
