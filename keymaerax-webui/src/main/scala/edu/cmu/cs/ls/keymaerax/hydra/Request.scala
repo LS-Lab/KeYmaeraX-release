@@ -145,21 +145,11 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
     val fml = node.sequent.toFormula
     if (fml.isFOL) {
-      try {
-        ToolProvider.cexTool() match {
-          case Some(cexTool) => cexTool.findCounterExample(fml) match {
-            //@todo return actual sequent, use collapsiblesequentview to display counterexample
-            case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-            case None => new CounterExampleResponse("cex.none") :: Nil
-          }
-          case None => new CounterExampleResponse("cex.nonfo") :: Nil
-        }
-      } catch {
-        case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
-      }
+      new CounterExampleResponse("cex.none") :: Nil
     } else {
       new CounterExampleResponse("cex.nonfo") :: Nil
     }
+    // TODO throw exception since counter-ex generator is not available?
   }
 }
 
@@ -174,17 +164,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
     //@note not a tactic because we don't want to change the proof tree just by simulating
     val fml = if (node.sequent.ante.nonEmpty) node.sequent.toFormula else { val Imply(True, succ) = node.sequent.toFormula; succ }
-    if (ToolProvider.odeTool().isDefined) fml match {
-      case Imply(initial, b@Box(prg, _)) =>
-        // all symbols because we need frame constraints for constants
-        val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
-        val Box(prgPre, _) = vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
-        val stateRelEqs = vars.map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort))).reduceRightOption(And).getOrElse(True)
-        val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
-        new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
-      case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
-    }
-    else new ErrorResponse("No simulation tool available, please configure Mathematica") :: Nil
+      new ErrorResponse("No simulation tool available for KeYmaeraI. ") :: Nil
   }
 
   private def addNonDetInitials(initial: Formula, vars: Set[NamedSymbol]): Formula = {
@@ -218,16 +198,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
   }, prg).get
 
   private def solve(ode: DifferentialProgram, evoldomain: Formula): Program = {
-    val iv: Map[Variable, Variable] =
-      primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
-    val time: Variable = Variable("t_", None, Real)
-    //@note replace initial values with original variable, since we turn them into assignments
-    val solution = replaceFree(ToolProvider.odeTool().get.odeSolve(ode, time, iv).get, iv.map(_.swap))
-    val flatSolution = flattenConjunctions(solution).
-      sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
-    Compose(
-      flatSolution.map({ case Equal(v: Variable, r) => Assign(v, r) }).reduceRightOption(Compose).getOrElse(Test(True)),
-      Test(evoldomain))
+    throw new Exception("Solving ODEs not available for KeYmaeraI.")
   }
 
   private def replaceFree(f: Formula, vars: Map[Variable, Variable]) = {
@@ -260,13 +231,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
-    ToolProvider.simulationTool() match {
-      case Some(s) =>
-        val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
-        val simulation = s.simulate(initial, timedStateRelation, steps, n)
-        new SimulationResponse(simulation, stepDuration) :: Nil
-      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
-    }
+      new ErrorResponse("No simulation tool available for KeYmaeraI.") :: Nil
   }
 }
 
@@ -1148,9 +1113,6 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
         try {
           //Tell all scheduled tactics to stop.
           //@todo figure out which of these are actually necessary.
-          System.out.flush()
-          System.err.flush()
-          ToolProvider.shutdown()
           System.out.flush()
           System.err.flush()
           HyDRAServerConfig.system.shutdown()
