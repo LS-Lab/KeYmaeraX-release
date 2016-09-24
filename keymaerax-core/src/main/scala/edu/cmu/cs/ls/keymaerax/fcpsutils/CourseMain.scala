@@ -12,17 +12,8 @@ import edu.cmu.cs.ls.keymaerax.parser.ParseException
   * @author Nathan Fulton
   */
 object CourseMain {
-  try {
-    val config = Map(
-      "linkName" -> "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel",
-      "libDir" -> "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
-    val provider = new MathematicaToolProvider(config)
-    ToolProvider.setProvider(provider)
-    if(provider.tools().forall(_.isInitialized)) println("Initialized!")
-    else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
-  } catch {
-    case _: Throwable => println("Won't be able to parse tactics or check proofs.")
-  }
+
+  println("Warning: Mathematica is not available in KeYmaeraI.")
 
   PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 

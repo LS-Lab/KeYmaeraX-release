@@ -478,7 +478,7 @@ trait UnifyUSCalculus {
           try {
             // |- subst(prereq)
             //@note don't call master to avoid infinite proof search for ODEs
-            val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.QE)
+            val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
             require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
 
             // |- subst(remainder{k})
@@ -1541,7 +1541,7 @@ trait UnifyUSCalculus {
         // reflexive setup corresponds to no-progress chase
         val initial: Provable = e match {
           case t: Term =>      // t=t
-            DerivedAxioms.equalReflex.fact(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
+            throw new ProverException("Equality reasoning is not supported in KeYmaeraI.")
           case f: Formula =>   // f<->f
             DerivedAxioms.equivReflexiveAxiom.fact(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
         }

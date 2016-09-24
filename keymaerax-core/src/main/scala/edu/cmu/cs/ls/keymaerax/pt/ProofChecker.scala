@@ -21,7 +21,6 @@ import scala.collection.immutable
  * @see [[Provable]]
  */
 object ProofChecker {
-  private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
 
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = Provable.startProof(goalSequent(phi))
@@ -40,7 +39,7 @@ object ProofChecker {
 
       case FOLRConstant(f) => {
         val node = proofNode(phi)
-        Some(proveBy(node, QE))
+        Some(proveBy(node, prop))
       }
 
       case AndTerm(e, d) => phi match {

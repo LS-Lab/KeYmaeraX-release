@@ -114,11 +114,9 @@ private object PropositionalTactics {
         | ((andL(-1) & andR(1) <((close | (hideL(-2) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
         | ((orR(1) & orL(-1) <((close | (hideR(2) partial)) partial, (close | (hideR(1) partial)) partial) & assertT(1, 1) partial)
         | ((implyR(1) & implyL(-1) <((close | (hideR(1) partial)) partial, (close | (hideL('Llast) partial)) partial) & assertT(1, 1) partial)
-        | ((monb partial)
-        | ((mond partial)
         | ((allR(1) & allL(-1) partial)
         | (existsL(-1) & existsR(1) partial)
-        partial) partial) partial) partial) partial) partial) partial) partial)*at.pos.length
+        partial) partial) partial) partial) partial) partial)*at.pos.length
     }
   }
 
