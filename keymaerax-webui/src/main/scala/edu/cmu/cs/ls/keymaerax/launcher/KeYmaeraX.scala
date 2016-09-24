@@ -94,18 +94,12 @@ object KeYmaeraX {
       //@note no MathKernel initialization needed for C generation
         codegen(options)
       else if (!options.get('mode).contains("ui") ) {
-        try {
-          initializeProver(if (options.contains('tool)) options else options ++ Map('tool -> "z3"))
-
-          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
-          options.get('mode) match {
-            case Some("prove") => prove(options)
-            case Some("modelplex") => modelplex(options)
-            case Some("codegen") => codegen(options)
-            case Some("ui") => assert(false, "already handled above since no prover needed"); ???
-          }
-        } finally {
-          shutdownProver()
+        //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
+        options.get('mode) match {
+          case Some("prove") => prove(options)
+          case Some("modelplex") => modelplex(options)
+          case Some("codegen") => codegen(options)
+          case Some("ui") => assert(false, "already handled above since no prover needed"); ???
         }
       }
     }
@@ -191,7 +185,6 @@ object KeYmaeraX {
 
   private def parseBelleTactic(fileName: String) = {
     try {
-      initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
       val fileContents: String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
       BelleParser(fileContents)
       println("Parsed file successfully")
@@ -221,80 +214,8 @@ object KeYmaeraX {
     }
   }
 
-  def initializeProver(options: OptionMap) = {
-    options('tool) match {
-      case "mathematica" => initMathematica(options)
-      case "z3" => initZ3(options)
-      case tool => throw new Exception("Unknown tool " + tool)
-    }
-
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-
-    val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
-    TactixLibrary.invGenerator = generator
-
-    //@note just in case the user shuts down the prover from the command line
-    Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
-  }
-
-  /** Initializes Z3 from command line options. */
-  private def initZ3(options: OptionMap) = {
-    ToolProvider.setProvider(new Z3ToolProvider())
-  }
-
-  /** Initializes Mathematica from command line options, if present; else from default config */
-  private def initMathematica(options: OptionMap) = {
-    assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
-      "\n[Error] Please always use command line option -mathkernel and -jlink together," +
-        "and specify the Mathematica link paths with:\n" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
-
-    val mathematicaConfig =
-      if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options('mathkernel).toString,
-        "libDir" -> options('jlink).toString)
-      else DefaultConfiguration.defaultMathematicaConfig
-
-    val linkNamePath = mathematicaConfig.get("linkName") match {
-      case Some(path) => path
-      case _ => ""
-    }
-    val libDirPath = mathematicaConfig.get("libDir") match {
-      case Some(path) => path
-      case _ => ""
-    }
-    assert(linkNamePath!="" && libDirPath!="",
-      "\n[Error] The paths to MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " and jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " are not specified! " +
-        "(On your system, they could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} +
-        " and " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
-        "Please specify the paths to " + DefaultConfiguration.defaultMathLinkName._1 + " and " + DefaultConfiguration.defaultMathLinkName._2 + " with command line option:" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-    assert(linkNamePath.endsWith(DefaultConfiguration.defaultMathLinkName._1) && new java.io.File(linkNamePath).exists(),
-      "\n[Error] Cannot find MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " in path: " + linkNamePath+ "! " +
-        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} + ")\n" +
-        "Please specify the correct path that points to " + DefaultConfiguration.defaultMathLinkName._1 + " file with command line option:" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-    assert(new java.io.File(libDirPath + File.separator + DefaultConfiguration.defaultMathLinkName._2).exists(),
-      "\n[Error] Cannot find jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " in path " + libDirPath+ "! " +
-        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
-        "Please specify the correct path that points to the directory contains " + DefaultConfiguration.defaultMathLinkName._2 + " file with command line option:" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-
-    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
-  }
-
-  def shutdownProver() = {
-    ToolProvider.shutdown()
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
-  }
-
   /** Exit gracefully */
-  private def exit(status: Int): Nothing = {shutdownProver(); sys.exit(status)}
+  private def exit(status: Int): Nothing = {sys.exit(status)}
 
   /** Generate a header stamping the source of a generated file */
   //@todo Of course this has a security attack for non-letter characters like end of comments from command line
