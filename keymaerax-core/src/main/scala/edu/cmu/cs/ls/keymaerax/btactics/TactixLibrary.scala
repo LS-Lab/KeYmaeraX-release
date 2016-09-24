@@ -59,9 +59,8 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step          : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
-    (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
-     else HilbertCalculus.stepAt(pos) partial)
-    | (assignb(pos) partial))
+    if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
+    else throw new IllegalArgumentException("Not a top level position."))
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
@@ -95,10 +94,7 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
     ((OnAll(?(
           (close
             | (must(normalize)
-            | (loop(gen)('R)
-            | (ODE('R)
-            | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
-      ?(OnAll(QE))
+            | exhaustiveEqL2R('L) ) ) ) ))*)
   }
 
   /** auto: automatically try to prove the current goal if that succeeds.
@@ -107,10 +103,8 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
     ((OnAll(?(
       (close
         | (must(normalize)
-        | (loopauto('R)
-        | (ODE('R)
-        | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
-      ?(OnAll(QE)) & done
+        | exhaustiveEqL2R('L) ) ) ) ))*) &
+      done
   }
 
   /*******************************************************************
@@ -147,386 +141,6 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
     * @see [[label()]]
     */
   def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
-
-  // modalities
-
-  /** discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
-    * @example{{{
-    *         |- [y_0:=y;]x>0
-    *         ----------------discreteGhost("y".asTerm)(1)
-    *         |- x>0
-    * }}}
-    * @example{{{
-    *         |- [z:=2;][y:=5;]x>0
-    *         ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
-    *         |- [z:=2;]x>0
-    * }}}
-    * @param t The ghost's initial value.
-    * @param ghost The new ghost variable. If None, the tactic chooses a name by inspecting t (must be a variable then).
-    * @incontext
-    */
-  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
-
-  /** abstractionb: turns '[a]p' into \forall BV(a) p by universally quantifying over all variables modified in `a`.
-    * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
-    * of that modality.
-    * @example{{{
-    *           |- \forall x x>0
-    *         ------------------abstractionb(1)
-    *           |- [x:=2;]x>0
-    * }}}
-    * @example{{{
-    *           |- x>0 & z=1 -> [z:=y;]\forall x x>0
-    *         --------------------------------------abstractionb(1, 1::1::Nil)
-    *           |- x>0 & z=1 -> [z:=y;][x:=2;]x>0
-    * }}}
-    * @example{{{
-    *           |- x>0
-    *         ---------------abstractionb(1)
-    *           |- [y:=2;]x>0
-    * }}}
-    */
-  lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
-
-  /** 'position' tactic t with universal abstraction at the same position afterwards
-    * @see [[abstractionb]] */
-  def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic = new DependentPositionTactic("with abstraction") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isTopLevel, "with abstraction only at top-level")
-        sequent(pos.checkTop) match {
-          case Box(a, p) =>
-            t(pos) & abstractionb(pos) & (if (pos.isSucc) (allR(pos)*) partial else skip)
-          case Diamond(a, p) if pos.isAnte => ???
-        }
-      }
-    }
-  }
-
-  /** loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-    * Wipes conditions that contain bound variables of the loop.
-    * {{{
-    *   use:                        init:        step:
-    *   I, G\BV(a) |- p, D\BV(a)    G |- I, D    I, G\BV(a) |- [a]p, D\BV(a)
-    *   --------------------------------------------------------------------
-    *   G |- [{a}*]p, D
-    * }}}
-    *
-    * @example{{{
-    *   use:          init:         step:
-    *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
-    *   ------------------------------------------------I("x>1".asFormula)(1)
-    *   x>2 |- [{x:=x+1;}*]x>0
-    * }}}
-    * @example{{{
-    *   use:               init:              step:
-    *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
-    *   ---------------------------------------------------------------I("x>1".asFormula)(1)
-    *   x>2, y>0 |- [{x:=x+y;}*]x>0
-    * }}}
-    * @param invariant The loop invariant `I`.
-    * @see [[loopRule()]]
-    * @note Currently uses I induction axiom, which is unsound for hybrid games.
-
-    */
-  def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
-  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-    * @see [[loop()]]
-    */
-  def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
-  /** loop: prove a property of a loop by induction, if the given invariant generator finds a loop invariant
-    * @see [[loop(Formula)]] */
-  def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos),
-        throw new BelleError("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
-      private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
-    }
-  }
-  /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
-    * @see [[loop(Formula)]] */
-  def loopauto: DependentPositionTactic = "loopauto" by ((pos:Position,seq:Sequent) =>
-    ChooseSome(
-      () => InvariantGenerator.loopInvariantGenerator(seq,pos),
-      (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
-    )
-    )
-
-  // differential equations
-
-  /** ODE: try to prove a property of a differential equation automatically.
-    * @see [[diffSolve]]
-    * @todo @see [[diffCut]]
-    * @see [[diffInd]]
-    * @see [[diffInvariant]]
-    * @see [[diffWeaken]]
-    * @see [[openDiffInd]]
-    * @see [[DA]]
-    */
-  lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
-  /** DG/DA differential ghosts that are generated automatically to prove differential equations.
-    * @see [[DA]] */
-  lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
-
-  /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
-    * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = (ToolProvider.odeTool(), ToolProvider.qeTool()) match {
-    case (Some(odeTool), Some(qeTool)) =>
-      DifferentialTactics.diffSolve(solution)(new ODESolverTool with QETool {
-        override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
-          odeTool.odeSolve(diffSys, diffArg, iv)
-        override def qeEvidence(formula: Formula): (Formula, Evidence) =
-          qeTool.qeEvidence(formula)
-      })
-    case (None, _) => throw new BelleError("diffSol requires a DiffSolutionTool, but got None")
-    case (_, None) => throw new BelleError("qeEvidence requires a QETool, but got None")
-  }
-
-
-
-  /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
-    * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
-  lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
-  /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
-    * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
-    * used in the evolution domain constraint.
-    *
-    * @example{{{
-    *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
-    *         -----------------------------------------------diffCut("x>0".asFormula)(1)
-    *         x>0 |- [{x'=2}]x>=0
-    * }}}
-    * @example{{{
-    *         x>0, x_0=x |- [{x'=2&x>=x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>=x_0
-    *         -------------------------------------------------------------------diffCut("x>=old(x)".asFormula)(1)
-    *         x>0 |- [{x'=2}]x>=0
-    * }}}
-    * @example{{{
-    *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0&x>=x_0}]x>=0
-    *                x>0, v>=0 |- [{x'=v,v'=1}]v>=0
-    *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0}]x>=x_0
-    *         --------------------------------------------------diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1)
-    *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
-    * }}}
-    * @param formulas the list of formulas that will be cut into the differential equation in that order.
-    *                 The formulas are typically shown to be differential invariants subsequently.
-    *                 They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
-    * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
-    * @see[[DC]]
-    * @see [[diffInvariant()]]
-    */
-  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
-  def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
-  /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
-    * (uses DI, DW, DE, QE)
-    *
-    * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
-    *             'full: tries to close everything after diffInd rule
-    *                    {{{
-    *                        *
-    *                      --------------------------
-    *                      G |- [x'=f(x)&q(x)]p(x), D
-    *                    }}}
-    *             'none: behaves as DI rule per cheat sheet
-    *                    {{{
-    *                      G, q(x) |- p(x), D    G, q(x) |- [x'=f(x)&q(x)](p(x))', D
-    *                      ---------------------------------------------------------
-    *                                  G |- [x'=f(x)&q(x)]p(x), D
-    *                    }}}
-    *             'diffInd: behaves as diffInd rule per cheat sheet
-    *                    {{{
-    *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p(x')    @note derive on (p(x))' already done
-    *                      ----------------------------------------------
-    *                                  G |- [x'=f(x)&q(x)]p(x), D
-    *                    }}}
-    * @example{{{
-    *         *
-    *    ---------------------diffInd(qeTool, 'full)(1)
-    *    x>=5 |- [{x'=2}]x>=5
-    * }}}
-    * @example{{{
-    *    x>=5, true |- x>=5    true |- [{x':=2}]x'>=0
-    *    --------------------------------------------diffInd(qeTool, 'diffInd)(1)
-    *    x>=5 |- [{x'=2}]x>=5
-    * }}}
-    * @example{{{
-    *    x>=5, true |- x>=5    x>=5, true |- [{x'=2}](x>=5)'
-    *    ---------------------------------------------------diffInd(qeTool, 'none)(1)
-    *    x>=5 |- [{x'=2}]x>=5
-    * }}}
-    * @example{{{
-    *    x>=5 |- [x:=x+1;](true -> x>=5&2>=0)
-    *    -------------------------------------diffInd(qeTool, 'full)(1, 1::Nil)
-    *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
-    * }}}
-    * @example
-    * {{{
-    * proveBy("x^2>=2->[{x'=x^3}]x^2>=2".asFormula, implyR(1) &
-    *   diffInd()(1) & QE
-    * )
-    * }}}
-    * @incontext
-    */
-  def diffInd(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
-  /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]]
-    * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
-    * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
-    * formulas are differential invariants. Fails if diffInd cannot prove invariants.
-    *
-    * @example{{{
-    *         x>0 |- [{x'=2&x>0}]x>=0
-    *         ------------------------diffInvariant("x>0".asFormula)(1)
-    *         x>0 |- [{x'=2}]x>=0
-    * }}}
-    * @example{{{
-    *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0
-    *         ---------------------------------diffInvariant("x>old(x)".asFormula)(1)
-    *                x>0 |- [{x'=2}]x>=0
-    * }}}
-    * @example{{{
-    *         x>0, v>=0, x_0=x |- [{x'=v,v'=1 & v>=0&x>x_0}]x>=0
-    *         ---------------------------------------------------diffInvariant("v>=0".asFormula, "x>old(x)".asFormula)(1)
-    *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
-    * }}}
-    * @param invariants The differential invariants to cut in as evolution domain constraint.
-    * @see [[diffCut]]
-    * @see [[diffInd]]
-    */
-  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
-  def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)
-  /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
-    * openDiffInd: Open Differential Invariant proves an open formula to be an invariant of a differential equation (by DIo, DW, DE, QE)
-    *
-    * @example{{{
-    *         *
-    *    ---------------------openDiffInd(1)
-    *    x^2>5 |- [{x'=x^3+x^4}]x^2>5
-    * }}}
-    * @example{{{
-    *         *
-    *    ---------------------openDiffInd(1)
-    *    x^3>5 |- [{x'=x^3+x^4}]x^3>5
-    * }}}
-    * @example
-    * {{{
-    * proveBy("x^2>9->[{x'=x^4}]x^2>9".asFormula, implyR(1) &
-    *   openDiffInd()(1)
-    * )
-    * }}}
-    */
-  def openDiffInd: DependentPositionTactic = DifferentialTactics.openDiffInd
-
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
-    *
-    * @example{{{
-    *         |- \exists y [{x'=2,y'=0*y+1}]x>0
-    *         ---------------------------------- DG("{y'=0*y+1}".asDifferentialProgram)(1)
-    *         |- [{x'=2}]x>0
-    * }}}
-    * @example{{{
-    *         |- \exists y [{x'=2,y'=f()*y+g() & x>=0}]x>0
-    *         --------------------------------------------- DG("{y'=f()*y+g()}".asDifferentialProgram)(1)
-    *         |- [{x'=2 & x>=0}]x>0
-    * }}}
-    * @param ghost A differential program of the form y'=a*y+b or y'=a*y or y'=b.
-    * @see [[DA()]]
-    */
-  def DG(ghost: DifferentialProgram): DependentPositionTactic = DifferentialTactics.DG(ghost)
-
-  /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
-    * ghost of the form y'=a*y+b and the postcondition replaced by r.
-    * {{{
-    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
-    * G |- [x'=f(x)&q(x)]p(x), D
-    * }}}
-    *
-    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
-    * @param ghost the extra differential equation for an extra variable y to ghost in of the form
-    *              y'=a*y+b or y'=a*y or y'=b or y'=a*y-b
-    * @param r the equivalent new postcondition to prove that can mention y.
-    * @example
-    * {{{
-    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-    *   DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
-    *     QE,
-    *     diffInd()(1, 1::Nil) & QE
-    *   ))
-    * }}}
-    * @see [[DG()]]
-    */
-  def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
-
-
-  // more
-
-  /**
-    * Generalize postcondition to C and, separately, prove that C implies postcondition.
-    * The operational effect of {a;b;}@generalize(f1) is generalize(f1).
-    * {{{
-    *   genUseLbl:        genShowLbl:
-    *   G |- [a]C, D      C |- B
-    *   -------------------------
-    *          G |- [a]B, D
-    * }}}
-    *
-    * @example{{{
-    *   genUseLbl:        genShowLbl:
-    *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
-    *   ------------------------------------generalize("x>1".asFormula)(1)
-    *   |- [x:=2;][y:=x;]y>1
-    * }}}
-    * @example{{{
-    *   genUseLbl:                      genShowLbl:
-    *   |- a=2 -> [z:=3;][x:=2;]x>1     x>1 |- [y:=x;]y>1
-    *   -------------------------------------------------generalize("x>1".asFormula)(1, 1::1::Nil)
-    *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
-    * }}}
-   */
-  def generalize(C: Formula)  : DependentPositionTactic = DLBySubst.generalize(C)
-
-  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
-    * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
-    * {{{
-    *   cutUseLbl:           cutShowLbl:
-    *   G |- [a](C->B), D    G |- [a]C, D
-    *   ---------------------------------
-    *          G |- [a]B, D
-    * }}}
-    *
-    * @example{{{
-    *   cutUseLbl:                       cutShowLbl:
-    *   |- [x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
-    *   -----------------------------------------------postCut("x>1".asFormula)(1)
-    *   |- [x:=2;][y:=x;]y>1
-    * }}}
-    * @example{{{
-    *   cutUseLbl:                                     cutShowLbl:
-    *   |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
-    *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
-    *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
-    * }}}
-    */
-  def postCut(cut: Formula)   : DependentPositionTactic = DLBySubst.postCut(cut)
-
-
-
-  // closing
-
-  /** QE: Quantifier Elimination to decide real arithmetic (after simplifying logical transformations).
-    * Applies simplifying transformations to the real arithmetic questions before solving it via [[RCF]].
-    * @param order the order of variables to use during quantifier elimination
-    * @see [[QE]]
-    * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleError("QE requires a QETool, but got None")))
-  def QE: BelleExpr = QE()
-
-  /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
-    * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
-    * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
-    */
-  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleError("partialQE requires a QETool, but got None")))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -585,30 +199,6 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
     })
     else EqualityTactics.exhaustiveEqR2L
 
-  /** Transform an FOL formula into the formula 'to'.
-    * A proof why that tranformation is acceptable will be shown on demand.
-    * Transforms the FOL formula at position 'pos' into the formula 'to'. Uses QE to prove the transformation correct.
-    * @example {{{
-    *                           *
-    *                           --------------
-    *           a<b |- a<b      |- a<b -> b>a
-    *           ------------------------------ transform("a<b".asFormula)(1)
-    *           a<b |- b>a
-    * }}}
-    * @example {{{
-    *                                         *
-    *                                    ---------------------
-    *           a+b<c, b>=0 |- a+b<c     b>=0 |- a+b<c -> a<c
-    *           ---------------------------------------------- transform("a+b<c".asFormula)(1)
-    *           a+b<c, b>=0 |- a<c
-    * }}}
-    * @param to The transformed formula that is desired as the result of this transformation.
-    */
-  def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleError("transform requires a QETool, but got None")).qeEvidence(formula)
-    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = ToolProvider.cexTool().getOrElse(throw new BelleError("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
-  })
-
   //
   /** OnAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */
   def onAll(e: BelleExpr): BelleExpr = OnAll(e)
@@ -665,10 +255,6 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
           )
         )
       )
-
-  /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
-    * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleError("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -745,10 +331,6 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
    * }}}
    */
   def proveBy(goal: Formula, tactic: BelleExpr): Provable = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
-
-  /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleError("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
-
 
   ///
 
