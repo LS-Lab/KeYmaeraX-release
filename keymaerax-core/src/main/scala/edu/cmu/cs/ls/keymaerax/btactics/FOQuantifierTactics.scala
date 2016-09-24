@@ -46,18 +46,12 @@ protected object FOQuantifierTactics {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
-            // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
+
             val x = vToInst(vars)
             val t = inst(vars)
-            val p = forall(qf)
 
-            val assign = Box(Assign(x, t), p)
+            useAt("all instantiate", us => us ++ RenUSubst((x, t) :: ("f()".asTerm, t) :: Nil))(pos)
 
-            DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
-            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
-              assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
-              )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
           case (_, f) =>
