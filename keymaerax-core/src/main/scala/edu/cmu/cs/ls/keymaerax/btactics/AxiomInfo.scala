@@ -60,7 +60,7 @@ object DerivationInfo {
   //@todo
   private val needsCodeName = "TODOTHISAXIOMSTILLNEEDSACODENAME"
 
-  private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
+  private def useAt(l:Lemma):DependentPositionTactic = UnifyUSCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   private def convert(rules: Map[String,Provable]): List[DerivationInfo] =
@@ -76,18 +76,18 @@ object DerivationInfo {
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("〈·〉", "<.>"), "<span class=\"k4-axiom-key\">〈a〉P </span> ↔ ¬[a]¬P")
       , "diamond", {case () => HilbertCalculus.diamond}),
-    new DerivedAxiomInfo("[] box", "[.]", "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
+    new DerivedAxiomInfo("[] box", "[.]", "box", {case () => UnifyUSCalculus.useAt(DerivedAxioms.boxAxiom)}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=c]p(x)</span>↔p(c)")
       , {case () => TactixLibrary.assignb}),
-    new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", {case () => HilbertCalculus.useAt("[:=] assign")}),
-    new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
+    new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", {case () => UnifyUSCalculus.useAt("[:=] assign")}),
+    new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => UnifyUSCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
-    new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
-    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
+    new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => UnifyUSCalculus.useAt("<:=> assign equality")}),
+    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => UnifyUSCalculus.useAt("[:=] assign equality")}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}),
-    new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
-    new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
+    new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => UnifyUSCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
+    new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => UnifyUSCalculus.useAt("[:=] assign equality exists") }),
     //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
     new CoreAxiomInfo("[':=] differential assign"
       , AxiomDisplayInfo(("[′:=]","[':=]"), "[x′:=c]p(x′)↔p(c)")
@@ -126,7 +126,7 @@ object DerivationInfo {
     new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-    , "DCaxiom", {case () => HilbertCalculus.useAt("DC differential cut")}),
+    , "DCaxiom", {case () => UnifyUSCalculus.useAt("DC differential cut")}),
     new InputPositionTacticInfo("diffCut"
     , RuleDisplayInfo("DC"
       , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
@@ -172,10 +172,10 @@ object DerivationInfo {
       , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
-      , "DG", {case () => HilbertCalculus.useAt("DG differential ghost")}),
+      , "DG", {case () => UnifyUSCalculus.useAt("DG differential ghost")}),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
-      , "DGC", {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
+      , "DGC", {case () => UnifyUSCalculus.useAt("DG differential ghost constant")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
@@ -198,10 +198,10 @@ object DerivationInfo {
       , "Dvar", {case () => HilbertCalculus.Derive.Dvar}),
     new DerivedAxiomInfo("x' derive variable"
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
-      , "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
+      , "DvariableAxiom", {case () => UnifyUSCalculus.useAt(DerivedAxioms.Dvariable)}),
     new DerivedAxiomInfo("x' derive var commuted"
       ,  AxiomDisplayInfo(("x′,C","x',C"), "x′=<span class=\"k4-axiom-key\">(x)′</span>")
-      , "DvariableCommutedAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
+      , "DvariableCommutedAxiom", {case () => UnifyUSCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
     new PositionTacticInfo("DvariableTactic"
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
       , {case () => DifferentialTactics.Dvariable}),
@@ -739,16 +739,16 @@ object DerivationInfo {
     // Derived axiomatic rules
     new DerivedRuleInfo("all generalization"
       , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall p_(||)"::Nil), SequentDisplay(Nil, "p_(||)"::Nil)::Nil)
-      , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
+      , "allGeneralize", {case () => UnifyUSCalculus.useAt(DerivedAxioms.allGeneralize)}),
     new DerivedRuleInfo("[] monotone"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]p_(||)"::Nil, "[a;]q_(||)"::Nil), SequentDisplay("p_(||)"::Nil, "q_(||)"::Nil)::Nil)
-      , "monb", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
+      , "monb", {case () => UnifyUSCalculus.useAt(DerivedAxioms.boxMonotone)}),
     new DerivedRuleInfo("[] monotone 2"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]q_(||)"::Nil, "[a;]p_(||)"::Nil), SequentDisplay("p_(||)"::Nil, "q_(||)"::Nil)::Nil)
-      , "monb2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
+      , "monb2", {case () => UnifyUSCalculus.useAt(DerivedAxioms.boxMonotone2)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
-      , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
+      , "CTtermCongruence", {case () => UnifyUSCalculus.useAt(DerivedAxioms.CTtermCongruence)})
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {

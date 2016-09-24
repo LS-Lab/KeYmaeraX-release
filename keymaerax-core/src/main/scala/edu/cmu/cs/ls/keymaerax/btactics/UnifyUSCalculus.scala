@@ -21,6 +21,13 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.collection.immutable._
 import scala.language.postfixOps
+/**
+  * Automatic unification-based Uniform Substitution Calculus with indexing.
+  *
+  * @author Andre Platzer
+  * @see [[UnifyUSCalculus]]
+  */
+object UnifyUSCalculus extends UnifyUSCalculus
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.

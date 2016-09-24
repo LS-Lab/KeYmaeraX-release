@@ -50,7 +50,7 @@ import scala.math.BigDecimal
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   * @see [[ToolProvider]]
   */
-object TactixLibrary extends HilbertCalculus with SequentCalculus {
+object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
   import Generator.Generator
   /** Default generator for loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
