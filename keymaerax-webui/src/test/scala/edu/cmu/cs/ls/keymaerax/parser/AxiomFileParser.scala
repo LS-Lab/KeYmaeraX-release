@@ -23,6 +23,6 @@ class AxiomFileParser extends FlatSpec with Matchers with PrivateMethodTester {
     val axioms = KeYmaeraXAxiomParser(axiomFile)
     axioms.size shouldNot be <= 0
     // check for a sample
-    axioms should contain ("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
+    axioms should contain ("all instantiate", "(\\forall x_ p(x_)) -> p(f())".asFormula)
   }
 }
