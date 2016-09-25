@@ -32,40 +32,6 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("andR(1)") shouldBe TactixLibrary.andR(1)
   }
 
-  it should "parse a built-in argument with an absolute non-top-level postion" in {
-    val pos = BelleParser.parseAbsolutePosition("1.1", UnknownLocation)
-    BelleParser("boxAnd(1.1)") shouldBe HilbertCalculus.boxAnd(pos)
-  }
-
-  it should "parse a built-in argument with a position locator" in {
-    BelleParser("boxAnd('L)") shouldBe HilbertCalculus.boxAnd(Find.FindL(0, None))
-  }
-
-  it should "parse a built-in argument with a 'R position locator" in {
-    BelleParser("boxAnd('R)") shouldBe HilbertCalculus.boxAnd(Find.FindR(0, None))
-  }
-
-  it should "parse a built-in argument with a 'Rlast position locator" in {
-    BelleParser("boxAnd('Rlast)") shouldBe HilbertCalculus.boxAnd(LastSucc(0))
-  }
-
-  it should "parse a built-in argument with a 'Llast position locator" in {
-    BelleParser("boxAnd('Llast)") shouldBe HilbertCalculus.boxAnd(LastAnte(0))
-  }
-
-  it should "parse a built-in argument with a '_ position locator" in {
-    BelleParser("boxAnd('_)") shouldBe HilbertCalculus.boxAnd(new Find(0, None, AntePosition(1), exact=true))
-  }
-
-  it should "parse a built-in tactic that takes a whole list of arguments" in {
-    BelleParser("diffInvariant({`1=1`}, 1)") shouldBe TactixLibrary.diffInvariant(Seq("1=1".asFormula) : _*)(1)
-  }
-
-  it should "Parse a loop tactic and print it back out" in {
-    BelleParser("loop({`1=1`}, 1)") shouldBe TactixLibrary.loop("1=1".asFormula)(1)
-    BellePrettyPrinter(TactixLibrary.loop("1=1".asFormula)(1)) shouldBe "loop({`1=1`}, 1)"
-  }
-
   //endregion
 
   //region Sequential combinator
@@ -275,47 +241,6 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.closeId), Idioms.?(TactixLibrary.orR(1)))
   }
 
-
-  //endregion
-
-  //region Comma lists
-
-  "comma separatred list folding" should "work" in withMathematica { qeTool =>
-    val t =
-      """
-        |nil<(nil, nil)
-      """.stripMargin
-    BelleParser(t) //should not cause an exception.
-  }
-
-  it should "work for a tactic (e)" in withMathematica { qeTool =>
-    val t =
-      """
-        |nil<((nil), nil)
-      """.stripMargin
-    BelleParser(t) //should not cause an exception.
-  }
-
-  it should "work for a tactic (e) in the final position" in withMathematica { qeTool =>
-    val t =
-      """
-        |nil<(nil, (nil))
-      """.stripMargin
-    BelleParser(t) //should not cause an exception.
-  }
-
-  it should "work on tactic that caused original bug" in withMathematica { qeTool =>
-    val t = """implyR(1) &
-              |loop({`x<=m`}, 1) <(
-              |  QE,
-              |  QE,
-              |  partial(composeb(1) & choiceb(1) & andR(1) <(
-              |    assignb(1) & diffSolve(1) & nil,
-              |    testb(1) & implyR(1) & diffSolve(1) & nil
-              |  ))
-              |)""".stripMargin
-    BelleParser(t) //should not cause an exception.
-  }
 
   //endregion
 
