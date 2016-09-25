@@ -104,34 +104,6 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
-  it should "diffWeaken simple" in {
-    val result = proveBy("[{x'=5&x<7}]x<7".asFormula,
-      diffWeaken(1) & prop)
-    println(result)
-    result shouldBe 'proved
-  }
-
-  it should "diffWeaken ouch" in withMathematica { qeTool =>
-    val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
-      diffWeaken(1) & implyR(1) & diffWeaken(1) & prop)
-    println(result)
-    result shouldBe 'proved
-  }
-
-  it should "diffWeaken before loopy" in withMathematica { qeTool =>
-    val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula,
-      diffWeaken(1) & implyR(1) & loop("x>0".asFormula)(1) & master())
-    println(result)
-    result shouldBe 'proved
-  }
-
-  it should "diffWeaken before semibound" in withMathematica { qeTool =>
-    val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula,
-      diffWeaken(1) & master())
-    println(result)
-    result shouldBe 'proved
-  }
-
   it should "instantiate free ODE modality whatever the names" in {
     val result = proveBy(
       Sequent(IndexedSeq("\\forall u [{v'=u}]v>0".asFormula), IndexedSeq()),
