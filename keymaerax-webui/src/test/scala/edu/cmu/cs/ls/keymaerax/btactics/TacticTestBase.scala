@@ -66,53 +66,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** For tests that want to record proofs in the database. */
   def withDatabase(testcode: DbTacticTester => Any): Unit = testcode(new DbTacticTester())
 
-  /**
-   * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
-   * axioms that are proved by QE.
-   * @example{{{
-   *    "My test" should "prove something with Mathematica" in withMathematica { implicit qeTool =>
-   *      // ... your test code here
-   *    }
-   * }}}
-   * */
-  def withMathematica(testcode: Mathematica => Any) {
-    val provider = new MathematicaToolProvider(DefaultConfiguration.defaultMathematicaConfig)
-    ToolProvider.setProvider(provider)
-    testcode(provider.tool)
-  }
-
-  /**
-    * Creates and initializes Z3 for tests that want to use QE. Also necessary for tests that use derived
-    * axioms that are proved by QE.
-    * Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
-    * @example{{{
-    *    "My test" should "prove something with Mathematica" in withZ3 { implicit qeTool =>
-    *      // ... your test code here
-    *    }
-    * }}}
-    * */
-  def withZ3(testcode: Z3 => Any) {
-    val provider = new Z3ToolProvider
-    ToolProvider.setProvider(provider)
-    testcode(provider.tool)
-  }
-
-  /**
-    * Creates and initializes Polya for tests that want to use QE. Also necessary for tests that use derived
-    * axioms that are proved by QE.
-    * Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
-    * @example{{{
-    *    "My test" should "prove something with Mathematica" in withPolya { implicit qeTool =>
-    *      // ... your test code here
-    *    }
-    * }}}
-    * */
-  def withPolya(testcode: Polya => Any) {
-    val provider = new PolyaToolProvider
-    ToolProvider.setProvider(provider)
-    testcode(provider.tool)
-  }
-
   /** Test setup */
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
@@ -124,7 +77,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /* Test teardown */
   override def afterEach() = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
-    ToolProvider.shutdown()
     TactixLibrary.invGenerator = FixedGenerator(Nil)
   }
 
