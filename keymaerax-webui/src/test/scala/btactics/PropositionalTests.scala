@@ -211,24 +211,6 @@ class PropositionalTests extends TacticTestBase {
   }
   it should "handle equivalence in succedent" in succEquivalence(normalize)
 
-  "Master" should "handle implication in succedent" in withMathematica { qeTool => succImplication(master()) }
-  it should "handle disjunction in succedent" in withMathematica { qeTool => succDisjunction(master()) }
-  it should "handle negation in succedent" in withMathematica { qeTool => succNegation(master()) }
-  it should "handle conjunction in antecedent" in withMathematica { qeTool => anteConjunction(master()) }
-  it should "handle negation in antecedent" in withMathematica { qeTool => anteNegation(master()) }
-  it should "handle implication in antecedent" in withMathematica { qeTool => anteImplication(master()) }
-  it should "handle disjunction in antecedent" in withMathematica { qeTool => anteDisjunction(master()) }
-  it should "handle conjunction in succedent" in withMathematica { qeTool => succConjunction(master()) }
-  it should "handle equivalence in antecedent" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), master())
-    result.subgoals should have size 2
-    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>1".asFormula)
-    result.subgoals.head.succ shouldBe empty
-    result.subgoals.last.ante shouldBe empty
-    result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
-  }
-  it should "handle equivalence in succedent" in withMathematica { qeTool => succEquivalence(master()) }
-
   "Propositional CMon" should "unpeel single negation" in {
     val result = proveBy(Sequent(IndexedSeq("!x>0".asFormula), IndexedSeq("!y>0".asFormula)),
       propCMon(PosInExpr(0::Nil)))
