@@ -36,7 +36,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in {
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
 
@@ -53,7 +53,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove PC3" in {check(PC3)}
   it should "prove -> tautology" in {check{implyTautology}}
 
-  it should "prove &-> down" in withMathematica { qeTool => check(andImplies)}
+  it should "prove &-> down" in {check(andImplies)}
 
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}

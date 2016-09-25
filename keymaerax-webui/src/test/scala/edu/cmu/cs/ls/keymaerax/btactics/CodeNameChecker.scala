@@ -22,7 +22,7 @@ import scala.reflect.runtime.{universe => ru}
 @IgnoreInBuildTest
 class CodeNameChecker extends TacticTestBase with Matchers {
   //@todo also reflect through all DerivedAxioms to check they've been added to AxiomInfo
-  "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { qeTool =>
+  "Tactic codeNames versus AxiomInfo codeNames" should "agree" in {
     val all = DerivationInfo.allInfo
     for (info <- all) {
       //println("Checking " + info.codeName)
@@ -37,7 +37,7 @@ class CodeNameChecker extends TacticTestBase with Matchers {
     }
   }
 
-  "Derived axioms" should "all be specified in AxiomInfo" in withMathematica { tool =>
+  "Derived axioms" should "all be specified in AxiomInfo" in {
     val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
