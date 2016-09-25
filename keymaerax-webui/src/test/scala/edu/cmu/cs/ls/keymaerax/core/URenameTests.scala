@@ -161,18 +161,4 @@ class URenameTests extends TacticTestBase {
     a [CoreException] shouldBe thrownBy{URename(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z")))("(x+y)'=x'+y'".asFormula)}
   }
 
-  it should "avoid unsound renaming proofs" taggedAs(AdvocatusTest) in {
-//    val proof1 = Provable.axioms("*' derive product")(USubst(
-//      SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asVariable) ::
-//        SubstitutionPair(UnitFunctional("g",AnyArg,Real), "y".asVariable) :: Nil))
-//    proof1 shouldBe 'proved
-//    proof1.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=(x)'+(y)'".asFormula))
-//    val proof = proof1
-    import TactixLibrary._
-    val proof = TactixLibrary.proveBy("(x+y)'=x'+y'".asFormula, derive(1, 0::Nil) & byUS("= reflexive"))
-    proof shouldBe 'proved
-    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula))
-    a [CoreException] shouldBe thrownBy{proof(UniformRenaming(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z"))), 0)}
-    // this prolongation wouldBe a proof of unsound (x+y)'=z'+y'
-  }
 }

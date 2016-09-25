@@ -44,12 +44,6 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   "doall" should "print e & doall(e)" in { roundTrip("andR(1) & doall(andL(1))") }
 
-  "transform" should "print with formula" in {
-    val tactic = TactixLibrary.transform("x>0".asFormula)(1)
-    BellePrettyPrinter(tactic) shouldBe "transform({`x>0`}, 1)"
-    roundTrip("transform({`x>0`}, 1)")
-  }
-
   "Operator precedence" should "parenthesize saturate *" in { roundTrip("implyR(1) & (andL('L)*)") }
 
   it should "parenthesize repeat *times" in { roundTrip("implyR(1) & (andL('L)*2)") }
