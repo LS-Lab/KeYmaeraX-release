@@ -184,10 +184,11 @@ object DerivationInfo {
       , RuleDisplayInfo(("∃L", "existsL"), (List("&Gamma;","∃x P(x)"),List("&Delta;")),
         List((List("&Gamma;","P(x)"),List("&Delta;"))))
       , {case () => SequentCalculus.existsL}),
-    new PositionTacticInfo("existsR"
-      , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"),List("∃x P(x)","&Delta;")),
-        List((List("&Gamma;"),List("P(&theta;)","&Delta;"))))
-      , {case () => SequentCalculus.existsR}),
+    new InputPositionTacticInfo("existsR"
+      , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
+        List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
+      , List(TermArg("θ"))
+      , {case () => (t:Term) => SequentCalculus.existsR(t)}),
 
     new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => SequentCalculus.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", ("↔CR", "<->CR"), {case () => SequentCalculus.commuteEquivR}),
