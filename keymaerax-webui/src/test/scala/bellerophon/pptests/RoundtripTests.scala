@@ -1,8 +1,9 @@
 package bellerophon.pptests
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, OnAll, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.core.{AntePos, AtomicODE, DifferentialSymbol, SeqPos, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -53,6 +54,15 @@ class RoundtripTests extends TacticTestBase {
 
   it should "input tactic generalizeb" in {
     roundTrip(TactixLibrary.generalize("x>0".asFormula)(1), "generalizeb({`x>0`}, 1)")
+  }
+
+  it should "input tactic diffCut" in {
+    roundTrip(TactixLibrary.diffCut("x>0".asFormula)(1), "diffCut({`x>0`}, 1)")
+  }
+
+  it should "input tactic DA4" in {
+    //@todo test with BelleExpr data structure, but DifferentialTactics is private
+    roundTrip("DA4({`x=0`}, {`x`}, {`1`}, {`2`}, 1)")
   }
 
 }
