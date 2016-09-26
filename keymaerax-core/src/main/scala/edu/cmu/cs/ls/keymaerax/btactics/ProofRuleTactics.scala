@@ -32,7 +32,7 @@ private object ProofRuleTactics {
     }
   }
 
-  def cut(f: Formula) = new InputTactic[Formula](SerializationNames.cutName, f) {
+  def cut(f: Formula) = new InputTactic[Formula]("cut", f) {
     override def computeExpr() = new BuiltInTactic(s"${name}(${input.prettyString})") {
       override def result(provable: Provable): Provable = {
         provable(core.Cut(input), 0)
@@ -41,7 +41,7 @@ private object ProofRuleTactics {
   }
 
   //@todo AntePos or AntePosition?
-  def cutL(f: Formula)(pos: AntePos) = new InputTactic[Formula](SerializationNames.cutLName, f) {
+  def cutL(f: Formula)(pos: AntePos) = new InputTactic[Formula]("cutL", f) {
     override def prettyString = s"${name}(${f.prettyString}, ${pos.toString})"
 
     override def computeExpr() = new BuiltInTactic(prettyString) {
@@ -52,7 +52,7 @@ private object ProofRuleTactics {
     }
   }
 
-  def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula](SerializationNames.cutRName, f) {
+  def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula]("cutR", f) {
     override def computeExpr() = new BuiltInTactic("CutR") {
       override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable, "cutR(" + f + ")")
@@ -63,7 +63,7 @@ private object ProofRuleTactics {
     override def prettyString: String = s"$name(${f.prettyString}, ${pos.toString})"
   }
 
-  def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula](SerializationNames.cutLRName, f) {
+  def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula]("cutLR", f) {
     override def computeExpr() = new BuiltInTactic("CutLR") {
       override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable, "cutLR(" + f + ")")

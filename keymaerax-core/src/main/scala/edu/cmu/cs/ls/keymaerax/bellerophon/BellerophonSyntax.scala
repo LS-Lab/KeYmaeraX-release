@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 
 object BelleExpr {
@@ -423,7 +422,7 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
+abstract case class InputTactic[T](name: String, input: T) extends BelleExpr {
   //@todo extends NamedBelleExpr
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
