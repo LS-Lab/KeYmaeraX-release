@@ -70,4 +70,8 @@ class RoundtripTests extends TacticTestBase {
     roundTrip("diffGhost({`x`}, {`1`}, {`2`}, {`0`}, 1)")
   }
 
+  it should "input tactic DGTactic" in {
+    roundTrip(TactixLibrary.DG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm))(1), "DGTactic({`x`}, {`5`}, {`2`}, 1)")
+  }
+
 }
