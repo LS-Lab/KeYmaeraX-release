@@ -2,7 +2,7 @@ package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, Idioms, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{AntePos, AtomicODE, DifferentialSymbol, SeqPos, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
@@ -92,6 +92,14 @@ class RoundtripTests extends TacticTestBase {
   it should "input tactic stutter" in {
     //@todo test with BelleExpr data structure, but DLBySubst is private
     roundTrip("stutter({`y`}, 1)")
+  }
+
+  it should "input tactic transform equality" in {
+    roundTrip(ArithmeticSimplification.transformEquality("x=y".asFormula)(1), "transformEquality({`x=y`}, 1)")
+  }
+
+  it should "input tactic diffInvariant" in {
+    roundTrip(TactixLibrary.diffInvariant("x^2=1".asFormula)(1), "diffInvariant({`x^2=1`}, 1)")
   }
 
 }
