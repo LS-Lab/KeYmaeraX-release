@@ -63,8 +63,15 @@ object ParseException {
   def apply(msg: String, state: ParseState, expect: String): ParseException =
     new ParseException(msg, state.location, tokenDescription(state.la), expect, state.topString, state.toString)
 
-  def apply(msg: String, after: Expression): ParseException =
-    new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", KeYmaeraXParser.printer.stringify(after), "")
+  def apply(msg: String, after: Expression): ParseException = {
+    assert(msg != null)
+    assert(after != null)
+    if(KeYmaeraXParser.printer == null) {
+      new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "Cannot print because somehow there's a null printer...", "")
+    } else {
+      new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", KeYmaeraXParser.printer.stringify(after), "")
+    }
+  }
 
   def apply(msg: String, loc: Location): ParseException =
     new ParseException(msg, loc, "<unknown>", "<unknown>", "", "")
