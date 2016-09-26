@@ -106,5 +106,21 @@ class RoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.cohide2(-1, 1), "coHide2(-1, 1)")
   }
 
+  it should "two-position tactic equivRewriting" ignore {
+    //@todo test with BelleExpr data structure, but PropositionalTactics is private
+    //@todo don't know how to print DependentTwoPositionTactics
+    roundTrip("equivRewriting(-1, 1)")
+  }
+
+  it should "two-position tactic instantiatedEquivRewriting" in {
+    //@todo test with BelleExpr data structure, but PropositionalTactics is private
+    roundTrip("instantiatedEquivRewriting(-1, 1)")
+  }
+
+  it should "two-position tactic L2R" ignore {
+    //@todo don't know how to print L2R
+    roundTrip("L2R(-1, 1)")
+  }
+
 
 }
