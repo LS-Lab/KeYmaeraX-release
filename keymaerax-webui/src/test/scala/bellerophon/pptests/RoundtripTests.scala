@@ -102,4 +102,9 @@ class RoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.diffInvariant("x^2=1".asFormula)(1), "diffInvariant({`x^2=1`}, 1)")
   }
 
+  it should "two-position tactic cohide2" in {
+    roundTrip(TactixLibrary.cohide2(-1, 1), "coHide2(-1, 1)")
+  }
+
+
 }

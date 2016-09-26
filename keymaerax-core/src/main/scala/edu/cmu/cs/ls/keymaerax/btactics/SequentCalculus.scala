@@ -46,7 +46,7 @@ trait SequentCalculus {
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
-  def cohide2: BuiltInTwoPositionTactic = "CoHide2" by {(pr:Provable, ante: Position, succ: Position) => {
+  def cohide2: BuiltInTwoPositionTactic = "coHide2" by {(pr:Provable, ante: Position, succ: Position) => {
       require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
       pr(CoHide2(ante.checkAnte.top, succ.checkSucc.top), 0)
     }
