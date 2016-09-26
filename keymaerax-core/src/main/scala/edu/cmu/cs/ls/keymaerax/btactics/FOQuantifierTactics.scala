@@ -43,6 +43,12 @@ protected object FOQuantifierTactics {
     new DependentPositionTactic("allL") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
+          case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+            useAt("all eliminate")(pos)
+          case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
+            StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+            //@todo assumes any USubstAboveURen
+            useAt("all instantiate", us => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
