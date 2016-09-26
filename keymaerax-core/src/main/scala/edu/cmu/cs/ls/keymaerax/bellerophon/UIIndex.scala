@@ -70,20 +70,20 @@ object UIIndex {
           (expr, isAnte) match {
             case (True, false) => "closeTrue" :: alwaysApplicable
             case (False, true) => "closeFalse" :: alwaysApplicable
-//            case (_: Not, true) => "notL" :: alwaysApplicable
-//            case (_: Not, false) => "notR" :: alwaysApplicable
+           case (_: Not, true) => "notL" :: alwaysApplicable
+           case (_: Not, false) => "notR" :: alwaysApplicable
             case (_: And, true) => "andL" :: alwaysApplicable
             case (_: And, false) => "andR" :: alwaysApplicable
             case (_: Or, true) => "orL" :: alwaysApplicable
             case (_: Or, false) => "orR1" :: "orR2" :: alwaysApplicable
             case (_: Imply, true) => "implyL" :: alwaysApplicable
             case (_: Imply, false) => "implyR" :: alwaysApplicable
-//            case (_: Equiv, true) => "equivL" :: alwaysApplicable
-//            case (_: Equiv, false) => "equivR" :: alwaysApplicable
-//            case (_: Forall, true) => "allL" :: alwaysApplicable
-//            case (_: Forall, false) => "allR" :: alwaysApplicable
-//            case (_: Exists, true) => "existsL" :: alwaysApplicable
-//            case (_: Exists, false) => "existsR" :: alwaysApplicable
+           case (_: Equiv, true) => "equivL" :: alwaysApplicable
+           case (_: Equiv, false) => "equivR" :: alwaysApplicable
+           case (_: Forall, true) => "allL" :: alwaysApplicable
+           case (_: Forall, false) => "allR" :: alwaysApplicable
+           case (_: Exists, true) => "existsL" :: alwaysApplicable
+           case (_: Exists, false) => "existsR" :: alwaysApplicable
             case _ => alwaysApplicable
           }
         }

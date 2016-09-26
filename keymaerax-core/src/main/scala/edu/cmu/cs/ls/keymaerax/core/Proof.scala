@@ -1015,7 +1015,7 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
 /**
   * ->L Imply left.
   * {{{
-  * G, p->q |- p    q, G |- D
+  * p->q, G |- p    q, G |- D
   * ---------------------- (-> Imply left)
   *   p->q, G |- D
   * }}}
@@ -1025,10 +1025,9 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
   /** ->L Imply left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
-    val newAnte = s.updated(pos, p).ante
     immutable.List(
-      Sequent( s.ante , immutable.IndexedSeq(p)),
-      Sequent( newAnte, immutable.IndexedSeq(q))
+      s.updated(SuccPos(0), p),
+      s.updated(pos, q)
     )
   }
 }
