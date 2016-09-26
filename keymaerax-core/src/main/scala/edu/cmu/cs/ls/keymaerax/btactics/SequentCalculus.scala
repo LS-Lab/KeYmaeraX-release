@@ -195,6 +195,7 @@ trait SequentCalculus {
         val fmls = s.ante.intersect(s.succ)
         require(fmls.nonEmpty, "Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
         val fml = fmls.head
+        if (!fml.isInstanceOf[AtomicFormula]) println("WARNING: Constructive logic identity rule used on non-initial sequent")
         close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
     }
   }
