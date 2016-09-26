@@ -84,5 +84,9 @@ class RoundtripTests extends TacticTestBase {
   it should "input tactic loop" in {
     roundTrip(TactixLibrary.loop("x>0".asFormula)(1), "loop({`x>0`}, 1)")
   }
-  
+
+  it should "input tactic boundRename" in {
+    roundTrip(TactixLibrary.boundRename("x".asVariable, "y".asVariable)(1), "boundRename({`x`}, {`y`}, 1)")
+  }
+
 }
