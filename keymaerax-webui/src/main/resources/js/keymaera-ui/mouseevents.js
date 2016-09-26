@@ -25,6 +25,7 @@ angular.module('keymaerax.ui.mouseevents')
         element[0].addEventListener('dragstart', function(event) {
           event.dataTransfer.effectAllowed = 'move';
           var dragData = JSON.stringify(attrs.dragData)
+          console.log("dragData is : " + dragData)
           //@note hack to make data available in dragenter and dragleave
           event.dataTransfer.setData('k4/dragdata/' + dragData, dragData);
           angular.element(event.target).addClass('k4-drag');
@@ -75,7 +76,15 @@ angular.module('keymaerax.ui.mouseevents')
           if (event.stopPropagation) event.stopPropagation();
           angular.element(event.target).removeClass('k4-drag-over');
           var data = $.grep(event.dataTransfer.types, function(e, i) { return e.substr(0, 'k4/dragdata/'.length) === 'k4/dragdata/' });
-          var dragData = data.length == 1 ? JSON.parse(data[0].substr('k4/dragdata/'.length)) : undefined;
+          var dragData = undefined
+          if(data.length == 1) {
+            //dragData strips off the prefix k4/dragdata/ and parses the resulting JSON.
+            dragData = JSON.parse(data[0].substr('k4/dragdata/'.length))
+            if(dragData == undefined) {
+              console.error("Error: dragData was not defined even though there were event.dataTransfer.types matching the desired prefix: " + data[0].substr('k4/dragdata/'.length))
+            }
+          }
+
           scope.$apply(scope.onDrop({dragData: dragData}));
         });
       }
