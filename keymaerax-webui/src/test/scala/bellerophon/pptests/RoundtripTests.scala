@@ -81,4 +81,8 @@ class RoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.cutLR("x>0".asFormula)(SuccPosition(1).checkTop), "cutLR({`x>0`}, 1)")
   }
 
+  it should "input tactic loop" in {
+    roundTrip(TactixLibrary.loop("x>0".asFormula)(1), "loop({`x>0`}, 1)")
+  }
+  
 }
