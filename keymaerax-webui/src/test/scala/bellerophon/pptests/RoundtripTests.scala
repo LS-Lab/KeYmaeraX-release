@@ -65,4 +65,9 @@ class RoundtripTests extends TacticTestBase {
     roundTrip("DA4({`x=0`}, {`x`}, {`1`}, {`2`}, 1)")
   }
 
+  it should "input tactic diffGhost" in {
+    //@todo test with BelleExpr data structure, but DifferentialTactics is private
+    roundTrip("diffGhost({`x`}, {`1`}, {`2`}, {`0`}, 1)")
+  }
+
 }
