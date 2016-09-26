@@ -74,4 +74,11 @@ class RoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.DG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm))(1), "DGTactic({`x`}, {`5`}, {`2`}, 1)")
   }
 
+  it should "input tactic cut, cutL, cutR" in {
+    roundTrip(TactixLibrary.cut("x>0".asFormula), "cut({`x>0`})")
+    roundTrip(TactixLibrary.cutL("x>0".asFormula)(AntePosition(1).checkTop), "cutL({`x>0`}, -1)")
+    roundTrip(TactixLibrary.cutR("x>0".asFormula)(SuccPosition(1).checkTop), "cutR({`x>0`}, 1)")
+    roundTrip(TactixLibrary.cutLR("x>0".asFormula)(SuccPosition(1).checkTop), "cutLR({`x>0`}, 1)")
+  }
+
 }

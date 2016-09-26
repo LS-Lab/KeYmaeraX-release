@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.HashMap
@@ -589,28 +590,12 @@ object DerivationInfo {
           (List("&Gamma;", "P"), List("&Delta;"))))
         ,List(FormulaArg("P")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
     // Proof rule input position tactics
-    //@todo Move these DependentPositionTactic wrappers to ProofRuleTactics?
     new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")),
-      {case () => (fml:Formula) => new DependentPositionTactic("cutL") {
-        /** Create the actual tactic to be applied at position pos */
-        override def factory(pos: Position): DependentTactic = new DependentTactic("cutL") {
-          ProofRuleTactics.cutL(fml)(pos.checkAnte.top)
-        }
-      }}),
+      {case () => (fml:Formula) => TactixLibrary.cutL(fml)}),
     new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula")),
-      {case () => (fml:Formula) => new DependentPositionTactic("cutR") {
-        /** Create the actual tactic to be applied at position pos */
-        override def factory(pos: Position): DependentTactic = new DependentTactic("cutR") {
-          ProofRuleTactics.cutR(fml)(pos.checkSucc.top)
-        }
-      }}),
+      {case () => (fml:Formula) => TactixLibrary.cutR(fml)}),
     new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
-      {case () => (fml:Formula) => new DependentPositionTactic("cutLR") {
-          /** Create the actual tactic to be applied at position pos */
-          override def factory(pos: Position): DependentTactic = new DependentTactic("cutLR") {
-            ProofRuleTactics.cutLR(fml)(pos)
-          }
-        }}),
+      {case () => (fml:Formula) => TactixLibrary.cutLR(fml)}),
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("loop",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
