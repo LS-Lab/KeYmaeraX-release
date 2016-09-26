@@ -167,7 +167,17 @@ object KeYmaeraXDeclarationsParser {
           case None => {
             assert(x != null, "variables occuring in an expression or returned from StaticSemantics should not be null.")
             assert(x.index != null, "indices of variables occuring in an expression or returned from StaticSemantics should not be null.")
-            throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
+
+            if(StaticSemantics.freeVars(expr).contains(x)) {
+              throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index + " occurs free.", x)
+            }
+            else {
+              // Quantified Real variables may occur without pre-declaration.
+              val imaginaryToken = decls.head._2._3 //@todo find a more reasonable place to point...
+              (Real, imaginaryToken)
+            }
+
+
           }
         }
         if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declarationToken.loc)
