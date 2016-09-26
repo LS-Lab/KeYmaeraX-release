@@ -101,7 +101,13 @@ angular.module('formula')
                     if (sinkFormulaId !== dragData) {
                       var fml1Id = dragData;
                       var fml2Id = sinkFormulaId;
-                      scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'step'});
+                      if(fml1Id == "") {
+                          console.error("Expected source to be defined.");
+                      }
+                      if(fml2Id == "") {
+                          console.error("Expected sink to be defined.");
+                      }
+                      scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'closeId'});
                     }
                   },
                   formulaDragEnter: function(dragData) {
