@@ -119,6 +119,7 @@ object HyDRAInitializer {
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
     try {
+      println("Populating DerivedLemmas database.")
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
       case e : Exception =>

@@ -136,12 +136,14 @@ object DerivedAxioms {
     var failures: mutable.Buffer[String] = mutable.Buffer()
     Range(0, fieldMirrors.length-1).foreach(idx => {
       try {
+        println("Populating lemma database with " + fieldMirrors(idx).symbol)
         fieldMirrors(idx)()
       } catch {
         case e: Throwable =>
           failures += fns(idx)
           println("WARNING: Failed to add derived lemma.")
           e.printStackTrace()
+          System.exit(-2)
       }
     })
     if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.mkString("\n"))
