@@ -138,7 +138,7 @@ class ChilledWater extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable with ODE" in withMathematica { qeTool =>
+  it should "be provable with ODE" ignore withMathematica { qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
     val inv = """(Tw < Tl) &
                 |    (Tl < Tlu() &
