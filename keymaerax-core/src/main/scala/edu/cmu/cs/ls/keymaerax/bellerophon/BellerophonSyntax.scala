@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 
 object BelleExpr {
@@ -423,7 +422,7 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
+abstract case class InputTactic[T](name: String, input: T) extends BelleExpr {
   //@todo extends NamedBelleExpr
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
@@ -492,6 +491,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
                 cause)
               tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
           }
+        } else if (cause == null) {
+          throw new BelleError(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}")
         } else throw cause
       case _ => pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
     }

@@ -28,7 +28,7 @@ object UpdateChecker {
 
 
   def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
-    downloadDBVersion() match {
+    downloadDBVersion match {
       case Some(oldestAcceptableDBVersion) =>
         Some(StringToVersion(databaseVersion) < StringToVersion(oldestAcceptableDBVersion))
       case None => None
@@ -60,7 +60,7 @@ object UpdateChecker {
     case None => None
   }
 
-  private def downloadDBVersion() : Option[String] = {
+  private lazy val downloadDBVersion : Option[String] = {
     try {
       val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
       if(json.asJsObject.getFields("oldestAcceptableDB").isEmpty)

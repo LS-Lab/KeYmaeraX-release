@@ -324,7 +324,7 @@ private object DifferentialTactics {
   }
 
   /** @see [[TactixLibrary.DG]] */
-  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" by ((pos: Position, sequent: Sequent) => {
+  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = parseGhost(ghost)
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
@@ -354,7 +354,12 @@ private object DifferentialTactics {
 //    ))
 //  )
 
-  def diffGhost(ghost: DifferentialProgram, initialValue: Term) = "diffGhost" by ((pos: Position, sequent: Sequent) => {
+  private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
+    val ghostParts = parseGhost(ghost)
+    List(ghostParts._1, ghostParts._2, ghostParts._3)
+  }
+
+  def diffGhost(ghost: DifferentialProgram, initialValue: Term) = "diffGhost" byWithInputs (/* match AxiomInfo arguments */ listifiedGhost(ghost) :+ initialValue, (pos: Position, sequent: Sequent) => {
     DG(ghost)(pos) &
     DLBySubst.assignbExists(initialValue)(pos) &
     DLBySubst.assignEquality(pos)
