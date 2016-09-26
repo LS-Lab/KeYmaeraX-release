@@ -192,17 +192,14 @@ private object DLBySubst {
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
    */
-  def generalize(c: Formula): DependentPositionTactic = new DependentPositionTactic("generalizeb") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
-        case (ctx, Box(a, _)) =>
-          cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
-            /* use */ /*label(BranchLabels.genUse)*/ ident,
-            /* show */(cohide(pos.top) & CMon(pos.inExpr++1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
-          )
-      }
-    }
-  }
+  def generalize(c: Formula): DependentPositionTactic =
+    "generalizeb" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
+      case (ctx, Box(a, _)) =>
+        cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
+          /* use */ /*label(BranchLabels.genUse)*/ ident,
+          /* show */(cohide(pos.top) & CMon(pos.inExpr++1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
+        )
+    })
 
   /** @see [[TactixLibrary.postCut()]]
    * @todo same for diamonds by the dual of K
