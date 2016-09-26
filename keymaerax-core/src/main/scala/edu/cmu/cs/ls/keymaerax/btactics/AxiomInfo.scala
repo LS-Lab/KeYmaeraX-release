@@ -141,7 +141,7 @@ object DerivationInfo {
         "diffGhost",
         ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
         List(
-          (List("&Gamma;", "y=i"), List("[{c,y'=a*y+b&Q}]P", "&Delta;"))
+          (List("&Gamma;", "y=i"), List("[{c,y'=a()*y+b&Q}]P", "&Delta;"))
         )
       ),
       List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
@@ -150,12 +150,12 @@ object DerivationInfo {
     new InputPositionTacticInfo("DGTactic",
       RuleDisplayInfo(
         "DGTactic",
-        ( List("&Gamma;"), List("∃y [{c, y'=a*y+b&Q}]P", "&Delta;") ),
+        ( List("&Gamma;"), List("∃y [{c, y'=a()*y+b&Q}]P", "&Delta;") ),
         List(
           (List("&Gamma;"), List("[{c&Q}]P", "&Delta;"))
         )
       ),
-      List(VariableArg("y"), TermArg("a"), TermArg("b")),
+      List(VariableArg("y"), TermArg("a()"), TermArg("b")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))}
     ),
 
