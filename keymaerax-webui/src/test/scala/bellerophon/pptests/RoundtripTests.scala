@@ -89,4 +89,9 @@ class RoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.boundRename("x".asVariable, "y".asVariable)(1), "boundRename({`x`}, {`y`}, 1)")
   }
 
+  it should "input tactic stutter" in {
+    //@todo test with BelleExpr data structure, but DLBySubst is private
+    roundTrip("stutter({`y`}, 1)")
+  }
+
 }

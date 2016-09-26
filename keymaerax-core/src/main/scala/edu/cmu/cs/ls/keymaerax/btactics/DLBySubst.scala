@@ -87,7 +87,7 @@ private object DLBySubst {
     *
     * @param x The self-assigned variable.
     */
-  def stutter(x: Variable): DependentPositionTactic = "stutter" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  def stutter(x: Variable): DependentPositionTactic = "stutter" byWithInput (x, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, f: Formula) =>
       val commute = if (pos.isAnte) commuteEquivR(1) else skip
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
