@@ -164,7 +164,11 @@ object KeYmaeraXDeclarationsParser {
         val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
           case Some((None,sort,token)) => (sort, token)
           case Some((Some(domain), sort, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
-          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
+          case None => {
+            assert(x != null, "variables occuring in an expression or returned from StaticSemantics should not be null.")
+            assert(x.index != null, "indices of variables occuring in an expression or returned from StaticSemantics should not be null.")
+            throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
+          }
         }
         if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declarationToken.loc)
         x.sort == declaredSort
