@@ -82,6 +82,12 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case e: BelleError => throw e.inContext(it, v.prettyString)
           case e: Throwable => throw new BelleError("Unable to create input tactic", e).inContext(it, "")
         }
+        case nit: NamedInputTactic => try {
+          apply(nit.computeExpr(), v)
+        } catch {
+          case e: BelleError => throw e.inContext(nit, v.prettyString)
+          case e: Throwable => throw new BelleError("Unable to create input tactic", e).inContext(nit, "")
+        }
         case PartialTactic(child, _) => try {
           apply(child, v)
         } catch {

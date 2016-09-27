@@ -428,6 +428,10 @@ abstract case class InputTactic[T](name: SerializationName, input: T) extends Be
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
 }
+abstract case class NamedInputTactic(name: String, input: Expression) extends BelleExpr {
+  def computeExpr(): BelleExpr
+  override def prettyString: String = s"${name}({`" + input.prettyString + "`})"
+}
 
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Expression]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
