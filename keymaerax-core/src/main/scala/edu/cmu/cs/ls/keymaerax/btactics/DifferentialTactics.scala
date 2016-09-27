@@ -355,7 +355,11 @@ private object DifferentialTactics {
 //  )
 
   private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
-    val ghostParts = parseGhost(ghost)
+    val ghostParts = try {
+      parseGhost(ghost)
+    } catch {
+      case ex: CoreException => throw new BelleError("Unable to parse ghost " + ghost.prettyString, ex)
+    }
     List(ghostParts._1, ghostParts._2, ghostParts._3)
   }
 
