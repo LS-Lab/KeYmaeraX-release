@@ -247,14 +247,14 @@ private object DifferentialTactics {
     if (ov.isEmpty) {
       DC(f)(pos)
     } else {
-      val ghosts: Set[((Term, Variable), BelleExpr)] = ov.map(old => {
+      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
         val ghost = old match {
           case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
           case _ => TacticHelper.freshNamedSymbol(Variable("old"), sequent)
         }
         (old -> ghost,
           discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
-      })
+      }).toList
       ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
     }
   }

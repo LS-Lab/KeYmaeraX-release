@@ -656,6 +656,16 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2}]x>=x_0".asFormula
   }
 
+  it should "cut in single formula with multiple old variables" in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq("dx^2+dy^2=1".asFormula), IndexedSeq("[{dx'=0,dy'=0}]dx^2+dy^2=1".asFormula)),
+      diffCut("dx=old(dx) & dy=old(dy)".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals.head.succ should contain only "[{dx'=0,dy'=0&true&dx=dx_0&dy=dy_0}]dx^2+dy^2=1".asFormula
+    result.subgoals(1).ante should contain only ("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals(1).succ should contain only "[{dx'=0,dy'=0}](dx=dx_0&dy=dy_0)".asFormula
+  }
+
   it should "cut in multiple formulas" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1))
@@ -692,7 +702,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=v_0)}]x>=0".asFormula
   }
 
-  it should "cut in single formulas with old multiple variables" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in withMathematica { qeTool =>
+  it should "cut in single formula with multiple old variables" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("dx^2+dy^2=1".asFormula), IndexedSeq("[{dx'=0,dy'=0}]dx^2+dy^2=1".asFormula)),
       diffInvariant("dx=old(dx) & dy=old(dy)".asFormula)(1))
     result.subgoals should have size 1
