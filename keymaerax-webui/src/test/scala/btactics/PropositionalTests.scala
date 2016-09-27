@@ -55,21 +55,6 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("x>0 -> y>0".asFormula, "b=3".asFormula)
   }
 
-  "orRi" should "introduce disjunction from succedent" in {
-    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>0".asFormula, "y>0".asFormula)), orRi())
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x>0 | y>0".asFormula
-  }
-
-  it should "work as two-position tactic" in {
-    val result = proveBy(Sequent(IndexedSeq("a=2".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula)),
-      orRi(SuccPos(1), SuccPos(0)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "a=2".asFormula
-    result.subgoals.head.succ should contain only ("b=3 | y>0".asFormula, "x>0".asFormula)
-  }
-
   "andLi" should "introduce conjunction from antecedent" in {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq()), andLi())
     result.subgoals should have size 1

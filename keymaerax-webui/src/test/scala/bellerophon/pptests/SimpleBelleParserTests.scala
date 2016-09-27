@@ -237,8 +237,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "work in the beginning of a branch" in {
-    val tactic = BelleParser("andR(1) & <(?(closeId), ?(orR(1)))")
-    tactic shouldBe TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.closeId), Idioms.?(TactixLibrary.orR(1)))
+    val tactic = BelleParser("andR(1) & <(?(closeId), ?(orR1(1)))")
+    tactic shouldBe TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.closeId), Idioms.?(TactixLibrary.orR1(1)))
   }
 
 

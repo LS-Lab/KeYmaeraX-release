@@ -73,30 +73,30 @@ class LocateTests extends TacticTestBase {
   "'R" should "locate the sole applicable formula in succedent" in {
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("x>0 | y>0".asFormula)),
-      TactixLibrary.orR('R)
+      TactixLibrary.orR2('R)
     )
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("x>0".asFormula, "y>0".asFormula)
+    result.subgoals.head.succ should contain only ("y>0".asFormula)
   }
 
   it should "locate the first applicable formula in antecedent" in {
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 | y>0".asFormula, "b=3 | c=4".asFormula)),
-      TactixLibrary.orR('R)
+      TactixLibrary.orR1('R)
     )
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("a=2".asFormula, "x>0".asFormula, "y>0".asFormula, "b=3 | c=4".asFormula)
+    result.subgoals.head.succ should contain only ("a=2".asFormula, "x>0".asFormula, "b=3 | c=4".asFormula)
   }
 
   it should "throw an exception if no applicable position can be found" in {
     val e = intercept[BelleError] { proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
-      TactixLibrary.orR('R)
+      TactixLibrary.orR1('R)
     )}
-    e.getMessage should include ("Position tactic orR is not applicable at 1")
-    e.getMessage should include ("Position tactic orR is not applicable at 2")
+    e.getMessage should include ("Position tactic orR1 is not applicable at 1")
+    e.getMessage should include ("Position tactic orR1 is not applicable at 2")
   }
 
   it should "work with dependent position tactics" in {
@@ -112,11 +112,11 @@ class LocateTests extends TacticTestBase {
   "'_" should "locate the sole applicable formula in sequent" in {
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("x>0 | y>0".asFormula)),
-      TactixLibrary.orR('_)
+      TactixLibrary.orR2('_)
     )
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("x>0".asFormula, "y>0".asFormula)
+    result.subgoals.head.succ should contain only ("y>0".asFormula)
   }
 
   it should "locate the first applicable formula" in {
@@ -132,10 +132,10 @@ class LocateTests extends TacticTestBase {
   it should "throw an exception if no applicable position can be found" in {
     val e = intercept[BelleError] { proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
-      TactixLibrary.orR('_)
+      TactixLibrary.orR2('_)
     )}
-    e.getMessage should include ("Position tactic orR is not applicable at 1")
-    e.getMessage should include ("Position tactic orR is not applicable at 2")
+    e.getMessage should include ("Position tactic orR2 is not applicable at 1")
+    e.getMessage should include ("Position tactic orR2 is not applicable at 2")
   }
 
   "'Llast" should "apply on last formula in antecedent" in {

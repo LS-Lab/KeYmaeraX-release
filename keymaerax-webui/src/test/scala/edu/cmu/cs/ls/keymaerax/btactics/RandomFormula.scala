@@ -359,7 +359,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if 40 until 50 contains it => val p1 = padRight(vars, n, nextPr(vars, n-1), 2);
         val pos1 = if (p1.conclusion.succ.length<=2) SuccPos(0) else SuccPos(rand.nextInt(p1.conclusion.succ.length-2))
         p1(Sequent(p1.conclusion.ante, p1.conclusion.succ.dropRight(2).patch(pos1.getIndex, Or(p1.conclusion.succ.dropRight(1).last, p1.conclusion.succ.last)::Nil, 0)),
-          OrRight(pos1))
+          OrR1())
       case it if 50 until 60 contains it => val p1 = padLeft(vars, n, padRight(vars, n, nextPr(vars, n-1), 1), 1);
         val posi1 = rand.nextInt(p1.conclusion.succ.length)
         val pos1 = SuccPos(posi1)

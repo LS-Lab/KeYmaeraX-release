@@ -163,10 +163,10 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "do nothing when change occurred" in {
-    val result = proveBy("x=2|x=3".asFormula, Idioms.must(orR(1)))
+    val result = proveBy("x=2|x=3".asFormula, Idioms.must(orR1(1)))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("x=2".asFormula, "x=3".asFormula)
+    result.subgoals.head.succ should contain only ("x=2".asFormula)
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {

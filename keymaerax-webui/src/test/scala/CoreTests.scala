@@ -112,7 +112,7 @@ class CoreTests extends FlatSpec with Matchers {
     testRule(ImplyLeft(aPos), seq(Imply(p, q), Nil), seq(Nil, p) ++ seq(q, Nil))
     testRule(AndRight(sPos), seq(Nil, And(p, q)), seq(Nil, p) ++ seq(Nil, q))
     testRule(AndLeft(aPos), seq(And(p, q), Nil), seq(p ++ q, Nil))
-    testRule(OrRight(sPos), seq(Nil, Or(p, q)), seq(Nil, p ++ q))
+    testRule(OrR1(), seq(Nil, Or(p, q)), seq(Nil, p))
     testRule(OrLeft(aPos), seq(Or(p, q), Nil), seq(p, Nil) ++ seq(q, Nil))
     //@TODO The following two tests fail since Equivs have been currently changed to a single formula
     testRule(EquivRight(sPos), seq(Nil, Equiv(p, q)), seq(p, q) ++ seq(q, p))
@@ -126,7 +126,7 @@ class CoreTests extends FlatSpec with Matchers {
 
     an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
     an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(OrR1(), s)
     an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
     // an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
     // an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
@@ -141,7 +141,7 @@ class CoreTests extends FlatSpec with Matchers {
     aPos = SeqPos(-2).asInstanceOf[AntePos]
     //an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
     an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(OrR1(), s)
     an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
     an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
@@ -156,7 +156,7 @@ class CoreTests extends FlatSpec with Matchers {
     aPos = SeqPos(-3).asInstanceOf[AntePos]
     an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
     an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(OrR1(), s)
     an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
     an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
@@ -175,7 +175,7 @@ class CoreTests extends FlatSpec with Matchers {
     val aPos = SeqPos(-5).asInstanceOf[AntePos]
     an [IndexOutOfBoundsException] should be thrownBy testRule(NotRight(sPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(NotLeft(aPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(OrRight(sPos), s)
+    an [IndexOutOfBoundsException] should be thrownBy testRule(OrR2(), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(OrLeft(aPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(AndRight(sPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(AndLeft(aPos), s)

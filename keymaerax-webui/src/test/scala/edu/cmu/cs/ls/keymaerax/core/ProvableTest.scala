@@ -297,7 +297,7 @@ class ProvableTest extends FlatSpec with Matchers {
     finProof.proved should be (goal)
     // incorrectly prolong forward
     a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, AndRight(SuccPos(0))))
-    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, OrRight(SuccPos(0))))
+    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, OrR1()))
     a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(new Sequent(IndexedSeq(), IndexedSeq(Equiv(fm, And(fm, True)))), ImplyRight(SuccPos(0))))
     a [CoreException] shouldBe thrownBy(proof(new Sequent(IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
     a [CoreException] shouldBe thrownBy(proof(new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
