@@ -323,7 +323,8 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val notOr = derivedAxiom("!| deMorgan", Sequent(IndexedSeq(), IndexedSeq("(!(p_() | q_())) <-> ((!p_()) & (!q_()))".asFormula)), prop)
+  // TODO not provable with the current prop tactic (which considers every rule invertible)
+  //lazy val notOr = derivedAxiom("!| deMorgan", Sequent(IndexedSeq(), IndexedSeq("(!(p_() | q_())) <-> ((!p_()) & (!q_()))".asFormula)), prop)
 
   /**
     * {{{Axiom "PC1".
@@ -378,7 +379,8 @@ object DerivedAxioms {
     * @Derived
     * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC10
     */
-  lazy val PC10 = derivedAxiom("PC10", Sequent(IndexedSeq(), IndexedSeq("q_() -> p_() | q_()".asFormula)), prop)
+  // TODO not provable with the current prop tactic (which considers every rule invertible)
+  //lazy val PC10 = derivedAxiom("PC10", Sequent(IndexedSeq(), IndexedSeq("q_() -> p_() | q_()".asFormula)), prop)
 
   /**
     * {{{Axiom "-> tautology".

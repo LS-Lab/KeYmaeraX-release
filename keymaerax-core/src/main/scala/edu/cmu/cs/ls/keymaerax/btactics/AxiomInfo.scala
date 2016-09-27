@@ -88,9 +88,10 @@ object DerivationInfo {
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
     new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => SequentCalculus.existsE}),
 
-    new DerivedAxiomInfo("!| deMorgan"
-      , AxiomDisplayInfo(("¬∨","!|"), "<span class=\"k4-axiom-key\">(¬(p|q))</span>↔(¬p∧¬q)")
-      , "notOr", {case () => useAt(DerivedAxioms.notOr)}),
+    // TODO not provable with the current prop tactic (which considers every rule invertible)
+    //new DerivedAxiomInfo("!| deMorgan"
+    //  , AxiomDisplayInfo(("¬∨","!|"), "<span class=\"k4-axiom-key\">(¬(p|q))</span>↔(¬p∧¬q)")
+    //  , "notOr", {case () => useAt(DerivedAxioms.notOr)}),
 
     new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", {case () => useAt(DerivedAxioms.equivReflexiveAxiom)}),
     new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
@@ -123,7 +124,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("PC2", "PC2", "PC2", {case () => useAt(DerivedAxioms.PC2)}),
     new DerivedAxiomInfo("PC3", "PC3", "PC3", {case () => useAt(DerivedAxioms.PC3)}),
     new DerivedAxiomInfo("PC9", "PC9", "PC9", {case () => useAt(DerivedAxioms.PC9)}),
-    new DerivedAxiomInfo("PC10", "PC10", "PC10", {case () => useAt(DerivedAxioms.PC10)}),
+    // TODO not provable with the current prop tactic (which considers every rule invertible)
+    //new DerivedAxiomInfo("PC10", "PC10", "PC10", {case () => useAt(DerivedAxioms.PC10)}),
 
     new DerivedAxiomInfo("&->", "&->", "andImplies", {case () => useAt(DerivedAxioms.andImplies)}),
 
