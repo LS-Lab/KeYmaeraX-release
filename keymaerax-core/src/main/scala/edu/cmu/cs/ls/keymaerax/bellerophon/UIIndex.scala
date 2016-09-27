@@ -24,11 +24,8 @@ object UIIndex {
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {
-    case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
     case _ => allStepsAt(expr, pos).find(DerivationInfo(_).inputs.isEmpty)
   }
-
-
 
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
     find(DerivationInfo(_).inputs.isEmpty)
@@ -44,123 +41,15 @@ object UIIndex {
     val alwaysApplicable = Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
-      case Differential(t) =>
-        val tactics =
-          t match {
-            case _: Variable => "DvariableTactic" :: alwaysApplicable
-            case _: Number => "c()' derive constant fn" :: alwaysApplicable
-            // optimizations
-            case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
-            case _: Neg => "-' derive neg" :: alwaysApplicable
-            case _: Plus => "+' derive sum" :: alwaysApplicable
-            case _: Minus => "-' derive minus" :: alwaysApplicable
-            // optimizations
-            case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: alwaysApplicable
-            case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: alwaysApplicable
-            case _: Times => "*' derive product" :: alwaysApplicable
-            case _: Divide => "/' derive quotient" :: alwaysApplicable
-            case _: Power => "^' derive power" :: alwaysApplicable
-            case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
-            case _ => alwaysApplicable
-          }
-        "derive" :: tactics
-
-      case DifferentialFormula(f) =>
-        val tactics =
-          f match {
-            case _: Equal => "=' derive =" :: alwaysApplicable
-            case _: NotEqual => "!=' derive !=" :: alwaysApplicable
-            case _: Greater => ">' derive >" :: alwaysApplicable
-            case _: GreaterEqual => ">=' derive >=" :: alwaysApplicable
-            case _: Less => "<' derive <" :: alwaysApplicable
-            case _: LessEqual => "<=' derive <=" :: alwaysApplicable
-            case _: And => "&' derive and" :: alwaysApplicable
-            case _: Or => "|' derive or" :: alwaysApplicable
-            case _: Imply => "->' derive imply" :: alwaysApplicable
-            case _: Forall => "forall' derive forall" :: alwaysApplicable
-            case _: Exists => "exists' derive exists" :: alwaysApplicable
-            case _ => alwaysApplicable
-          }
-        "derive" :: tactics
-      case Box(a, True) if isTop && !isAnte =>
-        "dualFree" :: Nil
-
-      case Box(a, post) =>
-        val maybeSplit = post match {
-          case _: And => "[] split" :: Nil
-          case _ => Nil
-        }
-        def containsPrime = {
-          var foundPrime = false
-          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-              case _: DifferentialFormula => foundPrime = true; Left(Some(ExpressionTraversal.stop))
-              case _ => Left(None)
-            }
-
-            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-              case _: DifferentialSymbol => foundPrime = true; Left(Some(ExpressionTraversal.stop))
-              case _ => Left(None)
-            }
-          }, post)
-          foundPrime
-        }
-        val rules = "abstractionb" :: "generalizeb" :: maybeSplit
-        a match {
-          case Assign(DifferentialSymbol(_),_) => "[:=] assign" :: rules
-          case _: Assign => "assignb" :: rules
-          case _: AssignAny => "[:*] assign nondet" :: rules
-          case _: Test => "[?] test" :: rules
-          case _: Compose => "[;] compose" :: rules
-          case _: Choice => "[++] choice" :: rules
-          case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("hideG", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
-          case _: Loop => "loop" :: "[*] iterate" :: rules
-          case ODESystem(ode, constraint) if containsPrime => ode match {
-            case _: AtomicODE => "DE differential effect" :: "diffWeaken" :: "diffCut" :: rules
-            case _: DifferentialProduct => "DE differential effect (system)" :: "diffWeaken" :: "diffCut" :: rules
-            case _ => rules
-          }
-          case ODESystem(ode, constraint) =>
-            val tactics: List[String] = "ODE" :: /*@todo diffSolve once done*/ "autoDiffSolve" :: "diffCut" :: "diffInd" :: "DIRule" ::  Nil
-            if (constraint == True)
-              (tactics :+ "diffGhost" :+ "DA4") ++ rules
-            else
-              (tactics :+ "diffWeaken" :+ "diffGhost" :+ "DA4") ++ rules
-          case _ => rules
-        }
-
-      case Diamond(a, post) => 
-        val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
-        val rules = alwaysApplicable ++ maybeSplit
-        a match {
-        case _: Assign => "<:=> assign" :: rules
-        case _: AssignAny => "<:*> assign nondet" :: rules
-        case _: Test => "<?> test" :: rules
-        case _: Compose => "<;> compose" :: rules
-        case _: Choice => "<++> choice" :: rules
-        case _: Dual => "<^d> dual" :: rules
-        case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
-        case _ => rules
-      }
 
       case Not(f) => f match {
-        case Box(_, Not(_)) => "<> diamond" :: alwaysApplicable
-        case _: Box => "![]" :: alwaysApplicable
-        case Diamond(_, Not(_)) => "[] box" :: alwaysApplicable
-        case _: Diamond => "!<>" :: alwaysApplicable
-        case _: Forall => "!all" :: alwaysApplicable
-        case _: Exists => "!exists" :: alwaysApplicable
-        case _: Equal => "! =" :: alwaysApplicable
-        case _: NotEqual => "! !=" :: alwaysApplicable
-        case _: Less => "! <" :: alwaysApplicable
-        case _: LessEqual => "! <=" :: alwaysApplicable
-        case _: Greater => "! >" :: alwaysApplicable
-        case _: GreaterEqual => "! >=" :: alwaysApplicable
-        case _: Not => "!! double negation" :: alwaysApplicable
-        case _: And => "!& deMorgan" :: alwaysApplicable
-        case _: Or => "!| deMorgan" :: alwaysApplicable
-        case _: Imply => "!-> deMorgan" :: alwaysApplicable
-        case _: Equiv => "!<-> deMorgan" :: alwaysApplicable
+//        case _: Forall => "!all" :: alwaysApplicable
+//        case _: Exists => "!exists" :: alwaysApplicable
+//        case _: Not => "!! double negation" :: alwaysApplicable
+//        case _: And => "!& deMorgan" :: alwaysApplicable
+//        case _: Or => "!| deMorgan" :: alwaysApplicable
+//        case _: Imply => "!-> deMorgan" :: alwaysApplicable
+//        case _: Equiv => "!<-> deMorgan" :: alwaysApplicable
         case _ => alwaysApplicable
       }
 
@@ -181,20 +70,20 @@ object UIIndex {
           (expr, isAnte) match {
             case (True, false) => "closeTrue" :: alwaysApplicable
             case (False, true) => "closeFalse" :: alwaysApplicable
-            case (_: Not, true) => "notL" :: alwaysApplicable
-            case (_: Not, false) => "notR" :: alwaysApplicable
-            case (_: And, true) => axioms ++ ("andL" :: alwaysApplicable)
-            case (_: And, false) => axioms ++ ("andR" :: alwaysApplicable)
+//            case (_: Not, true) => "notL" :: alwaysApplicable
+//            case (_: Not, false) => "notR" :: alwaysApplicable
+            case (_: And, true) => "andL" :: alwaysApplicable
+            case (_: And, false) => "andR" :: alwaysApplicable
             case (_: Or, true) => "orL" :: alwaysApplicable
-            case (_: Or, false) => "orR" :: alwaysApplicable
-            case (_: Imply, true) => axioms ++ ("implyL" :: alwaysApplicable)
-            case (_: Imply, false) => axioms ++ ("implyR" :: alwaysApplicable)
-            case (_: Equiv, true) => "equivL" :: alwaysApplicable
-            case (_: Equiv, false) => "equivR" :: alwaysApplicable
-            case (_: Forall, true) => "allL" :: alwaysApplicable
-            case (_: Forall, false) => "allR" :: alwaysApplicable
-            case (_: Exists, true) => "existsL" :: alwaysApplicable
-            case (_: Exists, false) => "existsR" :: alwaysApplicable
+            case (_: Or, false) => "orR1" :: "orR2" :: alwaysApplicable
+            case (_: Imply, true) => "implyL" :: alwaysApplicable
+            case (_: Imply, false) => "implyR" :: alwaysApplicable
+//            case (_: Equiv, true) => "equivL" :: alwaysApplicable
+//            case (_: Equiv, false) => "equivR" :: alwaysApplicable
+//            case (_: Forall, true) => "allL" :: alwaysApplicable
+//            case (_: Forall, false) => "allR" :: alwaysApplicable
+//            case (_: Exists, true) => "existsL" :: alwaysApplicable
+//            case (_: Exists, false) => "existsR" :: alwaysApplicable
             case _ => alwaysApplicable
           }
         }
@@ -206,12 +95,8 @@ object UIIndex {
     val expr2 = sequent.sub(pos2)
     (pos1, pos2, expr1, expr2) match {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
-      case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
-      case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
-      case (_: AntePosition, _, Some(fa: Forall), Some(_:Formula)) if(bodyIsEquiv(fa)) => "equivRewriting" :: Nil
-      case (_: AntePosition, _, Some(_: Equiv), Some(_: Formula)) => "instantiatedEquivRewriting" :: Nil //@note for applying function definitions.
-      case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
-      case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
+//      case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
+//      case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
       case _ => Nil
       //@todo more drag-and-drop support
     }
