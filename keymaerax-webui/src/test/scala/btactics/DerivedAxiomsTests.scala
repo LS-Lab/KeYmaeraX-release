@@ -46,7 +46,6 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
   it should "prove & commute" in {check(andCommute)}
   it should "prove & assoc" in {check(andAssoc)}
-  it should "prove !& deMorgan" in {check(notAnd)}
   it should "prove !| deMorgan" in {check(notOr)}
   it should "prove PC1" in {check(PC1)}
   it should "prove PC2" in {check(PC2)}

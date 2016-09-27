@@ -195,19 +195,6 @@ object DerivedAxioms {
   )
 
   /**
-    * {{{Axiom "-> distributes over <->".
-    *  (p() -> (q()<->r())) <-> ((p()->q()) <-> (p()->r()))
-    * End.
-    * }}}
-    *
-    * @Derived
-    */
-  lazy val implyDistEquivAxiom = derivedAxiom("-> distributes over <->",
-    Sequent(IndexedSeq(), IndexedSeq("(p_() -> (q_()<->r_())) <-> ((p_()->q_()) <-> (p_()->r_()))".asFormula)),
-    prop
-  )
-
-  /**
     * {{{Axiom "vacuous all quantifier".
     *  (\forall x_ p()) <-> p()
     * End.
@@ -327,16 +314,6 @@ object DerivedAxioms {
     * }}}
     */
   lazy val implySelf = derivedAxiom("-> self", Sequent(IndexedSeq(), IndexedSeq("(p_() -> p_()) <-> true".asFormula)), prop)
-
-  /**
-    * {{{Axiom "!& deMorgan".
-    *    (!(p() & q())) <-> ((!p()) | (!q()))
-    * End.
-    * }}}
-    *
-    * @Derived
-    */
-  lazy val notAnd = derivedAxiom("!& deMorgan", Sequent(IndexedSeq(), IndexedSeq("(!(p_() & q_())) <-> ((!p_()) | (!q_()))".asFormula)), prop)
 
   /**
     * {{{Axiom "!| deMorgan".
