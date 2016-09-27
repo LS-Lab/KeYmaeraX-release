@@ -32,10 +32,10 @@ private object ProofRuleTactics {
     }
   }
 
-  def cut(f: Formula) = new InputTactic[Formula](SerializationNames.cutName, f) {
-    override def computeExpr() = new BuiltInTactic(s"${name}(${input.prettyString})") {
+  def cut(f: Formula) = new NamedInputTactic("cut", f) {
+    override def computeExpr() = new BuiltInTactic("") {
       override def result(provable: Provable): Provable = {
-        provable(core.Cut(input), 0)
+        provable(core.Cut(input.asInstanceOf[Formula]), 0)
       }
     }
   }

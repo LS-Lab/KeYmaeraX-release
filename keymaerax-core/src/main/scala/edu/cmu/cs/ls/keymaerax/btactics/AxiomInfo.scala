@@ -242,7 +242,7 @@ object DerivationInfo {
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
-        ,List(FormulaArg("P")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
+        ,List(FormulaArg("P")), {case () => (fml:Formula) => SequentCalculus.cut(fml)}),
     // Proof rule input position tactics
     //@todo Move these DependentPositionTactic wrappers to ProofRuleTactics?
     new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")),

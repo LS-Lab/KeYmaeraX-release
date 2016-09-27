@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -47,5 +47,11 @@ class KeYmaeraI extends TacticTestBase {
     val f = "P() -> P()".asFormula
     val t = BelleParser("implyR(1) & close")
     proveBy(f,t) shouldBe 'proved
+  }
+
+  it should "extract cut" in {
+    val input = "cut({`1=1`})"
+    val t = BelleParser(input)
+    BellePrettyPrinter(t) shouldBe input
   }
 }

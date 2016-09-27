@@ -92,7 +92,7 @@ trait SequentCalculus {
   val equivR  : BuiltInRightTactic = "equivR" by { (pr:Provable, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
-  def cut(cut : Formula)      : InputTactic[Formula]         = ProofRuleTactics.cut(cut)
+  def cut(cut : Formula)      : NamedInputTactic         = ProofRuleTactics.cut(cut)
   /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutR(cut : Formula)     : (SuccPos => InputTactic[Formula])  = ProofRuleTactics.cutR(cut)
   /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]) */
