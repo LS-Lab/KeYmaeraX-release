@@ -596,61 +596,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
-  val mathConfSuggestion = path("config" / "mathematica" / "suggest") {
-    pathEnd {
-      get {
-        val request = new GetMathematicaConfigSuggestionRequest(database)
-        completeRequest(request, EmptyToken())
-      }
-    }
-  }
-
-  val tool = path("config" / "tool") {
-    pathEnd {
-      get {
-        val request = new GetToolRequest(database)
-        completeRequest(request, EmptyToken())
-      } ~
-      post {
-        entity(as[String]) { tool =>
-          val request = new SetToolRequest(database, tool)
-          completeRequest(request, EmptyToken())
-        }
-      }
-    }
-  }
-
-  val mathematicaConfig = path("config" / "mathematica") {
-    pathEnd {
-      get {
-          val request = new GetMathematicaConfigurationRequest(database)
-          completeRequest(request, EmptyToken())
-      } ~
-      post {
-        entity(as[String]) { params => {
-          val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
-          assert(p.contains("linkName"), "linkName not in: " + p.keys.toString())
-          assert(p.contains("jlinkLibDir"), "jlinkLibDir not in: " + p.keys.toString()) //@todo These are schema violations and should be checked as such, but I needed to disable the validator.
-          val linkName : String = p("linkName")
-          val jlinkLibDir : String = p("jlinkLibDir")
-          val request = new ConfigureMathematicaRequest(database, linkName, jlinkLibDir)
-          completeRequest(request, EmptyToken())
-        }}
-      }
-    }
-  }
-
-  val toolStatus = path("config" / "toolStatus") {
-    pathEnd {
-      get {
-        database.getConfiguration("tool").config("qe") match {
-          case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
-          case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
-        }
-      }
-    }
-  }
-
   val examples = path("examplesList" /) {
     pathEnd {
       get {
@@ -739,10 +684,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     cookie_echo        ::
     kyxConfig          ::
     keymaeraXVersion   ::
-    mathematicaConfig  ::
-    toolStatus         ::
-    tool               ::
-    mathConfSuggestion ::
     devAction          ::
     examples           ::
     Nil
