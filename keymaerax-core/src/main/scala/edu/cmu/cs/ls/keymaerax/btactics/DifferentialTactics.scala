@@ -822,4 +822,6 @@ private object DifferentialTactics {
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
   }
+
+  val DRIStep = useAt("DRIStep")
 }

@@ -505,5 +505,16 @@ End.
 Axiom "const formula congruence".
   s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
 End.
+
+/**
+ * DRI and Lie-based invariance checking rules.
+ */
+ Axiom "DRIStep".
+   (
+     (f(x) = 0 -> (f(x))' = 0) &
+     (f(x))' = 0 -> [{x' = t & f(x)=0 & H}](f(x))'=0)
+   )
+   ->
+   ( f(x) = 0 -> [{x' = t & H}](f(x))' = 0 )
 """
 }
