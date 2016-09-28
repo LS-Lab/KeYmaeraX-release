@@ -664,6 +664,7 @@ private object DifferentialTactics {
     val lie = DifferentialHelper.lieDerivative(ode, quantity)
     val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
       //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division. Maybe foldLeft over all variables, feeding remainder into next quotientRemainder?
+      //@todo polynomialReduce(lie, groebnerBasis(List(Times(Number(-2), quantity))), StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[BaseVariable]))
       lie, Times(Number(-2), quantity), StaticSemantics.boundVars(ode).symbols.find(_.isInstanceOf[BaseVariable]).getOrElse(Variable("x")))._1
     if (BelleExpr.DEBUG) println("Ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
     DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
