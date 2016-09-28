@@ -78,7 +78,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def withMathematica(testcode: Mathematica => Any) {
     val provider = new MathematicaToolProvider(DefaultConfiguration.defaultMathematicaConfig)
     ToolProvider.setProvider(provider)
-    testcode(provider.tool)
+    testcode(provider.tool())
   }
 
   /**
@@ -94,7 +94,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def withZ3(testcode: Z3 => Any) {
     val provider = new Z3ToolProvider
     ToolProvider.setProvider(provider)
-    testcode(provider.tool)
+    testcode(provider.tool())
   }
 
   /**
@@ -110,7 +110,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def withPolya(testcode: Polya => Any) {
     val provider = new PolyaToolProvider
     ToolProvider.setProvider(provider)
-    testcode(provider.tool)
+    testcode(provider.tool())
   }
 
   /** Test setup */

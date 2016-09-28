@@ -247,14 +247,14 @@ private object DifferentialTactics {
     if (ov.isEmpty) {
       DC(f)(pos)
     } else {
-      val ghosts: Set[((Term, Variable), BelleExpr)] = ov.map(old => {
+      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
         val ghost = old match {
           case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
           case _ => TacticHelper.freshNamedSymbol(Variable("old"), sequent)
         }
         (old -> ghost,
           discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
-      })
+      }).toList
       ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
     }
   }
@@ -355,7 +355,11 @@ private object DifferentialTactics {
 //  )
 
   private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
-    val ghostParts = parseGhost(ghost)
+    val ghostParts = try {
+      parseGhost(ghost)
+    } catch {
+      case ex: CoreException => throw new BelleError("Unable to parse ghost " + ghost.prettyString, ex)
+    }
     List(ghostParts._1, ghostParts._2, ghostParts._3)
   }
 
@@ -660,6 +664,7 @@ private object DifferentialTactics {
     val lie = DifferentialHelper.lieDerivative(ode, quantity)
     val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
       //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division. Maybe foldLeft over all variables, feeding remainder into next quotientRemainder?
+      //@todo polynomialReduce(lie, groebnerBasis(List(Times(Number(-2), quantity))), StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[BaseVariable]))
       lie, Times(Number(-2), quantity), StaticSemantics.boundVars(ode).symbols.find(_.isInstanceOf[BaseVariable]).getOrElse(Variable("x")))._1
     if (BelleExpr.DEBUG) println("Ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
     DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),

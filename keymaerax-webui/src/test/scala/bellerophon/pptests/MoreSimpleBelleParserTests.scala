@@ -86,8 +86,8 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse j(x) as a term or a formula depending on ArgInfo." in {
-    val formulaTactic = parser("Loop({`j(x)`})")
-    val termTactic = parser("diffGhost({`x`}, {`j(x)`}, {`j(x)`}, {`j(x)`})")
+    parser("loop({`j(x)`})") shouldBe TactixLibrary.loop("j(x)".asFormula)
+    parser("allL({`j(x)`})") shouldBe TactixLibrary.allL("j(x)".asTerm)
   }
 
   "Propositional Examples" should "close p() -> p()" in {

@@ -49,22 +49,22 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
                 }
                 else {
-                    var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 &&
+                    var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.suggestion.kernelName) > -1 &&
                       data.linkNamePrefix == $scope.linkName
-                    var jlinkExists = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) > -1 &&
+                    var jlinkExists = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.suggestion.jlinkName) > -1 &&
                       data.jlinkLibDirPrefix == $scope.jlinkLibPath
 
                     $scope.linkNameOkPrefix = data.linkNamePrefix
-                    $scope.linkNameWrong = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 ?
+                    $scope.linkNameWrong = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.suggestion.kernelName) > -1 ?
                         $scope.linkName.substring(data.linkNamePrefix.length, $scope.linkName.length) :
-                        ".../" + $scope.mathematicaConfigSuggestion.kernelName
-                    $scope.linkNameIncomplete = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) == -1
+                        ".../" + $scope.mathematicaConfigSuggestion.suggestion.kernelName
+                    $scope.linkNameIncomplete = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.suggestion.kernelName) == -1
 
                     $scope.jlinkLibPathOkPrefix = data.jlinkLibDirPrefix
-                    $scope.jlinkLibPathWrong = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) > -1 ?
+                    $scope.jlinkLibPathWrong = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.suggestion.jlinkName) > -1 ?
                       $scope.jlinkLibPath.substring(data.jlinkLibDirPrefix.length, $scope.jlinkLibPath.length) :
-                      ".../" + $scope.mathematicaConfigSuggestion.jlinkName
-                    $scope.jlinkPathIncomplete = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) == -1
+                      ".../" + $scope.mathematicaConfigSuggestion.suggestion.jlinkName
+                    $scope.jlinkPathIncomplete = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.suggestion.jlinkName) == -1
 
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", kernelNameExists);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", jlinkExists);
@@ -76,11 +76,11 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
     }
 
     $scope.setDefaultMathKernel = function() {
-      $scope.linkName = $scope.mathematicaConfigSuggestion.kernelPath + $scope.mathematicaConfigSuggestion.kernelName
+      $scope.linkName = $scope.mathematicaConfigSuggestion.suggestion.kernelPath + $scope.mathematicaConfigSuggestion.suggestion.kernelName
     }
 
     $scope.setDefaultJLinkLibPath = function() {
-      $scope.jlinkLibPath = $scope.mathematicaConfigSuggestion.jlinkPath + $scope.mathematicaConfigSuggestion.jlinkName
+      $scope.jlinkLibPath = $scope.mathematicaConfigSuggestion.suggestion.jlinkPath + $scope.mathematicaConfigSuggestion.suggestion.jlinkName
     }
 });
 
