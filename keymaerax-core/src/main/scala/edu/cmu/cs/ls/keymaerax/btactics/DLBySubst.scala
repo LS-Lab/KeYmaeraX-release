@@ -282,27 +282,26 @@ private object DLBySubst {
   })
 
   /** @see [[TactixLibrary.discreteGhost()]] */
-  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = new DependentPositionTactic("discrete ghost") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
-        case (ctx, f: Formula) =>
-          //def g(f: Formula) = Equiv(Box(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f))), f)
-          val ghost = ghostV(f)
-          cutLR(ctx(Box(Assign(ghost, t), f.replaceFree(t, ghost))))(pos.topLevel) <(
-            /* use */ ident,
-            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
-            )
-      }
+  def discreteGhost(t: Term, ghost: Option[Variable]): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
+      //@todo figure out how to serialize None when adding to AxiomInfo
+      ghost match { case Some(g) => List(t, g) case _ => List(t) }, (pos: Position, seq: Sequent) => {
+    seq.at(pos) match {
+      case (ctx, f: Formula) =>
+        // check specified name, or construct a new name for the ghost variable if None
+        def ghostV(f: Formula): Variable = ghost match {
+          case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
+          case None => t match {
+            case v: Variable => TacticHelper.freshNamedSymbol(v, f)
+            case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
+          }
+        }
+        val theGhost = ghostV(f)
+        cutLR(ctx(Box(Assign(theGhost, t), f.replaceFree(t, theGhost))))(pos.topLevel) <(
+          /* use */ ident,
+          /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
+          )
     }
-    // check specified name, or construct a new name for the ghost variable if None
-    private def ghostV(f: Formula): Variable = ghost match {
-      case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
-      case None => t match {
-        case v: Variable => TacticHelper.freshNamedSymbol(v, f)
-        case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
-      }
-    }
-  }
+  })
 
   /**
    * Turns an existential quantifier into an assignment.

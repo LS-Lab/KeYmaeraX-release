@@ -87,7 +87,7 @@ object DifferentialHelper {
     * @param fs A list of formulas, possibly containing Ands.
     */
   //@todo duplicate with FormulaTools.conjuncts
-  def flattenAnds(fs : immutable.List[Formula]) = fs.flatMap(decomposeAnds)
+  def flattenAnds(fs : immutable.List[Formula]): immutable.List[Formula] = fs.flatMap(decomposeAnds)
 
   /**
     *
