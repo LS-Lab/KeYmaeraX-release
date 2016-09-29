@@ -420,7 +420,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
   }
 
   override def groebnerBasis(polynomials: List[Term]): List[Term] = {
-    val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols.toList)
+    //@note sort for stable results
+    val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
     val input = new MExpr(MathematicaSymbols.GROEBNERBASIS,
       Array[MExpr](
         new MExpr(Expr.SYM_LIST, polynomials.map(k2m).toArray),
@@ -438,12 +439,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
   }
 
   override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
-    def toList(t: Term): List[Term] = t match {
-      case Pair(l, r) => toList(l) ++ toList(r)
-      case _ => t :: Nil
-    }
-
-    val vars = StaticSemantics.vars(polynomial).symbols.toList
+    //@note sort for stable results
+    val vars = StaticSemantics.vars(polynomial).symbols[NamedSymbol].toList.sorted.map(_.asInstanceOf[Variable])
     val input = new MExpr(MathematicaSymbols.POLYNOMIALREDUCE,
       Array[MExpr](
         k2m(polynomial),
@@ -455,8 +452,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
       ))
     val (_, result) = run(input)
     result match {
-        //@note could generally help to keep the cofactors in r(0) around for something
-      case r: Pair => (toList(r.left), r.right)
+      case r: Pair => (FormulaTools.argumentList(r.left), r.right)
       case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
