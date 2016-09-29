@@ -6,6 +6,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 /**
   * Tests the update checker string->version conversion.
   * @author Stefan Mitsch
+  * @author Nathan Fulton
   */
 class UpdateCheckerTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
@@ -42,4 +43,17 @@ class UpdateCheckerTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       }
     })
   }
+
+  it should "work" in {
+    StringToVersion("4.0b1") compareTo StringToVersion("4.0b1") shouldBe 0
+    StringToVersion("4.0b1") >= StringToVersion("4.0b1") shouldBe true
+    StringToVersion("4.0b1") > StringToVersion("4.0a9") shouldBe true
+    StringToVersion("5.0") > StringToVersion("4.0") shouldBe true
+    StringToVersion("4.0") > StringToVersion("4.0b9") shouldBe true
+    StringToVersion("4.1b1") > StringToVersion("4.0b1") shouldBe true
+    StringToVersion("4.1b1") >= StringToVersion("4.0b1") shouldBe true
+    StringToVersion("4.0b1") < StringToVersion("4.1b1") shouldBe true
+    StringToVersion("4.1b1") < StringToVersion("4.0b1") shouldBe false
+  }
+
 }
