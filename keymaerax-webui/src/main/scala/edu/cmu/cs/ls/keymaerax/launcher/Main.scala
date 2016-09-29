@@ -70,10 +70,9 @@ object Main {
 
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */
   private def clearCacheIfDeprecated(): Unit = {
-    val cacheLocation = System.getenv("HOME") + File.separator + ".keymaerax" + File.separator + "cache"
+    val cacheLocation = System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "cache"
     val cacheDirectory = new File(cacheLocation)
     val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
-    val lemmadb          = new File(cacheLocation + File.separator + "lemmadb")
 
     if (!cacheDirectory.exists()) {
       if (!cacheDirectory.mkdirs()) {
