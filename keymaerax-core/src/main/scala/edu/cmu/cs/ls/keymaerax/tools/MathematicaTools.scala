@@ -330,6 +330,13 @@ object DiffUncheckedM2KConverter {
   */
 private class DiffUncheckedM2KConverter extends UncheckedM2KConverter {
 
+  override def convert(e: MExpr): KExpr = {
+    if (e.listQ() && e.args().length == 1) {
+      //HACK: convert unique Groebner basis result
+      convert(e.args().head)
+    } else super.convert(e)
+  }
+
   protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.get(e.head) match {
     case Some(fn) => convertFunction(fn, e.args())
     case None =>
@@ -340,6 +347,7 @@ private class DiffUncheckedM2KConverter extends UncheckedM2KConverter {
         case result: Variable => result
       }
   }
+
   private def toKeYmaera(e: MExpr): NamedSymbol = {
     if (e.head.asString().startsWith(DiffUncheckedM2KConverter.PREFIX)) {
       val name = e.head.asString().substring(DiffUncheckedM2KConverter.PREFIX.length)
@@ -429,7 +437,12 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     }
   }
 
-  override def polynomialReduce(polynomial: Term, GB: List[Term]): Term = {
+  override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
+    def toList(t: Term): List[Term] = t match {
+      case Pair(l, r) => toList(l) ++ toList(r)
+      case _ => t :: Nil
+    }
+
     val vars = StaticSemantics.vars(polynomial).symbols.toList
     val input = new MExpr(MathematicaSymbols.POLYNOMIALREDUCE,
       Array[MExpr](
@@ -443,7 +456,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     val (_, result) = run(input)
     result match {
         //@note could generally help to keep the cofactors in r(0) around for something
-      case r: Pair => r.right
+      case r: Pair => (toList(r.left), r.right)
       case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
     }
   }

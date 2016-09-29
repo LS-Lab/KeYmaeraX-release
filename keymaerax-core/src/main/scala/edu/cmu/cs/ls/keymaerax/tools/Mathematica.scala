@@ -109,7 +109,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   override def solve(equations: Formula, vars: List[Expression]): Option[Formula] = mSolve.solve(equations,vars)
   override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = mAlgebra.quotientRemainder(term,div,x)
   override def groebnerBasis(polynomials: List[Term]): List[Term] = mAlgebra.groebnerBasis(polynomials)
-  override def polynomialReduce(polynomial: Term, GB: List[Term]): Term = mAlgebra.polynomialReduce(polynomial, GB)
+  override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = mAlgebra.polynomialReduce(polynomial, GB)
   override def simplify(expr: Expression, assumptions: List[Formula]): Expression = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Formula, assumptions: List[Formula]): Formula = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
