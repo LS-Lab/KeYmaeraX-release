@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable._
 
@@ -70,14 +71,37 @@ object SimplifierV2 {
         by(pr))
   }
 
+  //Justifications for adding things to the context
+  private val andLemma =
+    proveBy(
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop)
+
+  private val implyLemma =
+    proveBy(
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop)
+
+  private val orLemma =
+    proveBy(
+      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop)
+
+  private val equivLemma =
+    proveBy(
+      "((P_() <-> F_()) & (Q_() <-> G_())) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop)
+
+  private val notLemma =
+    proveBy(
+      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop)
+
   /**
     * Recursive formula simplification under a context using chase, proving ctx |- f = f'
     * @param f formula to simplify
-    * @param ctx context inwhich to simplify
+    * @param ctx context in which to simplify
     * @return
     */
   def formulaSimp(f:Formula, ctx:IndexedSeq[Formula] = IndexedSeq()) : Provable =
   {
+    // todo: remove prop from short circuit branches
+    // todo: Add derived axioms for missing cases of the chase simplification
     val pf =
       f match {
         case And(l, r) =>
@@ -94,17 +118,13 @@ object SimplifierV2 {
           //Use lf as part of context on the right
           val rpr = formulaSimp(r, ctx:+lf)
           val rf = extract(rpr).asInstanceOf[Formula]
-          //todo: These should be caught by the chase below, but the axiom index doesn't have all the cases
-          val nf = (lf,rf) match {
-            case (True, _) => rf
-            case (_, True) => lf
-            case (_,False) => False
-            case _ => And(lf,rf)
-          }
+          val nf = And(lf,rf)
           proveBy(Sequent(ctx, IndexedSeq(Equiv(f, nf))),
             cut(Equiv(l,lf)) <(
               cut(Imply(lf,Equiv(r,rf))) <(
-                prop,
+                useAt(andLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+                  closeId,closeId
+                  ),
                 hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & by(rpr)),
               hideR(SuccPos(0))& by(lpr)
               )
@@ -123,17 +143,13 @@ object SimplifierV2 {
           //Use lf as part of context on the right
           val rpr = formulaSimp(r, ctx:+lf)
           val rf = extract(rpr).asInstanceOf[Formula]
-          //todo: These should be caught by the chase below, but the axiom index doesn't have all the cases
-          val nf = (lf,rf) match {
-            case (True, _) => rf
-            case (_, True) => True
-            case (_,False) => Not(lf)
-            case _ => Imply(lf,rf)
-          }
+          val nf = Imply(lf,rf)
           proveBy(Sequent(ctx, IndexedSeq(Equiv(f, nf))),
             cut(Equiv(l,lf)) <(
               cut(Imply(lf,Equiv(r,rf))) <(
-                prop,
+                useAt(implyLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+                  closeId,closeId
+                  ),
                 hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & by(rpr)),
               hideR(SuccPos(0))& by(lpr)
               )
@@ -152,33 +168,40 @@ object SimplifierV2 {
           //Use lf as part of context on the right
           val rpr = formulaSimp(r, ctx:+Not(lf))
           val rf = extract(rpr).asInstanceOf[Formula]
-          //todo: These should be caught by the chase below, but the axiom index doesn't have all the cases
-          val nf = (lf,rf) match {
-            case (False, _) => rf
-            case (_, True) => True
-            case (_,False) => lf
-            case _ => Or(lf,rf)
-          }
+          val nf = Or(lf,rf)
           proveBy(Sequent(ctx, IndexedSeq(Equiv(f, nf))),
             cut(Equiv(l,lf)) <(
               cut(Imply(Not(lf),Equiv(r,rf))) <(
-                prop,
+                useAt(orLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+                  closeId,closeId
+                  ),
                 hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & by(rpr)),
               hideR(SuccPos(0))& by(lpr)
               )
           )
-        case Equiv(l, r) => ???
+        case Equiv(l, r) =>
+          val lpr = formulaSimp(l, ctx)
+          val lf = extract(lpr).asInstanceOf[Formula]
+          val rpr = formulaSimp(r, ctx)
+          val rf = extract(rpr).asInstanceOf[Formula]
+          val nf = Equiv(lf,rf)
+          proveBy(Sequent(ctx, IndexedSeq(Equiv(f, nf))),
+            cut(Equiv(l,lf)) <(
+              cut(Equiv(r,rf)) <(
+                useAt(equivLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+                  closeId,closeId
+                  ),
+                hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & by(rpr)),
+              hideR(SuccPos(0))& by(lpr)
+              )
+          )
         case Not(u) =>
           val upr = formulaSimp(u, ctx)
           val uf = upr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)).get.asInstanceOf[Formula]
-          val nf = uf match {
-            case True => False
-            case False => True
-            case _ => Not(uf)
-          }
+          val nf = Not(uf)
           proveBy(Sequent(ctx, IndexedSeq(Equiv(f, nf))),
             cut(Equiv(u,uf)) < (
-              prop,
+              useAt(notLemma,PosInExpr(1::Nil))(SuccPos(0)) & closeId,
               hideR(SuccPos(0))&by(upr)))
         case cf:ComparisonFormula =>
           val lpr = termSimp(cf.left)
@@ -188,27 +211,37 @@ object SimplifierV2 {
           val nf = cf.reapply(lt,rt)
           proveBy(Sequent(ctx, IndexedSeq(Equiv(cf, nf))),
             CEat(lpr)(SuccPosition(1,1::0::Nil))&
-              CEat(rpr)(SuccPosition(1,1::1::Nil))& prop)
+              CEat(rpr)(SuccPosition(1,1::1::Nil))&
+              cohideR(SuccPos(0))& byUS(DerivedAxioms.equivReflexiveAxiom))
         case _ =>
-          //Try to prove that the context already implies the formula
-          val pr = TactixLibrary.proveBy(Sequent(ctx, IndexedSeq(Equiv(f, True))), prop)
-          if (pr.isProved)
-            pr
-          //otherwise, try to prove that it is inconsistent
-          else {
-            val prf = TactixLibrary.proveBy(Sequent(ctx, IndexedSeq(Equiv(f, False))), prop)
-            if (prf.isProved)
-              prf
-            else
-              weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
-                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
-          }
+          weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
+            USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
       }
     //println("Simplified: "+pf)
     //todo: Contextual chase
-    val fin = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(pf)
-    //println("Final: "+fin)
-    fin
+    //Chase simplification
+    val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(pf)
+    //println("Final: "+cpr)
+    //Simple example of contextual simplification
+    val ff = extract(cpr).asInstanceOf[Formula]
+    if (ctx.contains(ff))
+    {
+      proveBy(Sequent(ctx, IndexedSeq(Equiv(f, True))),
+        cut(Equiv(f,ff)) <(
+          equivR(1) < (closeT,closeId),
+          hideR(SuccPos(0))& by(cpr)
+          ))
+    }
+    else if (ctx.contains(Not(ff)))
+    {
+      proveBy(Sequent(ctx, IndexedSeq(Equiv(f, False))),
+        cut(Equiv(f,ff)) <(
+          prop,
+          hideR(SuccPos(0))& by(cpr)
+          ))
+    }
+    else
+      cpr
   }
 
 
