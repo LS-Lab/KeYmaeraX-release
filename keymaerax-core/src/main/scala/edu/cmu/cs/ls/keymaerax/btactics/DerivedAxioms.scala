@@ -1672,6 +1672,26 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+  // diamond differential axioms
+
+  /**
+    * {{{Axiom "DGd diamond differential ghost".
+    *    <{c{|y_|}&q(|y_|)}>p(|y_|) <-> \forall y_ <{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}>p(|y_|)
+    *    // <x'=f(x)&q(x);>p(x) <-> \forall y <{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}>p(x) THEORY
+    * End.
+    * }}}
+    */
+  lazy val DGddifferentialghost = derivedAxiom("DGd diamond differential ghost",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\forall y_ <{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("DG differential ghost")(1, 0::0::Nil) &
+      useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+
   /**
     * {{{
     *   Axiom "[d] dual".

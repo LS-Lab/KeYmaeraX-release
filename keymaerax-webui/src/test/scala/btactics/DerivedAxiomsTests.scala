@@ -133,6 +133,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
+  it should "prove DGd differential ghost" in {check(DGddifferentialghost)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove x' derive var commuted" in withMathematica { qetool => check(DvariableCommuted)}
