@@ -27,7 +27,7 @@ class BelleError(message: String, cause: Throwable = null)
 case class UnificationException(e1: String, e2: String, info: String = "")
   extends BelleError("Un-Unifiable: " + e1 + "\nfor:          " + e2 + "\n" + info) {}
 
-case class BelleUserGeneratedError(message: String) extends BelleError(s"[Bellerophon User-Generated Message] $message")
+case class BelleUserGeneratedError(msg: String) extends BelleError(s"[Bellerophon User-Generated Message] $msg")
 
 class CompoundException(left: BelleError, right: BelleError)
   extends BelleError(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
