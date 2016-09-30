@@ -26,27 +26,47 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+1)^3>=1)".asFormula
+    result.subgoals should have size 1
+    //@todo shouldn't need kyxtime
+    result.subgoals.head.ante should contain only ("x=1&v=2".asFormula, "kyxtime=0".asFormula, "x_0=x".asFormula, "kyxtime_0=kyxtime".asFormula)
+    //@todo should be v*s_ instead of v*t_
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+x_0)^3>=1)".asFormula
+  }
+
+  it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x>=1&v>=2 -> [{x'=v}]x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x>=1&v>=2".asFormula, "kyxtime=0".asFormula, "x_0=x".asFormula, "kyxtime_0=kyxtime".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+x_0)^3>=1)".asFormula
   }
 
   it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=1&v=2&a=0".asFormula, "kyxtime=0".asFormula, "x_0=x".asFormula, "v_0=v".asFormula, "kyxtime_0=kyxtime".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+v_0*(kyxtime+1*t_)+x_0)^3>=1)".asFormula
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=1&v=2&a=0&t=0".asFormula, "kyxtime=0".asFormula, "x_0=x".asFormula, "t_0=t".asFormula, "v_0=v".asFormula, "kyxtime_0=kyxtime".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(kyxtime+1*t_)^2+v_0*(kyxtime+1*t_)+x_0)^3>=1)".asFormula
   }
 
   it should "solve double integrator" in  withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1>=0)".asFormula
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=1&v=2&a=3&t=0".asFormula, "kyxtime=0".asFormula, "x_0=x".asFormula, "v_0=v".asFormula, "t_0=t".asFormula, "kyxtime_0=kyxtime".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(kyxtime+1*t_)^2+v_0*(kyxtime+1*t_)+x_0>=0)".asFormula
   }
 
   //@todo support non-arithmetic post-condition.
@@ -63,7 +83,9 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
     //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
-    loneSucc(result) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->((j/2)/3*(kyxtime+1*t_)^3+(3/2)*(kyxtime+1*t_)^2+2*(kyxtime+1*t_)+1)^3>=1)".asFormula
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=1&v=2&a=3&j=4".asFormula, "kyxtime=0".asFormula, "x_0=x".asFormula, "v_0=v".asFormula, "a_0=a".asFormula, "kyxtime_0=kyxtime".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->((j/2)/3*(kyxtime+1*t_)^3+(a_0/2)*(kyxtime+1*t_)^2+v_0*(kyxtime+1*t_)+x_0)^3>=1)".asFormula
   }
 
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
@@ -209,41 +231,16 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     DifferentialHelper.isCanonicallyLinear(program) shouldBe false
   }
 
-  //@todo find more elegant way to write these tests without throwing something other than a BelleUserGeneratedError.
   "Precondition check" should "fail early when the ODE doesn't have the correct shape" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    try {
-      proveBy(f, t)
-      throw new Exception("WRONG ERROR MESSAGE HERE")
-    }
-    catch {
-      case BelleUserGeneratedError(msg) => msg shouldBe "Expected ODE to be linear and in correct order."
-    }
+    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Expected ODE to be linear and in correct order."
   }
 
   it should "fail early when the ODE is in wrong order" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=0&t=0 -> [{v'=a,x'=v,t'=1}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    try {
-      proveBy(f, t)
-      throw new Exception("WRONG ERROR MESSAGE HERE")
-    }
-    catch {
-      case BelleUserGeneratedError(msg) => msg shouldBe "Expected ODE to be linear and in correct order."
-    }
-  }
-
-  it should "fail when there aren't preconditions" in {
-    val f = "x=1&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
-    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    try {
-      proveBy(f, t)
-      throw new Exception("WRONG ERROR MESSAGE HERE")
-    }
-    catch {
-      case BelleUserGeneratedError(msg) => msg shouldBe "Expected sequent to have initial conditions for ODE."
-    }
+    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Expected ODE to be linear and in correct order."
   }
 
   //endregion

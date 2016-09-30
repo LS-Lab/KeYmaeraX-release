@@ -153,13 +153,7 @@ object DifferentialHelper {
       returnValue
     })
   }
-
-  def anteHasInitConds(ante: IndexedSeq[Formula], ode: DifferentialProgram): Boolean = {
-    val initialConditions = conditionsToValues(ante.flatMap(extractInitialConditions(Some(ode))).toList).keySet
-    getPrimedVariables(ode).forall(initialConditions.contains)
-  }
-
-
+  
   /** Computes the Lie derivative of the given `term` with respect to the differential equations `ode`.
     * This implementation constructs by DI proof, so will be correct.
     */

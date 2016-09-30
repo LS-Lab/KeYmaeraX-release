@@ -50,11 +50,10 @@ object AxiomaticODESolver {
       case _ => false
     }
 
-    odeSolverPreconds(pos) &
-    DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
     addTimeVarIfNecessary(odePos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
-    assertInitializedTimeVar(odePos) & //@note we leave t'=0*t+1 for now because it's easier to name the position after inverseDiffGhost steps.
+    odeSolverPreconds(pos) &
+    DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
     (cutInSoln(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     HilbertCalculus.DW(pos) &
@@ -89,10 +88,9 @@ object AxiomaticODESolver {
       throw noDiamondsForNowExn
     else if(!isCanonicallyLinear(ode))
       DebuggingTactics.error("Expected ODE to be linear and in correct order.")
-    else if(!anteHasInitConds(s.ante, ode))
-      DebuggingTactics.error("Expected sequent to have initial conditions for ODE.")
     else
-      Idioms.nil
+      StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
+        foldLeft[BelleExpr](Idioms.nil)((a, b) => a & (TactixLibrary.discreteGhost(b)(pos) & DLBySubst.assignEquality(pos)))
   })
 
   //endregion
@@ -106,20 +104,6 @@ object AxiomaticODESolver {
       case x:DifferentialProgram => addTimeVar(pos)
       case x:ODESystem => addTimeVar(pos)
       case _ => throw AxiomaticODESolverExn(s"Expected DifferentialProgram or ODESystem but found ${s.apply(pos).getClass}")
-  })
-
-  val assertInitializedTimeVar = TacticFactory.anon ((pos: Position, s: Sequent) => {
-    val timer = s.apply(pos) match {
-      case x: ODESystem => Variable(TIMEVAR)
-      case x: DifferentialProgram => Variable(TIMEVAR)
-      case _ => throw AxiomaticODESolverExn(s"Expected differential program or ode system but found ${s.apply(pos).prettyString}")
-    }
-    val initialConditions = conditionsToValues(s.ante.flatMap(extractInitialConditions(None)).toList)
-
-    DebuggingTactics.assert(_ => initialConditions.keySet contains timer,
-      s"There is no initialCondition for the time variable ${timer}") &
-    DebuggingTactics.assert(_ => initialConditions(timer) == Number(0),
-      s"The initial condition for ${timer} is non-zero (${initialConditions(timer)})")
   })
 
   /** Rewrites [{c}]p to [{c, t'=1}]p whenever the system c does not already contain a clock.
