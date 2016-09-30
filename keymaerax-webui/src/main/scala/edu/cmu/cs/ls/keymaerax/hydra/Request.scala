@@ -152,7 +152,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
             case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
             case None => new CounterExampleResponse("cex.none") :: Nil
           }
-          case None => new CounterExampleResponse("cex.nonfo") :: Nil
+          case None => new CounterExampleResponse("cex.notool") :: Nil
         }
       } catch {
         case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil

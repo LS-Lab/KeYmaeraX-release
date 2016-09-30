@@ -51,6 +51,14 @@
     until only first-order formulas remain and then try again.
     </p>
 </div>
+<div ng-if="result === 'cex.notool'" class="modal-body">
+    <p>
+        Sorry, the current backend tool does not support counter-example search.
+    </p>
+    <p>
+        Please go to <mark>Help &rarr; Backend Tool Configuration</mark> and configure Mathematica as backend tool.
+    </p>
+</div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Ok</button>
 </div>
