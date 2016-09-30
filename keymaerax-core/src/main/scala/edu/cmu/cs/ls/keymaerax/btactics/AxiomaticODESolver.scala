@@ -50,10 +50,10 @@ object AxiomaticODESolver {
       case _ => false
     }
 
-    addTimeVarIfNecessary(odePos) &
-    DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
     odeSolverPreconds(pos) &
     DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
+    addTimeVarIfNecessary(odePos) &
+    DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
     (cutInSoln(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     HilbertCalculus.DW(pos) &
@@ -73,7 +73,9 @@ object AxiomaticODESolver {
      |
       Idioms.nil
     ) &
-    DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER)
+    DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
+    TactixLibrary.exhaustiveEqL2R(hide=true)('Llast)*sizeOfTimeExplicitOde &
+    DebuggingTactics.debug("AFTER rewriting initial equalities", ODE_DEBUGGER)
   })
 
   //endregion
