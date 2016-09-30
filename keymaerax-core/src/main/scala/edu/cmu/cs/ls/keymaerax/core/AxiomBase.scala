@@ -456,6 +456,10 @@ Axiom "all dual".
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
+Axiom "all dual y".
+  (!\exists y_ !p(||)) <-> \forall y_ p(||)
+End.
+
 Axiom "all dual time".
   (!\exists t_ !p(||)) <-> \forall t_ p(||)
 End.
