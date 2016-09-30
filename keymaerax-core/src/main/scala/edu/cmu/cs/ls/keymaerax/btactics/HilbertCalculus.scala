@@ -247,6 +247,19 @@ trait HilbertCalculus extends UnifyUSCalculus {
       }
     )
 
+  /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
+  private[btactics] def DGCd(y:Variable, b:Term) =
+  useAt("DGd diamond differential ghost constant", PosInExpr(0::Nil),
+    (us:Subst)=>{
+      val singular = FormulaTools.singularities(b)
+      insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
+      us++RenUSubst(Seq(
+        (Variable("y_",None,Real), y),
+        (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+      ))
+    }
+  )
+
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a simple differential equation `[x'=c&q(x)]p(x)` by reduction to
