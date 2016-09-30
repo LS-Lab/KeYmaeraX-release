@@ -299,6 +299,27 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       })
     }
 
+    //@todo duplicate with sequent.js#getCounterExample
+    $scope.getCounterExample = function() {
+      spinnerService.show('counterExampleSpinner');
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample')
+        .then(function(response) {
+          var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
+          $uibModal.open({
+            templateUrl: 'templates/counterExample.html',
+            controller: 'CounterExampleCtrl',
+            size: dialogSize,
+            resolve: {
+              result: function() { return response.data.result; },
+              origFormula: function() { return response.data.origFormula; },
+              cexFormula: function() { return response.data.cexFormula; },
+              cexValues: function() { return response.data.cexValues; }
+            }
+          });
+        })
+        .finally(function() { spinnerService.hide('counterExampleSpinner'); });
+    }
+
     $scope.downloadProblemSolution = function() {
         var proofId = $routeParams.proofId;
         var userId = $cookies.get('userId');

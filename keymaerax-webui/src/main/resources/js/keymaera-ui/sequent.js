@@ -15,6 +15,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             onApplyTwoPositionTactic: '&'
         },
         link: function(scope, elem, attr) {
+            //@todo duplicate with provingawesome.js#getCounterExample
             scope.getCounterExample = function() {
                 spinnerService.show('counterExampleSpinner');
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample')
