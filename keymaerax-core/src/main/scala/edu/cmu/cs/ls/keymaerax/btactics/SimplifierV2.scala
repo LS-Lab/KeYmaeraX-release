@@ -36,6 +36,65 @@ object SimplifierV2 {
     }
   }
 
+  private val plusLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A()+X() = B()+Y())".asFormula,QE)
+  private val minusLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A()-X() = B()-Y())".asFormula,QE)
+  private val timesLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A()*X() = B()*Y())".asFormula,QE)
+  //power and divide need side conditions
+
+  /**
+    * Takes a term t, with an equality context ctx and returns ctx |- t = t' using equalities in ctx
+    * This is probably hopelessly slow...
+    * @param t
+    * @param ctx
+    * @return
+    */
+  def equalityRewrites(t:Term,ctx:IndexedSeq[Formula]) :Provable = {
+    t match {
+      case a:AtomicTerm =>
+        val pos = ctx.indexWhere( f => f match {
+          case (Equal(l,_)) => if (a.equals(l)) true else false
+          case _ => false})
+        if (pos >= 0){
+          proveBy(Sequent(ctx,IndexedSeq(ctx(pos))),close)
+        }
+        else {
+          weaken(ctx)(DerivedAxioms.equalReflex.fact(
+            USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil)))
+        }
+      case bop:BinaryCompositeTerm if (bop match {case Divide(_,_)=> false case Power(_,_) => false case _ => true})=>
+        val l = bop.left
+        val r = bop.right
+        val lpr = equalityRewrites(l,ctx)
+        val rpr = equalityRewrites(r,ctx)
+        val lt = extract(lpr).asInstanceOf[Term]
+        val rt = extract(rpr).asInstanceOf[Term]
+        val lem = bop match{
+          case Plus(_,_) => plusLemma
+          case Minus(_,_) => minusLemma
+          case Times(_,_) => timesLemma
+        }
+        proveBy(Sequent(ctx,IndexedSeq(Equal(bop.reapply(l,r),bop.reapply(lt,rt)))),
+          cut(Equal(l,lt)) <(
+            cut(Equal(r,rt)) <(
+            useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+              closeId,closeId
+              ),
+            hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
+          hideR(SuccPos(0))& by(lpr)
+        ))
+      case _ =>
+        weaken(ctx)(DerivedAxioms.equalReflex.fact(
+          USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil)))
+    }
+
+  }
+
   /**
     * Recursive term simplification using chase, proving |- t = t'
     * @param t The term to be simplifed
@@ -62,6 +121,21 @@ object SimplifierV2 {
     val fin = chaseFor(3,3,e=>arithSimpAxioms(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(pf)
     //println("Final: "+fin)
     fin
+  }
+
+  def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): Provable =
+  {
+    //todo: filter context and keep only equalities around
+    //todo: maybe do repeated equality rewriting
+    val teq = equalityRewrites(t,ctx)
+    val tt = extract(teq).asInstanceOf[Term]
+    val tpr = termSimp(tt)
+    val ttf = extract(tpr).asInstanceOf[Term]
+    proveBy(Sequent(ctx,IndexedSeq(Equal(t,ttf))),
+      CEat(tpr)(SuccPosition(1,1::Nil)) &
+      cut(Equal(t,tt))<(close,
+        hideR(SuccPos(0)) & by(teq)))
+
   }
 
   private def weaken(ctx:IndexedSeq[Formula]): ForwardTactic = pr => {
@@ -91,6 +165,30 @@ object SimplifierV2 {
   private val notLemma =
     proveBy(
       "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop)
+
+  private val equalLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A() = X() <-> B() = Y())".asFormula,QE)
+
+  private val notequalLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A() != X() <-> B() != Y())".asFormula,QE)
+
+  private val greaterequalLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A() >= X() <-> B() >= Y())".asFormula,QE)
+
+  private val greaterLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A() > X() <-> B() > Y())".asFormula,QE)
+
+  private val lessequalLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A() <= X() <-> B() <= Y())".asFormula,QE)
+
+  private val lessLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A() < X() <-> B() < Y())".asFormula,QE)
 
   private val equivTrans =
     proveBy("(P() <-> Q()) -> (Q() <-> R()) -> (P() <-> R())".asFormula,prop)
@@ -312,16 +410,29 @@ object SimplifierV2 {
             useAt(notLemma,PosInExpr(1::Nil))(SuccPos(0)) & closeId,
             hideR(SuccPos(0))&by(upr)))
       case cf:ComparisonFormula =>
-        val lpr = termSimp(cf.left)
-        val rpr = termSimp(cf.right)
-        //todo: Apply equalities in the context on the simplified terms
+        val l = cf.left
+        val r = cf.right
+        val lpr = termSimpWithRewrite(l,ctx)
+        val rpr = termSimpWithRewrite(r,ctx)
         val lt = extract(lpr).asInstanceOf[Term]
         val rt = extract(rpr).asInstanceOf[Term]
         val nf = cf.reapply(lt,rt)
+        val lem = cf match{
+          case Equal(_,_) => equalLemma
+          case NotEqual(_,_) => notequalLemma
+          case GreaterEqual(_,_) => greaterequalLemma
+          case Greater(_,_) => greaterLemma
+          case LessEqual(_,_) => lessequalLemma
+          case Less(_,_) => lessLemma
+        }
         proveBy(Sequent(ctx, IndexedSeq(Equiv(cf, nf))),
-          CEat(lpr)(SuccPosition(1,1::0::Nil))&
-            CEat(rpr)(SuccPosition(1,1::1::Nil))&
-            cohideR(SuccPos(0))& byUS(DerivedAxioms.equivReflexiveAxiom))
+          cut(Equal(l,lt))<(
+            cut(Equal(r,rt))<(
+              useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+                closeId,closeId
+                ),
+              hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
+            hideR(SuccPos(0))& by(lpr)))
       case _ =>
         weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
