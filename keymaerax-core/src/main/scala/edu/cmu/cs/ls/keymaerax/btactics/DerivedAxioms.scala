@@ -1708,6 +1708,21 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DWd diamond differential weakening".
+    *    <{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)&p_(||))
+    * End.
+    * }}}
+    */
+  lazy val DWddifferentialweakening = derivedAxiom("DWd diamond differential weakening",
+    Sequent(IndexedSeq(), IndexedSeq("<{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)&p_(||))".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(proveBy("!(p_() & q_()) <-> (p_() -> !q_())".asFormula, TactixLibrary.prop))(1, 1::0::1::Nil) &
+      useAt("DW differential weakening", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
     * Axiom "DCd diamond differential cut".
     *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
     *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
