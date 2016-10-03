@@ -135,6 +135,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   it should "prove DGd differential ghost" in {check(DGddifferentialghost)}
   it should "prove DGCd diamond differential ghost const" in {check(DGCddifferentialghostconst)}
+  it should "prove DCd diamond differential cut" in {check(DCddifferentialcut)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove x' derive var commuted" in withMathematica { qetool => check(DvariableCommuted)}

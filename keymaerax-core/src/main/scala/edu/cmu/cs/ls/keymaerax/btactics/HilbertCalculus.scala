@@ -209,6 +209,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
   def DC(invariant: Formula)  : DependentPositionTactic = namedUseAt("DCaxiom", "DC differential cut",
     (us:Subst)=>us++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
+  def DCd(invariant: Formula)  : DependentPositionTactic = useAt("DCd diamond differential cut",
+    (us:Subst)=>us++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+  )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
     * as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`.
     * {{{

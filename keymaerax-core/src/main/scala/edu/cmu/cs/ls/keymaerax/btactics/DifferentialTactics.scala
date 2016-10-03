@@ -239,13 +239,20 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
-    "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {nestDCs(formulas.map(ghostDC(_, pos, sequent)))})
+    "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {
+      formulas.map(ghostDC(_, pos, sequent)).foldRight[BelleExpr](skip)((cut, all) => cut <(all, skip))
+    })
 
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
   private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
+    def dc = sequent.sub(pos) match {
+      case Some(Box(_, _)) => DC _
+      case Some(Diamond(_, _)) => DCd _
+    }
+
     val ov = oldVars(f)
     if (ov.isEmpty) {
-      DC(f)(pos)
+      dc(f)(pos)
     } else {
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
         val ghost = old match {
@@ -255,16 +262,8 @@ private object DifferentialTactics {
         (old -> ghost,
           discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
       }).toList
-      ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
+      ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
     }
-  }
-
-  /** Turns a list of diff cuts (with possible 'old' ghost creation) tactics into nested DCs */
-  private def nestDCs(dcs: Seq[BelleExpr]): BelleExpr = {
-    dcs.head <(
-      /* use */ (if (dcs.tail.nonEmpty) nestDCs(dcs.tail) partial else skip) partial,
-      /* show */ skip
-      )
   }
 
   /** Returns a set of variables that are arguments to a special 'old' function */

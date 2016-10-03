@@ -1707,6 +1707,19 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+  /**
+    * Axiom "DCd diamond differential cut".
+    *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
+    *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
+    * End.
+    */
+  lazy val DCddifferentialcut = derivedAxiom("DCd diamond differential cut",
+    Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
+      useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1, 1::Nil) &
+      byUS("DC differential cut")
+  )
 
   /**
     * {{{
