@@ -15,7 +15,7 @@ import scala.collection.immutable._
 object SimplifierV2 {
 
   /**
-    * Returns the expression in expected position of |- t = t' or ctx |- f <-> f'
+    * Returns the expression in expected position of ctx |- t = t' or ctx |- f <-> f'
     * @param pr the provable from which to extract the expression
     * @return
     */
@@ -27,7 +27,7 @@ object SimplifierV2 {
   {
     e match {
       case t:Term => t match{
-        //todo: Need more simple arithmetic axioms in DerivedAxioms
+        //todo: Need more of these simple arithmetic axioms in DerivedAxioms
         case Plus(_,_) => List("0+","+0","+ inverse")
         case Times(_,_) => List("0*","*0","* inverse")
         case _ => Nil
@@ -35,6 +35,8 @@ object SimplifierV2 {
       case _ => Nil
     }
   }
+
+  //Technically, we don't need QE for these (just use the proof for divideLemma)
 
   private val plusLemma =
     proveBy(
@@ -45,7 +47,16 @@ object SimplifierV2 {
   private val timesLemma =
     proveBy(
       "(A() = B()) & (X() = Y()) -> (A()*X() = B()*Y())".asFormula,QE)
-  //power and divide need side conditions
+
+  private val divideLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A()/X() = B()/Y())".asFormula,
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
+
+  private val powerLemma =
+    proveBy(
+      "(A() = B()) & (X() = Y()) -> (A()^X() = B()^Y())".asFormula,
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
 
   /**
     * Takes a term t, with an equality context ctx and returns ctx |- t = t' using equalities in ctx
@@ -67,7 +78,7 @@ object SimplifierV2 {
           weaken(ctx)(DerivedAxioms.equalReflex.fact(
             USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil)))
         }
-      case bop:BinaryCompositeTerm if (bop match {case Divide(_,_)=> false case Power(_,_) => false case _ => true})=>
+      case bop:BinaryCompositeTerm =>
         val l = bop.left
         val r = bop.right
         val lpr = equalityRewrites(l,ctx)
@@ -78,16 +89,18 @@ object SimplifierV2 {
           case Plus(_,_) => plusLemma
           case Minus(_,_) => minusLemma
           case Times(_,_) => timesLemma
+          case Divide(_,_) => divideLemma
+          case Power(_,_) => powerLemma
         }
         proveBy(Sequent(ctx,IndexedSeq(Equal(bop.reapply(l,r),bop.reapply(lt,rt)))),
           cut(Equal(l,lt)) <(
             cut(Equal(r,rt)) <(
-            useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-              closeId,closeId
-              ),
-            hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
-          hideR(SuccPos(0))& by(lpr)
-        ))
+              useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
+                closeId,closeId
+                ),
+              hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
+            hideR(SuccPos(0))& by(lpr)
+            ))
       case _ =>
         weaken(ctx)(DerivedAxioms.equalReflex.fact(
           USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil)))
@@ -133,8 +146,8 @@ object SimplifierV2 {
     val ttf = extract(tpr).asInstanceOf[Term]
     proveBy(Sequent(ctx,IndexedSeq(Equal(t,ttf))),
       CEat(tpr)(SuccPosition(1,1::Nil)) &
-      cut(Equal(t,tt))<(close,
-        hideR(SuccPos(0)) & by(teq)))
+        cut(Equal(t,tt))<(close,
+          hideR(SuccPos(0)) & by(teq)))
 
   }
 
@@ -226,7 +239,7 @@ object SimplifierV2 {
           val(ctxU,tacU) = addContext(nu,ctx:+f)
           (ctxU,
             useAt(DerivedAxioms.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('_) &
-            implyRi(AntePos(ctx.length)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
+              implyRi(AntePos(ctx.length)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
         }
       case _ => (ctx:+f,ident)
     }
@@ -235,6 +248,7 @@ object SimplifierV2 {
 
   //Truth tables for propositional formulae
   //These should be in DerivedAxioms
+  // (some already are)
   private def propProof(f:String,ff:String):Provable =
   {
     proveBy(Equiv(f.asFormula,ff.asFormula),prop)
@@ -289,9 +303,25 @@ object SimplifierV2 {
       case Not(True) => Some(False,notT)
       case Not(False) => Some(True,notF)
 
+      case Equal(l,r) if l.equals(r) => Some(True,equalReflex)
+      case LessEqual(l,r) if l.equals(r) => Some(True,lessequalReflex)
+      case GreaterEqual(l,r) if l.equals(r) => Some(True,greaterequalReflex)
+
       case _ => None
     }
   }
+
+  //Reflexivity for comparison formulae
+  //These should be in DerivedAxioms
+  // (some already are)
+  private def qeProof(f:String,ff:String):Provable =
+  {
+    proveBy(Equiv(f.asFormula,ff.asFormula),QE)
+  }
+
+  val equalReflex = qeProof("F() = F()","true")
+  val lessequalReflex = qeProof("F() <= F()","true")
+  val greaterequalReflex = qeProof("F() >= F()","true")
 
   /**
     * Recursive formula simplification under a context using chase, proving ctx |- f = f'
@@ -450,7 +480,7 @@ object SimplifierV2 {
           cut(Equiv(f,recf)) <(
             cut(Equiv(recf,ff)) <(
               implyRi(AntePos(ctx.length+1)) &
-              implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
+                implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
               hideL('Llast) & hideR(SuccPos(0)) & by(pf)),
             hideR(SuccPos(0))& by(recpr)))
     }
@@ -465,12 +495,12 @@ object SimplifierV2 {
     {
       val prT = proveBy(Sequent(ctx,IndexedSeq(Equiv(chasef,True))),
         cohide2(AntePos(tind),SuccPos(0)) &
-        useAt(equivT,PosInExpr(0::Nil))(SuccPos(0)) & close)
+          useAt(equivT,PosInExpr(0::Nil))(SuccPos(0)) & close)
       proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
         cut(Equiv(f,chasef)) <(
           cut(Equiv(chasef,True)) <(
             implyRi(AntePos(ctx.length+1)) &
-            implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
+              implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
             hideL('Llast) & hideR(SuccPos(0)) & by(prT)),
           hideR(SuccPos(0))& by(chasepr)))
     }
