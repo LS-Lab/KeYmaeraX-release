@@ -23,10 +23,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
   });
 
   $scope.toolIsConfigured = true;
-  $http.get("/config/toolStatus").success(function(data) {
-    $scope.toolIsConfigured = data.configured;
-  });
-
 
   $http.get('/users/' + $cookies.get('userId') + '/dashinfo')
       .success(function(data) {
