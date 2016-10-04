@@ -62,7 +62,7 @@ object UpdateChecker {
 
   private lazy val downloadDBVersion : Option[String] = {
     try {
-      val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
+      val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/keymaerai_version.json").mkString)
       if(json.asJsObject.getFields("oldestAcceptableDB").isEmpty)
         throw new Exception("Cannot retrieve oldestAcceptableDB since version.json does not contain a DBVersion key.")
       else {
