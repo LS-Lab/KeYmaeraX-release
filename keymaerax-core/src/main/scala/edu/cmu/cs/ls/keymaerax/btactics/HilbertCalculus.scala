@@ -205,12 +205,15 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : DependentPositionTactic = namedUseAt("DWeaken", "DW differential weakening")
+  /** DWd: Diamond Differential Weakening to use evolution domain constraint `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)}>(q(x)&p(x))` */
+  lazy val DWd                 : DependentPositionTactic = useAt("DWd diamond differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = namedUseAt("DCaxiom", "DC differential cut",
-    (us:Subst)=>us++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+    (us:Option[Subst])=>us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
+  /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DCd(invariant: Formula)  : DependentPositionTactic = useAt("DCd diamond differential cut",
-    (us:Subst)=>us++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+    (us:Option[Subst])=>us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
     * as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`.
@@ -240,10 +243,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGC(y:Variable, b:Term) =
     useAt("DG differential ghost constant", PosInExpr(0::Nil),
-      (us:Subst)=>{
+      (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us++RenUSubst(Seq(
+        us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
         ))
@@ -253,10 +256,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGCd(y:Variable, b:Term) =
   useAt("DGd diamond differential ghost constant", PosInExpr(0::Nil),
-    (us:Subst)=>{
+    (us:Option[Subst])=>{
       val singular = FormulaTools.singularities(b)
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-      us++RenUSubst(Seq(
+      us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DC"))++RenUSubst(Seq(
         (Variable("y_",None,Real), y),
         (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
       ))
@@ -394,7 +397,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   // implementation
 
   @deprecated("useAt(AxiomInfo,inst) instead or just useAt(axiomName,inst)")
-  private[btactics] def namedUseAt(codeName: String, axiomName: String, inst: (Subst=>Subst) = us=>us) = new DependentPositionTactic(codeName) {
+  private[btactics] def namedUseAt(codeName: String, axiomName: String, inst: (Option[Subst]=>Subst) = us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution"))) = new DependentPositionTactic(codeName) {
     assert(DerivationInfo.hasCodeName(codeName), s"$codeName is a tactic name but is not a DerivationInfo codeName.")
     if (DerivationInfo.ofCodeName(codeName).codeName.toLowerCase() != codeName.toLowerCase()) println("WARNING: codeName should be changed to a consistent name: " + codeName)
     override def factory(pos: Position): DependentTactic = useAt(axiomName, inst)(pos)

@@ -206,7 +206,7 @@ private object DLBySubst {
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
   def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
-    (us: Subst) => us ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
+    (us: Option[Subst]) => us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
   private def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)

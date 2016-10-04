@@ -188,7 +188,7 @@ trait UnifyUSCalculus {
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): DependentPositionTactic = {
+  def useAt(lem: Lemma, key:PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = {
     if (lem.name.isDefined) {
       val info = ProvableInfo.ofCodeName(lem.name.get)
       if (info.provable == lem.fact)
@@ -203,7 +203,7 @@ trait UnifyUSCalculus {
       useAt("useAt", lem.fact, key, inst)
     }
   }
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Subst)=>us)
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution")))
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem, PosInExpr(0::Nil))
 
@@ -217,15 +217,15 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(ProvableInfo(axiom), key, inst)
+  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(ProvableInfo(axiom), key, inst)
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(ProvableInfo(axiom), key)
-  def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
+  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
-  def useExpansionAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
+  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
@@ -304,9 +304,9 @@ trait UnifyUSCalculus {
     */
   def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
 
-  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
-  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us)
-  private[btactics] def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = useAt("ANON", fact, key, us=>us)
+  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
+  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution")))
+  private[btactics] def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = useAt("ANON", fact, key, us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: Provable): DependentPositionTactic = useAt(fact, PosInExpr(0::Nil))
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.
@@ -350,13 +350,13 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
-  def useAt(codeName: String, fact: Provable, key: PosInExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic(codeName) {
+  def useAt(codeName: String, fact: Provable, key: PosInExpr, inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution"))): DependentPositionTactic = new DependentPositionTactic(codeName) {
     private val (keyCtx:Context[_],keyPart) = fact.conclusion.succ.head.at(key)
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val (ctx,expr) = sequent.at(pos)
-        val subst = inst(UnificationMatch(keyPart, expr))
+        val subst = inst(UnificationMatch.unifiable(keyPart, expr))
         if (DEBUG) println("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
