@@ -4,8 +4,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.lang.Number
-
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
@@ -176,11 +174,10 @@ object AxiomIndex {
         case _ => Nil
       }
 
-        //@todo BigDecimal missing unapply
-//      case Plus(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0+" :: Nil
-//      case Plus(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "+0" :: Nil
-//      case Times(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0*" :: Nil
-//      case Times(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "*0" :: Nil
+      case Plus(Number(n), _) if n == 0 => "0+" :: Nil
+      case Plus(_, Number(n)) if n == 0 => "+0" :: Nil
+      case Times(Number(n), _) if n == 0 => "0*" :: Nil
+      case Times(_, Number(n)) if n == 0 => "*0" :: Nil
 
       case _ => Nil
     } else expr match {
