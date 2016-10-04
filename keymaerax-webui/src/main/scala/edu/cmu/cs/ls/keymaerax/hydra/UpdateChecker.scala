@@ -79,7 +79,7 @@ object UpdateChecker {
   /** Returns the current version # in keymaerax.org/version.json, or None if the contents cannot be downloaded/parsed. */
   private lazy val downloadCurrentVersion: Option[String] = {
     try {
-      val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
+      val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/keymaerai_version.json").mkString)
       val version = json.asJsObject.getFields("version")
       if (version.isEmpty)
         throw new Exception("version.json does not contain a version key.")
