@@ -314,6 +314,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("DCd diamond differential cut", "DCd", "DCd", {case () => useAt(DerivedAxioms.DCddifferentialcut)}),
     new DerivedAxiomInfo("DWd diamond differential weakening", "DWd", "DWd", {case () => useAt(DerivedAxioms.DWddifferentialweakening)}),
     new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", {case () => useAt(DerivedAxioms.DWd2differentialweakening)}),
+    new DerivedAxiomInfo(",d commute", "commaCommuted", "commaCommuted", {case () => useAt(DerivedAxioms.commaCommuted)}),
+    new DerivedAxiomInfo("DGd diamond inverse differential ghost implicational", "DGdi", "DGdi", {case () => useAt(DerivedAxioms.DGdinversedifferentialghostimplicational)}),
 //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     //@note derived axiom exists eliminate not yet proven -> use core axiom instead
 //    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),

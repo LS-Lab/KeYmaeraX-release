@@ -1709,6 +1709,25 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+
+  /**
+    * {{{Axiom "DGd diamond inverse differential ghost implicational".
+    *    <{c{|y_|}&q(|y_|)}>p(|y_|)  ->  \exists y_ <{y_'=a(||),c{|y_|}&q(|y_|)}>p(|y_|)
+    * End.
+    * }}}
+    */
+  lazy val DGdinversedifferentialghostimplicational = derivedAxiom("DGd diamond inverse differential ghost implicational",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|)  <-  \\exists y_ <{y_'=a(||),c{|y_|}&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("all dual y")(1, 0::0::Nil) &
+      useAt(boxAxiom)(1, 0::0::0::Nil) &
+      useAt(converseImply, PosInExpr(1::Nil))(1) &
+      byUS("DG inverse differential ghost implicational")
+  )
+
   /**
     * {{{Axiom "DGCd diamond differential ghost const".
     *    <{c{|y_|}&q(|y_|)}>p(|y_|) <-> \forall y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)
@@ -1759,10 +1778,11 @@ object DerivedAxioms {
   )
 
   /**
-    * Axiom "DCd diamond differential cut".
+    * {{{Axiom "DCd diamond differential cut".
     *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
     *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
     * End.
+    * }}}
     */
   lazy val DCddifferentialcut = derivedAxiom("DCd diamond differential cut",
     Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
@@ -1770,6 +1790,21 @@ object DerivedAxioms {
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
       useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1, 1::Nil) &
       byUS("DC differential cut")
+  )
+
+  /**
+    * {{{Axiom "DCd diamond differential cut".
+    *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
+    *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
+    * End.
+    * }}}
+    */
+  lazy val commaCommuted = derivedAxiom(",d commute",
+    Sequent(IndexedSeq(), IndexedSeq("<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1) &
+      byUS(", commute")
   )
 
   /**
