@@ -1741,6 +1741,24 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DWd2 diamond differential weakening".
+    *    <{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)->p_(||))
+    * End.
+    * }}}
+    */
+  lazy val DWd2differentialweakening = derivedAxiom("DWd2 diamond differential weakening",
+    Sequent(IndexedSeq(), IndexedSeq("<{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)->p_(||))".asFormula)),
+      equivR(1) <(
+        implyRi & CMon(PosInExpr(1::Nil)) & prop & done,
+        cutAt("q_(||) & (q_(||)->p_(||))".asFormula)(1, 1::Nil) <(
+          implyRi & useAt(Kd2Axiom, PosInExpr(1::Nil))(1) & byUS("DW")
+          ,
+          cohideR(1) & CMon(PosInExpr(1::Nil)) & prop & done
+          )
+        )
+  )
+
+  /**
     * Axiom "DCd diamond differential cut".
     *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
     *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
