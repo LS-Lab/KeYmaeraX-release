@@ -7,9 +7,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import TacticFactory._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -29,7 +29,7 @@ object AxiomaticODESolver {
   private val ODE_DEBUGGER = false
 
   /** The name of the explicit time variables. */
-  private val TIMEVAR : String = "kyxtime"
+  private val TIMEVAR: Variable = "kyxtime".asVariable
 
   /** Temporary messages that aren't even necessarily useful to have in verbose ODE debugger mode. */
   private def tmpmsg(s:String) = if(ODE_DEBUGGER) println(s)
@@ -45,36 +45,39 @@ object AxiomaticODESolver {
 
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
     val timeAssignmentPos = subPosition(pos, PosInExpr(0::1::1::Nil))
-    val isAssignment : Expression => Boolean = (e : Expression) => e match {
-      case Box(Assign(_,_), _) => true
-      case _ => false
-    }
+    val isAssignment: Expression => Boolean = { case Box(Assign(_,_), _) => true case _ => false }
 
-    odeSolverPreconds(pos) &
-    DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
     addTimeVarIfNecessary(odePos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
+    odeSolverPreconds(pos) &
+    DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
     (cutInSoln(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
-    HilbertCalculus.DW(pos) &
+    (s.sub(pos) match {
+      case Some(Box(_,_)) => HilbertCalculus.DW(pos)
+      case Some(Diamond(_,_)) => TactixLibrary.useAt("DWd2 diamond differential weakening")(pos)
+    }) &
     DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
-    simplifyPostCondition(pos) &
+    simplifyPostCondition(odeSize(ode))(pos ++ PosInExpr(1::Nil)) &
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
     (inverseDiffCut(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
     RepeatTactic(inverseDiffGhost(pos), sizeOfTimeExplicitOde - 1) &
     DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(pos) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
-    HilbertCalculus.useAt("DS& differential equation solution")(pos) &
+    (s.sub(pos) match {
+      case Some(Box(_,_)) => HilbertCalculus.useAt("DS& differential equation solution")(pos)
+      case Some(Diamond(_,_)) => HilbertCalculus.useAt("Dsol& differential equation solution")(pos)
+    }) &
     DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
-    ((DebuggingTactics.assertAt((x:Expression) => s"Should be a boxed assignment: ${x.getClass}", isAssignment)(timeAssignmentPos) &
-      HilbertCalculus.assignb(timeAssignmentPos)
-     )
-     |
-      Idioms.nil
-    ) &
+    (HilbertCalculus.assignb(timeAssignmentPos) | HilbertCalculus.assignd(timeAssignmentPos) | Idioms.nil) &
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
     TactixLibrary.exhaustiveEqL2R(hide=true)('Llast)*sizeOfTimeExplicitOde &
+    // boxes can simplify a little further (could simplify even more -> simplification tactic)
+    Idioms.?(DebuggingTactics.assert((s: Sequent, p: Position) => s.sub(p) match {
+               case Some(Equal(timeVar, _)) => true
+               case _ => false }, "Cannot simplify, don't know kyxtime value")('Llast) &
+             TactixLibrary.exhaustiveEqL2R(hide=true)('Llast)) &
     DebuggingTactics.debug("AFTER rewriting initial equalities", ODE_DEBUGGER)
   })
 
@@ -83,12 +86,13 @@ object AxiomaticODESolver {
   //region Preconditions
 
   val odeSolverPreconds =  TacticFactory.anon ((pos: Position, s: Sequent) => {
-    val modal = s.apply(pos).asInstanceOf[Modal]
-    val ODESystem(ode, constraint) = modal.program
+    val ode: DifferentialProgram = s.sub(pos) match {
+      case Some(Box(ODESystem(o, _), _)) => o
+      case Some(Diamond(ODESystem(o, _), _)) => o
+      case sub => throw BelleUserGeneratedError("Expected [] or <> modality at position " + pos + ", but got " + sub)
+    }
 
-    if(modal.isInstanceOf[Diamond])
-      throw noDiamondsForNowExn
-    else if(!isCanonicallyLinear(ode))
+    if(!isCanonicallyLinear(ode))
       DebuggingTactics.error("Expected ODE to be linear and in correct order.")
     else
       StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
@@ -115,25 +119,24 @@ object AxiomaticODESolver {
     * @note If we want an initial value for time (kyxtime:=0) then this is the place to add that functionality.
     */
   val addTimeVar = TacticFactory.anon ((pos: Position, s:Sequent) => {
-    s.apply(pos) match {
-      case x:DifferentialProgram => //ok
-      case x:ODESystem => //ok
+    s.sub(pos) match {
+      case Some(x: DifferentialProgram) => //ok
+      case Some(x: ODESystem) => //ok
       case _ => throw AxiomaticODESolverExn(s"setupTimeVar should only be called on differential programs without an existing time variable but found ${s.apply(pos)} of type ${s.apply(pos).getClass}.")
     }
 
+    val t = TacticHelper.freshNamedSymbol(TIMEVAR, s)
     val modalityPos = parentPosition(pos)
-    if(!s.apply(modalityPos).isInstanceOf[Modal])
-      throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality.")
 
-    val t = TacticHelper.freshNamedSymbol(Variable(TIMEVAR), s)
-
-    s.apply(modalityPos) match {
-      case Box(_,_) => {
+    s.sub(modalityPos) match {
+      case Some(Box(_,_)) =>
         HilbertCalculus.DGC(t, Number(1))(modalityPos) &
         DLBySubst.assignbExists(Number(0))(modalityPos) &
         DLBySubst.assignEquality(modalityPos)
-      }
-      case Diamond(_,_) => throw noDiamondsForNowExn
+      case Some(Diamond(_,_)) =>
+        HilbertCalculus.DGCd(t, Number(1))(modalityPos) &
+        TactixLibrary.allR(modalityPos)
+      case _ => throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality.")
     }
   })
 
@@ -143,9 +146,10 @@ object AxiomaticODESolver {
 
   val cutInSoln = "cutInSoln" by ((pos: Position, s: Sequent) => {
     assert(s.apply(pos).isInstanceOf[Modal], s"Expected a modality but found ${s.apply(pos).prettyString}")
-    val system:ODESystem = s.apply(pos).asInstanceOf[Modal].program match {
-      case x:ODESystem => x
-      case x:DifferentialProgram => ???
+    val system:ODESystem = s.sub(pos) match {
+      case Some(Box(x:ODESystem, _)) => x
+      case Some(Diamond(x:ODESystem, _)) => x
+      case _ => ???
     }
 
     //@todo constrain to only true initial conditions by passing in Some(ode).
@@ -153,7 +157,7 @@ object AxiomaticODESolver {
     val initialConditions = s.ante.flatMap(extractInitialConditions(None)).toList
 
     val nextEqn = sortAtomicOdes(atomicOdes(system))
-      .filter(eqn => eqn.xp.x != Variable(TIMEVAR))
+      .filter(eqn => eqn.xp.x != TIMEVAR)
       .filter(eqn => isUnsolved(eqn.xp.x, system))
       .head
 
@@ -161,23 +165,18 @@ object AxiomaticODESolver {
 
     //@todo switch completely to the new integrator, so that this is a single tactic instead of a saturated tactic.
     val solnToCut =
-      Integrator(conditionsToValues(initialConditions), Variable(TIMEVAR), system).find(eq => eq.left == nextEqn.xp.x)
+      Integrator(conditionsToValues(initialConditions), Minus(TIMEVAR, Variable(TIMEVAR.name, Some(0))), system).find(eq => eq.left == nextEqn.xp.x)
         .getOrElse(throw new Exception(s"Could not get integrated value for ${nextEqn.xp.x} using new integration logic."))
 
-    tmpmsg(s"Solution for ${nextEqn.prettyString} is ${solnToCut}")
+    tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
 
     //@note we have to cut one at a time instead of just constructing a single tactic because solutions need to be added
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
-    s.apply(pos) match {
-      case Box(ode, postcond) => {
-        DifferentialTactics.diffCut(solnToCut)(pos) <(
-          Idioms.nil,
-          DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos) & DebuggingTactics.done
-        )
-      }
-      case Diamond(ode, postcond) => throw noDiamondsForNowExn
-    }
+    DifferentialTactics.diffCut(solnToCut)(pos) <(
+      Idioms.nil,
+      DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos) & DebuggingTactics.done
+      )
   })
 
   /**
@@ -224,7 +223,7 @@ object AxiomaticODESolver {
     val system = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem]
 
     val lowerBound = Number(0) //@todo check that this is actually the lower bound. Lower bound could be symbolic.
-    val timer = Variable(TIMEVAR)
+    val timer = TIMEVAR
 
     //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
     s.apply(pos).asInstanceOf[Modal] match {
@@ -237,67 +236,40 @@ object AxiomaticODESolver {
 
   //region Simplify post-condition
 
-  val simplifyPostCondition = "simplifyPostCondition" by ((pos: Position, s: Sequent) => {
-    val modality = s.apply(pos).asInstanceOf[Modal]
-    val Box(ode, Imply(evolutionDomain, originalConclusion)) = modality
-
-    val newConclusion = simplifiedConclusion(evolutionDomain, originalConclusion)
-    val implication = Imply(newConclusion, modality.child)
-
-    tmpmsg(s"The implication ${implication.prettyString} needs to be valid because we need to co-hide all other formulas for CMon.")
-    tmpmsg(s"And modality is ${s.apply(pos).prettyString}")
-
-    //@todo support non-arithmetic post-conditions such as [ODE][more]arith
-    if(!implication.isFOL)
-      throw new AxiomaticODESolverExn("Could not solve the ODE axiomatically because the post-condition is non-arithmetic.")
-
-    TactixLibrary.cutAt(newConclusion)(subPosition(pos, PosInExpr(1::Nil))) <(
-      Idioms.nil
-      ,
-      SequentCalculus.cohideR('Rlast) & TactixLibrary.CMon(PosInExpr(1::Nil)) & (TactixLibrary.QE | TactixLibrary.close) & DebuggingTactics.done
-    )
+  def simplifyPostCondition(odeSize: Int) = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
+    val rewrite = TactixLibrary.proveBy("(q_(||) -> p_(f(x_))) -> (q_(||) & x_=f(x_) -> p_(x_))".asFormula,
+      TactixLibrary.implyR(1)*2 & TactixLibrary.andL(-2) & TactixLibrary.eqL2R(-3)(1) & TactixLibrary.prop)
+    TactixLibrary.useAt(rewrite, PosInExpr(1::Nil))(pos)*odeSize & TactixLibrary.useAt(DerivedAxioms.trueImplies)(pos) &
+    //@todo simplify arithmetic tactic
+    (TacticFactory.anon((p: Position, s: Sequent) => s.sub(p) match {
+      case Some(f: Formula) =>
+        val positions = FormulaTools.posOf(f, _ match {
+          case Times(Number(n), _) => n == 0
+          case Times(_, Number(n)) => n == 0
+          case Plus(Number(n), _) => n == 0
+          case Plus(_, Number(n)) => n == 0
+          case _ => false}).map(p ++ _)
+        positions.map(TactixLibrary.chase(_)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(TactixLibrary.skip)
+    })(pos)*)
   })
-
-  private def simplifiedConclusion(evolutionDomain: Formula, originalConclusion: Formula): Formula = {
-    val fvs = StaticSemantics.freeVars(originalConclusion)
-    val varsToReplace : Map[Variable, Term] = conditionsToValues(extractInitialConditions(None)(evolutionDomain)).filterKeys(fvs.contains)
-
-    varsToReplace.foldLeft(originalConclusion)(
-      (currentFormula, nextPair) => SubstitutionHelper.replaceFree(currentFormula)(nextPair._1, nextPair._2)
-    )
-  }
-
-  @deprecated("Move this to a centralized location for ProveAs stuff", "4.2b2")
-  private def clearProveAsScope(lemmaName: String) = new DependentTactic("clearProveAsScope") {
-    override def computeExpr(p:Provable) = {
-      //Silently succeed if the lemma does not yet exist.
-      if(LemmaDBFactory.lemmaDB.contains(lemmaName))
-        LemmaDBFactory.lemmaDB.remove(lemmaName)
-      Idioms.nil
-    }
-  }
 
   //endregion
 
   //region Inverse diff cuts
 
-  val inverseDiffCut = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
-    val f: Modal = s.apply(pos).asInstanceOf[Modal]
-    val ODESystem(ode, constraint) = f.program
-    val p = f.child
-
-    constraint match {
-      case And(leftConstriant, nextConstraint) if(isPartOfSoln(ode, nextConstraint)) => f match {
-        case Box(_, _) => {
-          HilbertCalculus.useExpansionAt("DC differential cut")(pos) <(
-            Idioms.nil, /* Branch with no ev dom contraint */
-            DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
-            )
-        }
-        case Diamond(_,_) => throw noDiamondsForNowExn
-      }
-      case _ => Idioms.nil
+  private val inverseDiffCut = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
+    val idc: BelleExpr = s.sub(pos) match {
+      //@note evolution domain constraints are of the form true&solution or ...&solution
+      case Some(f@Box(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
+        HilbertCalculus.useExpansionAt("DC differential cut")(pos)
+      case Some(f@Diamond(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
+        HilbertCalculus.useExpansionAt("DCd diamond differential cut")(pos)
     }
+
+    idc <(
+      Idioms.nil, /* Branch with no ev dom contraint */
+      DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
+      )
   })
 
   /** Returns true iff f is part of the cut-in solution for the ODE. */
@@ -319,69 +291,53 @@ object AxiomaticODESolver {
     * }}}
     */
   val inverseDiffGhost = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
-    val f: Modal = s.apply(pos).asInstanceOf[Modal]
-    val ODESystem(ode, constraint) = f.program
-    val p = f.child
+    /* Note: Constructing our own substitution because the default substitution seems to get at least g(||) wrong. */
+    def subst(y_DE: AtomicODE, c: DifferentialProgram, q: Formula, p: Formula)(r: RenUSubst) = {
+      if(ODE_DEBUGGER) println("[inverseDiffGhost] input to subst:    " + r)
+      val (y, a, b) = DifferentialHelper.parseGhost(y_DE)
+      val renaming = RenUSubst(URename("y_".asVariable, y))
+      val result = renaming ++
+        RenUSubst(USubst(
+          "a(|y_|)".asTerm    ~> renaming(a) ::
+          "b(|y_|)".asTerm    ~> renaming(b) ::
+          "q(|y_|)".asFormula ~> q ::
+          DifferentialProgramConst("c", Except("y_".asVariable)) ~> c ::
+          "p(|y_|)".asFormula ~> p ::
+          Nil))
 
-    ode match {
-      case ode:DifferentialProduct => {
-        val y_DE = firstODE(ode)    //The left-most ODE in the system matching the pattern y_' = a(|y_|)*y_ + b(|y_|).
+      if(ODE_DEBUGGER) println("[inverseDiffGhost] output from subst: " + result)
+      result
+    }
 
-        /* Note: Constructing our own substitution because the default substitution seems to get at least g(||) wrong. */
-        def subst(r: RenUSubst) = {
-          if(ODE_DEBUGGER) println("[inverseDiffGhost] input to subst:    " + r)
-          val renaming =
-            RenUSubst(URename("y_".asTerm.asInstanceOf[Variable], y_DE.xp.x))
-
-          val result = renaming ++
-            RenUSubst(USubst(
-              "a(||)".asTerm    ~> renaming(y_DE.e) ::
-              "q(|y_|)".asFormula ~> r.substitution("q(|y_|)".asFormula) ::
-              DifferentialProgramConst("c", Except("y_".asVariable)) ~> r(DifferentialProgramConst("c", Except("y_".asVariable))) ::
-              "p(|y_|)".asFormula ~> r.substitution("p(|y_|)".asFormula) ::
-              Nil))
-
-          if(ODE_DEBUGGER) println("[inverseDiffGhost] output from subst: " + result);
-          result
-        }
-
-        f match {
-          case Box(_,_) => {
-            val axiomName = "DG inverse differential ghost implicational"
-
-            //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
-            TactixLibrary.cut(Forall(y_DE.xp.x::Nil, f)) <(
-              HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.done
-              ,
-              TactixLibrary.hide(pos) &
-              DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate ${y_DE} from the ODE via an application of ${axiomName}.", ODE_DEBUGGER) &
-              HilbertCalculus.useExpansionAt(axiomName, ((s:RenUSubst) => subst(s)))(pos)
-            ) &
-            DebuggingTactics.assertProvableSize(1) &
-            DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate ${y_DE} from the ODE.", ODE_DEBUGGER) &
-            DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
-          }
-          case Diamond(_,_) => throw noDiamondsForNowExn
-        }
-      }
-      case _ => Idioms.nil
+    s.sub(pos) match {
+      case Some(f@Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) =>
+        val axiomName = "DG inverse differential ghost implicational"
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
+        TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
+          DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
+          HilbertCalculus.useExpansionAt(axiomName)(pos)
+          ,
+          TactixLibrary.implyR(pos) & HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.done
+          ) &
+          DebuggingTactics.assertProvableSize(1) &
+          DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
+          DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
+      case Some(f@Diamond(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) =>
+        val axiomName = "DGd diamond differential ghost"
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
+        FOQuantifierTactics.universalGen(Some(y_DE.xp.x), y_DE.xp.x)(pos) &
+        TactixLibrary.cutAt(Diamond(ODESystem(c, q), p))(pos) <(
+          TactixLibrary.skip
+          ,
+          DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
+          TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) & TactixLibrary.useAt(",d commute")(1, 1::0::Nil) & DebuggingTactics.print("Foo") &
+            TactixLibrary.byUS("DGd diamond differential ghost"/*, subst(y_DE, c, q, p)*/) & TactixLibrary.done
+        ) &
+          DebuggingTactics.assertProvableSize(1) &
+          DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
+          DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
     }
   })
-
-  private def firstODE(ode: DifferentialProduct):AtomicODE = ode.left match {
-    case pi:DifferentialProduct => firstODE(pi)
-    case l:AtomicODE => l
-    case _ => ???
-  }
-
-  private def secondODE(ode: DifferentialProduct):AtomicODE = ode.left match {
-    case pi:DifferentialProduct => secondODE(pi)
-    case l:AtomicODE => ode.right match {
-      case pi:DifferentialProduct => firstODE(pi)
-      case r:AtomicODE => r
-      case _ => ???
-    }
-  }
 
   private def odeSize(e: Expression): Int = odeSize(e.asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode)
   private def odeSize(ode: DifferentialProgram): Int = ode match {
