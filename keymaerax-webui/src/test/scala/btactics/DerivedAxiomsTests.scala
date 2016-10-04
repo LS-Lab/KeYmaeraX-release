@@ -121,6 +121,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
   it should "prove Kd diamond modus ponens" in {check(KdAxiom)}
+  it should "prove Kd2 diamond modus ponens" in {check(Kd2Axiom)}
   it should "prove PC1" in {check(PC1)}
   it should "prove PC2" in {check(PC2)}
   it should "prove PC3" in {check(PC3)}

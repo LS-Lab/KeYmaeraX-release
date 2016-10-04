@@ -508,6 +508,24 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{
+    *   Axiom "Kd2 diamond modus ponens".
+    *     [a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))
+    *   End.
+    * }}}
+    */
+  lazy val Kd2Axiom = derivedAxiom("Kd2 diamond modus ponens",
+    Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))".asFormula)),
+    useExpansionAt("<> diamond")(1, 1::0::Nil) &
+      useExpansionAt("<> diamond")(1, 1::1::Nil) &
+      useAt(DerivedAxioms.converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("K modal modus ponens", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("K modal modus ponens", PosInExpr(1::Nil))(1) &
+      useAt(proveBy("(p_() -> !(p_()&q_()) -> !q_()) <-> true".asFormula, prop))(1, 1::Nil) &
+      byUS("[]T system") & TactixLibrary.done
+  )
+
+  /**
     * {{{Axiom "[]~><> propagation".
     *    [a;]p(||) & <a;>q(||) -> <a;>(p(||) & q(||))
     * End.

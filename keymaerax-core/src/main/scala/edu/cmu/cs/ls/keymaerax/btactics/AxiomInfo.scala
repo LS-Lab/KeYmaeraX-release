@@ -460,6 +460,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("-> converse", ("→conv","-> conv"), "converseImply", {case () => useAt(DerivedAxioms.converseImply)}),
     new DerivedAxiomInfo("<-> true", ("↔true","<-> true"), "equivTrue", {case () => useAt(DerivedAxioms.equivTrue)}),
     new DerivedAxiomInfo("Kd diamond modus ponens", "Kd", "Kd", {case () => useAt(DerivedAxioms.KdAxiom)}),
+    new DerivedAxiomInfo("Kd2 diamond modus ponens", "Kd2", "Kd2", {case () => useAt(DerivedAxioms.Kd2Axiom)}),
     //@todo internal only
 //    new DerivedAxiomInfo("K1", "K1", "K1", {case () => useAt(DerivedAxioms.K1)}),
 //    new DerivedAxiomInfo("K2", "K2", "K2", {case () => useAt(DerivedAxioms.K2)}),
