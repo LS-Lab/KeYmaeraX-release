@@ -24,9 +24,9 @@ object InvariantGenerator {
   def relevanceFilter(generator: Generator[Formula]): Generator[Formula] = (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val (system, constraint, post) = sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, post)) => (ode.ode,ode.constraint,post)
-      case Some(Box(system: Loop, post)) => (system,True,post)
-      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
+      case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
+      case Some(Box(system: Loop, pf)) => (system,True,pf)
+      case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
     val evos = if (constraint==True) Nil else DifferentialHelper.flattenAnds(List(constraint))
@@ -37,7 +37,7 @@ object InvariantGenerator {
       lazy val knowledge = StaticSemantics.freeVars(constraint).symbols
       // bound variables that free variables of the postcondition depend on but that are not yet free in the evolution domain constraint, so missing knowledge.
       // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
-      lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).filter(x => !knowledge.contains(x))
+      lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).diff(knowledge)
       //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
       lazy val candidates = generator(sequent,pos).toList.
         distinct.
@@ -118,10 +118,10 @@ object InvariantGenerator {
     */
   val inverseCharacteristicDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) => {
     import FormulaTools._
-    if (!ToolProvider.algebraTool().isDefined) throw new BelleError("inverse characteristic method needs a computer algebra tool")
-    if (!ToolProvider.pdeTool().isDefined) throw new BelleError("inverse characteristic method needs a PDE Solver")
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleError("inverse characteristic method needs a computer algebra tool")
+    if (ToolProvider.pdeTool().isEmpty) throw new BelleError("inverse characteristic method needs a PDE Solver")
     val (ode, constraint, post) = sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, post)) => (ode.ode,ode.constraint,post)
+      case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
       case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
@@ -129,9 +129,7 @@ object InvariantGenerator {
     val solutions = try {
       ToolProvider.pdeTool().get.pdeSolve(ode)
     } catch {
-      case e: Exception => if (BelleExpr.DEBUG) println("inverseCharacteristic generation unsuccessful: " + e)
-        e.printStackTrace()
-        Nil.iterator
+      case e: Throwable => throw new BelleError("inverseCharacteristic generation unsuccessful", e)
     }
     if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
@@ -142,7 +140,7 @@ object InvariantGenerator {
     val algebra = ToolProvider.algebraTool().get
     val GB = algebra.groebnerBasis(polynomials)
     solutions.flatMap({case FuncOf(_, arg) => argumentList(arg)}).flatMap((inv:Term) => {
-      val initial = algebra.polynomialReduce(inv, GB)
+      val initial = algebra.polynomialReduce(inv, GB)._2
       //@todo could check that it's not a tautology using RCF
       List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
     })
@@ -153,12 +151,12 @@ object InvariantGenerator {
     * to speed up computations.
     * @author Andre Platzer */
   def cached(generator: Generator[Formula]): Generator[Formula] = {
-    var cache: scala.collection.mutable.Map[Box, List[Formula]] = new scala.collection.mutable.HashMap()
+    val cache: scala.collection.mutable.Map[Box, List[Formula]] = new scala.collection.mutable.LinkedHashMap()
     (sequent,pos) => {
       val (box, system, constraint, post) = sequent.sub(pos) match {
-        case Some(box@Box(ode: ODESystem, post)) => (box, ode.ode, ode.constraint, post)
-        case Some(box@Box(system: Loop, post)) => (box, system, True, post)
-        case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
+        case Some(box@Box(ode: ODESystem, pf)) => (box, ode.ode, ode.constraint, pf)
+        case Some(box@Box(system: Loop, pf)) => (box, system, True, pf)
+        case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
         case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
       }
       cache.get(box) match {

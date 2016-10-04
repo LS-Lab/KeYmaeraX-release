@@ -163,4 +163,13 @@ class DeclsTests extends FlatSpec with Matchers {
                   |""".stripMargin
     KeYmaeraXProblemParser(model)
   }
+
+  it should "detect and print undeclared symbols" in {
+    val model = """Problem. x>0 End."""
+    //@todo better location information
+    the [ParseException] thrownBy  KeYmaeraXProblemParser(model) should have message
+      """<somewhere> type analysis: undefined symbol x with index None
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
 }

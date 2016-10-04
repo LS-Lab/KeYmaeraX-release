@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.annotation.tailrec
 
 /**
- * Parses .kyx KeYmaera X problem files.
+ * Parses `.kyx` KeYmaera X problem files.
  * @todo check sorts
  * @author Nathan Fulton
  * Created by nfulton on 6/12/15.
