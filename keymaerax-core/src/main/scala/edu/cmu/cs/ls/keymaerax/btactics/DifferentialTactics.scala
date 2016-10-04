@@ -324,7 +324,7 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.DG]] */
   def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
-    val (y, a, b) = parseGhost(ghost)
+    val (y, a, b) = DifferentialHelper.parseGhost(ghost)
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
@@ -355,7 +355,7 @@ private object DifferentialTactics {
 
   private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
     val ghostParts = try {
-      parseGhost(ghost)
+      DifferentialHelper.parseGhost(ghost)
     } catch {
       case ex: CoreException => throw new BelleError("Unable to parse ghost " + ghost.prettyString, ex)
     }
@@ -368,33 +368,10 @@ private object DifferentialTactics {
     DLBySubst.assignEquality(pos)
   })
 
-  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
-  private def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
-    UnificationMatch.unifiable("{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost) match {
-      case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
-      case None => UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost) match {
-        case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
-        case None => UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost) match {
-          case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
-          case None => UnificationMatch.unifiable("{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
-            case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
-            case None => UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost) match {
-              case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
-              case None => UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost) match {
-                case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
-                case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
   /** @see [[TactixLibrary.DA]] */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
     "DA2" by ((pos: Position) => {
-      val (y,a,b) = parseGhost(ghost)
+      val (y,a,b) = DifferentialHelper.parseGhost(ghost)
       DA(y, a, b, r)(pos)
     })
 

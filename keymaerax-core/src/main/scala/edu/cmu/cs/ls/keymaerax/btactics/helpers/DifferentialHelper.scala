@@ -5,9 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{And, AtomicDifferentialProgram, AtomicODE, Box, DifferentialFormula, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, DifferentialSymbol, Equal, Formula, Number, ODESystem, Program, StaticSemantics, Term, True, Variable}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable
 
@@ -88,6 +90,29 @@ object DifferentialHelper {
     */
   //@todo duplicate with FormulaTools.conjuncts
   def flattenAnds(fs : immutable.List[Formula]): immutable.List[Formula] = fs.flatMap(decomposeAnds)
+
+  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
+  def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
+    UnificationMatch.unifiable("{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+      case None => UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost) match {
+        case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
+        case None => UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost) match {
+          case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
+          case None => UnificationMatch.unifiable("{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+            case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+            case None => UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost) match {
+              case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
+              case None => UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost) match {
+                case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
+                case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   /**
     *
