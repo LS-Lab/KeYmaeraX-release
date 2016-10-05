@@ -353,28 +353,37 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $cookies, $uibModalInstance, FileSaver, Blob, proofId, proofName, proofData) {
-    $scope.validatedProofStatus = 'closed'
+        function($scope, $http, $cookies, $uibModalInstance, FileSaver, Blob, proofId, proofName) {
 
-    $scope.proofData = proofData;
-    proofData.tactic.fetch($cookies.get('userId'), proofId);
+    $scope.userId = $cookies.get('userId')
 
-    $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/validatedStatus").then(function(response) {
-      $scope.validatedProofStatus = response.data.status;
-      $scope.provedConclusion = response.data.provedConclusion;
-    });
-
-    $scope.cancel = function() {
-        $uibModalInstance.dismiss('cancel');
-    };
-
-    $scope.downloadTactic = function() {
-      var data = new Blob([proofData.tactic.lastExecutedTacticText], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, proofName + '.kyt');
+    // empty open proof until fetched from server
+    $scope.proof = {
+      proofId: '',
+      isProved: false,
+      tactic: '',
+      provable: ''
     }
 
+    // fetch proof
+    $http.get("/proofs/user/" + $scope.userId + "/" + proofId + "/validatedStatus").then(function(response) {
+      $scope.proof = response.data; // no transformation, pass on to HTML as is
+    });
+
+    // just close the dialog
+    $scope.cancel = function() { $uibModalInstance.dismiss('cancel'); };
+
+    // don't trust local cache, fetch new from server
+    $scope.downloadTactic = function() {
+      $http.get("/proofs/user/" + $scope.userId + "/" + proofId + "/extract").then(function(response) {
+        var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+        FileSaver.saveAs(data, proofName + '.kyt');
+      });
+    }
+
+    // don't trust local cache, fetch new from server
     $scope.downloadLemma = function() {
-      $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/lemma").then(function(response) {
+      $http.get("/proofs/user/" + $scope.userId + "/" + proofId + "/lemma").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
         FileSaver.saveAs(data, proofName + '.kyp');
       });
