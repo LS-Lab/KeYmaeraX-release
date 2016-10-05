@@ -26,20 +26,20 @@ object Integrator {
     val sortedOdes = sortAtomicOdes(atomicOdes(system))
     val primedVars = sortedOdes.map(ode => ode.xp.x).filter(_ != diffArg)
     val initializedVars = initialValues.keySet
-    val timer = diffArg
+    val timerVars = StaticSemantics.freeVars(diffArg)
 
     assert(primedVars.forall(initializedVars.contains), "All primed vars should be initialized.")
 
     sortedOdes.foldLeft[List[Equal]](Nil)((solvedComponents, ode) => {
-      if(timer == ode.xp.x)
+      if (timerVars.contains(ode.xp.x)) {
         solvedComponents
-      else if(containsSolvedComponents(ode.e, solvedComponents)) {
+      } else if (containsSolvedComponents(ode.e, solvedComponents)) {
         val xPrime = ode.e //as in the RHS of x' = xPrime
         val xPrimeWithoutDependentVariables = replaceSolvedDependentVariables(xPrime, solvedComponents)
-        Equal(ode.xp.x, Plus(integrator(xPrimeWithoutDependentVariables, timer, system), initialValues(ode.xp.x))) +: solvedComponents
+        Equal(ode.xp.x, Plus(integrator(xPrimeWithoutDependentVariables, diffArg, system), initialValues(ode.xp.x))) +: solvedComponents
       }
       else {
-        Equal(ode.xp.x, Plus(Times(ode.e, timer), initialValues(ode.xp.x))) +: solvedComponents
+        Equal(ode.xp.x, Plus(Times(ode.e, diffArg), initialValues(ode.xp.x))) +: solvedComponents
       }
     })
   }
@@ -97,6 +97,8 @@ object Integrator {
   private def integrator(term: Term, t: Term, system: ODESystem) : Term = term match {
     case Plus(l, r) => Plus(integrator(l, t, system), integrator(r, t, system))
     case Minus(l, r) => Minus(integrator(l, t, system), integrator(r, t, system))
+    case Times(Number(n), x) if n == 0 => Number(0)
+    case Times(x, Number(n)) if n == 0 => Number(0)
     case Times(c, x) if x.equals(t) && StaticSemantics.freeVars(c).intersect(StaticSemantics.freeVars(t)).isEmpty => Times(Divide(c, Number(2)), Power(x, Number(2)))
     case Times(c, Power(x, exp)) if x.equals(t) && StaticSemantics.freeVars(exp).intersect(StaticSemantics.freeVars(t)).isEmpty &&
         StaticSemantics.freeVars(c).intersect(StaticSemantics.freeVars(t)).isEmpty => {
@@ -114,7 +116,7 @@ object Integrator {
       case _ => throw new Exception("Cannot integrate terms with non-number exponents!")
     }
     case x: Term => {
-      val fvs = StaticSemantics.freeVars(x).toSet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+      val fvs = StaticSemantics.freeVars(x).toSet.filter(_.isInstanceOf[Variable])
       if(!containsPrimedVariables(fvs, system))
         Times(x,t)
       else
