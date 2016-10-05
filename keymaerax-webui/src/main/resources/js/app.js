@@ -68,8 +68,8 @@ keymaeraProofApp.config(['$routeProvider',
         controller: 'ModelDetailCtrl'
       }).
       when('/models/:modelId/proofs', {
-        templateUrl: 'partials/modelproof-list.html',
-        controller: 'ModelProofsCtrl'
+        templateUrl: 'partials/proof-list.html',
+        controller: 'ProofListCtrl'
       }).
       when('/models/:modelId/proofs/create', {
         //templateUrl: 'partials/proof-detail.html',
