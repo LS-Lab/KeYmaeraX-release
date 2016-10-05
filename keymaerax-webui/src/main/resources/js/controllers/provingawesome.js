@@ -353,7 +353,7 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     //@todo duplicate with proofs.js downloadTactic
     $scope.downloadTactic = function() {
       $http.get("/proofs/user/" + userId + "/" + proofId + "/extract").then(function(response) {
-        var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+        var data = new Blob([response.data.tacticText], { type: 'text/plain;charset=utf-8' });
         FileSaver.saveAs(data, proofName + '.kyt');
       });
     }
