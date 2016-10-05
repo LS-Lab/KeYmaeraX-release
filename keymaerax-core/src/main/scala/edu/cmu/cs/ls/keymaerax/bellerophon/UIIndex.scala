@@ -42,7 +42,7 @@ object UIIndex {
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
 
-      case Not(f) => f match {
+//      case Not(f) => f match {
 //        case _: Forall => "!all" :: alwaysApplicable
 //        case _: Exists => "!exists" :: alwaysApplicable
 //        case _: Not => "!! double negation" :: alwaysApplicable
@@ -50,8 +50,8 @@ object UIIndex {
 //        case _: Or => "!| deMorgan" :: alwaysApplicable
 //        case _: Imply => "!-> deMorgan" :: alwaysApplicable
 //        case _: Equiv => "!<-> deMorgan" :: alwaysApplicable
-        case _ => alwaysApplicable
-      }
+//        case _ => alwaysApplicable
+//      }
 
       case _ =>
         // Check for axioms vs. rules separately because sometimes we might want to apply these axioms when we don't
