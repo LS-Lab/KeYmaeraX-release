@@ -132,15 +132,15 @@ object DerivationInfo {
     // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
     new PositionTacticInfo("notL"
-      , RuleDisplayInfo(("¬L", "!L"), (List("¬P", "&Gamma;"),List("&Delta;")), List((List("&Gamma;"),List("&Delta;","P"))))
+      , RuleDisplayInfo(("¬L", "!L"), (List("¬P", "&Gamma;"),List("&Delta;")), List((List("&Gamma;"),List("P"))))
       , {case () => SequentCalculus.notL}),
     new PositionTacticInfo("notR"
-      , RuleDisplayInfo(("¬R", "!R"), (List("&Gamma;"),List("¬P","&Delta;")), List((List("&Gamma;","P"),List("&Delta;"))))
+      , RuleDisplayInfo(("¬R", "!R"), (List("&Gamma;"),List("¬P")), List((List("&Gamma;","P"),List("&Delta;"))))
       , {case () => SequentCalculus.notR}),
     new PositionTacticInfo("andR"
-      , RuleDisplayInfo(("∧R", "^R"), (List("&Gamma;"),List("P∧Q","&Delta;")),
-        List((List("&Gamma;"),List("P", "&Delta;")),
-          (List("&Gamma;"), List("Q", "&Delta;"))))
+      , RuleDisplayInfo(("∧R", "^R"), (List("&Gamma;"),List("P∧Q")),
+        List((List("&Gamma;"),List("P")),
+          (List("&Gamma;"), List("Q"))))
       , {case () => SequentCalculus.andR}),
     new PositionTacticInfo("andL"
       , RuleDisplayInfo(("∧L", "^L"), (List("P∧Q", "&Gamma;"),List("&Delta;")), List((List("&Gamma;","P","Q"),List("&Delta;"))))
@@ -151,7 +151,7 @@ object DerivationInfo {
           (List("&Gamma;", "Q"),List("&Delta;"))))
       , {case () => SequentCalculus.orL}),
     new PositionTacticInfo("implyR"
-      , RuleDisplayInfo(("⊃R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
+      , RuleDisplayInfo(("⊃R", "->R"), (List("&Gamma;"),List("P→Q")), List((List("&Gamma;","P"),List("Q"))))
       , {case () => SequentCalculus.implyR}),
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo(("⊃L", "->L"), (List("P→Q","&Gamma;"),List("C")),
@@ -165,7 +165,7 @@ object DerivationInfo {
          ))
       , {case () => SequentCalculus.equivL}),
     new PositionTacticInfo("equivR"
-      , RuleDisplayInfo(("↔R", "<->R"), (List("&Gamma;"),List("P↔Q","&Delta;")),
+      , RuleDisplayInfo(("↔R", "<->R"), (List("&Gamma;"),List("P↔Q")),
         List((List("&Gamma;","P","Q"),List("&Delta;")),
           (List("&Gamma;","¬P","¬Q"),List("&Delta;"))))
       , {case () => SequentCalculus.equivR}),
@@ -175,16 +175,16 @@ object DerivationInfo {
       , List(TermArg("θ"))
       , {case () => (t:Term) => SequentCalculus.allL(t)}),
     new PositionTacticInfo("allR"
-      , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
-        List((List("&Gamma;"),List("P(x)","&Delta;"))))
+      , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)")),
+        List((List("&Gamma;"),List("P(x)"))))
       , {case () => SequentCalculus.allR}),
     new PositionTacticInfo("existsL"
       , RuleDisplayInfo(("∃L", "existsL"), (List("&Gamma;","∃x P(x)"),List("&Delta;")),
         List((List("&Gamma;","P(x)"),List("&Delta;"))))
       , {case () => SequentCalculus.existsL}),
     new InputPositionTacticInfo("existsR"
-      , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
-        List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
+      , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)")),
+        List((List("&Gamma;"),List("P(θ)"))))
       , List(TermArg("θ"))
       , {case () => (t:Term) => SequentCalculus.existsR(t)}),
 
@@ -196,7 +196,7 @@ object DerivationInfo {
         , List((List("&Gamma;"),List("&Delta;")))),
       {case () => SequentCalculus.hideL}),
     new PositionTacticInfo("hideR"
-      , RuleDisplayInfo("WR", (List("&Gamma;"),List("P", "&Delta;"))
+      , RuleDisplayInfo("WR", (List("&Gamma;"),List("P"))
         , List((List("&Gamma;"),List("&Delta;")))),
       {case () => SequentCalculus.hideR}),
     new PositionTacticInfo("coHideL", "W", {case () => SequentCalculus.cohideL}),
@@ -205,7 +205,7 @@ object DerivationInfo {
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
       , {case () => TactixLibrary.closeF}),
     new PositionTacticInfo("closeTrue"
-      , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
+      , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤")),List())
         ,{case () => TactixLibrary.closeT}),
     new PositionTacticInfo("skolemizeL", "skolem", {case () => ProofRuleTactics.skolemizeL}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
@@ -221,16 +221,16 @@ object DerivationInfo {
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
-    new TwoPositionTacticInfo("equivRewriting", RuleDisplayInfo("equivRewriting", (List("&Gamma;", "∀X p(X) <-> q(X)"), List("p(Z)", "&Delta;")), List((List("&Gamma;", "∀X p(X) <-> q(X)"), List("q(Z)", "&Delta;")))), {case () => PropositionalTactics.equivRewriting}),
+    new TwoPositionTacticInfo("equivRewriting", RuleDisplayInfo("equivRewriting", (List("&Gamma;", "∀X p(X) <-> q(X)"), List("p(Z)")), List((List("&Gamma;", "∀X p(X) <-> q(X)"), List("q(Z)")))), {case () => PropositionalTactics.equivRewriting}),
     //    new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
 //    new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
     new TacticInfo("closeId",
-      RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
+      RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P")), Nil),
       {case () => TactixLibrary.closeId}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
-        /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
-        /*premise*/    List((List("&Gamma;", "x=y", "P(y)"), List("Q(y)", "&Delta;")))),
+        /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)")),
+        /*premise*/    List((List("&Gamma;", "x=y", "P(y)"), List("Q(y)")))),
       {case () => (pos: AntePosition) => TactixLibrary.eqL2R(pos)}),
 //      {case () => ProofRuleTactics.trivialCloser}), //@todo This is a 4.1b3 merge conflict. I'm not sure what the correct behavior is.
 
@@ -239,7 +239,7 @@ object DerivationInfo {
       , RuleDisplayInfo(("\u2702","cut")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
-          (List("&Gamma;"),List("&Delta;","P")),
+          (List("&Gamma;"),List("P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
         ,List(FormulaArg("P")), {case () => (fml:Formula) => SequentCalculus.cut(fml)}),
     // Proof rule input position tactics
@@ -267,8 +267,8 @@ object DerivationInfo {
         }}),
 
     new InputPositionTacticInfo("boundRename"
-      , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
-        List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
+      , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)")),
+        List((List("&Gamma;"),List("∀y P(y)"))))
       , List(TermArg("x"),TermArg("y"))
       , {case () => (x:Term) => (y:Term) => TactixLibrary.boundRename(x.asInstanceOf[Variable],y.asInstanceOf[Variable])}),
 
