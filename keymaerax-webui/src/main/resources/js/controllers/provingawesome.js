@@ -329,6 +329,7 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     $scope.cancel = function() { $uibModalInstance.dismiss('cancel'); };
 
     // don't trust local cache, fetch new from server
+    //@todo duplicate with proofs.js downloadTactic
     $scope.downloadTactic = function() {
       $http.get("/proofs/user/" + $scope.userId + "/" + proofId + "/extract").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
@@ -337,6 +338,7 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     }
 
     // don't trust local cache, fetch new from server
+    //@todo duplicate with proofs.js downloadLemma
     $scope.downloadLemma = function() {
       $http.get("/proofs/user/" + $scope.userId + "/" + proofId + "/lemma").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
