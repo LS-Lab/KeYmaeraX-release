@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ODESolverTool}
 
 import scala.collection.immutable._
@@ -81,13 +82,20 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
   val unfoldProgramNormalize = "unfoldProgramNormalize" by chase('R) & normalize(andR('R), Idioms.ident, Idioms.ident)
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
-  val prop                    : BelleExpr = NamedTactic("prop", {
-    OnAll(?(
+  def propStep : BelleExpr = NamedTactic("propStep", {
+    OnAll(
       close
-        | (alphaRule
-        | (betaRule
-        | (((implyL('_)) | ((((orR1('_)) & prop & done) | ((orR2('_)) & prop & done)))) |
-        ))) ))*
+        | alphaRule
+        | betaRule
+        | implyL('L)
+    )*
+  })
+  def prop : BelleExpr = NamedTactic("prop", {
+    OnAll(
+      (SaturateTactic(propStep) & done)
+        | ( SaturateTactic(orR1('R) | propStep) & done )
+        | ( SaturateTactic(orR2('R) | propStep) & done )
+    )*
   })
 
   /** master: master tactic that tries hard to prove whatever it could

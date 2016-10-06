@@ -283,6 +283,7 @@ object DerivationInfo {
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
     new PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     new PositionTacticInfo("unfoldProgramNormalize", "unfoldProgramNormalize", {case () => TactixLibrary.unfoldProgramNormalize}),
+    new PositionTacticInfo("propStep", "propStep", {case () => TactixLibrary.propStep}),
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase})
 
