@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.NamedTactic
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -31,6 +32,10 @@ class KeYmaeraI extends TacticTestBase {
     proveBy(f, t) shouldBe 'proved
   }
 
+  it should "print prop" in {
+    println(BellePrettyPrinter(TactixLibrary.prop))
+  }
+
   it should "prove true" in {
     val f = "true".asFormula
     val t = BelleParser("close")
@@ -54,4 +59,41 @@ class KeYmaeraI extends TacticTestBase {
     val t = BelleParser(input)
     BellePrettyPrinter(t) shouldBe input
   }
+
+  it should "prove p() -> p() by prop" in {
+    val f = "p() -> p()".asFormula
+    val t = BelleParser("prop")
+    proveBy(f,t) shouldBe 'proved
+  }
+
+  it should "prove true by prop" in {
+    val f = "true".asFormula
+    val t = BelleParser("prop")
+    proveBy(f,t) shouldBe 'proved
+  }
+
+  it should "prove false by custom tactic" in {
+    val f = "false -> p()".asFormula
+    val t = TactixLibrary.implyR('R) & (TactixLibrary.closeId | TactixLibrary.closeT('R) | TactixLibrary.closeF('L))
+    proveBy(f,t) shouldBe 'proved
+  }
+
+  it should "prove false by prop" in {
+    val f = "false -> p()".asFormula
+    val t = BelleParser("prop")
+    proveBy(f,t) shouldBe 'proved
+  }
+
+  it should "prove p() -> p() | q() by prop" in {
+    val f = "p() -> p() | q()".asFormula
+    val t = BelleParser("prop")
+    proveBy(f,t) shouldBe 'proved
+  }
+
+  it should "prove p() -> q() | p() by prop" in {
+    val f = "p() -> q() | p()".asFormula
+    val t = BelleParser("prop")
+    proveBy(f,t) shouldBe 'proved
+  }
+
 }
