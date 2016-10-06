@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.{File, FileWriter}
+
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
@@ -38,6 +40,15 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
+    val cache = new File(System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "cache")
+    val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
+    if (!versionFile.exists()) {
+      if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+    }
+    assert(versionFile.exists())
+    val fw = new FileWriter(versionFile)
+    fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+    fw.close()
   }
 
   "Derived Rule" should "prove allG" in withMathematica { qeTool => allGeneralize.fact.subgoals shouldBe List(

@@ -170,7 +170,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
             // proof might be finished
             if(!theAgenda.proofStatusDisplayed) {
               theAgenda.proofStatusDisplayed == true
-              $rootScope.$emit('agenda.isEmpty');
+              $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
               console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
             }
             else {
@@ -179,14 +179,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           }
         })
         .catch(function(data) {
-          $rootScope.$emit('agenda.loadError'); // TODO somewhere: open modal dialog and ask if proof should be loaded
+          $rootScope.$broadcast('agenda.loadError'); // TODO somewhere: open modal dialog and ask if proof should be loaded
 
         })
         .finally(function() { spinnerService.hide('proofLoadingSpinner'); });
     },
 
     /** Updates the agenda and the proof tree with new items resulting from a tactic */
-    updateAgendaAndTree: function(proofUpdate) {
+    updateAgendaAndTree: function(proofId, proofUpdate) {
       if (proofUpdate.progress) {
         var theProofTree = this.proofTree;
         var theAgenda = this.agenda;
@@ -211,13 +211,13 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
           theAgenda.proofStatusDisplayed == true
           console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
-          $rootScope.$emit('agenda.isEmpty');
+          $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
         }
         if(theAgenda.proofStatusDisplayed == true) {
           console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
-        $rootScope.$emit('agenda.updateWithoutProgress');
+        $rootScope.$broadcast('agenda.updateWithoutProgress');
       }
     }
   }

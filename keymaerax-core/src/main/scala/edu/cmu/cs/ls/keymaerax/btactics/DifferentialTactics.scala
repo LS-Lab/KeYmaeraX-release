@@ -329,8 +329,7 @@ private object DifferentialTactics {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
         val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
-        if (!singular.isEmpty) println("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
-        insist(singular.isEmpty, "Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
+        if (!singular.isEmpty) throw new BelleError("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
         cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a,y),b))), h), p)))(pos.checkSucc.top) < (
           /* use */ skip,
           /* show */ cohide(pos.top) &
@@ -557,12 +556,12 @@ private object DifferentialTactics {
       ((boxAnd(pos) & andR(pos))*) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
         val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-          case Some(Box(ode: ODESystem, post)) => (ode,post)
+          case Some(Box(ode: ODESystem, pf)) => (ode, pf)
           case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + seq)
           case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + seq)
         }
-        val bounds = StaticSemantics.boundVars(ode.ode).symbols
-        val frees = StaticSemantics.freeVars(post).symbols
+        val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+        val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
         //@note diffWeaken will already include all cases where V works, without much additional effort.
         (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
           diffWeaken(pos) & QE else fail) |
@@ -619,7 +618,7 @@ private object DifferentialTactics {
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (!ToolProvider.algebraTool().isDefined) throw new BelleError("DGAuto requires a AlgebraTool, but got None")
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleError("DGAuto requires a AlgebraTool, but got None")
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n == 0 => a
@@ -629,8 +628,8 @@ private object DifferentialTactics {
       }
     }
     val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
-      case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a, b), ode)
-      case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b, a), ode)
+      case Some(Box(ODESystem(o, _), Greater(a, b))) => (minus(a, b), o)
+      case Some(Box(ODESystem(o, _), Less(a, b))) => (minus(b, a), o)
       case e => throw new BelleError("DGauto does not support argument shape: " + e)
     }
     //@todo find a ghost that's not in ode
@@ -638,17 +637,32 @@ private object DifferentialTactics {
     require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
     // [x':=f(x)](quantity)'
     val lie = DifferentialHelper.lieDerivative(ode, quantity)
+
+    lazy val constrGGroebner: Term = {
+      val groebnerBasis: List[Term] = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).groebnerBasis(
+        quantity :: Nil)
+      ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).polynomialReduce(
+        lie match {
+          case Minus(Number(n), l) if n == 0 => l //@note avoid negated ghost from (f()-x)'
+          case _ => lie
+        },
+        groebnerBasis.map(Times(Number(-2), _))
+      )._1.head
+    }
+
+    val odeBoundVars = StaticSemantics.boundVars(ode).symbols[NamedSymbol].toList.filter(_.isInstanceOf[BaseVariable]).sorted.map(_.asInstanceOf[BaseVariable])
     val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
-      //@todo "x" needs to be generalized to find the actual variable of relevance / multivariate division. Maybe foldLeft over all variables, feeding remainder into next quotientRemainder?
-      //@todo polynomialReduce(lie, groebnerBasis(List(Times(Number(-2), quantity))), StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[BaseVariable]))
-      lie, Times(Number(-2), quantity), StaticSemantics.boundVars(ode).symbols.find(_.isInstanceOf[BaseVariable]).getOrElse(Variable("x")))._1
-    if (BelleExpr.DEBUG) println("Ghost " + ghost + "'=(" + constrG + ")*" + ghost + " for " + quantity);
-    DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constrG, ghost), Number(0))),
+      lie, Times(Number(-2), quantity), odeBoundVars.headOption.getOrElse(Variable("x")))._1
+
+    def dg(g: Term): BelleExpr = DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0))),
       Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
     )(pos) < (
       (close | QE) & done,
       diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
       )
+
+    // try guessing first, groebner basis if guessing fails
+    dg(constrG) | TacticFactory.anon((seq: Sequent) => dg(constrGGroebner))
   })
 
   /** Search-and-rescue style DGauto.

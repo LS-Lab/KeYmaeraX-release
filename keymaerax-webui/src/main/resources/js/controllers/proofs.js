@@ -58,68 +58,29 @@ var pollProofStatus = function(proof, userId, http) {
   }, 1000);
 }
 
-/* Proof list for all models belonging to a user. */
-angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($scope, $http, $cookies,$location, $routeParams, $route) {
-  $scope.openPrf = function(proofId) {
-      $location.path('/proofs/' + proofId)
-  }
-  //Load the proof list and emit as a view.
-  $http.get('models/users/' + $cookies.get('userId') + "/proofs").success(function(data) {
-    $scope.allproofs = data;
-  });
-
-  $scope.deleteProof = function(proof) {
-    $http.post('user/' + $cookies.get('userId') + "/proof/" + proof.id + "/delete").success(function(data) {
-      $route.reload();
-    });
-  };
-
-  $scope.loadProof = function(proof) {
-      proof.loadStatus = 'loading'
-      $http.get('proofs/user/' + $cookies.get('userId') + "/" + proof.id).success(function(data) {
-          proof.loadStatus = data.loadStatus
-          // when server loads proof itself asynchronously
-          if (data.loadStatus == 'loading') {
-            console.log("Start polling proof status");
-            pollProofStatus(proof, $cookies.get('userId'), $http);
-          }
-          if(data.loadStatus == 'Error') {
-              showCaughtErrorMessage($uibModal, data, "Error encountered while loading proof.")
-          }
-      }).
-      error(function(data, status, headers, config) {
-        // TODO check that it is a time out
-        console.log("Start polling proof status");
-        pollProofStatus(proof, $cookies.get('userId'), $http);
-      });
-  }
-
-  $scope.$emit('routeLoaded', {theview: 'allproofs'});
-});
-
-/* Proof list for an individual model */
-angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function ($scope, $http, $cookies,$location, $routeParams, $route) {
+/* Proof list (those of an individual model if the route param modelId is defined, all proofs otherwise) */
+angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($scope, $http, $cookies, $location, $routeParams, $route, FileSaver, Blob) {
   $scope.modelId = $routeParams.modelId;
+  $scope.userId = $cookies.get('userId')
 
   $scope.openPrf = function(proofId) {
       $location.path('/proofs/' + proofId)
   }
 
-
   $scope.deleteProof = function(proof) {
-    $http.post('user/' + $cookies.get('userId') + "/proof/" + proof.id + "/delete").success(function(data) {
+    $http.post('user/' + $scope.userId + "/proof/" + proof.id + "/delete").success(function(data) {
        $route.reload();
     });
   };
 
   $scope.loadProof = function(proof) {
     proof.loadStatus = 'loading'
-    $http.get('proofs/user/' + $cookies.get('userId') + "/" + proof.id).success(function(data) {
+    $http.get('proofs/user/' + $scope.userId + "/" + proof.id).success(function(data) {
       proof.loadStatus = data.loadStatus
       // when server loads proof itself asynchronously
       if (data.loadStatus == 'loading') {
         console.log("Start polling proof status");
-        pollProofStatus(proof, $cookies.get('userId'), $http);
+        pollProofStatus(proof, $scope.userId, $http);
       } else if(data.loadStatus == 'Error') {
           showMessage($uibModal, "Error encountered while attempting to load proof")
       }
@@ -129,12 +90,37 @@ angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function (
       console.log("Start polling proof status");
       //@TODO does this mean that there isn't necessarily an error here? Confused.
 //        showErrorMessage($uibModal, "Encountered error shile trying to poll proof status.")
-      pollProofStatus(proof, $cookies.get('userId'), $http);
+      pollProofStatus(proof, $scope.userId, $http);
     });
   }
+
+  //@todo duplicate with provingawesome.js downloadTactic
+  $scope.downloadTactic = function(proof) {
+    $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/extract").then(function(response) {
+      var data = new Blob([response.data.tacticText], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, proof.name + '.kyt');
+    });
+  }
+
+  //@todo duplicate with provingawesome.js downloadLemma
+  $scope.downloadLemma = function(proof) {
+    $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/lemma").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, proof.name + '.kyp');
+    });
+  }
+
   //Load the proof list and emit as a view.
-  $http.get('models/users/' + $cookies.get('userId') + "/model/" + $routeParams.modelId + "/proofs").success(function(data) {
-    $scope.proofs = data;
-  });
-  $scope.$emit('routeLoaded', {theview: 'proofs'});
+  if ($scope.modelId !== undefined) {
+    $http.get('models/users/' + $scope.userId + "/model/" + $scope.modelId + "/proofs").success(function(data) {
+      $scope.proofs = data;
+    });
+    $scope.$emit('routeLoaded', {theview: 'proofs'});
+  } else {
+    $http.get('models/users/' + $scope.userId + "/proofs").success(function(data) {
+      $scope.proofs = data;
+    });
+    $scope.$emit('routeLoaded', {theview: 'allproofs'});
+  }
+
 });

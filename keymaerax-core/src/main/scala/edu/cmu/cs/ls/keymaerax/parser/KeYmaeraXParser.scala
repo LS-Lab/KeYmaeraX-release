@@ -120,7 +120,7 @@ object KeYmaeraXParser extends Parser {
     catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}
   }
 
-  val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
+  lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]

@@ -124,10 +124,11 @@ trait AlgebraTool extends ToolInterface {
 
   /**
     * Computes the multi-variate polynomial reduction of `polynomial` divided with respect to the
-    * set of polynomials `GB`, which is guaranteed to be unique iff `GB` is a Gröbner basis.
+    * set of polynomials `GB`, which is guaranteed to be unique iff `GB` is a Gröbner basis. Returns the list of
+    * cofactors and the remainder.
     * @see [[groebnerBasis()]]
     */
-  def polynomialReduce(polynomial: Term, GB: List[Term]): Term
+  def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term)
 }
 
 /**
