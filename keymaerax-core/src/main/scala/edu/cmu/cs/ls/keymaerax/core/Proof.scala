@@ -1054,7 +1054,7 @@ case class EquivRight(pos: SuccPos) extends RightRule {
 /**
   * <->L Equiv left.
   * {{{
-  * p&q, G |- D    !p&!q, G |- D
+  * (p->q)&(q->p), G |- D
   * ----------------------------- (<-> Equiv left)
   *   p<->q, G |- D
   * }}}
@@ -1066,8 +1066,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p,q) = s(pos)
     //@note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
-    immutable.List(s.updated(pos, And(p,q)),
-                   s.updated(pos, And(Not(p),Not(q))))
+    immutable.List(s.updated(pos, And(Imply(p,q),Imply(q,p))))
   }
 }
 
