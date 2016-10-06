@@ -88,11 +88,11 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
         | alphaRule
         | betaRule
         | implyL('L)
-    )*
+    )
   })
   def prop : BelleExpr = NamedTactic("prop", {
     OnAll(
-      (SaturateTactic(propStep) & done)
+      (SaturateTactic(propStep) & DebuggingTactics.debug("here", true) & done)
         | ( SaturateTactic(orR1('R) | propStep) & done )
         | ( SaturateTactic(orR2('R) | propStep) & done )
     )*
@@ -248,22 +248,19 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
   lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  lazy val alphaRule: BelleExpr = (andL('_) ) |
-        ((implyR('_) ) |
-          (
-            (notR('_) )
-            )
-          )
+  lazy val alphaRule: BelleExpr = andL('_) | implyR('_) | notR('_)
+
   /** Beta rules are propositional rules that split */
-  lazy val betaRule: BelleExpr = (andR('_) ) |
-    ((orL('_) ) |
-      (  //(implyL('_) ) |
-        ((notL('_) ) |
-        ((equivL('_) ) |
-          (equivR('_) )
-          )
-        )
-      ))
+  lazy val betaRule: BelleExpr = andR('_) | orL('_) | notL('_) | equivL('_) | equivR('_)
+//  (andR('_) ) |
+//    ((orL('_) ) |
+//      (  //(implyL('_) ) |
+//        ((notL('_) ) |
+//        ((equivL('_) ) |
+//          (equivR('_) )
+//          )
+//        )
+//      ))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
