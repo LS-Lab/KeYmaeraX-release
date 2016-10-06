@@ -105,7 +105,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
   //@todo duplicate with provingawesome.js downloadLemma
   $scope.downloadLemma = function(proof) {
     $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/lemma").then(function(response) {
-      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      var data = new Blob([response.data.tacticText], { type: 'text/plain;charset=utf-8' });
       FileSaver.saveAs(data, proof.name + '.kyp');
     });
   }
