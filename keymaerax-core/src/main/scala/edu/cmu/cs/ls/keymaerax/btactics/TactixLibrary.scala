@@ -85,7 +85,9 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
     OnAll(?(
       close
         | (alphaRule
-        | betaRule) ))*
+        | (betaRule
+        | (((implyL('_)) | ((((orR1('_)) & prop & done) | ((orR2('_)) & prop & done)))) |
+        ))) ))*
   })
 
   /** master: master tactic that tries hard to prove whatever it could
@@ -239,24 +241,21 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
 
   /** Alpha rules are propositional rules that do not split */
   lazy val alphaRule: BelleExpr = (andL('_) ) |
-//    ((orR1('_) ) |
-//      ((orR2('_)) |
         ((implyR('_) ) |
-          ((notL('_) ) |
+          (
             (notR('_) )
             )
           )
-//        )
-//      )
   /** Beta rules are propositional rules that split */
   lazy val betaRule: BelleExpr = (andR('_) ) |
     ((orL('_) ) |
-      ((implyL('_) ) |
+      (  //(implyL('_) ) |
+        ((notL('_) ) |
         ((equivL('_) ) |
           (equivR('_) )
           )
         )
-      )
+      ))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
