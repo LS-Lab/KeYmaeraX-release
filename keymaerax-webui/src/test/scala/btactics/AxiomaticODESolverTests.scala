@@ -28,7 +28,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(0+1*t_-0)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)".asFormula
   }
 
   it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
@@ -37,7 +37,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>=1&v>=2".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(0+1*t_-0)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)".asFormula
   }
 
   it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
@@ -46,7 +46,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
@@ -55,7 +55,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=0&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   it should "solve double integrator" in  withMathematica { qeTool =>
@@ -64,7 +64,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f,t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x>=0)".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
   //@todo support non-arithmetic post-condition.
@@ -83,7 +83,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=3&j=4".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->((j/2)/3*(0+1*t_-0)^3+(a/2)*(0+1*t_-0)^2+v*(0+1*t_-0)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(j/2/3*t_^3+(a/2)*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
@@ -92,7 +92,62 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_->true)&(v*(kyxtime+1*t_-kyxtime)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_->true)&(v*(kyxtime+t_-kyxtime)+x)^3>=1)".asFormula
+  }
+
+  it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x>=1&v>=2 -> <{x'=0*x+v}>x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=1&v>=2".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(v*(kyxtime+t_-kyxtime)+x)^3>=1)".asFormula
+  }
+
+  it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=0 -> <{x'=0*x+v,v'=0*v+a}>x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=0".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(0*(kyxtime+t_-kyxtime)+(a/2*(kyxtime+t_-kyxtime)^2+v*(kyxtime+t_-kyxtime))+x)^3>=1)".asFormula
+  }
+
+  it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=0&t=0 -> <{x'=0*x+v,v'=0*v+a,t'=0*t+1}>x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=0&t=0".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(0*(kyxtime+t_-kyxtime)+(a/2*(kyxtime+t_-kyxtime)^2+v*(kyxtime+t_-kyxtime))+x)^3>=1)".asFormula
+  }
+
+  it should "solve double integrator" in  withMathematica { qeTool =>
+    val f = "x=1&v=2&a=3&t=0 -> <{x'=0*x+v,v'=0*v+a, t'=0*t+1}>x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&0*(kyxtime+t_-kyxtime)+(a/2*(kyxtime+t_-kyxtime)^2+v*(kyxtime+t_-kyxtime))+x>=0)".asFormula
+  }
+
+  //@todo support non-arithmetic post-condition.
+  it should "not fail if the post-condition is non-arithmetic." taggedAs(TodoTest) ignore withMathematica { qeTool =>
+    val f = "x=1&v=2&a=3&t=0 -> [{x'=0*x+v,v'=0*v+a, t'=0*t+1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    println(proveBy(f,t))
+    //shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
+  }
+
+  it should "work on the triple integrator x'''=j" in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=3&j=4 -> <{x'=0*x+v,v'=0*v+a,a'=0*a+j}>x^3>=1".asFormula
+    val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
+    //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=3&j=4".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(0*(kyxtime+t_-kyxtime)+(0/2*(kyxtime+t_-kyxtime)^2+(j/2/3*(kyxtime+t_-kyxtime)^3+a/2*(kyxtime+t_-kyxtime)^2)+v*(kyxtime+t_-kyxtime))+x)^3>=1)".asFormula
   }
 
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
@@ -129,7 +184,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "CutInSolns" should "solve x'=y,t'=1" in withMathematica { qeTool =>
     val f = "x=0&y=0&t=0 -> [{x'=y, t'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(1)
-    loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*kyxtime+0}]x>=0".asFormula
+    loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+0}]x>=0".asFormula
   }
 
   //@todo fix.
@@ -140,8 +195,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "SimplifyPostCondition" should "work" in withMathematica { qeTool =>
-    val f = "[{x'=1}](x=22 -> x>0)".asFormula
-    val t = simplifyPostCondition(1)
+    val f = "[{x'=1}](true&x=22 -> x>0)".asFormula
+    val t = simplifyPostCondition(1)(1, 1::Nil)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=1&true}]22>0".asFormula
   }
 

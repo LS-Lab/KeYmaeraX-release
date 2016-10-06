@@ -94,11 +94,9 @@ object Integrator {
     * @param t Time variable
     * @return Integral term dt
     */
-  private def integrator(term: Term, t: Term, system: ODESystem) : Term = term match {
+  private def integrator(term: Term, t: Term, system: ODESystem) : Term = SimplifierV2.termSimp(term)._1 match {
     case Plus(l, r) => Plus(integrator(l, t, system), integrator(r, t, system))
     case Minus(l, r) => Minus(integrator(l, t, system), integrator(r, t, system))
-    case Times(Number(n), x) if n == 0 => Number(0)
-    case Times(x, Number(n)) if n == 0 => Number(0)
     case Times(c, x) if x.equals(t) && StaticSemantics.freeVars(c).intersect(StaticSemantics.freeVars(t)).isEmpty => Times(Divide(c, Number(2)), Power(x, Number(2)))
     case Times(c, Power(x, exp)) if x.equals(t) && StaticSemantics.freeVars(exp).intersect(StaticSemantics.freeVars(t)).isEmpty &&
         StaticSemantics.freeVars(c).intersect(StaticSemantics.freeVars(t)).isEmpty => {

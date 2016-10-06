@@ -78,7 +78,11 @@ object AxiomaticODESolver {
                case Some(Equal(timeVar, _)) => true
                case _ => false }, "Cannot simplify, don't know kyxtime value")('Llast) &
              TactixLibrary.exhaustiveEqL2R(hide=true)('Llast)) &
-    DebuggingTactics.debug("AFTER rewriting initial equalities", ODE_DEBUGGER)
+    DebuggingTactics.debug("AFTER rewriting initial equalities", ODE_DEBUGGER) &
+    //@note do not simplify 0<=s<=t_, result can be surprising
+    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
+    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::1::Nil)) &
+    DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
   })
 
   //endregion
@@ -240,17 +244,7 @@ object AxiomaticODESolver {
     val rewrite = TactixLibrary.proveBy("(q_(||) -> p_(f(x_))) -> (q_(||) & x_=f(x_) -> p_(x_))".asFormula,
       TactixLibrary.implyR(1)*2 & TactixLibrary.andL(-2) & TactixLibrary.eqL2R(-3)(1) & TactixLibrary.prop)
     TactixLibrary.useAt(rewrite, PosInExpr(1::Nil))(pos)*odeSize & TactixLibrary.useAt(DerivedAxioms.trueImplies)(pos) &
-    //@todo simplify arithmetic tactic
-    (TacticFactory.anon((p: Position, s: Sequent) => s.sub(p) match {
-      case Some(f: Formula) =>
-        val positions = FormulaTools.posOf(f, _ match {
-          case Times(Number(n), _) => n == 0
-          case Times(_, Number(n)) => n == 0
-          case Plus(Number(n), _) => n == 0
-          case Plus(_, Number(n)) => n == 0
-          case _ => false}).map(p ++ _)
-        positions.map(TactixLibrary.chase(_)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(TactixLibrary.skip)
-    })(pos)*)
+    SimplifierV2.simpTac(pos)
   })
 
   //endregion
