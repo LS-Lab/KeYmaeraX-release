@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -305,7 +306,13 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val equivTrue = derivedAxiom("<-> true", Sequent(IndexedSeq(), IndexedSeq("(p() <-> true) <-> p()".asFormula)), prop)
+  lazy val equivTrue = derivedAxiom("<-> true", Sequent(IndexedSeq(), IndexedSeq("(p() <-> true) <-> p()".asFormula)), {
+    equivR(1) <(
+      equivL(-1) & andL(-1) & implyL(-2) <(close,close)
+      ,
+      equivR(1) <(close,close)
+    )
+  })
 
   /**
     * {{{Axiom "-> self".
