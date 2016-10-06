@@ -603,7 +603,7 @@ object SimplifierV2 {
   }
 
   //Simplifies a formula including sub-terms occuring in the formula
-  def simpTac():DependentPositionTactic = new DependentPositionTactic("formula simp"){
+  val simpTac:DependentPositionTactic = new DependentPositionTactic("formula simp"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         sequent.sub(pos) match
