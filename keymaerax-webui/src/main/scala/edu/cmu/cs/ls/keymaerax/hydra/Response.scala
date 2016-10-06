@@ -223,11 +223,14 @@ class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId
 // progress "open": open goals
 // progress "closed": no open goals but not checked for isProved
 class ProofProgressResponse(proofId: String, isClosed: Boolean)
-  extends ProofStatusResponse(proofId, if(isClosed) "closed" else "open")
+  extends ProofStatusResponse(proofId, if (isClosed) "closed" else "open")
 
-class ProofVerificationResponse(proofId: String, conclusion: Sequent, isVerified: Boolean)
-  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed") {
-  override def getJson = JsObject(super.getJson.fields + ("provedConclusion" -> JsString(conclusion.toString)))
+class ProofVerificationResponse(proofId: String, provable: Provable, tactic: String) extends Response {
+  override def getJson = JsObject(
+    "proofId" -> JsString(proofId),
+    "isProved" -> JsBoolean(provable.isProved),
+    "provable" -> JsString(provable.toString),
+    "tactic" -> JsString(tactic))
 }
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {

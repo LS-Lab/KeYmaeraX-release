@@ -1,7 +1,22 @@
-<h1>Your Proofs</h1>
 <div class="panel panel-default">
     <!-- Default panel contents -->
-    <div class="panel-heading">All Proofs</div>
+    <div class="panel-heading" ng-if="modelId === undefined" ng-cloak>All Proofs</div>
+
+    <div ng-if="modelId !== undefined" ng-cloak>
+        <div class="panel-heading">Proofs of Model {{modelId}}</div>
+        <div class="panel-body">
+            <div class="row">
+                <!-- upload form -->
+                <div class="col-md-6">
+                    <form novalidate class="simple-form" ng-submit="createProof(modelId, '', '')" ng-controller="ModelProofCreateCtrl">
+                        <div class="input-group">
+                            <input type="submit" value="Create New Proof" class="form-control" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Table -->
     <table class="table table-hover table-condensed">
@@ -17,7 +32,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr ng-repeat="proof in allproofs | orderBy:'name'">
+        <tr ng-repeat="proof in proofs | orderBy:'name'">
             <td>{{ proof.id }}</td>
             <td>{{ proof.name }}</td>
             <!--<td>{{ proof.modelName }}</td>-->
@@ -28,6 +43,8 @@
             </td>
             <td>
                 <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
+                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
+                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
                 <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>

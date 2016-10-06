@@ -152,7 +152,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
             case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
             case None => new CounterExampleResponse("cex.none") :: Nil
           }
-          case None => new CounterExampleResponse("cex.nonfo") :: Nil
+          case None => new CounterExampleResponse("cex.notool") :: Nil
         }
       } catch {
         case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
@@ -1078,8 +1078,9 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
-    val isProved = provable.isProved && provable.conclusion == conclusion
-    new ProofVerificationResponse(proofId, provable.conclusion, isProved) :: Nil
+    assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
+    val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
+    new ProofVerificationResponse(proofId, provable, tactic) :: Nil
   }
 }
 

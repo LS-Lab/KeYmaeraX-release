@@ -15,14 +15,16 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             onApplyTwoPositionTactic: '&'
         },
         link: function(scope, elem, attr) {
+            //@todo duplicate with provingawesome.js#getCounterExample
             scope.getCounterExample = function() {
                 spinnerService.show('counterExampleSpinner');
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample')
                     .then(function(response) {
+                      var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
                       $uibModal.open({
                         templateUrl: 'templates/counterExample.html',
                         controller: 'CounterExampleCtrl',
-                        size: 'lg',
+                        size: dialogSize,
                         resolve: {
                           result: function() { return response.data.result; },
                           origFormula: function() { return response.data.origFormula; },
