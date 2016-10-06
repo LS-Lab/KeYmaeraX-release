@@ -92,7 +92,7 @@ object TactixLibrary extends UnifyUSCalculus with SequentCalculus {
   })
   def prop : BelleExpr = NamedTactic("prop", {
     OnAll(
-      (SaturateTactic(propStep) & DebuggingTactics.debug("here", true) & done)
+      (SaturateTactic(propStep) & done)
         | ( SaturateTactic(orR1('R) | propStep) & done )
         | ( SaturateTactic(orR2('R) | propStep) & done )
     )*
