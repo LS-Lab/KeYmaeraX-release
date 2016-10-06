@@ -36,24 +36,24 @@ object SimplifierV2 {
 
   val arithProps = List(
     //Multiplication
-    qeProof(None,"0*x","0"),
-    qeProof(None,"x*0","0"),
-    qeProof(None,"1*x","x"),
-    qeProof(None,"x*1","x"),
+    qeProof(None,"0*f()","0"),
+    qeProof(None,"f()*0","0"),
+    qeProof(None,"1*f()","f()"),
+    qeProof(None,"f()*1","f()"),
     //qeProof(Some("x!=0"),"x*(x^-1)","1"),
     //qeProof(Some("x!=0"),"(x^-1)*x","1"),
     //Addition
-    qeProof(None,"0+x","x"),
-    qeProof(None,"x+0","x"),
-    qeProof(None,"x+(-x)","0"),
+    qeProof(None,"0+f()","f()"),
+    qeProof(None,"f()+0","f()"),
+    qeProof(None,"x+(-x)","0"), //@note not f() because of failing unification/useFor
     qeProof(None,"(-x)+x","0"),
     //Minus
-    qeProof(None,"0-x","-x"),
-    qeProof(None,"x-0","x"),
+    qeProof(None,"0-f()","-f()"),
+    qeProof(None,"f()-0","f()"),
     qeProof(None,"x-x","0"),
     qeProof(None,"x+y-x","y"),
     //Division
-    qeProof(None,"x/1","x")
+    qeProof(None,"f()/1","f()")
     //qeProof(Some("x!=0"),"x/x","1"),
     //qeProof(Some("x!=0"),"0/x","0")
   )
