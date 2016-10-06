@@ -28,14 +28,14 @@
         </div>
     </div>
 </div>
-<div ng-if="result === 'cex.none'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
+<div ng-if="result === 'cex.none'" class="modal-body">
     <p>
-    No counter-example found. Try proving it to see if it is valid.<br />
+    No counter-example found. Try proving it to see if it is valid.
     Some arithmetic simplifications may help reduce the complexity.
     </p>
     <p>
-        If the formula cannot be proved (<code>&#8866; false</code>)<br />
-        and no counter-example can be found, then<br />
+        If the formula cannot be proved (<code>&#8866; false</code>)
+        and no counter-example can be found, then
         sanity check it, e.g., whether you could have divided by zero.
     </p>
 </div>
@@ -43,9 +43,21 @@
     Sorry, no counter-example found before search timeout expired.
 </div>
 <div ng-if="result === 'cex.nonfo'" class="modal-body">
-    Sorry, cannot search for counter-examples in modalities.<br />
-    Please use more proof steps to remove modalities,<br />
+    <p>
+    Sorry, cannot search for counter-examples in modalities.
+    </p>
+    <p>
+    Please use more proof steps to remove modalities,
     until only first-order formulas remain and then try again.
+    </p>
+</div>
+<div ng-if="result === 'cex.notool'" class="modal-body">
+    <p>
+        Sorry, the current backend tool does not support counter-example search.
+    </p>
+    <p>
+        Please go to <mark>Help &rarr; Backend Tool Configuration</mark> and configure Mathematica as backend tool.
+    </p>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Ok</button>

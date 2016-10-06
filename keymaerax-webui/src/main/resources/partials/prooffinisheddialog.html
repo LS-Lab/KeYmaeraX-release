@@ -1,21 +1,24 @@
 <div class="modal-header">
-    <h3 class="modal-title"><i class="fa fa-graduation-cap"></i> Congratulations: Proof Found</h3>
+    <h3 class="modal-title">Proof Result</h3>
 </div>
 <div class="modal-body">
-    <p>
-        All goals in your proof agenda have been closed.
+    <p ng-if="proof.isProved" ng-cloak>
+        <i class="fa fa-check"></i> All goals in your proof agenda have been closed.
+    </p>
+    <p ng-if="!proof.isProved" ng-cloak>
+        <i class="fa fa-bolt"></i> Your proof still has open goals.
     </p>
 
     <!-- TODO Display proof statistics -->
 
-    <h4>Proved Conclusion</h4>
+    <h4>Provable</h4>
     <div>
-        <pre style="overflow:scroll;height:50px;"><code>{{provedConclusion}}</code></pre>
+        <pre style="overflow:scroll;height:200px;"><code>{{proof.provable}}</code></pre>
     </div>
 
     <h4>Tactic to Reproduce the Proof</h4>
     <div>
-        <pre style="overflow:scroll;height:200px;"><code>{{proofData.tactic.lastExecutedTacticText}}</code></pre>
+        <pre style="overflow:scroll;height:200px;"><code>{{proof.tactic}}</code></pre>
     </div>
 
 </div>
