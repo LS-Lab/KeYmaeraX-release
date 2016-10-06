@@ -96,4 +96,27 @@ class KeYmaeraI extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   }
 
+  it should "prove (p() <-> true) <-> p() by custom tactic" in {
+    val f = "(p() <-> true) <-> p()".asFormula
+    val t = BelleParser(
+      """
+        |equivR(1) & <(
+        |   equivL(-1) & andL(-1) & implyL(-2) &<(close, close)
+        |   ,
+        |   equivR(1) <(close, close)
+        |)
+      """.stripMargin)
+
+    val result = proveBy(f,t)
+    result shouldBe 'proved
+  }
+
+  it should "prove (p() <-> true) <-> p() by prop" in {
+    val f = "(p() <-> true) <-> p()".asFormula
+    val t = BelleParser("prop")
+
+    val result = proveBy(f,t)
+    result shouldBe 'proved
+  }
+
 }
