@@ -51,6 +51,7 @@ object SimplifierV2 {
     qeProof(None,"0-x","-x"),
     qeProof(None,"x-0","x"),
     qeProof(None,"x-x","0"),
+    qeProof(None,"x+y-x","y"),
     //Division
     qeProof(None,"x/1","x")
     //qeProof(Some("x!=0"),"x/x","1"),
