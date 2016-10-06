@@ -67,12 +67,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
-  //@todo support non-arithmetic post-condition.
-  it should "not fail if the post-condition is non-arithmetic." taggedAs(TodoTest) ignore withMathematica { qeTool =>
+  it should "work with a non-arithmetic post-condition" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    println(proveBy(f,t))
-    //shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->[{j'=k,k'=l, z'=1}]a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
   it should "work on the triple integrator x'''=j" in withMathematica { qeTool =>
@@ -131,12 +132,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
-  //@todo support non-arithmetic post-condition.
-  it should "not fail if the post-condition is non-arithmetic." taggedAs(TodoTest) ignore withMathematica { qeTool =>
-    val f = "x=1&v=2&a=3&t=0 -> [{x'=0*x+v,v'=0*v+a, t'=0*t+1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
+  it should "work with a non-arithmetic post-condition" in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=3&t=0 -> <{x'=0*x+v,v'=0*v+a, t'=0*t+1}>[{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
-    println(proveBy(f,t))
-    //shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*(t+1*t_)^2+2*(t+1*t_)+1>=0)".asFormula
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&[{j'=k,k'=l, z'=1}]a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
   it should "work on the triple integrator x'''=j" in withMathematica { qeTool =>
