@@ -894,9 +894,9 @@ case class Cut(c: Formula) extends Rule {
 /**
   * !R Not right.
   * {{{
-  *   G, p |- D
-  * ------------ (!R Not right)
-  *   G |- !p, D
+  *   G, p |- false
+  * ---------------- (!R Not right)
+  *   G |- !p
   * }}}
   */
 case class NotRight(pos: SuccPos) extends RightRule {
@@ -904,15 +904,15 @@ case class NotRight(pos: SuccPos) extends RightRule {
   /** !R Not right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Not(p) = s(pos)
-    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq())))
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq(False))))
   }
 }
 
 /**
   * !L Not left.
   * {{{
-  *   G |- D, p
-  * ------------ (!L Not left)
+  *  !p, G |- p   false, G |- D
+  * --------------------------- (!L Not left)
   *  !p, G |- D
   * }}}
   */
@@ -921,7 +921,8 @@ case class NotLeft(pos: AntePos) extends LeftRule {
   /** !L Not left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Not(p) = s(pos)
-    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))))
+    immutable.List(s.updated(SuccPos(0), p),
+      s.updated(pos, False))
   }
 }
 
