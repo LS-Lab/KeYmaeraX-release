@@ -110,7 +110,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(0+(a/2*t_^2+v*t_)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
@@ -119,7 +119,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f, t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=0&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(0+(a/2*t_^2+v*t_)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   it should "solve double integrator" in  withMathematica { qeTool =>
@@ -128,7 +128,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(f,t)
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&0+(a/2*t_^2+v*t_)+x>=0)".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
   //@todo support non-arithmetic post-condition.
@@ -147,7 +147,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=3&j=4".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(0+(0/2*t_^2+(j/2/3*t_^3+a/2*t_^2)+v*t_)+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(j/2/3*t_^3+a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
