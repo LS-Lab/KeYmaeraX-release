@@ -212,8 +212,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
       case e: ProverException =>
         if (DEBUGALOT) {println("      try converse since " + e.getMessage)}
         val u2 = unify(s2, t2)
-        compose(unify(s1, Subst(u2)(s1)), u2)
-      //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now.
+        compose(unify(t1, Subst(u2)(s1)), u2)
+      //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now
     }
   }
   protected def unifies(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
@@ -224,7 +224,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
       case e: ProverException =>
         if (DEBUGALOT) {println("      try converse since " + e.getMessage)}
         val u2 = unify(s2, t2)
-        compose(unify(s1, Subst(u2)(s1)), u2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
     }
   }
   protected def unifies(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
@@ -235,7 +235,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
       case e: ProverException =>
         if (DEBUGALOT) {println("      try converse since " + e.getMessage)}
         val u2 = unify(s2, t2)
-        compose(unify(s1, Subst(u2)(s1)), u2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
     }
   }
   protected def unifies(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
@@ -246,7 +246,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
       case e: ProverException =>
         if (DEBUGALOT) {println("      try converse since " + e.getMessage)}
         val u2 = unify(s2, t2)
-        compose(unify(s1, Subst(u2)(s1)), u2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
     }
   }
   protected def unifiesODE(s1:DifferentialProgram,s2:DifferentialProgram, t1:DifferentialProgram,t2:DifferentialProgram): List[SubstRepl] = {
@@ -257,7 +257,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
       case e: ProverException =>
         if (DEBUGALOT) {println("      try converse since " + e.getMessage)}
         val u2 = unifyODE(s2, t2)
-        compose(unifyODE(s1, Subst(u2)(s1).asInstanceOf[DifferentialProgram]), u2)
+        compose(unifyODE(t1, Subst(u2)(s1).asInstanceOf[DifferentialProgram]), u2)
     }
   }
 
