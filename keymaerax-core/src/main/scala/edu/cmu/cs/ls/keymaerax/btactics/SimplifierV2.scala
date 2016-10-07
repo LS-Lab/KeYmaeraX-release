@@ -36,36 +36,93 @@ object SimplifierV2 {
 
   val arithProps = List(
     //Multiplication
-    qeProof(None,"0*x","0"),
-    qeProof(None,"x*0","0"),
-    qeProof(None,"1*x","x"),
-    qeProof(None,"x*1","x"),
-    //qeProof(Some("x!=0"),"x*(x^-1)","1"),
-    //qeProof(Some("x!=0"),"(x^-1)*x","1"),
+    qeProof(None,"0*F_()","0"),
+    qeProof(None,"F_()*0","0"),
+    qeProof(None,"1*F_()","F_()"),
+    qeProof(None,"F_()*1","F_()"),
+    //qeProof(Some("F_()!=0"),"F_()*(F_()^-1)","1"),
+    //qeProof(Some("F_()!=0"),"(F_()^-1)*F_()","1"),
     //Addition
-    qeProof(None,"0+x","x"),
-    qeProof(None,"x+0","x"),
-    qeProof(None,"x+(-x)","0"),
-    qeProof(None,"(-x)+x","0"),
+    qeProof(None,"0+F_()","F_()"),
+    qeProof(None,"F_()+0","F_()"),
+    qeProof(None,"F_()+(-F_())","0"),
+    qeProof(None,"(-F_())+F_()","0"),
     //Minus
-    qeProof(None,"0-x","-x"),
-    qeProof(None,"x-0","x"),
-    qeProof(None,"x-x","0"),
+    qeProof(None,"0-F_()","-F_()"),
+    qeProof(None,"F_()-0","F_()"),
+    qeProof(None,"F_()-F_()","0"),
     //Division
-    qeProof(None,"x/1","x")
-    //qeProof(Some("x!=0"),"x/x","1"),
-    //qeProof(Some("x!=0"),"0/x","0")
+    qeProof(None,"F_()/1","F_()"),
+    //qeProof(Some("F_()!=0"),"F_()/F_()","1"),
+    //qeProof(Some("F_()!=0"),"0/F_()","0"),
+    //Negation
+    qeProof(None,"-0","0"),
+    qeProof(None,"-(-F_())","F_()")
   )
+
+  def mksubst(s:Subst) :Subst = {
+    //Force the substitution to not have variable renaming
+    if(!s.renaming.isEmpty) {
+      throw new ProverException("Substitution contains variable renaming: " + s)
+    }
+    return s
+  }
 
   def qeHeuristics(eq:Provable): Option[Provable] = {
     //todo: filter the list, like what happens in chase
     for ((tt, pr) <- arithProps)
       try {
-        return Some(useFor(pr, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))((eq)))
+        return Some(useFor(pr, PosInExpr(0 :: Nil),s=>mksubst(s))(SuccPosition(1, 1 :: Nil))(eq))
       } catch {
         case _: ProverException =>
       }
     None
+  }
+
+  //Strips out constants and replaces them with 0 (+ unit)
+  def flattenPlus(t:Term): (Term,BigDecimal) =
+  {
+    t match{
+      case Plus(l,r) =>
+        val (lt,lc) = flattenPlus(l)
+        val (rt,rc) = flattenPlus(r)
+        (Plus(lt,rt),(lc+rc))
+      case n:Number =>
+        (Number(0),n.value)
+      case _ => (t,0)
+    }
+  }
+
+  //Strips out constants and replaces them with 1 (* unit)
+  def flattenTimes(t:Term): (Term,BigDecimal) =
+  {
+    t match{
+      case Times(l,r) =>
+        val (lt,lc) = flattenTimes(l)
+        val (rt,rc) = flattenTimes(r)
+        (Times(lt,rt),(lc*rc))
+      case n:Number =>
+        (Number(1),n.value)
+      case _ => (t,1)
+    }
+  }
+
+  //Fold constants
+  def reassoc(t:Term): Provable =
+  {
+    val init = DerivedAxioms.equalReflex.fact(
+      USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
+    t match {
+      case Plus(_,_) =>
+        val (tt,c) = flattenPlus(t)
+        if(c==0) init
+        else proveBy(Equal(t,Plus(tt,Number(c))),QE)
+      case Times(_,_) =>
+        val (tt,c) = flattenTimes(t)
+        if(c==1) init
+        else proveBy(Equal(t,Times(tt,Number(c))),QE)
+      case _ => init
+    }
   }
 
   /**
@@ -77,21 +134,27 @@ object SimplifierV2 {
     //todo: This may need to be generalized to do allow term simplification under a context
     val init = DerivedAxioms.equalReflex.fact(
       USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
-    val recpf = t match {
+    val (rect,recpf) = t match {
       case bop: BinaryCompositeTerm =>
         val l = bop.left
         val r = bop.right
         val (lt,lpr) = termSimp(l)
         val (rt,rpr) = termSimp(r)
         val nt = bop.reapply(lt,rt)
-        proveBy(Sequent(IndexedSeq(), IndexedSeq(Equal(t, nt))),
+        (nt,proveBy(Equal(t, nt),
           CEat(lpr)(SuccPosition(1,1::0::Nil))&
-            CEat(rpr)(SuccPosition(1,1::1::Nil))& by(init))
-      case _ => init
+            CEat(rpr)(SuccPosition(1,1::1::Nil))& by(init)))
+      case uop: UnaryCompositeTerm =>
+        val u = uop.child
+        val (ut,upr) = termSimp(u)
+        val nt = uop.reapply(ut)
+        (nt,proveBy(Equal(t,nt),
+          CEat(upr)(SuccPosition(1,1::0::Nil)) & by (init)))
+      case _ => (t,init)
     }
+
     //Apply arithmetic propositions
     val apf = qeHeuristics(recpf) match { case None => recpf case Some(pr) => pr}
-
     //println("Simplified: "+pf)
     //val fin = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(apf)
     val ft = extract(apf).asInstanceOf[Term]
