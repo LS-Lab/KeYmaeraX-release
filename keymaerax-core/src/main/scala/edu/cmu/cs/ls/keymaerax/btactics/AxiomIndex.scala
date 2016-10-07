@@ -122,7 +122,13 @@ object AxiomIndex {
 
     case "[] post weaken" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
 
-    case "+<= up" | "-<= up" | "<=+ down" | "<=- down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
+    case "<= both" | "< both" => (PosInExpr(1::Nil), Nil)
+    case ">= flip" => directReduction
+    case "> flip" => directReduction
+    case "& recursor" | "| recursor" | "-> expand" => binaryDefault
+    case "neg<= up" | "<=neg down" => (PosInExpr(1::Nil), PosInExpr(0::Nil)::Nil)
+    case "+<= up" | "-<= up" | "abs<= up" | "max<= up" | "min<= up" | "<=+ down" | "<=- down" | "<=abs down" | "<=max down" | "<=min down" | "pow<= up" | "<=pow down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
+    case "*<= up" | "<=* down" | "Div<= up" | "<=Div down" => (PosInExpr(1::Nil),  PosInExpr(0::0::0::Nil)::PosInExpr(0::0::1::Nil)::PosInExpr(0::1::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
 
     // default position
     case _ => (PosInExpr(0::Nil), Nil)
@@ -249,7 +255,7 @@ object AxiomIndex {
         case _: Less => "! <" :: Nil
         case _: LessEqual => "! <=" :: Nil
         case _: Greater => "! >" :: Nil
-        case _: GreaterEqual => "! >=" :: Nil
+        //case _: GreaterEqual => "! >=" :: Nil
         case _: Not => "!! double negation" :: Nil
         case _: And => "!& deMorgan" :: Nil
         case _: Or => "!| deMorgan" :: Nil
@@ -260,6 +266,8 @@ object AxiomIndex {
 
       case And(True, _) => "true&" :: Nil
       case And(_, True) => "&true" :: Nil
+      case And(True, _) => "false&" :: Nil
+      case And(_, True) => "&false" :: Nil
       case Imply(True, _) => "true->" :: Nil
       case Imply(_, True) => "->true" :: Nil
 
