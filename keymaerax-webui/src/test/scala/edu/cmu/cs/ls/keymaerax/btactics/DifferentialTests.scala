@@ -541,14 +541,64 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2 & x>=0 | y<z}]x>0".asFormula
   }
 
-  it should "work in context" ignore withMathematica { qeTool =>
+  it should "work in context" in withMathematica { qeTool =>
     val result = proveBy("[x:=3;][{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1, 1::Nil))
 
     result.subgoals should have size 2
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[x:=3;][{x'=2}]x>0".asFormula
-    result.subgoals(1).ante shouldBe empty
-    result.subgoals(1).succ should contain only "[x:=3;][{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals.head.succ should contain only "[x:=3;][{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "[x:=3;][{x'=2}]x>0".asFormula
+  }
+
+  it should "work in context 2" in withMathematica { qeTool =>
+    val result = proveBy("[z:=1;][y:=2;][x:=3;][{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1, 1::1::1::Nil))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z:=1;][y:=2;][x:=3;][{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "[z:=1;][y:=2;][x:=3;][{x'=2}]x>0".asFormula
+  }
+
+  it should "work in context 3" in withMathematica { qeTool =>
+    val result = proveBy("a>1 -> [z:=1;][y:=2;][x:=3;][{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1, 1::1::1::1::Nil))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a>1 -> [z:=1;][y:=2;][x:=3;][{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "a>1 -> [z:=1;][y:=2;][x:=3;][{x'=2}]x>0".asFormula
+  }
+
+  it should "work in context 4" in withMathematica { qeTool =>
+    val result = proveBy("a>1 -> b=2|([z:=1;][y:=2;][x:=3;][{x'=2}]x>=0 | c<3)".asFormula, DC("x>0".asFormula)(1, 1::1::0::1::1::1::Nil))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a>1 -> b=2|([z:=1;][y:=2;][x:=3;][{x'=2 & true & x>0}]x>=0 | c<3)".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "a>1 -> b=2|([z:=1;][y:=2;][x:=3;][{x'=2}]x>0 | c<3)".asFormula
+  }
+
+  it should "work in context 5" in withMathematica { qeTool =>
+    val result = proveBy("a>1 & [{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1, 1::Nil))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a>1  & [{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "a>1 & [{x'=2}]x>0".asFormula
+  }
+
+  it should "work in context 6" in withMathematica { qeTool =>
+    val result = proveBy("a>1 -> b=2 & (c<3|[z:=1;][y:=2;][x:=3;][{x'=2}]x>=0) & d=4".asFormula, DC("x>0".asFormula)(1, 1::1::0::1::1::1::1::Nil))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a>1 -> b=2 & (c<3|[z:=1;][y:=2;][x:=3;][{x'=2 & true & x>0}]x>=0) & d=4".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "a>1 -> b=2 & (c<3|[z:=1;][y:=2;][x:=3;][{x'=2}]x>0) & d=4".asFormula
   }
 
   "diffCut" should "cut in a simple formula" in withMathematica { qeTool =>
