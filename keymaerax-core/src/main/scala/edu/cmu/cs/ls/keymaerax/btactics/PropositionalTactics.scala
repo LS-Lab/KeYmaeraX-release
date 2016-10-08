@@ -69,7 +69,7 @@ private object PropositionalTactics {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
    */
-  lazy val andLi: DependentTactic = implyRi()
+  lazy val andLi: DependentTactic = andLi()
   def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = new SingleGoalDependentTactic("inverse and left") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(pos1 != pos2, "Two distinct positions required")
