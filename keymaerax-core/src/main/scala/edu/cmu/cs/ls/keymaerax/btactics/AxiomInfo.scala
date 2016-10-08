@@ -74,6 +74,10 @@ object DerivationInfo {
     * Transferred into subsequent maps etc for efficiency reasons.
     */
   private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
+    new CoreAxiomInfo("DRIStep"
+      , AxiomDisplayInfo("DRIStep", "DRIStep")
+      , "DRIStep"
+      , {case () => DifferentialTactics.DRIStep}),
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("〈·〉", "<.>"), "<span class=\"k4-axiom-key\">〈a〉P </span> ↔ ¬[a]¬P")

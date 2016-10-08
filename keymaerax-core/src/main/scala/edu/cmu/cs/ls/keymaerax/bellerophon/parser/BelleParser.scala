@@ -17,10 +17,14 @@ object BelleParser extends (String => BelleExpr) {
 
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
-  def parseWithInvGen(s: String, g:Option[Generator.Generator[Formula]] = None): BelleExpr = {
-    invariantGenerator = g;
-    parseTokenStream(BelleLexer(s))
-  }
+  def parseWithInvGen(s: String, g:Option[Generator.Generator[Formula]] = None): BelleExpr =
+    KeYmaeraXProblemParser.firstNonASCIICharacter(s) match {
+      case Some((loc, char)) => throw ParseException(s"Found a non-ASCII character when parsing tactic: ${char}", loc, "<unknown>", "<unknown>", "", "")
+      case None => {
+        invariantGenerator = g;
+        parseTokenStream(BelleLexer(s))
+      }
+    }
 
   /** Runs the parser with debug mode turned on. */
   def debug(s: String) = {
