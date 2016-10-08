@@ -317,7 +317,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       val version = getVersion
 
       def checkExpired(date: Array[MExpr]): Option[Boolean] = {
-        println("Mathematica license expires: " + date.toString)
+        println("Mathematica license expires: " + date.mkString)
         if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
           //@note month in calendar is 0-based, in Mathematica it's 1-based
           val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
