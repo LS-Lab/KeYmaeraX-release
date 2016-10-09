@@ -39,48 +39,42 @@ object AxiomaticODESolver {
   def apply() = axiomaticSolve()
 
   def axiomaticSolve() = "AxiomaticODESolver" by ((pos:Position, s:Sequent) => {
-    val odePos = subPosition(pos, 0::Nil)
     val ode = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
-    val sizeOfTimeExplicitOde = odeSize(ode) + 1
+    val osize = odeSize(ode)
 
+    //The position of the ODE after introducing all [x_0:=x;] assignments
+    val odePosAfterInitialVals = pos ++ PosInExpr(List.fill(osize+2)(1))
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
-    val timeAssignmentPos = subPosition(pos, PosInExpr(0::1::1::Nil))
-    val isAssignment: Expression => Boolean = { case Box(Assign(_,_), _) => true case _ => false }
+    val timeAssignmentPos = subPosition(odePosAfterInitialVals, PosInExpr(0::1::1::Nil))
 
-    addTimeVarIfNecessary(odePos) &
+    addTimeVar(pos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
-    odeSolverPreconds(pos) &
+    odeSolverPreconds(pos ++ PosInExpr(1::Nil)) &
     DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
-    (cutInSoln(pos) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)).* &
+    (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER))*osize &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     (s.sub(pos) match {
-      case Some(Box(_,_)) => HilbertCalculus.DW(pos)
-      case Some(Diamond(_,_)) => TactixLibrary.useAt("DWd2 diamond differential weakening")(pos)
+      case Some(Box(_,_)) => HilbertCalculus.DW(odePosAfterInitialVals)
+      case Some(Diamond(_,_)) => TactixLibrary.useAt("DWd2 diamond differential weakening")(odePosAfterInitialVals)
     }) &
     DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
-    simplifyPostCondition(odeSize(ode))(pos ++ PosInExpr(1::Nil)) &
+    simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1::Nil)) &
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
-    (inverseDiffCut(pos) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
+    (inverseDiffCut(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
-    RepeatTactic(inverseDiffGhost(pos), sizeOfTimeExplicitOde - 1) &
-    DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(pos) &
+    RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
+    DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
     (s.sub(pos) match {
-      case Some(Box(_,_)) => HilbertCalculus.useAt("DS& differential equation solution")(pos)
-      case Some(Diamond(_,_)) => HilbertCalculus.useAt("Dsol& differential equation solution")(pos)
+      case Some(Box(_,_)) => HilbertCalculus.useAt("DS& differential equation solution")(odePosAfterInitialVals)
+      case Some(Diamond(_,_)) => HilbertCalculus.useAt("Dsol& differential equation solution")(odePosAfterInitialVals)
     }) &
     DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
     (HilbertCalculus.assignb(timeAssignmentPos) | HilbertCalculus.assignd(timeAssignmentPos) | Idioms.nil) &
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
-    TactixLibrary.exhaustiveEqL2R(hide=true)('Llast)*sizeOfTimeExplicitOde &
-    // boxes can simplify a little further (could simplify even more -> simplification tactic)
-    Idioms.?(DebuggingTactics.assert((s: Sequent, p: Position) => s.sub(p) match {
-               case Some(Equal(timeVar, _)) => true
-               case _ => false }, "Cannot simplify, don't know kyxtime value")('Llast) &
-             TactixLibrary.exhaustiveEqL2R(hide=true)('Llast)) &
-    DebuggingTactics.debug("AFTER rewriting initial equalities", ODE_DEBUGGER) &
-    //@note do not simplify 0<=s<=t_, result can be surprising
-    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
+    HilbertCalculus.assignb(pos)*(osize+2) & // all initial vals + time_0=time + time=0
+    DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
+    //@note do not simplify 0<=s<=t_ -> evolution domain (easier to recognize if we don't change evolution domain)
     SimplifierV2.simpTac(pos ++ PosInExpr(0::1::1::Nil)) &
     DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
   })
@@ -100,46 +94,34 @@ object AxiomaticODESolver {
       DebuggingTactics.error("Expected ODE to be linear and in correct order.")
     else
       StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
-        foldLeft[BelleExpr](Idioms.nil)((a, b) => a & (TactixLibrary.discreteGhost(b)(pos) & DLBySubst.assignEquality(pos)))
+        foldLeft[BelleExpr](Idioms.nil)((a, b) => a & TactixLibrary.discreteGhost(b)(pos))
   })
 
   //endregion
 
   //region Setup time variable
 
-  /** Adds a time variable to the ODE if there isn't one already; otherwise, does nothing.
-    *
-    * @see [[addTimeVar]] */
-  val addTimeVarIfNecessary = TacticFactory.anon ((pos: Position, s:Sequent) => s.apply(pos) match {
-      case x:DifferentialProgram => addTimeVar(pos)
-      case x:ODESystem => addTimeVar(pos)
-      case _ => throw AxiomaticODESolverExn(s"Expected DifferentialProgram or ODESystem but found ${s.apply(pos).getClass}")
-  })
-
-  /** Rewrites [{c}]p to [{c, t'=1}]p whenever the system c does not already contain a clock.
+  /** Rewrites [{c}]p to [{c, t'=1}]p.
     * The positional argument should point to the location of c, NOT the location of the box.
     * This tactic should work at any top-level position and also in any context.
     *
     * @note If we want an initial value for time (kyxtime:=0) then this is the place to add that functionality.
     */
   val addTimeVar = TacticFactory.anon ((pos: Position, s:Sequent) => {
-    s.sub(pos) match {
+    s.sub(pos ++ PosInExpr(0::Nil)) match {
       case Some(x: DifferentialProgram) => //ok
       case Some(x: ODESystem) => //ok
       case _ => throw AxiomaticODESolverExn(s"setupTimeVar should only be called on differential programs without an existing time variable but found ${s.apply(pos)} of type ${s.apply(pos).getClass}.")
     }
 
     val t = TacticHelper.freshNamedSymbol(TIMEVAR, s)
-    val modalityPos = parentPosition(pos)
 
-    s.sub(modalityPos) match {
+    s.sub(pos) match {
       case Some(Box(_,_)) =>
-        HilbertCalculus.DGC(t, Number(1))(modalityPos) &
-        DLBySubst.assignbExists(Number(0))(modalityPos) &
-        DLBySubst.assignEquality(modalityPos)
+        HilbertCalculus.DGC(t, Number(1))(pos) &
+        DLBySubst.assignbExists(Number(0))(pos)
       case Some(Diamond(_,_)) =>
-        HilbertCalculus.DGCd(t, Number(1))(modalityPos) &
-        TactixLibrary.allR(modalityPos)
+        HilbertCalculus.DGCd(t, Number(1))(pos)
       case _ => throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality.")
     }
   })
@@ -148,17 +130,17 @@ object AxiomaticODESolver {
 
   //region Cut in solutions
 
-  val cutInSoln = "cutInSoln" by ((pos: Position, s: Sequent) => {
-    assert(s.apply(pos).isInstanceOf[Modal], s"Expected a modality but found ${s.apply(pos).prettyString}")
+  def cutInSoln(odeSize: Int) = "cutInSoln" by ((pos: Position, s: Sequent) => {
     val system:ODESystem = s.sub(pos) match {
-      case Some(Box(x:ODESystem, _)) => x
-      case Some(Diamond(x:ODESystem, _)) => x
-      case _ => ???
+      case Some(Box(x: ODESystem, _)) => x
+      case Some(Diamond(x: ODESystem, _)) => x
     }
 
-    //@todo constrain to only true initial conditions by passing in Some(ode).
-    //@todo I don't think that the extractInitialConditions code picks up a=0 as an initial condtion for x'=v,v'=a. Check this when changing None.
-    val initialConditions = s.ante.flatMap(extractInitialConditions(None)).toList
+    def extract(f: Formula, p: PosInExpr, n: Int): List[(Variable, Term)] =
+      if (n == 0) Nil
+      else extract(f, p.parent, n-1) :+ (f.sub(p) match { case Some(Box(Assign(v, t: Variable), _)) => t -> v })
+
+    val initialConditions: Map[Variable, Term] = extract(s(pos.top), pos.inExpr.parent, odeSize+1).toMap
 
     val nextEqn = sortAtomicOdes(atomicOdes(system))
       .filter(eqn => eqn.xp.x != TIMEVAR)
@@ -169,7 +151,7 @@ object AxiomaticODESolver {
 
     //@todo switch completely to the new integrator, so that this is a single tactic instead of a saturated tactic.
     val solnToCut =
-      Integrator(conditionsToValues(initialConditions), Minus(TIMEVAR, Variable(TIMEVAR.name, Some(0))), system).find(eq => eq.left == nextEqn.xp.x)
+      Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(0))), system).find(eq => eq.left == nextEqn.xp.x)
         .getOrElse(throw new Exception(s"Could not get integrated value for ${nextEqn.xp.x} using new integration logic."))
 
     tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
@@ -179,7 +161,9 @@ object AxiomaticODESolver {
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
     DifferentialTactics.diffCut(solnToCut)(pos) <(
       Idioms.nil,
-      DebuggingTactics.debug("Doing diffInd on ", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos) & DebuggingTactics.done
+      //@todo need to normalize (otherwise no constified initial conditions), but normalize is probably too much when there are other formulas around (normalize at pos)
+      DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
+        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos.top) & DebuggingTactics.done
       )
   })
 
@@ -262,7 +246,9 @@ object AxiomaticODESolver {
 
     idc <(
       Idioms.nil, /* Branch with no ev dom contraint */
-      DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
+      //@todo need to normalize (constify initial conditions), but normalize might be too much if other formalus are around
+      DebuggingTactics.debug("inverse normalize", ODE_DEBUGGER) & TactixLibrary.normalize &
+        DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
       )
   })
 
@@ -311,7 +297,7 @@ object AxiomaticODESolver {
           DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
           HilbertCalculus.useExpansionAt(axiomName)(pos)
           ,
-          TactixLibrary.implyR(pos) & HilbertCalculus.useAt("all eliminate")('Llast) & TactixLibrary.close & DebuggingTactics.done
+          HilbertCalculus.useAt("all eliminate")(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) & TactixLibrary.useAt(DerivedAxioms.implySelf)(pos.top) & TactixLibrary.closeT & DebuggingTactics.done
           ) &
           DebuggingTactics.assertProvableSize(1) &
           DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &

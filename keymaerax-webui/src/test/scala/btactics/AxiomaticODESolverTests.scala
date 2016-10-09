@@ -31,6 +31,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)".asFormula
   }
 
+  it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val result = proveBy("x=1&v=2 -> [{x'=v}]x^3>=1".asFormula, AxiomaticODESolver()(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x=1&v=2 -> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)".asFormula
+  }
+
   it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x>=1&v>=2 -> [{x'=v}]x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)
@@ -47,6 +54,15 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=0".asFormula
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
+  }
+
+  it should "work on the double integrator x''=a in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
+    val t = AxiomaticODESolver()(1, 1::Nil)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x=1&v=2&a=0 -> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
@@ -178,7 +194,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo exists monotone
   "SetupTimeVar" should "work when time exists" in {
     val system = "[{x'=v}]1=1".asFormula
-    val tactic = addTimeVarIfNecessary
+    val tactic = addTimeVar
     val result = proveBy(system, tactic(SuccPosition(1, 0::Nil)))
     loneSucc(result) shouldBe "[{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
