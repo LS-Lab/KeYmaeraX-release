@@ -309,13 +309,11 @@ private object DifferentialTactics {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Box(ode@ODESystem(_, _), p)) =>
-          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
-            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
           consts.foldLeft[BelleExpr](inner)((tactic, c) =>
             let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
         case Some(Diamond(ode@ODESystem(_, _), p)) =>
-          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
-            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
           consts.foldLeft[BelleExpr](inner)((tactic, c) =>
             let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
       }

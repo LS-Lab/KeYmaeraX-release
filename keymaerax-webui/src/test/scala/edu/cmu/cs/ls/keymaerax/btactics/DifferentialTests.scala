@@ -405,6 +405,24 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[x:=x+1;](true->x>=5&[{x'=2}](x>=5)')".asFormula
   }
 
+  it should "autoprove x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in {
+    val result = proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
+      DifferentialTactics.diffInd('full)(1, 1::Nil)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=5".asFormula
+    result.subgoals.head.succ should contain only "[x:=x+1;](true->x>=5&2>=0)".asFormula
+  }
+
+  it should "autoprove x>=5&y>=0 -> [{x'=y}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in {
+    val result = proveBy(Sequent(IndexedSeq("x>=5&y>=0".asFormula), IndexedSeq("[x:=x+1;][{x'=y}]x>=5".asFormula)),
+      DifferentialTactics.diffInd('full)(1, 1::Nil)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=5&y>=0".asFormula
+    result.subgoals.head.succ should contain only "[x:=x+1;](true->x>=5&y>=0)".asFormula
+  }
+
   it should "x>=5 -> [{x'=2&x>7}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>=5".asFormula), IndexedSeq("[{x'=2 & x>7}]x>=5".asFormula)),
       DifferentialTactics.diffInd('diffInd)(1))
