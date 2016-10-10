@@ -197,27 +197,30 @@ protected object FOQuantifierTactics {
    *            \forall x x^2 >= -(y+5)^2
    * }}}
    */
-  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = new DependentPositionTactic("allGeneralize") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isTopLevel, "all generalize only at top-level")
-        val quantified: Variable = x match {
-          case Some(xx) => xx
-          case None => t match {
-            case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
-            case FuncOf(fn, _) => val fresh = TacticHelper.freshNamedSymbol(fn, sequent); Variable(fresh.name, fresh.index, fresh.sort)
-            case _ => throw new IllegalStateException("Disallowed by applies")
-          }
-        }
-
-        val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos.top))(t, quantified))
-        cut(genFml) <(
-          /* use */ allL(quantified, t)('Llast) & closeIdWith('Llast),
-          /* show */ hide(pos.top) partial
-        )
+  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = "allGeneralize" by ((pos: Position, sequent: Sequent) => {
+    val quantified: Variable = x match {
+      case Some(xx) => xx
+      case None => t match {
+        case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
+        case FuncOf(fn, _) => val fresh = TacticHelper.freshNamedSymbol(fn, sequent); Variable(fresh.name, fresh.index, fresh.sort)
+        case _ => throw new IllegalStateException("Disallowed by applies")
       }
     }
-  }
+
+    val subst = (s: Option[Subst]) => s match {
+      case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+    }
+
+    sequent.sub(pos) match {
+      case Some(f: Formula) =>
+        val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified))
+        cutAt(genFml)(pos) <(
+          /* use */ skip,
+          /* show */ useAt("all instantiate", PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
+            useAt(DerivedAxioms.implySelf)(pos.top) & closeT & done
+          )
+    }
+  })
 
   /**
    * Computes the universal closure of the formula at the specified position. Uses the provided order of quantifiers.
