@@ -214,19 +214,24 @@ protected object FOQuantifierTactics {
       }
     }
 
-    val subst = (s: Option[Subst]) => s match {
-      case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+    val (genFml, axiomName, subst) = sequent.sub(pos) match {
+      case Some(f: Formula) if quantified == t =>
+        val subst = (s: Option[Subst]) => s match {
+          case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
+        }
+        (Forall(Seq(quantified), f), "all eliminate", subst)
+      case Some(f: Formula) if quantified != t =>
+        val subst = (s: Option[Subst]) => s match {
+          case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+        }
+        (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), "all instantiate", subst)
     }
 
-    sequent.sub(pos) match {
-      case Some(f: Formula) =>
-        val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified))
-        cutAt(genFml)(pos) <(
-          /* use */ skip,
-          /* show */ useAt("all instantiate", PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
-            useAt(DerivedAxioms.implySelf)(pos.top) & closeT & done
-          )
-    }
+    cutAt(genFml)(pos) <(
+      /* use */ skip,
+      /* show */ useAt(axiomName, PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
+        useAt(DerivedAxioms.implySelf)(pos.top) & closeT & done
+      )
   })
 
   /**

@@ -294,6 +294,14 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "a=2 -> [x:=3;]\\forall z \\forall x x^2 >= -z^2".asFormula
   }
 
+  it should "introduce a new universal quantifier in context before an ODE" in {
+    val result = proveBy("a=2 -> [x:=3;][{x'=5}]x>0".asFormula,
+      universalGen(Some(Variable("x")), Variable("x"))(1, 1::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a=2 -> [x:=3;]\\forall x [{x'=5}]x>0".asFormula
+  }
+
   it should "generalize terms" in {
     val result = proveBy("\\forall x x^2 >= -(y+5)^2".asFormula, universalGen(Some(Variable("z")), "y+5".asTerm)(1))
     result.subgoals should have size 1
