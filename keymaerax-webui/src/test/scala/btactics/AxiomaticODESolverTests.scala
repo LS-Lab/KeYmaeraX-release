@@ -194,22 +194,29 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo exists monotone
   "SetupTimeVar" should "work when time exists" in {
     val system = "[{x'=v}]1=1".asFormula
-    val tactic = addTimeVar
-    val result = proveBy(system, tactic(SuccPosition(1, 0::Nil)))
-    loneSucc(result) shouldBe "[{x'=v,kyxtime'=1&true}]1=1".asFormula
+    val result = proveBy(system, addTimeVar(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[kyxtime:=0;][{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
 
   "CutInSolns" should "solve x'=y,t'=1" in withMathematica { qeTool =>
-    val f = "x=0&y=0&t=0 -> [{x'=y, t'=1}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(1)
-    loneSucc(proveBy(f,t)) shouldBe "[{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+0}]x>=0".asFormula
+    val f = "x=0&y=0&t=0 -> [kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][y_0:=y;][t_0:=t;][{x'=y, t'=1}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) &  AxiomaticODESolver.cutInSoln(2)(1, 1::1::1::1::1::Nil)
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0&y=0&t=0".asFormula
+    result.subgoals.head.succ should contain only "[kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][y_0:=y;][t_0:=t;][{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+x_0}]x>=0".asFormula
   }
 
   //@todo fix.
   it should "solve single time dependent eqn" taggedAs(TodoTest) ignore withMathematica { qeTool =>
-    val f = "x=0&y=0&t=0 -> [{x'=t, t'=1}]x>=0".asFormula
-    val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(1)*)
-    loneSucc(proveBy(f,t)) shouldBe ???
+    val f = "x=0&t=0 -> [kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][t_0:=t;][{x'=t, t'=1}]x>=0".asFormula
+    val t = TactixLibrary.implyR(1) & (AxiomaticODESolver.cutInSoln(2)(1, 1::1::1::1::Nil)*)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0&t=0".asFormula
+    result.subgoals.head.succ should contain only ???
   }
 
   "SimplifyPostCondition" should "work" in withMathematica { qeTool =>

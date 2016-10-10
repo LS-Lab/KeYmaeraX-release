@@ -16,14 +16,13 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 /**
   * An Axiomatic ODE solver.
   * Current Limitations:
-  *   * Only works in top-level succedent positions. I think this is only
+  *   * Only works in succedent positions (top-level for diamonds). I think this is only
   *     a limitation imposed by the differential tactics used herein.
-  *   * Initial conditions must already exist. Stefan has a work-around
-  *     that ghosts in initial conditions already in the diffSolve tactic.
   *   * Brittle when the initial ODE already has a domain constraint.
   *
   * @see Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
   * @author Nathan Fulton
+  * @author Stefan Mitsch
   */
 object AxiomaticODESolver {
   private val ODE_DEBUGGER = false
@@ -121,7 +120,8 @@ object AxiomaticODESolver {
         HilbertCalculus.DGC(t, Number(1))(pos) &
         DLBySubst.assignbExists(Number(0))(pos)
       case Some(Diamond(_,_)) =>
-        HilbertCalculus.DGCd(t, Number(1))(pos)
+        //@todo allR prevents solving diamond ODEs in context
+        HilbertCalculus.DGCd(t, Number(1))(pos) & TactixLibrary.allR(pos) & DLBySubst.stutter(t)(pos)
       case _ => throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality.")
     }
   })
@@ -246,7 +246,7 @@ object AxiomaticODESolver {
 
     idc <(
       Idioms.nil, /* Branch with no ev dom contraint */
-      //@todo need to normalize (constify initial conditions), but normalize might be too much if other formalus are around
+      //@todo need to normalize (constify initial conditions), but normalize might be too much if other formulas are around
       DebuggingTactics.debug("inverse normalize", ODE_DEBUGGER) & TactixLibrary.normalize &
         DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
       )
@@ -310,8 +310,9 @@ object AxiomaticODESolver {
           TactixLibrary.skip
           ,
           DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
-          TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) & TactixLibrary.useAt(",d commute")(1, 1::0::Nil) & DebuggingTactics.print("Foo") &
-            TactixLibrary.byUS("DGd diamond differential ghost"/*, subst(y_DE, c, q, p)*/) & TactixLibrary.done
+          TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) &
+            TactixLibrary.useAt(",d commute")(1, pos.inExpr ++ PosInExpr(1::0::Nil)) &
+            TactixLibrary.CE(pos.inExpr) & TactixLibrary.byUS("DGd diamond differential ghost") & TactixLibrary.done
         ) &
           DebuggingTactics.assertProvableSize(1) &
           DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
