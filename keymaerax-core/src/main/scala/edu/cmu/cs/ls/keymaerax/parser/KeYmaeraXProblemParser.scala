@@ -47,7 +47,7 @@ object KeYmaeraXProblemParser {
   catch {case e: ParseException => throw e.inInput(input)} //@todo properly offset Belle parse exceptions...
 
   /** Returns the location and value of the first non-ASCII character in a string. */
-  private def firstNonASCIICharacter(s : String) : Option[(Location, Char)] = {
+  def firstNonASCIICharacter(s : String) : Option[(Location, Char)] = {
     val pattern = """([^\p{ASCII}])""".r
     val matches = pattern.findAllIn(s).matchData
 

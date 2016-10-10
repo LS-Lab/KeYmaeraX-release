@@ -74,6 +74,10 @@ object DerivationInfo {
     * Transferred into subsequent maps etc for efficiency reasons.
     */
   private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
+    new CoreAxiomInfo("DRIStep"
+      , AxiomDisplayInfo("DRIStep", "DRIStep")
+      , "DRIStep"
+      , {case () => DifferentialTactics.DRIStep}),
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("〈·〉", "<.>"), "<span class=\"k4-axiom-key\">〈a〉P </span> ↔ ¬[a]¬P")
@@ -359,10 +363,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", {case () => useAt(DerivedAxioms.loopStuck)}),
     new DerivedAxiomInfo("<'> stuck", ("<′> stuck","<'> stuck"), "odeStuck", {case () => useAt(DerivedAxioms.odeStuck)}),
     new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", {case () => useAt(DerivedAxioms.postconditionWeaken)}),
-    new DerivedAxiomInfo("+<= up", "+<=", "intervalUpPlus", {case () => useAt(DerivedAxioms.intervalUpPlus)}),
-    new DerivedAxiomInfo("-<= up", "-<=", "intervalUpMinus", {case () => useAt(DerivedAxioms.intervalUpMinus)}),
-    new DerivedAxiomInfo("<=+ down", "<=+", "intervalDownPlus", {case () => useAt(DerivedAxioms.intervalDownPlus)}),
-    new DerivedAxiomInfo("<=- down", "<=-", "intervalDownMinus", {case () => useAt(DerivedAxioms.intervalDownMinus)}),
     new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", {case () => useAt(DerivedAxioms.equivReflexiveAxiom)}),
     new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
     new DerivedAxiomInfo("-> distributes over <->", ("→↔","-><->"), "implyDistEquiv", {case () => useAt(DerivedAxioms.implyDistEquivAxiom)}),
@@ -432,12 +432,30 @@ object DerivationInfo {
     new DerivedAxiomInfo("abs", "abs", "abs", {case () => useAt(DerivedAxioms.absDef)}),
     new DerivedAxiomInfo("min", "min", "min", {case () => useAt(DerivedAxioms.minDef)}),
     new DerivedAxiomInfo("max", "max", "max", {case () => useAt(DerivedAxioms.maxDef)}),
+    new DerivedAxiomInfo("& recursor", "& recursor", "andRecursor", {case () => useAt(DerivedAxioms.andRecursor)}),
+    new DerivedAxiomInfo("| recursor", "| recursor", "orRecursor", {case () => useAt(DerivedAxioms.orRecursor)}),
+    new DerivedAxiomInfo("<= both", "<= both", "intervalLEBoth", {case () => useAt(DerivedAxioms.intervalLEBoth)}),
+    new DerivedAxiomInfo("< both", "< both", "intervalLBoth", {case () => useAt(DerivedAxioms.intervalLBoth)}),
+    new DerivedAxiomInfo("neg<= up", "neg<=", "intervalUpNeg", {case () => useAt(DerivedAxioms.intervalUpNeg)}),
+    new DerivedAxiomInfo("abs<= up", "abs<=", "intervalUpAbs", {case () => useAt(DerivedAxioms.intervalUpAbs)}),
+    new DerivedAxiomInfo("max<= up", "max<=", "intervalUpMax", {case () => useAt(DerivedAxioms.intervalUpMax)}),
+    new DerivedAxiomInfo("min<= up", "min<=", "intervalUpMin", {case () => useAt(DerivedAxioms.intervalUpMin)}),
+    new DerivedAxiomInfo("+<= up", "+<=", "intervalUpPlus", {case () => useAt(DerivedAxioms.intervalUpPlus)}),
+    new DerivedAxiomInfo("-<= up", "-<=", "intervalUpMinus", {case () => useAt(DerivedAxioms.intervalUpMinus)}),
     new DerivedAxiomInfo("*<= up", "*<=", "intervalUpTimes", {case () => useAt(DerivedAxioms.intervalUpTimes)}),
     new DerivedAxiomInfo("1Div<= up", "1/<=", "intervalUp1Divide", {case () => useAt(DerivedAxioms.intervalUp1Divide)}),
     new DerivedAxiomInfo("Div<= up", "/<=", "intervalUpDivide", {case () => useAt(DerivedAxioms.intervalUpDivide)}),
+    new DerivedAxiomInfo("pow<= up", "pow<=", "intervalUpPower", {case () => useAt(DerivedAxioms.intervalUpPower)}),
+    new DerivedAxiomInfo("<=neg down", "<=neg", "intervalDownNeg", {case () => useAt(DerivedAxioms.intervalDownNeg)}),
+    new DerivedAxiomInfo("<=abs down", "<=abs", "intervalDownAbs", {case () => useAt(DerivedAxioms.intervalDownAbs)}),
+    new DerivedAxiomInfo("<=max down", "<=max", "intervalDownMax", {case () => useAt(DerivedAxioms.intervalDownMax)}),
+    new DerivedAxiomInfo("<=min down", "<=min", "intervalDownMin", {case () => useAt(DerivedAxioms.intervalDownMin)}),
+    new DerivedAxiomInfo("<=+ down", "<=+", "intervalDownPlus", {case () => useAt(DerivedAxioms.intervalDownPlus)}),
+    new DerivedAxiomInfo("<=- down", "<=-", "intervalDownMinus", {case () => useAt(DerivedAxioms.intervalDownMinus)}),
     new DerivedAxiomInfo("<=* down", "<=*", "intervalDownTimes", {case () => useAt(DerivedAxioms.intervalDownTimes)}),
     new DerivedAxiomInfo("<=1Div down", "<=1/", "intervalDown1Divide", {case () => useAt(DerivedAxioms.intervalDown1Divide)}),
     new DerivedAxiomInfo("<=Div down", "<=/", "intervalDownDivide", {case () => useAt(DerivedAxioms.intervalDownDivide)}),
+    new DerivedAxiomInfo("<=pow down", "<=pow", "intervalDownPower", {case () => useAt(DerivedAxioms.intervalDownPower)}),
     new DerivedAxiomInfo("! !="
       , AxiomDisplayInfo(("¬≠","!!="), "<span class=\"k4-axiom-key\">(¬(f≠g)</span>↔(f=g))")
       , "notNotEqual", {case () => useAt(DerivedAxioms.notNotEqual)}),
