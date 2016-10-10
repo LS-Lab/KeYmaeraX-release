@@ -48,7 +48,7 @@ protected object FOQuantifierTactics {
           case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
             StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
             //@todo assumes any USubstAboveURen
-            useAt("all instantiate", us => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
+            useAt("all instantiate", uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
@@ -59,6 +59,7 @@ protected object FOQuantifierTactics {
 
             val assign = Box(Assign(x, t), p)
 
+            //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
             DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos) partial,
