@@ -74,7 +74,8 @@ object DerivationInfo {
   private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
 
     // first-order logic quantifiers
-    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => ???}),
+    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => assert(false, "allInst is not intended for external use, use allL instead"); ??? }),
+    new CoreAxiomInfo("exists generalize", ("∃gen","existsGen"), "existsGen", {case () => assert(false, "existsGen is not indented for external use, use existsR instead"); ??? }),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => SequentCalculus.allDist}),
     new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => SequentCalculus.allV}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => SequentCalculus.existsV}),

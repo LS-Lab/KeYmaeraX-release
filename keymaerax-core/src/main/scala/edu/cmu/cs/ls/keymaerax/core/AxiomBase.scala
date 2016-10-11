@@ -133,6 +133,10 @@ Axiom /*\\foralli */ "all instantiate".
   (\forall x_ p(x_)) -> p(f())
 End.
 
+Axiom /*\\existsi */ "exists generalize".
+  p(f()) -> \exists x_ p(x_)
+End.
+
 /* consequence of "all instantiate" @note generalized "all instantiate" */
 Axiom "all eliminate".
   (\forall x_ p(||)) -> p(||)
