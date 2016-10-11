@@ -147,6 +147,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   it should "prove DGd differential ghost" in {check(DGddifferentialghost)}
   it should "prove DGCd diamond differential ghost const" in {check(DGCddifferentialghostconst)}
+  it should "prove DGCd diamond differential ghost const exists" in {check(DGCddifferentialghostconstexists)}
   it should "prove DCd diamond differential cut" in {check(DCddifferentialcut)}
   it should "prove DWd diamond differential weakening" in {check(DWddifferentialweakening)}
   it should "prove DWd2 diamond differential weakening" in {check(DWd2differentialweakening)}
