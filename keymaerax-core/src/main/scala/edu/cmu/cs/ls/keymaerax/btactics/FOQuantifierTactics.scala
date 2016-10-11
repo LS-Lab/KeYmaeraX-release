@@ -40,16 +40,10 @@ protected object FOQuantifierTactics {
   })
 
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    new DependentPositionTactic("allL") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
-          case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
-            require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
-            def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
-            // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
-            val x = vToInst(vars)
-            val t = inst(vars)
-            val p = forall(qf)
+    //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
+    "allL" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
+      def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
+      def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
             val assign = Box(Assign(x, t), p)
 
@@ -67,6 +61,9 @@ protected object FOQuantifierTactics {
         }
       }
 
+  def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
+    //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
+    "existsR" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
   }
