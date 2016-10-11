@@ -359,6 +359,10 @@ Axiom "DIo open differential invariance >".
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
 
+Axiom "DV differential variant >=".
+  <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
+End.
+
 Axiom "c()' derive constant fn".
   c()' = 0
 End.

@@ -192,6 +192,12 @@ object DerivationInfo {
     new DerivedAxiomInfo("DIo open differential invariance <"
       , AxiomDisplayInfo("DIo", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<g(x)</span>↔[?Q]f(x)<g(x))←(f(x)<g(x)→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
       , "DIoless", {case () => ???}),
+    new CoreAxiomInfo("DV differential variant >="
+      , AxiomDisplayInfo("DVgeq", "todo DVgeq")
+      , "DVgeq", {case () => ???}),
+    new DerivedAxiomInfo("DV differential variant <="
+      , AxiomDisplayInfo("DVleq", "todo DVleq")
+      , "DVleq", {case () => ???}),
 
     new PositionTacticInfo("axiomaticSolve", "axiomaticSolve", {case () => AxiomaticODESolver.apply()}, needsTool = true),
     

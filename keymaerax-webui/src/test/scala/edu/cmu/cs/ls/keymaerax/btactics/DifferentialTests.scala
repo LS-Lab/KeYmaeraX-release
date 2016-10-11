@@ -1305,4 +1305,16 @@ class DifferentialTests extends TacticTestBase {
   it should "prove x^3>5 -> [{x'=7*x^3+x^8}]x^3>5" in withMathematica { qeTool =>
     proveBy("x^3>5 -> [{x'=7*x^3+x^8}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
+
+  "Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withMathematica { tool =>
+    proveBy(Sequent(IndexedSeq("a()>0".asFormula), IndexedSeq("<{x'=a()}>x>=b()".asFormula)), diffVar(1)) shouldBe 'proved
+  }
+
+  it should "diff var flat flight progress [function]" in withMathematica { tool =>
+    proveBy("\\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula, diffVar(1, 0::1::Nil)) shouldBe 'proved
+  }
+
+  it should "diff var flat flight progress [variable]" taggedAs(IgnoreInBuildTest) in withMathematica { tool =>
+    proveBy("\\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 0::0::1::Nil)) shouldBe 'proved
+  }
 }

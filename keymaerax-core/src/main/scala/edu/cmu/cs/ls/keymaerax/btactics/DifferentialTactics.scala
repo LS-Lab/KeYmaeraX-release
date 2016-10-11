@@ -237,6 +237,33 @@ private object DifferentialTactics {
     }
   }
 
+  /** @see [[TactixLibrary.diffVar]] */
+  val diffVar: DependentPositionTactic = new DependentPositionTactic("diffVar") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        //require(pos.isSucc, "diffVar only at ODE system in succedent")
+        val greater = sequent.sub(pos) match {
+          case Some(Diamond(ODESystem(_,True), _: GreaterEqual)) => true
+          case Some(Diamond(ODESystem(_,True), _: LessEqual)) => false
+          case _ => throw new IllegalArgumentException("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + sequent.sub(pos))
+        }
+        val t = (if (greater)
+          HilbertCalculus.namedUseAt("DVgeq", "DV differential variant >=")
+        else
+          HilbertCalculus.namedUseAt("DVleq", "DV differential variant <="))(pos) & (
+          // \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
+          derive(pos ++ PosInExpr(0::1::1::1::0::Nil)) &
+            derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
+            DE(pos ++ PosInExpr(0::1::Nil)) &
+            (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
+              abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE
+              )
+          )
+        t
+      }
+    }
+  }
+
   /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {nestDCs(formulas.map(ghostDC(_, pos, sequent)))})
