@@ -45,34 +45,75 @@ protected object FOQuantifierTactics {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
-            val assign = Box(Assign(x, t), p)
+      sequent.at(pos) match {
+        case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+          useAt("all eliminate")(pos)
+        case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
+          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          //@todo assumes any USubstAboveURen
+          useAt("all instantiate", uso => uso ++ RenUSubst(("f()".asTerm, uso.renaming(instance.get)) :: Nil))(pos)
+        case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
+          require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity in antecedent")
+          def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
+          // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
+          val x = vToInst(vars)
+          val t = inst(vars)
+          val p = forall(qf)
 
-            DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
-            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
-              assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
-              )
-          case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-            throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
-          case (_, f) =>
-            throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
-          case _ =>
-            throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
-        }
+          val assign = Box(Assign(x, t), p)
+
+          //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
+          DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
+          ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+            assignb(pos) partial,
+            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
+            )
+        case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+          throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
+        case (_, f) =>
+          throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
+        case _ =>
+          throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
       }
+    })
 
   def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
     "existsR" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
-  }
 
-  def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    if (instance==None)
-      useAt("exists eliminate")
-    else
-      existsByDuality(allInstantiate(quantified, instance))
+      sequent.at(pos) match {
+        case (ctx, f@Exists(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+          useAt("exists eliminate")(pos)
+        case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
+          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          //@todo assumes any USubstAboveURen
+          useAt("exists generalize", PosInExpr(1::Nil), (uso: Subst) => uso ++ RenUSubst(("f()".asTerm, uso.renaming(instance.get)) :: Nil))(pos)
+        case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
+          require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
+          def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
+          // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
+          val x = vToInst(vars)
+          val t = inst(vars)
+          val p = exists(qf)
+
+          val assign = Box(Assign(x, t), p)
+
+          //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
+          DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
+            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+              assignb(pos) partial,
+              cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize")
+              )
+        case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+          throw new BelleError("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
+        case (_, f) =>
+          throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
+        case _ =>
+          throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
+      }
+    })
 
 
   /** @see [[SequentCalculus.allR]] */
