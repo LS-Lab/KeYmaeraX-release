@@ -97,7 +97,8 @@ object ProofTree {
 
         assert(updated.size == 1, "Expected exactly 1 updated node")
 
-        if (updated.nonEmpty) {
+        // real update or 'unchanged' update + added nodes
+        if (updated.head != step.local.get.conclusion || added.nonEmpty) {
           val updatedNode = treeNode(updated.head, Some(openGoals(branch)), Some(step))
           val addedNodes = added.map({ sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
