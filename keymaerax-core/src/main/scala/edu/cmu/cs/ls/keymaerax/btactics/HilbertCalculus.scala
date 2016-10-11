@@ -259,12 +259,23 @@ trait HilbertCalculus extends UnifyUSCalculus {
     (us:Option[Subst])=>{
       val singular = FormulaTools.singularities(b)
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-      us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DC"))++RenUSubst(Seq(
+      us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
         (Variable("y_",None,Real), y),
         (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
       ))
     }
   )
+  private[btactics] def DGCde(y:Variable, b:Term) =
+    useAt("DGd diamond differential ghost constant exists", PosInExpr(0::Nil),
+      (us:Option[Subst])=>{
+        val singular = FormulaTools.singularities(b)
+        insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
+        us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
+          (Variable("y_",None,Real), y),
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+        ))
+      }
+    )
 
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
