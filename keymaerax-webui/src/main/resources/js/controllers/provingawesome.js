@@ -270,6 +270,13 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       $scope.onTacticScript($scope.tactic.tacticDiff);
     };
 
+    $scope.rerunTactic = function() {
+      var tactic = $scope.tactic.tacticText;
+      sequentProofData.prune($scope.userId, $scope.proofId, $scope.prooftree.root, function() {
+        $scope.onTacticScript(tactic);
+      });
+    }
+
     $scope.simulate = function() {
       $uibModal.open({
         templateUrl: 'templates/simulator.html',
