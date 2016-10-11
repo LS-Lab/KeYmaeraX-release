@@ -112,6 +112,15 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_->true)&(v*t_+x)^3>=1)".asFormula
   }
 
+  it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
+    val t = AxiomaticODESolver()(1, 1::Nil)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x=1&v=2 -> \\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_->true)&(v*t_+x)^3>=1)".asFormula
+  }
+
   it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x>=1&v>=2 -> <{x'=0*x+v}>x^3>=1".asFormula
     val t = TactixLibrary.implyR(1) & AxiomaticODESolver()(1)

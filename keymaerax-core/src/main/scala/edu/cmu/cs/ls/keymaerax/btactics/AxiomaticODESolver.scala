@@ -116,12 +116,8 @@ object AxiomaticODESolver {
     val t = TacticHelper.freshNamedSymbol(TIMEVAR, s)
 
     s.sub(pos) match {
-      case Some(Box(_,_)) =>
-        HilbertCalculus.DGC(t, Number(1))(pos) &
-        DLBySubst.assignbExists(Number(0))(pos)
-      case Some(Diamond(_,_)) =>
-        //@todo allR prevents solving diamond ODEs in context
-        HilbertCalculus.DGCd(t, Number(1))(pos) & TactixLibrary.allR(pos) & DLBySubst.stutter(t)(pos)
+      case Some(Box(_,_)) => HilbertCalculus.DGC(t, Number(1))(pos) & DLBySubst.assignbExists(Number(0))(pos)
+      case Some(Diamond(_,_)) => HilbertCalculus.DGCde(t, Number(1))(pos) & DLBySubst.assignbExists(Number(0))(pos)
       case _ => throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality.")
     }
   })
