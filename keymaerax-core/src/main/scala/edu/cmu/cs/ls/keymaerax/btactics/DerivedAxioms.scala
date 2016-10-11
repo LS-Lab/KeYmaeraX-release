@@ -1744,6 +1744,16 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+  lazy val DGCddifferentialghostconstexists = derivedAxiom("DGd diamond differential ghost constant exists",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\exists y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      useAt("DG differential ghost constant all")(1, 0::0::Nil) &
+      useAt("!! double negation", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("all dual y", PosInExpr(0::Nil))(1, 1::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
   /**
     * {{{Axiom "DWd diamond differential weakening".
     *    <{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)&p_(||))

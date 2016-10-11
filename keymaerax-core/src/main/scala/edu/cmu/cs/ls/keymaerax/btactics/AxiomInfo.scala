@@ -193,6 +193,9 @@ object DerivationInfo {
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
       , "DGC", {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
+    new CoreAxiomInfo("DG differential ghost constant all"
+      , AxiomDisplayInfo("DGa", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∀y [{x′=f(x),y′=g()&Q}]P")
+      , "DGCa", {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
@@ -315,6 +318,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => useAt(DerivedAxioms.Dskipd)}),
     new DerivedAxiomInfo("DGd diamond differential ghost", "DGd", "DGd", {case () => useAt(DerivedAxioms.DGddifferentialghost)}),
     new DerivedAxiomInfo("DGd diamond differential ghost constant", "DGCd", "DGCd", {case () => useAt(DerivedAxioms.DGCddifferentialghostconst)}),
+    new DerivedAxiomInfo("DGd diamond differential ghost constant exists", "DGCde", "DGCde", {case () => useAt(DerivedAxioms.DGCddifferentialghostconstexists)}),
     new DerivedAxiomInfo("DCd diamond differential cut", "DCd", "DCd", {case () => useAt(DerivedAxioms.DCddifferentialcut)}),
     new DerivedAxiomInfo("DWd diamond differential weakening", "DWd", "DWd", {case () => useAt(DerivedAxioms.DWddifferentialweakening)}),
     new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", {case () => useAt(DerivedAxioms.DWd2differentialweakening)}),
