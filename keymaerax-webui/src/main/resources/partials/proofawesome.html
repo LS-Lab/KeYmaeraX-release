@@ -168,12 +168,21 @@
                     <div class="col-md-12">
                         <div class="panel panel-default">
                             <div class="panel-heading">
-                                <div class="row">
-                                    <div class="col-md-2"><h3 class="panel-title">Proof Programming</h3></div>
-                                    <div class="col-md-9 k4-abbreviate"
-                                         uib-tooltip="Edit tactic below (execute with 'shift-enter' or click 'Run')"
-                                         tooltip-placement="top-left">Execute on current branch: {{tactic.tacticDiff}}</div>
-                                    <div class="col-md-1"><button class="btn btn-default pull-right" ng-click="executeTacticDiff()">Run</button></div>
+                                <div class="col-md-2"><h3 class="panel-title">Proof Programming</h3></div>
+                                <div class="col-md-1">
+                                    <button class="btn btn-default" ng-click="rerunTactic()" uib-tooltip="Re-run tactic from original conjecture">Re-run</button>
+                                </div>
+                                <div class="input-group col-md-9">
+                                    <span class="input-group-addon">Fresh steps</span>
+                                    <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
+                                           uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
+                                           tooltip-placement="top-left" ng-model="tactic.tacticDiff">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" ng-click="executeTacticDiff()"
+                                                uib-tooltip="Augment the derivation on the current tab with fresh steps"
+                                                tooltip-placement="top-left"
+                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Execute</button>
+                                    </span>
                                 </div>
                             </div>
                             <div class="panel-body">
