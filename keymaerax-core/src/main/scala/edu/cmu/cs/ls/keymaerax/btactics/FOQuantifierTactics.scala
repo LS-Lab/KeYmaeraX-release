@@ -40,42 +40,56 @@ protected object FOQuantifierTactics {
   })
 
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    new DependentPositionTactic("allL") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
-          case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
-            useAt("all eliminate")(pos)
-          case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
-            StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
-            //@todo assumes any USubstAboveURen
-            useAt("all instantiate", us => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
-          case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
-            require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
-            def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
-
-            val x = vToInst(vars)
-            val t = inst(vars)
-
-            useAt("all instantiate", us => us ++ RenUSubst((x, t) :: ("f()".asTerm, t) :: Nil))(pos)
-
-          case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-            throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
-          case (_, f) =>
-            throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
-          case _ =>
-            throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
-        }
-      }
-
+    "allL" by ((pos: Position, sequent: Sequent) => {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
-  }
+
+      sequent.at(pos) match {
+        case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+          useAt("all eliminate")(pos)
+        case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
+          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          //@todo assumes any USubstAboveURen
+          useAt("all instantiate", us => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
+        case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
+          require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity in antecedent")
+          val x = vToInst(vars)
+          val t = inst(vars)
+          useAt("all instantiate", us => us ++ RenUSubst((x, t) :: ("f()".asTerm, t) :: Nil))(pos)
+        case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+          throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
+        case (_, f) =>
+          throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
+        case _ =>
+          throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
+      }
+    })
 
   def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    if (instance==None)
-      useAt("exists eliminate")
-    else
-      existsByDuality(allInstantiate(quantified, instance))
+    "existsR" by ((pos: Position, sequent: Sequent) => {
+      def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
+      def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
+
+      sequent.at(pos) match {
+        case (ctx, f@Exists(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+          useAt("exists eliminate")(pos)
+        case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
+          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          //@todo assumes any USubstAboveURen
+          useAt("exists generalize", PosInExpr(1::Nil), (us: Subst) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
+        case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
+          require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
+          val x = vToInst(vars)
+          val t = inst(vars)
+          useAt("exists instantiate", us => us ++ RenUSubst((x, t) :: ("f()".asTerm, t) :: Nil))(pos)
+        case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+          throw new BelleError("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
+        case (_, f) =>
+          throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
+        case _ =>
+          throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
+      }
+    })
 
 
   /** @see [[SequentCalculus.allR]] */
