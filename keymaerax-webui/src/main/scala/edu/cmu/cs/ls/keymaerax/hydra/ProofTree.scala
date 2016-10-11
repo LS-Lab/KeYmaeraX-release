@@ -86,13 +86,20 @@ object ProofTree {
       if(outputProvable.subgoals.length == openGoals.length - 1) {
         openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
       } else {
-        val delta =
+        val updated =
           outputProvable.subgoals
-            .zipWithIndex.filter({case (sg,i) => i >= openGoals.length || openGoals(i).sequent != sg})
+            .zipWithIndex.filter({case (sg,i) => i < openGoals.length && (openGoals(i).sequent != sg || step.local.get.conclusion == sg)})
             .map(_._1)
-        if (delta.nonEmpty) {
-          val updatedNode = treeNode(delta.head, Some(openGoals(branch)), Some(step))
-          val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
+        val added =
+          outputProvable.subgoals
+            .zipWithIndex.filter({case (sg,i) => i >= openGoals.length})
+            .map(_._1)
+
+        assert(updated.size == 1, "Expected exactly 1 updated node")
+
+        if (updated.nonEmpty) {
+          val updatedNode = treeNode(updated.head, Some(openGoals(branch)), Some(step))
+          val addedNodes = added.map({ sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
         } else if (!step.isUserExecuted && !includeUndos) {
