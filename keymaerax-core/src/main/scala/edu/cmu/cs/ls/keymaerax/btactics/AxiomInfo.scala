@@ -299,9 +299,9 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => posnil}),
     new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", {case () => posnil}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
-    new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
 
     // Derived axioms
+    new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),

@@ -776,10 +776,12 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val existsAndAxiom = derivedAxiom("\\exists& exists and",
+  lazy val existsAndAxiom = {
+    existsEliminate //@note access dependency hidden in CMon, so that it is added to the lemma database
+    derivedAxiom("\\exists& exists and",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (q_(||) & p_(||)) -> \\exists x_ (p_(||))".asFormula)),
     /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
-  )
+  )}
 
   /**
     * {{{Axiom "<:=> assign equality".
@@ -1117,7 +1119,6 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
-    * @todo prove
     */
   lazy val existsEliminate = derivedAxiom("exists eliminate",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists x_ p_(||))".asFormula)),

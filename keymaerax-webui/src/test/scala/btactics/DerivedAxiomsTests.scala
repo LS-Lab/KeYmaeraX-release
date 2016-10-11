@@ -230,7 +230,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove !!" in {check(doubleNegationAxiom)}
   it should "tactically prove exists dual" in {check(existsDualAxiom)}
   ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
-  ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
+  it should "tactically prove exists eliminate" in {check(existsEliminate)}
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}
   it should "tactically prove box dual" in {check(boxAxiom)}
   it should "tactically prove <:=> assign" in {check(assigndAxiom)}
