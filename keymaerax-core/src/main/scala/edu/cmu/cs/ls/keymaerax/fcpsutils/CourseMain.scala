@@ -1,12 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.fcpsutils
 
-import java.io.File
+import java.io.{File, FileInputStream}
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Provable}
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
+
+import org.apache.commons.io.input.BOMInputStream
 
 /**
   * @author Nathan Fulton
@@ -83,7 +85,8 @@ object CourseMain {
   private def parseTacticFileOrFail(v: ArgValue): BelleExpr = {
     val fileName = fileExistsOrFail(v)
     try {
-      BelleParser.parseWithInvGen(scala.io.Source.fromFile(new File(fileName)).mkString, Some(FixedGenerator[Formula](Nil)))
+      BelleParser.parseWithInvGen(scala.io.Source.fromInputStream(
+        new BOMInputStream(new FileInputStream(new File(fileName)))).mkString, Some(FixedGenerator[Formula](Nil)))
     } catch {
       case ex: ParseException =>
         println(s"Tactic in ${fileName} did not parse\n" + ex)
@@ -95,7 +98,8 @@ object CourseMain {
   private def parseProblemFileOrFail(v: ArgValue) : Formula = {
     val fileName = fileExistsOrFail(v)
     try {
-      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser(scala.io.Source.fromFile(fileName).mkString)
+      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser(scala.io.Source.fromInputStream(
+        new BOMInputStream(new FileInputStream(new File(fileName)))).mkString)
     }
     catch {
       case e : ParseException => {
