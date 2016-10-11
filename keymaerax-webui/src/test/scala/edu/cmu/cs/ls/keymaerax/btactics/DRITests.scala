@@ -31,7 +31,7 @@ class DRITests extends TacticTestBase {
     BelleParser(BellePrettyPrinter(DifferentialTactics.DRIStep(1))) shouldBe DifferentialTactics.DRIStep(1)
   }
 
-  "DRI" should "close simple example" in withZ3(qeTool => {
+  "DRI" should "close simple example" ignore withZ3(qeTool => {
     val f = "x=0 -> [{x' = 0 & 2=2}]x=0".asFormula
     val t = DifferentialTactics.DRI(1)
     proveBy(f,t) shouldBe 'proved
