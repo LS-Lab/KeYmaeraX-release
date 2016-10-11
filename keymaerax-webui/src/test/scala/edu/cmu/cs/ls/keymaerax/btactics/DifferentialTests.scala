@@ -1311,10 +1311,10 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "diff var flat flight progress [function]" in withMathematica { tool =>
-    proveBy("\\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula, diffVar(1, 0::1::Nil)) shouldBe 'proved
+    proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula, diffVar(1, 1::0::1::Nil)) shouldBe 'proved
   }
 
   it should "diff var flat flight progress [variable]" taggedAs(IgnoreInBuildTest) in withMathematica { tool =>
-    proveBy("\\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 0::0::1::Nil)) shouldBe 'proved
+    proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
 }

@@ -233,7 +233,7 @@ http://www.scalatest.org/user_guide
 Specification
 =============
 
-The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness assurance by way of a small trusted LCF-style core while still being amenable to automatic theorem proving.
+The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness assurance by way of a small trusted LCF-style kernel while still being amenable to automatic theorem proving.
 Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
 
 1. André Platzer. 
