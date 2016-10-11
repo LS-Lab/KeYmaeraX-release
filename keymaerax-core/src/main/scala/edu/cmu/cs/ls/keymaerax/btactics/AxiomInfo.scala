@@ -155,18 +155,18 @@ object DerivationInfo {
       , RuleDisplayInfo(("⊃R", "->R"), (List("&Gamma;"),List("P→Q")), List((List("&Gamma;","P"),List("Q"))))
       , {case () => SequentCalculus.implyR}),
     new PositionTacticInfo("implyL"
-      , RuleDisplayInfo(("⊃L", "->L"), (List("P→Q","&Gamma;"),List("C")),
-        List((List("P→Q","&Gamma;"),List("Q")),
+      , RuleDisplayInfo(("⊃L", "->L"), (List("P⊃Q","&Gamma;"),List("C")),
+        List((List("P⊃Q","&Gamma;"),List("P")),
           (List("Q", "&Gamma;"),List("C"))))
       , {case () => SequentCalculus.implyL}),
     new PositionTacticInfo("equivL"
-      , RuleDisplayInfo(("↔L", "<->L"), (List("P↔Q","&Gamma;"),List("C")),
+      , RuleDisplayInfo(("&equiv;L", "<->L"), (List("P&equiv;Q","&Gamma;"),List("C")),
         List((List("(P⊃Q)∧(Q⊃P)", "&Gamma;"),List("C"))))
       , {case () => SequentCalculus.equivL}),
     new PositionTacticInfo("equivR"
-      , RuleDisplayInfo(("↔R", "<->R"), (List("&Gamma;"),List("P↔Q")),
-        List((List("&Gamma;","P","Q"),List("C")),
-          (List("&Gamma;","¬P","¬Q"),List("C"))))
+      , RuleDisplayInfo(("&equiv;R", "<->R"), (List("&Gamma;"),List("P&equiv;Q")),
+        List((List("&Gamma;","P"),List("Q")),
+          (List("&Gamma;","Q"),List("P"))))
       , {case () => SequentCalculus.equivR}),
     new InputPositionTacticInfo("allL"
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("C")),

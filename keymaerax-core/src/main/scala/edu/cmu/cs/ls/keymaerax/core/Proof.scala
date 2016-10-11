@@ -1036,9 +1036,9 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
 /**
   * <->R Equiv right.
   * {{{
-  * G, p |- D, q    G, q |- D, p
+  * G, p |- q    G, q |- p
   * ----------------------------- (<->R Equiv right)
-  *   G |- p<->q, D
+  *   G |- p<->q
   * }}}
   */
 case class EquivRight(pos: SuccPos) extends RightRule {
