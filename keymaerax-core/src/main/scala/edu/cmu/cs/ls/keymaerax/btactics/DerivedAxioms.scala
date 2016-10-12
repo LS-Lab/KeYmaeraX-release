@@ -769,6 +769,22 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "[:=] assign all".
+    *  \forall x_ p_(||) -> [x_:=f_();]p_(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val forallImpliesAssignbAxiom = derivedAxiom("[:=] assign all",
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) -> [x_:=f_();]p_(||)".asFormula)),
+    //    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
+    //      & byUS("[:=] assign equality exists")
+      useAt("[:=] assign equality", PosInExpr(0::Nil))(1, 1::Nil) &
+      byUS(forallImpliesAxiom)
+  )
+
+  /**
     * {{{Axiom "\\exists& exists and".
     *  \exists x_ (q_(||) & p_(||)) -> \exists x_ (p_(||))
     * End.
@@ -782,6 +798,20 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (q_(||) & p_(||)) -> \\exists x_ (p_(||))".asFormula)),
     /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
   )}
+
+  /**
+    * {{{Axiom "\\forall-> forall implies".
+    *  \forall x_ p_(||) -> \forall x_ (q_(||) -> p_(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val forallImpliesAxiom = {
+    derivedAxiom("\\forall-> forall implies",
+      Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) -> \\forall x_ (q_(||) -> p_(||))".asFormula)),
+      /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
+    )}
 
   /**
     * {{{Axiom "<:=> assign equality".
