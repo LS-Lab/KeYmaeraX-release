@@ -1591,6 +1591,24 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DV differential variant <=".
+    *    <{c&true}>f(||)<=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)>=g(||) -> f(||)'<=g(||)'-e_))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val DVLessEqual = derivedAxiom("DV differential variant <=",
+    Sequent(IndexedSeq(), IndexedSeq("<{c&true}>f(||)<=g(||) <- \\exists e_ (e_>0 & [{c&true}](f(||)>=g(||) -> f(||)'<=g(||)'-e_))".asFormula)),
+    useAt(flipLessEqual.fact)(1, 1::1::Nil) &
+      useAt(flipGreaterEqual.fact)(1, 0::0::1::1:: 0::Nil) &
+      useAt(flipLessEqual.fact)(1, 0::0::1::1:: 1::Nil) &
+      // transform g(||)'+e_<=f(||)' to g(||)'<=f(||)'-e_
+      useAt(TactixLibrary.proveBy("s()-r()>=t() <-> s()>=t()+r()".asFormula, QE), PosInExpr(0::Nil))(1, 0::0::1::1:: 1::Nil) &
+      byUS("DV differential variant >=")
+  )
+
+  /**
     * {{{Axiom "DX diamond differential skip".
     *    <{c&q(||)}>p(||) <- q(||)&p(||)
     * End.

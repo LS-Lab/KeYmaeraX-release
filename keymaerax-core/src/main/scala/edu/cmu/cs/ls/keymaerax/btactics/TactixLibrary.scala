@@ -416,6 +416,16 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def openDiffInd: DependentPositionTactic = DifferentialTactics.openDiffInd
 
+  /** DV: Differential Variant proves a formula to become true at some point after a differential equation.
+    *
+    * @example{{{
+    *         *
+    *    ------------------------- DV(1)
+    *    a()>0 |- <{x'=a()}>x>=b()
+    * }}}
+    */
+  def diffVar: DependentPositionTactic = DifferentialTactics.diffVar
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     *

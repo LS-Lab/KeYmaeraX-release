@@ -237,6 +237,33 @@ private object DifferentialTactics {
     }
   }
 
+  /** @see [[TactixLibrary.diffVar]] */
+  val diffVar: DependentPositionTactic = new DependentPositionTactic("diffVar") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        //require(pos.isSucc, "diffVar only at ODE system in succedent")
+        val greater = sequent.sub(pos) match {
+          case Some(Diamond(ODESystem(_,True), _: GreaterEqual)) => true
+          case Some(Diamond(ODESystem(_,True), _: LessEqual)) => false
+          case _ => throw new IllegalArgumentException("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + sequent.sub(pos))
+        }
+        val t = (if (greater)
+          HilbertCalculus.namedUseAt("DVgeq", "DV differential variant >=")
+        else
+          HilbertCalculus.namedUseAt("DVleq", "DV differential variant <="))(pos) & (
+          // \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
+          derive(pos ++ PosInExpr(0::1::1::1::0::Nil)) &
+            derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
+            DE(pos ++ PosInExpr(0::1::Nil)) &
+            (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
+              abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE
+              )
+          )
+        t
+      }
+    }
+  }
+
   /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {
@@ -328,27 +355,15 @@ private object DifferentialTactics {
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
         val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
         if (!singular.isEmpty) throw new BelleError("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
-        cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a,y),b))), h), p)))(pos.checkSucc.top) < (
-          /* use */ skip,
-          /* show */ cohide(pos.top) &
-          //@todo why is this renaming here? Makes no sense to me.
-          ///* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
-          equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
-          )
+
+        val subst = (us: Subst) => us ++ RenUSubst(
+          (Variable("y_",None,Real), y) ::
+          (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+
+        useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
     }
   })
-
-  //@todo might work instead of implementation above after some tweaking
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
-    */
-//  private[btactics] def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
-//    (us:Subst)=>us++RenUSubst(Seq(
-//      (Variable("y_",None,Real), y),
-//      (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
-//      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
-//    ))
-//  )
 
   private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
     val ghostParts = try {
@@ -524,17 +539,21 @@ private object DifferentialTactics {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
-      def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
-        sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
-      }
-      val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+      if (sequent.succ.size <= 1) {
+        def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[(Formula, Int)] = {
+          sequent.ante.zipWithIndex.filter(f => StaticSemantics.freeVars(f._1).intersect(taboo).isEmpty)
+        }
+        val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
 
-      if (consts.nonEmpty) {
-        val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0)) partial
-        val constFml = consts.reduceRight(And)
-        diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast), skip))*(consts.size-1) & closeIdWith('Rlast)) partial
+        if (consts.nonEmpty) {
+          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0))
+          val constFml = consts.map(_._1).reduceRight(And)
+          diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(consts.size-1) & closeIdWith('Rlast) & done)
+        } else {
+          diffWeakenG(pos)
+        }
       } else {
-        diffWeakenG(pos)
+        useAt("DW differential weakening")(pos) & abstractionb(pos) & (allR('Rlast)*)
       }
   })
 
