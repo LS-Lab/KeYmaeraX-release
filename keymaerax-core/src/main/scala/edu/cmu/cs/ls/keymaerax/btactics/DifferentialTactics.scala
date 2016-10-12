@@ -358,27 +358,15 @@ private object DifferentialTactics {
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
         val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
         if (!singular.isEmpty) throw new BelleError("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
-        cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a,y),b))), h), p)))(pos.checkSucc.top) < (
-          /* use */ skip,
-          /* show */ cohide(pos.top) &
-          //@todo why is this renaming here? Makes no sense to me.
-          ///* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
-          equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
-          )
+
+        val subst = (us: Subst) => us ++ RenUSubst(
+          (Variable("y_",None,Real), y) ::
+          (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+
+        useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
     }
   })
-
-  //@todo might work instead of implementation above after some tweaking
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
-    */
-//  private[btactics] def DG(y:Variable, a:Term, b:Term) = useAt("DG differential ghost", PosInExpr(0::Nil),
-//    (us:Subst)=>us++RenUSubst(Seq(
-//      (Variable("y_",None,Real), y),
-//      (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a),
-//      (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
-//    ))
-//  )
 
   private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
     val ghostParts = try {
