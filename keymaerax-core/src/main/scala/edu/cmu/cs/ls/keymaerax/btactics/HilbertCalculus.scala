@@ -253,6 +253,18 @@ trait HilbertCalculus extends UnifyUSCalculus {
       }
     )
 
+  private[btactics] def DGCa(y:Variable, b:Term) =
+    useAt("DG differential ghost constant all", PosInExpr(0::Nil),
+      (us:Option[Subst])=>{
+        val singular = FormulaTools.singularities(b)
+        insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
+        us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+          (Variable("y_",None,Real), y),
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+        ))
+      }
+    )
+
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGCd(y:Variable, b:Term) =
   useAt("DGd diamond differential ghost constant", PosInExpr(0::Nil),
