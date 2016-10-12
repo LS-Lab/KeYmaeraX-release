@@ -577,17 +577,21 @@ private object DifferentialTactics {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
-      def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
-        sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
-      }
-      val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+      if (sequent.succ.size <= 1) {
+        def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[(Formula, Int)] = {
+          sequent.ante.zipWithIndex.filter(f => StaticSemantics.freeVars(f._1).intersect(taboo).isEmpty)
+        }
+        val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
 
-      if (consts.nonEmpty) {
-        val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0)) partial
-        val constFml = consts.reduceRight(And)
-        diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast), skip))*(consts.size-1) & closeIdWith('Rlast)) partial
+        if (consts.nonEmpty) {
+          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0))
+          val constFml = consts.map(_._1).reduceRight(And)
+          diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(consts.size-1) & closeIdWith('Rlast) & done)
+        } else {
+          diffWeakenG(pos)
+        }
       } else {
-        diffWeakenG(pos)
+        useAt("DW differential weakening")(pos) & abstractionb(pos) & (allR('Rlast)*)
       }
   })
 
