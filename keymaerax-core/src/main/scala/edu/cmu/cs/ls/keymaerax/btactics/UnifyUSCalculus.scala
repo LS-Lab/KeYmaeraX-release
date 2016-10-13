@@ -521,17 +521,22 @@ trait UnifyUSCalculus {
                 //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
               }
 
+              def hide2 =
+                if (p.isSucc) cohide2(AntePos(sequent.ante.size), p.top)
+                else ((sequent.ante.indices.filterNot(i => i == p.index0).map(i => hideL(AntePosition.base0(i))) :+ hideL(AntePos(sequent.ante.size))) ++
+                       sequent.succ.indices.map(i => hideR(SuccPosition.base0(i)))).reduceRight[BelleExpr](_ & _)
+
               // uses specialized congruence tactic for DC, may not work with other conditional equivalences
               cut(C(subst(prereq))) <(
                 /* use: result remains open */ cutAt(subst(conclusion))(p) <(
                 hideL('Llast),
-                cohide2(AntePos(sequent.ante.size), p.top) & cut(C(subst(equiv))) <(
-                  /* hide C(prereq) */ hideL(-1) & implyR(1) & andLi & implyRi & condEquivCongruence(C.ctx, p.inExpr, HereP, commute) & closeTrue(1),
+                hide2 & cut(C(subst(equiv))) <(
+                  /* hide C(prereq) */ hideL(-1) & implyR(1) & andLi & implyRi & condEquivCongruence(C.ctx, p.inExpr, HereP, commute) & closeTrue(1) & done,
                   /* hide C(r)->C(l) */ hideR(1) & implyRi & CMon(p.inExpr) & by(Provable.startProof(Imply(subst(prereq), subst(Context(remainder)(k))))(subst.toForward(fact), 0)) & done
                   )
 //                  equivifyR(1) & commute & implyRi & CMon(p.inExpr) & by(Provable.startProof(Imply(subst(prereq), subst(Context(remainder)(k))))(subst.toForward(fact), 0))
                 ),
-                /* show prereq with stripped down master */ hideR(p.top)
+                /* leave open: show prereq (@todo stripped down master might show) */ if (p.isSucc) hideR(p.top) else hideL(p.top)
                 )
           }
         case Forall(vars, remainder) if vars.length==1 => ???
