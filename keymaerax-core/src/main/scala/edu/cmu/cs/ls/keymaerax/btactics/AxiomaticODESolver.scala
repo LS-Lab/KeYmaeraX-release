@@ -53,7 +53,8 @@ object AxiomaticODESolver {
     (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER))*osize &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
     (s.sub(pos) match {
-      case Some(Box(_,_)) => HilbertCalculus.DW(odePosAfterInitialVals)
+      case Some(Box(_,_)) if pos.isSucc => HilbertCalculus.DW(odePosAfterInitialVals)
+      case Some(Box(_,_)) if pos.isAnte => HilbertCalculus.useAt(DerivedAxioms.DWeakeningAnd, PosInExpr(0::Nil))(odePosAfterInitialVals)
       case Some(Diamond(_,_)) => TactixLibrary.useAt("DWd2 diamond differential weakening")(odePosAfterInitialVals)
     }) &
     DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
@@ -116,7 +117,8 @@ object AxiomaticODESolver {
     val t = TacticHelper.freshNamedSymbol(TIMEVAR, s)
 
     s.sub(pos) match {
-      case Some(Box(_,_)) => HilbertCalculus.DGC(t, Number(1))(pos) & DLBySubst.assignbExists(Number(0))(pos)
+      case Some(Box(_,_)) if pos.isSucc => HilbertCalculus.DGC(t, Number(1))(pos) & DLBySubst.assignbExists(Number(0))(pos)
+      case Some(Box(_,_)) if pos.isAnte => HilbertCalculus.DGCa(t, Number(1))(pos) & DLBySubst.assignbAll(Number(0))(pos)
       case Some(Diamond(_,_)) => HilbertCalculus.DGCde(t, Number(1))(pos) & DLBySubst.assignbExists(Number(0))(pos)
       case _ => throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality.")
     }
@@ -152,6 +154,8 @@ object AxiomaticODESolver {
 
     tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
 
+    val diffIndPos = if (pos.isSucc) pos.top else SuccPosition.base0(s.succ.size).top
+
     //@note we have to cut one at a time instead of just constructing a single tactic because solutions need to be added
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
@@ -159,7 +163,7 @@ object AxiomaticODESolver {
       Idioms.nil,
       //@todo need to normalize (otherwise no constified initial conditions), but normalize is probably too much when there are other formulas around (normalize at pos)
       DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(pos.top) & DebuggingTactics.done
+        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(diffIndPos) & DebuggingTactics.done
       )
   })
 
@@ -221,10 +225,12 @@ object AxiomaticODESolver {
   //region Simplify post-condition
 
   def simplifyPostCondition(odeSize: Int) = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
-    val rewrite = TactixLibrary.proveBy("(q_(||) -> p_(f(x_))) -> (q_(||) & x_=f(x_) -> p_(x_))".asFormula,
-      TactixLibrary.implyR(1)*2 & TactixLibrary.andL(-2) & TactixLibrary.eqL2R(-3)(1) & TactixLibrary.prop)
-    TactixLibrary.useAt(rewrite, PosInExpr(1::Nil))(pos)*odeSize & TactixLibrary.useAt(DerivedAxioms.trueImplies)(pos) &
-    SimplifierV2.simpTac(pos)
+    val rewrite =
+      if (pos.isSucc) TactixLibrary.proveBy("(q_(||) -> p_(f(x_))) -> (q_(||) & x_=f(x_) -> p_(x_))".asFormula,
+        TactixLibrary.implyR(1)*2 & TactixLibrary.andL(-2) & TactixLibrary.eqL2R(-3)(1) & TactixLibrary.prop & TactixLibrary.done)
+      else TactixLibrary.proveBy("(q_(||) & x_=f(x_)) & p_(x_) -> q_(||) & p_(f(x_))".asFormula,
+        TactixLibrary.implyR(1) & TactixLibrary.andL(-1)*2 & TactixLibrary.andR(1) <(TactixLibrary.closeId, TactixLibrary.eqR2L(-3)(1) & TactixLibrary.closeId))
+    TactixLibrary.useAt(rewrite, if (pos.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil))(pos)*odeSize & SimplifierV2.simpTac(pos)
   })
 
   //endregion
@@ -267,26 +273,12 @@ object AxiomaticODESolver {
     * }}}
     */
   val inverseDiffGhost = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
-    /* Note: Constructing our own substitution because the default substitution seems to get at least g(||) wrong. */
-    def subst(y_DE: AtomicODE, c: DifferentialProgram, q: Formula, p: Formula)(r: RenUSubst) = {
-      if(ODE_DEBUGGER) println("[inverseDiffGhost] input to subst:    " + r)
-      val (y, a, b) = DifferentialHelper.parseGhost(y_DE)
-      val renaming = RenUSubst(URename("y_".asVariable, y))
-      val result = renaming ++
-        RenUSubst(USubst(
-          "a(|y_|)".asTerm    ~> renaming(a) ::
-          "b(|y_|)".asTerm    ~> renaming(b) ::
-          "q(|y_|)".asFormula ~> q ::
-          DifferentialProgramConst("c", Except("y_".asVariable)) ~> c ::
-          "p(|y_|)".asFormula ~> p ::
-          Nil))
-
-      if(ODE_DEBUGGER) println("[inverseDiffGhost] output from subst: " + result)
-      result
-    }
+    def checkResult(ode: DifferentialProgram, y_DE: AtomicDifferentialProgram) = DebuggingTactics.assertProvableSize(1) &
+      DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
+      DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
 
     s.sub(pos) match {
-      case Some(f@Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) =>
+      case Some(f@Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) if pos.isSucc =>
         val axiomName = "DG inverse differential ghost implicational"
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
@@ -294,10 +286,26 @@ object AxiomaticODESolver {
           HilbertCalculus.useExpansionAt(axiomName)(pos)
           ,
           HilbertCalculus.useAt("all eliminate")(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) & TactixLibrary.useAt(DerivedAxioms.implySelf)(pos.top) & TactixLibrary.closeT & DebuggingTactics.done
-          ) &
-          DebuggingTactics.assertProvableSize(1) &
-          DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
-          DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
+          ) & checkResult(ode, y_DE)
+      case Some(Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) if pos.isAnte =>
+        //@note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
+        val subst = (us: Option[TactixLibrary.Subst]) =>
+          RenUSubst(
+            ("y_".asTerm, y_DE.xp.x) ::
+            ("b(|y_|)".asTerm, y_DE.e) ::
+            ("q(|y_|)".asFormula, q) ::
+            (DifferentialProgramConst("c", Except("y_".asVariable)), c) ::
+            ("p(|y_|)".asFormula, p) ::
+            Nil)
+
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
+        HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
+        TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
+          HilbertCalculus.useAt("DG differential ghost constant", PosInExpr(1::Nil), subst)(pos)
+          ,
+          TactixLibrary.cohideR('Rlast) & TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
+            TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
+          ) & checkResult(ode, y_DE)
       case Some(f@Diamond(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) =>
         val axiomName = "DGd diamond differential ghost"
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
@@ -309,10 +317,7 @@ object AxiomaticODESolver {
           TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) &
             TactixLibrary.useAt(",d commute")(1, pos.inExpr ++ PosInExpr(1::0::Nil)) &
             TactixLibrary.CE(pos.inExpr) & TactixLibrary.byUS("DGd diamond differential ghost") & TactixLibrary.done
-        ) &
-          DebuggingTactics.assertProvableSize(1) &
-          DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
-          DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
+        ) & checkResult(ode, y_DE)
     }
   })
 
