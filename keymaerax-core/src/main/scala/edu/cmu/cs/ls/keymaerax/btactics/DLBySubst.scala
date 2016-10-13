@@ -296,9 +296,13 @@ private object DLBySubst {
           }
         }
         val theGhost = ghostV(f)
+        //@todo polarity
+        val commute = if (pos.isSucc) skip else commuteEquivR(1)
+
+        //@note cannot use plain useAt, because we want to support ghosts resulting in [x:=2;][x:=3;]p(x)
         cutLR(ctx(Box(Assign(theGhost, t), f.replaceFree(t, theGhost))))(pos.topLevel) <(
           /* use */ ident,
-          /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
+          /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & commute & byUS("[:=] assign")
           )
     }
   })
