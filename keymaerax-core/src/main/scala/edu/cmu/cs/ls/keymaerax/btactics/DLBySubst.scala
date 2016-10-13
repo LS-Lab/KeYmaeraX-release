@@ -321,4 +321,23 @@ private object DLBySubst {
         s.getOrElse(throw BelleUserGeneratedError("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
   })
+
+  /**
+    * Turns a universal quantifier into an assignment.
+    *
+    * @example{{{
+    *         [t:=f;][x:=t;]x>=0 |-
+    *         -------------------------assignbAll(f)(-1)
+    *         \forall t [x:=t;]x>=0 |-
+    * }}}
+    * @param f The right-hand side term of the assignment chosen as a witness for the universal quantifier.
+    * @return The tactic.
+    */
+  def assignbAll(f: Term): DependentPositionTactic = "[:=] assign all" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(Forall(vars, p)) =>
+      require(vars.size == 1, "Cannot handle universal lists")
+      val subst = (s: Option[Subst]) =>
+        s.getOrElse(throw BelleUserGeneratedError("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+      useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
+  })
 }
