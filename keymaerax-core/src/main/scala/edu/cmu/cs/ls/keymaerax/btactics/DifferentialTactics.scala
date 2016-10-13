@@ -321,9 +321,9 @@ private object DifferentialTactics {
   def diffInvariant(formulas: Formula*): DependentPositionTactic =
     "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
-      //@todo why is this 'Rlast instead of pos?
-      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()('Rlast))
-      diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
+      //@note UnifyUSCalculus leaves prereq open at last succedent position
+      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
+      diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*)
     })
 
   /**

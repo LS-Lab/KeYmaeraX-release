@@ -638,8 +638,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2}]x>0".asFormula)
   }
 
-  //@todo requires better UnifyUSCalculus CMon ->
-  it should "cut in a simple formula in context" ignore withMathematica { qeTool =>
+  it should "cut in a simple formula in context" in withMathematica { qeTool =>
     val result = proveBy("x>0 -> [{x'=2}]x>=0".asFormula, diffCut("x>0".asFormula)(1, 1::Nil))
     result.subgoals should have size 2
     result.subgoals.head.ante shouldBe empty
@@ -880,8 +879,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2 & true & x>0}]x>=0".asFormula)
   }
 
-  //@todo requires better UnifyUSCalculus CMon ->
-  it should "cut in a simple formula in context" ignore withMathematica { qeTool =>
+  it should "cut in a simple formula in context" in withMathematica { qeTool =>
     val result = proveBy("x>0 -> [{x'=2}]x>=0".asFormula, diffInvariant("x>0".asFormula)(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
