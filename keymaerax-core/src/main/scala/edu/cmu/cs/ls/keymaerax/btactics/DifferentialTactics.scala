@@ -356,7 +356,7 @@ private object DifferentialTactics {
         val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
         if (!singular.isEmpty) throw new BelleError("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
 
-        val subst = (us: Subst) => us ++ RenUSubst(
+        val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUserGeneratedError("DG expects substitution result from unification")) ++ RenUSubst(
           (Variable("y_",None,Real), y) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
