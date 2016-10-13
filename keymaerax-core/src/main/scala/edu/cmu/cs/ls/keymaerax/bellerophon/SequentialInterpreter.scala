@@ -287,13 +287,17 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 Some((UnificationMatch(s, provable.subgoals.head), expr))
               } catch {
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
-                case e: UnificationException => None
+                // fall back to user-provided substitution
+                case e: UnificationException =>
+                  //if (DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
+                  Some(RenUSubst(Nil), expr)
               }
               case _ => throw new BelleError("Cannot unify non-sequent types.").inContext(t, "")
             }
           })
             .filter(_.isDefined).map(_.get)
-            .headOption.getOrElse(throw new BelleError("USubst Pattern Incomplete -- could not find a unifier for any option").inContext(t, ""))
+            //@note head is defined since empty substitution is returned when no unification can be found
+            .head //Option.getOrElse(throw new BelleError("USubst Pattern Incomplete -- could not find a unifier for any option").inContext(t, ""))
 
           apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
         }
