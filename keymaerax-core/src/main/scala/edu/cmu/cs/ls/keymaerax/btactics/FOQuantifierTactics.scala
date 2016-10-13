@@ -62,11 +62,13 @@ protected object FOQuantifierTactics {
 
           val assign = Box(Assign(x, t), p)
 
+          val subst = (us: Subst) => us ++ RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) :: Nil)
+
           //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
           ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
-            assignb(pos) partial,
-            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")
+            assignb(pos),
+            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate", subst) & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
@@ -93,18 +95,20 @@ protected object FOQuantifierTactics {
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
           def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
-          // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
+          // cut in [x:=x;]p(t) from axiom: \exists x. p(x) -> p(t)
           val x = vToInst(vars)
           val t = inst(vars)
           val p = exists(qf)
 
           val assign = Box(Assign(x, t), p)
 
+          val subst = (us: Subst) => us ++ RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) :: Nil)
+
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
-              assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize")
+              assignb(pos),
+              cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleError("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
