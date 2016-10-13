@@ -62,13 +62,11 @@ protected object FOQuantifierTactics {
 
           val assign = Box(Assign(x, t), p)
 
-          val subst = (us: Subst) => us ++ RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) :: Nil)
-
           //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
           ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
-            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate", subst) & done
+            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate") & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
@@ -102,13 +100,13 @@ protected object FOQuantifierTactics {
 
           val assign = Box(Assign(x, t), p)
 
-          val subst = (us: Subst) => us ++ RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) :: Nil)
+          val subst = (us: Subst) => RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t.replaceFree(x, "x_".asVariable)) :: ("p_(.)".asFormula, Box(Assign("x_".asVariable, DotTerm()), p.replaceAll(x, "x_".asVariable))) :: Nil)
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
+              cohide('Rlast) & CMon(pos.inExpr) & DebuggingTactics.print("Before exists generalize") & byUS("exists generalize", subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleError("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)

@@ -221,6 +221,14 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "instantiate ODE" ignore {
+    val result = proveBy(Sequent(IndexedSeq("\\forall t_ [{x'=2,t_'=1&true}]x>b".asFormula), IndexedSeq()),
+      allInstantiate(None, Some("0".asTerm))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "t_=0->[{x'=2,t_'=1&true}]x>b".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
   "existsR" should "instantiate simple formula" in {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
