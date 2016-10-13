@@ -1559,6 +1559,22 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DW differential weakening and".
+    *    [{c&q(||)}]p(||) -> ([{c&q(||)}](q(||)&p(||)))
+    * End.
+    * }}}
+    */
+  lazy val DWeakeningAnd = derivedAxiom("DW differential weakening and",
+    Sequent(IndexedSeq(), IndexedSeq("[{c_&q_(||)}]p_(||) -> ([{c_&q_(||)}](q_(||)&p_(||)))".asFormula)),
+    implyR(1) & cut("[{c_&q_(||)}](q_(||)->(p_(||)->(q_(||)&p_(||))))".asFormula) <(
+      /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))('Llast) & implyL('Llast) <(
+        cohide('Rlast) & byUS("DW") & done,
+        useAt("K modal modus ponens", PosInExpr(0::Nil))('Llast) & implyL('Llast) <(close, close)),
+      /* show */ G('Rlast) & prop
+      )
+  )
+
+  /**
     * {{{Axiom "DI differential invariance".
     *  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
     *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY

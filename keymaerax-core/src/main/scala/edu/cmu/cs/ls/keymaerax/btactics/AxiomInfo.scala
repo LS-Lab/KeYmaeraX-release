@@ -322,6 +322,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("DW differential weakening"
       , AxiomDisplayInfo("DW","[x′=f(x)&Q]P↔[x′=f(x)&Q](Q→P)")
       , "DWeaken", {case () => HilbertCalculus.DW}),
+    new DerivedAxiomInfo("DW differential weakening and"
+      , AxiomDisplayInfo("DW∧","[x′=f(x)&Q]P→[x′=f(x)&Q](Q∧P)")
+      , "DWeakenAnd", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => useAt(DerivedAxioms.Dskipd)}),
     new DerivedAxiomInfo("DGd diamond differential ghost", "DGd", "DGd", {case () => useAt(DerivedAxioms.DGddifferentialghost)}),
     new DerivedAxiomInfo("DGd diamond differential ghost constant", "DGCd", "DGCd", {case () => useAt(DerivedAxioms.DGCddifferentialghostconst)}),
