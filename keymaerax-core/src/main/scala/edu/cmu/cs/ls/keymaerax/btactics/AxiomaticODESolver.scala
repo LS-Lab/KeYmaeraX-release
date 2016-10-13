@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import TacticFactory._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -44,7 +43,7 @@ object AxiomaticODESolver {
     //The position of the ODE after introducing all [x_0:=x;] assignments
     val odePosAfterInitialVals = pos ++ PosInExpr(List.fill(osize+2)(1))
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
-    val timeAssignmentPos = subPosition(odePosAfterInitialVals, PosInExpr(0::1::1::Nil))
+    val timeAssignmentPos = odePosAfterInitialVals ++ PosInExpr(0::1::1::Nil)
 
     addTimeVar(pos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
@@ -90,8 +89,7 @@ object AxiomaticODESolver {
       case sub => throw BelleUserGeneratedError("Expected [] or <> modality at position " + pos + ", but got " + sub)
     }
 
-    if(!isCanonicallyLinear(ode))
-      DebuggingTactics.error("Expected ODE to be linear and in correct order.")
+    if (!isCanonicallyLinear(ode)) DebuggingTactics.error("Expected ODE to be linear and in correct order.")
     else
       StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
         foldLeft[BelleExpr](Idioms.nil)((a, b) => a & TactixLibrary.discreteGhost(b)(pos))
@@ -141,8 +139,8 @@ object AxiomaticODESolver {
     val initialConditions: Map[Variable, Term] = extract(s(pos.top), pos.inExpr.parent, odeSize+1).toMap
 
     val nextEqn = sortAtomicOdes(atomicOdes(system))
-      .filter(eqn => eqn.xp.x != TIMEVAR)
-      .filter(eqn => isUnsolved(eqn.xp.x, system))
+      .filter(_.xp.x != TIMEVAR)
+      .filterNot(eqn => isSolved(eqn.xp.x, system))
       .head
 
     tmpmsg(s"next equation to integrate and cut: ${nextEqn.prettyString}")
@@ -168,57 +166,17 @@ object AxiomaticODESolver {
   })
 
   /**
-    * @param ode
-    * @return The list of atomic differential equations occurring in the differential program.
-    * @author Nathan Fulton
-    */
-  private def odeConstraints(ode : Program) : List[Formula] = ode match {
-    case AtomicODE(x,e)                   => Nil
-    case ODESystem(ode, constraint)       => constraint :: Nil
-    case DifferentialProduct(left, right) => odeConstraints(left) ++ odeConstraints(right)
-    case _                                => throw AxiomaticODESolverExn("Expected AtomicODE, ODESystem, or DifferentialProduct.") //@todo what about other differential programs?
-  }
-
-  /**
     *
     * @param v A variable occuring in the odes program.
     * @param system An ode system.
     * @return true if the program does not already contain an = constraint (a.k.a. sol'n) for v in the evolution domain.
     */
-  def isUnsolved(v : Variable, system : ODESystem) = {
-    val odes = atomicOdes(system.ode)
-    if(odes.find(_.xp.x.equals(v)).isEmpty) false //Variables that don't occur in the ODE are trivially already solved.
-    //In non-special cases, check for a = evolution domain constraint in the ode.
-    else {
-      val vConstraints = odeConstraints(system).flatMap(decomposeAnds).find(_ match {
-        case Equal(l, r) => l.equals(v)
-        case _ => false
-      })
-      vConstraints.isEmpty
-    }
+  def isSolved(v: Variable, system: ODESystem): Boolean = {
+    //Variables that don't occur in the ODE are trivially already solved
+    //An occurring variable is solved when an evolution domain constraint of the form 'a = ...' exists
+    !atomicOdes(system.ode).exists(_.xp.x == v) ||
+      decomposeAnds(system.constraint).exists({ case Equal(l, r) => l == v case _ => false })
   }
-
-  //endregion
-
-  //region diffCut lower bound on time
-
-  /** Adds t>=0 to the differential equation's domain constraint.
-    * @todo Why is this necessary? It's not included in the paper proof. */
-  val cutInTimeLB = "cutInTimeLB" by ((pos: Position, s: Sequent) => {
-    assert(s.apply(pos).isInstanceOf[Modal], s"Expected modality at position ${pos} of ${s.prettyString}")
-    assert(s.apply(pos).asInstanceOf[Modal].program.isInstanceOf[ODESystem], s"Expected modality to contain ODE System but it did not in ${s(pos)}")
-
-    val system = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem]
-
-    val lowerBound = Number(0) //@todo check that this is actually the lower bound. Lower bound could be symbolic.
-    val timer = TIMEVAR
-
-    //@todo this won't work in the case where we cut in our own time until Stefan's code for isntantiating exisentials is added in...
-    s.apply(pos).asInstanceOf[Modal] match {
-      case Box(_,_) => TactixLibrary.diffCut(GreaterEqual(timer, lowerBound))(pos) <(Idioms.nil, TactixLibrary.diffInd()(pos) & DebuggingTactics.done)
-      case Diamond(_,_) => throw noDiamondsForNowExn
-    }
-  })
 
   //endregion
 
@@ -334,16 +292,6 @@ object AxiomaticODESolver {
 
   /** Exceptions thrown by the axiomatic ODE solver. */
   case class AxiomaticODESolverExn(msg: String) extends Exception(msg)
-  val noDiamondsForNowExn = AxiomaticODESolverExn("No diamonds for now.")
-
-  def parentPosition(pos: Position): Position =
-    if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr.parent)
-    else SuccPosition(pos.checkSucc.top, pos.inExpr.parent)
-
-  def subPosition(pos: Position, sub: PosInExpr): Position =
-    if(pos.isAnte) AntePosition(pos.checkAnte.top, pos.inExpr ++ sub)
-    else SuccPosition(pos.checkSucc.top, pos.inExpr ++ sub)
-  def subPosition(pos: Position, sub: List[Int]): Position = subPosition(pos, PosInExpr(sub))
 
   //endregion
 }
