@@ -183,12 +183,31 @@ object AxiomaticODESolver {
   //region Simplify post-condition
 
   def simplifyPostCondition(odeSize: Int) = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
-    val rewrite =
-      if (pos.isSucc) TactixLibrary.proveBy("(q_(||) -> p_(f(x_))) -> (q_(||) & x_=f(x_) -> p_(x_))".asFormula,
-        TactixLibrary.implyR(1)*2 & TactixLibrary.andL(-2) & TactixLibrary.eqL2R(-3)(1) & TactixLibrary.prop & TactixLibrary.done)
-      else TactixLibrary.proveBy("(q_(||) & x_=f(x_)) & p_(x_) -> q_(||) & p_(f(x_))".asFormula,
-        TactixLibrary.implyR(1) & TactixLibrary.andL(-1)*2 & TactixLibrary.andR(1) <(TactixLibrary.closeId, TactixLibrary.eqR2L(-3)(1) & TactixLibrary.closeId))
-    TactixLibrary.useAt(rewrite, if (pos.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil))(pos)*odeSize & SimplifierV2.simpTac(pos)
+    val rewrite: Provable =
+      if (pos.isSucc) TactixLibrary.proveBy("(q_(f(x_)) -> p_(f(x_))) -> (q_(x_) & x_=f(x_) -> p_(x_))".asFormula,
+        TactixLibrary.implyR(1) * 2 & TactixLibrary.andL(-2) & TactixLibrary.eqL2R(-3)(1) & TactixLibrary.eqL2R(-3)(-2) & TactixLibrary.prop & TactixLibrary.done)
+      else TactixLibrary.proveBy("(q_(x_) & x_=f(x_)) & p_(x_) -> q_(f(x_)) & p_(f(x_))".asFormula,
+        TactixLibrary.implyR(1) & TactixLibrary.andL(-1) * 2 & TactixLibrary.andR(1) & OnAll(TactixLibrary.eqR2L(-3)(1) & TactixLibrary.closeId))
+
+    //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f
+    ("simplifyPostConditionStep" by ((pp: Position, ss: Sequent) => {
+      val subst = if (pos.isSucc) (us: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
+        case Some(Imply(And(q, Equal(x, f)), p)) => RenUSubst(
+          ("x_".asVariable, x) ::
+            ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
+            ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
+            ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
+            Nil)
+      } else (us: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
+        case Some(And(And(q, Equal(x, f)), p)) => RenUSubst(
+          ("x_".asVariable, x) ::
+            ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
+            ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
+            ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
+            Nil)
+      }
+      TactixLibrary.useAt("ANON", rewrite, if (pp.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp)
+    }))(pos)*odeSize & SimplifierV2.simpTac(pos)
   })
 
   //endregion
