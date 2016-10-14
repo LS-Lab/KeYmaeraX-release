@@ -250,18 +250,42 @@ class UnificationMatchTest extends SystemTestBase {
       (Variable("x_"), Variable("y",Some(0))) :: Nil))
   }
 
-  ignore should "unify j()=x+y with s()=s()" in {
+  it should "unify j()=x+y with s()=s()" ignore {
     //@note unification but not matching
     shouldUnify("s()=s()".asFormula, "j()=x+y".asFormula, USubst(
       SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
   }
 
-  ignore should "unify x+y=j() with s()=s()" in {
+  it should "unify x+y=j() with s()=s()" ignore {
     //@note unification but not matching
     shouldUnify("s()=s()".asFormula, "x+y=j()".asFormula, USubst(
       SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
   }
 
+  //@todo single pass does not pick up x_ correctly for predicates before x_=f
+  it should "unify q_(x_) & x_=f(x_) -> p_(x_) with complicated formula" ignore {
+    shouldMatch("q_(x_) & x_=f(x_) -> p_(x_)".asFormula,
+      "((v>=0&x+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0)&x=v_0*(kyxtime-kyxtime_0)+x_0->v>=0&x+v^2/(2*B)<=S".asFormula,
+      RenUSubst(
+        ("q_(.)".asFormula, "(v>=0&.+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0".asFormula) ::
+        ("f(.)".asTerm, "v_0*(kyxtime-kyxtime_0)+x_0".asTerm) ::
+        ("p_(.)".asFormula, "v>=0&.+v^2/(2*B)<=S".asFormula) ::
+        ("x_".asVariable, "x".asVariable) ::
+        Nil)
+    )
+  }
+
+  it should "unify x_=f(x_) & q_(x_) -> p_(x_) with complicated formula" in {
+    shouldMatch("x_=f(x_) & q_(x_) -> p_(x_)".asFormula,
+      "x=v_0*(kyxtime-kyxtime_0)+x_0&((v>=0&x+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0)->v>=0&x+v^2/(2*B)<=S".asFormula,
+      RenUSubst(
+        ("f(.)".asTerm, "v_0*(kyxtime-kyxtime_0)+x_0".asTerm) ::
+        ("q_(.)".asFormula, "(v>=0&.+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0".asFormula) ::
+        ("p_(.)".asFormula, "v>=0&.+v^2/(2*B)<=S".asFormula) ::
+        ("x_".asVariable, "x".asVariable) ::
+        Nil)
+    )
+  }
 
   "Dassignb unification" should "unify [u':=f();]p(u') with [u':=b();]u'>=0" in {
     shouldMatch("[u':=f();]p(u')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
