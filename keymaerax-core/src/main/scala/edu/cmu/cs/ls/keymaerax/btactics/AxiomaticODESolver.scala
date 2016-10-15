@@ -15,9 +15,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 /**
   * An Axiomatic ODE solver.
   * Current Limitations:
-  *   * Only works in succedent positions (top-level for diamonds). I think this is only
-  *     a limitation imposed by the differential tactics used herein.
-  *   * Brittle when the initial ODE already has a domain constraint.
+  *   - Diamonds in succedent only
   *
   * @see Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
   * @author Nathan Fulton
@@ -51,6 +49,8 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
     (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER))*osize &
     DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
+    simplifyEvolutionDomain(osize)(odePosAfterInitialVals ++ PosInExpr(0::1::Nil)) &
+    DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER) &
     (s.sub(pos) match {
       case Some(Box(_,_)) if pos.isSucc => HilbertCalculus.DW(odePosAfterInitialVals)
       case Some(Box(_,_)) if pos.isAnte => HilbertCalculus.useAt(DerivedAxioms.DWeakeningAnd, PosInExpr(0::Nil))(odePosAfterInitialVals)
@@ -59,6 +59,7 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
     simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1::Nil)) &
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
+    //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
     (inverseDiffCut(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
     RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
@@ -73,8 +74,8 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
     HilbertCalculus.assignb(pos)*(osize+2) & // all initial vals + time_0=time + time=0
     DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
-    //@note do not simplify 0<=s<=t_ -> evolution domain (easier to recognize if we don't change evolution domain)
     SimplifierV2.simpTac(pos ++ PosInExpr(0::1::1::Nil)) &
+    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::1::Nil)) &
     DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
   })
 
@@ -180,7 +181,28 @@ object AxiomaticODESolver {
 
   //endregion
 
-  //region Simplify post-condition
+  //region Simplify post-condition and evolution domain constraint
+
+  private def simplifyEvolutionDomain(odeSize: Int) = "simplifyEvolutionDomain" by ((pos: Position, seq: Sequent) => {
+    val simplFact = TactixLibrary.proveBy(
+      "p_(f(x_)) & x_=f(x_) <-> p_(x_) & x_=f(x_)".asFormula, TactixLibrary.equivR(1) <(
+        TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqL2R(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId),
+        TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqR2L(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId)
+        ))
+
+    val step = "simplifyEvolDomainStep" by ((pp: Position, ss: Sequent) => {
+      val subst = (us: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
+        case Some(And(p, Equal(x, f))) => RenUSubst(
+          ("x_".asVariable, x) ::
+            ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
+            ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
+            Nil)
+      }
+      TactixLibrary.useAt("ANON", simplFact, PosInExpr(1::Nil), subst)(pp)
+    })
+
+    (0 until odeSize).map(List.fill(_)(0)).map(i => step(pos ++ PosInExpr(i))).reduceRight[BelleExpr](_ & _)
+  })
 
   def simplifyPostCondition(odeSize: Int) = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
     val rewrite: Provable =
@@ -216,11 +238,9 @@ object AxiomaticODESolver {
 
   private val inverseDiffCut = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
     val idc: BelleExpr = s.sub(pos) match {
-      //@note evolution domain constraints are of the form true&solution or ...&solution
-      case Some(f@Box(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
-        HilbertCalculus.useExpansionAt("DC differential cut")(pos)
-      case Some(f@Diamond(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
-        HilbertCalculus.useExpansionAt("DCd diamond differential cut")(pos)
+      //@note all evolution domain constraints (even the initial ones) must be removed
+      case Some(Box(_, _)) => HilbertCalculus.useExpansionAt("DC differential cut")(pos)
+      case Some(Diamond(_, _)) => HilbertCalculus.useExpansionAt("DCd diamond differential cut")(pos)
     }
 
     idc <(
@@ -230,12 +250,6 @@ object AxiomaticODESolver {
         DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
       )
   })
-
-  /** Returns true iff f is part of the cut-in solution for the ODE. */
-  private def isPartOfSoln(ode: DifferentialProgram, f: Formula): Boolean = f match {
-    case Equal(t1, t2) => atomicOdes(ode).exists(a => a.xp.x == t1 || a.xp.x == t2)
-    case _ => false
-  }
 
   //endregion
 
