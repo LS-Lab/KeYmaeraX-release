@@ -89,11 +89,10 @@ private object DLBySubst {
     */
   def stutter(x: Variable): DependentPositionTactic = "stutter" byWithInput (x, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, f: Formula) =>
-      val commute = if (pos.isAnte) commuteEquivR(1) else skip
+      val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
-        cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) &
-          byUS("[:=] self assign")
+        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS("[:=] self assign") & done
       )
   })
 
