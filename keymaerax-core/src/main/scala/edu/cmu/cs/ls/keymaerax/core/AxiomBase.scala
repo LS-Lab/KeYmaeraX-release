@@ -53,7 +53,12 @@ private[core] object AxiomBase {
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
 
-    Map()
+    Map(
+      ("CE congruence",
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
+          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany))))))
+
+    )
   }
 
   /**

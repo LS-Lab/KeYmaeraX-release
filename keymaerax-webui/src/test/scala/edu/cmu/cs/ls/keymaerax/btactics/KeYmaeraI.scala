@@ -7,6 +7,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.NamedTactic
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.core.{Forall, Formula, Imply}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -19,10 +21,44 @@ class KeYmaeraI extends TacticTestBase {
     proveBy(f, t)
   }
 
+  it should "work for Andre's example" in {
+    val in =
+      """
+        |Functions.
+        |  B p(R,R).
+        |End.
+        |Problem.
+        |  \exists x \forall y p(x,y) -> \forall y \exists x p(x,y)
+        |End.
+      """.stripMargin
+    val f = KeYmaeraXProblemParser(in)
+    f.isInstanceOf[Imply] shouldBe true
+    val t = BelleParser("implyR(1) & allR(1) & existsR({`z`}, 1) & existsL(-1)")
+    val result = proveBy(f, t)
+    println(result)
+  }
+
   "allR" should "work" in {
     val t = SequentCalculus.allR(1) & SequentCalculus.implyR(1) & SequentCalculus.close
     val f = "(\\forall x (p(x)->p(x)))".asFormula
     proveBy(f, t) shouldBe 'proved
+  }
+
+  it should "work for Andre's example" in {
+    val in =
+      """
+        |Functions.
+        |  B p(R,R).
+        |End.
+        |Problem.
+        |  \exists x \forall y p(x,y) -> \forall y \exists x p(x,y)
+        |End.
+      """.stripMargin
+    val f = KeYmaeraXProblemParser(in)
+    f.isInstanceOf[Imply] shouldBe true
+    val t = BelleParser("implyR(1) & allR(1) & existsR({`z`}, 1)")
+    val result = proveBy(f, t)
+    println(result)
   }
 
 
@@ -124,7 +160,7 @@ class KeYmaeraI extends TacticTestBase {
     result shouldBe 'proved
   }
 
-  it should "prove (p() <-> true) <-> p() by prop" in {
+  ignore should "prove (p() <-> true) <-> p() by prop" in {
     val f = "(p() <-> true) <-> p()".asFormula
     val t = BelleParser("prop")
 
