@@ -163,7 +163,7 @@ object AxiomaticODESolver {
       Idioms.nil,
       //@todo need to normalize (otherwise no constified initial conditions), but normalize is probably too much when there are other formulas around (normalize at pos)
       DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(diffIndPos) & DebuggingTactics.done
+        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()('Rlast) & DebuggingTactics.done
       )
   })
 
@@ -230,7 +230,8 @@ object AxiomaticODESolver {
             Nil)
       }
       TactixLibrary.useAt("ANON", rewrite, if (pp.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp)
-    }))(pos)*odeSize & SimplifierV2.simpTac(pos)
+    }))(pos)*odeSize &
+      (if (pos.isSucc) TactixLibrary.useAt(TactixLibrary.proveBy("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(pos) else TactixLibrary.skip) & SimplifierV2.simpTac(pos)
   })
 
   //endregion
@@ -250,7 +251,7 @@ object AxiomaticODESolver {
       Idioms.nil, /* Branch with no ev dom contraint */
       //@todo need to normalize (constify initial conditions), but normalize might be too much if other formulas are around
       DebuggingTactics.debug("inverse normalize", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
+        DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()('Rlast) & DebuggingTactics.done /* Show precond of diff cut */
       )
   })
 
