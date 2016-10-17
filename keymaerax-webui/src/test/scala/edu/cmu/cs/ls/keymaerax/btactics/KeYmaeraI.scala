@@ -16,9 +16,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   */
 class KeYmaeraI extends TacticTestBase {
   "existsL" should "work" in {
-    val t = SequentCalculus.implyR(1) & SequentCalculus.existsL(-1)
+    val t = SequentCalculus.implyR(1) & SequentCalculus.existsL(-1) & SequentCalculus.close
     val f = "(\\exists x (x=x)) -> true".asFormula
-    proveBy(f, t)
+    proveBy(f, t) shouldBe 'proved
   }
 
   it should "work for Andre's example" in {
@@ -33,9 +33,9 @@ class KeYmaeraI extends TacticTestBase {
       """.stripMargin
     val f = KeYmaeraXProblemParser(in)
     f.isInstanceOf[Imply] shouldBe true
-    val t = BelleParser("implyR(1) & allR(1) & existsR({`z`}, 1) & existsL(-1)")
+    val t = BelleParser("implyR(1) & existsL(-1) & allR(1) & existsR({`x`}, 1) & allL({`y`}, -1) & close")
     val result = proveBy(f, t)
-    println(result)
+    result shouldBe 'proved
   }
 
   "allR" should "work" in {
