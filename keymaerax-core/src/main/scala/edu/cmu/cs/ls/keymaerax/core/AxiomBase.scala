@@ -146,6 +146,10 @@ Axiom "exists eliminate".
   p(||) -> \exists x_ p(||)
 End.
 
+Axiom "exists dual".
+  (!\forall x (!p(||))) <-> (\exists x p(||))
+End.
+
 Axiom "vacuous all quantifier".
   (\forall x_ p()) <-> p()
 End.

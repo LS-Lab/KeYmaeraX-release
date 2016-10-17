@@ -13,6 +13,19 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   * @author Nathan Fulton
   */
 class KeYmaeraI extends TacticTestBase {
+  "existsL" should "work" in {
+    val t = SequentCalculus.implyR(1) & SequentCalculus.existsL(-1)
+    val f = "(\\exists x (x=x)) -> true".asFormula
+    proveBy(f, t)
+  }
+
+  "allR" should "work" in {
+    val t = SequentCalculus.allR(1) & SequentCalculus.implyR(1) & SequentCalculus.close
+    val f = "(\\forall x (p(x)->p(x)))".asFormula
+    proveBy(f, t) shouldBe 'proved
+  }
+
+
   "KeYmaeraI" should "prove hw 5.3" in {
     val f = "A() & ( (A() -> B()) | (A() -> C()) ) -> B() | C()".asFormula
     val t = BelleParser(

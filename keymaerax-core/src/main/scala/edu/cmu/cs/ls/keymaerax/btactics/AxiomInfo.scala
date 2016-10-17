@@ -88,6 +88,8 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => posnil}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
     new CoreAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => SequentCalculus.existsE}),
+    new CoreAxiomInfo("exists dual", ("∃e","existsdual"), "existsdual", {case () => SequentCalculus.existsDual}),
+
 
     // TODO not provable with the current prop tactic (which considers every rule invertible)
     //new DerivedAxiomInfo("!| deMorgan"

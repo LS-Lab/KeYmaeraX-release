@@ -154,6 +154,8 @@ trait SequentCalculus {
   //@todo document and unclear what it really does depending on the index
   lazy val existsE : DependentPositionTactic = useAt("exists eliminate", us => us)
 
+  lazy val existsDual : DependentPositionTactic = useAt("exists dual", us => us)
+
 
   // closing
 
