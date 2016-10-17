@@ -926,6 +926,16 @@ case class NotLeft(pos: AntePos) extends LeftRule {
   }
 }
 
+/** Original classical not left. Included for existsL */
+case class NotLeftHack(pos: AntePos) extends LeftRule {
+  val name: String = "Not Left Hack"
+  /** !L Not left */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Not(p) = s(pos)
+    immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))))
+  }
+}
+
 /**
   * &R And right
   * {{{

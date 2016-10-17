@@ -53,6 +53,8 @@ trait SequentCalculus {
   }
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
   val notL    : BuiltInLeftTactic = "notL" by { (pr:Provable, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
+  val notLHack    : BuiltInLeftTactic = "notLHack" by { (pr:Provable, pos:AntePosition) => pr(NotLeftHack(pos.checkTop), 0) }
+
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
   val notR    : BuiltInRightTactic = "notR" by { (pr:Provable, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
