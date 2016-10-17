@@ -117,7 +117,7 @@ class JLinkMathematicaLink extends MathematicaLink {
           }
           case Some(false) => println("WARNING: Mathematica seems not activated or Mathematica license might be expired, Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
             //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
-          case None => println("WARNING: Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
+          case None => println("WARNING: Mathematica may not be activated or Mathematica license might be expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please check your Mathematica license manually."); true
         }
       } catch {
         case e: UnsatisfiedLinkError =>
