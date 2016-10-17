@@ -214,24 +214,27 @@ object AxiomaticODESolver {
 
     //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f
     ("simplifyPostConditionStep" by ((pp: Position, ss: Sequent) => {
-      val subst = if (pos.isSucc) (us: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
-        case Some(Imply(And(q, Equal(x, f)), p)) => RenUSubst(
+      val (xx, subst) = if (pos.isSucc) ss.sub(pp) match {
+        case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (x, (us: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
             ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
-            ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
+            ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
-            Nil)
-      } else (us: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
-        case Some(And(And(q, Equal(x, f)), p)) => RenUSubst(
+            Nil))
+      } else ss.sub(pp) match {
+        case Some(And(And(q, Equal(x: Variable, f)), p)) => (x, (us: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
             ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
-            ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
+            ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
-            Nil)
+            Nil))
       }
-      TactixLibrary.useAt("ANON", rewrite, if (pp.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp)
+      DLBySubst.stutter(xx)(pos ++ PosInExpr(1::Nil)) &
+      TactixLibrary.useAt("ANON", rewrite, if (pp.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp) &
+      TactixLibrary.assignb(pos ++ PosInExpr(1::Nil))
     }))(pos)*odeSize &
-      (if (pos.isSucc) TactixLibrary.useAt(TactixLibrary.proveBy("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(pos) else TactixLibrary.skip) & SimplifierV2.simpTac(pos)
+      (if (pos.isSucc) TactixLibrary.useAt(TactixLibrary.proveBy("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(pos)
+       else TactixLibrary.skip) & SimplifierV2.simpTac(pos)
   })
 
   //endregion

@@ -34,6 +34,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)".asFormula
   }
 
+  it should "retain initial evolution domain" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asFormula)
+  }
+
   it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val result = proveBy("x=1&v=2 -> [{x'=v}]x^3>=1".asFormula, AxiomaticODESolver()(1, 1::Nil))
     result.subgoals should have size 1
@@ -127,6 +134,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "solve simple nested ODEs" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
@@ -199,6 +213,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2&a=3&j=4".asFormula
     result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->true)&(j/2/3*t_^3+a/2*t_^2+v*t_+x)^3>=1)".asFormula
+  }
+
+  it should "solve simple nested ODEs" ignore withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>[{x'=3}]x>0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) & \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
