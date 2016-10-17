@@ -23,7 +23,10 @@ protected object FOQuantifierTactics {
         val v = vars.head
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
-            if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
+            if (pos.isAnte)
+              notLHack(pos) & base('Rlast) & notR('Rlast) & hideR('Rlast)
+            else
+              notR(pos) & base('Llast) & DebuggingTactics.debug("FAILING NOW BECAUSE notL PRODUCED TWO GOALS SEE ABOVE!", true) & notL('Llast)
           } else base(pos++PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
     })
 
