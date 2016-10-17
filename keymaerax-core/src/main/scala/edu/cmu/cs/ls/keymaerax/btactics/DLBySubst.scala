@@ -285,8 +285,9 @@ private object DLBySubst {
   def discreteGhost(t: Term, ghost: Option[Variable]): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
       //@todo figure out how to serialize None when adding to AxiomInfo
       ghost match { case Some(g) => List(t, g) case _ => List(t) }, (pos: Position, seq: Sequent) => {
-    seq.at(pos) match {
-      case (ctx, f: Formula) =>
+    require(ghost match { case Some(g) => g != t case None => true }, "Expected ghost different from t, use stutter instead")
+    seq.sub(pos) match {
+      case Some(f: Formula) =>
         // check specified name, or construct a new name for the ghost variable if None
         def ghostV(f: Formula): Variable = ghost match {
           case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
@@ -296,14 +297,15 @@ private object DLBySubst {
           }
         }
         val theGhost = ghostV(f)
-        //@todo polarity
-        val (hidePos, commute) = if (pos.isSucc) (pos.topLevel, skip) else (SuccPosition.base0(seq.succ.size), commuteEquivR(1))
 
-        //@note cannot use plain useAt, because we want to support ghosts resulting in [x:=2;][x:=3;]p(x)
-        cutLR(ctx(Box(Assign(theGhost, t), f.replaceFree(t, theGhost))))(pos.topLevel) <(
-          /* use */ ident,
-          /* show */ cohide(hidePos) & CMon(pos.inExpr) & equivifyR(1) & commute & byUS("[:=] assign")
-          )
+        val subst = (us: Option[Subst]) => RenUSubst(
+          ("x_".asVariable, theGhost) ::
+          ("f()".asTerm, t) ::
+          ("p(.)".asFormula, f.replaceFree(t, DotTerm())) ::
+          Nil
+        )
+
+        useAt("[:=] assign", PosInExpr(1::Nil), subst)(pos)
     }
   })
 

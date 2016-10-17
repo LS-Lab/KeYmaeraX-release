@@ -583,7 +583,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "use same variable if asked to do so" in {
-    val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1))
+    val result = proveBy("y>0".asFormula, DLBySubst.stutter("y".asVariable)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[y:=y;]y>0".asFormula
@@ -608,7 +608,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce self-assignment ghosts in the middle of formulas when not bound before" in {
-    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1, 1::Nil))
+    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, DLBySubst.stutter("y".asVariable)(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[x:=1;][y:=y;][y:=2;]y>0".asFormula
