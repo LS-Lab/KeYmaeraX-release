@@ -74,8 +74,9 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
     HilbertCalculus.assignb(pos)*(osize+2) & // all initial vals + time_0=time + time=0
     DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
+    //@todo remove duplicate evolution domain constraint
     SimplifierV2.simpTac(pos ++ PosInExpr(0::1::1::Nil)) &
-    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::1::Nil)) &
+    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
     DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
   })
 
@@ -238,9 +239,11 @@ object AxiomaticODESolver {
 
   private val inverseDiffCut = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
     val idc: BelleExpr = s.sub(pos) match {
-      //@note all evolution domain constraints (even the initial ones) must be removed
-      case Some(Box(_, _)) => HilbertCalculus.useExpansionAt("DC differential cut")(pos)
-      case Some(Diamond(_, _)) => HilbertCalculus.useExpansionAt("DCd diamond differential cut")(pos)
+      //@note evolution domain constraints are of the form true&solution or ...&solution
+      case Some(f@Box(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
+        HilbertCalculus.useExpansionAt("DC differential cut")(pos)
+      case Some(f@Diamond(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
+        HilbertCalculus.useExpansionAt("DCd diamond differential cut")(pos)
     }
 
     idc <(
@@ -250,6 +253,12 @@ object AxiomaticODESolver {
         DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
       )
   })
+
+  /** Returns true iff f is part of the cut-in solution for the ODE. */
+  private def isPartOfSoln(ode: DifferentialProgram, f: Formula): Boolean = f match {
+    case Equal(t1, t2) => atomicOdes(ode).exists(a => a.xp.x == t1 || a.xp.x == t2)
+    case _ => false
+  }
 
   //endregion
 

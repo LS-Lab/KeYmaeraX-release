@@ -486,54 +486,6 @@ private object DifferentialTactics {
         )
   })
 
-  /** @see [[TactixLibrary.diffSolve]] */
-  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(tool: ODESolverTool): DependentPositionTactic = "diffSolve" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Box(odes: ODESystem, _)) =>
-      require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
-
-      val time: Variable = TacticHelper.freshNamedSymbol(Variable("t_", None, Real), sequent)
-      val introTime =
-        DG(AtomicODE(DifferentialSymbol(time), Plus(Times("0".asTerm, time), "1".asTerm)))(pos) &
-            DLBySubst.assignbExists("0".asTerm)(pos) &
-            DLBySubst.assignEquality(pos)
-
-      def createTactic(ode: ODESystem, solution: Formula, time: Variable, iv: Map[Variable, Variable],
-                       diffEqPos: SeqPos): BelleExpr = {
-        val initialGhosts = (primedSymbols(ode.ode) + time).foldLeft(skip)((a, b) =>
-          a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquality(diffEqPos)))
-
-        // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
-        val flatSolution = flattenConjunctions(solution).
-          sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
-
-        diffUnpackEvolutionDomainInitially(diffEqPos) &
-          initialGhosts &
-          diffInvariant(flatSolution:_*)(diffEqPos) &
-          // initial ghosts are at the end of the antecedent
-          exhaustiveEqR2L(hide=true)('Llast)*flatSolution.size &
-          diffWeaken(diffEqPos)
-      }
-
-      // initial values (from only the formula at pos, because allR will increase index of other occurrences elsewhere in the sequent)
-      val iv: Map[Variable, Variable] =
-        primedSymbols(odes.ode).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
-
-      val theSolution = solution match {
-        case sol@Some(_) => sol
-        case None => tool.odeSolve(odes.ode, time, iv)
-      }
-
-      val diffEqPos = SuccPos(sequent.succ.length-1) //@note introTime moves ODE to the end of the succedent
-      theSolution match {
-        // add relation to initial time
-        case Some(s) =>
-          val sol = And(s, GreaterEqual(time, Number(0)))
-          introTime & createTactic(odes, sol, time, iv, diffEqPos)
-        case None => throw new BelleError("No solution found")
-      }
-
-  })
-
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
   lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a: ODESystem, p)) =>
