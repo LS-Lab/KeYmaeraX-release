@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import spray.can.Http
 
@@ -119,6 +120,7 @@ object HyDRAInitializer {
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
     try {
+      LemmaDBFactory.lemmaDB.deleteDatabase() //@note The lemma DB for KeYmaera I is rather small so to prevent initialization errors, we'll just go ahead and delete the database.
       println("Populating DerivedLemmas database.")
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
