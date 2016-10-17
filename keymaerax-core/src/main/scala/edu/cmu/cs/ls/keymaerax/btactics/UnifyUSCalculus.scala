@@ -371,6 +371,12 @@ trait UnifyUSCalculus {
       * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
       * in place of c at position p in context C{_}.
       *
+      * For facts of the form
+      * {{{
+      *   prereq -> (left<->right)
+      * }}}
+      * this tactic will try only QE to prove `prereq` globally and will leave `C{prereq}` as an open goal otherwise.
+      *
       * @param subst the substitution subst=unify(k,c)
       * @param K the context of fact in which key k occurs
       * @param k the key from context K{_} to use in place of c
@@ -1185,6 +1191,12 @@ trait UnifyUSCalculus {
     * where `__l__` indicates the key part of the fact.
     * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
     *
+    * For facts of the form
+    * {{{
+    *   prereq -> (left<->right)
+    * }}}
+    * this tactic currently only uses master to prove `prereq` globally and otherwise gives up.
+    *
     * @author Andre Platzer
     * @param fact the Provable fact whose conclusion to use to simplify at the indicated position of the sequent
     * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
@@ -1441,7 +1453,7 @@ trait UnifyUSCalculus {
 
             // |- subst(prereq)
             val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
-            require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
+            require(prereqFact.isProved, "only globally provable requirements currently supported. Use useAt instead " + prereqFact)
 
             // |- subst(remainder{k})
             val remFact: Provable = (Provable.startProof(subst(Context(remainder)(k)))
