@@ -97,7 +97,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
             | (must(normalize)
             | (loop(gen)('R)
             | (ODE('R)
-            | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
+            | (diffSolve('L) // somehow ODE aborts before even trying diffSolve
+            | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE))
   }
 
@@ -109,7 +110,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         | (must(normalize)
         | (loopauto('R)
         | (ODE('R)
-        | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
+        | (diffSolve('L) // somehow ODE aborts before even trying diffSolve
+        | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE)) & done
   }
 
