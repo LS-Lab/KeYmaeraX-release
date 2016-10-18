@@ -523,8 +523,8 @@ trait UnifyUSCalculus {
 
               def hide2 =
                 if (p.isSucc) cohide2(AntePos(sequent.ante.size), p.top)
-                else ((sequent.ante.indices.filterNot(i => i == p.index0).map(i => hideL(AntePosition.base0(i))) :+ hideL(AntePos(sequent.ante.size))) ++
-                       sequent.succ.indices.map(i => hideR(SuccPosition.base0(i)))).reduceRight[BelleExpr](_ & _)
+                else (sequent.ante.indices.reverse.tail.map(i => hideL(AntePosition.base0(i))) ++
+                      sequent.succ.indices.reverse.map(i => hideR(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip)
 
               // uses specialized congruence tactic for DC, may not work with other conditional equivalences
               cut(C(subst(prereq))) <(
