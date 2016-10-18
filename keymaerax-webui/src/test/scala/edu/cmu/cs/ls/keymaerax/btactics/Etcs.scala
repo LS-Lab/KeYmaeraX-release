@@ -26,12 +26,17 @@ import scala.language.postfixOps
 @SlowTest
 class Etcs extends TacticTestBase {
 
-  "ETCS controllability lemma" should "be provable with master" in withMathematica { tool =>
+  "ETCS controllability" should "prove lemma with master" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/controllability-lemma.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "ETCS RBC controllability lemma" should "be provable with master" in withMathematica { tool =>
+  it should "prove RBC characterisation with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-characterisation.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "prove RBC lemma with master" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-lemma.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
