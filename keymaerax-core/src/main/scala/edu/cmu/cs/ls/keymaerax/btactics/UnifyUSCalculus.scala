@@ -579,6 +579,11 @@ trait UnifyUSCalculus {
       useAt(TactixLibrary.proveBy("(p_()|q_()) -> (p_()|r_()) <-> (p_() | (q_()->r_()))".asFormula, TactixLibrary.prop))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute) &
       useAt(TactixLibrary.proveBy("p_() | true <-> true".asFormula, TactixLibrary.prop))(1, subPos)
+    case Forall(x, p) if towards.head == 0 =>
+      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 0 ++ 0) &
+      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 0 ++ 1) &
+      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 1) &
+      condEquivCongruence(Box(AssignAny(x.head), p), PosInExpr(towards.pos.updated(0, 1)), subPos, commute)
     case DotFormula =>
       val fact =
         if (commute) "((p_()<->q_())&q_() -> p_()) <-> true".asFormula

@@ -148,6 +148,27 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
+  it should "solve in universal context in ante" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("\\forall z [{x'=2}]x>0".asFormula), IndexedSeq()), diffSolve(-1, PosInExpr(0::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "\\forall z \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> 2*t_+x>0)".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "solve in nasty assignment context in ante" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("[x:=*;][{x'=2}]x>0".asFormula), IndexedSeq()), diffSolve(-1, PosInExpr(1::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[x:=*;]\\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> 2*t_+x>0)".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "solve in nasty universal context in ante" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("\\forall x [{x'=2}]x>0".asFormula), IndexedSeq()), diffSolve(-1, PosInExpr(0::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "\\forall x \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> 2*t_+x>0)".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
