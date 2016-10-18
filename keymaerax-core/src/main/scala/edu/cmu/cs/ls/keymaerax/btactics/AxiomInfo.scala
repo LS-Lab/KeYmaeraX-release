@@ -71,7 +71,7 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
+  private [btactics] lazy val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
 
     // first-order logic quantifiers
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => assert(false, "allInst is not intended for external use, use allL instead"); ??? }),
@@ -305,7 +305,7 @@ object DerivationInfo {
   }
 
   /** code name mapped to derivation information */
-  private val byCodeName: Map[String, DerivationInfo] =
+  private lazy val byCodeName: Map[String, DerivationInfo] =
   /* @todo Decide on a naming convention. Until then, making everything case insensitive */
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
         acc.+((info.codeName.toLowerCase(), info))
