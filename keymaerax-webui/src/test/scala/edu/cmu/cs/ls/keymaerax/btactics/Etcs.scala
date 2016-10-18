@@ -36,6 +36,12 @@ class Etcs extends TacticTestBase {
     proveBy(s, master()) shouldBe 'proved
   }
 
+  it should "prove RBC corollary with tactic" ignore withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-corollary.kyx"))
+    //@todo write tactic
+    proveBy(s, master()) shouldBe 'proved
+  }
+
   it should "prove RBC lemma with master" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-lemma.kyx"))
     proveBy(s, master()) shouldBe 'proved
