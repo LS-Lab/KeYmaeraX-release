@@ -49,7 +49,7 @@ class TactixLibraryTests extends TacticTestBase {
           ,
           QE
           ,
-            diffSolve()(1) & OnAll(QE)
+            diffSolve(1) & OnAll(QE)
       )
     ) shouldBe 'proved
   }
@@ -92,7 +92,7 @@ class TactixLibraryTests extends TacticTestBase {
           ,
           QE
           ,
-          diffSolve()(1) & OnAll(QE)
+          diffSolve(1) & OnAll(QE)
           ))
     ) shouldBe 'proved
   }
@@ -105,7 +105,7 @@ class TactixLibraryTests extends TacticTestBase {
             ,
             QE
             ,
-            diffSolve()(1) & OnAll(QE)
+            diffSolve(1) & OnAll(QE)
             ))
     ) shouldBe 'proved
   }

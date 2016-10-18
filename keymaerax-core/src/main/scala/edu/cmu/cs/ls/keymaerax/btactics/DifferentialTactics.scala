@@ -567,7 +567,7 @@ private object DifferentialTactics {
     ) & ODE(pos) | noCut(pos) |
       // if no differential cut succeeded, just skip and go for a direct proof.
       //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
-      TactixLibrary.diffSolve()(pos) |
+      TactixLibrary.diffSolve(pos) |
       ChooseSome(
         //@todo should memoize the results of the differential invariant generator
         () => InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos),

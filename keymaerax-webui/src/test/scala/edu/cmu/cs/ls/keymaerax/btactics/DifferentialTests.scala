@@ -1271,44 +1271,28 @@ class DifferentialTests extends TacticTestBase {
     proveBy(s, t) shouldBe 'proved
   }
 
-  "diffSolve" should "use provided solution" in withMathematica { tool =>
+  "diffSolve" should "find a solution" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
-      diffSolve(Some("t=t_0+t_ & x=x_0+2*t_".asFormula))(1))
+      diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("((true&t_>=0)&t=t_0+t_)&x=x_0+2*t_ -> x>b".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 2*t_+x>b)".asFormula)
   }
 
-  it should "add time if not present" in withMathematica { tool =>
+  it should "add time" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
-      diffSolve(Some("x=x_0+2*t_".asFormula))(1))
+      diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(true&t_>=0)&x=x_0+2*t_ -> x>b".asFormula)
-  }
-
-  it should "ask Mathematica if no solution provided and add time regardless" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
-      diffSolve()(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("((true&t_>=0)&x=2*t_+x_0)&t=t_0+t_ -> x>b".asFormula)
-  }
-
-  it should "add time if not present and ask Mathematica if no solution provided" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
-      diffSolve(None)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(true&t_>=0)&x=2*t_+x_0 -> x>b".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 2*t_+x>b)".asFormula)
   }
 
   it should "work if not sole formula in succedent" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("a=5".asFormula, "[{x'=2}]x>b".asFormula, "c>2".asFormula)),
-      diffSolve(None)(2))
+      diffSolve(2))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("a=5".asFormula, "(true&t_>=0)&x=2*t_+x_0 -> x>b".asFormula, "c>2".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("a=5".asFormula, "\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 2*t_+x>b)".asFormula, "c>2".asFormula)
   }
 
   it should "add time if not present and ask Mathematica if no solution provided as part of master" in withMathematica { tool =>
@@ -1316,7 +1300,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "diffSolve add time if not present and ask Mathematica" in withMathematica { tool =>
-    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), diffSolve()(1) & QE) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), diffSolve(1) & QE) shouldBe 'proved
   }
 
   it should "open diff ind x>b() |- [{x'=2}]x>b()" in withMathematica { tool =>
@@ -1327,90 +1311,91 @@ class DifferentialTests extends TacticTestBase {
     proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "find solution for x'=v if None is provided" in withMathematica { tool =>
+  it should "find solution for x'=v" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0".asFormula), IndexedSeq("[{x'=v}]x>0".asFormula)),
-      diffSolve()(1))
+      diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0 & v>=0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(true&t_>=0)&x=t_*v+x_0 -> x>0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0 & v>=0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> v*t_+x>0)".asFormula)
   }
 
-  it should "use provided solution for x'=v, v'=a" in withMathematica { tool =>
+  it should "find solution for x'=v, v'=a" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a}]x>0".asFormula)),
-      diffSolve(Some("v=a*t_+v_0&x=1/2*(a*t_*t_+2*t_*v_0+2*x_0)".asFormula))(1))
+      diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_*t_+2*t_*v_0+2*x_0) -> x>0".asFormula)
-  }
-
-  it should "find solution for x'=v, v'=a if None is provided" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a}]x>0".asFormula)),
-      diffSolve()(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_^2+2*t_*v_0+2*x_0) -> x>0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0 & v>=0 & a>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> a/2*t_^2+v*t_+x>0)".asFormula)
   }
 
   it should "work when ODE is not sole formula in succedent" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("y=1".asFormula, "[{x'=v,v'=a}]x>0".asFormula, "z=3".asFormula)),
-      diffSolve()(2))
+      diffSolve(2))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula, "true".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0 & v>=0 & a>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List(
       "y=1".asFormula,
       "z=3".asFormula,
-      "((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_^2+2*t_*v_0+2*x_0) -> x>0".asFormula)
+      "\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> a/2*t_^2+v*t_+x>0)".asFormula)
   }
 
   it should "work when safety property is abstract" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("J(x,v)".asFormula), IndexedSeq("[{x'=v,v'=a}]J(x,v)".asFormula)),
-      diffSolve()(1))
+      diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("J(x_0,v_0)".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_^2+2*t_*v_0+2*x_0) -> J(x,v)".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("J(x,v)".asFormula)
+    //@todo improve simplifier
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> J(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,a*(0+1*t_-0)+v))".asFormula)
   }
 
   it should "solve the simplest of all ODEs" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve()(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(true&t_>=0)&x=t_+x_0 -> x>0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> t_+x>0)".asFormula)
+  }
+
+  it should "solve simple box after ODE" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][x:=3;]x>0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    //@todo simplifier chases too much
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 3>0)".asFormula)
   }
 
   it should "solve simple nested ODEs" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve()(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(true&t_>=0)&x=2*t_+x_0 -> [{x'=3}]x>0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
   it should "solve complicated nested ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("v=0 & x<s & 0<T".asFormula, "t=0".asFormula, "a_0=(s-x)/T^2".asFormula), IndexedSeq("[{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asFormula)),
-      diffSolve()(1))
+      diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("v_0=0 & x_0<s & 0<T".asFormula, "t_0=0".asFormula, "a_0=(s-x_0)/T^2".asFormula, "t__0=0".asFormula, "v_0>=0&t_0<=T".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("((((v>=0&t<=T)&t_>=0)&t=t_0+t_)&v=a_0*t_+v_0)&x=1/2*(a_0*t_^2+2*t_*v_0+2*x_0)->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("v_1=0 & x_1<s & 0<T".asFormula, "t_1=0".asFormula, "a_0=(s-x_1)/T^2".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall v (v=a_0*t_+v_1->\\forall t (t=t_+t_1->\\forall x (x=a_0/2*t_^2+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asFormula)
   }
 
-  it should "increase index of existing other occurrences of initial values" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x_0=b".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve()(1))
+  it should "not touch index of existing other occurrences of initial values" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x_0=b".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0".asFormula, "x_1=b".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(true&t_>=0)&x=t_+x_0 -> x>0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula, "x_0=b".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> t_+x>0)".asFormula)
   }
 
   it should "retain initial evolution domain for the sake of contradictions" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("y>0".asFormula), IndexedSeq("[{x'=1&y<=0}]x>0".asFormula)), diffSolve()(1))
+    val result = proveBy(Sequent(IndexedSeq("y>0".asFormula), IndexedSeq("[{x'=1&y<=0}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("y>0".asFormula, "t__0=0".asFormula, "y<=0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(y<=0&t_>=0)&x=t_+x_0 -> x>0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("y>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> y<=0) -> t_+x>0)".asFormula)
   }
 
   it should "retain initial evolution domain for the sake of contradictions (2)" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), diffSolve()(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0".asFormula, "t__0=0".asFormula, "x_0<0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("(x<0&t_>=0)&x=t_+x_0 -> x>=0".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asFormula)
   }
 
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
