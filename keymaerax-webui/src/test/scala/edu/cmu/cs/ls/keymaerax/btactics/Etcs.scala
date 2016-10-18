@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -45,6 +46,18 @@ class Etcs extends TacticTestBase {
   it should "prove RBC lemma with master" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-lemma.kyx"))
     proveBy(s, master()) shouldBe 'proved
+  }
+
+  "ETCS reactivity" should "prove lemma with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "prove full lemma with tactic" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
   }
 
   "ETCS essentials" should "be provable with master" in withMathematica { tool =>
