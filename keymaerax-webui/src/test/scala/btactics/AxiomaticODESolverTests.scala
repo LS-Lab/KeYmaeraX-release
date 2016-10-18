@@ -266,13 +266,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "[kyxtime:=0;][{x'=v,kyxtime'=1&true}]1=1".asFormula
   }
 
-  "CutInSolns" should "solve x'=y,t'=1" in withMathematica { qeTool =>
-    val f = "x=0&y=0&t=0 -> [kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][y_0:=y;][t_0:=t;][{x'=y, t'=1}]x>=0".asFormula
-    val t = implyR(1) &  AxiomaticODESolver.cutInSoln(2)(1, 1::1::1::1::1::Nil)
+  "CutInSolns" should "solve x'=y,t'=1" ignore withMathematica { qeTool =>
+    //@todo setup correctly
+    val f = "[kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][t_0:=t;][{x'=y,t'=1}]x>=0".asFormula
+    val t = AxiomaticODESolver.cutInSoln(2)(1, 1::1::1::1::Nil)
     val result = proveBy(f,t)
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0&y=0&t=0".asFormula
-    result.subgoals.head.succ should contain only "[kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][y_0:=y;][t_0:=t;][{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+x_0}]x>=0".asFormula
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][t_0:=t;][{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+x_0}]x>=0".asFormula
   }
 
   //@todo fix.

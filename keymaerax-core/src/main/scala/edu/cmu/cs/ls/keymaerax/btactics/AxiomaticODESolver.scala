@@ -74,7 +74,6 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
     HilbertCalculus.assignb(pos)*(osize+2) & // all initial vals + time_0=time + time=0
     DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
-    //@todo remove duplicate evolution domain constraint
     SimplifierV2.simpTac(pos ++ PosInExpr(0::1::1::Nil)) &
     SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
     DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
@@ -161,9 +160,8 @@ object AxiomaticODESolver {
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
     DifferentialTactics.diffCut(solnToCut)(pos) <(
       Idioms.nil,
-      //@todo need to normalize (otherwise no constified initial conditions), but normalize is probably too much when there are other formulas around (normalize at pos)
-      DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()('Rlast) & DebuggingTactics.done
+      TactixLibrary.cohideR('Rlast) & DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
+        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
       )
   })
 
@@ -214,7 +212,7 @@ object AxiomaticODESolver {
 
     //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f
     ("simplifyPostConditionStep" by ((pp: Position, ss: Sequent) => {
-      val (xx, subst) = if (pos.isSucc) ss.sub(pp) match {
+      val (xx, subst) = if (pp.isSucc) ss.sub(pp) match {
         case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (x, (us: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
             ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
@@ -229,9 +227,9 @@ object AxiomaticODESolver {
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
             Nil))
       }
-      DLBySubst.stutter(xx)(pos ++ PosInExpr(1::Nil)) &
+      DLBySubst.stutter(xx)(pp ++ PosInExpr(1::Nil)) &
       TactixLibrary.useAt("ANON", rewrite, if (pp.isSucc) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp) &
-      TactixLibrary.assignb(pos ++ PosInExpr(1::Nil))
+      TactixLibrary.assignb(pp ++ PosInExpr(1::Nil))
     }))(pos)*odeSize &
       (if (pos.isSucc) TactixLibrary.useAt(TactixLibrary.proveBy("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(pos)
        else TactixLibrary.skip) & SimplifierV2.simpTac(pos)
@@ -252,9 +250,8 @@ object AxiomaticODESolver {
 
     idc <(
       Idioms.nil, /* Branch with no ev dom contraint */
-      //@todo need to normalize (constify initial conditions), but normalize might be too much if other formulas are around
-      DebuggingTactics.debug("inverse normalize", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()('Rlast) & DebuggingTactics.done /* Show precond of diff cut */
+      TactixLibrary.cohideR('Rlast) & DebuggingTactics.debug("inverse normalize", ODE_DEBUGGER) & TactixLibrary.normalize &
+        DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
       )
   })
 
