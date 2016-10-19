@@ -193,6 +193,20 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "rename bound occurrences used in instance term" in {
+    val result = proveBy(Sequent(IndexedSeq("\\forall x \\forall y (p(x) & p(y))".asFormula), IndexedSeq()),
+      allL("y".asVariable)(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("\\forall y_0 (p(y) & p(y_0))".asFormula, "\\forall x \\forall y (p(x) & p(y))".asFormula)
+  }
+
+  it should "rename bound occurrences used in instance term at deeper nested positions" in {
+    val result = proveBy(Sequent(IndexedSeq("\\forall x (x>5 -> y>2 & \\forall y (p(x) & p(y)))".asFormula), IndexedSeq()),
+      allL("y".asVariable)(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("y>5 -> y>2 & \\forall y_0 (p(y) & p(y_0))".asFormula, "\\forall x (x>5 -> y>2 & \\forall y (p(x) & p(y)))".asFormula)
+  }
+
   "existsR" should "instantiate simple formula" in {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
