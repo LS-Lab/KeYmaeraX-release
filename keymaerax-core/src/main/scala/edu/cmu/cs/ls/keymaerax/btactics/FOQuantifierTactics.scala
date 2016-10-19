@@ -42,6 +42,24 @@ protected object FOQuantifierTactics {
     what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
+  /** Uses bound renaming to ensure that all of the xs only occur free at/below position pos. */
+  def ensureFree(xs: Set[Variable]): DependentPositionTactic = "ensureFree" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(f: Formula) if StaticSemantics.boundVars(f).toSet.intersect(xs).nonEmpty =>
+      val Some((inExpr, e: Formula)) = f.find(e => e match { case Exists(ys, _) => ys.intersect(xs.toSeq).nonEmpty case Forall(ys, _) => ys.intersect(xs.toSeq).nonEmpty case _ => false })
+      val (re, renTac) = e match {
+        //@todo support block quantifiers
+        case Exists(ys, p) if ys.size == 1 =>
+          val ry = TacticHelper.freshNamedSymbol(ys.head, p)
+          (Exists(ry::Nil, p.replaceFree(ys.head, ry)), boundRename(ry, ys.head))
+        case Forall(ys, p) if ys.size == 1 =>
+          val ry = TacticHelper.freshNamedSymbol(ys.head, p)
+          (Forall(ry::Nil, p.replaceFree(ys.head, ry)), boundRename(ry, ys.head))
+      }
+      CEat(proveBy(Equiv(re, e), renTac(1, 0::Nil) & byUS(DerivedAxioms.equivReflexiveAxiom)))(pos ++ inExpr) &
+        ensureFree(xs)(pos ++ PosInExpr(inExpr.pos :+ 0))
+    case _ => skip
+  })
+
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
     "allL" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
@@ -53,12 +71,15 @@ protected object FOQuantifierTactics {
           useAt("all eliminate")(pos)
         case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          val t = inst(vars)
+          ensureFree(StaticSemantics.freeVars(t).toSet)(pos ++ PosInExpr(0::Nil)) &
           //@todo assumes any USubstAboveURen
-          useAt("all instantiate", us => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
+          useAt("all instantiate", us => us ++ RenUSubst(("f()".asTerm, us.renaming(t)) :: Nil))(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity in antecedent")
           val x = vToInst(vars)
           val t = inst(vars)
+          ensureFree(StaticSemantics.freeVars(t).toSet)(pos ++ PosInExpr(0::Nil)) &
           useAt("all instantiate", us => us ++ RenUSubst((x, t) :: ("f()".asTerm, t) :: Nil))(pos)
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
@@ -84,12 +105,15 @@ protected object FOQuantifierTactics {
           useAt("exists eliminate")(pos)
         case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          val t = inst(vars)
+          ensureFree(StaticSemantics.freeVars(t).toSet)(pos ++ PosInExpr(0::Nil)) &
           //@todo assumes any USubstAboveURen
           useAt("exists generalize", PosInExpr(1::Nil), (us: Subst) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil))(pos)
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
           val x = vToInst(vars)
           val t = inst(vars)
+          ensureFree(StaticSemantics.freeVars(t).toSet)(pos ++ PosInExpr(0::Nil)) &
           useAt("exists instantiate", us => us ++ RenUSubst((x, t) :: ("f()".asTerm, t) :: Nil))(pos)
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleError("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
