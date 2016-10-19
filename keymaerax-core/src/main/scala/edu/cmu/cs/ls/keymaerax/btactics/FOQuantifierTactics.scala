@@ -48,7 +48,7 @@ protected object FOQuantifierTactics {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
-      sequent.at(pos) match {
+      val t = sequent.at(pos) match {
         case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt("all eliminate")(pos)
         case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
@@ -67,6 +67,10 @@ protected object FOQuantifierTactics {
         case _ =>
           throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
       }
+
+      val fa = sequent.at(pos)._2.asInstanceOf[Formula]
+
+      SequentCalculus.cut(fa) <(t, TactixLibrary.close)
     })
 
   def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =

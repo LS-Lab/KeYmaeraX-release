@@ -15,6 +15,12 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   * @author Nathan Fulton
   */
 class KeYmaeraI extends TacticTestBase {
+  "allL" should "allL" in {
+    val t = SequentCalculus.implyR(1) & SequentCalculus.allL(-1)
+    val f = "(\\forall x x=x) -> q(x)".asFormula
+    println(proveBy(f,t))
+  }
+
   "existsL" should "work" in {
     val t = SequentCalculus.implyR(1) & SequentCalculus.existsL(-1) & SequentCalculus.close
     val f = "(\\exists x (x=x)) -> true".asFormula
