@@ -32,12 +32,12 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     stringify(expr)
     //@todo custom OpSpec?
     .replaceAllLiterally("&", "&#8743;")
+    .replaceAllLiterally("!=", "&ne;")
     .replaceAllLiterally("!", "&not;")
     .replaceAllLiterally("|", "&#8744;")
-    .replaceAllLiterally("->", "&rarr;")
     .replaceAllLiterally("<->", "&#8596;")
+    .replaceAllLiterally("->", "&rarr;")
     .replaceAllLiterally("<=", "&leq;")
-    .replaceAllLiterally("!=", "&ne;")
     .replaceAllLiterally(">=", "&geq;")
     //.replaceAllLiterally("*", "&middot;") // program * vs. multiplication *
     // ^y --> <sup>y</sup>
