@@ -9,7 +9,9 @@ import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFact
 import edu.cmu.cs.ls.keymaerax.tools._
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
+import edu.cmu.cs.ls.keymaerax.{btactics, lemma}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import spray.can.Http
 
@@ -135,6 +137,11 @@ object HyDRAInitializer {
     }
 
     try {
+      //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
+      val cacheVersion = LemmaDBFactory.lemmaDB.version()
+      if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
+        LemmaDBFactory.lemmaDB.deleteDatabase()
+      //Populate the derived axioms database.
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
       case e : Exception =>
