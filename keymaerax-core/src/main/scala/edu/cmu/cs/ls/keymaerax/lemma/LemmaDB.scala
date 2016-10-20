@@ -76,4 +76,7 @@ trait LemmaDB {
   /** Delete the whole lemma database */
   def deleteDatabase(): Unit
 
+  /** Returns the version of this lemma database. */
+  def version(): String
+
 }

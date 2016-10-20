@@ -59,4 +59,6 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
     cachedLemmas -= id
     db.remove(id)
   }
+
+  override def version(): String = db.version()
 }
