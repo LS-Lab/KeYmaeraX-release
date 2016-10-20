@@ -1,0 +1,43 @@
+Functions.
+  R ep.   /* time limit for control decisions */
+  R V.    /* maximum velocity of obstacles */
+End.
+
+ProgramVariables.
+  R xo.   /* position summary of obstacles */
+  R yo.
+  R dxo.  /* direction and linear velocity of obstacles */
+  R dyo.
+  R t.    /* time */
+  R xo0.
+  R yo0.
+End.
+
+Problem.
+    ep > 0
+  & t = 0
+  & V >= 0
+  & xo = xo0
+  & yo = yo0
+  ->
+  [
+    {
+
+      /* control obstacle */
+      dxo :=*;
+      dyo :=*;
+      ?dxo^2 + dyo^2 <= V^2;
+
+      xo0 := xo;
+      yo0 := yo;
+
+    	t := 0;
+
+      /* dynamics */
+      { xo' = dxo,
+        yo' = dyo,
+        t' = 1 & t <= ep
+      }
+    }*
+  ] (-V*t <= xo-xo0 & xo-xo0 <= V*t & -V*t <= yo-yo0 & yo-yo0 <= V*t)
+End.

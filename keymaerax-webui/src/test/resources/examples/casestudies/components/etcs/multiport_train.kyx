@@ -1,0 +1,68 @@
+Functions.
+  R brake.
+  R drive.
+  R A.
+  R b.
+  R ep.
+End.
+
+ProgramVariables.
+  R state.
+  R d.
+  R d0.
+  R m.
+  R m0.
+  R z.
+  R v.
+  R a.
+  R vdes.
+  R t.
+  R SB.
+End.
+
+Problem.
+    A>=0
+  & b>0
+  & drive=0
+  & brake=1
+  & state=drive
+  & vdes=0
+  & d=0
+  & v=0
+  & z<=m
+  & d0=d
+  & m0=m
+  & ep>0
+  ->
+  [
+    {
+      m0:=m;
+      d0:=d;
+
+      /* train ctrl */
+      {
+
+        {
+           ?v <= vdes; a:=*; ?-b <= a & a <= A;
+        ++ ?v >= vdes; a:=*; ?-b <= a & a <  0;
+        }
+
+        SB := (v^2 - d^2)/(2*b) + (A/b+1)*(A/2*ep^2+ep*v);
+
+        {
+           ?  m-z<=SB | state=brake; a := -b;
+        ++ ?!(m-z<=SB | state=brake);
+        }
+      }
+
+      t := 0;
+
+      /* train plant */
+      {z'=v, v' = a, t'=1 & v >= 0 & t <= ep}
+
+      m :=*; d :=*; state :=*; vdes :=*;
+      ?(state=brake & m0=m & d0=d) | (state=drive & d >= 0 & d0^2 - d^2 <= 2*b*(m-m0) & vdes >= 0);
+
+    }* @invariant(v^2 - d^2 <= 2*b*(m-z) & d >= 0)
+  ] (z >= m -> v <= d)
+End.

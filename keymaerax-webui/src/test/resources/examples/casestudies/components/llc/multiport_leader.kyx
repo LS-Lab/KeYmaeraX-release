@@ -1,0 +1,42 @@
+Functions.
+  R ep.   /* time limit for control decisions */
+  R A.
+  R B.
+End.
+
+ProgramVariables.
+  R xl.   /* position summary of obstacles */
+  R vl.
+  R al.
+  R t.    /* time */
+  R xl0.
+  R vl0.
+End.
+
+Problem.
+    ep > 0
+  & A >= 0
+  & B > 0
+  & t = 0
+  & xl = xl0
+  & vl = vl0
+  & 0 <= vl
+  ->
+  [
+    {
+      /* control leader */
+      al :=*; ?-B <= al & al <= A;
+
+      xl0 := xl;
+      vl0 := vl;
+
+    	t := 0;
+
+      /* dynamics */
+      { xl' = vl,
+        vl' = al,
+        t' = 1 & vl >= 0 & t <= ep
+      }
+    }* @invariant(0 <= t & t <= ep & xl-xl0 >= (vl+vl0)/2*t & 0 <= vl & -B*t <= vl-vl0 & vl-vl0 <= A*t)
+  ] (xl-xl0 >= (vl+vl0)/2*t & 0 <= vl & -B*t <= vl-vl0 & vl-vl0 <= A*t)
+End.

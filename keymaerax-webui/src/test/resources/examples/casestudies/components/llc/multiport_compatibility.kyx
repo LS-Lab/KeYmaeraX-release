@@ -1,0 +1,25 @@
+Functions.
+  R ep.   /* time limit for control decisions */
+  R A.
+  R B.
+End.
+
+ProgramVariables.
+  R xll.
+  R vll.
+  R xll0.
+  R vll0.
+  R xlf.
+  R vlf.
+  R xlf0.
+  R vlf0.
+  R t.
+End.
+
+Problem.
+    xlf0=xll0 & vlf0=vll0
+  ->
+  [
+    xlf:=xll; vlf:=vll;
+  ] (xll-xll0 >= (vll+vll0)/2*t & 0 <= vll & -B*t <= vll-vll0 & vll-vll0 <= A*t -> xlf-xlf0 >= (vlf+vlf0)/2*t & 0 <= vlf & -B*t <= vlf-vlf0 & vlf-vlf0 <= A*t)
+End.

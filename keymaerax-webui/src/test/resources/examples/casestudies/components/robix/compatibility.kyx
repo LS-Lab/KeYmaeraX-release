@@ -1,0 +1,23 @@
+Functions.
+  R V.    /* maximum velocity of obstacles */
+End.
+
+ProgramVariables.
+  R xoo.
+  R yoo.
+  R xor.
+  R yor.
+  R t.
+  R xoo0.
+  R yoo0.
+  R xor0.
+  R yor0.
+End.
+
+Problem.
+  xor0=xoo0 & yor0=yoo0
+  ->
+  [
+    xor:=xoo; yor:=yoo;
+  ] (-V*t <= xoo-xoo0 & xoo-xoo0 <= V*t & -V*t <= yoo-yoo0 & yoo-yoo0 <= V*t -> -V*t <= xor-xor0 & xor-xor0 <= V*t & -V*t <= yor-yor0 & yor-yor0 <= V*t)
+End.

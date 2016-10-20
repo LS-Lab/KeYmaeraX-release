@@ -1,0 +1,29 @@
+Functions.
+  R brake.
+  R drive.
+  R b.
+End.
+
+ProgramVariables.
+  R statet.
+  R dt.
+  R dt0.
+  R mt.
+  R mt0.
+  R vdest.
+  R stater.
+  R dr.
+  R dr0.
+  R mr.
+  R mr0.
+  R vdesr.
+  R t.
+End.
+
+Problem.
+    mr0=mt0 & dr0=dt0
+  ->
+  [
+    statet:=stater; mt:=mr; dt:=dr; vdest:=vdesr;
+  ] ((stater=brake & mr0=mr & dr0=dr) | (stater=drive & dr >= 0 & dr0^2 - dr^2 <= 2*b*(mr-mr0) & vdesr >= 0) -> (statet=brake & mt0=mt & dt0=dt) | (statet=drive & dt >= 0 & dt0^2 - dt^2 <= 2*b*(mt-mt0) & vdest >= 0))
+End.
