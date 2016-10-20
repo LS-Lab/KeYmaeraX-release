@@ -103,15 +103,19 @@ object ModelPlex extends ModelPlexTrait {
       vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, v.sort).asInstanceOf[NamedSymbol]) ++
         vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, v.sort))
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
+
+    def conjectureOf(prg: Program) = {
+      assert(StaticSemantics.boundVars(prg).symbols.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
+        "all bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
+          "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.toSet diff vars.toSet).mkString(", "))
+      val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
+      //@note suppress assumptions since at most those without bound variables are still around.
+      //@todo remove implication
+      Imply(True, Diamond(prg, posteqs))
+    }
+
     fml match {
-      case Imply(assumptions, Box(prg, _)) =>
-        assert(StaticSemantics.boundVars(prg).symbols.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
-          "all bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
-            "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.toSet diff vars.toSet).mkString(", "))
-        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
-        //@note suppress assumptions since at most those without bound variables are still around.
-        //@todo remove implication
-        Imply(True, Diamond(prg, posteqs))
+      case Imply(_, Box(prg, _)) => conjectureOf(prg)
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }
@@ -387,12 +391,18 @@ object ModelPlex extends ModelPlexTrait {
     */
   def optimizationOneWithSearch: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel, "Start Opt. 1 at top level")
-    val positions: List[Position] = collectSubpositions(pos, sequent, {
-        case Exists(_, _) => pos.isSucc
-        case Forall(_, _) => pos.isAnte
-        case _ => false
+
+    val simplForall1 = proveBy("p(y) -> \\forall x (x=y -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
+    val simplForall2 = proveBy("p(y) -> \\forall x (y=x -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
+
+    val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
+        case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(pp))
+        case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(pp))
+        case (Forall(xs, Imply(Equal(x, _), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall1, PosInExpr(1::Nil))(pp))
+        case (Forall(xs, Imply(Equal(_, x), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall2, PosInExpr(1::Nil))(pp))
+        case _ => None
       })
-    positions.map(p => optimizationOneWithSearchAt(p)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
+    positions.reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
   })
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
@@ -512,5 +522,21 @@ object ModelPlex extends ModelPlexTrait {
         if (cond(t)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
     }, sequent(pos.top))
     positions
+  }
+
+  private def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
+    require(pos.isTopLevel, "Collecting at top level")
+    var result: List[T] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = trafo(e, pos ++ p) match {
+        case Some(t) => result = t +: result; Left(None)
+        case None => Left(None)
+      }
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = trafo(t, pos ++ p) match {
+        case Some(t) => result = t +: result; Left(None)
+        case None => Left(None)
+      }
+    }, sequent.sub(pos).get.asInstanceOf[Formula])
+    result
   }
 }
