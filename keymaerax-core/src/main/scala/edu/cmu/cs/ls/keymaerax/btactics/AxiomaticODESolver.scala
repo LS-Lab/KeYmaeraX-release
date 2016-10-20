@@ -22,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   * @author Stefan Mitsch
   */
 object AxiomaticODESolver {
-  private val ODE_DEBUGGER = false
+  private val ODE_DEBUGGER = true
 
   /** The name of the explicit time variables. */
   private val TIMEVAR: Variable = "kyxtime".asVariable
@@ -153,15 +153,20 @@ object AxiomaticODESolver {
 
     tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
 
-    val diffIndPos = if (pos.isSucc) pos.top else SuccPosition.base0(s.succ.size).top
+    val diffInd = "ANON" by ((pp: Position, ss: Sequent) => {
+      val Some(withInitials: Formula) = ss.sub(pp)
+      TactixLibrary.CEat(TactixLibrary.proveBy(Equiv(True, withInitials),
+        DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
+        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done))(pp)
+    })
 
     //@note we have to cut one at a time instead of just constructing a single tactic because solutions need to be added
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
     DifferentialTactics.diffCut(solnToCut)(pos) <(
       Idioms.nil,
-      TactixLibrary.cohideR('Rlast) & DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
+      TactixLibrary.cohideR('Rlast) & diffInd(SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.dropRight(odeSize+1)))) &
+        TactixLibrary.auto & DebuggingTactics.done
       )
   })
 
