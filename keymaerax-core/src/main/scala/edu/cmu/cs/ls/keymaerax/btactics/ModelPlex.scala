@@ -160,31 +160,6 @@ object ModelPlex extends ModelPlexTrait {
    * @return The tactic.
    */
   def modelplexSequentStyle: DependentPositionTactic = ???
-//    new PositionTactic("Modelplex Sequent-Style") {
-//    override def applies(s: Sequent, p: Position): Boolean = s(p.top) match {
-//      case Imply(_, Diamond(_, _)) => true
-//      case _ => false
-//    }
-//
-//    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-//
-//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-//        Some(ImplyRightT(p) & ((AxiomCloseT |
-//          (debugT("Before HP") &
-//            (locateSucc(diamondSeqT) | locateSucc(diamondChoiceT) | locateSucc(diamondNDetAssign) |
-//              locateSucc(diamondTestRetainConditionT) | locateSucc(diamondAssignEqualT) |
-//              locateSucc(substitutionDiamondAssignT) | locateSucc(v2vAssignT) |
-//              locateSucc(diamondDiffSolve2DT)) &
-//            debugT("After  HP") &
-//            ((locateSucc(mxPropositionalRightT) | locateSucc(optimizationOneAt()) | locateAnte(PropositionalLeftT) |
-//              locateAnte(optimizationOneAt()))*)
-//            )
-//          )*)
-//        )
-//      }
-//    }
-//  }
 
   /**
    * ModelPlex backward proof tactic for axiomatic-style monitor synthesis, i.e., avoids proof branching as occuring in
@@ -203,8 +178,6 @@ object ModelPlex extends ModelPlexTrait {
       case Some(Imply(_, Diamond(_, _))) =>
         implyR(pos) & ((debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))*) &
           debug("Done with transformation, now looking for quantifiers") &
-          //?(atOutermostQuantifier(ToolTactics.partialQE)(pos)) &
-          //?(ToolTactics.partialQE) &
           debug("Modelplex done")
     }
   })
@@ -227,11 +200,6 @@ object ModelPlex extends ModelPlexTrait {
         useAt("<?> test") ::
         useAt("<:=> assign") ::
         ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
-//          substitutionDiamondAssignT ::
-//          v2vAssignT ::
-//          (diamondAssignEqualT & (if (useOptOne) optimizationOne() else skip)) ::
-//          (diamondDiffSolve2DT & (if (useOptOne) optimizationOne() else skip)) ::
-//          boxAssignBaseT ::
         Nil)(pos))
 
   /**
@@ -242,46 +210,6 @@ object ModelPlex extends ModelPlexTrait {
    * @return The tactic.
    */
   def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = ???
-//    locateT(diamondSeqT :: useAt("<*> approx", PosInExpr(1::Nil)) :: Nil) &
-//      locateT(
-//        useAt("<*> approx", PosInExpr(1::Nil)) ::
-//          diamondSeqT ::
-//          diamondChoiceT ::
-//          (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
-//          diamondTestT ::
-//          substitutionDiamondAssignT ::
-//          v2vAssignT ::
-//          (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
-//          (diamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
-//          boxAssignBaseT ::
-//          Nil)
-
-  /** Propositional tactic that avoids branching in formulas without modalities. */
-  private def mxPropositionalRightT: DependentPositionTactic = "Modelplex Propositional Right" by ((pos: Position, sequent: Sequent) => {
-    ???
-//    var containsPrg = false
-//    sequent(pos.top) match {
-//      // only apply to formulas that contain programs
-//      case f: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-//        override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = {
-//        containsPrg = true
-//        Left(Some(ExpressionTraversal.stop))
-//        }
-//        }, f)
-//      case _ => // nothing to do
-//    }
-//    require(containsPrg, "Foo")
-//    PropositionalRightT(p)
-  })
-
-  /** Performs tactic t at the outermost quantifier underneath position p, if any. */
-  private def atOutermostQuantifier(t: DependentPositionTactic): DependentPositionTactic = "ModelPlex at outermost quantifier" by ((pos: Position, sequent: Sequent) => {
-    require(positionOfOutermostQuantifier(sequent, pos).isDefined, "Bar")
-    positionOfOutermostQuantifier(sequent, pos) match {
-      case Some(pos) => t(pos)
-      case None => skip
-    }
-  })
 
   /**
    * Returns a tactic to solve two-dimensional differential equations. Introduces constant function symbols for
@@ -305,38 +233,6 @@ object ModelPlex extends ModelPlexTrait {
    * @note Unused so far, for deriving prediction monitors where DI is going to rely on knowledge from prior tests.
    */
   def diamondTestRetainConditionT: DependentPositionTactic = ???
-//    new PositionTactic("<?H> modelplex test") {
-//    //@todo introduce a derived axiom
-//    override def applies(s: Sequent, p: Position): Boolean = s(p.top).subFormulaAt(p.inExpr) match {
-//      case Some(Diamond(Test(_), _)) => true
-//      case _ => false
-//    }
-//
-//    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-//
-//      def constructCut(f: Formula) = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
-//        override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-//          case Diamond(Test(h), phi) => Right(And(h, Imply(h, phi)))
-//          case _ => Left(Some(ExpressionTraversal.stop))
-//        }
-//      }), f)
-//
-//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-//        node.sequent(p.top).subFormulaAt(p.inExpr) match {
-//          case Some(Diamond(Test(h), phi)) =>
-//            Some(
-//              diamondTestT(p) &
-//                cutT(constructCut(node.sequent(p))) & onBranch(
-//                (cutUseLbl, debugT("use cut") & ((AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT))*)
-//                  & debugT("Modelplex: Expected axiom close, but did not close")),
-//                (cutShowLbl, debugT("show cut") & hideT(p.topLevel))
-//              )
-//            )
-//        }
-//      }
-//    }
-//  }
 
   /**
    * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s,
@@ -529,11 +425,11 @@ object ModelPlex extends ModelPlexTrait {
     var result: List[T] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = trafo(e, pos ++ p) match {
-        case Some(t) => result = t +: result; Left(None)
+        case Some(tt) => result = tt +: result; Left(None)
         case None => Left(None)
       }
       override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = trafo(t, pos ++ p) match {
-        case Some(t) => result = t +: result; Left(None)
+        case Some(tt) => result = tt +: result; Left(None)
         case None => Left(None)
       }
     }, sequent.sub(pos).get.asInstanceOf[Formula])
