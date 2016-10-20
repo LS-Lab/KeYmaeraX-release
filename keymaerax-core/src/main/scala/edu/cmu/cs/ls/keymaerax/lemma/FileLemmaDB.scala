@@ -26,9 +26,10 @@ import edu.cmu.cs.ls.keymaerax.parser._
  */
 
 class FileLemmaDB extends LemmaDBBase {
+  private lazy val cachePath = System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "cache"
+
   private lazy val lemmadbpath: File = {
-    val file = new File(System.getProperty("user.home") + File.separator +
-      ".keymaerax" + File.separator + "cache" + File.separator + "lemmadb")
+    val file = new File(cachePath + File.separator + "lemmadb")
     if (!file.exists() && !file.mkdirs()) println("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
     file
   }
@@ -62,5 +63,11 @@ class FileLemmaDB extends LemmaDBBase {
     lemmadbpath.delete()
     //@note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
+  }
+
+  override def version(): String = {
+    val file = new File(cachePath + File.separator + "VERSION")
+    assert(file.exists() && file.canRead, s"Cache VERSION file should exist and be readable, but is not: ${file.getAbsolutePath}")
+    scala.io.Source.fromFile(file).mkString
   }
 }

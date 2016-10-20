@@ -6,7 +6,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
+
 import scala.collection.immutable._
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 
 /**
   * Created by yongkiat on 9/29/16.
@@ -331,7 +333,7 @@ object SimplifierV2 {
       case And(l,r) =>
         val (ctxL,tacL) = addContext(l,ctx)
         val (ctxR,tacR) = addContext(r,ctxL)
-        (ctxR,andL('_) & implyRi(AntePos(ctx.length+1)) & tacL & implyR(SuccPos(0)) & tacR)
+        (ctxR, andL('Llast) & implyRi(AntePos(ctx.length+1)) & tacL & implyR(SuccPos(0)) & tacR)
       //Both the de-morganed and originals are added to the context
       case Not(u) =>
         //Apply deMorgan things to Not
@@ -348,7 +350,7 @@ object SimplifierV2 {
           //Adds f to the context, but also all of its deMorganed things
           val(ctxU,tacU) = addContext(nu,ctx:+f)
           (ctxU,
-            useAt(DerivedAxioms.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('_) &
+            useAt(DerivedAxioms.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('Llast) &
               implyRi(AntePos(ctx.length)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
         }
       case _ => (ctx:+f,ident)
@@ -450,14 +452,14 @@ object SimplifierV2 {
       case And(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
         //short circuit
-        if (lf.equals(False))
-        {
-          return (False,
-            proveBy(Sequent(ctx,IndexedSeq(Equiv(f,False))),
-              cut(Equiv(l,lf))<(
-                prop,
-                hideR(SuccPos(0))& by(lpr))))
-        }
+//        if (lf.equals(False))
+//        {
+//          return (False,
+//            proveBy(Sequent(ctx,IndexedSeq(Equiv(f,False))),
+//              cut(Equiv(l,lf))<(
+//                prop,
+//                hideR(SuccPos(0))& by(lpr))))
+//        }
         //Update context with new formula
         val (out,tac) = addContext(lf,ctx)
         //Use lf as part of context on the right
@@ -469,20 +471,20 @@ object SimplifierV2 {
               useAt(andLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
                 closeId,closeId
                 ),
-              hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
+              hideL('Llast) & hideR(SuccPos(0)) & implyR(1)  & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
             )
         ))
       case Imply(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
         //short circuit
-        if (lf.equals(False))
-        {
-          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
-            cut(Equiv(l,lf))<(
-              prop,
-              hideR(SuccPos(0))& by(lpr))))
-        }
+//        if (lf.equals(False))
+//        {
+//          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
+//            cut(Equiv(l,lf))<(
+//              prop,
+//              hideR(SuccPos(0))& by(lpr))))
+//        }
         val (out,tac) = addContext(lf,ctx)
         //Use lf as part of context on the right
         val (rf,rpr) = formulaSimp(r, out)
@@ -500,13 +502,13 @@ object SimplifierV2 {
       case Or(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
         //short circuit
-        if (lf.equals(True))
-        {
-          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
-            cut(Equiv(l,lf))<(
-              prop,
-              hideR(SuccPos(0))& by(lpr))))
-        }
+//        if (lf.equals(True))
+//        {
+//          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
+//            cut(Equiv(l,lf))<(
+//              prop,
+//              hideR(SuccPos(0))& by(lpr))))
+//        }
         val (out,tac) = addContext(Not(lf),ctx)
         //Use lf as part of context on the right
         val (rf,rpr) = formulaSimp(r, out)

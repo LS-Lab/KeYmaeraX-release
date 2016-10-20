@@ -104,18 +104,20 @@ class JLinkMathematicaLink extends MathematicaLink {
       ml = MathLinkFactory.createKernelLink(Array[String](
         "-linkmode", "launch",
         "-linkname", linkName + " -mathlink"))
-      ml.discardAnswer()
-      //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
-      //@note print warnings for license issues instead of shutting down immediately
-      isActivated match {
-        case Some(true) => isComputing match {
-          case Some(true) => true // everything ok
-          case Some(false) => println("ERROR: Test computation in Mathematica failed, shutting down.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X."); false
-          case None => println("WARNING: Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+        ml.discardAnswer()
+        //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
+        //@note print warnings for license issues instead of shutting down immediately
+        isActivated match {
+          case Some(true) => isComputing match {
+            case Some(true) => true // everything ok
+            case Some(false) => println("ERROR: Test computation in Mathematica failed, shutting down.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+              throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+            case None => println("WARNING: Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+          }
+          case Some(false) => println("WARNING: Mathematica seems not activated or Mathematica license might be expired, Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
+            //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
+          case None => println("WARNING: Mathematica may not be activated or Mathematica license might be expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please check your Mathematica license manually."); true
         }
-        case Some(false) => println("WARNING: Mathematica seems not activated or Mathematica license might be expired, Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
-        case None => println("WARNING: Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
-      }
     } catch {
       case e: UnsatisfiedLinkError =>
         println("Shutting down since Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +

@@ -461,4 +461,28 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x>0".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
+
+  "quantifier rules" should "not prove false \\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)" in {
+    val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
+      implyR(1) & existsR(1) & allL(-1) & allR(1) & existsL(-1) & (close | skip)
+    )
+    result should not be 'proved
+    result.isProved shouldBe false
+  }
+
+  it should "not prove false \\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y) with insts" in {
+    val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
+      implyR(1) & existsR(Variable("y"),Variable("y"))(1) & allL(Variable("x"),Variable("x"))(-1) & allR(1) & existsL(-1) & (close | skip)
+    )
+    result should not be 'proved
+    result.isProved shouldBe false
+  }
+
+  it should "not prove false \\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y) with vars" in {
+    val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
+      implyR(1) & existsR(Variable("y"))(1) & allL(Variable("x"))(-1) & allR(1) & existsL(-1) & (close | skip)
+    )
+    result should not be 'proved
+    result.isProved shouldBe false
+  }
 }
