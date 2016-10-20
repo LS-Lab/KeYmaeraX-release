@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, _}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
@@ -42,6 +42,11 @@ object IntervalArithmetic {
         "pL"+getVarName(l)+"C"+getVarName(r)+"R"
       case Times(l,r) =>
         "tL"+getVarName(l)+"C"+getVarName(r)+"R"
+      case Minus(l,r) =>
+        "tL"+getVarName(l)+"C"+getVarName(r)+"R"
+      case Power(l,r) =>
+        "powL"+getVarName(l)+"C"+getVarName(r)+"R"
+      case _ => ???
     }
   }
   private def hideLeftBox(e:Expression) : List[String] =
@@ -160,7 +165,7 @@ object IntervalArithmetic {
   }
 
   //Alternative approach: Just create the program directly, try the proof after and hope it works
-  def deriveProgram(dir:Boolean,vars:List[String],t:Term) : (List[String],Program,Term) =
+  def deriveTermProgram(dir:Boolean,vars:List[String],t:Term) : (List[String],Program,Term) =
   {
     val varname = (if(dir) ubPrefix else lbPrefix) ++ getVarName(t)
     val nvar = Variable(varname)
@@ -169,18 +174,19 @@ object IntervalArithmetic {
       case at:AtomicTerm =>
         return (vars,nop,at)
       case at:ApplicationOf =>
-        return (varname::vars,Assign(nvar,at),nvar)
+        return (vars,nop,at)
+      //return (varname::vars,Assign(nvar,at),nvar)
       case Plus(l,r) =>
-        val (lvars,lp,lbound) = deriveProgram(dir,vars,l)
-        val (rvars,rp,rbound) = deriveProgram(dir,lvars,r)
+        val (lvars,lp,lbound) = deriveTermProgram(dir,vars,l)
+        val (rvars,rp,rbound) = deriveTermProgram(dir,lvars,r)
         val func = if(dir) uPlus else lPlus
         return (rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
       case Times(l,r) =>
         //Upper bounds
-        val (luvars,lup,lubound) = deriveProgram(true,vars,l)
-        val (ruvars,rup,rubound) = deriveProgram(true,luvars,r)
-        val (llvars,llp,llbound) = deriveProgram(false,ruvars,l)
-        val (rlvars,rlp,rlbound) = deriveProgram(false,llvars,r)
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (ruvars,rup,rubound) = deriveTermProgram(true,luvars,r)
+        val (llvars,llp,llbound) = deriveTermProgram(false,ruvars,l)
+        val (rlvars,rlp,rlbound) = deriveTermProgram(false,llvars,r)
         val func = if(dir) uTimes else lTimes
         val bound = if(dir) maxF else minF
         val boundstr = if(dir) "max" else "min"
@@ -200,6 +206,85 @@ object IntervalArithmetic {
         //Final program
         val prog = Compose(Compose(prog1,prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
         return (rlvars,prog,nvar)
+      case _ => return(vars,nop,t)
+
+    }
+  }
+
+  //Takes f and returns program a, formula f' such that
+  // <a> f' -> f should be provable
+  // Along with additional facts about the derivation that should be cut in
+  // Variables threaded through
+  //This commented version allows for shortcircuting, which is probably more useful, but the proof is hard(er)
+  //  def deriveFormulaProgram(vars:List[String],f:Formula) : (List[String],Program,Formula,Formula) = {
+  //    f match {
+  //      case LessEqual(l,r) =>
+  //      {
+  //        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+  //        val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
+  //        return (rlvars, Compose(lup,rlp),LessEqual(lubound,rlbound),
+  //          And(And(LessEqual(l,lubound),LessEqual(rlbound,r)),LessEqual(lubound,rlbound)))
+  //      }
+  //      case And(l,r) =>
+  //      {
+  //        val (lvars,lp,lf,lext) = deriveFormulaProgram(vars,l)
+  //        val (rvars,rp,rf,rext) = deriveFormulaProgram(lvars,r)
+  //        return (rvars, Compose(Compose(lp,Test(lf)),rp),rf, And(lext,rext))
+  //      }
+  //      case Or(l,r) =>
+  //      {
+  //        val (lvars,lp,lf,lext) = deriveFormulaProgram(vars,l)
+  //        val (rvars,rp,rf,rext) = deriveFormulaProgram(lvars,r)
+  //        return (rvars, Compose(lp,Choice(Test(lf),rp)),rf,Or(lext,rext))
+  //      }
+  //    }
+  //  }
+
+  def deriveFormulaProgram(vars:List[String],f:Formula) : (List[String],Program,Formula) = {
+    f match {
+      case LessEqual(l,r) =>
+      {
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
+        return (rlvars, Compose(lup,rlp),LessEqual(lubound,rlbound))
+      }
+      case Less(l,r) =>
+      {
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
+        return (rlvars, Compose(lup,rlp),Less(lubound,rlbound))
+      }
+      //Note that the r,l args are flipped for >= and >
+      case GreaterEqual(r,l) =>
+      {
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
+        return (rlvars, Compose(lup,rlp),GreaterEqual(rlbound,lubound))
+      }
+      case Greater(r,l) =>
+      {
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
+        return (rlvars, Compose(lup,rlp),Greater(rlbound,lubound))
+      }
+      //Not sure what to do for equality, especially if it is on non-trivial sub-terms
+      case Equal(l,r) =>
+        return(vars,nop,Equal(l,r))
+      //NotEqual can be translated to Greater or Less, but maybe it should have special meaning w.r.t. to Equal
+      case NotEqual(l,r) =>
+        return(vars,nop,NotEqual(l,r))
+      case And(l,r) =>
+      {
+        val (lvars,lp,lf) = deriveFormulaProgram(vars,l)
+        val (rvars,rp,rf) = deriveFormulaProgram(lvars,r)
+        return (rvars, Compose(lp,rp),And(lf,rf))
+      }
+      case Or(l,r) =>
+      {
+        val (lvars,lp,lf) = deriveFormulaProgram(vars,l)
+        val (rvars,rp,rf) = deriveFormulaProgram(lvars,r)
+        return (rvars, Compose(lp,rp),Or(lf,rf))
+      }
     }
   }
 
@@ -224,12 +309,60 @@ object IntervalArithmetic {
     }
   }
 
+  //Decompose across Imply
+  //These are single sided implications
+  private val decomposeAnd = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() & Q_() -> PP_() & QQ_())".asFormula,prop)
+  private val decomposeOr = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() | Q_() -> PP_() | QQ_())".asFormula,prop)
+  private val decomposeLE = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (F_() <= gg_() -> f_() <= g_())".asFormula,QE)
+  private val decomposeLT = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (F_() < gg_() -> f_() < g_())".asFormula,QE)
+  private val decomposeGE = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (gg_() >= F_() -> g_() >= f_())".asFormula,QE)
+  private val decomposeGT = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (gg_() > F_() -> g_() > f_())".asFormula,QE)
+
+
+  // These can be used to decompose the big formula generated at the end
+  //private val decomposeDiamTestAnd = proveBy("<?p_() & q_();>r_() <-> <?p_();?q_();>r_()".asFormula,
+  //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop)
+  //private val decomposeDiamTestOr = proveBy("<?p_() | q_();>r_() <-> <?p_(); ++ ?q_();>r_()".asFormula,
+  //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop)
+
+  def deriveFormulaProof(f:Formula) : Provable =
+  {
+    val(_,pinit,ff) = deriveFormulaProgram(Nil,f)
+    val prog = stripNoOp(Compose(pinit,Test(ff)))
+    val pf = proveBy(Sequent(intervalAxiomContext,IndexedSeq(Imply(Diamond(prog,True),f))),
+      //Turn the <> into a formula, preserving its shape
+      chase(SuccPosition(1,0::Nil)) &
+        //Repeatedly decompose w.r.t. shape of formula
+        (OnAll(?(
+          (useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
+            (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_))))*) &
+        //Decompose inequalities
+        (OnAll(?(
+          (useAt(decomposeLE,PosInExpr(1::Nil))(1) & andR('_)) |
+          (useAt(decomposeLT,PosInExpr(1::Nil))(1) & andR('_)) |
+          (useAt(decomposeGE,PosInExpr(1::Nil))(1) & andR('_)) |
+          (useAt(decomposeGT,PosInExpr(1::Nil))(1) & andR('_))
+        )) *) &
+        //single step removal of the rounding arithmetic axioms
+        (OnAll(?(
+          (useAt(lPlusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
+            (useAt(uPlusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
+            (useAt(uTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*) )) |
+            (useAt(lTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*)))
+        ))*) &
+        //reflexivity
+        OnAll(simpTac(1) & closeT)
+    )
+    //Decompose the big formula here
+    pf
+  }
 
   def deriveProof(dir:Boolean,t:Term): Provable =
   {
-    val (_,pinit,bound) = deriveProgram(dir:Boolean,Nil,t)
+    val (_,pinit,bound) = deriveTermProgram(dir:Boolean,Nil,t)
     val prog = stripNoOp(pinit)
     val f = if(dir) LessEqual(t,bound) else LessEqual(bound,t)
+    //First prove the cut
     proveBy(Sequent(intervalAxiomContext,IndexedSeq(Box(prog,f))),
       //Removes the HP
       chase(1) &
@@ -362,8 +495,8 @@ object IntervalArithmetic {
       case _ => us
     })
 
-  //Normalizes to a simpler grammar with no negatives
-  lazy val simplifyEqns: DependentPositionTactic = chaseI(5, 5, (exp: Expression) => exp match {
+  //"NNF" by pushing negations into equations/inequations
+  lazy val toNNF: DependentPositionTactic = chaseI(5, 5, (exp: Expression) => exp match {
     case And(_,_) => "& recursor" :: Nil
     case Or(_,_) => "| recursor" :: Nil
     case Imply(_,_) => "-> expand" :: Nil
