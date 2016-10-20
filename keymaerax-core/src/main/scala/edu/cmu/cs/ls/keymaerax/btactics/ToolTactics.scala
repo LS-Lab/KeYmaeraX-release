@@ -75,23 +75,25 @@ private object ToolTactics {
       else tool.findCounterExample(Imply(orig, to))
     }
 
+    val keepPos = if (pos.isSucc) pos.topLevel else SuccPosition.base0(sequent.succ.size)
+
     //@note assumes that modalHide is called first
-    val smartHide = "smartHide" by ((shsequent: Sequent) => {
+    val smartAnteHide = "smartAnteHide" by ((shsequent: Sequent) => {
       val theCex = cex
       val theCexVars = theCex.get.keySet.filter(x => x.isInstanceOf[Variable]).map(x => x.asInstanceOf[Variable])
       shsequent.ante.indices.reverse.map(i =>
         if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCexVars).isEmpty) hide(AntePos(i))
-        else skip).reduceLeftOption(_&_).getOrElse(skip) &
-      shsequent.succ.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCexVars).isEmpty) hide(SuccPos(i))
         else skip).reduceLeftOption(_&_).getOrElse(skip)
     })
 
+    val succCohide = "succCohide" by ((pp: Position, ss: Sequent) => {
+      ss.succ.indices.filter(i => i != pp.index0).reverse.map(i => hide(SuccPos(i))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
+    })
 
     cutLR(to)(pos) <(
       /* c */ skip,
       //@note first try to prove only the transformation, then with smart hiding, if all that fails, full QE on all FOL formulas
-      /* c->d */ (cohide(pos) & QE) | (modalHide & ((smartHide & QE) | QE))
+      /* c->d */ (cohide(keepPos) & QE & done) | (succCohide(keepPos) & modalHide & ((smartAnteHide & QE & done) | (QE & done)))
       )
   })
 
