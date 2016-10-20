@@ -1,0 +1,46 @@
+/**
+ * RBC controllability corollary for European Train Control System
+ * @provable
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ *       Proposition 3
+ */
+Functions.
+  R b.
+  R amax.
+  R ep.
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R em. /* emergency brake: 0=off, 1=on */
+End.
+
+Problem.
+em = 0 & mo = m & v^2 - d^2 <= 2*b*(m-z) & d>=0 & v>=0 & b>0 & ep >0 ->
+  [
+       do := d; mo := m; m :=*; d :=*; vdes :=*; ?d >= 0 & do^2 - d^2 <= 2*b*(m-mo) & vdes >= 0;
+    ++ em := 1;
+  ](d >= 0 & do^2 - d^2 <= 2*b*(m-mo) & vdes >= 0 ->
+     [
+          ?v <= vdes; a :=*; ?a >=0 & a <= amax;
+       ++ ?v >= vdes; a :=*; ?a <=0 & a >= -b;
+     ]
+     <SB:=*;>
+     [
+       {   ?  m - z <= SB | em = 1; a := -b;
+        ++ ?!(m - z <= SB | em = 1);
+       }
+       t:=0;
+       {z'=v, v' = a, t'=1 & v >= 0 & t <= ep}
+     ](z >= m -> v <= d)
+  )
+End.

@@ -65,5 +65,45 @@ class Etcs extends TacticTestBase {
     proveBy(s, master()) shouldBe 'proved
   }
 
+  "Rephrased ETCS models" should "prove controllability lemma with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/controllability-lemma.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
 
+  it should "prove essentials with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "prove rbc controllability characterization with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-characterisation.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "prove rbc controllability corollary with master" ignore withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "prove rbc controllability lemma with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-lemma.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "prove reactivity lemma with tactic" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "prove full reactivity lemma with tactic" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "prove safety lemma with master" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+  }
 }
