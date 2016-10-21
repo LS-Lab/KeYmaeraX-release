@@ -5,19 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Context._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
-import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 
 import scala.collection.immutable._
 
@@ -49,16 +43,9 @@ object IntervalArithmetic {
       case _ => ???
     }
   }
-  private def hideLeftBox(e:Expression) : List[String] =
-  {
-    e match {
-      case Box(_,Box(_,_)) => AxiomIndex.axiomsFor(e)
-      case  _ => Nil
-    }
-  }
 
-  //Check if the context program already calculates the upper bound variable
-  def contextContains(prog:Program,v:String) : Boolean = {
+  //Check if the context program already calculates the bound variable
+  private def contextContains(prog:Program,v:String) : Boolean = {
     prog match
     {
       case Assign(nvar,t) => nvar.name.equals(v)
@@ -66,43 +53,33 @@ object IntervalArithmetic {
         contextContains(lp,v) | contextContains(rp,v)
       case _ => ???
     }
-
   }
-  //Takes a program context ctxP, and term t
-  //Returns a provable pr, program p, formula f and term t' such that:
-  //pr = |- [ctxP;p] f
-  //and f is an upper bound of the form t <= t'
+
+  //Encoding of no-op
   private val nop = Assign(Variable("x_"),Variable("x_"))
 
-  private val composeAssoc = proveBy("[a_;{b_;c_;}] p_(||) <-> [{a_;b_;}c_;]p_(||)".asFormula,
-    useAt("[;] compose")(SuccPosition(1,1::Nil)) &
-      useAt("[;] compose")(SuccPosition(1,1::Nil)) &
-      useAt("[;] compose")(SuccPosition(1,0::Nil)) &
-      useAt("[;] compose")(SuccPosition(1,0::1::Nil)) &
-      byUS("<-> reflexive"))
-
-  private val testAddLem = proveBy("f() <= F() & g() <= G() -> f() + g() <= F() + G() ".asFormula, QE)
-
-  //  val intervalAxiomContext = IndexedSeq(
-  //    "\\forall x \\forall y (x + y <= uPlus(x,y))".asFormula,
-  //    "\\forall x \\forall y (lPlus(x,y) <= x + y)".asFormula
-  //  )
-
+  //Axiomatization of op-with-rounding functions
   val intervalAxiomContext = IndexedSeq(
     "\\forall x \\forall y (x + y <= uPlus(x,y))".asFormula,
     "\\forall x \\forall y (lPlus(x,y) <= x + y)".asFormula,
+
+    "\\forall x \\forall y (x - y <= uMinus(x,y))".asFormula,
+    "\\forall x \\forall y (lMinus(x,y) <= x - y)".asFormula,
+
     "\\forall x \\forall y (x * y <= uTimes(x,y))".asFormula,
     "\\forall x \\forall y (lTimes(x,y) <= x * y)".asFormula
   )
 
   private val uPlus = Function("uPlus", None, Tuple(Real, Real), Real)
   private val lPlus = Function("lPlus", None, Tuple(Real, Real), Real)
+  private val uMinus = Function("uMinus", None, Tuple(Real, Real), Real)
+  private val lMinus = Function("lMinus", None, Tuple(Real, Real), Real)
   private val uTimes = Function("uTimes", None, Tuple(Real, Real), Real)
   private val lTimes = Function("lTimes", None, Tuple(Real, Real), Real)
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
-  //QE doesn't work well with uPlus(,)
+  //Arithmetic lemmas involving the interval axioms
   private val uPlusLem = proveBy(("((\\forall x \\forall y (x + y <= uPlus(x,y))) & f_() <= F_() & g_() <= G_()) ->" +
     "f_() + g_() <= uPlus(F_(),G_())").asFormula,
     useAt("all instantiate",(us:Subst)=>us++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
@@ -115,24 +92,23 @@ object IntervalArithmetic {
       useAt("all instantiate",(us:Subst)=>us++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("<=+ down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
 
-  val duplicateL:DependentPositionTactic = new DependentPositionTactic("duplicate L") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        assert(pos.isAnte && pos.isTopLevel)
-        sequent.sub(pos) match {
-          case Some(f: Formula) =>
-            cut(f) < (ident, close)
-          case _ => ident
-        }
-      }
-    }
-  }
+  private val uMinusLem = proveBy(("((\\forall x \\forall y (x - y <= uMinus(x,y))) & f_() <= F_() & gg_() <= g_()) ->" +
+    "f_() - g_() <= uMinus(F_(),gg_())").asFormula,
+    useAt("all instantiate",(us:Subst)=>us++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt("all instantiate",(us:Subst)=>us++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt("-<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
+
+  private val lMinusLem = proveBy(("((\\forall x \\forall y (lMinus(x,y) <= x - y)) & ff_() <= f_() & g_() <= G_()) ->" +
+    "lMinus(ff_(),G_()) <= f_() - g_()").asFormula,
+    useAt("all instantiate",(us:Subst)=>us++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt("all instantiate",(us:Subst)=>us++RenUSubst(("f()".asTerm,"G_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt("<=- down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
 
   //Bad -- causes splitting
   private val maxLem = proveBy( "h_() <= f_() | h_() <= g_() -> h_() <= max(f_(),g_()) ".asFormula,QE)
   private val minLem = proveBy( "f_() <= H_() | g_() <= H_() -> min(f_(),g_()) <= H_()".asFormula,QE)
 
-  //This is the exact shape of times generated
+  //This is the exact shape for times generated
   private val uTimesLem = proveBy(
     ("((\\forall x \\forall y (x * y <= uTimes(x,y))) & f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() ->" +
       "f_() * g_() <= max((max((uTimes((F_(),G_())),uTimes((F_(),gg_())))),max((uTimes((ff_(),G_())),uTimes((ff_(),gg_())))))))").asFormula,
@@ -157,14 +133,27 @@ object IntervalArithmetic {
         allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
       OnAll(close))
 
-  def fixSubst(subst:Subst,l:Term,r:Term):Subst ={
-    subst ++ RenUSubst(
-      ("F_()".asTerm, l) ::
-        ("G_()".asTerm, r) ::
-        Nil)
-  }
+  private val rwPow2 = proveBy("f_()^2 = f_() * f_()".asFormula,QE)
 
-  //Alternative approach: Just create the program directly, try the proof after and hope it works
+  private val lpowLem1 = proveBy("(0<=ff_() & ff_() <= f_() & h_() <= ff_()*ff_()) -> h_() <= f_()^2".asFormula,QE)
+  private val lPowLem = proveBy(
+    ("((\\forall x \\forall y (lTimes(x,y) <= x * y)) & 0 <= ff_() & ff_() <= f_()) -> " +
+      "lTimes(ff_(),ff_()) <= f_()^2").asFormula,
+    implyR(1) &
+      useAt(lpowLem1,PosInExpr(1::Nil))(1) & prop &
+      allL("ff_()".asTerm)(-1) &
+      allL("ff_()".asTerm)(-1) & close)
+
+  private def ifThenElse(f:Formula,p1:Program,p2:Program): Program =
+  {
+    Choice(Compose(Test(f),p1), Compose(Test(Not(f)),p2))
+  }
+  /**
+    * @param dir direction of bound (true = upper, false = lower)
+    * @param vars bounds already generated
+    * @param t the term to bound (atomics,appOf, +, - , *)
+    * @return list of new vars bound, program and a bounding term calculated by that program
+    */
   def deriveTermProgram(dir:Boolean,vars:List[String],t:Term) : (List[String],Program,Term) =
   {
     val varname = (if(dir) ubPrefix else lbPrefix) ++ getVarName(t)
@@ -180,6 +169,11 @@ object IntervalArithmetic {
         val (lvars,lp,lbound) = deriveTermProgram(dir,vars,l)
         val (rvars,rp,rbound) = deriveTermProgram(dir,lvars,r)
         val func = if(dir) uPlus else lPlus
+        return (rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
+      case Minus(l,r) =>
+        val (lvars,lp,lbound) = deriveTermProgram(dir,vars,l)
+        val (rvars,rp,rbound) = deriveTermProgram(!dir,lvars,r)
+        val func = if(dir) uMinus else lMinus
         return (rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
       case Times(l,r) =>
         //Upper bounds
@@ -206,6 +200,33 @@ object IntervalArithmetic {
         //Final program
         val prog = Compose(Compose(prog1,prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
         return (rlvars,prog,nvar)
+      case Power(l,n:Number) if n.value == 2 =>
+        //Specific implementation for squaring to test out if-then-else
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (llvars,llp,llbound) = deriveTermProgram(false,luvars,l)
+        val func = if(dir) uTimes else lTimes
+        val boundstr = if(dir) "max" else "min"
+
+        val prog1 = Compose(lup,llp)
+
+        //Upper bound is standard
+        //Note inefficiency if squaring variables
+        if (dir){
+          val uuasg = Assign(Variable(varname+"uu"),FuncOf(func,Pair(lubound,lubound)))
+          val llasg = Assign(Variable(varname+"ll"),FuncOf(func,Pair(llbound,llbound)))
+          val prog2 = Compose(uuasg,llasg)
+          val lmax = Assign(nvar,FuncOf(maxF,Pair(Variable(varname+"uu"),Variable(varname+"ll"))))
+          val prog = Compose(Compose(prog1,prog2),lmax)
+          return(llvars,prog,nvar)
+        }
+        else
+        {
+          //For now, check that the lower bound is greater than 0
+
+          val llasg = Assign(nvar,FuncOf(func,Pair(llbound,llbound)))
+          val prog = Compose(prog1,Compose(llasg,Test(LessEqual(Number(0),llbound))))
+          return(llvars,prog,nvar)
+        }
       case _ => return(vars,nop,t)
 
     }
@@ -325,13 +346,37 @@ object IntervalArithmetic {
   //private val decomposeDiamTestOr = proveBy("<?p_() | q_();>r_() <-> <?p_(); ++ ?q_();>r_()".asFormula,
   //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop)
 
+  private def hideDiamond(e:Expression) : List[String] =
+  {
+    e match {
+      case Diamond(Test(_),True) => Nil
+      case  _ => AxiomIndex.axiomsFor(e)
+    }
+  }
+
+  private val lastImplyRi: DependentTactic  = new SingleGoalDependentTactic("lastImplyRi") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      assert(sequent.ante.length > 0)
+      implyRi(AntePos(sequent.ante.length-1),SuccPos(0))
+    }
+  }
+
   def deriveFormulaProof(f:Formula) : Provable =
   {
     val(_,pinit,ff) = deriveFormulaProgram(Nil,f)
-    val prog = stripNoOp(Compose(pinit,Test(ff)))
+    val prog = Compose(stripNoOp(pinit),Test(ff))
+    println("Derived: "+prog)
     val pf = proveBy(Sequent(intervalAxiomContext,IndexedSeq(Imply(Diamond(prog,True),f))),
-      //Turn the <> into a formula, preserving its shape
-      chase(SuccPosition(1,0::Nil)) &
+      //Turn the program part into a formula first, preserving the test part using hideDiamond
+      useAt("<;> compose")(SuccPosition(1,0::Nil)) &
+        chase(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
+        //Strip off all the accumulated side conditions
+        implyR(1) &
+        (andL('Llast)*) &
+        lastImplyRi &
+        //Now clear up the diamond for the test part
+        chase(SuccPosition(1,0::Nil)) &
+        useAt("&true")(SuccPosition(1,0::Nil)) &
         //Repeatedly decompose w.r.t. shape of formula
         (OnAll(?(
           (useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
@@ -339,19 +384,23 @@ object IntervalArithmetic {
         //Decompose inequalities
         (OnAll(?(
           (useAt(decomposeLE,PosInExpr(1::Nil))(1) & andR('_)) |
-          (useAt(decomposeLT,PosInExpr(1::Nil))(1) & andR('_)) |
-          (useAt(decomposeGE,PosInExpr(1::Nil))(1) & andR('_)) |
-          (useAt(decomposeGT,PosInExpr(1::Nil))(1) & andR('_))
+            (useAt(decomposeLT,PosInExpr(1::Nil))(1) & andR('_)) |
+            (useAt(decomposeGE,PosInExpr(1::Nil))(1) & andR('_)) |
+            (useAt(decomposeGT,PosInExpr(1::Nil))(1) & andR('_))
         )) *) &
         //single step removal of the rounding arithmetic axioms
         (OnAll(?(
           (useAt(lPlusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
             (useAt(uPlusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
+            (useAt(lMinusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
+            (useAt(uMinusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
             (useAt(uTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*) )) |
-            (useAt(lTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*)))
+            (useAt(lTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))) |
+            (useAt(lPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident)))
+
         ))*) &
         //reflexivity
-        OnAll(simpTac(1) & closeT)
+        OnAll(simpTac(1) & ?(closeT))
     )
     //Decompose the big formula here
     pf
