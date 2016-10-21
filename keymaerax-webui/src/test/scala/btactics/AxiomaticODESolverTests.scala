@@ -176,6 +176,27 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "false & \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> 2*t_+x>0)".asFormula
   }
 
+  it should "work on the single integrator x'=v in positive context in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq("a=2 -> [{x'=v}]x^3>=1".asFormula), IndexedSeq()), AxiomaticODESolver()(-1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "a=2 -> (\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1))".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "work on the single integrator x'=v in negative context in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq("[{x'=v}]x^3>=1 -> a=2".asFormula), IndexedSeq()), AxiomaticODESolver()(-1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "(\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)) -> a=2".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "work on the single integrator x'=v in negative context in the succedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val result = proveBy("[{x'=v}]x^3>=1 -> x=1&v=2".asFormula, AxiomaticODESolver()(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "(\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*t_+x)^3>=1)) -> x=1&v=2".asFormula
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
