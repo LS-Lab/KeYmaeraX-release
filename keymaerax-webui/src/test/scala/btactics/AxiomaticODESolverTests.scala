@@ -169,6 +169,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "solve in unprovable context" in withMathematica { tool =>
+    val result = proveBy("false & [{x'=2}]x>0".asFormula, diffSolve(1, PosInExpr(1::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "false & \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> 2*t_+x>0)".asFormula
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)

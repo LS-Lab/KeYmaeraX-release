@@ -60,7 +60,7 @@ object AxiomaticODESolver {
     simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1::Nil)) &
     DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
     //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
-    (inverseDiffCut(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
+    (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
     RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
     DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
@@ -128,7 +128,7 @@ object AxiomaticODESolver {
   //region Cut in solutions
 
   def cutInSoln(odeSize: Int) = "cutInSoln" by ((pos: Position, s: Sequent) => {
-    val system:ODESystem = s.sub(pos) match {
+    val system: ODESystem = s.sub(pos) match {
       case Some(Box(x: ODESystem, _)) => x
       case Some(Diamond(x: ODESystem, _)) => x
     }
@@ -153,21 +153,31 @@ object AxiomaticODESolver {
 
     tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
 
-    val diffInd = "ANON" by ((pp: Position, ss: Sequent) => {
-      val Some(withInitials: Formula) = ss.sub(pp)
-      TactixLibrary.CEat(TactixLibrary.proveBy(Equiv(True, withInitials),
-        DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done))(pp)
-    })
-
     //@note we have to cut one at a time instead of just constructing a single tactic because solutions need to be added
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
-    DifferentialTactics.diffCut(solnToCut)(pos) <(
-      Idioms.nil,
-      TactixLibrary.cohideR('Rlast) & diffInd(SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.dropRight(odeSize+1)))) &
-        TactixLibrary.auto & DebuggingTactics.done
-      )
+
+    val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
+    val fact = s.sub(withInitialsPos) match {
+      case Some(fml: Formula) =>
+        val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))
+        val (ctx, modal: Modal) = Context.at(fml, odePos)
+        val ODESystem(_, e) = modal.program
+        val factFml =
+          if (pos.isSucc) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, solnToCut))), fml)
+          else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, solnToCut))))
+        TactixLibrary.proveBy(factFml,
+          TactixLibrary.implyR(1) & TactixLibrary.diffCut(solnToCut)(if (pos.isSucc) 1 else -1, odePos) <(
+            TactixLibrary.close
+            ,
+            TactixLibrary.cohideR('Rlast) &
+            DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.assignb(1)*(odeSize+1) &
+            DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
+          )
+        )
+    }
+
+    TactixLibrary.useAt(fact, PosInExpr((if (pos.isSucc) 1 else 0 )::Nil))(withInitialsPos)
   })
 
   /**
@@ -244,20 +254,28 @@ object AxiomaticODESolver {
 
   //region Inverse diff cuts
 
-  private val inverseDiffCut = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
-    val idc: BelleExpr = s.sub(pos) match {
-      //@note evolution domain constraints are of the form true&solution or ...&solution
-      case Some(f@Box(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
-        HilbertCalculus.useExpansionAt("DC differential cut")(pos)
-      case Some(f@Diamond(ODESystem(ode, And(_, constraint)), p)) if isPartOfSoln(ode, constraint) =>
-        HilbertCalculus.useExpansionAt("DCd diamond differential cut")(pos)
+  private def inverseDiffCut(odeSize: Int): DependentPositionTactic = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
+    val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
+    val fact = s.sub(withInitialsPos) match {
+      case Some(fml: Formula) =>
+        val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))
+        val (ctx, modal: Modal) = Context.at(fml, odePos)
+        val ODESystem(_, And(e, soln)) = modal.program
+        val factFml =
+          if (pos.isSucc) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)), fml)
+          else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)))
+        TactixLibrary.proveBy(factFml,
+          TactixLibrary.implyR(1) & TactixLibrary.diffCut(soln)(if (pos.isSucc) -1 else 1, odePos) <(
+            TactixLibrary.close
+            ,
+            TactixLibrary.cohideR('Rlast) &
+            DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.assignb(1)*(odeSize+1) &
+            DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
+            )
+        )
     }
 
-    idc <(
-      Idioms.nil, /* Branch with no ev dom contraint */
-      TactixLibrary.cohideR('Rlast) & DebuggingTactics.debug("inverse normalize", ODE_DEBUGGER) & TactixLibrary.normalize &
-        DebuggingTactics.debug("inverse diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done /* Show precond of diff cut */
-      )
+    TactixLibrary.useAt(fact, PosInExpr((if (pos.isSucc) 1 else 0)::Nil))(withInitialsPos)
   })
 
   /** Returns true iff f is part of the cut-in solution for the ODE. */
