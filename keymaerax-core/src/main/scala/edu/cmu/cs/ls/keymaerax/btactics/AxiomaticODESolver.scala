@@ -64,6 +64,8 @@ object AxiomaticODESolver {
     //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
     (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
+    SimplifierV2.simpTac(odePosAfterInitialVals ++ PosInExpr(0::1::Nil)) &
+    DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
     RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
     DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
     DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
@@ -342,8 +344,9 @@ object AxiomaticODESolver {
           ,
           DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
           TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) &
-            TactixLibrary.useAt(",d commute")(1, pos.inExpr ++ PosInExpr(1::0::Nil)) &
-            TactixLibrary.CE(pos.inExpr) & TactixLibrary.byUS("DGd diamond differential ghost") & TactixLibrary.done
+            TactixLibrary.CE(pos.inExpr) &
+            TactixLibrary.useAt(",d commute")(1, PosInExpr(1::0::Nil)) &
+            TactixLibrary.byUS("DGd diamond differential ghost") & TactixLibrary.done
         ) & checkResult(ode, y_DE)
     }
   })

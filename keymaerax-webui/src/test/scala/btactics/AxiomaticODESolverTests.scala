@@ -278,6 +278,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) & \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
+  it should "solve a ModelPlex question" in withMathematica { tool =>
+    val result = proveBy("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&<{l'=0*l+fpost_0(),c'=0*c+1&0<=l&c<=ep}>((fpost()=fpost_0()&lpost()=l)&cpost()=c))".asFormula,
+      diffSolve(1, 1::0::1::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> 0<=fpost_0()*s_+l&s_+c<=ep) & (fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asFormula)
+  }
+
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
