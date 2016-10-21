@@ -284,12 +284,6 @@ object AxiomaticODESolver {
     TactixLibrary.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0)::Nil))(withInitialsPos)
   })
 
-  /** Returns true iff f is part of the cut-in solution for the ODE. */
-  private def isPartOfSoln(ode: DifferentialProgram, f: Formula): Boolean = f match {
-    case Equal(t1, t2) => atomicOdes(ode).exists(a => a.xp.x == t1 || a.xp.x == t2)
-    case _ => false
-  }
-
   //endregion
 
   //region Inverse diff ghosts
