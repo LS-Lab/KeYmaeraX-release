@@ -209,7 +209,17 @@ object ModelPlex extends ModelPlexTrait {
     * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
-  def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = ???
+  def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = "Axiomatic model monitor" by ((pos: Position) =>
+    locateT(
+      useAt("<*> approx", PosInExpr(1::Nil)) ::
+        AxiomaticODESolver.axiomaticSolve() ::
+        useAt("<;> compose") ::
+        useAt("<++> choice") ::
+        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt("<?> test") ::
+        useAt("<:=> assign") ::
+        ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        Nil)(pos))
 
   /**
    * Returns a tactic to solve two-dimensional differential equations. Introduces constant function symbols for
@@ -344,7 +354,7 @@ object ModelPlex extends ModelPlexTrait {
   private def optimizationOneAt(inst: Option[(Variable, Term)] = None): DependentPositionTactic = "Optimization 1" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc => inst match {
-          case Some(i) => debug("Foo") & existsR(i._1, i._2)(pos) & debug("Bar")
+          case Some(i) => existsR(i._1, i._2)(pos)
           case None =>
             require(vars.size == 1)
             val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head

@@ -125,18 +125,21 @@ class ModelplexTacticTests extends TacticTestBase {
 //    finalResult.subgoals.head.ante shouldBe empty
 //    finalResult.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep) & lpost()=l & cpost()=0".asFormula
   }
-//
-//  ignore should "find correct model monitor condition" in {
-//    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-mx.key"))
-//    val tactic = locateSucc(modelplexSequentStyle)
-//    val result = helper.runTactic(tactic, new RootNode(s))
-//    result.openGoals() should have size 2
-//    result.openGoals()(0).sequent.ante should contain only "0<=x & x<=m & 0<ep".asFormula
-//    result.openGoals()(0).sequent.succ should contain only "-1<=f & f<=(m-x)/ep".asFormula
-//    result.openGoals()(1).sequent.ante should contain only ("0<=x & x<=m & 0<ep".asFormula, "-1<=f & f<=(m-x)/ep".asFormula)
-//    result.openGoals()(1).sequent.succ should contain only "f_post()=f & x_post()=x & t_post()=0".asFormula
-//  }
-//
+
+  it should "find correct model monitor condition" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
+
+    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.modelMonitorT)(1)
+    val result = proveBy(modelplexInput, tactic)
+
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "true".asFormula
+    //@todo simplification
+    result.subgoals.head.succ should contain only "(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0<=fpost_0()*s_+l&s_+c<=ep)&(fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asFormula
+  }
+
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in {
     val s = KeYmaeraXProblemParser(
       io.Source.fromInputStream(
