@@ -389,6 +389,10 @@ object SimplifierV2 {
   val notT = propProof("!true","false")
   val notF = propProof("!false","true")
 
+  val ltNotReflex = qeEquivProof("F()<F()","false")
+  val gtNotReflex = qeEquivProof("F()>F()","false")
+  val neqNotReflex = qeEquivProof("F()!=F()","false")
+
   private def propHeuristics(f:Formula) : Option[(Formula,Provable)] =
   {
     f match {
@@ -415,9 +419,12 @@ object SimplifierV2 {
       case Not(True) => Some(False,notT)
       case Not(False) => Some(True,notF)
 
-      case Equal(l,r) if l.equals(r) => Some(True,equalReflex)
-      case LessEqual(l,r) if l.equals(r) => Some(True,lessequalReflex)
-      case GreaterEqual(l,r) if l.equals(r) => Some(True,greaterequalReflex)
+      case Equal(l,r) if l == r => Some(True,equalReflex)
+      case LessEqual(l,r) if l == r => Some(True,lessequalReflex)
+      case GreaterEqual(l,r) if l == r => Some(True,greaterequalReflex)
+      case Less(l,r) if l == r => Some(False,ltNotReflex)
+      case Greater(l,r) if l == r => Some(False,gtNotReflex)
+      case NotEqual(l,r) if l == r => Some(False,neqNotReflex)
 
       case _ => None
     }
