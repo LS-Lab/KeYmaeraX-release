@@ -19,6 +19,7 @@ import spray.json._
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
+import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 
 import scala.collection.mutable.ListBuffer
 
@@ -163,6 +164,14 @@ class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
       "html" -> fmlHtml,
       "string" -> fmlString
     )
+  )
+}
+
+class ModelPlexCCodeResponse(model: ModelPOJO, monitor: Formula) extends Response {
+  def getJson = JsObject(
+    "modelid" -> JsString(model.modelId.toString),
+    "modelname" -> JsString(model.name),
+    "code" -> JsString(CGenerator(monitor))
   )
 }
 

@@ -552,14 +552,14 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   }
 }
 
-class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, additionalVars: List[String]) extends UserRequest(userId) {
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
   def resultingResponses() = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser(model.keyFile)
     val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
       ++ additionalVars.map(_.asVariable)).toList
     val modelplexInput = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
-    val monitor = monitorKind match {
+    val monitorCond = monitorKind match {
       case "controller" =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
         try {
@@ -569,7 +569,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         }
     }
 
-    if (monitor.subgoals.size == 1) new ModelPlexResponse(model, monitor.subgoals.head.toFormula) :: Nil
+    if (monitorCond.subgoals.size == 1) conditionKind match {
+      case "kym" => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+      case "c" => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+    }
     else new ErrorResponse("ModelPlex failed") :: Nil
   }
 }

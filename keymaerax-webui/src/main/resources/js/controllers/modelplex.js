@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
-    function($scope, $uibModalInstance, $http, spinnerService, userid, modelid) {
+    function($scope, $uibModalInstance, $http, spinnerService, FileSaver, Blob, userid, modelid) {
 
   $scope.mxdata = {
     modelid: modelid,
@@ -17,10 +17,22 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.modelplex = function() {
     spinnerService.show('modelplexExecutionSpinner')
     $http({method: 'GET',
-           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" + $scope.mxdata.monitorkind,
+           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" + $scope.mxdata.monitorkind + "/kym",
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
         $scope.mxdata.monitor = response.data.monitor;
+      })
+      .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
+  }
+
+  $scope.downloadCCode = function() {
+    spinnerService.show('modelplexExecutionSpinner')
+    $http({method: 'GET',
+           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" + $scope.mxdata.monitorkind + "/c",
+           params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
+      .then(function(response) {
+        var data = new Blob([response.data.code], { type: 'text/plain;charset=utf-8' });
+        FileSaver.saveAs(data, response.data.modelname + '.c');
       })
       .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
   }
