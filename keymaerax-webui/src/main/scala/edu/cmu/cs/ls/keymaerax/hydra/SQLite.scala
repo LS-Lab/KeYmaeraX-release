@@ -69,6 +69,8 @@ object SQLite {
     override def deleteDatabase(): Unit = {
       db.deleteAllLemmas()
     }
+
+    override def version(): String = db.getConfiguration("version").config("version")
   }
 
   def SQLiteLemmaDB (db: SQLiteDB) = new CachedLemmaDB(new UncachedSQLiteLemmaDB(db))
