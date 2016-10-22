@@ -34,7 +34,7 @@ object AxiomaticODESolver {
 
   def apply() = axiomaticSolve()
 
-  def axiomaticSolve() = "AxiomaticODESolver" by ((pos:Position, s:Sequent) => {
+  def axiomaticSolve() = "diffSolve" by ((pos:Position, s:Sequent) => {
     val ode = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
     val osize = odeSize(ode)
 
