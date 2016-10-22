@@ -2,8 +2,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{TheType, DependentPositionTactic, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, PosInExpr, TheType}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.language.postfixOps
 
@@ -190,7 +191,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "Watertank controller monitor (backward tactic)")
   }
 
-  it should "work using the command line interface" in {
+  it should "work using the command line interface" taggedAs IgnoreInBuildTest in {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 
@@ -450,7 +451,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expectedSucc, result, "RSS controller monitor (backward tactic)")
   }
 
-  it should "work using the command line interface" in {
+  it should "work using the command line interface" taggedAs IgnoreInBuildTest in {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 
