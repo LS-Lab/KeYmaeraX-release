@@ -100,7 +100,7 @@ class Robix extends TacticTestBase {
       /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
         print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
         print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
-        print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
+        print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) &
           di("a")(1) & dw & prop & OnAll(hideFactsAbout("dxo", "dyo") partial) <(
             hideFactsAbout("y", "yo") & accArithTactic,
             hideFactsAbout("x", "xo") & accArithTactic
