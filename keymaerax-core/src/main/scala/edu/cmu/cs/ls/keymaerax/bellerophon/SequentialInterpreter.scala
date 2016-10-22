@@ -279,25 +279,27 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
           //@todo loop through all using the first one whose unificatoin and tactic application ends up being successful as opposed to committing to first unifiable case.
           //Attempt to find a child that unifies with the input.
-          val unification: (UnificationMatch.Subst, RenUSubst => BelleExpr) = children.map(pair => {
+          val unifications = children.map(pair => {
             val ty = pair._1
             val expr = pair._2
             ty match {
               case SequentType(s) => try {
-                Some((UnificationMatch(s, provable.subgoals.head), expr))
+                (UnificationMatch(s, provable.subgoals.head), expr)
               } catch {
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                 // fall back to user-provided substitution
                 case e: UnificationException =>
                   //if (DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
-                  Some(RenUSubst(Nil), expr)
+                  (RenUSubst(Nil), expr)
               }
               case _ => throw new BelleError("Cannot unify non-sequent types.").inContext(t, "")
             }
           })
-            .filter(_.isDefined).map(_.get)
-            //@note head is defined since empty substitution is returned when no unification can be found
-            .head //Option.getOrElse(throw new BelleError("USubst Pattern Incomplete -- could not find a unifier for any option").inContext(t, ""))
+
+          //@note try user-provided last unification
+          val unification: (UnificationMatch.Subst, RenUSubst => BelleExpr) =
+            if (unifications.forall(_._1.isEmpty)) unifications.last
+            else unifications.filterNot(_._1.isEmpty).head
 
           apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
         }
