@@ -548,7 +548,7 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   def resultingResponses() = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser(model.keyFile)
-    new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) :: Nil
+    new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
   }
 }
 
@@ -556,7 +556,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
   def resultingResponses() = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser(model.keyFile)
-    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
       ++ additionalVars.map(_.asVariable)).toList
     val modelplexInput = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitor = monitorKind match {

@@ -154,9 +154,15 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 }
 
 class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
+  val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(monitor))
+  val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(monitor))
+
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
-    "monitor" -> JsString(monitor.prettyString)
+    "monitor" -> JsObject(
+      "html" -> fmlHtml,
+      "string" -> fmlString
+    )
   )
 }
 
