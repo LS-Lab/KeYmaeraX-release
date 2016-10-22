@@ -578,7 +578,7 @@ class Robix extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*) & loop(invariant)(1) & Idioms.<(
       print("Base case") & QE & done,
       print("Use case") & QE & done,
-      print("Induction step") & chase('R) & normalize(andR('R), skip, skip) & OnAll(ODE('R) & QE & done)
+      print("Induction step") & chase('R) & normalize(andR('R), skip, skip) & OnAll(ODE('R) & allR('R) & implyR('R)*2 & allL("t_".asVariable)('Llast) & QE & done)
     )
 
     proveBy(s, tactic) shouldBe 'proved
