@@ -135,14 +135,39 @@ object IntervalArithmetic {
 
   private val rwPow2 = proveBy("f_()^2 = f_() * f_()".asFormula,QE)
 
+  //upper bound^2 lemmas
+  private val uPowLem = proveBy(("((\\forall x \\forall y (x * y <= uTimes(x,y))) & ff_() <= f_() & f_() <= F_()) -> " +
+    "f_()^2 <= max((uTimes(F_(),F_()),uTimes(ff_(),ff_())))").asFormula,
+    implyR(1) & useAt("pow<= up",PosInExpr(1::Nil))(1) & prop &
+      (OnAll(useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)))) &
+      (OnAll((useAt("maxLem",maxLem,PosInExpr(1::Nil))(1)) & prop)*) &
+      <(allL("ff_()".asTerm)(-1) & allL("ff_()".asTerm)(-1),
+        allL("F_()".asTerm)(-1) & allL("F_()".asTerm)(-1)) &
+      OnAll(close))
+
+  //lower bound ^2 lemmas
+  //When the interval is entirely positive
   private val lpowLem1 = proveBy("(0<=ff_() & ff_() <= f_() & h_() <= ff_()*ff_()) -> h_() <= f_()^2".asFormula,QE)
-  private val lPowLem = proveBy(
+  private val poslPowLem = proveBy(
     ("((\\forall x \\forall y (lTimes(x,y) <= x * y)) & 0 <= ff_() & ff_() <= f_()) -> " +
       "lTimes(ff_(),ff_()) <= f_()^2").asFormula,
     implyR(1) &
       useAt(lpowLem1,PosInExpr(1::Nil))(1) & prop &
       allL("ff_()".asTerm)(-1) &
       allL("ff_()".asTerm)(-1) & close)
+
+  //When the interval is entirely negative
+  private val lpowLem2 = proveBy("(F_()<=0 & f_() <= F_() & h_() <= F_()*F_()) -> h_() <= f_()^2".asFormula,QE)
+  private val neglPowLem = proveBy(
+    ("((\\forall x \\forall y (lTimes(x,y) <= x * y)) & F_() <= 0 & f_() <= F_()) -> " +
+      "lTimes(F_(),F_()) <= f_()^2").asFormula,
+    implyR(1) &
+      useAt(lpowLem2,PosInExpr(1::Nil))(1) & prop &
+      allL("F_()".asTerm)(-1) &
+      allL("F_()".asTerm)(-1) & close)
+
+  //When it is inconclusive
+  private val bothlPowLem = proveBy("0 <= F_()^2".asFormula,QE)
 
   private def ifThenElse(f:Formula,p1:Program,p2:Program): Program =
   {
@@ -221,10 +246,15 @@ object IntervalArithmetic {
         }
         else
         {
-          //For now, check that the lower bound is greater than 0
-
+          //If the U(x) <= 0 then U(x)^2 is a lower bound
+          //else if the l(x) >= 0 then l(x)^2 is a lower bound
+          //else 0 is the lower bound
+          val luasg = Assign(nvar,FuncOf(func,Pair(lubound,lubound)))
           val llasg = Assign(nvar,FuncOf(func,Pair(llbound,llbound)))
-          val prog = Compose(prog1,Compose(llasg,Test(LessEqual(Number(0),llbound))))
+          val zasg = Assign(nvar,Number(0))
+          val innerTest = ifThenElse( LessEqual(Number(0),llbound), llasg, zasg )
+          val outerTest = ifThenElse(LessEqual(lubound,Number(0)),luasg,innerTest)
+          val prog = Compose(prog1,outerTest)
           return(llvars,prog,nvar)
         }
       case _ => return(vars,nop,t)
@@ -363,16 +393,19 @@ object IntervalArithmetic {
 
   def deriveFormulaProof(f:Formula) : Provable =
   {
+    println(uPowLem)
     val(_,pinit,ff) = deriveFormulaProgram(Nil,f)
     val prog = Compose(stripNoOp(pinit),Test(ff))
-    println("Derived: "+prog)
+    //println("Derived: "+prog)
     val pf = proveBy(Sequent(intervalAxiomContext,IndexedSeq(Imply(Diamond(prog,True),f))),
       //Turn the program part into a formula first, preserving the test part using hideDiamond
       useAt("<;> compose")(SuccPosition(1,0::Nil)) &
         chase(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
-        //Strip off all the accumulated side conditions
+        //Strip off all accumulated side conditions
         implyR(1) &
-        (andL('Llast)*) &
+        (OnAll(?(andL('Llast) | orL('Llast) ))*) &
+        //Conditional bounds like those found in squares might lead to splitting
+        OnAll(
         lastImplyRi &
         //Now clear up the diamond for the test part
         chase(SuccPosition(1,0::Nil)) &
@@ -396,11 +429,14 @@ object IntervalArithmetic {
             (useAt(uMinusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))) |
             (useAt(uTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*) )) |
             (useAt(lTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))) |
-            (useAt(lPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident)))
-
+            (useAt(uPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_)) & ident) |
+            (useAt(poslPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
+            (useAt(neglPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
+            (cohideR(1) & byUS(bothlPowLem))
         ))*) &
         //reflexivity
         OnAll(simpTac(1) & ?(closeT))
+        )
     )
     //Decompose the big formula here
     pf
