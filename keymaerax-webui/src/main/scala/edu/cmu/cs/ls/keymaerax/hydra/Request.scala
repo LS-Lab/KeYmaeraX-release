@@ -544,6 +544,13 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
   }
 }
 
+class AddModelTacticRequest(db : DBAbstraction, userId : String, modelId : String, tactic: String) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val tacticId = db.addModelTactic(modelId, tactic)
+    new BooleanResponse(tacticId.isDefined) :: Nil
+  }
+}
+
 class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
   def resultingResponses() = {
     val model = db.getModel(modelId)

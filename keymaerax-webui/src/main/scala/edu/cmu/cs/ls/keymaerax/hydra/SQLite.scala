@@ -346,6 +346,16 @@ object SQLite {
         else None
       })
 
+    override def addModelTactic(modelId: String, fileContents: String): Option[Int] =
+      synchronizedTransaction({
+        nSelects = nSelects + 1
+        val mId = Integer.parseInt(modelId)
+        if (Models.filter(_._Id === mId).filter(_.tactic.isEmpty).list.isEmpty) {
+          Some(Models.filter(_._Id === mId).map(_.tactic).update(Some(fileContents)))
+        }
+        else None
+      })
+
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       synchronizedTransaction({
         nInserts = nInserts + 2

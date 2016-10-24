@@ -240,6 +240,9 @@ trait DBAbstraction {
   /** Deletes a provable and all associated sequents / formulas */
   def deleteProvable(provableId: Int): Boolean
 
+  /** Adds a tactic script to the model */
+  def addModelTactic(modelId: String, tactic: String): Option[Int]
+
   /////////////////////
 
   /** Creates a new execution and returns the new ID in tacticExecutions */

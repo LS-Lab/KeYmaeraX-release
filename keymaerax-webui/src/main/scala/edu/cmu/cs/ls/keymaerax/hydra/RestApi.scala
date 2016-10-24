@@ -235,6 +235,11 @@ trait RestApi extends HttpService with SLF4JLogging {
       val request = new GetModelTacticRequest(database, userId, modelId)
       completeRequest(request, t)
     }
+    post {
+      entity(as[String]) { contents => {
+        val request = new AddModelTacticRequest(database, userId, modelId, contents)
+        completeRequest(request, t)
+      }}}
   }}
 
   val extractTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (userId, proofId) => { pathEnd {
