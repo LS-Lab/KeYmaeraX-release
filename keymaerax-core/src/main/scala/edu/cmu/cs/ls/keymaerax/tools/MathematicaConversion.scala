@@ -138,9 +138,11 @@ class KMComparator(val l: MExpr) {
   private def naryEquals(l: MExpr, r: MExpr, expectedHead: MExpr): Boolean = {
     // Op[Op[a,b], c] === Op[a,b,c]
     def checkBinary(l: MExpr, r: MExpr, i: Int): Boolean = {
-      l.head() === r.head() && l.args().length == 2 && l.args().last === r.args().reverse(i) &&
+      (l.head() === r.head() && l.args().length == 2 && l.args().last === r.args().reverse(i) &&
         (if (hasHead(l.args().head, expectedHead)) checkBinary(l.args().head, r, i+1)
-         else l.args().head === r.args().reverse(i+1))
+         else l.args().head === r.args().reverse(i+1))) ||
+      // List of Ands: first argument could be an Inequality, don't recurse
+      (i == r.args().length-1 && l === r.args().reverse(i))
     }
     checkBinary(l, r, 0)
   }
