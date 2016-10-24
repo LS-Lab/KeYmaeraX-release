@@ -132,13 +132,13 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.modelMonitorT)(1)
+    //@todo can steer result depending on where and when we use partial QE
+    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.modelMonitorT)(1) & ModelPlex.optimizationOneWithSearch(1) & SimplifierV2.simpTac(1)
     val result = proveBy(modelplexInput, tactic)
 
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "true".asFormula
-    //@todo simplification
-    result.subgoals.head.succ should contain only "(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0<=fpost_0()*s_+l&s_+c<=ep)&(fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asFormula
+    result.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(cpost()=0&((fpost() < 0&((ep=cpost()&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l|(ep>cpost()&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l)|((fpost()=0&ep>=cpost())&l>=0)&lpost()=l)|((fpost()>0&ep>=0)&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l)|cpost()>0&((((fpost() < 0&ep>=cpost())&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l|((fpost()=0&ep>=cpost())&l>=0)&lpost()=l)|((fpost()>0&ep>=cpost())&l>=0)&lpost()=cpost()*fpost()+l))".asFormula
   }
 
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in {

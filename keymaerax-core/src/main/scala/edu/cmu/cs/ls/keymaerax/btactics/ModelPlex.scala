@@ -296,16 +296,23 @@ object ModelPlex extends ModelPlexTrait {
     * @see[[optimizationOneWithSearchAt]]
     */
   def optimizationOneWithSearch: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
-    require(pos.isTopLevel, "Start Opt. 1 at top level")
-
-    val simplForall1 = proveBy("p(y) -> \\forall x (x=y -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
-    val simplForall2 = proveBy("p(y) -> \\forall x (y=x -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
+    val simplForall1 = proveBy("p(f()) -> \\forall x (x=f() -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
+    val simplForall2 = proveBy("p(f()) -> \\forall x (f()=x -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
 
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-        case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(pp))
-        case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(pp))
         case (Forall(xs, Imply(Equal(x, _), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall1, PosInExpr(1::Nil))(pp))
         case (Forall(xs, Imply(Equal(_, x), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall2, PosInExpr(1::Nil))(pp))
+        // @note shape of ode solution
+        case (ode@Exists(ts, And(GreaterEqual(_, _), And(Forall(ss, Imply(And(_, _), _)), _))), pp) if pp.isSucc && ts.contains("t_".asVariable) && ss.contains("s_".asVariable)=>
+          val signature = StaticSemantics.signature(ode).filter({
+            case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+          val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
+          val transformed = proveBy(edo, partialQE)
+          val backSubst = signature.foldLeft[Formula](transformed.subgoals.head.succ.head)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing)))
+          val pqe = proveBy(Imply(backSubst, ode), QE)
+          Some(cutAt(backSubst)(pp) <(skip, (if (pp.isSucc) cohideR(pp.topLevel) else cohideR('Rlast)) & CMon(pp.inExpr) & by(pqe)))
+        case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(pp))
+        case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(pp))
         case _ => None
       })
     positions.reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
@@ -357,7 +364,7 @@ object ModelPlex extends ModelPlexTrait {
           case Some(i) => existsR(i._1, i._2)(pos)
           case None =>
             require(vars.size == 1)
-            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
+            val (v, post) = vars.map(v => (v, Function(s"${v.name.replaceAllLiterally("_", "")}post", Some(0), Unit, v.sort))).head
             val postFn = FuncOf(post, Nothing)
             existsR(v, postFn)(pos)
         }
@@ -365,7 +372,7 @@ object ModelPlex extends ModelPlexTrait {
           case Some(i) => allL(i._1, i._2)(pos)
           case None =>
             require(vars.size == 1)
-            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
+            val (v, post) = vars.map(v => (v, Function(s"${v.name.replaceAllLiterally("_", "")}post", Some(0), Unit, v.sort))).head
             val postFn = FuncOf(post, Nothing)
             allL(v, postFn)(pos)
         }
@@ -419,19 +426,17 @@ object ModelPlex extends ModelPlexTrait {
 
   /** Collects the subpositions at/under pos that satisfy condition cond. Ordered: reverse depth (deepest first). */
   private def collectSubpositions(pos: Position, sequent: Sequent, cond: Expression => Boolean): List[Position] = {
-    require(pos.isTopLevel, "Collecting at top level")
     var positions: List[Position] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
         if (cond(e)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
       override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
         if (cond(t)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
-    }, sequent(pos.top))
+    }, sequent.sub(pos).get.asInstanceOf[Formula])
     positions
   }
 
   private def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
-    require(pos.isTopLevel, "Collecting at top level")
     var result: List[T] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = trafo(e, pos ++ p) match {
