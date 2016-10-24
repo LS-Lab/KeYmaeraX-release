@@ -153,6 +153,23 @@ object ModelPlex extends ModelPlexTrait {
   })
 
   /**
+    * Returns a tactic to derive a model monitor in axiomatic style using forward chase + diffSolve. The tactic is
+    * designed to operate on input produced by createMonitorSpecificationConjecture.
+    *
+    * @see [[createMonitorSpecificationConjecture]]
+    * @return The tactic.
+    */
+  def modelMonitorByChase: DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
+    // remove loops
+    case Diamond(Loop(_), _) => "<*> approx" :: Nil
+    // remove ODEs for controller monitor
+    case Diamond(ODESystem(_, _), _) => Nil
+    case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+  })(pos) & locateT(AxiomaticODESolver.axiomaticSolve()::Nil)(pos) &
+            //@todo can steer result depending on where and when we use partial QE
+            ModelPlex.optimizationOneWithSearch(pos) & SimplifierV2.simpTac(pos))
+
+  /**
    * ModelPlex sequent-style synthesis technique, i.e., with branching so that the tactic can operate on top-level
    * operators. Operates on monitor specification conjectures.
     *
