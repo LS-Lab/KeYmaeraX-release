@@ -1,10 +1,10 @@
-unfoldProgramNormalize & loop({`0<=vf&xf < xl&xf+vf^2/(2*B) < xl+vl^2/(2*B)&0<=t&t<=ep&xl-xl0>=(vl+vl0)/2*t&0<=vl&-B*t<=vl-vl0&vl-vl0<=A*t&xlr=xl&vlr=vl`}, 1) & <(
+unfold & loop({`0<=vf&xf < xl&xf+vf^2/(2*B) < xl+vl^2/(2*B)&0<=t&t<=ep&xl-xl0>=(vl+vl0)/2*t&0<=vl&-B*t<=vl-vl0&vl-vl0<=A*t&xlr=xl&vlr=vl`}, 1) & <(
   QE,
   QE,
-  unfoldProgramNormalize & <(
-    AxiomaticODESolver(1) & QE,
-    AxiomaticODESolver(1) & QE,
-    AxiomaticODESolver(1) & allR(1) & implyR(1) & implyR(1) & allL({`t_`}, -24) & implyL(-24) & <(
+  unfold & <(
+    diffSolve(1) & QE,
+    diffSolve(1) & QE,
+    diffSolve(1) & allR(1) & implyR(1) & implyR(1) & allL({`t_`}, -24) & implyL(-24) & <(
       hideR(1) & QE,
       hideL(-6) & transform({`xf+vf^2/(2*B)+(A/B+1)*(A/2*t_^2+t_*vf) < xlr+vlr^2/(2*B)`}, -14) & andL(-23) & andL(-24) & andR(1) & <(
         QE,

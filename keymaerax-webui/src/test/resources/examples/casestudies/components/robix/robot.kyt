@@ -1,16 +1,16 @@
 implyR(1) & andL('L)* & loop({`v>=0&dx^2+dy^2=1&0<=t&t<=ep&-V*t<=xo-xo0&xo-xo0<=V*t&-V*t<=yo-yo0&yo-yo0<=V*t&(v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B))`}, 1) & <(
   QE,
   QE,
-  unfoldProgramNormalize & <(
-    diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)-B*t`}, 1) & diffInvariant({`-t*(v+B/2*t)<=x-old(x)&x-old(x)<=t*(v+B/2*t)`}, 1) & diffInvariant({`-t*(v+B/2*t)<=y-old(y)&y-old(y)<=t*(v+B/2*t)`}, 1) & allR2L(-19) & allR2L(-18) & allR2L(-17) & hideL(-19) & hideL(-18) & hideL(-17) & diffWeaken(1) & unfoldProgramNormalize & orL(-12) & <(
+  unfold & <(
+    diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)-B*t`}, 1) & diffInvariant({`-t*(v+B/2*t)<=x-old(x)&x-old(x)<=t*(v+B/2*t)`}, 1) & diffInvariant({`-t*(v+B/2*t)<=y-old(y)&y-old(y)<=t*(v+B/2*t)`}, 1) & allR2L(-19) & allR2L(-18) & allR2L(-17) & hideL(-19) & hideL(-18) & hideL(-17) & diffWeaken(1) & unfold & orL(-12) & <(
       hideR(2) & hideR(2) & QE,
       orL(-12) & <(
         hideR(3) & hideR(1) & smartQE,
         smartQE
         )
       ),
-    diffInvariant({`0<=t`}, 1) & diffInvariant({`v=old(v)`}, 1) & allR2L(-19) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffWeaken(1) & unfoldProgramNormalize & smartQE,
-    diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)+a*t`}, 1) & diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) & diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) & hideL(-13) & allR2L(-22) & allR2L(-21) & allR2L(-20) & diffWeaken(1) & unfoldProgramNormalize & hideL(-22) & transform({`abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))|abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))`}, -14) & hideL(-4) & hideL(-6) & hideL(-21) & hideL(-10) & orL(-11) & <(
+    diffInvariant({`0<=t`}, 1) & diffInvariant({`v=old(v)`}, 1) & allR2L(-19) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffWeaken(1) & unfold & smartQE,
+    diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)+a*t`}, 1) & diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) & diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) & hideL(-13) & allR2L(-22) & allR2L(-21) & allR2L(-20) & diffWeaken(1) & unfold & hideL(-22) & transform({`abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))|abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))`}, -14) & hideL(-4) & hideL(-6) & hideL(-21) & hideL(-10) & orL(-11) & <(
       hideR(3) & hideR(1) & smartQE,
       hideR(2) & hideR(1) & smartQE
       )

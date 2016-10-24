@@ -46,7 +46,7 @@ class Etcs extends TacticTestBase {
     proveBy(s, master()) shouldBe 'proved
   }
 
-  "ETCS reactivity" should "prove lemma with master" in withMathematica { tool =>
+  "ETCS reactivity" should "prove lemma with tactic" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyx"))
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyt")).mkString)
     proveBy(s, tactic) shouldBe 'proved
