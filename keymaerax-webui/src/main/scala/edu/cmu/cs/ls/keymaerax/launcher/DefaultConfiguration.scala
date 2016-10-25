@@ -144,7 +144,7 @@ object DefaultConfiguration {
   }
 
   def exemplaryMathLinkPath: (String, String) = {
-    val MATHEMATICA_VERSION = "10.0"
+    val MATHEMATICA_VERSION = "11.0"
     var linkNamePath: String = ""
     var libDirPath: String = ""
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
