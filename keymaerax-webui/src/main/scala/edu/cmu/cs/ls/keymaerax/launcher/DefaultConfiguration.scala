@@ -144,6 +144,7 @@ object DefaultConfiguration {
   }
 
   def exemplaryMathLinkPath: (String, String) = {
+    val MATHEMATICA_VERSION = "10.0"
     var linkNamePath: String = ""
     var libDirPath: String = ""
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -154,15 +155,15 @@ object DefaultConfiguration {
         libDirPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64"
       } else libDirPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86"
     } else if(osName.contains("windows")) {
-      linkNamePath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\MathKernel.exe"
+      linkNamePath = s"C:\\Program Files\\Wolfram Research\\Mathematica\\${MATHEMATICA_VERSION}\\MathKernel.exe"
       if(osArch.contains("64")) {
-        libDirPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"
-      } else libDirPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows"
+        libDirPath = s"C:\\Program Files\\Wolfram Research\\Mathematica\\${MATHEMATICA_VERSION}\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"
+      } else libDirPath = s"C:\\Program Files\\Wolfram Research\\Mathematica\\${MATHEMATICA_VERSION}\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows"
     } else if(osName.contains("linux")) {
-      linkNamePath = "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel"
+      linkNamePath = s"/usr/local/Wolfram/Mathematica/${MATHEMATICA_VERSION}/Executables/MathKernel"
       if(osArch.contains("64")) {
-        libDirPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"
-      } else libDirPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux"
+        libDirPath = s"/usr/local/Wolfram/Mathematica/${MATHEMATICA_VERSION}/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"
+      } else libDirPath = s"/usr/local/Wolfram/Mathematica/${MATHEMATICA_VERSION}/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux"
     }
     (linkNamePath, libDirPath)
   }
