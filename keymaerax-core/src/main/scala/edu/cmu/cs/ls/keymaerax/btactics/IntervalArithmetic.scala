@@ -90,7 +90,7 @@ object IntervalArithmetic {
     "\\forall x \\forall y (lTimes(x,y) <= x * y)".asFormula,
 
     "\\forall x \\forall y (x / y <= uDiv(x,y))".asFormula,
-    "\\forall x \\forall y (lDiv(x,y) <= x * y)".asFormula
+    "\\forall x \\forall y (lDiv(x,y) <= x / y)".asFormula
   )
 
   private val uPlus = Function("uPlus", None, Tuple(Real, Real), Real)
@@ -99,8 +99,8 @@ object IntervalArithmetic {
   private val lMinus = Function("lMinus", None, Tuple(Real, Real), Real)
   private val uTimes = Function("uTimes", None, Tuple(Real, Real), Real)
   private val lTimes = Function("lTimes", None, Tuple(Real, Real), Real)
-  private val uDivide = Function("uDivide", None, Tuple(Real, Real), Real)
-  private val lDivide = Function("lDivide", None, Tuple(Real, Real), Real)
+  private val uDiv = Function("uDiv", None, Tuple(Real, Real), Real)
+  private val lDiv = Function("lDiv", None, Tuple(Real, Real), Real)
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
@@ -218,12 +218,29 @@ object IntervalArithmetic {
   //  private val udivLem4 = proveBy(("gg_() <= g_() & g_() <= G_() & f_() <= F_() & G_() < 0 &" +
   //    "h_() <= F_()/G_() & h_() <= F_()/gg_() -> h_() <= f_()/g_()").asFormula,QE)
 
-  //  private val uDivLem = proveBy(("((\\forall x \\forall y (x * y <= uDiv(x,y))) &" +
-  //    "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | gg_()>0) -> " +
-  //    "f_() / g_() <= max((max((uDiv((F_(),G_())),uDiv((F_(),gg_())))),max((uDiv((ff_(),G_())),uDiv((ff_(),gg_())))))))").asFormula,
-  //
-  //  )
+  private val uDivLem = proveBy(("((\\forall x \\forall y (x / y <= uDiv(x,y))) &" +
+    "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | gg_()>0) -> " +
+    "f_() / g_() <= max((max((uDiv((F_(),G_())),uDiv((F_(),gg_())))),max((uDiv((ff_(),G_())),uDiv((ff_(),gg_())))))))").asFormula,
+    implyR(1) & (andL('Llast)*)&
+      useAt("div<= up",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
+      (OnAll((useAt("maxLem",maxLem,PosInExpr(1::Nil))(1)) & prop)*) &
+      <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
+        allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
+        allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
+        allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
+      OnAll(close))
 
+  private val lDivLem = proveBy(("((\\forall x \\forall y (lDiv(x,y) <= x / y)) &" +
+    "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | gg_()>0) -> " +
+    "min((min((lDiv((F_(),G_())),lDiv((F_(),gg_())))),min((lDiv((ff_(),G_())),lDiv((ff_(),gg_())))))) <= f_() / g_() )").asFormula,
+    implyR(1) & (andL('Llast)*)&
+      useAt("<=div down",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
+      (OnAll((useAt("minLem",minLem,PosInExpr(1::Nil))(1)) & prop)*) &
+      <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
+        allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
+        allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
+        allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
+      OnAll(close))
 
   private def ifThenElse(f:Formula,p1:Program,p2:Program): Program =
   {
@@ -281,30 +298,34 @@ object IntervalArithmetic {
         //Final program
         val prog = Compose(Compose(prog1,prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
         return (rlvars,prog,nvar)
-      //      case Divide(l,r) =>
-      //        //Note: The interval must not cross 0
-      //        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
-      //        val (ruvars,rup,rubound) = deriveTermProgram(true,luvars,r)
-      //        val (llvars,llp,llbound) = deriveTermProgram(false,ruvars,l)
-      //        val (rlvars,rlp,rlbound) = deriveTermProgram(false,llvars,r)
-      //        val func = if(dir) uDivide else lDivide
-      //        val bound = if(dir) maxF else minF
-      //        val boundstr = if(dir) "max" else "min"
-      //        val uuasg = Assign(Variable(varname+"uu"),FuncOf(func,Pair(lubound,rubound)))
-      //        val ulasg = Assign(Variable(varname+"ul"),FuncOf(func,Pair(lubound,rlbound)))
-      //        val luasg = Assign(Variable(varname+"lu"),FuncOf(func,Pair(llbound,rubound)))
-      //        val llasg = Assign(Variable(varname+"ll"),FuncOf(func,Pair(llbound,rlbound)))
-      //
-      //        val ubvar = Variable(varname+"u"+boundstr)
-      //        val lbvar = Variable(varname+"l"+boundstr)
-      //
-      //        val umax = Assign(ubvar,FuncOf(bound,Pair(Variable(varname+"uu"),Variable(varname+"ul"))))
-      //        val lmax = Assign(lbvar,FuncOf(bound,Pair(Variable(varname+"lu"),Variable(varname+"ll"))))
-      //        //Existing progs
-      //        val prog1 = Compose(Compose(lup,rup),Compose(llp,rlp))
-      //        val prog2 = Compose(Compose(Compose(uuasg,ulasg),Compose(luasg,llasg)),Compose(umax,lmax))
-      //        //Final program
-      //        val prog = Compose(Compose(prog1,prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
+      case Divide(l,r) =>
+        //Note: The interval must not cross 0
+        val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
+        val (ruvars,rup,rubound) = deriveTermProgram(true,luvars,r)
+        val (llvars,llp,llbound) = deriveTermProgram(false,ruvars,l)
+        val (rlvars,rlp,rlbound) = deriveTermProgram(false,llvars,r)
+        val func = if(dir) uDiv else lDiv
+        val bound = if(dir) maxF else minF
+        val boundstr = if(dir) "max" else "min"
+        val uuasg = Assign(Variable(varname+"uu"),FuncOf(func,Pair(lubound,rubound)))
+        val ulasg = Assign(Variable(varname+"ul"),FuncOf(func,Pair(lubound,rlbound)))
+        val luasg = Assign(Variable(varname+"lu"),FuncOf(func,Pair(llbound,rubound)))
+        val llasg = Assign(Variable(varname+"ll"),FuncOf(func,Pair(llbound,rlbound)))
+
+        val ubvar = Variable(varname+"u"+boundstr)
+        val lbvar = Variable(varname+"l"+boundstr)
+
+        val umax = Assign(ubvar,FuncOf(bound,Pair(Variable(varname+"uu"),Variable(varname+"ul"))))
+        val lmax = Assign(lbvar,FuncOf(bound,Pair(Variable(varname+"lu"),Variable(varname+"ll"))))
+        //Existing progs
+        val prog1 = Compose(Compose(lup,rup),Compose(llp,rlp))
+        val prog2 = Compose(Compose(Compose(uuasg,ulasg),Compose(luasg,llasg)),Compose(umax,lmax))
+        //Bounds check
+        //todo: we can avoid repeating this check
+        val test = Test(Or(Less(rubound,Number(0)),Greater(rlbound,Number(0))))
+        //Final program
+        val prog = Compose(Compose(Compose(prog1,test),prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
+        return (rlvars,prog,nvar)
       case Power(l,n:Number) if n.value == 2 =>
         val func = if(dir) uTimes else lTimes
         val boundstr = if(dir) "max" else "min"
@@ -462,22 +483,24 @@ object IntervalArithmetic {
           case (Minus(_,_),_) => useAt(uMinusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
           case (_,Times(_,_)) => useAt(lTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))
           case (Times(_,_),_) => useAt(uTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))
+          case (_,Divide(_,_)) => useAt(lDivLem,PosInExpr(1::Nil))(1) & andR('_)  < (close, (OnAll(?(andR('_)))*))
+          case (Divide(_,_),_) => useAt(uDivLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))
           case (_,Power(n,_)) =>
             if(isVar(n)) {
-              useAt(lPowLemSpec,PosInExpr(1::Nil))(1) & close
+              useAt(lPowLemSpec,PosInExpr(1::Nil))(1)
             }
             else
               (useAt(poslPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
-              (useAt(neglPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
-              (cohideR(1) & byUS(bothlPowLem))
+                (useAt(neglPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
+                (cohideR(1) & byUS(bothlPowLem))
           case (Power(n,_),_) =>
             if(isVar(n)){
-              useAt(uPowLemSpec,PosInExpr(1::Nil))(1) & close
+              useAt(uPowLemSpec,PosInExpr(1::Nil))(1)
             }
             else useAt(uPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_))
           case f => ident
         }
-        case _ => ???
+        case _ => ident
       }
     }
   }
@@ -488,9 +511,10 @@ object IntervalArithmetic {
   def deriveFormulaProof(f:Formula) : Provable =
   {
     //todo: f should be converted to nnf
+    println(uDivLem)
     val(_,pinit,ff) = deriveFormulaProgram(Nil,f)
     val prog = Compose(stripNoOp(pinit),Test(ff))
-    if(DEBUG) println("Derived: "+prog)
+    if(DEBUG) prettyPrint(prog)
     val pf = proveBy(Sequent(intervalAxiomContext,IndexedSeq(Imply(Diamond(prog,True),f))),
       //Turn the program part into a formula first, preserving the test part using hideDiamond
       debugPrint("Chasing away formula") &
@@ -523,7 +547,7 @@ object IntervalArithmetic {
             )) *) &
             debugPrint("arith") &
             //single step removal of the rounding arithmetic axioms
-            (OnAll(patmatchArith)*) &
+            ((OnAll(debugPrint("arith step") &patmatchArith & debugPrint("done")))*) &
             //reflexivity
             OnAll(simpTac(1) & ?(closeT))
         )
@@ -532,23 +556,16 @@ object IntervalArithmetic {
     pf
   }
 
-  def deriveProof(dir:Boolean,t:Term): Provable =
-  {
-    val (_,pinit,bound) = deriveTermProgram(dir:Boolean,Nil,t)
-    val prog = stripNoOp(pinit)
-    val f = if(dir) LessEqual(t,bound) else LessEqual(bound,t)
-    //First prove the cut
-    proveBy(Sequent(intervalAxiomContext,IndexedSeq(Box(prog,f))),
-      //Removes the HP
-      chase(1) &
-        //single step removal of axs
-        (OnAll(
-          (useAt(lPlusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_) & OnAll(simpTac(1) & ?(closeT)))) |
-            (useAt(uPlusLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_) & OnAll(simpTac(1) & ?(closeT)))) |
-            (useAt(uTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, prop & OnAll(simpTac(1) & ?(closeT)))) |
-            (useAt(lTimesLem,PosInExpr(1::Nil))(1) & andR('_) < (close, prop & OnAll(simpTac(1) & ?(closeT))))
-        )*)
-    )
+  def prettyPrint(p:Program) : Unit = {
+    p match {
+      case Compose(a,b) =>
+        {
+          prettyPrint(a)
+          prettyPrint(b)
+        }
+      case _ => println(p.toString)
+    }
+
   }
 
   /*
