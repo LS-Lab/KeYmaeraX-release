@@ -67,7 +67,12 @@ class FileLemmaDB extends LemmaDBBase {
 
   override def version(): String = {
     val file = new File(cachePath + File.separator + "VERSION")
-    assert(file.exists() && file.canRead, s"Cache VERSION file should exist and be readable, but is not: ${file.getAbsolutePath}")
-    scala.io.Source.fromFile(file).mkString
+    if(!file.exists()) {
+      "0.0"
+    }
+    else {
+      assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
+      scala.io.Source.fromFile(file).mkString
+    }
   }
 }
