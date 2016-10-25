@@ -51,10 +51,9 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
     result.subgoals(1).succ should contain only "x!=m".asFormula
     result.subgoals(2).ante should contain only ("J(x_0,v_0)".asFormula, "b>0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals(2).succ should contain only "((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_^2+2*t_*v_0+2*x_0)->J(x,v)".asFormula
-    //@todo where did SB(x,m) in succedent go?
+    result.subgoals(2).succ should contain only ("SB(x_0,m)".asFormula, "((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_^2+2*t_*v_0+2*x_0)->J(x,v)".asFormula)
     result.subgoals(3).ante should contain only ("J(x_0,v_0)".asFormula, "b>0".asFormula, "t__0=0".asFormula, "true".asFormula)
-    result.subgoals(3).succ should contain only "((true&t_>=0)&v=-1*b*t_+v_0)&x=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)->J(x,v)".asFormula
+    result.subgoals(3).succ should contain only ("SB(x_0,m)".asFormula, "((true&t_>=0)&v=-1*b*t_+v_0)&x=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)->J(x,v)".asFormula)
   }
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" in withMathematica { qeTool =>
@@ -67,11 +66,10 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals(1).succ should contain only "x!=m".asFormula
     result.subgoals(2).ante should contain only ("J(x_0,v_0)".asFormula, "b>0".asFormula, "t__0=0".asFormula,
       "true".asFormula, "x=1/2*(a*t_^2+2*t_*v_0+2*x_0)".asFormula, "v=a*t_+v_0".asFormula, "t_>=0".asFormula)
-    result.subgoals(2).succ should contain only "J(x,v)".asFormula
-    //@todo where did SB(x,m) in succedent go?
+    result.subgoals(2).succ should contain only ("SB(x_0,m)".asFormula, "J(x,v)".asFormula)
     result.subgoals(3).ante should contain only ("J(x_0,v_0)".asFormula, "b>0".asFormula, "t__0=0".asFormula,
       "true".asFormula, "x=1/2*(-1*b*t_^2+2*t_*v_0+2*x_0)".asFormula, "v=-1*b*t_+v_0".asFormula, "t_>=0".asFormula)
-    result.subgoals(3).succ should contain only "J(x,v)".asFormula
+    result.subgoals(3).succ should contain only ("SB(x_0,m)".asFormula, "J(x,v)".asFormula)
   }
 
   it should "prove automatically with the correct conditions" in withMathematica { tool =>
