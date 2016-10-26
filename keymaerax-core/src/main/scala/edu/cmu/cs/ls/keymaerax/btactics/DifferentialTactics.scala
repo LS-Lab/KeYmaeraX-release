@@ -697,12 +697,17 @@ private object DifferentialTactics {
     val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
       lie, Times(Number(-2), quantity), odeBoundVars.headOption.getOrElse(Variable("x")))._1
 
-    def dg(g: Term): BelleExpr = DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0))),
-      Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
-    )(pos) < (
-      (close | QE) & done,
-      diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
-      )
+    // Formula that must be valid: quantity <-> \exists ghost. quantity * ghost^2 > 0
+    // Ghosted-in differential equation: ghost' = constrG*ghost + 0
+    def dg(g: Term): BelleExpr = {
+      val de = AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0)))
+      val p = Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+      DebuggingTactics.debug(s"DGauto: trying $de with $p") &
+      DA(de,p)(pos) < (
+        (close | QE) & done,
+        diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
+        )
+    }
 
     // try guessing first, groebner basis if guessing fails
     dg(constrG) | TacticFactory.anon((seq: Sequent) => dg(constrGGroebner))
