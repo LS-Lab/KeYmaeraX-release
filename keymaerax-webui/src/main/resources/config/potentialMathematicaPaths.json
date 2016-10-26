@@ -29,6 +29,13 @@
     "os" : "Unix",
     "mathematicaPaths" : [
       {
+        "version" : "11.x or later",
+        "kernelPath" : "/usr/local/Wolfram/Mathematica/11.0/Executables/",
+        "kernelName": "MathKernel",
+        "jlinkPath" : "/usr/local/Wolfram/Mathematica/11.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/",
+        "jlinkName" : "libJLinkNativeLibrary.so"
+      },
+      {
         "version" : "10.x or later",
         "kernelPath" : "/usr/local/Wolfram/Mathematica/10.0/Executables/",
         "kernelName": "MathKernel",
