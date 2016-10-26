@@ -314,7 +314,8 @@ class JLinkMathematicaLink extends MathematicaLink {
         val date: Array[MExpr] = version match {
           case ("9", _, _) => licenseExpirationDate.args
           case ("10", _, _) => licenseExpirationDate.args.head.args
-          case (major, minor, _) => if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
+          case ("11", _, _) => licenseExpirationDate.args.head.args
+          case (major, minor, _) => println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
         }
         if (date == null) None
         else try {
