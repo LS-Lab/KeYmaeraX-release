@@ -658,6 +658,48 @@ private object DifferentialTactics {
   })
 
 
+  /** Differential auxiliary proof for properties of the form [{x'=f(x)}]h(x)=0
+    * @todo where f(x) = x and h(x) = x (for now). Make this work for at least the class x^n = 0
+    * @author Nathan Fulton
+    * @todo integrate into dgatuo and ODE. */
+  def dgZeroEquilibrium : DependentPositionTactic = "dgZeroEquilibrium" by ((pos: Position, seq:Sequent) => {
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleError(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
+
+    val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
+
+    /** The lhs of the property lhs == 0 */
+    val lhs = property match {
+      case Equal(term, Number(n)) if n == 0 => term
+      case _ => throw new BelleError(s"Not sure what to do with shape ${seq.sub(pos)}")
+    }
+
+    /** The equation in the ODE that mentions itself.
+      * @todo make this tactic work for systems of ODEs. */
+    val x: Variable = system match {
+      case AtomicODE(variable, equation) => variable.x
+    }
+
+    /** The ghost variable */
+    val ghostVar = "z_".asVariable
+    require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
+
+    val newEquation = AtomicODE(DifferentialSymbol(ghostVar), Plus(Times(Number(-1), ghostVar), Number(0)))
+    val requiredProperty = And(
+      Equal(Times(x, ghostVar), Number(0)),
+      Greater(ghostVar, Number(0))
+    )
+
+    DA(newEquation, requiredProperty)(pos) <(
+      (close | QE) & done
+      ,
+      implyR(pos) & boxAnd(pos) & andR(pos) <(
+        diffInd()(pos) & QE //prove x*z_ == 0
+        ,
+        DGauto(pos) //prove z_ > 0 using open set tactic.
+      )
+    )
+  })
+
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
