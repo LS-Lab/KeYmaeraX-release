@@ -35,6 +35,7 @@ object DefaultConfiguration {
     else Map()
   }
 
+  //@todo this code should be re-written. First identify the prefix/suffix for the system, and then figure out the version. Otherwise we have to update N places in the code every time a new version of Mathematica is released.
   def defaultMathLinkPath: (String, String) = {
     var linkNamePath: String = ""
     var libDirPath: String = ""
@@ -61,7 +62,8 @@ object DefaultConfiguration {
           libDirPath = libDirPathMac32MmtcOld
         }
       }
-    } else if (osName.contains("windows")) {
+    }
+    else if (osName.contains("windows")) {
       val mathematicaWindowsPrefix = "C:\\Program Files\\Wolfram Research\\Mathematica"
       var mathematicaVersion = ""
 
@@ -101,12 +103,16 @@ object DefaultConfiguration {
         }
       }
 
-    } else if(osName.contains("linux")) {
+    }
+    else if(osName.contains("linux")) {
       val mathematicaLinuxPrefix = "/usr/local/Wolfram/Mathematica"
       var mathematicaVersion = ""
       if(new File(mathematicaLinuxPrefix).exists()) {
+        // check if Mathematica version is 11.0
+        if(new File(mathematicaLinuxPrefix + File.separator + "11.0").exists())
+          mathematicaVersion = "11.0"
         // check if Mathematica version is 10.4
-        if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
+        else if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
           mathematicaVersion = "10.4"
         // check if Mathematica version is 10.3
         else if(new File(mathematicaLinuxPrefix + File.separator + "10.3").exists())
