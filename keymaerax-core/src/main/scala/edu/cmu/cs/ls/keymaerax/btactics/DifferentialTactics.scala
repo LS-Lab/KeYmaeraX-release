@@ -657,47 +657,101 @@ private object DifferentialTactics {
       ) & ODE(pos)
   })
 
+  /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
+    * @todo make this happen by usubst. */
+  def dgZero : DependentPositionTactic = "dgZero" by ((pos: Position, seq:Sequent) => {
+    val ONE = Number(1)
 
-  /** Differential auxiliary proof for properties of the form [{x'=f(x)}]h(x)=0
-    * @todo where f(x) = x and h(x) = x (for now). Make this work for at least the class x^n = 0
-    * @author Nathan Fulton
-    * @todo integrate into dgatuo and ODE. */
-  def dgZeroEquilibrium : DependentPositionTactic = "dgZeroEquilibrium" by ((pos: Position, seq:Sequent) => {
     if (ToolProvider.algebraTool().isEmpty) throw new BelleError(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
 
     val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
 
-    /** The lhs of the property lhs == 0 */
+    /** The lhs of the post-condition {{{lhs = 0}}} */
     val lhs = property match {
       case Equal(term, Number(n)) if n == 0 => term
       case _ => throw new BelleError(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
 
-    /** The equation in the ODE that mentions itself.
+    /** The equation in the ODE of the form {{{x'=c*x^n}}}; the n is optional.
       * @todo make this tactic work for systems of ODEs. */
-    val x: Variable = system match {
-      case AtomicODE(variable, equation) => variable.x
+    val (x: Variable, (c: Option[Term], n: Option[Term])) = system match {
+      case AtomicODE(variable, equation) => (variable.x, equation match {
+        case Times(c, Power(variable, n)) => (Some(c), Some(n))
+        case Times(c, v:Variable) if v==variable.x => (Some(c), None)
+        case Power(variable, n) => (None, Some(n))
+        case v:Variable if v==variable.x => (None, None)
+      })
     }
+    require(lhs == x, "Currently require that the post-condition is of the form x=0 where x is the primed variable in the ODE.")
 
     /** The ghost variable */
     val ghostVar = "z_".asVariable
     require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
 
-    val newEquation = AtomicODE(DifferentialSymbol(ghostVar), Plus(Times(Number(-1), ghostVar), Number(0)))
-    val requiredProperty = And(
-      Equal(Times(x, ghostVar), Number(0)),
-      Greater(ghostVar, Number(0))
-    )
 
-    DA(newEquation, requiredProperty)(pos) <(
-      (close | QE) & done
-      ,
+    val (newOde: DifferentialProgram, equivFormula: Formula) = (c,n) match {
+      case (Some(c), Some(n)) => (
+        s"$ghostVar' = ( (-1*$c * $x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (Some(c), None) => (
+        s"$ghostVar' = ((-1*$c*$x) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (None, Some(n)) => (
+        s"$ghostVar' = ((-1*$x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (None, None) => (
+        s"$ghostVar' = -1 * $ghostVar + 0".asDifferentialProgram,
+        s"$x * $ghostVar = 0 & $ghostVar > 0".asFormula
+      )
+    }
+
+
+
+    DA(newOde, equivFormula)(pos) <(
+      TactixLibrary.QE,
       implyR(pos) & boxAnd(pos) & andR(pos) <(
-        diffInd()(pos) & QE //prove x*z_ == 0
-        ,
-        DGauto(pos) //prove z_ > 0 using open set tactic.
+        DifferentialTactics.diffInd()(pos) & QE,
+        DGauto(pos)
+//        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
+//          QE,
+//          implyR(1) & diffInd()(1) & QE
+//        )
       )
     )
+
+    //Equation and property for the first auxiliary
+    //equation: y' = (-c*x^(n-1)/2) * z_  + 0
+    //property: x&z_^2=0 & z_>0
+//    val newEquation = AtomicODE(DifferentialSymbol(ghostVar),
+//      Plus(
+//        Times( //-c*x^(n-1) * z_
+//          Times( //-c*x^(n-1)
+//            Times(Number(-1), c), //-c
+//            Power(x, Minus(n, ONE))
+//          ),
+//          ghostVar
+//        ),
+//        Number(0)
+//      ))
+//
+//    val requiredProperty = And(
+//      Equal(Times(x, ghostVar), Number(0)),
+//      Greater(ghostVar, Number(0))
+//    )
+
+//    implyR(1) & DA(newEquation, requiredProperty)(1) <(
+//      TactixLibrary.QE,
+//      implyR(1) & boxAnd(1) & andR(1) <(
+//        DifferentialTactics.diffInd()(1) & QE,
+//        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
+//          QE,
+//          implyR(1) & diffInd()(1) & QE
+//        )
+//      )
+//    )
   })
 
   /** @see [[TactixLibrary.DGauto]]
