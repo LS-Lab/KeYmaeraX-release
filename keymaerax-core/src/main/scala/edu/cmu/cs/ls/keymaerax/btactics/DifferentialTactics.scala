@@ -715,43 +715,8 @@ private object DifferentialTactics {
       implyR(pos) & boxAnd(pos) & andR(pos) <(
         DifferentialTactics.diffInd()(pos) & QE,
         DGauto(pos)
-//        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
-//          QE,
-//          implyR(1) & diffInd()(1) & QE
-//        )
       )
     )
-
-    //Equation and property for the first auxiliary
-    //equation: y' = (-c*x^(n-1)/2) * z_  + 0
-    //property: x&z_^2=0 & z_>0
-//    val newEquation = AtomicODE(DifferentialSymbol(ghostVar),
-//      Plus(
-//        Times( //-c*x^(n-1) * z_
-//          Times( //-c*x^(n-1)
-//            Times(Number(-1), c), //-c
-//            Power(x, Minus(n, ONE))
-//          ),
-//          ghostVar
-//        ),
-//        Number(0)
-//      ))
-//
-//    val requiredProperty = And(
-//      Equal(Times(x, ghostVar), Number(0)),
-//      Greater(ghostVar, Number(0))
-//    )
-
-//    implyR(1) & DA(newEquation, requiredProperty)(1) <(
-//      TactixLibrary.QE,
-//      implyR(1) & boxAnd(1) & andR(1) <(
-//        DifferentialTactics.diffInd()(1) & QE,
-//        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
-//          QE,
-//          implyR(1) & diffInd()(1) & QE
-//        )
-//      )
-//    )
   })
 
   /** @see [[TactixLibrary.DGauto]]
