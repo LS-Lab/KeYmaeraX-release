@@ -2397,4 +2397,23 @@ object DerivedAxioms {
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("h_()".asTerm, "z".asVariable), ("F_()".asTerm, "X".asVariable), ("ff_()".asTerm, "xx".asVariable))(1) &
       byUS(proveBy("\\forall xx \\forall X \\forall z \\forall x (z<=x^2 <- ((xx<=x & x<=X) & ((0 <= xx & z<=xx^2) | (X<= 0 & z<=X^2))))".asFormula, TactixLibrary.RCF))
   )
+
+  /**
+    * {{{Axiom "dgZeroEquilibrium".
+    *   x=0 & n>0 -> [{x'=c*x^n}]x=0
+    * End.
+    * }}}
+    */
+  val dgZeroEquilibrium = derivedAxiom("dgZeroEquilibrium", Sequent(IndexedSeq(), IndexedSeq("x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula)),
+    implyR(1) & DA("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, "x*y^2=0&y>0".asFormula)(1) <(
+      TactixLibrary.QE,
+      implyR(1) & TactixLibrary.boxAnd(1) & andR(1) <(
+        DifferentialTactics.diffInd()(1) & QE,
+        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
+          QE,
+          implyR(1) & diffInd()(1) & QE
+        )
+      )
+    )
+  )
 }
