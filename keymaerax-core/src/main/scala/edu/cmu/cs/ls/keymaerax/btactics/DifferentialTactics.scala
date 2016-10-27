@@ -708,15 +708,21 @@ private object DifferentialTactics {
       )
     }
 
+    val backupTactic =
+      DA(newOde, equivFormula)(pos) <(
+        TactixLibrary.QE,
+        implyR(pos) & boxAnd(pos) & andR(pos) <(
+          DifferentialTactics.diffInd()(pos) & QE,
+          DGauto(pos) //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
+          )
+        )
 
-
-    DA(newOde, equivFormula)(pos) <(
-      TactixLibrary.QE,
-      implyR(pos) & boxAnd(pos) & andR(pos) <(
-        DifferentialTactics.diffInd()(pos) & QE,
-        DGauto(pos)
-      )
-    )
+    //@todo massage the other cases into a useAt.
+    //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
+    if(c.isDefined && n.isDefined) //if has correct shape for using the derived axiom
+      TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
+    else
+      backupTactic
   })
 
   /** @see [[TactixLibrary.DGauto]]
