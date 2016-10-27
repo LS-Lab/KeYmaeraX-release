@@ -65,7 +65,8 @@ class AutoDGTests extends TacticTestBase {
     val t = TactixLibrary.implyR(1) & DifferentialTactics.dgZero(1)
   }))
 
-  "x=0 & n>0 -> [{x'=c*x^n}]x=0" should "prove by custom tactic" in withMathematica(qeTool => {
+  /** @note please leave this here, because it's the "clear exposition of main idea" version of dgZero. */
+  "canonical x=0 & n>0 -> [{x'=c*x^n}]x=0" should "prove by custom tactic" in withMathematica(qeTool => {
     import TactixLibrary._
     import DifferentialTactics.{DA, diffInd}
     val t = implyR(1) & DA("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, "x*y^2=0&y>0".asFormula)(1) <(
