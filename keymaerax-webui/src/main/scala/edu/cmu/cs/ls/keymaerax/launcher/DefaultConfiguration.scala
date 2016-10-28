@@ -35,6 +35,7 @@ object DefaultConfiguration {
     else Map()
   }
 
+  //@todo this code should be re-written. First identify the prefix/suffix for the system, and then figure out the version. Otherwise we have to update N places in the code every time a new version of Mathematica is released.
   def defaultMathLinkPath: (String, String) = {
     var linkNamePath: String = ""
     var libDirPath: String = ""
@@ -61,7 +62,8 @@ object DefaultConfiguration {
           libDirPath = libDirPathMac32MmtcOld
         }
       }
-    } else if (osName.contains("windows")) {
+    }
+    else if (osName.contains("windows")) {
       val mathematicaWindowsPrefix = "C:\\Program Files\\Wolfram Research\\Mathematica"
       var mathematicaVersion = ""
 
@@ -101,12 +103,16 @@ object DefaultConfiguration {
         }
       }
 
-    } else if(osName.contains("linux")) {
+    }
+    else if(osName.contains("linux")) {
       val mathematicaLinuxPrefix = "/usr/local/Wolfram/Mathematica"
       var mathematicaVersion = ""
       if(new File(mathematicaLinuxPrefix).exists()) {
+        // check if Mathematica version is 11.0
+        if(new File(mathematicaLinuxPrefix + File.separator + "11.0").exists())
+          mathematicaVersion = "11.0"
         // check if Mathematica version is 10.4
-        if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
+        else if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
           mathematicaVersion = "10.4"
         // check if Mathematica version is 10.3
         else if(new File(mathematicaLinuxPrefix + File.separator + "10.3").exists())
@@ -144,6 +150,7 @@ object DefaultConfiguration {
   }
 
   def exemplaryMathLinkPath: (String, String) = {
+    val MATHEMATICA_VERSION = "11.0"
     var linkNamePath: String = ""
     var libDirPath: String = ""
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -154,15 +161,15 @@ object DefaultConfiguration {
         libDirPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64"
       } else libDirPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86"
     } else if(osName.contains("windows")) {
-      linkNamePath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\MathKernel.exe"
+      linkNamePath = s"C:\\Program Files\\Wolfram Research\\Mathematica\\${MATHEMATICA_VERSION}\\MathKernel.exe"
       if(osArch.contains("64")) {
-        libDirPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"
-      } else libDirPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows"
+        libDirPath = s"C:\\Program Files\\Wolfram Research\\Mathematica\\${MATHEMATICA_VERSION}\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"
+      } else libDirPath = s"C:\\Program Files\\Wolfram Research\\Mathematica\\${MATHEMATICA_VERSION}\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows"
     } else if(osName.contains("linux")) {
-      linkNamePath = "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel"
+      linkNamePath = s"/usr/local/Wolfram/Mathematica/${MATHEMATICA_VERSION}/Executables/MathKernel"
       if(osArch.contains("64")) {
-        libDirPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"
-      } else libDirPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux"
+        libDirPath = s"/usr/local/Wolfram/Mathematica/${MATHEMATICA_VERSION}/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"
+      } else libDirPath = s"/usr/local/Wolfram/Mathematica/${MATHEMATICA_VERSION}/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux"
     }
     (linkNamePath, libDirPath)
   }

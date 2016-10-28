@@ -540,7 +540,7 @@ private object DifferentialTactics {
             case _ => false
           })
           // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-            openDiffInd(pos) | DGauto(pos)
+            openDiffInd(pos) | DGauto(pos)  | dgZero(pos)
           else
           //@todo check degeneracy for split to > or =
             diffInd()(pos)
@@ -583,6 +583,73 @@ private object DifferentialTactics {
       ) & ODE(pos)
   })
 
+  /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
+    * @todo make this happen by usubst. */
+  def dgZero : DependentPositionTactic = "dgZero" by ((pos: Position, seq:Sequent) => {
+    val ONE = Number(1)
+
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleError(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
+
+    val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
+
+    /** The lhs of the post-condition {{{lhs = 0}}} */
+    val lhs = property match {
+      case Equal(term, Number(n)) if n == 0 => term
+      case _ => throw new BelleError(s"Not sure what to do with shape ${seq.sub(pos)}")
+    }
+
+    /** The equation in the ODE of the form {{{x'=c*x^n}}}; the n is optional.
+      * @todo make this tactic work for systems of ODEs. */
+    val (x: Variable, (c: Option[Term], n: Option[Term])) = system match {
+      case AtomicODE(variable, equation) => (variable.x, equation match {
+        case Times(c, Power(variable, n)) => (Some(c), Some(n))
+        case Times(c, v:Variable) if v==variable.x => (Some(c), None)
+        case Power(variable, n) => (None, Some(n))
+        case v:Variable if v==variable.x => (None, None)
+      })
+    }
+    require(lhs == x, "Currently require that the post-condition is of the form x=0 where x is the primed variable in the ODE.")
+
+    /** The ghost variable */
+    val ghostVar = "z_".asVariable
+    require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
+
+
+    val (newOde: DifferentialProgram, equivFormula: Formula) = (c,n) match {
+      case (Some(c), Some(n)) => (
+        s"$ghostVar' = ( (-1*$c * $x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (Some(c), None) => (
+        s"$ghostVar' = ((-1*$c*$x) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (None, Some(n)) => (
+        s"$ghostVar' = ((-1*$x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (None, None) => (
+        s"$ghostVar' = -1 * $ghostVar + 0".asDifferentialProgram,
+        s"$x * $ghostVar = 0 & $ghostVar > 0".asFormula
+      )
+    }
+
+    val backupTactic =
+      DA(newOde, equivFormula)(pos) <(
+        TactixLibrary.QE,
+        implyR(pos) & boxAnd(pos) & andR(pos) <(
+          DifferentialTactics.diffInd()(pos) & QE,
+          DGauto(pos) //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
+          )
+        )
+
+    //@todo massage the other cases into a useAt.
+    //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
+    if(c.isDefined && n.isDefined) //if has correct shape for using the derived axiom
+      TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
+    else
+      backupTactic
+  })
 
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
@@ -623,12 +690,17 @@ private object DifferentialTactics {
     val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleError("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
       lie, Times(Number(-2), quantity), odeBoundVars.headOption.getOrElse(Variable("x")))._1
 
-    def dg(g: Term): BelleExpr = DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0))),
-      Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
-    )(pos) < (
-      (close | QE) & done,
-      diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
-      )
+    // Formula that must be valid: quantity <-> \exists ghost. quantity * ghost^2 > 0
+    // Ghosted-in differential equation: ghost' = constrG*ghost + 0
+    def dg(g: Term): BelleExpr = {
+      val de = AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0)))
+      val p = Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
+      DebuggingTactics.debug(s"DGauto: trying $de with $p") &
+      DA(de,p)(pos) < (
+        (close | QE) & done,
+        diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
+        )
+    }
 
     // try guessing first, groebner basis if guessing fails
     dg(constrG) | TacticFactory.anon((seq: Sequent) => dg(constrGGroebner))
