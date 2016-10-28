@@ -13,7 +13,7 @@
 <!-- Conclusion -->
 <div ng-repeat="section in deductionPath.sections"
      ng-init="outerIdx=$index"
-     uib-collapse="deductionPath.isCollapsed">
+     ng-if="!deductionPath.isCollapsed">
 
     <!-- section start is always displayed -->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 && section.path.length === 1 && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
@@ -167,6 +167,7 @@
 </div>
 <!-- full expand and previous step if full-collapsed -->
 <div class="row k4-proofrow k4-proofrow-last"
+     ng-init="outerIdx=0"
      ng-repeat="step in [proofStepParent(deductionPath.sections[0].path[0])]"
      ng-if="deductionPath.isCollapsed">
     <ul>
