@@ -177,11 +177,11 @@
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
                    uib-tooltip="Expand all"
                    tooltip-popup-delay="1000">
-                    <span class="fa fa-plus-square-o"></span></a>
-                <!-- nonbreaking space to reserve space for icon -->
-                <span>&nbsp;</span>
-                <span>&nbsp;</span>
-                </span>
+                    <span class="fa fa-plus-square-o"></span>
+                </a>
+                <span ng-if="step !== undefined">&nbsp;</span>
+            </span>
+            <span class="k4-prooficon">&nbsp;</span>
             <!-- proof rule -->
             <span class="k4-proofrule"
                   ng-if="step !== undefined"
@@ -193,6 +193,7 @@
                   popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
                     {{step.id | childRuleName:this}}
                 </span>
+            <span class="k4-proofrule" ng-if="step === undefined"></span>
         </li>
     </ul>
     <div class="col-md-12 k4-goalwithsiblings" id="seq_{{step.id}}" ng-if="step !== undefined">
