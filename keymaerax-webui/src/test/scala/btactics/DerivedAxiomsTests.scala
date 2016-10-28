@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -20,6 +20,7 @@ import scala.collection.immutable
 @CheckinTest
 @SummaryTest
 @UsualTest
+@IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
 class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
 
   private def check(lemma: Lemma): Sequent = {
