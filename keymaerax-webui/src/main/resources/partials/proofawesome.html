@@ -206,6 +206,8 @@
                         <div class="col-md-1" cg-busy="defer" ng-if="defer"></div>
                     </div>
                 </uib-tab-heading>
+
+                <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
                 <k4-sequentproof user-id="userId"
                                  proof-id="proofId"
                                  node-id="task.id"
@@ -215,7 +217,8 @@
                                  read-only="false"
                                  on-tactic="doTactic(formulaId, tacticId)"
                                  on-input-tactic="doInputTactic(formulaId, tacticId, input)"
-                                 on-two-position-tactic="doTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequentproof>
+                                 on-two-position-tactic="doTwoPositionTactic(fml1Id, fml2Id, tacticId)"
+                                 ng-if="task.isSelected"></k4-sequentproof>
 
                 <!-- vertical gap between sequent and tactic editor to provide space for collapse/expand buttons -->
                 <div style="margin-top:20px;"></div>
