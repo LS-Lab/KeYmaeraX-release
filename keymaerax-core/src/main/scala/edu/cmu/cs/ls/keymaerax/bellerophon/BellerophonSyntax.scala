@@ -79,7 +79,8 @@ case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
 }
 
 /** ⎵: Placeholder for tactics. Reserved tactic expression */
-object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
+class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
+object BelleDot extends BelleDot()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positional tactics
