@@ -135,6 +135,17 @@ class TacticDiffTest extends TacticTestBase {
     diff._3 should contain theSameElementsAs List((diff._1.t, t2))
   }
 
+  it should "find difference of input position tactics" in {
+    val t1 = BelleParser("andL(-1) & nil")
+    val t2 = BelleParser("andL(-1) & loop({`x>0`},1)")
+    val diff = TacticDiff.diff(t1, t2)
+    diff._1.t match {
+      case SeqTactic(c1, c2: BelleDot) =>
+        diff._2 should contain theSameElementsAs List((c2, BelleParser("nil")))
+        diff._3 should contain theSameElementsAs List((c2, BelleParser("loop({`x>0`},1)")))
+    }
+  }
+
   it should "find multiple differences" in {
     val t1 = BelleParser("notL(-1) & <(nil, hideR(2), hideR(3))")
     val t2 = BelleParser("notR(1) & <(hideL(-1), hideR(2), andR(1) & <(hideR(3), hideR(4)))")
