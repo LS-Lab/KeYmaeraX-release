@@ -55,6 +55,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           }
           case ProveAs(lemmaName, pos, e) => "proveAs"
           case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
+          case dot: BelleDot => "_@" + dot.hashCode()
           case _ => throw PrinterException(s"Do not know how to pretty-print ${e}")
         }
     }

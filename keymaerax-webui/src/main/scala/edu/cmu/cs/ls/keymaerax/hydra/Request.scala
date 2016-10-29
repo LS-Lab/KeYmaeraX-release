@@ -1228,6 +1228,21 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   }
 }
 
+class TacticDiffRequest(db: DBAbstraction, proofIdStr: String, oldTactic: String, newTactic: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val oldT = BelleParser(oldTactic)
+    try {
+      val newT = BelleParser(newTactic)
+      val diff = TacticDiff.diff(oldT, newT)
+      new TacticDiffResponse(diff) :: Nil
+    } catch {
+      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    }
+  }
+}
+
 class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request {
   private val proofId = Integer.parseInt(proofIdStr)
 

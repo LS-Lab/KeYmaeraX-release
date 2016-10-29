@@ -1,6 +1,6 @@
 angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'diff-match-patch'])
-  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData', '$window',
-      function($http, derivationInfos, Textcomplete, sequentProofData, $window) {
+  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData',
+      function($http, derivationInfos, Textcomplete, sequentProofData) {
     return {
         restrict: 'AE',
         scope: {
@@ -12,8 +12,6 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
         },
         link: function(scope, elem, attr) {
           scope.tactic = sequentProofData.tactic;
-
-          var DiffMatchPatch = $window.diff_match_patch;
 
           var combinators = ['*', '|', '&', '<'];
           var ta = elem.find('textarea');
@@ -72,30 +70,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             }
           ]);
 
-          scope.computeTacticDiff = function() {
-            dmp = new DiffMatchPatch();
-            diffs = dmp.diff_main(scope.tactic.lastExecutedTacticText, scope.tactic.tacticText);
-            dmp.Diff_EditCost = scope.diffOptions.editCost;
-            dmp.diff_cleanupEfficiency(diffs);
-
-            var intros = $.grep(diffs, function(e, i) {
-              /* e is of the form Array[type,text], where type==0 means equal, type==1 means intro */
-              return e[0] == 1;
-            });
-
-            intros = $.map(intros, function(e, i) {
-              var trimmed = e[1].trim();
-              //@note charAt(0) without trailing nil, at end with trailing nil
-              return trimmed.charAt(0) == '&' ? trimmed.substring(1, trimmed.length) : trimmed;
-              //return trimmed.charAt(trimmed.length-1) == '&' ? trimmed.substring(0, trimmed.length-1) : trimmed;
-            })
-
-            //@todo what if more than 1 intro?
-            return intros[0];
-          }
-
           scope.executeTacticDiff = function() {
-            scope.onTacticScript({tacticText: scope.computeTacticDiff()});
+            scope.onTacticScript({tacticText: scope.tactic.tacticDiff});
           };
 
           scope.diffOptions = {
@@ -115,7 +91,14 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
           };
 
           scope.$watch('tactic.tacticText', function(newValue, oldValue) {
-            scope.tactic.tacticDiff = scope.computeTacticDiff();
+            if (scope.tactic.lastExecutedTacticText !== undefined && scope.tactic.tacticText !== undefined) {
+              var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : scope.tactic.tacticText };
+              $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
+                .then(function(response) {
+                  //@todo multiple diffs
+                  scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
+                });
+            }
           });
 
 //          rangy.init();
