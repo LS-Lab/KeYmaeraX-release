@@ -268,7 +268,7 @@ object BelleParser extends (String => BelleExpr) {
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
           if(!isOpenParen(st.input)) {
-            val parsedExpr = constructTactic(name, None)
+            val parsedExpr = constructTactic(name, None, identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc), st.input)
           }
           else {
@@ -281,7 +281,7 @@ object BelleParser extends (String => BelleExpr) {
             }
             val spanLoc = if(endLoc.end.column != -1) identLoc.spanTo(endLoc) else identLoc
 
-            val parsedExpr = constructTactic(name, Some(args))
+            val parsedExpr = constructTactic(name, Some(args), identLoc)
             parsedExpr.setLocation(identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, spanLoc), remainder)
           }
@@ -368,7 +368,7 @@ object BelleParser extends (String => BelleExpr) {
   //region Constructors (i.e., functions that construct [[BelleExpr]] and other accepted values from partially parsed inputs.
 
   /** Constructs a tactic using the reflective expression builder. */
-  private def constructTactic(name: String, args : Option[List[TacticArg]]) : BelleExpr = {
+  private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location) : BelleExpr = {
     // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by makikng a bunch of one-tuples.
     val newArgs = args match {
       case None => Nil
@@ -381,7 +381,7 @@ object BelleParser extends (String => BelleExpr) {
     try {
       ReflectiveExpressionBuilder(name, newArgs, invariantGenerator)
     } catch {
-      case e: ReflectiveExpressionBuilderExn => throw new ReflectiveExpressionBuilderExn(e.getMessage + s" Encountered while parsing $name", e)
+      case e: ReflectiveExpressionBuilderExn => throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
     }
   }
 

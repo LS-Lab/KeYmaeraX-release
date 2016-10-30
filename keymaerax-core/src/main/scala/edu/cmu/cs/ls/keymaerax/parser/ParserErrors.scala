@@ -69,6 +69,9 @@ object ParseException {
   def apply(msg: String, loc: Location): ParseException =
     new ParseException(msg, loc, "<unknown>", "<unknown>", "", "")
 
+  def apply(msg: String, loc: Location, cause: Throwable): ParseException =
+    new ParseException(msg, loc, "<unknown>", "<unknown>", "", "", cause)
+
   def apply(msg: String, cause: Throwable): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "", cause)
 
