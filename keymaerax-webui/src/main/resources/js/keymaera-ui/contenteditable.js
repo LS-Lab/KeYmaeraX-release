@@ -5,23 +5,37 @@ angular.module('keymaerax.ui.binding', ['ngSanitize']).directive('contenteditabl
     link: function(scope, element, attrs, ngModel) {
       if (!ngModel) return;
 
+      rangy.init();
+      var savedSel = {};
+
       ngModel.$render = function() {
         element.html($sce.getTrustedHtml(ngModel.$viewValue || ''));
+        //@note set cursor
+        if (savedSel.element !== undefined && savedSel.range !== undefined) {
+          rangy.getSelection().restoreCharacterRanges(savedSel.element, savedSel.range);
+        }
+        read(); // initialize
       };
 
-      element.on('blur keyup change', function() {
+      element.on('blur keyup change', function(event) {
+        // save range to reset cursor
+        savedSel.element = event.target;
+        savedSel.range = rangy.getSelection().saveCharacterRanges(event.target);
+        //@note set attributes for auto-completion
+        if (savedSel.element !== undefined && savedSel.range !== undefined) {
+          event.target.selectionDirection = 'none';
+          event.target.selectionStart = savedSel.range[0].characterRange.start;
+          event.target.selectionEnd = savedSel.range[0].characterRange.end;
+          event.target.value = element.text();
+        }
         scope.$evalAsync(read);
       });
 
-      read();
-
       function read() {
-        var html = element.html();
-        // clearing the content leaves a <br> behind, which optionally is removed
-        if (attrs.stripBr && html === '<br>') {
-          html = '';
-        }
-        ngModel.$setViewValue(html);
+        //var html = element.html();
+        var text = element.text();
+        //ngModel.$setViewValue(html);
+        ngModel.$setViewValue(text);
       }
     }
   };

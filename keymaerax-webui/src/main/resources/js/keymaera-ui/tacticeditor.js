@@ -1,4 +1,4 @@
-angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'diff-match-patch'])
+angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
   .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData',
       function($http, derivationInfos, Textcomplete, sequentProofData) {
     return {
@@ -14,8 +14,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
           scope.tactic = sequentProofData.tactic;
 
           var combinators = ['*', '|', '&', '<'];
-          var ta = elem.find('textarea');
-          var textcomplete = new Textcomplete(ta, [
+          var tacticContent = elem.find('#tacticcontent');
+          var textComplete = new Textcomplete(tacticContent, [
             // combinators
             {
               match: /\B:(\w*)$/,
@@ -74,54 +74,34 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             scope.onTacticScript({tacticText: scope.tactic.tacticDiff});
           };
 
-          scope.diffOptions = {
-            editCost: 4,
-            attrs: {
-              insert: {
-                'data-attr': 'insert',
-                'class': 'insertion'
-              },
-              delete: {
-                'data-attr': 'delete'
-              },
-              equal: {
-                'data-attr': 'equal'
-              }
-            }
-          };
-
           scope.$watch('tactic.tacticText', function(newValue, oldValue) {
-            if (scope.tactic.lastExecutedTacticText !== undefined && scope.tactic.tacticText !== undefined) {
-              var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : scope.tactic.tacticText };
+            var newText = jQuery('<p>'+newValue+'</p>').text(); // strip HTML tags
+            var oldText = jQuery('<p>'+oldValue+'</p>').text();
+            if (oldText !== newText && scope.tactic.lastExecutedTacticText !== undefined && scope.tactic.tacticText !== undefined) {
+              //@note compute diff
+              var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : newText };
               $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
                 .then(function(response) {
+                  $('#tacticcontent>span.k4-tacticeditor-error').removeClass('k4-tacticeditor-error');
                   //@todo multiple diffs
                   scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
+                })
+                .catch(function(response) {
+                  if (response.data !== undefined) {
+                    var errorText = response.data.textStatus;
+                    var location = response.data.location; // { column: Int, line: Int }
+                    var unparsableStart = newText.split('\n', location.line-1).join('\n').length + location.column-1;
+
+                    //@todo location end
+                    scope.tactic.tacticText = newText.substring(0, unparsableStart) +
+                      '<span class="k4-tacticeditor-error" title="' + errorText + '">' +
+                      newText.substring(unparsableStart, newText.length) + '</span>'
+                  }
                 });
             }
           });
 
-//          rangy.init();
-//
-//          var savedSel = {};
-//          var listener = function listener() {
-//            console.log("Diff HTML changed")
-//            if (savedSel.element !== undefined && savedSel.range !== undefined) {
-//              rangy.getSelection().restoreCharacterRanges(savedSel.element, savedSel.range);
-//            }
-//          };
-//
-//          scope.$watch('tactic.diffHtml', listener);
-//
-//          scope.tacticChange = function(event) {
-//            //@todo does not work with deletions
-//            //@todo cursor flickering
-//            savedSel.element = event.target;
-//            savedSel.range = rangy.getSelection().saveCharacterRanges(event.target);
-//            sequentProofData.tactic.tacticText = event.target.innerText;
-//          }
-
-          $(textcomplete).on({
+          $(textComplete).on({
             'textComplete:select': function(e, value) {
               scope.$apply(function() {
                 sequentProofData.tactic.tacticText = value
@@ -136,7 +116,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
           });
         },
         template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                    '<textarea class="k4-tacticeditor" ng-model="tactic.tacticText" rows="10" ng-shift-enter="executeTacticDiff()"></textarea>' +
+                    '<div contenteditable id="tacticcontent" class="k4-tacticeditor" ng-model="tactic.tacticText" ng-shift-enter="executeTacticDiff()"></div>' +
                   '</div></div>'
     };
   }]);
