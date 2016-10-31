@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.core.Lemma
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -84,4 +84,17 @@ class AutoDGTests extends TacticTestBase {
     result shouldBe 'proved
 
   })
+
+
+  //region helper methods
+
+  "TacticHelper.transformMonomial" should "work" in {
+    val result = TacticHelper.transformMonomials("2*x^2 + 3*x^3".asTerm, (t:Term) => t match {
+      case Times(coeff, Power(v,exp)) => Times(coeff, Power(v, Minus(exp, Number(1))))
+    })
+
+    println(result)
+  }
+
+  //endregion
 }

@@ -5,7 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 
 object TacticHelper {
 
@@ -78,5 +79,26 @@ object TacticHelper {
 
     //@todo not sure about that last term.
     freeInModality.intersect(freeInGamma).intersect(SetLattice.allVars -- boundInProgram).symbols
+  }
+
+  /** Transforms monomials in e using the xform function. */
+  def transformMonomials(e: Term, xform: Term => Term): Term = {
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p:PosInExpr, term:Term) = {
+        if(isMonomial(term))
+          Right(xform(term))
+        else
+          Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, e).getOrElse(throw new BelleError("Expected transformMonomials to succeed."))
+  }
+
+  /** Returns true iff t is (approximately, locally) a monomial; i.e., has the form {{{coeff(|x|)*x^exp(|x|)}}} where coeff and exp are optional. **/
+  def isMonomial(t: Term) = t match {
+    case v:Variable => true
+    case Times(coeff:Term, v:Variable) => !StaticSemantics.vars(coeff).contains(v)
+    case Times(coeff:Term, Power(v:Variable, exp:Term)) => !StaticSemantics.vars(coeff).contains(v) && !StaticSemantics.vars(exp).contains(v)
+    case _ => false
   }
 }
