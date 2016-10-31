@@ -459,22 +459,21 @@ object BelleParser extends (String => BelleExpr) {
       val (argList, closeParenAndRemainder) = rest.span(tok => tok.terminal != CLOSE_PAREN)
 
       //Ensure we actually found a close-paren and then compute the remainder.
-      if(closeParenAndRemainder isEmpty)
+      if (closeParenAndRemainder.isEmpty)
         throw ParseException("Expected argument list but could not find closing parenthesis.", input.head.location)
       assert(closeParenAndRemainder.head.terminal == CLOSE_PAREN)
       val remainder = closeParenAndRemainder.tail
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
-      val arguments = removeCommas(argList, false).map(tok => tok match {
-        case BelleToken(terminal: EXPRESSION, _) => {
-          assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name ${codeName} because it is called with expression arguments.")
-          assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to ${codeName} (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
-          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok)
+      val arguments = removeCommas(argList, false).map({
+        case tok@BelleToken(terminal: EXPRESSION, loc) =>
+          assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
+          assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
+          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc)
           nonPosArgCount = nonPosArgCount + 1
           theArg
-        }
-        case _ => parseArgumentToken(None)(tok)
+        case tok => parseArgumentToken(None)(tok, UnknownLocation)
       })
       (arguments, remainder)
     }
@@ -503,7 +502,7 @@ object BelleParser extends (String => BelleExpr) {
     * @param tok The argument token that's currently being processed.
     * @return The argument corresponding to the current token.
     */
-  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok : BelleToken) : TacticArg = tok.terminal match {
+  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok : BelleToken, loc: Location) : TacticArg = tok.terminal match {
     case terminal : TACTIC_ARGUMENT => terminal match {
       case ABSOLUTE_POSITION(posString) => Right(parseAbsolutePosition(posString, tok.location))
       case LAST_ANTECEDENT              => Right(LastAnte(0)) //@todo 0?
@@ -517,23 +516,23 @@ object BelleParser extends (String => BelleExpr) {
         //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
         expectedType.get match {
-          case ty:FormulaArg if(tok.expression.isInstanceOf[Formula]) => Left(tok.expression)
+          case ty:FormulaArg if tok.expression.isInstanceOf[Formula] => Left(tok.expression)
           case ty:FormulaArg => try {
             Left(tok.undelimitedExprString.asFormula)
           } catch {
-            case exn: ParseException => throw new Exception(s"Could not parse ${tok.exprString} as a Formula, but a formula was expected. Error: ${exn}")
+            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Formula, but a formula was expected. Error: $exn", loc, exn)
           }
-          case ty:TermArg if(tok.expression.isInstanceOf[Term]) => Left(tok.expression)
+          case ty:TermArg if tok.expression.isInstanceOf[Term] => Left(tok.expression)
           case ty:TermArg => try {
             Left(tok.undelimitedExprString.asTerm)
           } catch {
-            case exn: ParseException => throw new Exception(s"Could not parse ${tok.exprString} as a Variable, but a term was expected. Error: ${exn}")
+            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a term was expected. Error: $exn", loc, exn)
           }
-          case ty:VariableArg if(tok.expression.isInstanceOf[Variable]) => Left(tok.expression)
+          case ty:VariableArg if tok.expression.isInstanceOf[Variable] => Left(tok.expression)
           case ty:VariableArg => try {
             Left(tok.undelimitedExprString.asVariable)
           } catch {
-            case exn: ParseException => throw new Exception(s"Could not parse ${tok.exprString} as a Variable, but a Variable was expected. Error: ${exn}")
+            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a Variable was expected. Error: $exn", loc, exn)
           }
         }
       }
