@@ -609,20 +609,14 @@ private object DifferentialTactics {
       case t:Term => t
     })
 
-
-    //@todo not sure if this works for no exponent (i.e. x, x+x, x+x+x and so on). In fact p. sure it doesn't -- see pattern matching below.
-    //@todo I've lost track of this code. Review and comment before commit.
-    val (ghostODE, ghostEqn) = {
-      if(TacticHelper.variableOccursWithExponent(x, derivative)) (
-        //y' = -xPrimeDividedByX/2 * y
-        s"$ghostVar' = ((-1/2)*($xPrimeDividedByX)) * $ghostVar".asDifferentialProgram,
-        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
-      )
-      else (
-        s"$ghostVar' = ((-1/2)*($xPrimeDividedByX)) * $ghostVar".asDifferentialProgram,
-        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
-      )
-    }
+    /* construct the arguments ti diff aux:
+     * y' = -xPrimeDividedByX/2 * y
+     * x=0 <-> \exists y x*y^2=0 & y>0 */
+    //@todo At some point I was not sure if this works for no exponent (i.e. x, x+x, x+x+x and so on b/c of the pattern matching in dgZero. But it does. So review dgZero and this to see what's up.
+    val (ghostODE, ghostEqn) = (
+      s"$ghostVar' = ((-1/2)*($xPrimeDividedByX)) * $ghostVar".asDifferentialProgram,
+      s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+    )
 
     DA(ghostODE, ghostEqn)(pos) <(
       TactixLibrary.QE,
