@@ -110,11 +110,16 @@ object TacticHelper {
     ExpressionTraversal.traverse(fn, e).getOrElse(throw new BelleError("Expected transformMonomials to succeed."))
   }
 
-  /** Returns true iff t is (approximately, locally) a monomial; i.e., has the form {{{coeff(|x|)*x^exp(|x|)}}} where coeff and exp are optional. **/
-  def isMonomial(t: Term) = t match {
-    case v:Variable => true
-    case Times(coeff:Term, v:Variable) => !StaticSemantics.vars(coeff).contains(v)
-    case Times(coeff:Term, Power(v:Variable, exp:Term)) => !StaticSemantics.vars(coeff).contains(v) && !StaticSemantics.vars(exp).contains(v)
-    case _ => false
+  /** Returns monomial iff t is (approximately, locally) a monomial; i.e., has the form {{{coeff(|x|)*x^exp(|x|)}}} where coeff and exp are optional.
+    * @return Optional coefficient, variable, optional exponent; or None if this isn't a monomial
+    */
+  def asMonomial(t: Term): Option[(Option[Term], Variable, Option[Term])] = t match {
+    case v:Variable => Some(None, v, None)
+    case Times(coeff:Term, v:Variable) if !StaticSemantics.vars(coeff).contains(v) => Some(Some(coeff), v, None)
+    case Times(coeff:Term, Power(v:Variable, exp:Term))
+      if !StaticSemantics.vars(coeff).contains(v) && !StaticSemantics.vars(exp).contains(v) => Some(Some(coeff), v, Some(exp))
+    case _ => None
   }
+
+  def isMonomial(t:Term) = asMonomial(t).nonEmpty
 }
