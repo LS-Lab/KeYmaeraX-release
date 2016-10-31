@@ -13,15 +13,11 @@ import scala.collection.immutable
   * Created by bbohrer on 12/29/15.
   */
 case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, theLeaves: List[AgendaItem]) {
-  def leaves =
-    theLeaves.map{case item =>
-      AgendaItem(item.id, item.name, item.proofId, item.goal)
-    }
+  def leaves = theLeaves.map(item => AgendaItem(item.id, item.name, item.proofId, item.goal))
 
-  def leavesAndRoot = root :: leaves.map({case item => item.goal})
+  def leavesAndRoot = root :: leaves.map(item => item.goal)
 
-  def findNode(id: String) = nodes.find({case node =>
-    node.id.toString == id})
+  def findNode(id: String) = nodes.find(node => node.id.toString == id)
 
   def goalIndex(id: String): Int = {
     leaves.zipWithIndex.find({case (item, i) => item.id == id}).get._2
