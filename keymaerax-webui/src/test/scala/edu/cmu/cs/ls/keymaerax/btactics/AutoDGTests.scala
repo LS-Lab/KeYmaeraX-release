@@ -36,7 +36,7 @@ class AutoDGTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   }))
 
-  "dgZeroEquilibrium" should "prove x=0 is an eq point of x'=3*x^1" in withMathematica(qeTool => {
+  "dgZero" should "prove x=0 is an eq point of x'=3*x^1" in withMathematica(qeTool => {
     val f = "x=0 -> [{x'=3*x^1}]x=0".asFormula
     val t = TactixLibrary.implyR(1) & DifferentialTactics.dgZero(1)
     proveBy(f,t) shouldBe 'proved
@@ -63,6 +63,7 @@ class AutoDGTests extends TacticTestBase {
   it should "prove x=0 -> [{x'=5*x^2}]x=0" in withMathematica((qeTool => {
     val f = "x=0 -> [{x'=5*x^2}]x=0".asFormula
     val t = TactixLibrary.implyR(1) & DifferentialTactics.dgZero(1)
+    proveBy(f,t) shouldBe 'proved
   }))
 
   /** @note please leave this here, because it's the "clear exposition of main idea" version of dgZero. */
