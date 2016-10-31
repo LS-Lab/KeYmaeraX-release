@@ -98,6 +98,12 @@ object TacticDiff {
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
+    case DependentTactic(n1) => t2 match {
+      case DependentTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case _ =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
+    }
     case AppliedPositionTactic(c1, l1) => t2 match {
       case AppliedPositionTactic(c2, l2) if c1 == c2 && l1 == l2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case _ =>
