@@ -189,7 +189,7 @@
                   ng-mouseover="highlightStepPosition(step.id, true)"
                   ng-mouseleave="highlightStepPosition(step.id, false)"
                   ng-right-click="proofStepRightClick($event)" tabindex="-1"
-                  uib-popover-template="'proofStepPopover.html'"
+                  uib-popover-template="'proofStepPopoverPrev.html'"
                   popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
                     {{step.id | childRuleName:this}}
                 </span>
@@ -257,6 +257,12 @@
 <script type="text/ng-template" id="proofStepPopover.html">
     <div class="k4-nobreak">
         <a ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopoverPrev.html">
+    <div class="k4-nobreak">
+        <a ng-click="prune(step.id)"><span class="fa fa-eraser"> Prune</span></a><br/>
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>
