@@ -66,6 +66,11 @@ class AutoDGTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   }))
 
+  "dgZeroPolynomialDerivative" should "prove x=0 -> [{x'=x+x}]x=0" in withMathematica(qeTool => {
+    val f = "x=0 -> [{x'=x+x}]x=0".asFormula
+    val t = TactixLibrary.implyR(1) & DifferentialTactics.dgZeroPolynomialDerivative(1)
+    proveBy(f,t) shouldBe 'proved
+  })
   /** @note please leave this here, because it's the "clear exposition of main idea" version of dgZero. */
   "canonical x=0 & n>0 -> [{x'=c*x^n}]x=0" should "prove by custom tactic" in withMathematica(qeTool => {
     import TactixLibrary._
