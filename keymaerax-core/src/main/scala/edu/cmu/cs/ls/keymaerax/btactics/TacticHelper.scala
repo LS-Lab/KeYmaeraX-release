@@ -81,6 +81,22 @@ object TacticHelper {
     freeInModality.intersect(freeInGamma).intersect(SetLattice.allVars -- boundInProgram).symbols
   }
 
+  /** Returns true iff {{{v^n}}} s.t. n!=0, n!=1 occurs in {{{term}}}*/
+  def variableOccursWithExponent(v: Variable, term: Term) = {
+    var occursWithExponent = false
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term) = asMonomial(t) match {
+        case Some((_, x, Some(power))) if(power != Number(1) && power != Number(0) && x==v) => {
+          occursWithExponent = true
+          Left(None)
+        }
+        case _ => Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, term).getOrElse(throw new BelleError("Could not determine whether this variable occurs with an exponent."))
+    occursWithExponent
+  }
+
   /** Transforms monomials in e using the xform function. */
   def transformMonomials(e: Term, xform: Term => Term): Term = {
     val fn = new ExpressionTraversalFunction {
