@@ -600,7 +600,7 @@ private object DifferentialTactics {
     val ghostVar = "z_".asVariable
     require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
 
-    //Given a system of the forma x'=f(x), this returns (f(x))'/x simplified so that x does not occur on the denom.
+    //Given a system of the form x'=f(x), this returns (f(x))'/x simplified so that x does not occur on the denom.
     //@note this is done because we can't ghost in something that contains a division by a possibly zero-valued variable (in this case, x).
     val xPrimeDividedByX = TacticHelper.transformMonomials(derivative, (t:Term) => t match {
       case Times(coeff, Power(v,exp)) if(v == x) => Times(coeff, Power(v, Minus(exp, Number(1))))
