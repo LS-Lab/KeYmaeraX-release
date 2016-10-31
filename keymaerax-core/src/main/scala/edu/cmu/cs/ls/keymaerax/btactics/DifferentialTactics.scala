@@ -583,6 +583,56 @@ private object DifferentialTactics {
       ) & ODE(pos)
   })
 
+  def dgZeroPolynomialDerivative : DependentPositionTactic = "dgZeroPolynomialDerivative" by ((pos: Position, seq:Sequent) => {
+    val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
+
+    val lhs = property match {
+      case Equal(term, Number(n)) if n == 0 => term
+      case _ => throw new BelleError(s"Not sure what to do with shape ${seq.sub(pos)}")
+    }
+
+    val (x: Variable, derivative:Term) = system match {
+      case AtomicODE(xp, t) => (xp.x, t)
+      case _ => throw new BelleError("Systems not currently supported by dgZeroPolynomialDerivative")
+    }
+    require(lhs == x, "Currently require that the post-condition is of the form x=0 where x is the primed variable in the ODE.")
+
+    val ghostVar = "z_".asVariable
+    require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
+
+    //Given a system of the forma x'=f(x), this returns (f(x))'/x simplified so that x does not occur on the denom.
+    //@note this is done because we can't ghost in something that contains a division by a possibly zero-valued variable (in this case, x).
+    val xPrimeDividedByX = TacticHelper.transformMonomials(derivative, (t:Term) => t match {
+      case Times(coeff, Power(v,exp)) if(v == x) => Times(coeff, Power(v, Minus(exp, Number(1))))
+      case Times(coeff, v:Variable) if(v==x) => coeff
+      case v:Variable if(v==x) => Number(1)
+      case t:Term => t
+    })
+
+
+    //@todo not sure if this works for no exponent (i.e. x, x+x, x+x+x and so on). In fact p. sure it doesn't -- see pattern matching below.
+    //@todo I've lost track of this code. Review and comment before commit.
+    val (ghostODE, ghostEqn) = {
+      if(TacticHelper.variableOccursWithExponent(x, derivative)) (
+        //y' = -xPrimeDividedByX/2 * y
+        s"$ghostVar' = ((-1/2)*($xPrimeDividedByX)) * $ghostVar".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      else (
+        s"$ghostVar' = ((-1/2)*($xPrimeDividedByX)) * $ghostVar".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+    }
+
+    DA(ghostODE, ghostEqn)(pos) <(
+      TactixLibrary.QE,
+      implyR(pos) & boxAnd(pos) & andR(pos) <(
+        DifferentialTactics.diffInd()(pos) & QE,
+        DGauto(pos) //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
+      )
+    )
+  })
+
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
     * @todo make this happen by usubst. */
   def dgZero : DependentPositionTactic = "dgZero" by ((pos: Position, seq:Sequent) => {
