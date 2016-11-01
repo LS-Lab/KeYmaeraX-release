@@ -71,7 +71,15 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           ]);
 
           scope.executeTacticDiff = function() {
-            scope.onTacticScript({tacticText: scope.tactic.tacticDiff});
+            if (scope.tactic.tacticDel === '' || scope.tactic.tacticDel === 'nil') {
+              scope.onTacticScript({tacticText: scope.tactic.tacticDiff});
+            } else {
+              //todo prune deleted stuff instead of rerun from root
+              var tactic = scope.tactic.tacticText;
+              sequentProofData.prune(scope.userId, scope.proofId, sequentProofData.proofTree.root, function() {
+                scope.onTacticScript({tacticText: tactic});
+              });
+            }
           };
 
           scope.$watch('tactic.tacticText', function(newValue, oldValue) {
@@ -82,9 +90,18 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : newText };
               $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
                 .then(function(response) {
-                  $('#tacticcontent>span.k4-tacticeditor-error').removeClass('k4-tacticeditor-error');
                   //@todo multiple diffs
+                  scope.tactic.tacticDel = response.data.replOld.length > 0 ? response.data.replOld[0].repl : "";
                   scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
+
+                  var formattedTactic = response.data.context;
+                  $.each(response.data.replNew, function(i, e) {
+                    var old = $.grep(response.data.replOld, function(oe, i) { return oe.dot == e.dot; });
+                    formattedTactic = old.length > 0 ?
+                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-repl" title="Replaces ' + old[0].repl + '">' + e.repl + '</span>') :
+                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-new">' + e.repl + '</span>');
+                  });
+                  scope.tactic.tacticText = formattedTactic;
                 })
                 .catch(function(response) {
                   if (response.data !== undefined) {

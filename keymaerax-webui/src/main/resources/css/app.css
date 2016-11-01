@@ -104,6 +104,7 @@ del {
   font-family:monospace;
   display: block;
   width: 100%;
+  color: gray;
   box-sizing: border-box;
   outline: 0px solid transparent;
   white-space: pre-wrap;       /* css-3 */
@@ -114,7 +115,16 @@ del {
 }
 
 .k4-tacticeditor-error {
+  color: black;
   border-bottom: 1px dashed red;
+}
+
+.k4-tacticeditor-new {
+  color: black;
+}
+
+.k4-tacticeditor-repl {
+  color: black;
 }
 
 .k4-drag {

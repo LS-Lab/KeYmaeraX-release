@@ -232,8 +232,20 @@
                                 <div class="col-md-1">
                                     <button class="btn btn-default" ng-click="rerunTactic()" uib-tooltip="Re-run tactic from original conjecture">Re-run</button>
                                 </div>
-                                <div class="input-group col-md-9">
+                                <div class="input-group col-md-9" ng-if="tactic.tacticDel === ''">
                                     <span class="input-group-addon">Fresh steps</span>
+                                    <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
+                                           uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
+                                           tooltip-placement="top-left" ng-model="tactic.tacticDiff">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" ng-click="executeTacticDiff()"
+                                                uib-tooltip="Augment the derivation on the current tab with fresh steps"
+                                                tooltip-placement="top-left"
+                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Execute</button>
+                                    </span>
+                                </div>
+                                <div class="input-group col-md-9" ng-if="tactic.tacticDel !== ''">
+                                    <span class="input-group-addon">Replace {{tactic.tacticDel}} with </span>
                                     <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
                                            uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
                                            tooltip-placement="top-left" ng-model="tactic.tacticDiff">

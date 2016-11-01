@@ -267,7 +267,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.executeTacticDiff = function() {
-      $scope.onTacticScript($scope.tactic.tacticDiff);
+      if ($scope.tactic.tacticDel === '' || $scope.tactic.tacticDel === 'nil') {
+        $scope.onTacticScript($scope.tactic.tacticDiff);
+      } else {
+        $scope.rerunTactic();
+      }
     };
 
     $scope.rerunTactic = function() {
