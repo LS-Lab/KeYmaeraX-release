@@ -156,12 +156,11 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.right shouldBe TactixLibrary.andR(3)
   }
 
-  //@todo fix or decide on a precedence of | and &...
-  ignore should "parse e | b & c" in {
-    val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[SeqTactic]
+  it should "parse e | b & c" in {
+    val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[EitherTactic]
     result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(3)
+    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
+    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
   }
 
   //endregion
@@ -215,10 +214,9 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.child.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
   }
 
-  ignore should "get precedence right" in {
-    //@todo parser get's it wrong
+  it should "get precedence right" in {
     val tactic = BelleParser("andR(1) & andR(2)*")
-    tactic shouldBe a [SaturateTactic]
+    tactic shouldBe a [SeqTactic]
     tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
   }
 
@@ -233,10 +231,22 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.times shouldBe 22
   }
 
+  it should "get precedence right" in {
+    val tactic = BelleParser("andR(1) & andR(2)*3")
+    tactic shouldBe a [SeqTactic]
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*3)
+  }
+
   "saturate parser" should "parse e+" in {
     val tactic = BelleParser("andR(1)+").asInstanceOf[SeqTactic]
     tactic.left shouldBe TactixLibrary.andR(1)
     tactic.right.asInstanceOf[SaturateTactic].child shouldBe   TactixLibrary.andR(1)
+  }
+
+  it should "get precedence right" in {
+    val tactic = BelleParser("andR(1) & andR(2)+")
+    tactic shouldBe a [SeqTactic]
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)+)
   }
 
   "doall combinator parser" should "parse doall(closeId)" in {
