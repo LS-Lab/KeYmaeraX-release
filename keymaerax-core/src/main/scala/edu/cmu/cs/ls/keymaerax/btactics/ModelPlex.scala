@@ -165,9 +165,7 @@ object ModelPlex extends ModelPlexTrait {
     // remove ODEs for controller monitor
     case Diamond(ODESystem(_, _), _) => Nil
     case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) & locateT(AxiomaticODESolver.axiomaticSolve()::Nil)(pos) &
-            //@todo can steer result depending on where and when we use partial QE
-            ModelPlex.optimizationOneWithSearch(pos) & SimplifierV2.simpTac(pos))
+  })(pos) & locateT(AxiomaticODESolver.axiomaticSolve()::Nil)(pos))
 
   /**
    * ModelPlex sequent-style synthesis technique, i.e., with branching so that the tactic can operate on top-level
