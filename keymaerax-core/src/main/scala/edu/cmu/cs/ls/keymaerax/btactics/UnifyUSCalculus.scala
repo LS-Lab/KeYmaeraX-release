@@ -1679,4 +1679,40 @@ trait UnifyUSCalculus {
     } ensuring(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
     doChase(de,pos)
   }
+
+  /** chaseCustom: Unrestricted form of chaseFor, where AxiomIndex is not built in,
+    * i.e. it takes keys of the form Expression => List[(Provable,PosInExpr, List[PosInExpr])]
+    * This allows customised rewriting
+    */
+  def chaseCustom(keys: Expression=>List[(Provable,PosInExpr, List[PosInExpr])]): ForwardPositionTactic = pos => de => {
+    /** Recursive chase implementation */
+    def doChase(de: Provable, pos: Position): Provable = {
+      if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+      // generic recursor
+      keys(de.conclusion.sub(pos).get) match {
+        case Nil =>
+          if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+          de
+        // take the first axiom among breadth that works for one useFor step
+        case l: List[(Provable,PosInExpr, List[PosInExpr])] =>
+          // useFor the first applicable axiom if any, or None
+          def firstAxUse: Option[(Provable,List[PosInExpr])] = {
+            for ((ax,key,recursor) <- l) try {
+              return Some((useFor(ax, key)(pos)(de), recursor))
+            } catch {case _: ProverException => /* ignore and try next */}
+            None
+          }
+          firstAxUse match {
+            case None =>
+              if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+              de
+            case Some((axUse, recursor)) =>
+              recursor.foldLeft(axUse)(
+                (pf, cursor) => doChase(pf, pos ++ cursor)
+              )
+          }
+      }
+    } ensuring(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
+    doChase(de,pos)
+  }
 }
