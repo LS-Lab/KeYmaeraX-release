@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 
@@ -16,6 +16,7 @@ import scala.collection.immutable
   * @see [[DerivedAxiomsTests]]
   * @note Must be separate test suite from same tests withZ3, otherwise lazy vals in DerivedAxioms corrupt tests.
   */
+@IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
 @CheckinTest
 @SummaryTest
 @UsualTest
