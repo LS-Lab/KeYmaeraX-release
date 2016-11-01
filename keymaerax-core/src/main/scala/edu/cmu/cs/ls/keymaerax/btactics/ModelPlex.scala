@@ -162,10 +162,10 @@ object ModelPlex extends ModelPlexTrait {
   def modelMonitorByChase: DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
     // remove loops
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
-    // remove ODEs for controller monitor
+    // keep ODEs, solve later
     case Diamond(ODESystem(_, _), _) => Nil
     case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) & locateT(AxiomaticODESolver.axiomaticSolve()::Nil)(pos))
+  })(pos) & (locateT(AxiomaticODESolver.axiomaticSolve()::Nil)(pos)*))
 
   /**
    * ModelPlex sequent-style synthesis technique, i.e., with branching so that the tactic can operate on top-level
@@ -311,8 +311,8 @@ object ModelPlex extends ModelPlexTrait {
     * @see[[optimizationOneWithSearchAt]]
     */
   def optimizationOneWithSearch: DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
-    val simplForall1 = proveBy("p(f()) -> \\forall x (x=f() -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
-    val simplForall2 = proveBy("p(f()) -> \\forall x (f()=x -> p(x))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
+    val simplForall1 = proveBy("p(f()) -> \\forall x_ (x_=f() -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
+    val simplForall2 = proveBy("p(f()) -> \\forall x_ (f()=x_ -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
 
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
         case (Forall(xs, Imply(Equal(x, _), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall1, PosInExpr(1::Nil))(pp))

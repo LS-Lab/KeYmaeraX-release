@@ -146,12 +146,12 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
-    val tactic = ModelPlex.modelMonitorByChase(1, 1::Nil)
+    val tactic = ModelPlex.modelMonitorByChase(1, 1::Nil) & ModelPlex.optimizationOneWithSearch(1, 1::Nil) & SimplifierV2.simpTac(1)
     val result = proveBy(modelplexInput, tactic)
 
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> (-1<=fpost()&fpost()<=(m-l)/ep)&(cpost()=0&((fpost() < 0&((ep=cpost()&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l|(ep>cpost()&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l)|((fpost()=0&ep>=cpost())&l>=0)&lpost()=l)|((fpost()>0&ep>=0)&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l)|cpost()>0&((((fpost() < 0&ep>=cpost())&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l|((fpost()=0&ep>=cpost())&l>=0)&lpost()=l)|((fpost()>0&ep>=cpost())&l>=0)&lpost()=cpost()*fpost()+l))".asFormula
+    result.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(cpost()=0&((fpost() < 0&((ep=cpost()&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l|(ep>cpost()&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l)|((fpost()=0&ep>=cpost())&l>=0)&lpost()=l)|((fpost()>0&ep>=0)&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l)|cpost()>0&((((fpost() < 0&ep>=cpost())&l>=-1*cpost()*fpost())&lpost()=cpost()*fpost()+l|((fpost()=0&ep>=cpost())&l>=0)&lpost()=l)|((fpost()>0&ep>=cpost())&l>=0)&lpost()=cpost()*fpost()+l))".asFormula
   }
 
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in {

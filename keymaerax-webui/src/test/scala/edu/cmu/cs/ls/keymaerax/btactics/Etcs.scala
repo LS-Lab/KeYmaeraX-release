@@ -138,7 +138,7 @@ class Etcs extends TacticTestBase {
       Variable("z"), Variable("t"), Variable("a"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1, 1::Nil) &
-      DebuggingTactics.print("Before Opt. 1") & ModelPlex.optimizationOneWithSearch(1, 1::Nil) & DebuggingTactics.print("After Opt. 1") &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(1, 1::Nil) & DebuggingTactics.print("After Opt. 1") &
       SimplifierV2.simpTac(1))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
