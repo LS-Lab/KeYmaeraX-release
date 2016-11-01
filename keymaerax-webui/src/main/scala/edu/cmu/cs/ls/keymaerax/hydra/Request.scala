@@ -574,6 +574,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         } catch {
           case _: Throwable => foResult
         }
+      case "model" => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1, 1::Nil) &
+        ModelPlex.optimizationOneWithSearch(1, 1::Nil) & SimplifierV2.simpTac(1))
     }
 
     if (monitorCond.subgoals.size == 1) conditionKind match {

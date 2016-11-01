@@ -29,15 +29,15 @@
                     <select class="form-control" id="monitorkind" ng-model="mxdata.monitorkind">
                         <option value="controller">Controller Monitor</option>
                         <option value="model">Model Monitor</option>
-                        <option value="prediction">Prediction Monitor</option>
+                        <!--<option value="prediction">Prediction Monitor</option>-->
                     </select>
                     <datalist id="monitorkindList">
 
                     </datalist>
                     <span id="monitorkindHelpBlock" class="help-block">
-                        For canconical models of the form <code>(ctrl;plant)</code>, a controller monitor checks
-                        decisions of <code>ctrl</code>, a model monitor checks <code>ctrl;plant</code> for past plant,
-                        and a prediction monitor checks <code>ctrl;plant</code> for future and disturbed plant.
+                        For canonical models of the form <code>(ctrl;plant)</code>, a controller monitor checks
+                        decisions of <code>ctrl</code>, a model monitor checks <code>ctrl;plant</code> for past plant.
+                        <!--and a prediction monitor checks <code>ctrl;plant</code> for future and disturbed plant.-->
                     </span>
                 </div>
             </div>
