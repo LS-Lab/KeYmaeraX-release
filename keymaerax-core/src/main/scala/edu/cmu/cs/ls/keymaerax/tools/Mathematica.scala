@@ -79,7 +79,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
    * @param formula The formula.
    * @return A counterexample, if found. None otherwise.
    */
-  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = mCEX.findCounterExample(formula)
+  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = mCEX.findCounterExample(formula)
 
   /**
     * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state

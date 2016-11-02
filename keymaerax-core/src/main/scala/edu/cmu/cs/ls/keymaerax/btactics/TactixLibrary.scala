@@ -606,7 +606,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
     override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleError("transform requires a QETool, but got None")).qeEvidence(formula)
-    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = ToolProvider.cexTool().getOrElse(throw new BelleError("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
+    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]] = ToolProvider.cexTool().getOrElse(throw new BelleError("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
   })
 
   //

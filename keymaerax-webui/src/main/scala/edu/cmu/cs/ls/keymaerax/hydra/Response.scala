@@ -604,7 +604,7 @@ class PruneBelowResponse(item:AgendaItem) extends Response {
   )
 }
 
-class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Term] = Map()) extends Response {
+class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Expression] = Map()) extends Response {
   def getJson = JsObject(
     "result" -> JsString(kind),
     "origFormula" -> JsString(fml.prettyString),
@@ -617,12 +617,16 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
     )
   )
 
-  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Term]): Formula = {
+  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
       override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case v: Variable => Right(cex(v))
-        case FuncOf(fn, _) => Right(cex(fn))
+        case v: Variable => Right(cex(v).asInstanceOf[Term])
+        case FuncOf(fn, _) => Right(cex(fn).asInstanceOf[Term])
         case tt => Right(tt)
+      }
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
+        case ff => Right(ff)
       }
     }, fml).get
   }

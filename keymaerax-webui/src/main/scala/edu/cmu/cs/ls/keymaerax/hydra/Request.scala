@@ -136,6 +136,27 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends UserRequest(u
 }
 
 class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
+  def allFnToVar(fml: Formula, fn: Function): Formula = {
+    fml.find(t => t match {
+        case FuncOf(func, _) if fn.sort == Real => func == fn
+        case PredOf(func, _) if fn.sort == Bool => func == fn
+        case _ => false }) match {
+      case Some((_, e: Term)) => allFnToVar(fml.replaceAll(e, Variable(fn.name, fn.index, Real)), fn)
+      case Some((_, e: Formula)) => allFnToVar(fml.replaceAll(e, PredOf(Function(fn.name, fn.index, Unit, Bool), Nothing)), fn) //@todo beware of name clashes
+      case None => fml
+    }
+  }
+
+  def findCounterExample(fml: Formula, cexTool: CounterExampleTool): Option[Map[NamedSymbol, Expression]] = {
+    val signature = StaticSemantics.signature(fml).filter({
+      case Function(_, _, _, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+    val lmf = signature.foldLeft[Formula](fml)((f, t) => allFnToVar(f, t))
+    cexTool.findCounterExample(lmf) match {
+      case Some(cex) => Some(cex.map({case (k, v) => signature.find(s => s.name == k.name && s.index == k.index).getOrElse(k) -> v }))
+      case None => None
+    }
+  }
+
   override def resultingResponses(): List[Response] = {
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
@@ -150,7 +171,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     if (fml.isFOL) {
       try {
         ToolProvider.cexTool() match {
-          case Some(cexTool) => cexTool.findCounterExample(fml) match {
+          case Some(cexTool) => findCounterExample(fml, cexTool) match {
             //@todo return actual sequent, use collapsiblesequentview to display counterexample
             case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
             case None => new CounterExampleResponse("cex.none") :: Nil

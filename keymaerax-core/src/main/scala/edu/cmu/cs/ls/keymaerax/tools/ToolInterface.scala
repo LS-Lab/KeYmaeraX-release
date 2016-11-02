@@ -77,7 +77,7 @@ trait CounterExampleTool extends ToolInterface {
     * @param formula The formula.
     * @return A counterexample, if found. None otherwise.
     */
-  def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]]
+  def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]]
 }
 
 /**
