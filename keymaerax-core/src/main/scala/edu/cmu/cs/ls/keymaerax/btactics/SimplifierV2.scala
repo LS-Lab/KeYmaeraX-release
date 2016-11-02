@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
-import scala.collection.immutable._
+import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 
 /**
@@ -52,7 +52,7 @@ object SimplifierV2 {
     //Minus
     qeProof(None,"0-F_()","-F_()"),
     qeProof(None,"F_()-0","F_()"),
-    qeProof(None,"F_()-F_()","0"),
+    qeProof(None,"x-x","0"),
     qeProof(None,"F_()+G_()-F_()","G_()"),
     //Division
     qeProof(None,"F_()/1","F_()"),
@@ -706,4 +706,109 @@ object SimplifierV2 {
       }
     }
   }
+
+
+  private val nop = Assign(Variable("x_"),Variable("x_"))
+
+  def isNop(p:Program) : Boolean = {
+    p match {
+      case Assign(x,y) => {
+        y match { case v:Variable =>
+          v.name.equals(x.name) case _ => false}
+      }
+      case _ => false
+    }
+  }
+  def stripNoOp(p:Program) : Program = {
+    p match {
+      case Compose(p,pp) =>
+        val sp = stripNoOp(p)
+        val spp = stripNoOp(pp)
+        if(isNop(sp)) spp
+        else if(isNop(spp)) sp
+        else Compose(sp,spp)
+      case _ => p
+    }
+  }
+
+  //Attempt to rewrite the requested auxiliary variables in a program
+  //The RHS of each rewrite is determined automatically if not already given
+  def rewriteProgramAux(p:Program,targets:List[Variable],rewrites:Map[Variable,Term]=Map()):(Program,Map[Variable,Term]) = {
+    p match {
+      case Assign(v,e) =>
+        val erw = rewrites.foldLeft(e) { (e,kv) => e.replaceFree(kv._1,kv._2) }
+        if(targets.contains(v)){
+          rewrites get v match{
+            case None =>
+              (nop,rewrites + (v -> erw))
+            case Some(eorig) =>
+              if(erw.equals(eorig)) (nop,rewrites)
+              else throw new ProverException("Clashing rewrites for"+v+" : " + eorig+" "+erw)
+          }
+        }
+        else {
+          (Assign(v,erw),rewrites)
+        }
+      case Compose(l,r) =>
+        val (lp,lrw) = rewriteProgramAux(l,targets,rewrites)
+        val (rp,rrw) = rewriteProgramAux(r,targets,lrw)
+        (Compose(lp,rp),rrw)
+      case Choice(l,r) =>
+        val (lp,lrw) = rewriteProgramAux(l,targets,rewrites)
+        val (rp,rrw) = rewriteProgramAux(r,targets,rewrites)
+        //None of the rewrites that occur inside a choice should matter outside
+        (Choice(lp,rp),rewrites)
+      case Test(f) =>
+        val erw = rewrites.foldLeft(f) { (e,kv) => e.replaceFree(kv._1,kv._2) }
+        (Test(erw),rewrites)
+      //No other rewrites should be applied
+      case p => (p,rewrites)
+    }
+
+  }
+
+  private def hideBox(e:Expression) : List[String] =
+  {
+    e match {
+      //Ignore nested loops and ODEs in chase
+      case Box(ODESystem(_,_),_) => Nil
+      case Box(Loop(_),_) => Nil
+      case Box(_,_) => AxiomIndex.axiomsFor(e)
+      case  _ => Nil //AxiomIndex.axiomsFor(e)
+    }
+  }
+
+  // Given [a*]f, returns [b*]f and attempts a proof of [a*]f |- [b*]f
+  // Also works if given p1 -> p2 -> ... p -> [a*]f , in which case the attempted proof is
+  // p1 -> p2 -> ... -> [a*]f |- p1-> p2 -> ... -> [b*]f
+  // where b has the requested auxiliaries rewritten away
+  def rewriteLoopAux(f:Formula,targets:List[Variable]):(Formula,Provable) = {
+    f match {
+      case (Imply(pre,rhs)) =>
+        val (rf,pr) = rewriteLoopAux(rhs,targets)
+        val tar = Imply(pre,rf)
+        val seq = proveBy(Sequent(IndexedSeq(f),IndexedSeq(tar)),
+          implyR(1) &
+          modusPonens(AntePos(1),AntePos(0)) &
+          hideL(-2) & (by(pr) *))
+        return (tar,seq)
+
+      case (Box(Loop(prog),fml))=>
+        val sprog = stripNoOp(rewriteProgramAux(prog,targets)._1)
+        val tar = Box(Loop(sprog),fml)
+
+        val seq = proveBy(Sequent(IndexedSeq(f),IndexedSeq(tar)),
+          loop(f)(1) <
+            (close,
+            useAt("[*] iterate")(-1) & andL(-1) & close,
+            //Crucial case, fails if the rewrite was bad:
+            useAt("[*] iterate")(-1) & andL(-1) &
+              chase(3,3, (e:Expression)=>hideBox(e))(SuccPosition(1,Nil)) &
+              chase(3,3, (e:Expression)=>hideBox(e))(AntePosition(2,Nil)) &
+              (close *) ))
+        (tar,seq)
+      case _ => throw new ProverException("loop rewriting expects input shape [{a*}]f or p -> ")
+    }
+  }
+
 }
