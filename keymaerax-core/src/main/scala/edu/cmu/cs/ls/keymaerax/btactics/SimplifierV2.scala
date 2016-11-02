@@ -727,6 +727,8 @@ object SimplifierV2 {
         if(isNop(sp)) spp
         else if(isNop(spp)) sp
         else Compose(sp,spp)
+      case Choice(l,r) =>
+        Choice(stripNoOp(l),stripNoOp(r))
       case _ => p
     }
   }
