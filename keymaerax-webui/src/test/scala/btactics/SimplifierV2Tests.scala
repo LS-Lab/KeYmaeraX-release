@@ -46,4 +46,38 @@ class SimplifierV2Tests extends TacticTestBase {
     val tactic = simpTac
     println(proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1,PosInExpr(0::1::Nil))))
   }
+
+  "SimplifierV2" should "simplify program auxiliaries in loop" in withMathematica { qeTool =>
+    //ETCS essentials:
+    val fml = ("[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
+      "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
+    val(res,pr) = rewriteLoopAux(fml,List(Variable("SB")))
+    pr shouldBe 'proved
+    println(res)
+  }
+
+  "SimplifierV2" should "simplify program auxiliaries with precondition" in withMathematica { qeTool =>
+    //ETCS essentials:
+    val fml = ("v^2<=2*b*(m-z)&b>0&A>=0->[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
+      "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
+    val(res,pr) = rewriteLoopAux(fml,List(Variable("SB")))
+    pr shouldBe 'proved
+    println(res)
+  }
+
+  "SimplifierV2" should "simplify program auxiliaries with multiple preconditions" in withMathematica { qeTool =>
+    val fml = ("a<=b & b<=c -> v^2<=2*b*(m-z)&b>0&A>=0->[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
+      "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
+    val(res,pr) = rewriteLoopAux(fml,List(Variable("SB")))
+    pr shouldBe 'proved
+    println(res)
+  }
+
+  "SimplifierV2" should "leave open bad rewrites" in withMathematica { qeTool =>
+    val fml = ("v^2<=2*b*(m-z)&b>0&A>=0->[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
+      "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
+    val(res,pr) = rewriteLoopAux(fml,List(Variable("SB"),Variable("a")))
+    pr.isProved shouldBe false
+    println(res)
+  }
 }
