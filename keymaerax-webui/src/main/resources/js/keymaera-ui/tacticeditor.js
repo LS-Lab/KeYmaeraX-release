@@ -12,6 +12,11 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
         },
         link: function(scope, elem, attr) {
           scope.tactic = sequentProofData.tactic;
+          scope.tacticError = {
+            error: "",
+            details: "",
+            isVisible: false
+          }
 
           var combinators = ['*', '|', '&', '<'];
           var tacticContent = elem.find('#tacticcontent');
@@ -90,29 +95,33 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : newText };
               $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
                 .then(function(response) {
+                  scope.tacticError.isVisible = false;
+
                   //@todo multiple diffs
                   scope.tactic.tacticDel = response.data.replOld.length > 0 ? response.data.replOld[0].repl : "";
                   scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
 
-                  var formattedTactic = response.data.context;
-                  $.each(response.data.replNew, function(i, e) {
-                    var old = $.grep(response.data.replOld, function(oe, i) { return oe.dot == e.dot; });
-                    formattedTactic = old.length > 0 ?
-                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-repl" title="Replaces ' + old[0].repl + '">' + e.repl + '</span>') :
-                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-new">' + e.repl + '</span>');
-                  });
-                  scope.tactic.tacticText = formattedTactic;
+//                  var formattedTactic = response.data.context;
+//                  $.each(response.data.replNew, function(i, e) {
+//                    var old = $.grep(response.data.replOld, function(oe, i) { return oe.dot == e.dot; });
+//                    formattedTactic = old.length > 0 ?
+//                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-repl" title="Replaces ' + old[0].repl + '">' + e.repl + '</span>') :
+//                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-new">' + e.repl + '</span>');
+//                  });
+//                  scope.tactic.tacticText = formattedTactic;
                 })
                 .catch(function(response) {
                   if (response.data !== undefined) {
                     var errorText = response.data.textStatus;
                     var location = response.data.location; // { column: Int, line: Int }
-                    var unparsableStart = newText.split('\n', location.line-1).join('\n').length + location.column-1;
+                    scope.tacticError.text = location + ": " + errorText;
+                    scope.tacticError.isVisible = true;
 
+//                    var unparsableStart = newText.split('\n', location.line-1).join('\n').length + location.column-1;
                     //@todo location end
-                    scope.tactic.tacticText = newText.substring(0, unparsableStart) +
-                      '<span class="k4-tacticeditor-error" title="' + errorText + '">' +
-                      newText.substring(unparsableStart, newText.length) + '</span>'
+//                    scope.tactic.tacticText = newText.substring(0, unparsableStart) +
+//                      '<span class="k4-tacticeditor-error" title="' + errorText + '">' +
+//                      newText.substring(unparsableStart, newText.length) + '</span>'
                   }
                 });
             }
@@ -134,6 +143,12 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
         },
         template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
                     '<div contenteditable id="tacticcontent" class="k4-tacticeditor" ng-model="tactic.tacticText" ng-shift-enter="executeTacticDiff()"></div>' +
+                  '</div></div>' +
+                  '<div class=row><div class="col-md-12">' +
+                  '<k4-auto-hide-alert message="tacticError.text"' +
+                                      'details="tacticError.details"' +
+                                      'is-visible="tacticError.isVisible" timeout="-1">' +
+                  '</k4-auto-hide-alert>' +
                   '</div></div>'
     };
   }]);
