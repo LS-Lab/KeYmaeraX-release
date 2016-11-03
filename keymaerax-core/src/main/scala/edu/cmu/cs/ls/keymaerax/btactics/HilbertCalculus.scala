@@ -238,7 +238,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
     * @see [[DifferentialTactics.diffInd()]] */
-  lazy val DI                 : DependentPositionTactic = namedUseAt("DI", "DI differential invariant")
+  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant")
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGC(y:Variable, b:Term) =
