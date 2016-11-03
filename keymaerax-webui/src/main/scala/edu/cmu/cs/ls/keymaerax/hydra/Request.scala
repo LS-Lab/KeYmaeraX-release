@@ -586,17 +586,17 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
     val modelFml = KeYmaeraXProblemParser(model.keyFile)
     val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
       ++ additionalVars.map(_.asVariable)).toList
-    val modelplexInput = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
-    val monitorCond = monitorKind match {
-      case "controller" =>
-        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
+      case ("controller", Some(tool)) =>
+        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(1)*)
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
         } catch {
           case _: Throwable => foResult
         }
-      case "model" => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1, 1::Nil) &
-        ModelPlex.optimizationOneWithSearch(1, 1::Nil) & SimplifierV2.simpTac(1))
+      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
     if (monitorCond.subgoals.size == 1) conditionKind match {
