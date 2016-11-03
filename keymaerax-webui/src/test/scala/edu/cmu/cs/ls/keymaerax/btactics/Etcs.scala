@@ -123,7 +123,6 @@ class Etcs extends TacticTestBase {
     val modelplexInput = ModelPlex.createMonitorSpecificationConjecture(model, Variable("v"), Variable("z"),
       Variable("t"), Variable("a"))
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil) & ModelPlex.simplify())
-    println(foResult)
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
     foResult.subgoals.head.succ should contain only ("m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=-b|" +

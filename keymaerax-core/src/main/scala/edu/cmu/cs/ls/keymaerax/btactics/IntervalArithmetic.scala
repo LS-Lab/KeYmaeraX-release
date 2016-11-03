@@ -484,27 +484,6 @@ object IntervalArithmetic {
     }
   }
 
-  def isNop(p:Program) : Boolean = {
-    p match {
-      case Assign(x,y) => {
-        y match { case v:Variable =>
-          v.name.equals(x.name) case _ => false}
-      }
-      case _ => false
-    }
-  }
-  def stripNoOp(p:Program) : Program = {
-    p match {
-      case Compose(p,pp) =>
-        val sp = stripNoOp(p)
-        val spp = stripNoOp(pp)
-        if(isNop(sp)) spp
-        else if(isNop(spp)) sp
-        else Compose(sp,spp)
-      case _ => p
-    }
-  }
-
   //Decompose across Imply
   //These are single sided implications
   private val decomposeAnd = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() & Q_() -> PP_() & QQ_())".asFormula,prop)
@@ -629,7 +608,7 @@ object IntervalArithmetic {
               (useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_))))*) &
             //Decompose inequalities
-            debugPrint("deompose ineq") &
+            debugPrint("decompose ineq") &
             (OnAll(?(
               (useAt(decomposeLE,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeLT,PosInExpr(1::Nil))(1) & andR('_)) |
@@ -649,18 +628,18 @@ object IntervalArithmetic {
 
   def prettyTerm(t:Term) : String = {
     t match {
-      case n:Number => n.value.toString()
+      case n:Number => "Const "+n.value.toString()
       case FuncOf(f,Pair(l,r)) if (axFuncs.contains(f)) =>
         //If f is an arith function, then print the arguments
-        f.name+" "+prettyTerm(l) +" "+ prettyTerm(r)
+        f.name+" ("+prettyTerm(l) +") ("+ prettyTerm(r)+")"
       case FuncOf(f,Pair(l,r)) if (builtinFuncs.contains(f)) =>
         //For max,min (and later,abs, we need to capitalize...)
-        if (f.equals(maxF)) "Max "+prettyTerm(l) +" "+ prettyTerm(r)
-        else if (f.equals(minF)) "Min "+prettyTerm(l) +" "+ prettyTerm(r)
+        if (f.equals(maxF)) "Max ("+prettyTerm(l) +") ("+ prettyTerm(r)+")"
+        else if (f.equals(minF)) "Min "+prettyTerm(l) +") ("+ prettyTerm(r)+")"
         else ???
       case FuncOf(f,Nothing) => "func_"+f.name
       case v:Variable => v.name
-      case Neg(l) => "Neg "+prettyTerm(l)
+      case Neg(l) => "Neg ("+prettyTerm(l)
       case _ => "Unsupported: "+t.toString
     }
   }
