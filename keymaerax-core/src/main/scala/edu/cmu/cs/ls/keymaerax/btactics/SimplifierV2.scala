@@ -60,7 +60,9 @@ object SimplifierV2 {
     //qeProof(Some("F_()!=0"),"0/F_()","0"),
     //Negation
     qeProof(None,"-0","0"),
-    qeProof(None,"-(-F_())","F_()")
+    qeProof(None,"-(-F_())","F_()"),
+    //Power, temporary special case
+    qeProof(None,"0^2","0")
   )
 
   def mksubst(s:Subst) :Subst = {
@@ -135,6 +137,7 @@ object SimplifierV2 {
   def termSimp(t:Term): (Term,Provable) =
   {
     //todo: This may need to be generalized to do allow term simplification under a context
+    //todo: reflect out ground terms
     val init = DerivedAxioms.equalReflex.fact(
       USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     val (rect,recpf) = t match {
@@ -201,7 +204,7 @@ object SimplifierV2 {
   }
 
   /**
-    * Takes a term t, with an equality context ctx and returns ctx |- t = t' using equalities in ctx
+    * Takes a term t, with an equality context ctx and returns ctx |- t = t' using simple equalities (v=n or f()=n)
     * This is probably hopelessly slow...
     * @param t
     * @param ctx
@@ -209,9 +212,9 @@ object SimplifierV2 {
     */
   def equalityRewrites(t:Term,ctx:IndexedSeq[Formula]) :Provable = {
     t match {
-      case a:AtomicTerm =>
+      case _:Variable | _:ApplicationOf =>
         val pos = ctx.indexWhere( f => f match {
-          case (Equal(l,_)) => if (a.equals(l)) true else false
+          case (Equal(l,n:Number)) => t.equals(l)
           case _ => false})
         if (pos >= 0){
           proveBy(Sequent(ctx,IndexedSeq(ctx(pos))),close)
@@ -249,7 +252,6 @@ object SimplifierV2 {
     }
   }
 
-
   def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): (Term,Provable) =
   {
     //todo: filter context and keep only equalities around
@@ -266,7 +268,7 @@ object SimplifierV2 {
   private def weaken(ctx:IndexedSeq[Formula]): ForwardTactic = pr => {
     val p = Provable.startProof(pr.conclusion.glue(Sequent(ctx, IndexedSeq())))
     proveBy(p,
-      hideL('Llast)*ctx.length &
+      cohideR(1) & //('Llast)*ctx.length &
         by(pr))
   }
 
@@ -318,6 +320,8 @@ object SimplifierV2 {
   private val equivTrans =
     proveBy("(P() <-> Q()) -> (Q() <-> R()) -> (P() <-> R())".asFormula,prop)
 
+  private val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE)
+
   // Context management tactic generator for simplifier
   // Returns a new context ctx', and a tactic that turns
   // a goal of the form: ctx,f |- G into ctx' |- G
@@ -353,6 +357,10 @@ object SimplifierV2 {
             useAt(DerivedAxioms.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('Llast) &
               implyRi(AntePos(ctx.length)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
         }
+      case Equal(n:Number,r) =>
+        //Add the flipped version of an equality so we always rewrite left-to-right
+        (ctx:+Equal(r,n),implyRi(AntePos(ctx.length)) & useAt(eqSym,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) &
+          implyR('_))
       case _ => (ctx:+f,ident)
     }
 
