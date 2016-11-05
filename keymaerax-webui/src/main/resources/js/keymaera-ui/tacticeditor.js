@@ -114,7 +114,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                   if (response.data !== undefined) {
                     var errorText = response.data.textStatus;
                     var location = response.data.location; // { column: Int, line: Int }
-                    scope.tacticError.text = location + ": " + errorText;
+                    scope.tacticError.text = location.line + ':' + location.column + " " + errorText;
                     scope.tacticError.isVisible = true;
 
 //                    var unparsableStart = newText.split('\n', location.line-1).join('\n').length + location.column-1;
