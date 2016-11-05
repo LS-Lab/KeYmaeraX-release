@@ -5,8 +5,8 @@ angular.module('keymaerax.ui.binding', ['ngSanitize']).directive('contenteditabl
     link: function(scope, element, attrs, ngModel) {
       if (!ngModel) return;
 
-//      rangy.init();
-//      var savedSel = {};
+      rangy.init();
+      var savedSel = {};
 
       ngModel.$render = function() {
         element.html($sce.getTrustedHtml(ngModel.$viewValue || ''));
@@ -19,15 +19,15 @@ angular.module('keymaerax.ui.binding', ['ngSanitize']).directive('contenteditabl
 
       element.on('blur keyup change', function(event) {
         // save range to reset cursor
-//        savedSel.element = event.target;
-//        savedSel.range = rangy.getSelection().saveCharacterRanges(event.target);
-//        //@note set attributes for auto-completion
-//        if (savedSel.element !== undefined && savedSel.range !== undefined) {
-//          event.target.selectionDirection = 'none';
-//          event.target.selectionStart = savedSel.range[0].characterRange.start;
-//          event.target.selectionEnd = savedSel.range[0].characterRange.end;
-//          event.target.value = element.text();
-//        }
+        savedSel.element = event.target;
+        savedSel.range = rangy.getSelection().saveCharacterRanges(event.target);
+        //@note set attributes for auto-completion
+        if (savedSel.element !== undefined && savedSel.range !== undefined) {
+          event.target.selectionDirection = 'none';
+          event.target.selectionStart = savedSel.range[0].characterRange.start;
+          event.target.selectionEnd = savedSel.range[0].characterRange.end;
+          event.target.value = element.text();
+        }
         scope.$evalAsync(read);
       });
 
