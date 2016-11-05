@@ -540,7 +540,7 @@ private object DifferentialTactics {
             case _ => false
           })
           // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-            openDiffInd(pos) | DGauto(pos)  | dgZero(pos)
+            openDiffInd(pos) | DGauto(pos)  | dgZeroMonomial(pos)
           else
           //@todo check degeneracy for split to > or =
             diffInd()(pos)
@@ -583,7 +583,7 @@ private object DifferentialTactics {
       ) & ODE(pos)
   })
 
-  def dgZeroPolynomialDerivative : DependentPositionTactic = "dgZeroPolynomialDerivative" by ((pos: Position, seq:Sequent) => {
+  def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {
     val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
 
     val lhs = property match {
@@ -600,10 +600,12 @@ private object DifferentialTactics {
     val ghostVar = "z_".asVariable
     require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
 
+    val negOneHalf: Term = Divide(Number(-1), Number(2))
     //Given a system of the form x'=f(x), this returns (f(x))'/x simplified so that x does not occur on the denom.
     //@note this is done because we can't ghost in something that contains a division by a possibly zero-valued variable (in this case, x).
     val xPrimeDividedByX = TacticHelper.transformMonomials(derivative, (t:Term) => t match {
-      case Times(coeff, Power(v,exp)) if(v == x) => Times(coeff, Power(v, Minus(exp, Number(1))))
+      case Times(coeff, Power(v,exp)) if(v == x) => 
+        Times(coeff, Power(v, Minus(exp, Number(1))))
       case Times(coeff, v:Variable) if(v==x) => coeff
       case v:Variable if(v==x) => Number(1)
       case t:Term => t
@@ -614,8 +616,14 @@ private object DifferentialTactics {
      * x=0 <-> \exists y x*y^2=0 & y>0 */
     //@todo At some point I was not sure if this works for no exponent (i.e. x, x+x, x+x+x and so on b/c of the pattern matching in dgZero. But it does. So review dgZero and this to see what's up.
     val (ghostODE, ghostEqn) = (
-      s"$ghostVar' = ((-1/2)*($xPrimeDividedByX)) * $ghostVar".asDifferentialProgram,
-      s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      AtomicODE(DifferentialSymbol(ghostVar), Times(Times(negOneHalf,xPrimeDividedByX) , ghostVar)),
+      And(
+        Equal(
+          Times(x, Power(ghostVar, Number(2)) ),
+          Number(0)
+        ),
+        Greater(ghostVar, Number(0))
+      )
     )
 
     DA(ghostODE, ghostEqn)(pos) <(
@@ -629,7 +637,7 @@ private object DifferentialTactics {
 
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
     * @todo make this happen by usubst. */
-  def dgZero : DependentPositionTactic = "dgZero" by ((pos: Position, seq:Sequent) => {
+  def dgZeroMonomial : DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq:Sequent) => {
     val ONE = Number(1)
 
     if (ToolProvider.algebraTool().isEmpty) throw new BelleError(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
@@ -664,12 +672,12 @@ private object DifferentialTactics {
         s"$ghostVar' = ( (-1*$c * $x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
         s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
       )
-      case (Some(c), None) => (
-        s"$ghostVar' = ((-1*$c*$x) / 2) * $ghostVar + 0".asDifferentialProgram,
-        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
-      )
       case (None, Some(n)) => (
         s"$ghostVar' = ((-1*$x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
+        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
+      )
+      case (Some(c), None) => (
+        s"$ghostVar' = ((-1*$c*$x) / 2) * $ghostVar + 0".asDifferentialProgram,
         s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
       )
       case (None, None) => (
