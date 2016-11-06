@@ -106,8 +106,8 @@ object UIIndex {
         }
         val rules = "abstractionb" :: "generalizeb" :: maybeSplit
         a match {
-          case Assign(DifferentialSymbol(_),_) => "[:=] assign" :: rules
-          case _: Assign => "assignb" :: rules
+          case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
+          case Assign(_: BaseVariable, _) => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
@@ -132,7 +132,8 @@ object UIIndex {
         val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
         val rules = alwaysApplicable ++ maybeSplit
         a match {
-        case _: Assign => "<:=> assign" :: rules
+        case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
+        case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
         case _: AssignAny => "<:*> assign nondet" :: rules
         case _: Test => "<?> test" :: rules
         case _: Compose => "<;> compose" :: rules

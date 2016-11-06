@@ -205,7 +205,8 @@ object AxiomIndex {
 
       case Box(a, post) =>
         a match {
-        case _: Assign => "[:=] assign" :: "[:=] assign equality" :: "[:=] assign update" :: Nil
+        case Assign(_: BaseVariable, _) => "[:=] assign" :: "[:=] assign equality" :: "[:=] assign update" :: Nil
+        case Assign(_: DifferentialSymbol, _) => "[':=] differential assign" :: Nil
         //@todo "[:=] assign equality" does not automatically do the fresh renaming of "assignbTactic", which is not available forward, though.
         //case _: Assign => "assignbTactic" :: Nil
         case _: AssignAny => "[:*] assign nondet" :: Nil
@@ -235,7 +236,8 @@ object AxiomIndex {
       }
 
       case Diamond(a, _) => a match {
-        case _: Assign => "<:=> assign" :: "<:=> assign equality all" :: "<:=> assign equality" :: Nil
+        case Assign(_: BaseVariable, _) => "<:=> assign" :: "<:=> assign equality all" :: "<:=> assign equality" :: Nil
+        case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: Nil
         case _: AssignAny => "<:*> assign nondet" :: Nil
         case _: Test => "<?> test" :: Nil
         case _: Compose => "<;> compose" :: Nil
