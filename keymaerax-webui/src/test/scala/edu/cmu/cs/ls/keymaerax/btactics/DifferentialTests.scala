@@ -722,13 +722,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z)}]x>=old".asFormula)
   }
 
-  it should "retain existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
+  it should "already rewrite existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       diffCut("x>=old(x)".asFormula)(1))
     result.subgoals should have size 2
-    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2 & true & x>=x_0}]x>=0".asFormula)
-    result.subgoals(1).ante should contain theSameElementsAs List("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(1).ante should contain theSameElementsAs List("x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2}]x>=x_0".asFormula)
   }
 
@@ -736,9 +736,9 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("dx^2+dy^2=1".asFormula), IndexedSeq("[{dx'=0,dy'=0}]dx^2+dy^2=1".asFormula)),
       diffCut("dx=old(dx) & dy=old(dy)".asFormula)(1))
     result.subgoals should have size 2
-    result.subgoals.head.ante should contain theSameElementsAs List("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("dx_0^2+dy_0^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{dx'=0,dy'=0&true&dx=dx_0&dy=dy_0}]dx^2+dy^2=1".asFormula)
-    result.subgoals(1).ante should contain theSameElementsAs List("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals(1).ante should contain theSameElementsAs List("dx_0^2+dy_0^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
     result.subgoals(1).succ should contain theSameElementsAs List("[{dx'=0,dy'=0}](dx=dx_0&dy=dy_0)".asFormula)
   }
 
@@ -746,11 +746,11 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1))
     result.subgoals should have size 3
-    result.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asFormula)
     result.subgoals(1).ante should contain theSameElementsAs List("v>=0".asFormula, "x>0".asFormula)
     result.subgoals(1).succ should contain theSameElementsAs List("[{x'=v,v'=2}]v>=0".asFormula)
-    result.subgoals(2).ante should contain theSameElementsAs List("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(2).ante should contain theSameElementsAs List("v>=0".asFormula, "x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals(2).succ should contain theSameElementsAs List("[{x'=v,v'=2 & true & v>=0}]x>=x_0".asFormula)
   }
 
@@ -839,13 +839,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2 & (x>=0 | y<z)}]x>=old".asFormula
   }
 
-  it should "retain existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
+  it should "already rewrite existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>x>=0".asFormula)),
       diffCut("x>=old(x)".asFormula)(1))
     result.subgoals should have size 2
-    result.subgoals.head.ante should contain only ("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain only "<{x'=2 & true & x>=x_0}>x>=0".asFormula
-    result.subgoals(1).ante should contain only ("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(1).ante should contain only ("x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals(1).succ should contain only "[{x'=2}]x>=x_0".asFormula
   }
 
@@ -853,9 +853,9 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("dx^2+dy^2=1".asFormula), IndexedSeq("<{dx'=0,dy'=0}>dx^2+dy^2=1".asFormula)),
       diffCut("dx=old(dx) & dy=old(dy)".asFormula)(1))
     result.subgoals should have size 2
-    result.subgoals.head.ante should contain only ("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals.head.ante should contain only ("dx_0^2+dy_0^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
     result.subgoals.head.succ should contain only "<{dx'=0,dy'=0&true&dx=dx_0&dy=dy_0}>dx^2+dy^2=1".asFormula
-    result.subgoals(1).ante should contain only ("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals(1).ante should contain only ("dx_0^2+dy_0^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
     result.subgoals(1).succ should contain only "[{dx'=0,dy'=0}](dx=dx_0&dy=dy_0)".asFormula
   }
 
@@ -863,11 +863,11 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("<{x'=v,v'=2}>x>=0".asFormula)),
       diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1))
     result.subgoals should have size 3
-    result.subgoals.head.ante should contain only ("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.ante should contain only ("v>=0".asFormula, "x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain only "<{x'=v,v'=2 & (true & v>=0) & x>=x_0}>x>=0".asFormula
     result.subgoals(1).ante should contain only ("v>=0".asFormula, "x>0".asFormula)
     result.subgoals(1).succ should contain only "[{x'=v,v'=2}]v>=0".asFormula
-    result.subgoals(2).ante should contain only ("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(2).ante should contain only ("v>=0".asFormula, "x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals(2).succ should contain only "[{x'=v,v'=2 & true & v>=0}]x>=x_0".asFormula
   }
 
@@ -890,7 +890,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffInvariant("v>=old(v)".asFormula)(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "x>0".asFormula, "v_0=v".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("v_0>=0".asFormula, "x>0".asFormula, "v_0=v".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=v,v'=2 & (true & v>=v_0)}]x>=0".asFormula)
   }
 
@@ -898,7 +898,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("dx^2+dy^2=1".asFormula), IndexedSeq("[{dx'=0,dy'=0}]dx^2+dy^2=1".asFormula)),
       diffInvariant("dx=old(dx) & dy=old(dy)".asFormula)(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("dx^2+dy^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("dx_0^2+dy_0^2=1".asFormula, "dx_0=dx".asFormula, "dy_0=dy".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{dx'=0,dy'=0&true&dx=dx_0&dy=dy_0}]dx^2+dy^2=1".asFormula)
   }
 
@@ -914,7 +914,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asFormula)
   }
 

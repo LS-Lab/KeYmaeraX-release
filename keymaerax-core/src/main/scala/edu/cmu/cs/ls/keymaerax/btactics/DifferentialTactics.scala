@@ -287,7 +287,7 @@ private object DifferentialTactics {
           case _ => TacticHelper.freshNamedSymbol(Variable("old"), sequent)
         }
         (old -> ghost,
-          discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos))
+          discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) & TactixLibrary.exhaustiveEqR2L(hide=false)('Llast))
       }).toList
       ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
     }
