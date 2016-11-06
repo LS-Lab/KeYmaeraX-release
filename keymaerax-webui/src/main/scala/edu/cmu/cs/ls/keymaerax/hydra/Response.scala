@@ -14,7 +14,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Fixed, PosInExpr, PositionLocator, TacticDiff}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.Location
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Location}
 import spray.json._
 import java.io.{PrintWriter, StringWriter}
 
@@ -158,12 +158,14 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
   val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(monitor))
   val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(monitor))
+  val fmlPlainString = JsString(KeYmaeraXPrettyPrinter(monitor))
 
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "monitor" -> JsObject(
       "html" -> fmlHtml,
-      "string" -> fmlString
+      "string" -> fmlString,
+      "plainString" -> fmlPlainString
     )
   )
 }

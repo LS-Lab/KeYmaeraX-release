@@ -68,10 +68,7 @@
         </form>
     </div>
     <div class="well" ng-if="mxdata.monitor !== undefined">
-        <k4-formula user-id="" proof-id="" node-id=""
-                    formula="mxdata.monitor" highlight="false" collapsed="false"
-                    on-tactic=""
-                    on-input-tactic=""></k4-formula>
+        <span class="k4-formula-preformat">{{mxdata.monitor.plainString}}</span>
     </div>
 </div>
 <div class="modal-footer">
