@@ -167,7 +167,16 @@ object ModelPlex extends ModelPlexTrait {
     // keep ODEs, solve later
     case Diamond(ODESystem(_, _), _) => Nil
     case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) & (locateT(AxiomaticODESolver.axiomaticSolve()::Nil)(pos)*))
+  })(pos) & solveAllIn(pos))
+
+  /** Solve all ODEs somewhere underneath pos */
+  private def solveAllIn: DependentPositionTactic = TacticFactory.anon((pos: Position, sequent: Sequent) => {
+    val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
+      case (Diamond(_: ODESystem, _), pp) => Some(AxiomaticODESolver.axiomaticSolve()(pp))
+      case _ => None
+    })
+    positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  })
 
   /**
    * ModelPlex sequent-style synthesis technique, i.e., with branching so that the tactic can operate on top-level
@@ -275,17 +284,17 @@ object ModelPlex extends ModelPlexTrait {
    */
   def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic = "Modelplex Locate" by ((pos: Position, sequent: Sequent) => {
     require(tactics.nonEmpty, "At least 1 tactic required")
-    val here = tactics.map(_(pos) partial).reduceRight[BelleExpr]((t, comp) => (t | comp) partial)
+    val here = tactics.map(_(pos)).reduceRight[BelleExpr](_ | _)
 
     def recurseOnFormula(p: Position) = sequent.sub(p) match {
-      case Some(_: Formula) => locateT(tactics)(p) partial
+      case Some(_: Formula) => locateT(tactics)(p)
       case _ => DebuggingTactics.error("Stop recursion")
     }
 
     val left: BelleExpr = recurseOnFormula(pos ++ PosInExpr(0::Nil))
     val right: BelleExpr = recurseOnFormula(pos ++ PosInExpr(1::Nil))
 
-    ((here partial) | (((left partial) | (right partial)) partial)) partial
+    here | left | right
   })
 
   /** Returns the position of the outermost universal quantifier underneath position p in sequent s, if any. None otherwise. */
