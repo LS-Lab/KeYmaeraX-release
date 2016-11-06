@@ -139,7 +139,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(0=cpost()&(cpost()*fpost()+lpost()=cpost()*fpost()+l&(fpost() < cpost()&(cpost()=ep&ep*fpost()+l>=cpost()*fpost()|ep>cpost()&cpost()*fpost()+l>=cpost()*fpost())|(ep>=cpost()&cpost()*fpost()+l>=cpost()*fpost())&fpost()>cpost())|((fpost()=cpost()&l=lpost())&ep>=cpost())&lpost()>=cpost())|(cpost()>0&ep>=cpost())&(l>=0&(fpost()=0&l=lpost()|lpost()=cpost()*fpost()+l&fpost()>0)|(lpost()=cpost()*fpost()+l&fpost() < 0)&cpost()*fpost()+l>=0))".asFormula
+    result.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(0=cpost()&(lpost()=l&(fpost() < 0&(0=ep&l>=0|ep>0&l>=0)|(ep>=0&l>=0)&fpost()>0)|((fpost()=0&l=lpost())&ep>=0)&l>=0)|(cpost()>0&ep>=cpost())&(l>=0&(fpost()=0&l=lpost()|lpost()=cpost()*fpost()+l&fpost()>0)|(lpost()=cpost()*fpost()+l&fpost() < 0)&cpost()*fpost()+l>=0))".asFormula
   }
 
   it should "find correct model monitor condition by chase" in withMathematica { tool =>
@@ -152,7 +152,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(0=cpost()&(cpost()*fpost()+lpost()=cpost()*fpost()+l&(fpost() < cpost()&(cpost()=ep&ep*fpost()+l>=cpost()*fpost()|ep>cpost()&cpost()*fpost()+l>=cpost()*fpost())|(ep>=cpost()&cpost()*fpost()+l>=cpost()*fpost())&fpost()>cpost())|((fpost()=cpost()&l=lpost())&ep>=cpost())&lpost()>=cpost())|(cpost()>0&ep>=cpost())&(l>=0&(fpost()=0&l=lpost()|lpost()=cpost()*fpost()+l&fpost()>0)|(lpost()=cpost()*fpost()+l&fpost() < 0)&cpost()*fpost()+l>=0))".asFormula
+    result.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(0=cpost()&(lpost()=l&(fpost() < 0&(0=ep&l>=0|ep>0&l>=0)|(ep>=0&l>=0)&fpost()>0)|((fpost()=0&l=lpost())&ep>=0)&l>=0)|(cpost()>0&ep>=cpost())&(l>=0&(fpost()=0&l=lpost()|lpost()=cpost()*fpost()+l&fpost()>0)|(lpost()=cpost()*fpost()+l&fpost() < 0)&cpost()*fpost()+l>=0))".asFormula
   }
 
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in {
