@@ -479,7 +479,7 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
         "classpath:/examples/tutorials/cpsweek/cpsweek.json",
         "/examples/tutorials/cpsweek/cpsweek.png") ::
       new ExamplePOJO(2, "FM 2016 Tutorial",
-        "Proof-by-pointing and tactics",
+        "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.json",
         "/examples/tutorials/fm/fm.png") ::
