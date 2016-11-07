@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, Generator}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, Generator, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term, Variable}
 
 /**
@@ -15,7 +15,9 @@ object ReflectiveExpressionBuilder {
       if (info.needsGenerator) {
         generator match {
           case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](theGenerator)
-          case None => throw new ReflectiveExpressionBuilderExn(s"Need a generator for tactic ${info.codeName} but none was provided.")
+          case None =>
+            println(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
+            info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](TactixLibrary.invGenerator)
         }
       } else {
         info.belleExpr
