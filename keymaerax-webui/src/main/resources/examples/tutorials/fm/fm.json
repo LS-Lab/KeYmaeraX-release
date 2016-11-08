@@ -37,7 +37,7 @@
       "name": "Formal Methods Tutorial Example 5",
       "description": "Simple model of steering, car avoids collision with other cars.",
       "title": "2-dimensional car",
-      "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=130",
+      "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=131",
       "model": "classpath:/examples/tutorials/fm/04_car.kyx",
       "tactic": "classpath:/examples/tutorials/fm/04_car.kyt"
     }
