@@ -1715,4 +1715,9 @@ trait UnifyUSCalculus {
     } ensuring(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
     doChase(de,pos)
   }
+
+  def fromAxIndex(s:String) : (Provable,PosInExpr, List[PosInExpr]) = {
+    val (ax,rec) = AxiomIndex.axiomIndex(s)
+    (ProvableInfo(s).provable,ax,rec)
+  }
 }

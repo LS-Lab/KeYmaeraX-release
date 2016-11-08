@@ -673,11 +673,6 @@ object IntervalArithmetic {
     }
   }
 
-  private def fromAxIndex(s:String) : (Provable,PosInExpr, List[PosInExpr]) = {
-    val (ax,rec) = AxiomIndex.axiomIndex(s)
-    (ProvableInfo(s).provable,ax,rec)
-  }
-
   private val equivExpand = proveBy("(p_() <-> q_()) <-> ((p_() -> q_()) & (q_() -> p_()))".asFormula,prop)
 
   private val minusExpand = proveBy("f_()-g_() = f_() +(-g_())".asFormula,QE)
