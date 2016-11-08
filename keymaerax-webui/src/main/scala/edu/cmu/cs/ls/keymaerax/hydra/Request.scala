@@ -482,7 +482,7 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.json",
-        "/examples/tutorials/fm/fm.png")
+        "/examples/tutorials/fm/fm.png") ::
       Nil
     new ListExamplesResponse(examples) :: Nil
   }
