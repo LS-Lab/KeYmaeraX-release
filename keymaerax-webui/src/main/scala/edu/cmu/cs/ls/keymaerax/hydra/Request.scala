@@ -478,11 +478,11 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
         "classpath:/examples/tutorials/cpsweek/cpsweek.json",
         "/examples/tutorials/cpsweek/cpsweek.png") ::
-      new ExamplePOJO(2, "FM 2016 Tutorial",
+      new ExamplePOJO(1, "FM 2016 Tutorial",
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.json",
-        "/examples/tutorials/fm/fm.png") ::
+        "/examples/tutorials/fm/fm.png")
       Nil
     new ListExamplesResponse(examples) :: Nil
   }
