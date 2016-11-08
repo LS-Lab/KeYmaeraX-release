@@ -22,6 +22,8 @@ import scala.collection.immutable._
   * @author Yong Kiam Tan
   */
 object IsabelleSyntax {
+  /** @todo implement */
+  def fromAxIndex(s:String) = ???
 
   private val DEBUG = true
 
