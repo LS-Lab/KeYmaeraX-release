@@ -703,6 +703,12 @@ class ModelplexTacticTests extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  it should "prove stopsign with v change and disturbance" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   it should "find correct controller monitor for stopsign" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -736,6 +742,22 @@ class ModelplexTacticTests extends TacticTestBase {
     stop shouldBe "0<=ep&(xpost()=x&vpost()=0)&tpost()=0".asFormula
   }
 
+  it should "find correct controller monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
+
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*) & SimplifierV2.simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&0<=ep&(xpost()=x&vpost()=v)&tpost()=0|0<=ep&(((xpost()=x&vpost()=0)&dpost()=0)&cpost()=0)&tpost()=0".asFormula
+
+    val Or(acc,stop) = result.subgoals.head.succ.head
+    acc shouldBe "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&0<=ep&(xpost()=x&vpost()=v)&tpost()=0".asFormula
+    stop shouldBe "0<=ep&(((xpost()=x&vpost()=0)&dpost()=0)&cpost()=0)&tpost()=0".asFormula
+  }
+
   it should "find correct model monitor for stopsign" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -767,6 +789,22 @@ class ModelplexTacticTests extends TacticTestBase {
     val Or(acc,stop) = result.subgoals.head.succ.head
     acc shouldBe "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x".asFormula
     stop shouldBe "((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0".asFormula
+  }
+
+  it should "find correct model monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
+
+    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*) & SimplifierV2.simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&((0<=tpost()&ep>=tpost())&-1*tpost()*(cpost()+dpost()+v)+xpost()=x)&v=vpost()|((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0".asFormula
+
+    val Or(acc,stop) = result.subgoals.head.succ.head
+    acc shouldBe "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&((0<=tpost()&ep>=tpost())&-1*tpost()*(cpost()+dpost()+v)+xpost()=x)&v=vpost()".asFormula
+    stop shouldBe "((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0".asFormula
   }
 
 //
