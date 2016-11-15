@@ -1,0 +1,5 @@
+implyR(1) & andL('L)* & loop({`v>=0&x+v^2/(2*b)<=S`}, 1) & <(
+  QE,
+  QE,
+  composeb(1) & composeb(1.1) & diffSolve(1.1.1) & unfold & doall(QE)
+  )

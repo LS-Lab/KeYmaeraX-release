@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, PosInExpr, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
@@ -12,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 
@@ -688,6 +690,85 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, foResult, "VSL controller monitor (forward chase without Opt. 1)")
     report(expected, opt1Result, "VSL controller monitor (forward chase with Opt. 1)")
   }
+
+  "PLDI" should "prove stopsign" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "prove stopsign with direct v control" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "find correct controller monitor for stopsign" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("v"), Variable("a"), Variable("t"))
+
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*) & SimplifierV2.simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0|v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0|(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0".asFormula
+
+    val Or(acc,Or(coast,brake)) = result.subgoals.head.succ.head
+    acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0".asFormula
+    coast shouldBe "v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0".asFormula
+    brake shouldBe "(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0".asFormula
+  }
+
+  it should "find correct controller monitor for stopsign with direct v control" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("v"), Variable("t"))
+
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*) & SimplifierV2.simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "S-x>=ep*vpost()&0<=ep&xpost()=x&tpost()=0|0<=ep&(xpost()=x&vpost()=0)&tpost()=0".asFormula
+
+    val Or(acc,stop) = result.subgoals.head.succ.head
+    acc shouldBe "S-x>=ep*vpost()&0<=ep&xpost()=x&tpost()=0".asFormula
+    stop shouldBe "0<=ep&(xpost()=x&vpost()=0)&tpost()=0".asFormula
+  }
+
+  it should "find correct model monitor for stopsign" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("v"), Variable("a"), Variable("t"))
+
+    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*) & SimplifierV2.simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((ep=0&0=tpost())&((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&x=xpost())&v>0)|(A=apost()&A>0)&((v=0&vpost()=0)&xpost()=x|(v=vpost()&xpost()=x)&v>0))|ep>0&(((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&xpost()=tpost()*v+x)&v>0))&((ep=tpost()|0=tpost())|0 < tpost()&tpost() < ep)|(A=apost()&A>0)&(((v=0&vpost()=A*tpost())&xpost()=1/2*A*(-1*tpost())^2+x|(vpost()=A*tpost()+v&xpost()=1/2*A*(-1*tpost())^2+tpost()*v+x)&v>0)&(ep=tpost()|0 < tpost()&tpost() < ep)|0=tpost()&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0))))|v=0&(((0<=tpost()&ep>=tpost())&xpost()=x)&0=vpost())&apost()=0|((ep=0&0=tpost())&apost()+b=0)&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0)|(ep>0&apost()+b=0)&(((v=b*tpost()+vpost()&b*(-1*tpost())^2+2*(-1*tpost()*v+-1*x+xpost())=0)&v>0)&((ep=tpost()&b<=ep^-1*v|0=tpost())|(tpost() < ep&0 < tpost())&b*tpost()<=v)|((0=tpost()&v=0)&vpost()=0)&2*xpost()=2*x)".asFormula
+
+    val Or(acc,Or(coast,brake)) = result.subgoals.head.succ.head
+    acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((ep=0&0=tpost())&((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&x=xpost())&v>0)|(A=apost()&A>0)&((v=0&vpost()=0)&xpost()=x|(v=vpost()&xpost()=x)&v>0))|ep>0&(((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&xpost()=tpost()*v+x)&v>0))&((ep=tpost()|0=tpost())|0 < tpost()&tpost() < ep)|(A=apost()&A>0)&(((v=0&vpost()=A*tpost())&xpost()=1/2*A*(-1*tpost())^2+x|(vpost()=A*tpost()+v&xpost()=1/2*A*(-1*tpost())^2+tpost()*v+x)&v>0)&(ep=tpost()|0 < tpost()&tpost() < ep)|0=tpost()&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0))))".asFormula
+    coast shouldBe "v=0&(((0<=tpost()&ep>=tpost())&xpost()=x)&0=vpost())&apost()=0".asFormula
+    brake shouldBe "((ep=0&0=tpost())&apost()+b=0)&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0)|(ep>0&apost()+b=0)&(((v=b*tpost()+vpost()&b*(-1*tpost())^2+2*(-1*tpost()*v+-1*x+xpost())=0)&v>0)&((ep=tpost()&b<=ep^-1*v|0=tpost())|(tpost() < ep&0 < tpost())&b*tpost()<=v)|((0=tpost()&v=0)&vpost()=0)&2*xpost()=2*x)".asFormula
+  }
+
+  it should "find correct model monitor for stopsign with direct v control" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("v"), Variable("t"))
+
+    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*) & SimplifierV2.simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x|((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0".asFormula
+
+    val Or(acc,stop) = result.subgoals.head.succ.head
+    acc shouldBe "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x".asFormula
+    stop shouldBe "((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0".asFormula
+  }
+
 //
 //  "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
