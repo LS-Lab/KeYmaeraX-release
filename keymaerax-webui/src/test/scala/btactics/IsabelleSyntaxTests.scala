@@ -77,4 +77,39 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     pff shouldBe 'proved
   }
 
+  "isabelle syntax" should "stopsign control monitor" in withMathematica { qeTool =>
+    val uf = "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0|v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0|(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0".asFormula
+    val (f, pf) = normalise(uf)
+    val (prog, pff) = deriveFormulaProof(f)
+    println(prettyProg(prog))
+    pf shouldBe 'proved
+    pff shouldBe 'proved
+  }
+
+  "isabelle syntax" should "stopsign with direct v control control monitor" in withMathematica { qeTool =>
+    val uf = "S-x>=ep*vpost()&0<=ep&xpost()=x&tpost()=0|0<=ep&(xpost()=x&vpost()=0)&tpost()=0".asFormula
+    val (f, pf) = normalise(uf)
+    val (prog, pff) = deriveFormulaProof(f)
+    println(prettyProg(prog))
+    pf shouldBe 'proved
+    pff shouldBe 'proved
+  }
+
+  "isabelle syntax" should "stopsign model monitor" in withMathematica { qeTool =>
+    val uf = "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((ep=0&0=tpost())&((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&x=xpost())&v>0)|(A=apost()&A>0)&((v=0&vpost()=0)&xpost()=x|(v=vpost()&xpost()=x)&v>0))|ep>0&(((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&xpost()=tpost()*v+x)&v>0))&((ep=tpost()|0=tpost())|0 < tpost()&tpost() < ep)|(A=apost()&A>0)&(((v=0&vpost()=A*tpost())&xpost()=1/2*A*(-1*tpost())^2+x|(vpost()=A*tpost()+v&xpost()=1/2*A*(-1*tpost())^2+tpost()*v+x)&v>0)&(ep=tpost()|0 < tpost()&tpost() < ep)|0=tpost()&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0))))|v=0&(((0<=tpost()&ep>=tpost())&xpost()=x)&0=vpost())&apost()=0|((ep=0&0=tpost())&apost()+b=0)&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0)|(ep>0&apost()+b=0)&(((v=b*tpost()+vpost()&b*(-1*tpost())^2+2*(-1*tpost()*v+-1*x+xpost())=0)&v>0)&((ep=tpost()&b<=ep^-1*v|0=tpost())|(tpost() < ep&0 < tpost())&b*tpost()<=v)|((0=tpost()&v=0)&vpost()=0)&2*xpost()=2*x)".asFormula
+    val (f, pf) = normalise(uf)
+    val (prog, pff) = deriveFormulaProof(f)
+    println(prettyProg(prog))
+    pf shouldBe 'proved
+    pff shouldBe 'proved
+  }
+
+  "isabelle syntax" should "stopsign with direct v control model monitor" in withMathematica { qeTool =>
+    val uf = "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x|((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0".asFormula
+    val (f, pf) = normalise(uf)
+    val (prog, pff) = deriveFormulaProof(f)
+    println(prettyProg(prog))
+    pf shouldBe 'proved
+    pff shouldBe 'proved
+  }
 }
