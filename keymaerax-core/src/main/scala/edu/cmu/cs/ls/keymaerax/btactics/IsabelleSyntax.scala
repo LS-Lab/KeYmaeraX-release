@@ -200,7 +200,7 @@ object IsabelleSyntax {
 
   def prettyTerm(t:Term) : String = {
     t match {
-      case n:Number => "Const "+n.value.toString()
+      case n:Number => "Const (Abs_bword "+n.value.toString()+")"
       case FuncOf(f,Nothing) => "Var func_"+f.name
       case v:Variable => "Var "+v.name
       case Plus(l,r) => "Plus ("+prettyTerm(l)+")"+" ("+prettyTerm(r)+")"
