@@ -210,22 +210,22 @@ object IsabelleSyntax {
         if (f.equals(maxF)) "Max ("+prettyTerm(l) +") ("+ prettyTerm(r)+")"
         else if (f.equals(minF)) "Min ("+prettyTerm(l) +") ("+ prettyTerm(r)+")"
         else ???
-      case FuncOf(f,t) if (axFuncs.contains(f)) =>
-        "Abs ("+prettyTerm(t)+")"
-      case Neg(l) => "Neg ("+prettyTerm(l)
+      //case FuncOf(f,t) if (axFuncs.contains(f)) =>
+      //  "Abs ("+prettyTerm(t)+")"
+      case Neg(l) => "Neg ("+prettyTerm(l)+")"
       case _ => throw new IllegalArgumentException("Unsupported Term: "+t.toString)
     }
   }
 
   def prettyFormula(f:Formula) : String = {
     f match {
-      case LessEqual(l,r) => "Le ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
+      case LessEqual(l,r) => "Leq ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
       case And(l,r) => "And ("+prettyFormula(l)+") ("+prettyFormula(r)+")"
 
       case Or(l,r) => "Or ("+prettyFormula(l)+") ("+prettyFormula(r)+")"
-      case Less(l,r) => "Less ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
-      case Equal(l,r) => "Equal ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
-      case NotEqual(l,r) => "NotEqual ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
+      case Less(l,r) => "Le ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
+      case Equal(l,r) => "Equals ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
+      case NotEqual(l,r) => "Not( Equal ("+prettyTerm(l)+") ("+prettyTerm(r)+") )"
       case _ => throw new IllegalArgumentException("Unsupported formula: "+f.prettyString)
     }
   }
