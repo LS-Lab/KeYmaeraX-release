@@ -200,9 +200,11 @@ object IsabelleSyntax {
 
   def prettyTerm(t:Term) : String = {
     t match {
-      case n:Number => "Const (Abs_bword "+n.value.toString()+")"
-      case FuncOf(f,Nothing) => "Var func_"+f.name
-      case v:Variable => "Var "+v.name
+      case n:Number =>
+        if (n.value>=0) "Const (Abs_bword "+n.value.toString()+")"
+        else "Neg (Const (Abs_bword "+(-n.value).toString()+"))"
+      case FuncOf(f,Nothing) => "Var \"func_"+f.name+"\""
+      case v:Variable => "Var \""+v.name+"\""
       case Plus(l,r) => "Plus ("+prettyTerm(l)+")"+" ("+prettyTerm(r)+")"
       case Times(l,r) => "Times ("+prettyTerm(l)+")"+" ("+prettyTerm(r)+")"
       case FuncOf(f,Pair(l,r)) if (axFuncs.contains(f)) =>
@@ -240,7 +242,7 @@ object IsabelleSyntax {
       //prettyProg(a)+";\n"+prettyProg(b)
       case Assign(x,e) =>
         //Brackets around names not necessary
-        "Assign "+x.name+" ("+prettyTerm(e)+")"
+        "Assign \""+x.name+"\" ("+prettyTerm(e)+")"
       case Test(f) =>
         "Test ("+prettyFormula(f)+")"
       case _ => throw new IllegalArgumentException("Unsupported program: "+p.prettyString)
