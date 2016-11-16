@@ -33,38 +33,33 @@ class IsabelleSyntaxTests extends TacticTestBase  {
 
   "isabelle syntax" should "derive negation bounds" in withMathematica { qeTool =>
     val fml = "a-(x*z+y) > b-(y*z+x)".asFormula
-    val (f,pf) = normalise(fml)
-    val (prog,pff) = deriveFormulaProof(f)
-    pf shouldBe 'proved
-    pff shouldBe 'proved
+    val (prog, pff) = isarSyntax(fml)
     println(pff)
     println(prettyProg(prog))
+    pff shouldBe 'proved
   }
 
   "isabelle syntax" should "derive repeated addition bounds" in withMathematica { qeTool =>
     val fml = "(x+y)+z+((x+y)+z+5) <= a+b".asFormula
-    val (prog,pf) = deriveFormulaProof(fml)
-    pf shouldBe 'proved
-    println(pf)
+    val (prog, pff) = isarSyntax(fml)
+    println(pff)
     println(prettyProg(prog))
+    pff shouldBe 'proved
   }
 
   "isabelle syntax" should "derive lower bounds for different forms of squares" in withMathematica { qeTool =>
     val fml = "x^2<=xopost()^2 & (a+b)^2 <= c^2 | (a+b)^2 <= (c+d)^2".asFormula
-    val (f,pf) = normalise(fml)
-    val (prog,pff) = deriveFormulaProof(f)
-    pf shouldBe 'proved
-    pff shouldBe 'proved
+    val (prog, pff) = isarSyntax(fml)
     println(pff)
     println(prettyProg(prog))
+    pff shouldBe 'proved
   }
 
   "isabelle syntax" should "derive ETCS essentials" in withMathematica { qeTool =>
     val uf = "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=-b| m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=A".asFormula
-    val (f,pf) = normalise(uf)
-    val (prog,pff) = deriveFormulaProof(f)
+    val (prog, pff) = isarSyntax(uf)
+    println(pff)
     println(prettyProg(prog))
-    pf shouldBe 'proved
     pff shouldBe 'proved
   }
 
@@ -73,25 +68,24 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (f,pf) = normalise(uf)
     val (prog,pff) = deriveFormulaProof(f)
     println(prettyProg(prog))
+    println(pff)
     pf shouldBe 'proved
     pff shouldBe 'proved
   }
 
   "isabelle syntax" should "stopsign control monitor" in withMathematica { qeTool =>
     val uf = "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0|v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0|(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0".asFormula
-    val (f, pf) = normalise(uf)
-    val (prog, pff) = deriveFormulaProof(f)
+    val (prog, pff) = isarSyntax(uf)
+    println(pff)
     println(prettyProg(prog))
-    pf shouldBe 'proved
     pff shouldBe 'proved
   }
 
   "isabelle syntax" should "stopsign with direct v control control monitor" in withMathematica { qeTool =>
     val uf = "S-x>=ep*vpost()&0<=ep&xpost()=x&tpost()=0|0<=ep&(xpost()=x&vpost()=0)&tpost()=0".asFormula
-    val (f, pf) = normalise(uf)
-    val (prog, pff) = deriveFormulaProof(f)
+    val (prog, pff) = isarSyntax(uf)
+    println(pff)
     println(prettyProg(prog))
-    pf shouldBe 'proved
     pff shouldBe 'proved
   }
 
@@ -106,10 +100,22 @@ class IsabelleSyntaxTests extends TacticTestBase  {
 
   "isabelle syntax" should "stopsign with direct v control model monitor" in withMathematica { qeTool =>
     val uf = "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x|((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0".asFormula
-    val (f, pf) = normalise(uf)
-    val (prog, pff) = deriveFormulaProof(f)
+    val (prog, pff) = isarSyntax(uf)
+    println(pff)
     println(prettyProg(prog))
-    pf shouldBe 'proved
     pff shouldBe 'proved
+  }
+
+  "isabelle syntax" should "stopsign with direct v control model monitor with disturbance" in withMathematica { qeTool =>
+    val uf = "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&((0<=tpost()&ep>=tpost())&-1*tpost()*(cpost()+dpost()+v)+xpost()=x)&v=vpost()|((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0".asFormula
+    val (prog, pff) = isarSyntax(uf)
+    println(pff)
+    println(prettyProg(prog))
+    pff shouldBe 'proved
+  }
+
+  "isabelle syntax" should "common subformula eliminate" in withMathematica { qeTool =>
+    val uf = "(P() & Q() & R() & A() | P() & A() & R() ) | A() & R()".asFormula
+    println(commonFormulaProof(uf))
   }
 }

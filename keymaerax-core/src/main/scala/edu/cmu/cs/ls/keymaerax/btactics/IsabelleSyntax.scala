@@ -94,24 +94,108 @@ object IsabelleSyntax {
       {
         val (lvars,lctr,lp,lf) = deriveFormulaProgram(l,vars,tempctr)
         return (lvars, lctr, lp,Not(lf))
-
       }
     }
+  }
+
+  def listConj(ls:List[Formula]) : Formula = {
+    ls match {
+      case Nil => True
+      case (x::xs) => And(x,listConj(xs))//Compose(Test(x),listConj(xs))
+    }
+  }
+
+  //Common formula elimination (reverse deMorgan/distributivity) for Or and And
+  def commonFormula(f:Formula) : (Set[Formula],Formula) = {
+    f match{
+      case Or(l,r) =>
+        val (lfs,lp) = commonFormula(l)
+        val (rfs,rp) = commonFormula(r)
+        val common = lfs.intersect(rfs)
+        val ldiff = lfs.diff(common)
+        val rdiff = rfs.diff(common)
+        (common,Or(And(listConj(ldiff.toList),lp),And(listConj(rdiff.toList),rp) ))//Choice(Compose(listConj(ldiff.toList),lp),Compose(listConj(rdiff.toList),rp)))
+      case And(l,r) =>
+        val (lfs,lp) = commonFormula(l)
+        val (rfs,rp) = commonFormula(r)
+        val common = lfs.union(rfs)
+        (common,And(lp,rp))
+      case _ => (Set(f),True)
+    }
+  }
+
+  private val decomposeAnd = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() & Q_() -> PP_() & QQ_())".asFormula,prop)
+  private val decomposeOr = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() | Q_() -> PP_() | QQ_())".asFormula,prop)
+
+  private val lastImplyRi: DependentTactic  = new SingleGoalDependentTactic("lastImplyRi") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      assert(sequent.ante.length > 0)
+      implyRi(AntePos(sequent.ante.length-1),SuccPos(0))
+    }
+  }
+
+  def commonFormulaProof(f:Formula) : (Formula,Provable) = {
+    val (fs,fu) = commonFormula(f)
+    val ff = And(listConj(fs.toList),fu)
+
+    (ff,proveBy(Imply(ff,f),
+      (OnAll(?
+      (implyR(1) & andL('Llast) & lastImplyRi & (andL('_)*) &
+        ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
+          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_)))))*) & prop))
+  }
+
+
+  def compileFormula(f:Formula) : Program = {
+    f match {
+      case Or(l,r) => Choice(compileFormula(l),compileFormula(r))
+      case And(l,r) => Compose(compileFormula(l),compileFormula(r))
+      case _ => Test(f)
+    }
+  }
+
+  def compileFormulaProof(f:Formula) :Provable = {
+    val prog = compileFormula(f)
+    proveBy(Imply(Diamond(prog,True),Diamond(Test(f),True)),
+      chase(3,3)(SuccPosition(1,0::Nil)) &
+        chase(3,3)(SuccPosition(1,1::Nil)) &
+        //TODO: This is slow
+        prop)
   }
 
   def debugPrint(str:String) : BelleExpr =
     if (DEBUG) print(str) else ident
 
-  def deriveFormulaProof(f:Formula) : (Program,Provable) =
+  private def default(ax:Provable) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+
+  def deriveFormulaProof(f:Formula,decompose:Boolean=false) : (Program,Provable) =
   {
     val(_,_,pinit,ff) = deriveFormulaProgram(f)
-    val prog = Compose(stripNoOp(pinit),Test(ff))
+    //val prog = Compose(stripNoOp(pinit),Test(ff))
+    val formula = if(decompose)compileFormula(ff) else Test(ff)
+    val prog = Compose(stripNoOp(pinit),formula)
 
     val pf = proveBy(Imply(Diamond(prog,True),f),
       chase(3,3)(SuccPosition(1,0::Nil)) & prop)
-
-    //Decompose the big formula if desired here
     (prog,pf)
+
+    //    chase(3,3)(SuccPosition(1,0::Nil)) & implyR(1) & close)
+
+    //    if(decompose)
+    //    {
+    //
+    //      val split = useFor("<;> compose")(SuccPosition(1,0::Nil))(pf)
+    //      val compf = compileFormulaProof(ff)
+    //      val change = useFor(compf,PosInExpr(1::Nil))(SuccPosition(1,0::1::Nil))(split)
+    //      val reassm = useFor("<;> compose",PosInExpr(1::Nil))(SuccPosition(1,0::Nil))(change)
+    ////      val retprog = reassm.conclusion.succ(0).sub(PosInExpr(1::Nil)).get
+    //      println("exp",reassm)
+    //      (prog,pf)
+    //
+    //    }
+    //    else
+    //      //No decomposition
+    //      (prog,pf)
   }
 
   def prettyTerm(t:Term) : String = {
@@ -149,8 +233,8 @@ object IsabelleSyntax {
   def prettyProg(p:Program) : String = {
     p match {
       //If-then-else encoding
-      case Choice(Compose(Test(f),e1),Compose(Test(Not(ff)),e2)) if ff.equals(f) =>
-        "If ("+prettyFormula(f)+") ("+prettyProg(e1)+") ("+prettyProg(e2)+")"
+      case Choice(a,b) =>
+        "Choice ("+prettyProg(a)+") ("+prettyProg(b)+")"
       case Compose(a,b) =>
         "Seq ("+prettyProg(a)+") ("+prettyProg(b)+")"
       //prettyProg(a)+";\n"+prettyProg(b)
@@ -229,6 +313,23 @@ object IsabelleSyntax {
 
     val fml = arith.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
     return (fml,arith)
+  }
+
+  //Merging everything together
+  def isarSyntax(f:Formula) : (Program,Provable) = {
+    val (normf, normproof) = normalise(f) //normf <-> f
+    val (commf, commproof) = commonFormulaProof(normf) //commf -> normf
+    val (simpf, simpproof) = formulaSimp(commf) //simpf <-> commf
+    val (prog, pff) = deriveFormulaProof(simpf,true)
+
+    //todo: Something is wrong with useFor
+    val compose = proveBy(Imply(Diamond(prog,True),f),
+      implyR(1) & useAt(normproof)(1) & useAt(commproof,PosInExpr(1::Nil))(1) & useAt(simpproof,PosInExpr(0::Nil))(1) &
+      lastImplyRi & by(pff)
+    )
+
+    (prog,compose)
+
   }
 
 }
