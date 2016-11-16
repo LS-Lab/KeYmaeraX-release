@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
+import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -35,7 +36,7 @@ object KeYmaeraX {
       |
       |Usage: java -Xss20M -jar keymaerax.jar
       |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
-      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym] |
+      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym] [-isar] |
       |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse filename.kyx |
@@ -134,6 +135,7 @@ object KeYmaeraX {
       case "-modelplex" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
         else optionErrorReporter("-modelPlex")
+      case "-isar" :: tail => nextOption(map ++ Map('isar -> true), tail)
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
@@ -424,6 +426,7 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val verifyOption = options.getOrElse('verify, false).asInstanceOf[Boolean]
+    val isarOption = options.getOrElse('isar,false).asInstanceOf[Boolean]
     val inputFileName = inputFileNameDotKey.dropRight(4)
     var outputFileName = inputFileName
     if(options.contains('out)) {
@@ -453,6 +456,16 @@ object KeYmaeraX {
     pw.write("/**\n * @param variables are for the state before the controller run\n * @param post() function symbols are for the state after the controller run\n * @param other function symbols are constant\n */\n\n")
     pw.write(output)
     pw.close()
+
+    if(isarOption) {
+
+      val pw2 = new PrintWriter(outputFileName + ".isar")
+      val (prog,proof) = isarSyntax(outputFml)
+      pw2.write("/************************************\n * Pretty printer syntax for Isabelle/HOL import \n ************************************/\n\n")
+      pw2.write(prettyProg(prog))
+      pw2.close()
+
+    }
   }
 
 

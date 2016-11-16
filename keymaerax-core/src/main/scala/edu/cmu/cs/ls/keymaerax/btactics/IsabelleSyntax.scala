@@ -213,7 +213,7 @@ object IsabelleSyntax {
       case FuncOf(f,t) if (axFuncs.contains(f)) =>
         "Abs ("+prettyTerm(t)+")"
       case Neg(l) => "Neg ("+prettyTerm(l)
-      case _ => "Unsupported Term: "+t.toString
+      case _ => throw new IllegalArgumentException("Unsupported Term: "+t.toString)
     }
   }
 
@@ -226,7 +226,7 @@ object IsabelleSyntax {
       case Less(l,r) => "Less ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
       case Equal(l,r) => "Equal ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
       case NotEqual(l,r) => "NotEqual ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
-      case _ => "Unsupported: "+f.prettyString
+      case _ => throw new IllegalArgumentException("Unsupported formula: "+f.prettyString)
     }
   }
 
@@ -243,7 +243,7 @@ object IsabelleSyntax {
         "Assign "+x.name+" ("+prettyTerm(e)+")"
       case Test(f) =>
         "Test ("+prettyFormula(f)+")"
-      case _ => "Unsupported: "+p.prettyString
+      case _ => throw new IllegalArgumentException("Unsupported program: "+p.prettyString)
     }
   }
 
