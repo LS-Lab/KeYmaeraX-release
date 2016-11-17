@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
 
 /**
   * These are all translated by hand from the supplementary material of
@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
   * @author Nathan Fulton
   */
 @SlowTest
+@IgnoreInBuildTest // test runs forever, queues up and ruins all builds
 class Arch2016InvariantBenchmarks extends TacticTestBase {
   "ahmadi_parrilo_kristic" should "prove by ODE" in withMathematica(qeTool => {
     val system = "x'=-x+x*y, y'=-y, t'=1".asDifferentialProgram
