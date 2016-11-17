@@ -90,13 +90,13 @@ class AutoDGTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
-  it should "prove x>=0 -> [{x'=c*x+d*x^2+e*x^3}]x>=0" in withMathematica(qeTool => {
+  it should "prove x>=0 -> [{x'=c*x+d*x^2+e*x^3}]x>=0" ignore withMathematica(qeTool => {
     val f = "x>=0 -> [{x'=c*x+d*x^2+e*x^3}]x>=0".asFormula
     val t = TactixLibrary.implyR(1) & DifferentialTactics.dgZeroPolynomial(1)
     proveBy(f,t) shouldBe 'proved //@todo actually not sure dgZeroPolynomialDerivative is the right tactic for this.
   })
 
-  it should "prove x=0 -> [{x'=x^2}]x=0" in withMathematica(qeTool => {
+  it should "prove x=0 -> [{x'=x^2}]x=0" ignore withMathematica(qeTool => {
     val f = "x=0 -> [{x'=x^2}]x=0".asFormula
     val t =  TactixLibrary.implyR(1) & DifferentialTactics.dgZeroPolynomial(1)
     proveBy(f,t) shouldBe 'proved
