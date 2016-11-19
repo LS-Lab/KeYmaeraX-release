@@ -36,7 +36,8 @@ object KeYmaeraX {
       |
       |Usage: java -Xss20M -jar keymaerax.jar
       |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
-      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym] [-isar] |
+      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym]
+      |             [-isar] |
       |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse filename.kyx |
