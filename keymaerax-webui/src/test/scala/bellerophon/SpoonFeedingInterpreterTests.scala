@@ -286,6 +286,6 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
-    tree.nodes should have size 62
+    tree.nodes should have size 50
   }}
 }
