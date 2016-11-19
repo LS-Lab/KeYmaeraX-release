@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
+import scala.language.postfixOps
+
 
 /**
   * Tests BelleExpr pretty printing, for expected string representation plus roundtrip identity with parser.
@@ -50,10 +52,16 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
     roundTrip("transform({`x>0`}, 1)")
   }
 
-  "Operator precedence" should "parenthesize saturate *" in { roundTrip("implyR(1) & (andL('L)*)") }
+  "Operator precedence" should "bind saturate * stronger than &" in { roundTrip("implyR(1) & andL('L)*") }
 
-  it should "parenthesize repeat *times" in { roundTrip("implyR(1) & (andL('L)*2)") }
+  it should "parenthesize & in saturate *" in { roundTrip("(implyR(1) & andL('L))*") }
+
+  it should "bind repeat *times stronger than &" in { roundTrip("implyR(1) & andL('L)*2") }
 
   it should "parenthesize partial" in { roundTrip("implyR(1) & (andL(1) partial)") }
+
+  it should "parenthesize tactic combinators" in {
+    parser(BellePrettyPrinter(TactixLibrary.alphaRule*)) shouldBe (TactixLibrary.alphaRule*)
+  }
 
 }
