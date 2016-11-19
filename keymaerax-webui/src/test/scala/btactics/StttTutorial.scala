@@ -70,7 +70,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
     val tactic = implyR('_) & (andL('_)*) & diffCut("v>=0".asFormula)(1) & Idioms.<(
       diffCut("x>=old(x)".asFormula)(1) & Idioms.<(
-        exhaustiveEqR2L('L, "x0=x".asFormula) & diffWeaken(1) & exhaustiveEqL2R('L, "x_0=x0".asFormula) & prop,
+        diffWeaken(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop,
         diffInd()(1)
       ),
       diffInd()(1)
@@ -82,7 +82,7 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with multi-arg invariant" in withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
     val tactic = implyR('_) & (andL('_)*) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
-      exhaustiveEqR2L('L, "x0=x".asFormula) & diffWeaken(1) & exhaustiveEqL2R('L, "x_0=x0".asFormula) & prop
+      diffWeaken(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
 //    db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -411,7 +411,7 @@ class StttTutorial extends TacticTestBase {
             diffInd()(1)),
           diffInd()(1)),
         diffInd()(1)
-        ) & exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & (andL('_)*) & diffWeaken('R)
+        ) & (andL('L)*) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
@@ -435,8 +435,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
 
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
-      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) &
-      exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & (andL('_)*) & diffWeaken('R)
+      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
