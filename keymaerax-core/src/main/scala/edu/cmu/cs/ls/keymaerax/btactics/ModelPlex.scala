@@ -297,20 +297,6 @@ object ModelPlex extends ModelPlexTrait {
     here | left | right
   })
 
-  /** Returns the position of the outermost universal quantifier underneath position p in sequent s, if any. None otherwise. */
-  private def positionOfOutermostQuantifier(s: Sequent, p: Position): Option[Position] = {
-    var outermostPos: Option[Position] = None
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-        case Forall(_, _) =>
-          outermostPos = Some(p ++ pos)
-          Left(Some(ExpressionTraversal.stop))
-        case _ => Left(None)
-      }
-    }, s.sub(p).getOrElse(throw new IllegalArgumentException("Formula " + s(p.top) + " is not a formula at sub-position " + p.inExpr)).asInstanceOf[Formula])
-    outermostPos
-  }
-
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
     * somewhere in the quantified formula.
     *
@@ -408,60 +394,9 @@ object ModelPlex extends ModelPlexTrait {
 
   /** Simplifies reflexive comparisons and implications/conjunctions/disjunctions with true. */
   def simplify(): DependentTactic = "ModelPlex Simplify" by ((sequent: Sequent) => {
-    simplifyReflexivity & (simplifyTrue*)
+    sequent.ante.indices.map(i => SimplifierV2.simpTac(AntePosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
+    sequent.succ.indices.map(i => SimplifierV2.simpTac(SuccPosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
-
-  /** Simplifies reflexive comparisons to true. */
-  private def simplifyReflexivity: DependentTactic = "ModelPlex Simplify Reflexivity" by ((sequent: Sequent) => {
-    val equalReflexTrue = trueFact("s_()=s_()".asFormula, DerivedAxioms.equalReflex)
-    val geqReflexTrue = trueFact("s_()>=s_()".asFormula, DerivedAxioms.greaterEqualReflex)
-
-    def m(e: Expression) = e match {
-      case Equal(lhs, rhs) => lhs == rhs
-      case GreaterEqual(lhs, rhs) => lhs == rhs
-      case _ => false
-    }
-
-    val positions =
-      sequent.ante.indices.flatMap(i => collectSubpositions(AntePos(i), sequent, m)) ++
-      sequent.succ.indices.flatMap(i => collectSubpositions(SuccPos(i), sequent, m))
-
-    positions.map(p => useAt(equalReflexTrue, PosInExpr(0::Nil))(p) | useAt(geqReflexTrue, PosInExpr(0::Nil))(p)).
-      reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
-  })
-
-  /** Simplifies implications, conjunctions, and disjunctions having one operand true. */
-  private def simplifyTrue: DependentTactic = "ModelPlex Simplify True" by ((sequent: Sequent) => {
-    def m(e: Expression) = e match {
-      case Imply(True, _) => true
-      case Imply(_, True) => true
-      case And(True, _) => true
-      case And(_, True) => true
-      case Or(True, _) => true
-      case Or(_, True) => true
-      case _ => false
-    }
-    val positions =
-      sequent.ante.indices.flatMap(i => collectSubpositions(AntePos(i), sequent, m)) ++
-      sequent.succ.indices.flatMap(i => collectSubpositions(SuccPos(i), sequent, m))
-
-    positions.map(chase(_)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
-  })
-
-  private def trueFact(fact: Formula, factProof: Lemma): Provable =
-    TactixLibrary.proveBy(Equiv(fact, True), equivR(1) <(closeT, cohide(1) & byUS(factProof)))
-
-  /** Collects the subpositions at/under pos that satisfy condition cond. Ordered: reverse depth (deepest first). */
-  private def collectSubpositions(pos: Position, sequent: Sequent, cond: Expression => Boolean): List[Position] = {
-    var positions: List[Position] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-        if (cond(e)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
-      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-        if (cond(t)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
-    }, sequent.sub(pos).get.asInstanceOf[Formula])
-    positions
-  }
 
   private def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
     var result: List[T] = Nil
