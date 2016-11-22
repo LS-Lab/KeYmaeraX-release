@@ -93,4 +93,28 @@ class SimplifierV2Tests extends TacticTestBase {
     pr.isProved shouldBe false
     res shouldBe "v^2<=2*b*(m-z)&b>0&A>=0->[{{?m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);++?m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);}t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m".asFormula
   }
+
+  it should "simplify sole function arguments" in withMathematica { tool =>
+    val fml = "abs(0*1+0)>=0".asFormula
+    val result = proveBy(fml, simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "abs(0)>=0".asFormula
+  }
+
+  it should "simplify multiple function arguments" in withMathematica { tool =>
+    val fml = "max(0*1+0, 0+1*y-0)>=0".asFormula
+    val result = proveBy(fml, simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "max(0,y)>=0".asFormula
+  }
+
+  it should "not choke on noarg functions" in withMathematica { tool =>
+    val fml = "f()>=0".asFormula
+    val result = proveBy(fml, simpTac(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "f()>=0".asFormula
+  }
 }
