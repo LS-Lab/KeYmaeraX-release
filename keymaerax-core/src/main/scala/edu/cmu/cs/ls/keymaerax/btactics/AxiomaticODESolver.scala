@@ -35,7 +35,11 @@ object AxiomaticODESolver {
   def apply() = axiomaticSolve()
 
   def axiomaticSolve() = "diffSolve" by ((pos:Position, s:Sequent) => {
-    val ode = s.apply(pos).asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode
+    val (ode, q) = s.sub(pos) match {
+      case Some(Box(ODESystem(o, qq), _)) => (o, qq)
+      case Some(Diamond(ODESystem(o, qq), _)) => (o, qq)
+    }
+
     val osize = odeSize(ode)
 
     //The position of the ODE after introducing all [x_0:=x;] assignments
@@ -44,6 +48,9 @@ object AxiomaticODESolver {
     val timeAssignmentPos = odePosAfterInitialVals ++ PosInExpr(0::1::1::Nil)
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
+
+    val simpSol = SimplifierV2.simpTac(pos ++ (if (q == True) PosInExpr(0::1::Nil) else PosInExpr(0::1::1::Nil)))
+    val simpEvolDom = if (q == True) TactixLibrary.skip else SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil))
 
     addTimeVar(pos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
@@ -78,9 +85,14 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
     HilbertCalculus.assignb(pos)*(osize+2) & // all initial vals + time_0=time + time=0
     DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
-    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::1::Nil)) &
-    SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
-    DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
+    (if (q == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0::1::0::0::Nil)) &
+                    TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0::1::0::Nil)) &
+                    ( TactixLibrary.useAt("true->")(pos ++ PosInExpr(0::1::Nil))
+                    | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0::1::Nil)))
+     else TactixLibrary.skip) &
+    DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
+    simpSol & simpEvolDom &
+      DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
   })
 
   //endregion
