@@ -114,6 +114,24 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
+  it should "solve double integrator out of order" taggedAs TodoTest ignore withMathematica { qeTool =>
+    val f = "x=1&v=2&a=3&t=0 -> [{v'=a, t'=1, x'=v}]x>=0".asFormula
+    val t = implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->a/2*t_^2+v*t_+x>=0)".asFormula
+  }
+
+  it should "not fail reordering a single ODE" taggedAs TodoTest ignore withMathematica { qeTool =>
+    val f = "t=0 -> [{t'=1}]t>=0".asFormula
+    val t = implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "t=0".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->t_+t>=0)".asFormula
+  }
+
   it should "work with a non-arithmetic post-condition" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
