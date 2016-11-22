@@ -143,6 +143,15 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
+  it should "instantiate with duration when asked" in  withMathematica { qeTool =>
+    val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1 & v>=0}]x>=0".asFormula
+    val t = implyR(1) & AxiomaticODESolver.axiomaticSolve(instEnd = true)(1)
+    val result = proveBy(f,t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0 -> (a*t_+v>=0 -> a/2*t_^2+v*t_+x>=0))".asFormula
+  }
+
   it should "work with a non-arithmetic post-condition" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)

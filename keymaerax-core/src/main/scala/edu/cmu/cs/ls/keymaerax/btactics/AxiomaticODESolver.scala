@@ -34,10 +34,11 @@ object AxiomaticODESolver {
 
   def apply() = axiomaticSolve()
 
-  def axiomaticSolve() = "diffSolve" by ((pos:Position, s:Sequent) => {
+  def axiomaticSolve(instEnd: Boolean = false) = "diffSolve" by ((pos:Position, s:Sequent) => {
     val (ode, q) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
-      case Some(Diamond(ODESystem(o, qq), _)) => (o, qq)
+      case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)
+      case Some(Diamond(ODESystem(o, qq), _)) if  instEnd => throw BelleUserGeneratedError("Cannot instantiate evolution domain check with duration in diamonds")
     }
 
     val osize = odeSize(ode)
@@ -50,7 +51,10 @@ object AxiomaticODESolver {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
     val simpSol = SimplifierV2.simpTac(pos ++ (if (q == True) PosInExpr(0::1::Nil) else PosInExpr(0::1::1::Nil)))
-    val simpEvolDom = if (q == True) TactixLibrary.skip else SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil))
+    val simpEvolDom =
+      if (q == True) TactixLibrary.skip
+      else if (instEnd) SimplifierV2.simpTac(pos ++ PosInExpr(0::Nil))
+      else SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil))
 
     addTimeVar(pos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
@@ -89,6 +93,8 @@ object AxiomaticODESolver {
                     TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0::1::0::Nil)) &
                     ( TactixLibrary.useAt("true->")(pos ++ PosInExpr(0::1::Nil))
                     | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0::1::Nil)))
+     else if (instEnd) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0::1::0::Nil)) &
+                       TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0::1::0::0::0::Nil))
      else TactixLibrary.skip) &
     DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
     simpSol & simpEvolDom &
