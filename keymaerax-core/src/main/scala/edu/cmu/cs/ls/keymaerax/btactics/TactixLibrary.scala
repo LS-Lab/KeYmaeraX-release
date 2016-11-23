@@ -532,6 +532,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleError("partialQE requires a QETool, but got None")))
 
+  /** Splits propositional into many smallest possible QE calls */
+  def atomicQE: BelleExpr = prop & onAll(QE) //@todo less splitting (try with timeouts?)
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
