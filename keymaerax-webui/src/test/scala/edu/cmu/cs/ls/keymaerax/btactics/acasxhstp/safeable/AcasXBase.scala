@@ -45,8 +45,6 @@ class AcasXBase extends TacticTestBase {
   /* Common tactics */
   def dT(s: => String) = /*Tactics.SubLabelBranch(s) &*/ DebuggingTactics.debug(s, doPrint = DEBUG, _.prettyString)
 
-  lazy val crushw = orL('L, "w=-1|w=1".asFormula) & Idioms.<(dT("w=-1") & QE & done, dT("w=1") & QE & done)
-
   def cutEZ(c: Formula, t: BelleExpr) = cut(c) & Idioms.<(skip, /* show */ t & done)
 
   /* Lemmas */

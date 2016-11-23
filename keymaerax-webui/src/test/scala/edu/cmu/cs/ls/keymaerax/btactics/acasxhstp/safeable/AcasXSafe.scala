@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import org.scalatest.Args
 
 import scala.language.postfixOps
 
@@ -53,13 +54,9 @@ class AcasXSafe extends AcasXBase {
       abs('R, "abs(h)".asTerm) &
       abs('L, "abs(r-0)".asTerm)
 
-  private lazy val absmax2 = (abs('R, "abs(r_3-ro_0)".asTerm) | dT("abs(r_3-ro_0) not present")) &
-    ( EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
-      max('L, "max((0,w*(dhf-dhd)))".asTerm) | dT("max(0,w*(dhf-dhd)) not present")) &
-    ( EqualityTactics.abbrv("max((0,w*(dhf-dhd_3)))".asTerm, Some(Variable("maxF"))) &
-      max('L, "max((0,w*(dhf-dhd_3)))".asTerm) | dT("max(0,w*(dhf-dhd_3)) not present"))
-
   "ACAS X safe" should "prove use case lemma" in withMathematica { tool =>
+    if (lemmaDB.get("nodelay_ucLoLemma").isDefined) lemmaDB.remove("nodelay_ucLoLemma")
+
     val ucLoFormula = Imply(invariant, postcond)
     val ucLoTac = implyR('R) & (andL('L)*) &
       allL(Variable("t"), Number(0))('L) &
@@ -78,39 +75,31 @@ class AcasXSafe extends AcasXBase {
   }
 
   it should "prove lower bound safe lemma" in withMathematica { tool =>
-    // Formula from print after diffSolve in Theorem 1
-    val safeLemmaFormula = """((w*dhd>=w*dhf|w*ao>=a)&t_>=0)&(w*(ao*t_+dhd)>=w*dhf|w*ao>=a)&(((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)&maxI=max((0,w*(dhf-dhd)))->((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h) < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0""".stripMargin.asFormula
+    if (lemmaDB.get("nodelay_safeLoLemma").isDefined) lemmaDB.remove("nodelay_safeLoLemma")
 
-    val safeLemmaTac = dT("lemma") & SimplifierV2.simpTac(1) & dT("Simplified using known facts") & implyR('R) & (andL('L)*) &
-      dT("Before skolem") & (allR('R)*) & dT("After skolem") &
-      implyR('R) & orR('R) & dT("Now what?") &
+    // Formula from print in Theorem 1
+    val safeLemmaFormula = """(w*dhd>=w*dhf|w*ao>=a)&(((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)&maxI=max((0,w*(dhf-dhd)))->[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)""".stripMargin.asFormula
+
+    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & diffSolveEnd('R) &
+      dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
+      SimplifierV2.simpTac(1) & dT("Simplified using known facts") & (allR('R)*) &
       //here we'd want to access previously introduced skolem symbol and
       // time introduced by diffSolution;goal 90
-      allL(Variable("t"), "t_+t".asTerm)('L) & // t_22+t_23: kxtime_5 == t_22, t == t_23
+      allL(Variable("t"), "t_+t".asTerm)('L) & // t_22+t_23: t_ == t_22, t == t_23
       allL(Variable("ro"), "rv*(t_+t)".asTerm)('L) & // rv*(t_22+t_23)
       dT("Before CUT") &
       cut("0<=t+t_&t+t_<maxI/a|t+t_>=maxI/a".asFormula) & Idioms.<(
       /* use */ dT("Use Cut") &
         orL('L, "0<=t+t_&t+t_ < maxI/a|t+t_>=maxI/a".asFormula) & Idioms.<(
-        dT("Goal 110") & hideL('L, initDomain) & // TODO remove this hide
+        dT("Goal 110") & hideL('L, initDomain) &
           allL(Variable("ho"), "w*a/2*(t+t_)^2 + dhd*(t+t_)".asTerm)('L)
           & dT("instantiate ho 1 Lo") &
           implyL('L, "0<=t_+t&t_+t < maxI/a&rv*(t_+t)=rv*(t_+t)&w*a/2*(t+t_)^2+dhd*(t+t_)=w*a/2*(t_+t)^2+dhd*(t_+t)|t_+t>=maxI/a&rv*(t_+t)=rv*(t_+t)&w*a/2*(t+t_)^2+dhd*(t+t_)=dhf*(t_+t)-w*maxI^2/(2*a)->abs(r-rv*(t_+t))>rp|w*h < w*(w*a/2*(t+t_)^2+dhd*(t+t_))-hp".asFormula)
           & Idioms.<(
           dT("left of -> 1 Lo") & orR('R) &
             hideR('R, "t_+t>=maxI/a&rv*(t_+t)=rv*(t_+t)&w*a/2*(t+t_)^2+dhd*(t+t_)=dhf*(t_+t)-w*maxI^2/(2*a)".asFormula) &
-            hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & hideR('R, "w*(-(ao/2*t_^2+dhd*t_)+h)<w*ho-hp".asFormula) &
             hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & QE & done,
-          dT("right of -> 1 Lo") &
-            orL('L, "0<=t&t < max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)".asFormula)
-            & Idioms.<(
-            dT("1-early Lo") &
-              orL('L, "abs(r-rv*(t_+t))>rp|w*h < w*(w*a/2*(t+t_)^2+dhd*(t+t_))-hp".asFormula)
-              & Idioms.<(QE & done, hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & QE & done) & done,
-            dT("1-late Lo") &
-              orL('L, "abs(r-rv*(t_+t))>rp|w*h < w*(w*a/2*(t+t_)^2+dhd*(t+t_))-hp".asFormula)
-              & Idioms.<(QE & done, hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & absmax2 & crushw & done) & done
-          ) & done
+          dT("right of -> 1 Lo") & atomicQE & done
         ) & done,
         dT("final time in straight Lo") &
           allL(Variable("ho"), "dhf*(t+t_) - w*maxI^2/(2*a)".asTerm)('L) &
@@ -119,28 +108,14 @@ class AcasXSafe extends AcasXBase {
           & Idioms.<(
           dT("left of -> 2 Lo") & orR('R) &
             hideR('R, "0<=t_+t&t_+t < maxI/a&rv*(t_+t)=rv*(t_+t)&dhf*(t+t_)-w*maxI^2/(2*a)=w*a/2*(t_+t)^2+dhd*(t_+t)".asFormula) &
-            hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & hideR('R, "w*(-(ao/2*t_^2+dhd*t_)+h)<w*ho-hp".asFormula) &
             hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & QE & done,
-          // also closes with: la(hide, initDomain) & absmax2 & QE
-          dT("right of -> 2 Lo") & (andL('L)*) &
-            orL('L, "0<=t&t < max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)".asFormula)
-            & Idioms.<(
-            dT("2-early Lo") &
-              orL('L, "abs(r-rv*(t_+t))>rp|w*h<w*(dhf*(t+t_)-w*maxI^2/(2*a))-hp".asFormula)
-              & Idioms.<(QE & done, hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & absmax2 & crushw & done) & done,
-            dT("2-late Up") &
-              orL('L, "abs(r-rv*(t_+t))>rp|w*h<w*(dhf*(t+t_)-w*maxI^2/(2*a))-hp".asFormula)
-              & Idioms.<(QE & done, hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & absmax2 & crushw & done) & done
-          ) & done
+          dT("right of -> 2 Lo") & atomicQE & done
         ) & done
       ) & done
       ,
       /* show */ dT("Show Cut") & hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) &
-        hideL('L, "\\forall ho (0<=t_+t&t_+t < maxI/a&rv*(t_+t)=rv*(t_+t)&ho=w*a/2*(t_+t)^2+dhd*(t_+t)|t_+t>=maxI/a&rv*(t_+t)=rv*(t_+t)&ho=dhf*(t_+t)-w*maxI^2/(2*a)->abs(r-rv*(t_+t))>rp|w*h < w*ho-hp)".asFormula)
-        & hideR('R, "abs((-rv)*t_+r-ro)>rp".asFormula) & hideR('R, "w*(-(ao/2*t_^2+dhd*t_)+h)<w*ho-hp".asFormula) &
-        dT("Show Cut 2") & orR('R) &
-        orL('L, "0<=t&t<max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)".asFormula)
-        & (andL('L)*) & (andR('R)*) & dT("End CutShowLbl") & onAll(QE & done) & done
+        hideL('L, "\\forall ho (0<=t_+t&t_+t < maxI/a&rv*(t_+t)=rv*(t_+t)&ho=w*a/2*(t_+t)^2+dhd*(t_+t)|t_+t>=maxI/a&rv*(t_+t)=rv*(t_+t)&ho=dhf*(t_+t)-w*maxI^2/(2*a)->abs(r-rv*(t_+t))>rp|w*h < w*ho-hp)".asFormula) &
+        atomicQE & done
     )
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
@@ -150,7 +125,9 @@ class AcasXSafe extends AcasXBase {
   }
 
   it should "prove Theorem 1: correctness of implicit safe regions" in withMathematica { tool =>
-    //@todo prove use case lemma and lower bound safe lemma if not proved already (call other test cases)
+    if (lemmaDB.get("safe_implicit").isDefined) lemmaDB.remove("safe_implicit")
+
+    //@todo prove use case lemma and lower bound safe lemma if not proved already (call other test cases, but beware of teardown)
 
     /*** Main safe theorem and its tactic ***/
     val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
@@ -188,7 +165,7 @@ class AcasXSafe extends AcasXBase {
               /* show */ dT("After DC 2") & closeId & done
           ) & done
           ,
-          dT("Before diff. solution") & diffSolveEnd('R) & allR('R) & implyR('R)*2 & (andLi*) & implyRi &
+          dT("Preparing for safeLoLemma") & (andLi*) & implyRi &
             by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
           ) /* end orL on cutEZ */
           /* End cutUseLbl "Generalization strong enough" */
