@@ -142,13 +142,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * @see [[onBranch()]]
    * @see [[sublabel()]]
    */
-  def label(s: String): BelleExpr = ??? //new LabelBranch(s)
+  def label(s: String): BelleExpr = skip //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s
     *
     * @see [[label()]]
     */
-  def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
+  def sublabel(s: String): BelleExpr = skip //new SubLabelBranch(s)
 
   // modalities
 
