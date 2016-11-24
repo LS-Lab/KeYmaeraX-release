@@ -5,12 +5,16 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
+import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.{EqualityTactics, Idioms, SimplifierV2}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import org.scalatest.Args
+
+import scala.collection.immutable._
 
 import scala.language.postfixOps
 
@@ -123,57 +127,71 @@ class AcasXSafe extends AcasXBase {
     storeLemma(safeLemma, Some("nodelay_safeLoLemma"))
   }
 
-  it should "prove Theorem 1: correctness of implicit safe regions" in withMathematica { tool =>
-    if (lemmaDB.get("safe_implicit").isDefined) lemmaDB.remove("safe_implicit")
+  it should "prove Theorem 1: correctness of implicit safe regions" in {
+    if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
 
-    //@todo prove use case lemma and lower bound safe lemma if not proved already (call other test cases, but beware of teardown)
+    if (!lemmaDB.contains("nodelay_ucLoLemma")) {
+      println("Proving nodelay_ucLoLemma...")
+      runTest("ACAS X safe should prove use case lemma", Args(nilReporter))
+      println("...done")
+    }
 
-    /*** Main safe theorem and its tactic ***/
-    val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
+    if (!lemmaDB.contains("nodelay_safeLoLemma")) {
+      println("Proving nodelay_safeLoLemma...")
+      runTest("ACAS X safe should prove lower bound safe lemma", Args(nilReporter))
+      println("...done")
+    }
 
-    val safeTac = implyR('R) & (andL('L)*) & loop(invariant)('R) & Idioms.<(
-      dT("Base case") & prop & done
-      ,
-      dT("Use case") & andR('R) & Idioms.<(
-        cohide2(-1, 1) & implyRi & by(lemmaDB.get("nodelay_ucLoLemma").getOrElse(throw new Exception("Lemma nodelay_ucLoLemma must be proved first"))) & done,
-        (andL('L)*) & closeId & done
-        ) & done
-      ,
-      dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
-        dT("Generalization Holds") & chase('R) & SimplifierV2.simpTac('R) & normalize & done
+    withMathematica { tool =>
+      beforeEach()
+
+      /** * Main safe theorem and its tactic ***/
+      val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
+
+      val safeTac = implyR('R) & (andL('L) *) & loop(invariant)('R) & Idioms.<(
+        dT("Base case") & prop & done
         ,
-        dT("Generalization Strong Enough") &
-          EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
-          /*abbrv(Variable("maxI"))(AntePosition(0, PosInExpr(0::1::0::0::0::0::0::0::0::1::1::0::Nil)))*/
-          cutEZ("!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula,
-            cohide('R, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula) & prop & done) &
-          orL('L, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula) & Idioms.<(
-          hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) &
-            hideL('L, "((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>=0&rv>=0&a>0)".asFormula) &
-            dT("Before DI") &
-            // TODO there must be an easier way to use evol domain false initially
-            cutEZ("[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](0=1)".asFormula, // false as postcondition doesn't work
-              hideR('R, "[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>=0&rv>=0&a>0))".asFormula)
-                & diffInd(auto = 'full)('R)) &
-            hideL('L, "!(w*dhd>=w*dhf|w*ao>=a)".asFormula) &
-            dT("After DI") & diffCut("0=1".asFormula)('R) & Idioms.<(
+        dT("Use case") & andR('R) & Idioms.<(
+          cohide2(-1, 1) & implyRi & by(lemmaDB.get("nodelay_ucLoLemma").getOrElse(throw new Exception("Lemma nodelay_ucLoLemma must be proved first"))) & done,
+          (andL('L) *) & closeId & done
+        ) & done
+        ,
+        dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
+          dT("Generalization Holds") & chase('R) & SimplifierV2.simpTac('R) & normalize & done
+          ,
+          dT("Generalization Strong Enough") &
+            EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
+            /*abbrv(Variable("maxI"))(AntePosition(0, PosInExpr(0::1::0::0::0::0::0::0::0::1::1::0::Nil)))*/
+            cutEZ("!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula,
+              cohide('R, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula) & prop & done) &
+            orL('L, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula) & Idioms.<(
+            hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) &
+              hideL('L, "((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>=0&rv>=0&a>0)".asFormula) &
+              dT("Before DI") &
+              // TODO there must be an easier way to use evol domain false initially
+              cutEZ("[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](0=1)".asFormula, // false as postcondition doesn't work
+                hideR('R, "[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>=0&rv>=0&a>0))".asFormula)
+                  & diffInd()('R)) &
+              hideL('L, "!(w*dhd>=w*dhf|w*ao>=a)".asFormula) &
+              dT("After DI") & diffCut("0=1".asFormula)('R) & Idioms.<(
               /* use */ dT("After DC 1") & diffWeaken('R) & dT("after DW") &
-              implyR('R) & andL('L) & cohide('L, "0=1".asFormula) & dT("before QE") & QE & done
+                implyR('R) & andL('L) & cohide('L, "0=1".asFormula) & dT("before QE") & QE & done
               ,
               /* show */ dT("After DC 2") & closeId & done
-          ) & done
-          ,
-          dT("Preparing for safeLoLemma") & (andLi*) & implyRi &
-            by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
+            ) & done
+            ,
+            dT("Preparing for safeLoLemma") & (andLi *) & implyRi &
+              by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
           ) /* end orL on cutEZ */
           /* End cutUseLbl "Generalization strong enough" */
-      ) /* End indStepLbl */
-    )
+        ) /* End indStepLbl */
+      )
 
-    val safeTheorem = proveBy(safeSeq, safeTac)
-    safeTheorem shouldBe 'proved
-    storeLemma(safeTheorem, Some("safe_implicit"))
+      val safeTheorem = proveBy(safeSeq, safeTac)
+      safeTheorem shouldBe 'proved
+      storeLemma(safeTheorem, Some("safe_implicit"))
+    }
   }
 
   it should "prove Lemma 1: equivalence between implicit and explicit region formulation" in withMathematica { tool =>
@@ -534,56 +552,60 @@ class AcasXSafe extends AcasXBase {
     equivalence shouldBe 'proved
     storeLemma(equivalence, Some("safe_equivalence"))
   }
-//
-//  it should "prove Corollary 1: explicit region safety from implicit region safety and conditional equivalence" in {
-//    // proof dependency
-//    // execute other proofs to create lemmas, so that this proof does not fail when run in isolation on
-//    // a fresh machine
-//    if (!(lemmaDB.contains("safe_implicit") && lemmaDB.contains("nodelay_ucLoLemma"))) {
-//      println("Proving safe_implicit lemma and nodelay_ucLoLemma...")
-//      runTest("ACAS X safe should prove Theorem 1: correctness of implicit safe regions", new Args(nilReporter))
-//      println("...done")
-//    }
-//    if (!lemmaDB.contains("safe_equivalence")) {
-//      println("Proving safe_equivalence lemma...")
-//      runTest("ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation", new Args(nilReporter))
-//      println("...done")
-//    }
-//
-//    // rerun initialization (runTest runs afterEach() at the end)
-//    beforeEach()
-//
-//    // load lemmas
-//
-//    val acasximplicit = KeYmaeraXProblemParser(io.Source.fromFile(folder + "safe_implicit.kyx").mkString)
-//    val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromFile(folder + "safe_explicit.kyx").mkString)
-//    val implicitExplicit = KeYmaeraXProblemParser(io.Source.fromFile(folder + "safe_equivalence.kyx").mkString)
-//    val lem = true
-//    val acasximplicitP = if (lem && lemmaDB.contains("safe_implicit")) LookupLemma(lemmaDB, "safe_implicit").lemma.fact else Provable.startProof(acasximplicit)
-//    val implicitExplicitP = if (lem && lemmaDB.contains("safe_equivalence")) LookupLemma(lemmaDB, "safe_equivalence").lemma.fact else Provable.startProof(implicitExplicit)
-//
-//    // extract formula fragments
-//    val equivalence = implicitExplicitP.conclusion.succ.head
-//    val Imply(And(a,w), Equiv(_,i)) = equivalence // extract subformulas A()&W(w) -> (Ce(...)<->Ci(...))
-//    val Imply(And(_, And(_, _)), Box(Loop(_), And(u, _))) = acasximplicit
-//    val ucLoFact = if (lemmaDB.contains("nodelay_ucLoLemma")) LookupLemma(lemmaDB, "nodelay_ucLoLemma").lemma.fact else Provable.startProof(Imply(And(w,And(i,a)), u))
-//    val ucLoLemma = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(a, w, i), IndexedSeq(u)),
-//      cut(ucLoFact.conclusion.succ.head) & onBranch(
-//        (BranchLabels.cutShowLbl, cohide(2) & by(ucLoFact)),
-//        (BranchLabels.cutUseLbl, implyL(-4) & (andR(2) & (andR(2) & (closeId , closeId), closeId), closeId) )
-//      )
-//    )
-//    ucLoLemma.subgoals shouldBe ucLoFact.subgoals
-//    if (!ucLoLemma.isProved) println("Proof will be partial. Prove other lemmas first")
-//
-//    if (!acasximplicitP.isProved || !implicitExplicitP.isProved) println("Proof will be partial. Prove other lemmas first")
-//    val proof = acasXcongruence(implicitExplicitP, acasximplicitP, ucLoLemma, acasxexplicit, QE)
-//
-//    println("Proof has " + proof.subgoals.size + " open goals")
-//    proof shouldBe 'proved
-//    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq(acasxexplicit))
-//    // finalize resulting proof as a lemma
-//    lemmaDB.add(Lemma(proof, ToolEvidence(immutable.Map("input" -> acasxexplicit.toString, "output" -> "true")) :: Nil, Some("safe_explicit")))
-//  }
+
+  it should "prove Corollary 1: explicit region safety from implicit region safety and conditional equivalence" in {
+    // proof dependency
+    // execute other proofs to create lemmas, so that this proof does not fail when run in isolation on
+    // a fresh machine
+    if (!(lemmaDB.contains("safe_implicit") && lemmaDB.contains("nodelay_ucLoLemma"))) {
+      println("Proving safe_implicit lemma and nodelay_ucLoLemma...")
+      runTest("ACAS X safe should prove Theorem 1: correctness of implicit safe regions", Args(nilReporter))
+      println("...done")
+    }
+    if (!lemmaDB.contains("safe_equivalence")) {
+      println("Proving safe_equivalence lemma...")
+      runTest("ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation", Args(nilReporter))
+      println("...done")
+    }
+
+    withMathematica { tool =>
+
+      // rerun initialization (runTest runs afterEach() at the end)
+      beforeEach()
+
+      // load lemmas
+
+      val acasximplicit = KeYmaeraXProblemParser( io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
+      val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_explicit.kyx")).mkString)
+      val implicitExplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
+      val acasximplicitP = lemmaDB.get("safe_implicit").getOrElse(throw new Exception("Proof will be partial. Prove safe_implicit first"))
+      val implicitExplicitP = lemmaDB.get("safe_equivalence").getOrElse(throw new Exception("Proof will be partial. Prove safe_equivalence first"))
+
+      // extract formula fragments
+      val equivalence = implicitExplicitP.fact.conclusion.succ.head
+      val Imply(And(a, w), Equiv(_, i)) = equivalence
+      // extract subformulas A()&W(w) -> (Ce(...)<->Ci(...))
+      val Imply(And(_, And(_, _)), Box(Loop(_), And(u, _))) = acasximplicit
+      val ucLoFact = lemmaDB.get("nodelay_ucLoLemma").getOrElse(throw new Exception("Proof will be partial. Prove nodelay_ucLoLemma first"))
+      val ucLoLemma = proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u)),
+        cut(ucLoFact.fact.conclusion.succ.head) & Idioms.<(
+          /*use*/ prop & done,
+          /*show*/ cohide(2) & by(ucLoFact)
+        )
+      )
+      ucLoLemma shouldBe 'proved
+
+      val proof: Provable = acasXcongruence(implicitExplicitP.fact, acasximplicitP.fact, ucLoLemma, acasxexplicit, QE)
+
+      println("Proof has " + proof.subgoals.size + " open goals")
+      proof shouldBe 'proved
+      proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(acasxexplicit))
+
+      //storeLemma(proof, Some("safe_explicit")) //@todo stack overflow
+    }
+  }
 
 }
