@@ -8,7 +8,10 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Created by nfulton on 10/15/15.
  * @see [[ProofChecker]]
  */
-sealed abstract class ProofTerm()
+sealed abstract class ProofTerm() {
+  def prettyString: String = this.toString //@todo leave this abstract and over-ride in all the cases below.
+}
+//@todo support also positional stuff and proof terms for entire provables...
 case class dLConstant(label: String) extends ProofTerm
 case class FOLRConstant(f : Formula) extends ProofTerm
 case class AndTerm(left: ProofTerm, right: ProofTerm) extends ProofTerm

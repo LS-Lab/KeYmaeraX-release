@@ -19,6 +19,8 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
 import scala.collection.immutable
 
 /*--------------------------------------------------------------------------------*/
@@ -368,11 +370,11 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *  )
   * }}}
   */
-final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
+final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) extends ProvableSig {
   /**
     * Position types for the subgoals of a Provable.
     */
-  type Subgoal = Int
+  override type Subgoal = Int
 
   /**
     * Checks whether this Provable proves its conclusion.
@@ -381,7 +383,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     *         false if subgoals are missing that need to be proved first.
     * @note soundness-critical
     */
-  final def isProved: Boolean = subgoals.isEmpty
+  override final def isProved: Boolean = subgoals.isEmpty
 
   /**
     * What conclusion this Provable proves if isProved.
@@ -456,7 +458,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @requires(subderivation.conclusion == subgoals(subgoal))
     * @note soundness-critical
     */
-  final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
+  final def apply(sd: ProvableSig, subgoal: Subgoal): Provable = {
+    val subderivation = sd.asInstanceOf[Provable]
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
     subderivation.subgoals.toList match {
@@ -471,7 +474,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     "Same conclusion\n" + conclusion + " after joining derivations") ensuring (
     r => subgoals.patch(subgoal, Nil, 1).toSet.subsetOf(r.subgoals.toSet),
     "All previous premises still around except the one replaced by a derivation") ensuring (
-    r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
+    r => sd.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 
   /**
     * Apply a uniform substitution to a (locally sound!) Provable.
@@ -550,11 +553,12 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
-  def apply(prolongation: Provable): Provable = {
+  def apply(abstractProlongation: ProvableSig): Provable = {
+    val prolongation = abstractProlongation.asInstanceOf[Provable]
     //@note it really already works when prolongation.subgoal(0)==conclusion but it's somewhat surprising so disallowed.
     require(prolongation.subgoals.length==1, "Currently only for prolongations with exactly one subgoal\n" + this + "\nwith\n" + prolongation)
     prolongation(this, 0)
-  } ensuring(r => r.conclusion == prolongation.conclusion && r.subgoals == subgoals, "Prolonging proof forward\n" + this + "\nwith\n" + prolongation)
+  } ensuring(r => r.conclusion == abstractProlongation.conclusion && r.subgoals == subgoals, "Prolonging proof forward\n" + this + "\nwith\n" + abstractProlongation)
 
   /**
     * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
