@@ -1276,7 +1276,7 @@ class DifferentialTests extends TacticTestBase {
       diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 2*t_+x>b)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> 2*t_+x>b)".asFormula)
   }
 
   it should "add time" in withMathematica { tool =>
