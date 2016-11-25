@@ -1284,7 +1284,7 @@ class DifferentialTests extends TacticTestBase {
       diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 2*t_+x>b)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> 2*t_+x>b)".asFormula)
   }
 
   it should "work if not sole formula in succedent" in withMathematica { tool =>
@@ -1292,7 +1292,7 @@ class DifferentialTests extends TacticTestBase {
       diffSolve(2))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("a=5".asFormula, "\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 2*t_+x>b)".asFormula, "c>2".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("a=5".asFormula, "\\forall t_ (t_>=0 -> 2*t_+x>b)".asFormula, "c>2".asFormula)
   }
 
   it should "add time if not present and ask Mathematica if no solution provided as part of master" in withMathematica { tool =>
@@ -1316,7 +1316,7 @@ class DifferentialTests extends TacticTestBase {
       diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0 & v>=0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> v*t_+x>0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> v*t_+x>0)".asFormula)
   }
 
   it should "find solution for x'=v, v'=a" in withMathematica { tool =>
@@ -1324,7 +1324,7 @@ class DifferentialTests extends TacticTestBase {
       diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0 & v>=0 & a>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> a/2*t_^2+v*t_+x>0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0)".asFormula)
   }
 
   it should "work when ODE is not sole formula in succedent" in withMathematica { tool =>
@@ -1335,7 +1335,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List(
       "y=1".asFormula,
       "z=3".asFormula,
-      "\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> a/2*t_^2+v*t_+x>0)".asFormula)
+      "\\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0)".asFormula)
   }
 
   it should "work when safety property is abstract" in withMathematica { tool =>
@@ -1344,14 +1344,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("J(x,v)".asFormula)
     //@todo improve simplifier
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> J(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,a*(0+1*t_-0)+v))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> J(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,a*(0+1*t_-0)+v))".asFormula)
   }
 
   it should "solve the simplest of all ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> t_+x>0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> t_+x>0)".asFormula)
   }
 
   it should "solve simple box after ODE" in withMathematica { tool =>
@@ -1359,14 +1359,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
     //@todo simplifier chases too much
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> 3>0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> 3>0)".asFormula)
   }
 
   it should "solve simple nested ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
   it should "solve complicated nested ODEs" in withMathematica { tool =>
@@ -1381,7 +1381,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x_0=b".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula, "x_0=b".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> true) -> t_+x>0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> t_+x>0)".asFormula)
   }
 
   it should "retain initial evolution domain for the sake of contradictions" in withMathematica { tool =>
