@@ -27,6 +27,9 @@ case class RenamingTerm(child: ProofTerm, premise: Formula, what: Variable, repl
 /** Witness for rule application. */
 case class RuleApplication(child: ProofTerm, ruleName: String, subgoal: Int) extends ProofTerm //@todo add to theory.
 case class UsubstProvableTerm(child: ProofTerm, substitution: USubst) extends ProofTerm
+/** @todo replaces dLConstant so we can distinguish between rule applications and axiom applications. */
+case class AxiomTerm(name: String) extends ProofTerm
+case class RuleTerm(name: String) extends ProofTerm
 /** @todo replace this with a proof term construction. */
 case class ForwardNewConsequenceTerm(child: ProofTerm, newConsequence: Sequent, rule: Rule) extends ProofTerm
 /** @todo replace this with a proof term construction. */

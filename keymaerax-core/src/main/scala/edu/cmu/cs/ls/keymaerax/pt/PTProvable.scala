@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Rule, Sequent, USubst}
+import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
@@ -36,6 +36,18 @@ trait ProvableSig {
   def apply(prolongation: ProvableSig): ProvableSig
 
   def sub(subgoal: Subgoal): ProvableSig
+
+  val axiom: immutable.Map[String, Formula] = Provable.axiom
+
+  val axioms: immutable.Map[String, ProvableSig]
+
+  val rules: immutable.Map[String, ProvableSig]
+
+  def startProof(goal : Sequent): ProvableSig
+
+  def startProof(goal : Formula): ProvableSig
+
+  def proveArithmetic(t: QETool, f: Formula): Lemma
 
   def prettyString: String
 }
@@ -71,6 +83,16 @@ case class PTProvable(provable: Provable, pt: ProofTerm) extends ProvableSig {
 
   override def sub(subgoal: Subgoal): ProvableSig =
     PTProvable(provable.sub(subgoal), NoProof())
+
+  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(x._2.asInstanceOf[Provable], AxiomTerm(x._1))))
+
+  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(x._2.asInstanceOf[Provable], RuleTerm(x._1))))
+
+  def startProof(goal : Sequent): ProvableSig = PTProvable(Provable.startProof(goal), NoProof())
+
+  def startProof(goal : Formula): ProvableSig = PTProvable(Provable.startProof(goal), NoProof())
+
+  def proveArithmetic(t: QETool, f: Formula): Lemma = ??? //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
 
   override def toString: String = s"PTProvable(${provable.toString}, ${pt.toString})"
 
