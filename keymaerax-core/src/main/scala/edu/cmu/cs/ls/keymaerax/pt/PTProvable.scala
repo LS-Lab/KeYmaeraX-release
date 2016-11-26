@@ -51,26 +51,26 @@ case class PTProvable(provable: Provable, pt: ProofTerm) extends ProvableSig {
   override def proved: Sequent = provable.proved //@todo should we also check whether pt proof-checks?
 
   override def apply(rule: Rule, subgoal: Subgoal): ProvableSig =
-    PTProvable(provable(rule, subgoal), ???)
+    PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal))
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = subderivation match {
-    case subprovable:Provable => PTProvable(provable(subprovable, subgoal), ???) //@todo throw exception?
+    case subprovable:Provable => ???
     case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable, subgoal), subPT)
   }
 
   override def apply(subst: USubst): ProvableSig =
-    PTProvable(provable(subst), ???)
+    PTProvable(provable(subst), UsubstProvableTerm(pt, subst))
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig =
-    PTProvable(provable(newConsequence, rule), ???)
+    PTProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
 
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
     case subProvable: Provable => ???
-    case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable), subPT)
+    case prolongationProof: PTProvable => PTProvable(prolongationProof.provable(prolongation), ProlongationTerm(pt, prolongationProof))
   }
 
   override def sub(subgoal: Subgoal): ProvableSig =
-    PTProvable(provable.sub(subgoal), ???)
+    PTProvable(provable.sub(subgoal), NoProof())
 
   override def toString: String = s"PTProvable(${provable.toString}, ${pt.toString})"
 

@@ -24,3 +24,11 @@ case class CETerm(child: ProofTerm, premise: Equiv, substitution: USubst) extend
 case class UsubstTerm(child: ProofTerm, premise: Formula, substitution: USubst) extends ProofTerm
 //@todo eisegesis theory alllows a set of renamings. Also, make sure UniformRenamings are sufficient for all proofs.
 case class RenamingTerm(child: ProofTerm, premise: Formula, what: Variable, repl: Variable) extends ProofTerm
+/** Witness for rule application. */
+case class RuleApplication(child: ProofTerm, ruleName: String, subgoal: Int) extends ProofTerm //@todo add to theory.
+case class UsubstProvableTerm(child: ProofTerm, substitution: USubst) extends ProofTerm
+/** @todo replace this with a proof term construction. */
+case class ForwardNewConsequenceTerm(child: ProofTerm, newConsequence: Sequent, rule: Rule) extends ProofTerm
+/** @todo replace this with a proof term construction. */
+case class ProlongationTerm(child: ProofTerm, prolongation: PTProvable) extends ProofTerm
+case class NoProof() extends ProofTerm
