@@ -548,7 +548,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     *           G0 |- D0
     * }}}
     *
-    * @param prolongation the subderivation used to prolong this Provable.
+    * @param abstractProlongation the subderivation used to prolong this Provable.
     *                       Where subderivation has a  subgoal equaling our conclusion.
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
