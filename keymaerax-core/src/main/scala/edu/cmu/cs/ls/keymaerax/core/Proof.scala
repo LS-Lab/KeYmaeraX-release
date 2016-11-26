@@ -582,6 +582,15 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   override def toString: String = "Provable(" + conclusion + (if (isProved) " proved" else "\n  from   " + subgoals.mkString("\n  with   ")) + ")"
   def prettyString: String = "Provable(" + conclusion.prettyString + (if (isProved) " proved" else "\n  from   " + subgoals.map(_.prettyString).mkString("\n  with   ")) + ")"
+
+  override val axioms: Map[String, ProvableSig] = Provable.axioms
+  override val rules: Map[String, ProvableSig] = Provable.rules
+
+  override def startProof(goal: Sequent): ProvableSig = Provable.startProof(goal)
+
+  override def startProof(goal: Formula): ProvableSig = Provable.startProof(goal)
+
+  override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
 }
 
 
