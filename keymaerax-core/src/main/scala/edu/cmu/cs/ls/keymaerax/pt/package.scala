@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax
 
 /**
   * Proof-term checker turns proof terms to proof certificates.
-  * [[edu.cmu.cs.ls.keymaerax.pt.ProofChecker]] turns a [[edu.cmu.cs.ls.keymaerax.pt.ProofTerm proof term]] to the [[edu.cmu.cs.ls.keymaerax.core.Provable]] that it proves.
+  * [[edu.cmu.cs.ls.keymaerax.pt.ProofChecker]] turns a [[edu.cmu.cs.ls.keymaerax.pt.ProofTerm proof term]] to the [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]] that it proves.
   * {{{
   *   ProofChecker : ProofTerm * Formula => Provable
   * }}}

@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.language.postfixOps
@@ -49,7 +50,7 @@ private object ToolTactics {
     //Run QE and extract the resulting provable and equivalence
     //@todo how about storing the lemma, but also need a way of finding it again
     //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
-    val qeFact = core.Provable.proveArithmetic(qeTool, sequent.succ.head).fact
+    val qeFact = ProvableSig.proveArithmetic(qeTool, sequent.succ.head).fact
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
     ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(

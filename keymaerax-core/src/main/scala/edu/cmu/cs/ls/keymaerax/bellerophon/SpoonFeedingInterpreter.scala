@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * Sequential interpreter for Bellerophon tactic expressions: breaks apart combinators and spoon-feeds "atomic" tactics
@@ -79,7 +80,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           if (children.length != p.subgoals.length)
             throw new BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(branches(branch)._1, "")
 
-          val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(Provable.startProof(sg), labels)))
+          val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
           val newBranches = branches.updated(branch, branchTactics.head) ++ branchTactics.tail
           val branchIdx = branches.length until (branches.length+children.length-1)
           //@todo compose result

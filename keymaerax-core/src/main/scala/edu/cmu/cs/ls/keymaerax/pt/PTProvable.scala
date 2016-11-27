@@ -11,8 +11,9 @@ import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
 
 /**
-  * A common signature for [[edu.cmu.cs.ls.keymaerax.core.Provable]]'s and [[PTProvable]]'s for use in the [[btactics]] package.
+  * A common signature for [[edu.cmu.cs.ls.keymaerax.pt.ProvableSig]]'s and [[PTProvable]]'s for use in the [[btactics]] package.
   * This allows for tactics to construct proof terms or not.
+  *
   * @author Nathan Fulton
   */
 trait ProvableSig {
@@ -39,7 +40,7 @@ trait ProvableSig {
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
-  val axioms: immutable.Map[String, ProvableSig]
+  val axioms: Map[String, ProvableSig]
 
   val rules: immutable.Map[String, ProvableSig]
 
@@ -51,12 +52,32 @@ trait ProvableSig {
 
   def prettyString: String
 }
+object ProvableSig {
+  var PROOF_TERMS_ENABLED = false
+
+  val axiom: immutable.Map[String, Formula] = Provable.axiom
+
+  val axioms: immutable.Map[String, ProvableSig] =
+    if(PROOF_TERMS_ENABLED) PTProvable.axioms else Provable.axioms
+
+  val rules: immutable.Map[String, ProvableSig] =
+    if(PROOF_TERMS_ENABLED) PTProvable.rules else Provable.rules
+
+  def startProof(goal : Sequent): ProvableSig =
+    if(PROOF_TERMS_ENABLED) PTProvable.startProof(goal) else Provable.startProof(goal)
+
+  def startProof(goal : Formula): ProvableSig =
+    if(PROOF_TERMS_ENABLED) PTProvable.startProof(goal) else Provable.startProof(goal)
+
+  def proveArithmetic(t: QETool, f: Formula): Lemma =
+    if(PROOF_TERMS_ENABLED) PTProvable.proveArithmetic(t,f) else Provable.proveArithmetic(t,f)
+}
 
 /**
   * PTProvable has the same signature as Provable, but constructs proof terms alongside Provables.
   * @author Nathan Fulton
   */
-case class PTProvable(provable: Provable, pt: ProofTerm) extends ProvableSig {
+case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig {
   override val conclusion: Sequent = provable.conclusion
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
 
@@ -66,7 +87,7 @@ case class PTProvable(provable: Provable, pt: ProofTerm) extends ProvableSig {
     PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal))
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = subderivation match {
-    case subprovable:Provable => ???
+    case subprovable: ProvableSig => ???
     case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable, subgoal), subPT)
   }
 
@@ -77,24 +98,36 @@ case class PTProvable(provable: Provable, pt: ProofTerm) extends ProvableSig {
     PTProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
 
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
-    case subProvable: Provable => ???
+    case subProvable: ProvableSig => ???
     case prolongationProof: PTProvable => PTProvable(prolongationProof.provable(prolongation), ProlongationTerm(pt, prolongationProof))
   }
 
   override def sub(subgoal: Subgoal): ProvableSig =
     PTProvable(provable.sub(subgoal), NoProof())
 
-  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(x._2.asInstanceOf[Provable], AxiomTerm(x._1))))
+  val axioms: immutable.Map[String, ProvableSig] = PTProvable.axioms
 
-  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(x._2.asInstanceOf[Provable], RuleTerm(x._1))))
+  val rules: immutable.Map[String, ProvableSig] = PTProvable.rules
+
+  def startProof(goal : Sequent): ProvableSig = PTProvable.startProof(goal)
+
+  def startProof(goal : Formula): ProvableSig = PTProvable.startProof(goal)
+
+  def proveArithmetic(t: QETool, f: Formula): Lemma = PTProvable.proveArithmetic(t,f)
+
+  override def toString: String = s"PTProvable(${provable.toString}, ${pt.toString})"
+
+  override def prettyString: String = s"PTProvable(${provable.prettyString}, ${pt.prettyString})"
+}
+
+object PTProvable {
+  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(x._2.asInstanceOf[ProvableSig], AxiomTerm(x._1))))
+
+  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(x._2.asInstanceOf[ProvableSig], RuleTerm(x._1))))
 
   def startProof(goal : Sequent): ProvableSig = PTProvable(Provable.startProof(goal), NoProof())
 
   def startProof(goal : Formula): ProvableSig = PTProvable(Provable.startProof(goal), NoProof())
 
   def proveArithmetic(t: QETool, f: Formula): Lemma = ??? //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
-
-  override def toString: String = s"PTProvable(${provable.toString}, ${pt.toString})"
-
-  override def prettyString: String = s"PTProvable(${provable.prettyString}, ${pt.prettyString})"
 }

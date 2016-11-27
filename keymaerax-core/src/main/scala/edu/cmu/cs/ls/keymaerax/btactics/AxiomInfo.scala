@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.HashMap
 
@@ -65,7 +66,7 @@ object DerivationInfo {
   private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
-  private def convert(rules: Map[String,Provable]): List[DerivationInfo] =
+  private def convert(rules: Map[String,ProvableSig]): List[DerivationInfo] =
   //@todo display info is rather impoverished
     rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name,name), canonicalize(name))).toList
   private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
@@ -73,7 +74,7 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = convert(Provable.rules) ++ List(
+  private [btactics] val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
     new CoreAxiomInfo("DRIStep"
       , AxiomDisplayInfo("DRIStep", "DRIStep")
       , "DRIStep"
@@ -798,7 +799,7 @@ object DerivationInfo {
     val canonicals = list.map(i => i.canonicalName.toLowerCase())
     val codeNames = list.map(i => i.codeName.toLowerCase()).filter(n => n!=needsCodeName)
     list.forall(i => i match {
-        case ax: CoreAxiomInfo => Provable.axiom.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
+        case ax: CoreAxiomInfo => ProvableSig.axiom.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
         case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
         case _ => true
       }
@@ -909,7 +910,7 @@ sealed trait DerivationInfo {
 /** Meta-Information for a (derived) axiom or (derived) axiomatic rule */
 trait ProvableInfo extends DerivationInfo {
   /** The Provable representing this (derived) axiom or (derived) axiomatic rule */
-  val provable: Provable
+  val provable: ProvableSig
 }
 
 object ProvableInfo {
@@ -950,12 +951,12 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
   def belleExpr = codeName by ((pos:Position, seq:Sequent) => expr ()(pos))
   override val formula:Formula = {
-    Provable.axiom.get(canonicalName) match {
+    ProvableSig.axiom.get(canonicalName) match {
       case Some(fml) => fml
       case None => throw new AxiomNotFoundException("No formula for core axiom " + canonicalName)
     }
   }
-  override lazy val provable:Provable = Provable.axioms(canonicalName)
+  override lazy val provable:ProvableSig = ProvableSig.axioms(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -972,7 +973,7 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
 //      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
 //    }
 //  }
-  override lazy val provable:Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)
+  override lazy val provable:ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -1030,7 +1031,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
   val expr = TactixLibrary.by(provable, codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr
-  lazy val provable: Provable = Provable.rules(canonicalName)
+  lazy val provable: ProvableSig = ProvableSig.rules(canonicalName)
   override val numPositionArgs = 0
 }
 
@@ -1039,7 +1040,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
-  lazy val provable: Provable = DerivedAxioms.derivedAxiomOrRule(canonicalName)
+  lazy val provable: ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 0
 }
 

@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
@@ -121,7 +122,7 @@ class TactixLibraryTests extends TacticTestBase {
   "LetInspect" should "post-hoc instantiate a j closing \\exists j 5+3=j" in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j()".asTerm,
-        (pr:Provable) => pr.subgoals.head.succ.head match {
+        (pr:ProvableSig) => pr.subgoals.head.succ.head match {
           case Equal(l,r) => l
         }
         ,
@@ -136,7 +137,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j(||)".asTerm,
-        (pr:Provable) => pr.subgoals.head.succ.head match {
+        (pr:ProvableSig) => pr.subgoals.head.succ.head match {
           case Equal(l,r) => l
         }
         ,
@@ -151,7 +152,7 @@ class TactixLibraryTests extends TacticTestBase {
   ignore should "post-hoc instantiate a j closing \\exists j (x+x)'=j" in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj (x+x)'=jj".asFormula,
       LetInspect("j(.)".asTerm,
-        (pr:Provable) => pr.subgoals.head.succ.head match {
+        (pr:ProvableSig) => pr.subgoals.head.succ.head match {
           case Equal(l,r) => l
         }
         ,
@@ -166,7 +167,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
-        (pr:Provable) => pr.subgoals.head.succ.head match {
+        (pr:ProvableSig) => pr.subgoals.head.succ.head match {
           case Equal(l,r) => l
         }
         ,
@@ -181,7 +182,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj jj=(x+x*y)'".asFormula,
       LetInspect("j(||)".asTerm,
-        (pr:Provable) => pr.subgoals.head.succ.head match {
+        (pr:ProvableSig) => pr.subgoals.head.succ.head match {
           case Equal(l,r) => r
         }
         ,
@@ -195,7 +196,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
-        (pr:Provable) => pr.subgoals.head.succ.head match {
+        (pr:ProvableSig) => pr.subgoals.head.succ.head match {
           case Equal(l,r) => l
         }
         ,

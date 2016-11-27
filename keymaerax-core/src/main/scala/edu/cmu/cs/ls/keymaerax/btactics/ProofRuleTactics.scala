@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 
 /**
@@ -22,11 +23,11 @@ private object ProofRuleTactics {
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
-  private[btactics] def requireOneSubgoal(provable: Provable, msg: => String) =
+  private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String) =
     if(provable.subgoals.length != 1) throw new BelleError(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
-    override def result(provable: Provable): Provable = {
+    override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "apply " + rule)
       provable(rule, 0)
     }
@@ -34,7 +35,7 @@ private object ProofRuleTactics {
 
   def cut(f: Formula) = new InputTactic[Formula]("cut", f) {
     override def computeExpr() = new BuiltInTactic(s"${name}(${input.prettyString})") {
-      override def result(provable: Provable): Provable = {
+      override def result(provable: ProvableSig): ProvableSig = {
         provable(core.Cut(input), 0)
       }
     }
@@ -45,7 +46,7 @@ private object ProofRuleTactics {
     override def prettyString = s"${name}(${f.prettyString}, ${pos.toString})"
 
     override def computeExpr() = new BuiltInTactic(prettyString) {
-      override def result(provable: Provable): Provable = {
+      override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutL(" + f + ")")
         provable(core.CutLeft(f, pos), 0)
       }
@@ -54,7 +55,7 @@ private object ProofRuleTactics {
 
   def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula]("cutR", f) {
     override def computeExpr() = new BuiltInTactic("CutR") {
-      override def result(provable: Provable): Provable = {
+      override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutR(" + f + ")")
         provable(core.CutRight(f, pos), 0)
       }
@@ -65,7 +66,7 @@ private object ProofRuleTactics {
 
   def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula]("cutLR", f) {
     override def computeExpr() = new BuiltInTactic("CutLR") {
-      override def result(provable: Provable): Provable = {
+      override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutLR(" + f + ")")
         if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
         else provable(core.CutRight(f, pos.checkSucc.top), 0)
@@ -123,7 +124,7 @@ private object ProofRuleTactics {
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
   def uniformRenaming(what: Variable, repl: Variable) = new BuiltInTactic("UniformRenaming") {
-    override def result(provable: Provable): Provable = {
+    override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
       provable(core.UniformRenaming(what, repl), 0)
     }
@@ -154,7 +155,7 @@ private object ProofRuleTactics {
         val brenR = core.BoundRenaming(what, repl, SuccPos(0))
         val mod = brenR(fml) ensuring(r => r==brenL(fml), "bound renaming for formula is independent of position")
         // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
-        val side: Provable = (Provable.startProof(Equiv(mod, fml))
+        val side: ProvableSig = (ProvableSig.startProof(Equiv(mod, fml))
           // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
           (EquivRight(SuccPos(0)), 0)
           // right branch  [x:=f(x)]P(x) |- [y:=f(x)]P(y)
@@ -170,7 +171,7 @@ private object ProofRuleTactics {
     })
 
   private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = new BuiltInPositionTactic("BoundRenaming") {
-    override def computeResult(provable: Provable, pos: Position): Provable = {
+    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
       require(pos.isTopLevel, "bound renaming rule only at top-level")
       provable(core.BoundRenaming(what, repl, pos.top), 0)
@@ -194,7 +195,7 @@ private object ProofRuleTactics {
       val fml: Formula = sequent.apply(pos).asInstanceOf[Formula]
       val mod: Formula = predictor(fml)
       // |- mod <-> fml
-      val side: Provable = TactixLibrary.proveBy(Equiv(mod, fml),
+      val side: ProvableSig = TactixLibrary.proveBy(Equiv(mod, fml),
         // |- mod <-> fml
         equivR(1) <(
           // left branch  mod |- fml
@@ -214,7 +215,7 @@ private object ProofRuleTactics {
 
   def contextualize[T <: BelleExpr](tactic: AtPosition[T]): DependentPositionTactic =
     contextualize(tactic, (fml:Formula) => {
-      def shapeCheck(pr: Provable): Provable = {
+      def shapeCheck(pr: ProvableSig): ProvableSig = {
         require(pr.subgoals.length==1, "one subgoal only")
         require(pr.subgoals.head.ante.isEmpty, "no antecedent")
         require(pr.subgoals.head.succ.length==1, "one subformula in succedent only")
@@ -225,7 +226,7 @@ private object ProofRuleTactics {
 
 
   def skolemize = new BuiltInPositionTactic("Skolemize") {
-    override def computeResult(provable: Provable, pos: Position): Provable = {
+    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
@@ -233,7 +234,7 @@ private object ProofRuleTactics {
   }
 
   def skolemizeR = new BuiltInRightTactic("skolemizeR") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
+    override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
@@ -241,7 +242,7 @@ private object ProofRuleTactics {
   }
 
   def skolemizeL = new BuiltInLeftTactic("skolemizeL") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
+    override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
@@ -251,7 +252,7 @@ private object ProofRuleTactics {
   /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
   @deprecated("Use SequentCalculus.close(0,0) instead")
   private[btactics] def trivialCloser = new BuiltInTactic("TrivialCloser") {
-    override def result(provable: Provable) = {
+    override def result(provable: ProvableSig) = {
       requireOneSubgoal(provable, name)
       if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)
         throw new BelleError(s"${this.name} should only be applied to formulas of the form \\phi |- \\phi")
@@ -262,7 +263,7 @@ private object ProofRuleTactics {
   /** Closes the goal using specified positions. */
   //@todo compare with SequentCalculus.close
   def close = new BuiltInTwoPositionTactic("Close") {
-    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
+    override def computeResult(provable: ProvableSig, posOne: Position, posTwo: Position): ProvableSig = {
       requireOneSubgoal(provable, name)
       require(posOne.isAnte && posTwo.isSucc, "Position one should be in the Antecedent, position two in the Succedent.")
       provable(core.Close(posOne.checkAnte.top, posTwo.checkSucc.top), 0)
@@ -270,14 +271,14 @@ private object ProofRuleTactics {
   }
 
   def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
+    override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseTrue(pos.top), 0)
     }
   }
 
   def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
+    override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseFalse(pos.top), 0)
     }

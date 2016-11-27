@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
 
 import scala.collection.immutable
@@ -62,7 +63,7 @@ object ModelPlex extends ModelPlexTrait {
     }
 
     val proofStart = Platform.currentTime
-    val result = TactixLibrary.proveBy(Provable.startProof(mxInputSequent), tactic)
+    val result = TactixLibrary.proveBy(ProvableSig.startProof(mxInputSequent), tactic)
     val proofDuration = Platform.currentTime - proofStart
     Console.println("[proof time " + proofDuration + "ms]")
 
@@ -448,7 +449,7 @@ object ModelPlex extends ModelPlexTrait {
     positions.map(chase(_)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
   })
 
-  private def trueFact(fact: Formula, factProof: Lemma): Provable =
+  private def trueFact(fact: Formula, factProof: Lemma): ProvableSig =
     TactixLibrary.proveBy(Equiv(fact, True), equivR(1) <(closeT, cohide(1) & byUS(factProof)))
 
   /** Collects the subpositions at/under pos that satisfy condition cond. Ordered: reverse depth (deepest first). */

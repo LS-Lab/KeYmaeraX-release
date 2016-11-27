@@ -11,6 +11,7 @@ import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTe
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.{FlatSpec, Matchers, TagAnnotation}
 
 import scala.collection.immutable.Map
@@ -34,9 +35,9 @@ class RandomProvableTest extends FlatSpec with Matchers {
       val e = rand.nextProvable(randomComplexity)
       e shouldBe 'proved
       // prolong with conclusion identity is a no-op
-      e(Provable.startProof(e.conclusion)) shouldBe e
+      e(ProvableSig.startProof(e.conclusion)) shouldBe e
       // use a fact that isn't proved and then continue above with a sub is a no-op
-      Provable.startProof(e.conclusion).sub(0)(Provable.startProof(e.conclusion)) shouldBe Provable.startProof(e.conclusion)
+      ProvableSig.startProof(e.conclusion).sub(0)(ProvableSig.startProof(e.conclusion)) shouldBe ProvableSig.startProof(e.conclusion)
 //      val sub = rand.rand.nextInt(e.subgoals.length)
 //      e(e.sub(sub), sub) shouldBe e
     }

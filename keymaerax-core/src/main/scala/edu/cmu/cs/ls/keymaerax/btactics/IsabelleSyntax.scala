@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 
@@ -134,7 +135,7 @@ object IsabelleSyntax {
     }
   }
 
-  def commonFormulaProof(f:Formula) : (Formula,Provable) = {
+  def commonFormulaProof(f:Formula) : (Formula,ProvableSig) = {
     val (fs,fu) = commonFormula(f)
     val ff = And(listConj(fs.toList),fu)
 
@@ -154,7 +155,7 @@ object IsabelleSyntax {
     }
   }
 
-  def compileFormulaProof(f:Formula) :Provable = {
+  def compileFormulaProof(f:Formula) :ProvableSig = {
     val prog = compileFormula(f)
     proveBy(Imply(Diamond(prog,True),Diamond(Test(f),True)),
       chase(3,3)(SuccPosition(1,0::Nil)) &
@@ -166,9 +167,9 @@ object IsabelleSyntax {
   def debugPrint(str:String) : BelleExpr =
     if (DEBUG) print(str) else ident
 
-  private def default(ax:Provable) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+  private def default(ax:ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
 
-  def deriveFormulaProof(f:Formula,decompose:Boolean=false) : (Program,Provable) =
+  def deriveFormulaProof(f:Formula,decompose:Boolean=false) : (Program,ProvableSig) =
   {
     val(_,_,pinit,ff) = deriveFormulaProgram(f)
     //val prog = Compose(stripNoOp(pinit),Test(ff))
@@ -269,13 +270,13 @@ object IsabelleSyntax {
   private val lessEqualRec = proveBy("f_() <= g_() <-> f_() <= g_()".asFormula,byUS("<-> reflexive"))
   private val lessRec = proveBy("f_() < g_() <-> f_() < g_()".asFormula,byUS("<-> reflexive"))
 
-  private def binaryDefault(ax:Provable) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+  private def binaryDefault(ax:ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
 
   //Converts an input formula (FOL, no quantifiers) into a formula satisfying:
   //1) NNF (negations pushed into (in)equalities)
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), p_()^2 -> p_() * p_()
-  def normalise(f:Formula) : (Formula,Provable) = {
+  def normalise(f:Formula) : (Formula,ProvableSig) = {
     val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
     val nnf = chaseCustom((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
@@ -318,7 +319,7 @@ object IsabelleSyntax {
   }
 
   //Merging everything together
-  def isarSyntax(f:Formula) : (Program,Provable) = {
+  def isarSyntax(f:Formula) : (Program,ProvableSig) = {
     val (normf, normproof) = normalise(f) //normf <-> f
     val (commf, commproof) = commonFormulaProof(normf) //commf -> normf
     val (simpf, simpproof) = formulaSimp(commf) //simpf <-> commf

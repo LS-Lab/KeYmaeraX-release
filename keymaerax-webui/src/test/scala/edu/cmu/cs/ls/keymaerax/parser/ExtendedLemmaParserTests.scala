@@ -5,7 +5,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.SQLite
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
+
 import scala.collection.immutable.IndexedSeq
 
 /**
@@ -19,7 +21,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq("2=2".asFormula, "5=5".asFormula))
 
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val hash = "\"\"\"\"" + Lemma.checksum(Provable.startProof(sequent)) + "\"\"\"\""
+    val hash = "\"\"\"\"" + Lemma.checksum(ProvableSig.startProof(sequent)) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
     val lemmaFile =
@@ -58,7 +60,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
 
   it should "work with no subgoals" in {
     val sequent = Sequent(IndexedSeq("p()".asFormula), IndexedSeq("p()".asFormula))
-    val closedProvable = Provable.startProof(sequent).apply(Close(AntePos(0), SuccPos(0)), 0)
+    val closedProvable = ProvableSig.startProof(sequent).apply(Close(AntePos(0), SuccPos(0)), 0)
     val hash = "\"\"\"\"" + Lemma.checksum(closedProvable) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
@@ -93,7 +95,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
     val sequent = Sequent(IndexedSeq(), IndexedSeq("2=2".asFormula, "5=5".asFormula))
 
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val hash = "\"\"\"\"" + Lemma.checksum(Provable.startProof(sequent)) + "\"\"\"\""
+    val hash = "\"\"\"\"" + Lemma.checksum(ProvableSig.startProof(sequent)) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
     val lemmaFile =
@@ -130,7 +132,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq())
 
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val hash = "\"\"\"\"" + Lemma.checksum(Provable.startProof(sequent)) + "\"\"\"\""
+    val hash = "\"\"\"\"" + Lemma.checksum(ProvableSig.startProof(sequent)) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
     val lemmaFile =
@@ -232,7 +234,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
 
   ignore should "not create a lemma with no evidence." in {
     val name ="blah"
-    val p = Provable.startProof("1=1".asFormula)
+    val p = ProvableSig.startProof("1=1".asFormula)
     a [java.lang.AssertionError] shouldBe thrownBy (new Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name)))
   }
 
@@ -243,7 +245,7 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
       name = name + "1"
     }
 
-    val p = Provable.startProof("1=1".asFormula)
+    val p = ProvableSig.startProof("1=1".asFormula)
 
     try {
       db.add(new Lemma(p, Lemma.requiredEvidence(p, ToolEvidence(("a", "a")::Nil)::Nil), Some(name)))

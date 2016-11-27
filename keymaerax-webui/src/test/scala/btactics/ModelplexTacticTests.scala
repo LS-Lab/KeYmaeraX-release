@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 import testHelper.ParserFactory._
@@ -50,7 +51,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //  def numBranches(n: ProofNode): Int = if (n.children.nonEmpty) n.children.map(numBranches).min else 0
 //  def numBranches(s: ProofStep): Int = if (s.subgoals.nonEmpty) s.subgoals.map(numBranches).sum else 1
 
-  def report(result: Formula, proof: Provable, name: String) = {
+  def report(result: Formula, proof: ProvableSig, name: String) = {
     println(s"$name monitor size: " + monitorSize(result))
 //    println("Number of proof steps: " + numSteps(proof))
 //    println("Number of branches (open/all): " + proof.subgoals.size + "/" + numBranches(proof))

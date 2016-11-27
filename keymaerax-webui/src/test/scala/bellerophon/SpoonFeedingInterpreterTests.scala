@@ -4,10 +4,11 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ProofTree}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import testHelper.KeYmaeraXTestTags.SlowTest
 
@@ -32,7 +33,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
-    interpreter(implyR(1), BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(implyR(1), BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = false)
     tree.nodes should have size 2
@@ -48,7 +49,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
-    interpreter(implyR(1) & closeId, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(implyR(1) & closeId, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 3
@@ -66,7 +67,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
-    interpreter(implyR(1) & (andR(1) | closeId), BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(implyR(1) & (andR(1) | closeId), BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 3
@@ -85,7 +86,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
     interpreter(implyR(1) & andR(1) & Idioms.<(closeId & done, skip),
-      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 7
@@ -113,7 +114,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
     interpreter(implyR(1) & andR(1) & Idioms.<(closeId & done, diffWeaken(1) & prop & done),
-      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 7
@@ -144,7 +145,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
     interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(closeId & done, QE & done), QE & done),
-      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 9
@@ -175,7 +176,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
     interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(closeId & done, skip), skip),
-      BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 7
@@ -204,7 +205,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tacticText = """implyR('R) & andL('L) & diffCut({`v>=0`}, 1) & <(diffWeaken(1) & prop, diffInd(1))"""
     val tactic = BelleParser(tacticText)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 11
@@ -218,7 +219,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyt")).mkString)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 22
@@ -235,7 +236,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyt")).mkString)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 42 // no further testing necessary with this answer ;-)
@@ -247,7 +248,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyt")).mkString)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 22
@@ -259,7 +260,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyt")).mkString)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 11
@@ -271,7 +272,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyt")).mkString)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 36
@@ -283,7 +284,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyt")).mkString)
-    interpreter(tactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(modelContent))))
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 50

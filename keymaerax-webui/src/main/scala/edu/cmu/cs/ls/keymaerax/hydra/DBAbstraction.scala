@@ -6,13 +6,14 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Provable, Formula, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Sequent}
 
 import java.io.File
 import java.io.FileOutputStream
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
 import scala.collection.immutable.Nil
@@ -72,7 +73,7 @@ class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:St
 class ProofPOJO(val proofId:Int, val modelId:Int, val name:String, val description:String,
                 val date:String, val stepCount : Int, val closed : Boolean)
 
-case class ProvablePOJO(provableId: Int, provable:Provable)
+case class ProvablePOJO(provableId: Int, provable:ProvableSig)
 
 case class SequentPOJO(sequentId: Int, provableId: Int)
 
@@ -124,8 +125,8 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(stepId: Int, executionId: Int, input:Provable, local:Option[Provable], branch:Int, alternativeOrder:Int, rule:String, executableId: Int, isUserExecuted: Boolean = true) {
-  def output: Option[Provable] = local.map{case localProvable => input(localProvable, branch)}
+case class ExecutionStep(stepId: Int, executionId: Int, input:ProvableSig, local:Option[ProvableSig], branch:Int, alternativeOrder:Int, rule:String, executableId: Int, isUserExecuted: Boolean = true) {
+  def output: Option[ProvableSig] = local.map{case localProvable => input(localProvable, branch)}
 }
 
 case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
@@ -141,7 +142,7 @@ case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequ
     steps.lastOption.map{case step => step.stepId}
   }
 
-  def lastProvable:Provable = steps.lastOption.flatMap(_.output).getOrElse(Provable.startProof(conclusion))
+  def lastProvable:ProvableSig = steps.lastOption.flatMap(_.output).getOrElse(ProvableSig.startProof(conclusion))
 }
 
 case class ExecutablePOJO(executableId: Int, belleExpr:String)
@@ -232,7 +233,7 @@ trait DBAbstraction {
 
   // Tactics
   /** Stores a Provable in the database and returns its ID */
-  def createProvable(p: Provable): Int
+  def createProvable(p: ProvableSig): Int
 
   /** Reconstruct a stored Provable */
   def getProvable(provableId: Int): ProvablePOJO
@@ -259,7 +260,7 @@ trait DBAbstraction {
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
   /** Truncate the execution trace at the beginning of alternativeTo and replace it with trace. */
-  def addAlternative(alternativeTo: Int, inputProvable: Provable, trace:ExecutionTrace)
+  def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace)
 
   /** Return the sequence of steps that led to the current state of the proof. */
   def getExecutionTrace(proofID: Int): ExecutionTrace

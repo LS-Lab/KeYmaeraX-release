@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * Created by yongkiat on 9/29/16.
@@ -20,13 +21,13 @@ object SimplifierV2 {
     * @param pr the provable from which to extract the expression
     * @return
     */
-  private def extract(pr:Provable):Expression = {
+  private def extract(pr:ProvableSig):Expression = {
     pr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get
   }
 
   //todo: All of these should be moved to derived axioms (some are already there, but missing the other side)
   //Proves |- f -> t = tt or just t = tt if f is given
-  private def qeProof(f:Option[String],t:String,tt:String):(Term,Provable) =
+  private def qeProof(f:Option[String],t:String,tt:String):(Term,ProvableSig) =
   {
     val ttt  = tt.asTerm
     (ttt,
@@ -73,7 +74,7 @@ object SimplifierV2 {
     return s
   }
 
-  def qeHeuristics(eq:Provable): Option[Provable] = {
+  def qeHeuristics(eq:ProvableSig): Option[ProvableSig] = {
     //todo: filter the list, like what happens in chase
     for ((tt, pr) <- arithProps)
       try {
@@ -113,7 +114,7 @@ object SimplifierV2 {
   }
 
   //Fold constants
-  def reassoc(t:Term): Provable =
+  def reassoc(t:Term): ProvableSig =
   {
     val init = DerivedAxioms.equalReflex.fact(
       USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
@@ -134,7 +135,7 @@ object SimplifierV2 {
     * Recursive term simplification using chase, proving |- t = t'
     * @param t The term to be simplifed
     */
-  def termSimp(t:Term): (Term,Provable) =
+  def termSimp(t:Term): (Term,ProvableSig) =
   {
     //todo: This may need to be generalized to do allow term simplification under a context
     //todo: reflect out ground terms
@@ -187,7 +188,7 @@ object SimplifierV2 {
       implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
 
   //Uses const congruence rule on a t and eq to generate |- eq -> t = t'
-  def fwdeqL2R(eq:Formula,t:Term): Provable =
+  def fwdeqL2R(eq:Formula,t:Term): ProvableSig =
   {
     eq match
     {
@@ -195,7 +196,7 @@ object SimplifierV2 {
       case Equal(l,r) =>
         val tdot = t.replaceFree(l,DotTerm())
         val tr = t.replaceFree(l,r)
-        Provable.axioms("const congruence")(
+        ProvableSig.axioms("const congruence")(
           USubst(SubstitutionPair(FuncOf(Function("ctxT_", None, Real, Real), DotTerm()), tdot)::
             SubstitutionPair(FuncOf(Function("s", None, Unit, Real), Nothing), l) ::
             SubstitutionPair(FuncOf(Function("t", None, Unit, Real), Nothing), r) :: Nil))
@@ -210,7 +211,7 @@ object SimplifierV2 {
     * @param ctx
     * @return
     */
-  def equalityRewrites(t:Term,ctx:IndexedSeq[Formula]) :Provable = {
+  def equalityRewrites(t:Term,ctx:IndexedSeq[Formula]) :ProvableSig = {
     t match {
       case _:Variable | _:ApplicationOf =>
         val pos = ctx.indexWhere( f => f match {
@@ -252,7 +253,7 @@ object SimplifierV2 {
     }
   }
 
-  def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): (Term,Provable) =
+  def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): (Term,ProvableSig) =
   {
     //todo: filter context and keep only equalities around
     //todo: maybe do repeated equality rewriting
@@ -266,7 +267,7 @@ object SimplifierV2 {
   }
 
   private def weaken(ctx:IndexedSeq[Formula]): ForwardTactic = pr => {
-    val p = Provable.startProof(pr.conclusion.glue(Sequent(ctx, IndexedSeq())))
+    val p = ProvableSig.startProof(pr.conclusion.glue(Sequent(ctx, IndexedSeq())))
     proveBy(p,
       cohideR(1) & //('Llast)*ctx.length &
         by(pr))
@@ -369,7 +370,7 @@ object SimplifierV2 {
   //Truth tables for propositional formulae
   //These should be in DerivedAxioms
   // (some already are)
-  private def propProof(f:String,ff:String):Provable =
+  private def propProof(f:String,ff:String):ProvableSig =
   {
     proveBy(Equiv(f.asFormula,ff.asFormula),prop)
   }
@@ -401,7 +402,7 @@ object SimplifierV2 {
   val gtNotReflex = qeEquivProof("F()>F()","false")
   val neqNotReflex = qeEquivProof("F()!=F()","false")
 
-  private def propHeuristics(f:Formula) : Option[(Formula,Provable)] =
+  private def propHeuristics(f:Formula) : Option[(Formula,ProvableSig)] =
   {
     f match {
       case And(l,True) => Some(l,andT)
@@ -441,7 +442,7 @@ object SimplifierV2 {
   //Reflexivity for comparison formulae
   //These should be in DerivedAxioms
   // (some already are)
-  private def qeEquivProof(f:String,ff:String):Provable =
+  private def qeEquivProof(f:String,ff:String):ProvableSig =
   {
     proveBy(Equiv(f.asFormula,ff.asFormula),QE)
   }
@@ -457,12 +458,12 @@ object SimplifierV2 {
     * @param ctx context in which to simplify
     * @return f',pr where pr proves the equivalence
     */
-  def formulaSimp(f:Formula, ctx:IndexedSeq[Formula] = IndexedSeq()) : (Formula,Provable) =
+  def formulaSimp(f:Formula, ctx:IndexedSeq[Formula] = IndexedSeq()) : (Formula,ProvableSig) =
   {
     //println("At: "+f+" Context: "+ctx)
     // todo: remove the use of prop from short circuit branches
     //Recursive simplification
-    val (recf:Formula,recpr:Provable) =
+    val (recf:Formula,recpr:ProvableSig) =
     f match {
       case And(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
@@ -602,7 +603,7 @@ object SimplifierV2 {
 
     //Propositional simplification (these should be done by chase instead)
 
-    val (_,proppr:Provable) = propHeuristics(recf) match {
+    val (_,proppr:ProvableSig) = propHeuristics(recf) match {
       case None => (recf,recpr)
       case Some((ff,pr)) =>
         val pf = proveBy(Sequent(ctx,IndexedSeq(Equiv(recf,ff))),cohideR(SuccPos(0)) & byUS(pr))
@@ -658,7 +659,7 @@ object SimplifierV2 {
   }
 
   //Splits an equivalence in succedent of provable into left and right halves
-  def splitEquiv(pr:Provable): (Provable,Provable) = {
+  def splitEquiv(pr:ProvableSig): (ProvableSig,ProvableSig) = {
     val seq = pr.conclusion
     assert(seq.succ.length == 1 && seq.succ(0).isInstanceOf[Equiv])
     seq.succ(0).fml match {
@@ -672,7 +673,7 @@ object SimplifierV2 {
 
   //Commented out in ProofRuleTactics
   def exchangeR (posOne:SuccPos,posTwo:SuccPos) : BelleExpr = new BuiltInTactic("exchangeR") {
-    override def result(provable: Provable) = {
+    override def result(provable: ProvableSig) = {
       provable(ExchangeRightRule(posOne,posTwo), 0)
     }
   }
@@ -792,7 +793,7 @@ object SimplifierV2 {
   // Also works if given p1 -> p2 -> ... p -> [a*]f , in which case the attempted proof is
   // p1 -> p2 -> ... -> [a*]f |- p1-> p2 -> ... -> [b*]f
   // where b has the requested auxiliaries rewritten away
-  def rewriteLoopAux(f:Formula,targets:List[Variable]):(Formula,Provable) = {
+  def rewriteLoopAux(f:Formula,targets:List[Variable]):(Formula,ProvableSig) = {
     f match {
       case (Imply(pre,rhs)) =>
         val (rf,pr) = rewriteLoopAux(rhs,targets)

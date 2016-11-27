@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ODESolverTool
 
 import scala.collection.immutable
@@ -414,7 +415,7 @@ private object DifferentialTactics {
     */
   //@todo replace this by an interface DifferentialProgram, Provable, because DG(DifferentialProgram) is called from here anyhow.
   @deprecated("Use DA(DifferentialProgram, Provable) instead")
-  def DA(y: Variable, a: Term, b: Term, auxEquiv: Provable): DependentPositionTactic =
+  def DA(y: Variable, a: Term, b: Term, auxEquiv: ProvableSig): DependentPositionTactic =
     "DAbase" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) => null
@@ -788,7 +789,7 @@ private object DifferentialTactics {
     // proper search & rescue tactic
     val SandR: BelleExpr = LetInspect(
       spooky,
-      (pr:Provable) => {
+      (pr:ProvableSig) => {
         assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
         if (BelleExpr.DEBUG) println("Instantiate::\n" + pr)
         // induction step condition \forall x \forall ghost condition>=0

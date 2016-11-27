@@ -1,13 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * Interpreter for Bellerophon tactic expressions that transforms [[BelleValue Bellerophon values]] using
-  * [[BelleExpr Bellerophon tactic language expressions]] to ultimately produce [[Provable]].
+  * [[BelleExpr Bellerophon tactic language expressions]] to ultimately produce [[ProvableSig]].
   * {{{
   *   Interpreter : BelleExpr * BelleValue => BelleValue
   * }}}
+ *
   * @author Nathan Fulton
   * @see [[SequentialInterpreter]]
   */

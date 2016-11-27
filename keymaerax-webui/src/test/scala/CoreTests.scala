@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, SuccPosition}
@@ -11,6 +11,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import java.io.File
+
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
 import scala.collection.immutable._
 
 @CheckinTest
@@ -71,14 +74,14 @@ class CoreTests extends FlatSpec with Matchers {
     Power(Variable("x", None, Real), Number(2)) should be (Power(Variable("x", None, Real), Number(2)))
   }
 
-  def rootSucc(f: Formula) = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq(f)))
-  def rootAnte(f: Formula) = Provable.startProof(Sequent(IndexedSeq(f), IndexedSeq()))
+  def rootSucc(f: Formula) = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(f)))
+  def rootAnte(f: Formula) = ProvableSig.startProof(Sequent(IndexedSeq(f), IndexedSeq()))
 
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
     println("\tCheck " + rule) //@TODO turn into "should" output?
-    val pn = Provable.startProof(in)
+    val pn = ProvableSig.startProof(in)
     val resList = pn.apply(rule, 0).subgoals
     println("\tResult\t" + resList)
     println("\tExpected\t" + out)
@@ -96,7 +99,7 @@ class CoreTests extends FlatSpec with Matchers {
     }
   }
 
-  def testRule(rule: Rule, in: Sequent) = Provable.startProof(in).apply(rule, 0).subgoals
+  def testRule(rule: Rule, in: Sequent) = ProvableSig.startProof(in).apply(rule, 0).subgoals
 
   implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
 

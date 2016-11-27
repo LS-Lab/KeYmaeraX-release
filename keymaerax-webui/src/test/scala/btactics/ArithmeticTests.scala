@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
 import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
@@ -13,7 +14,7 @@ class ArithmeticTests extends TacticTestBase {
   private class MockTool(expected: Formula) extends ToolBase("MockTool") with QETool with CounterExampleTool {
     initialized = true
     //@todo should we keep hacking ourselves into the trusted tools of the core, or should we add a TestMode where MockTool is trusted?
-    val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
+    val rcf = Class.forName(ProvableSig.getClass.getCanonicalName).getField("MODULE$").get(null)
     val trustedToolsField = rcf.getClass.getDeclaredField("trustedTools")
     trustedToolsField.setAccessible(true)
     val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]

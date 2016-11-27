@@ -5,9 +5,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+
 import scala.collection.immutable.IndexedSeq
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.language.postfixOps
 
@@ -25,7 +27,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val tactic = andR(1)
     val v = {
       val f = "1=1 & 2=2".asFormula
-      BelleProvable(Provable.startProof(f))
+      BelleProvable(ProvableSig.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
@@ -42,7 +44,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val tactic = implyR(1) & close
     val v = {
       val f = "1=2 -> 1=2".asFormula
-      BelleProvable(Provable.startProof(f))
+      BelleProvable(ProvableSig.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
@@ -54,7 +56,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val tactic = andR(1) | (implyR(1) & close)
     val v = {
       val f = "1=2 -> 1=2".asFormula
-      BelleProvable(Provable.startProof(f))
+      BelleProvable(ProvableSig.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
@@ -66,7 +68,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val tactic = (implyR(1) & close) | andR(1)
     val v = {
       val f = "1=2 -> 1=2".asFormula
-      BelleProvable(Provable.startProof(f))
+      BelleProvable(ProvableSig.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
@@ -89,7 +91,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
     val tactic = implyR(1) & DebuggingTactics.done | (skip & skip) & DebuggingTactics.done
     val f = "1=2 -> 1=2".asFormula
-    a[BelleError] should be thrownBy theInterpreter(tactic, BelleProvable(Provable.startProof(f))
+    a[BelleError] should be thrownBy theInterpreter(tactic, BelleProvable(ProvableSig.startProof(f))
     )
   }
 
@@ -176,7 +178,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     )
     val v = {
       val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-      BelleProvable(Provable.startProof(f))
+      BelleProvable(ProvableSig.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
@@ -192,7 +194,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       )
     val v = {
       val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-      BelleProvable(Provable.startProof(f))
+      BelleProvable(ProvableSig.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
@@ -220,7 +222,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleError] shouldBe thrownBy(
-      theInterpreter.apply(tactic, BelleProvable(Provable.startProof(f)))
+      theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof(f)))
     )
   }
 
@@ -315,7 +317,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   /*"A failing tactic"*/
   ignore should "print nice errors and provide a stack trace" in {
     val itFails = new BuiltInTactic("fails") {
-      override def result(provable: Provable) = throw new ProverException("Fails...")
+      override def result(provable: ProvableSig) = throw new ProverException("Fails...")
     }
 
     val conj = Idioms.nil & (itFails | itFails)
@@ -332,7 +334,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
         & Idioms.nil
         & split
         & Idioms.nil
-        & Idioms.nil, BelleProvable(Provable.startProof("1=1 & 2=2".asFormula)))
+        & Idioms.nil, BelleProvable(ProvableSig.startProof("1=1 & 2=2".asFormula)))
     }
     thrown.printStackTrace()
     thrown.getMessage should include ("Fails...")
@@ -350,14 +352,14 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   private def shouldClose(expr: BelleExpr, f: Formula): Unit = shouldClose(expr, Sequent(IndexedSeq(), IndexedSeq(f)))
 
   private def shouldClose(expr: BelleExpr, sequent: Sequent): Unit = {
-    val v = BelleProvable(Provable.startProof(sequent))
+    val v = BelleProvable(ProvableSig.startProof(sequent))
     val result = theInterpreter.apply(expr, v)
     result shouldBe a[BelleProvable]
     result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   private def shouldResultIn(expr: BelleExpr, f: Formula, expectedResult : Seq[Sequent]) = {
-    val v = BelleProvable(Provable.startProof(f))
+    val v = BelleProvable(ProvableSig.startProof(f))
     val result = theInterpreter.apply(expr, v)
     result shouldBe a[BelleProvable]
     result.asInstanceOf[BelleProvable].p.subgoals shouldBe expectedResult

@@ -21,6 +21,7 @@ import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.mutable.ListBuffer
 
@@ -257,7 +258,7 @@ class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId
 class ProofProgressResponse(proofId: String, isClosed: Boolean)
   extends ProofStatusResponse(proofId, if (isClosed) "closed" else "open")
 
-class ProofVerificationResponse(proofId: String, provable: Provable, tactic: String) extends Response {
+class ProofVerificationResponse(proofId: String, provable: ProvableSig, tactic: String) extends Response {
   override def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "isProved" -> JsBoolean(provable.isProved),

@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import java.security.MessageDigest
 
-import edu.cmu.cs.ls.keymaerax.core.{Evidence, Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence

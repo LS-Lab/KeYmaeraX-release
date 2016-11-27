@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 /**
@@ -135,7 +136,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             if (children.length != p.subgoals.length)
               throw new BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
             //Compute the results of piecewise applications of children to provable subgoals.
-            val results: Seq[Provable] =
+            val results: Seq[ProvableSig] =
               (children zip p.subgoals) map (pair => {
                 val e_i = pair._1
                 val s_i = pair._2
@@ -156,7 +157,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
             // is replaced with 0 new subgoals.
             val combinedEffect =
-              results.foldLeft((p, 0))((op: (Provable, Int), subderivation: Provable) => {
+              results.foldLeft((p, 0))((op: (ProvableSig, Int), subderivation: ProvableSig) => {
                 replaceConclusion(op._1, op._2, subderivation)
               })
             BelleProvable(combinedEffect._1)
@@ -199,7 +200,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val BelleProvable(provable, labels) = v
           assert(provable.subgoals.length == 1)
 
-          val lemma = Provable.startProof(f)
+          val lemma = ProvableSig.startProof(f)
 
           //Prove the lemma iff it's not already proven.
           if(LemmaDBFactory.lemmaDB.contains(lemmaName)) {
@@ -235,12 +236,12 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           import Augmentors.SequentAugmentor
           //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
           val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
-          val in: Provable = Provable.startProof(provable.subgoals.head.replaceAll(value, abbr))
+          val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           apply(inner, new BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
-              val backsubst: Provable = derivation(us)
+              val backsubst: ProvableSig = derivation(us)
               BelleProvable(provable(backsubst,0), lbl)
             case e => throw new BelleError("Let expected sub-derivation")
           }
@@ -253,13 +254,13 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           if (provable.subgoals.length != 1)
             throw new BelleError("LetInspect of multiple goals is not currently supported.").inContext(expr, "")
 
-          val in: Provable = Provable.startProof(provable.subgoals.head)
+          val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
           apply(inner, new BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
               try {
                 val value: Expression = instantiator(derivation)
                 val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
-                val backsubst: Provable = derivation(us)
+                val backsubst: ProvableSig = derivation(us)
                 BelleProvable(provable(backsubst, 0), lbl)
               } catch {
                 case e: BelleError => throw e.inContext(expr, "LetInspect backsubstitution failed")
@@ -323,7 +324,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
   }
 
   /** Maps sequents to BelleProvables. */
-  private def bval(s: Sequent) = BelleProvable(Provable.startProof(s))
+  private def bval(s: Sequent) = BelleProvable(ProvableSig.startProof(s))
 
   /**
    * Replaces the nth subgoal of original with the remaining subgoals of result.
@@ -336,7 +337,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
    *         * The new index of the (n+1)th goal. //@todo clarify
    * @todo result is undefined. Subderivation rather
    */
-  private def replaceConclusion(original: Provable, n: Int, subderivation: Provable): (Provable, Int) = {
+  private def replaceConclusion(original: ProvableSig, n: Int, subderivation: ProvableSig): (ProvableSig, Int) = {
     assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
     if(original.subgoals(n) != subderivation.conclusion)
       throw new BelleError(s"Subgoal #$n of the original provable (${original.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")

@@ -9,6 +9,7 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
@@ -46,13 +47,13 @@ class URenameTests extends TacticTestBase {
       * }}}
       */
     // proved premise |- \forall x p(||) -> \forall x p(||)
-    val prem = Provable.startProof(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall x p(||)".asFormula)))(
+    val prem = ProvableSig.startProof(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall x p(||)".asFormula)))(
       Close(AntePos(0),SuccPos(0)), 0
     )
     prem shouldBe 'proved
     // assumed premise |- \forall x p(||) -> \forall y p(||)
     // unsound conclusion y>=0 |- \forall x y>=0 -> \forall y y>=0
-    val conc = Provable.startProof(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))(
+    val conc = ProvableSig.startProof(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))(
       HideLeft(AntePos(0)), 0) (
       ImplyRight(SuccPos(0)), 0
     )
@@ -92,13 +93,13 @@ class URenameTests extends TacticTestBase {
       * x^2>=y -> \forall y x^2>=y nonsense
       * }}}
       */
-    val prem = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
+    val prem = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
     prem should not be 'proved
-    a [RenamingClashException] shouldBe thrownBy {Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+    a [RenamingClashException] shouldBe thrownBy {ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
       UniformRenaming(Variable("y"),Variable("x")), 0
     )}
     a [RenamingClashException] shouldBe thrownBy {
-      val clash = Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+      val clash = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
         UniformRenaming(Variable("y"),Variable("x")), 0
       )
       // wouldBe from now on

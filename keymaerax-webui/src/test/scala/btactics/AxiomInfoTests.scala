@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -13,7 +13,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 class AxiomInfoTests extends FlatSpec with Matchers with BeforeAndAfterEach {
  "Axiom Info" should "exist for all axioms" in {
    try {
-     Provable.axiom.keys.forall({ case axiomName => AxiomInfo(axiomName); true }) shouldBe true
+     ProvableSig.axiom.keys.forall({ case axiomName => AxiomInfo(axiomName); true }) shouldBe true
    } catch {
      case e:AxiomNotFoundException =>
        println("Test failed: Axiom not implemented: " + e.axiomName)

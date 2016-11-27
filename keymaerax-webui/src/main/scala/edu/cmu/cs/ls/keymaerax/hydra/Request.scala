@@ -23,14 +23,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
-
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-
-
-import java.io.{File, FileInputStream, FileOutputStream, FileNotFoundException}
+import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
+
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.io.Source
 import scala.collection.immutable._
@@ -839,7 +838,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
       val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
       tree.findNode(nodeId) match {
         case Some(node) => {
-          val provable = Provable.startProof(node.sequent)
+          val provable = ProvableSig.startProof(node.sequent)
           val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
           new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
         }
@@ -975,7 +974,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       val ruleName =
         if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
         else "custom"
-      val localProvable = Provable.startProof(node.sequent)
+      val localProvable = ProvableSig.startProof(node.sequent)
       val globalProvable = trace.lastProvable
       assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
       val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)

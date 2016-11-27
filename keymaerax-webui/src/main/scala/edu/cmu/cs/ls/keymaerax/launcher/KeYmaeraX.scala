@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -530,7 +531,7 @@ object KeYmaeraX {
   // helpers
 
   /** Print brief information about all open goals in the proof tree under node */
-  def printOpenGoals(node: Provable): Unit = node.subgoals.foreach(g => printNode(g))
+  def printOpenGoals(node: ProvableSig): Unit = node.subgoals.foreach(g => printNode(g))
 
   def printNode(node: Sequent): Unit = node.toString + "\n"
 
@@ -581,7 +582,7 @@ object KeYmaeraX {
 
   /** KeYmaera C: A simple interactive command-line prover */
   @deprecated("Use web UI instead")
-  private def interactiveProver(root: Provable): Provable = {
+  private def interactiveProver(root: ProvableSig): ProvableSig = {
     val commands = io.Source.stdin.getLines()
     println("KeYmaera X Interactive Command-line Prover\n" +
       "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n")

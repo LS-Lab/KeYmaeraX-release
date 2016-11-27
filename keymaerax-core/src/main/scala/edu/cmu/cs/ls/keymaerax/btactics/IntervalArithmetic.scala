@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 
@@ -577,7 +578,7 @@ object IntervalArithmetic {
   def debugPrint(str:String) : BelleExpr =
     if (DEBUG) print(str) else ident
 
-  def deriveFormulaProof(f:Formula) : (Program,Provable) =
+  def deriveFormulaProof(f:Formula) : (Program,ProvableSig) =
   {
     // f must be in NNF, with negations completely pushed into comparisons
     // Also, >, >= should be flipped to <, <=
@@ -685,12 +686,12 @@ object IntervalArithmetic {
   private val lessEqualRec = proveBy("f_() <= g_() <-> f_() <= g_()".asFormula,byUS("<-> reflexive"))
   private val lessRec = proveBy("f_() < g_() <-> f_() < g_()".asFormula,byUS("<-> reflexive"))
 
-  private def binaryDefault(ax:Provable) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+  private def binaryDefault(ax:ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
   //Converts an input formula (FOL, no quantifiers) into a formula satisfying:
   //1) NNF (negations pushed into (in)equalities)
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), custom rewrites of powers to squares
-  def normalise(f:Formula) : (Formula,Provable) = {
+  def normalise(f:Formula) : (Formula,ProvableSig) = {
     val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
     val nnf = chaseCustom((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil

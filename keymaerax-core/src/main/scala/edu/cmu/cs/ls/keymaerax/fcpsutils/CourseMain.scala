@@ -5,8 +5,9 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Provable}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * @author Nathan Fulton
@@ -66,7 +67,7 @@ object CourseMain {
     val f = parseProblemFileOrFail(problem)
     val expr = parseTacticFileOrFail(solution)
 
-    val result = SequentialInterpreter(Seq())(expr, BelleProvable(Provable.startProof(f)))
+    val result = SequentialInterpreter(Seq())(expr, BelleProvable(ProvableSig.startProof(f)))
     result match {
       case BelleProvable(p, _) => {
         if(!p.isProved) {

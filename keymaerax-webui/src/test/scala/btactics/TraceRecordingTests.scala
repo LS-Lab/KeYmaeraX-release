@@ -1,13 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, PosInExpr, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, PosInExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, DBAbstractionObj}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, ProofTree}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import org.scalatest.{Ignore, BeforeAndAfterEach, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Ignore, Matchers}
 
 import scala.collection.immutable._
 
@@ -20,7 +21,7 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   val db = DBAbstractionObj.testDatabase
   //@todo fill in reasonable data, this is bogus
   private val u = 999
-  val listener = new TraceRecordingListener(db, 1337, u, Some(u), Provable.startProof(True), 0, 1, false, "TODO")
+  val listener = new TraceRecordingListener(db, 1337, u, Some(u), ProvableSig.startProof(True), 0, 1, false, "TODO")
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
@@ -28,8 +29,8 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
-  private def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(s))
+  private def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
+    val v = BelleProvable(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)

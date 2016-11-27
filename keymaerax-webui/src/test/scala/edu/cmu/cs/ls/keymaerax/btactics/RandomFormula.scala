@@ -6,10 +6,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+
 import scala.util.Random
 import scala.collection.immutable
 import scala.collection.immutable._
 import Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
  * Random formula generator and random term generator and random program generator
@@ -84,7 +86,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** Generate a random proof of a random tautological sequents */
-  def nextProvable(size: Int): Provable = nextPr(nextNames("z", size / 3 + 1), size)
+  def nextProvable(size: Int): ProvableSig = nextPr(nextNames("z", size / 3 + 1), size)
 
   /** Generate a random schematic instance of the given Formula `fml` of complexity `size`.
     * @param renamed whether variables can have been renamed in the schematic instance generated.
@@ -162,18 +164,18 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   //def nextProved(size: Int): Sequent = nextProvable(size).conclusion
 
   /** weaken p1 and p2 such that they have the same context except at position `pos` */
-  private def weakenRight(p1: Provable, p2: Provable, pos: SuccPos): (Provable,Provable) = {
+  private def weakenRight(p1: ProvableSig, p2: ProvableSig, pos: SuccPos): (ProvableSig,ProvableSig) = {
     require(pos.getIndex==0, "currently only implemented for first succedent position")
     ???
   }
 
   /** Apply Rule Forward: like Provable.apply(Sequent,Rule) except for two premises */
-  private def prolong(p1: Provable, p2: Provable, newConsequence: Sequent, rule: Rule): Provable = {
-    Provable.startProof(newConsequence)(rule, 0)(p1, 0)(p2, 1)
+  private def prolong(p1: ProvableSig, p2: ProvableSig, newConsequence: Sequent, rule: Rule): ProvableSig = {
+    ProvableSig.startProof(newConsequence)(rule, 0)(p1, 0)(p2, 1)
   }
 
   /** padding such that at least lefts many formula in antecedent of pr by weakening */
-  private def padLeft(vars : IndexedSeq[Variable], n : Int, pr: Provable, lefts: Int): Provable = {
+  private def padLeft(vars : IndexedSeq[Variable], n : Int, pr: ProvableSig, lefts: Int): ProvableSig = {
     require(lefts>=0)
     if (pr.conclusion.ante.length >= lefts) pr
     else {
@@ -183,7 +185,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** padding such that at least rights many formula in succedent of pr by weakening */
-  private def padRight(vars : IndexedSeq[Variable], n : Int, pr: Provable, rights: Int): Provable = {
+  private def padRight(vars : IndexedSeq[Variable], n : Int, pr: ProvableSig, rights: Int): ProvableSig = {
     require(rights>=0)
     if (pr.conclusion.succ.length >= rights) pr
     else {
@@ -345,13 +347,13 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** Generate a random proof of a random tautological sequent, basically via an external forward sequent calculus */
-  def nextPr(vars : IndexedSeq[Variable], n : Int): Provable = {
+  def nextPr(vars : IndexedSeq[Variable], n : Int): ProvableSig = {
     require(n>=0)
-    if (n == 0 || rand.nextFloat()<=shortProbability) return Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return ProvableSig.startProof(True)(CloseTrue(SuccPos(0)), 0)
     val r = rand.nextInt(70)
     r match {
-      case 0 => Provable.startProof(True)(CloseTrue(SuccPos(0)), 0)
-      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); Provable.startProof(Sequent(IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
+      case 0 => ProvableSig.startProof(True)(CloseTrue(SuccPos(0)), 0)
+      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); ProvableSig.startProof(Sequent(IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
       case it if 10 until 20 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
         p1(p1.conclusion.glue(Sequent(IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
       case it if 20 until 30 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
