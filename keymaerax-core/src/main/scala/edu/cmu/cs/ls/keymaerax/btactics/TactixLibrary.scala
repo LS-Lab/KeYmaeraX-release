@@ -143,13 +143,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * @see [[onBranch()]]
    * @see [[sublabel()]]
    */
-  def label(s: String): BelleExpr = ??? //new LabelBranch(s)
+  def label(s: String): BelleExpr = skip //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s
     *
     * @see [[label()]]
     */
-  def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
+  def sublabel(s: String): BelleExpr = skip //new SubLabelBranch(s)
 
   // modalities
 
@@ -273,7 +273,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  lazy val diffSolve: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve()
+  lazy val diffSolve: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = false)
+
+  /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
+    * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
+  lazy val diffSolveEnd: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = true)
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
     * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
@@ -528,6 +532,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
   def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleError("partialQE requires a QETool, but got None")))
+
+  /** Splits propositional into many smallest possible QE calls */
+  def atomicQE: BelleExpr = prop & onAll(QE) //@todo less splitting (try with timeouts?)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.

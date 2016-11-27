@@ -68,6 +68,9 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
 object PosInExpr {
   /** Top position of an expression, i.e., the whole expression itself, not any subexpressions */
   val HereP: PosInExpr = new PosInExpr(Nil)
+
+  /** Parses the binary representation of an int into a PosInExpr */
+  def parseInt(i: Int): PosInExpr = if (i > 1) parseInt(i/2) ++ i%2 else PosInExpr(i::Nil)
 }
 
 // @note observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class

@@ -139,25 +139,32 @@ object SimplifierV2 {
   {
     //todo: This may need to be generalized to do allow term simplification under a context
     //todo: reflect out ground terms
-    val init = DerivedAxioms.equalReflex.fact(
-      USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
-    val (rect,recpf) = t match {
+    val recpf = t match {
       case bop: BinaryCompositeTerm =>
         val l = bop.left
         val r = bop.right
         val (lt,lpr) = termSimp(l)
         val (rt,rpr) = termSimp(r)
         val nt = bop.reapply(lt,rt)
-        (nt,proveBy(Equal(t, nt),
+        proveBy(Equal(t, nt),
           CEat(lpr)(SuccPosition(1,1::0::Nil))&
-            CEat(rpr)(SuccPosition(1,1::1::Nil))& by(init)))
+            CEat(rpr)(SuccPosition(1,1::1::Nil))& byUS(DerivedAxioms.equalReflex))
       case uop: UnaryCompositeTerm =>
         val u = uop.child
         val (ut,upr) = termSimp(u)
         val nt = uop.reapply(ut)
-        (nt,proveBy(Equal(t,nt),
-          CEat(upr)(SuccPosition(1,1::0::Nil)) & by (init)))
-      case _ => (t,init)
+        proveBy(Equal(t,nt),
+          CEat(upr)(SuccPosition(1,1::0::Nil)) & byUS(DerivedAxioms.equalReflex))
+      case FuncOf(fn, c) if c != Nothing =>
+        val args = FormulaTools.argumentList(c)
+        val simp = args.map(termSimp)
+        val nArgs = simp.map(_._1).reduce[Term](Pair)
+        val pref = if (args.size <= 1) 0::Nil else 0::0::Nil
+        val tactic = simp.zipWithIndex.map({ case ((_, eqPr), i) => useAt(eqPr)(1, pref ++ PosInExpr.parseInt(i).pos) }).
+          reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflex)
+        proveBy(Equal(t, FuncOf(fn, nArgs)), tactic)
+      case _ => DerivedAxioms.equalReflex.fact(
+        USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     }
 
     //Apply arithmetic propositions

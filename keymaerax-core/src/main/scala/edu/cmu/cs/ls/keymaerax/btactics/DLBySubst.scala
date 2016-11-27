@@ -212,9 +212,9 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.loop]] */
-  def loop(invariant: Formula) = "loop" byWithInput(invariant, (pos, sequent) => {
+  def loop(invariant: Formula, pre: BelleExpr = alphaRule*): DependentPositionWithAppliedInputTactic = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
-    (alphaRule*) & ("doLoop" byWithInput(invariant, (pos, sequent) => {
+    pre & ("doLoop" byWithInput(invariant, (pos, sequent) => {
        sequent.sub(pos) match {
           case Some(b@Box(Loop(a), p)) =>
             if (!FormulaTools.dualFree(a)) loopRule(invariant)(pos)

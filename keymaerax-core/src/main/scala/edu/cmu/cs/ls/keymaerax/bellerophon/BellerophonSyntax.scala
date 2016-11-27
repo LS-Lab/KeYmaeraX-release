@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo, FormulaTools}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -240,7 +240,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
     * @see [[apply()]]
     */
-  final def apply(locator: Symbol, expected: Formula): T = locator match {
+  final def apply(locator: Symbol, expected: Expression): T = locator match {
     case 'L => apply(FindL(0, Some(expected)))
     case 'R => apply(FindR(0, Some(expected)))
     case '_ => this match {
@@ -332,18 +332,23 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(provable: ProvableSig, goal: Int, shape: Option[Formula], pos: Position, exact: Boolean,
+  private def tryAllAfter(provable: ProvableSig, goal: Int, shape: Option[Expression], pos: Position, exact: Boolean,
                           cause: BelleError): ProvableSig =
     if (pos.isIndexDefined(provable.subgoals(goal))) {
       try {
         shape match {
-          case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
+          case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
             positionTactic.computeResult(provable, pos)
-          case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
+          case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
             tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
-          case Some(f) if exact && provable.subgoals(goal)(pos.top) == f => positionTactic.computeResult(provable, pos)
-          case Some(f) if exact && provable.subgoals(goal)(pos.top) != f =>
+          case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) == f => positionTactic.computeResult(provable, pos)
+          case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) != f =>
             tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+          case Some(t: Term) if exact =>
+            val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), _ == t)
+            if (tPos.isEmpty) tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+            else positionTactic.computeResult(provable, pos.topLevel ++ tPos.head)
+          //@todo inexact terms
           case None => positionTactic.computeResult(provable, pos)
         }
       } catch {
@@ -465,21 +470,26 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(goal: Int, shape: Option[Formula], pos: Position, exact: Boolean,
+  private def tryAllAfter(goal: Int, shape: Option[Expression], pos: Position, exact: Boolean,
                           cause: BelleError): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (pos.isIndexDefined(provable.subgoals(goal))) {
           try {
             shape match {
-              case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
+              case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-              case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
+              case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
                 tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
-              case Some(f) if exact && f == provable.subgoals(goal)(pos.top) =>
+              case Some(f: Formula) if exact && f == provable.subgoals(goal)(pos.top) =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-              case Some(f) if exact && f != provable.subgoals(goal)(pos.top) =>
+              case Some(f: Formula) if exact && f != provable.subgoals(goal)(pos.top) =>
                 tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+              case Some(t: Term) if exact =>
+                val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), _ == t)
+                if (tPos.isEmpty) tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+                else pt.factory(pos.topLevel ++ tPos.head).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
+              //@todo inexact terms
               case None =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
             }
