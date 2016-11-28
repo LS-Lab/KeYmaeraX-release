@@ -77,22 +77,19 @@ class ArithmeticTests extends TacticTestBase {
   it should "not support differential symbols" in withMathematica { tool =>
     the [BelleError] thrownBy { proveBy(
       Sequent(IndexedSeq(), IndexedSeq("5=5 | x' = 1'".asFormula)),
-      TactixLibrary.QE) } should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got Provable(  ==>  5=5|x'=(1)'\n  from     ==>  5=5, x'=(1)')"
+      TactixLibrary.QE) } should have message "QE was unable to prove: invalid formula Expected proved provable, but got NoProofTermProvable(Provable(  ==>  5=5|x'=(1)'   from     ==>  5=5, x'=(1)'))"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq(), IndexedSeq("x' = y'".asFormula)),
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got Provable(  ==>  x'=y'\n  from     ==>  x'=y')"
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula Expected proved provable, but got NoProofTermProvable(Provable(  ==>  x'=y'   from     ==>  x'=y'))"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
     the [BelleError] thrownBy proveBy(
       Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a=a()".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
-                                                                            |Expected proved provable, but got Provable(a=1, a()=2
-                                                                            |  ==>  a=a()
-                                                                            |  from     ==>  false)""".stripMargin
+      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula Expected proved provable, but got NoProofTermProvable(Provable(a=1, a()=2   ==>  a=a()   from     ==>  false))""".stripMargin
 
     proveBy(
       Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a<a()".asFormula)),
