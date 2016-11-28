@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import SequentCalculus.{cohide2, cohideR, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
+import SequentCalculus.{cohide2, cohideR, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR, commuteEqual}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutL, cutLR, cutR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
@@ -755,6 +755,7 @@ trait UnifyUSCalculus {
     * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))``
     * @todo Optimization: Would direct propositional rules make CEat faster at pos.isTopLevel?
     */
+
   def CEat(fact: ProvableSig): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
@@ -764,17 +765,29 @@ trait UnifyUSCalculus {
       case Imply(l,r) => (l, r, ident, CMon)
       case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
     }
-    val (other, key, equivify, tactic) = splitFact
+    val (otherInit, keyInit, equivify, tactic) = splitFact
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
+        val (other,key) =
+          if(pos.isAnte && fact.conclusion.succ.head.isInstanceOf[Imply]) (keyInit,otherInit)
+          else (otherInit,keyInit)
+
         require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + " which is " + sequent.sub(pos).getOrElse("<ill-positioned>") + "\nat " + sequent)
         val (ctx, _) = sequent.at(pos)
-        val (cutPos: SuccPos, commute: BelleExpr) = pos match {case p: SuccPosition => (p.top, ident) case p: AntePosition => (SuccPos(sequent.succ.length), commuteEquivR(1))}
+        val (cutPos: SuccPos, commute: BelleExpr) = pos match {
+          case p: SuccPosition => (p.top, ident)
+          case p: AntePosition => (SuccPos(sequent.succ.length),
+            fact.conclusion.succ.head match {
+              case Equal(l,r) => commuteEqual(1)
+              case Equiv(l,r) => commuteEquivR(1)
+              case _ => ident
+            })
+        }
         val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
         cutLR(ctxOther)(pos.top) <(
           /* use */ ident,
-          /* show */ cohideR(cutPos) & equivify & tactic(pos.inExpr) & commute &  by(fact)
+          /* show */ cohideR(cutPos) & equivify & tactic(pos.inExpr) & commute & by(fact)
           )
       }
     }
