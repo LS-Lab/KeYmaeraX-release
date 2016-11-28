@@ -91,7 +91,7 @@ object CondCongruence {
 
     //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
     // A() & W(w) |- Ce<->ci
-    val seqEquivalence = (Provable.startProof(Sequent(IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
+    val seqEquivalence = (ProvableSig.startProof(Sequent(IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
     (Cut(equivalence), 0)
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)
@@ -428,7 +428,7 @@ object CondCongruence {
    * @return a proof of acasxexplicit as constructed out of the other ingredients.
    * @author Andre Platzer
    */
-  def acasXTLcongruence(implicitExplicit: Provable, acasximplicitP: Provable, ucLoLemma: Provable, acasxexplicit: Formula, done: BelleExpr = close): ProvableSig = {
+  def acasXTLcongruence(implicitExplicit: ProvableSig, acasximplicitP: ProvableSig, ucLoLemma: ProvableSig, acasxexplicit: Formula, done: BelleExpr = close): ProvableSig = {
     //@todo compiles but not yet ported
     println("implicit-explicit lemma subgoals: " + implicitExplicit.subgoals)
     require(implicitExplicit.conclusion.ante.isEmpty, "Equivalence of implicit and explicit should be proved without assumptions")
@@ -480,7 +480,7 @@ object CondCongruence {
     // read off more lemmas from equivalence
 
     //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
-    val seqEquivalence = (Provable.startProof(Sequent(IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
+    val seqEquivalence = (ProvableSig.startProof(Sequent(IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
     (Cut(equivalence), 0)
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)

@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import java.security.MessageDigest
 
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
@@ -70,7 +70,7 @@ object Lemma {
     }
     //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
-    Lemma(fact, evidence, name)
+    Lemma(NoProofTermProvable(fact), evidence, name) //@todo also load proof terms.
   }
 
   /** Compute the checksum for the given Provable, which provides some protection against accidental changes. */

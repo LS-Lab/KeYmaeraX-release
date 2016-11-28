@@ -19,7 +19,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
 import scala.collection.immutable
 
@@ -370,11 +370,11 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *  )
   * }}}
   */
-final case class Provable private(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) extends ProvableSig {
+final case class Provable private(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
   /**
     * Position types for the subgoals of a Provable.
     */
-  override type Subgoal = Int
+  type Subgoal = Int
 
   /**
     * Checks whether this Provable proves its conclusion.
@@ -383,7 +383,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *         false if subgoals are missing that need to be proved first.
     * @note soundness-critical
     */
-  override final def isProved: Boolean = subgoals.isEmpty
+  final def isProved: Boolean = subgoals.isEmpty
 
   /**
     * What conclusion this Provable proves if isProved.
@@ -415,7 +415,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @requires(0 <= subgoal && subgoal < subgoals.length)
     * @note soundness-critical. And soundness needs Rule to be sealed.
     */
-  final def apply(rule: Rule, subgoal: Subgoal): ProvableSig = {
+  final def apply(rule: Rule, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to an index " + subgoal + " that is within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       // subgoal closed by proof rule
@@ -458,7 +458,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @requires(subderivation.conclusion == subgoals(subgoal))
     * @note soundness-critical
     */
-  final def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
+  final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
     subderivation.subgoals.toList match {
@@ -490,7 +490,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
-  final def apply(subst: USubst): ProvableSig =
+  final def apply(subst: USubst): Provable =
     try {
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
       //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 27."
@@ -522,7 +522,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * Will return a Provable with the same subgoals but an updated conclusion.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
-  def apply(newConsequence: Sequent, rule: Rule): ProvableSig = {
+  def apply(newConsequence: Sequent, rule: Rule): Provable = {
     //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
     insist(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " was expected to justify\n" + this.conclusion.prettyString + "\n-----------------------------" + rule + "??\n" + newConsequence.prettyString +
       "\n\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule instead led to " + rule(newConsequence) +
@@ -552,7 +552,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
-  def apply(prolongation: ProvableSig): ProvableSig = {
+  def apply(prolongation: Provable): Provable = {
     //@note it really already works when prolongation.subgoal(0)==conclusion but it's somewhat surprising so disallowed.
     require(prolongation.subgoals.length==1, "Currently only for prolongations with exactly one subgoal\n" + this + "\nwith\n" + prolongation)
     prolongation(this, 0)
@@ -572,7 +572,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * which is suitable for being merged back into this Provable for subgoal `i` subsequently.
     * @note not soundness-critical only helpful for completeness-critical
     */
-  def sub(subgoal: Subgoal): ProvableSig = {
+  def sub(subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     Provable.startProof(subgoals(subgoal))
   } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
@@ -580,15 +580,6 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
 
   override def toString: String = "Provable(" + conclusion + (if (isProved) " proved" else "\n  from   " + subgoals.mkString("\n  with   ")) + ")"
   def prettyString: String = "Provable(" + conclusion.prettyString + (if (isProved) " proved" else "\n  from   " + subgoals.map(_.prettyString).mkString("\n  with   ")) + ")"
-
-  override val axioms: Map[String, ProvableSig] = Provable.axioms
-  override val rules: Map[String, ProvableSig] = Provable.rules
-
-  override def startProof(goal: Sequent): ProvableSig = Provable.startProof(goal)
-
-  override def startProof(goal: Formula): ProvableSig = Provable.startProof(goal)
-
-  override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
 }
 
 
@@ -615,7 +606,7 @@ object Provable {
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only valid formulas are sound axioms.
     */
-  val axioms: immutable.Map[String, ProvableSig] = axiom.mapValues(axiom =>
+  val axioms: immutable.Map[String, Provable] = axiom.mapValues(axiom =>
     new Provable(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
   )
 
@@ -630,7 +621,7 @@ object Provable {
     * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(USubst)]]
     */
-  val rules: immutable.Map[String, ProvableSig] = AxiomBase.loadAxiomaticRules.mapValues(rule =>
+  val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules.mapValues(rule =>
     new Provable(rule._2, rule._1)
   )
 
@@ -646,7 +637,7 @@ object Provable {
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note soundness-critical
     */
-  def startProof(goal : Sequent): ProvableSig = {
+  def startProof(goal : Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq(goal))
   } ensuring(
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
@@ -663,7 +654,7 @@ object Provable {
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note Not soundness-critical (convenience method)
     */
-  def startProof(goal : Formula): ProvableSig =
+  def startProof(goal : Formula): Provable =
     startProof(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
   /**
@@ -680,7 +671,7 @@ object Provable {
     //@note soundness-critical
     val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-    Lemma(fact, Lemma.requiredEvidence(fact, evidence :: Nil), None)
+    Lemma(NoProofTermProvable(fact), Lemma.requiredEvidence(NoProofTermProvable(fact), evidence :: Nil), None)
   }
 
   /**
