@@ -57,7 +57,7 @@ class PolynomialArithTests extends TacticTestBase {
     val (m5,r5) = mulMono(m4,m3)
     val (m6,r6) = mulMono(m5,m5)
 
-    val p2 = mulPolyMono(p1,Number(5),m4)
+    val (p2,r2) = mulPolyMono(p1,Number(5),m4)
 
     //println(m4,m5,m6)
     //println(p2)
@@ -69,8 +69,8 @@ class PolynomialArithTests extends TacticTestBase {
     val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a^2)".asTerm
 
     val (p3,r3) = addPoly(p1,p2)
-    val p4 = mulPoly(p1,p2)
-    val p5 = mulPoly(p3,p4)
+    val (p4,r4) = mulPoly(p1,p2)
+    val (p5,r5) = mulPoly(p3,p4)
 
     //println(p4)
     //println(p5)
@@ -95,7 +95,29 @@ class PolynomialArithTests extends TacticTestBase {
     println(mulMono(m2,m1)) //Inverse
   }
 
-  "PolynomialArith" should "do poly normalize" in withMathematica { qeTool =>
+  "PolynomialArith" should "do poly mono mul with proof" in withMathematica { qeTool =>
+    val m1 = "1 * x^5 * a^5".asTerm
+    val p1 = "0 + 5 * (1 * x^2) + 5 * (1 * y^2)".asTerm
+    val (p2,r2) = mulPolyMono(p1,Number(5),m1)
+
+    println(p2,r2)
+  }
+
+  "PolynomialArith" should "do poly mul with proof" in withMathematica { qeTool =>
+    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a^2)".asTerm
+    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a^2)".asTerm
+
+    val (p3,r3) = addPoly(p1,p2)
+    val (p4,r4) = mulPoly(p1,p2)
+    val (p5,r5) = mulPoly(p3,p4)
+
+    println(p4)
+    println(r4)
+    println(p5)
+    println(r5)
+  }
+
+  "PolynomialArith" should "do poly normalize with proof" in withMathematica { qeTool =>
     val p1 = "x * x + y + z * 5".asTerm
     val p2 = "y*(z + z + x ) * (x* y)".asTerm
 

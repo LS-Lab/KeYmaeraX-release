@@ -132,7 +132,7 @@ object PolynomialArith {
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(plusCoeff2,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
-              & TactixLibrary.RCF))
+              & RCF))
           }
         }
         else {
@@ -182,14 +182,14 @@ object PolynomialArith {
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(timesCoeff1,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
-              & TactixLibrary.RCF))
+              & RCF))
           else {
             val res = Times(rec,Power(sl,Number(ml.value+mr.value)))
             (res, proveBy(Equal(lhs,res), useAt(timesAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(timesCoeff2,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
-              & TactixLibrary.RCF))
+              & RCF))
           }
         }
         else {
@@ -201,33 +201,73 @@ object PolynomialArith {
     }
   }
 
+  private val timesAssoc3 = proveBy(("(P_() + C_() * M_()) * (D_() * N_()) = " +
+    "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE)
+
   //Multiplies a normalized polynomial by a constant and a normalized monomial
-  def mulPolyMono(l:Term,c:Number,r:Term): Term = {
+  def mulPolyMono(l:Term,c:Number,r:Term): (Term,ProvableSig) = {
+    val lhs = Times(l,Times(c,r))
     l match {
-      case n:Number => n // Multiplication by 0 poly
+      case n:Number => (n,proveBy(Equal(lhs,n),byUS("0*"))) // Multiplication by 0 poly
       case Plus(nl,Times(cl:Number,ml)) =>
-        Plus(mulPolyMono(nl,c,r),Times(Number(cl.value*c.value),mulMono(ml,r)._1) )
+        val (rec1,pr1) = mulPolyMono(nl,c,r)
+        val (rec2,pr2) = mulMono(ml,r)
+        val res =  Plus(rec1,Times(Number(cl.value*c.value),rec2) )
+
+        (res,proveBy(Equal(lhs,res),useAt(timesAssoc3)(SuccPosition(1,0::Nil))
+          & useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(pr2)(SuccPosition(1,0::1::1::Nil))
+          & useAt(plusCoeff2,PosInExpr(1::Nil))(1)
+          //Should only be simple arithmetic
+          & RCF))
+
       case _ => ???
     }
   }
 
   //Multiplies and returns normalised polynomials
-  def mulPoly(l:Term,r:Term): Term = {
+  def mulPoly(l:Term,r:Term): (Term,ProvableSig) = {
+    val lhs = Times(l,r)
     r match {
-      case n:Number => n //Multiplication by 0 poly
-      case Plus(nr,Times(cr:Number,mr)) => addPoly(mulPoly(l,nr),mulPolyMono(l,cr,mr))._1
+      case n:Number => (n,proveBy(Equal(lhs,n),byUS("*0"))) //Multiplication by 0 poly
+      case Plus(nr,Times(cr:Number,mr)) =>
+        val (rec1,pr1) = mulPoly(l,nr)
+        val (rec2,pr2) = mulPolyMono(l,cr,mr)
+        val (res,pr3) = addPoly(rec1,rec2)
+        (res,proveBy(Equal(lhs,res),useAt("distributive")(SuccPosition(1,0::Nil))
+          & useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(pr2)(SuccPosition(1,0::1::Nil))
+          & by(pr3)
+        ))
+
       case _ => ???
     }
   }
 
   //Normalizes an otherwise un-normalized term
   //Not many bells and whistles yet
-  def normalise(l:Term) : Term = {
+  def normalise(l:Term) : (Term,ProvableSig) = {
     l match {
-      case n:Number => Plus(Number(0), Times(n,Number(1)))
-      case v:Variable => Plus(Number(0),Times(Number(1), Times(Number(1),Power(v,Number(1))) ))
-      case Plus(l,r) => addPoly(normalise(l),normalise(r))._1
-      case Times(l,r) => mulPoly(normalise(l),normalise(r))
+      case n:Number =>
+        val res = Plus(Number(0), Times(n,Number(1)))
+        (res,proveBy(Equal(l,res), RCF ))
+      case v:Variable =>
+        val res = Plus(Number(0),Times(Number(1), Times(Number(1),Power(v,Number(1))) ))
+        (res,proveBy(Equal(l,res), RCF ))
+      case Plus(ln,rn) =>
+        val (rec1,pr1) = normalise(ln)
+        val (rec2,pr2) = normalise(rn)
+        val (res,pr3) = addPoly(rec1,rec2)
+        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(pr2)(SuccPosition(1,0::1::Nil))
+          & by(pr3)))
+      case Times(ln,rn) =>
+        val (rec1,pr1) = normalise(ln)
+        val (rec2,pr2) = normalise(rn)
+        val (res,pr3) = mulPoly(rec1,rec2)
+        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(pr2)(SuccPosition(1,0::1::Nil))
+          & by(pr3)))
       case _ => ???
     }
   }
