@@ -51,9 +51,9 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
     result.subgoals(1).succ should contain only "x!=m".asFormula
     result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
-    result.subgoals(2).succ should contain only ("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> J(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,a*(0+1*t_-0)+v))".asFormula, "SB(x,m)".asFormula)
+    result.subgoals(2).succ should contain only ("\\forall t_ (t_>=0 -> J(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,a*(0+1*t_-0)+v))".asFormula, "SB(x,m)".asFormula)
     result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
-    result.subgoals(3).succ should contain only " \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> true) -> J((-b)/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,(-b)*(0+1*t_-0)+v))".asFormula
+    result.subgoals(3).succ should contain only " \\forall t_ (t_>=0 -> J((-b)/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,(-b)*(0+1*t_-0)+v))".asFormula
   }
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" in withMathematica { qeTool =>
@@ -64,10 +64,10 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals.head.succ should contain only "J(x,v)".asFormula
     result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
     result.subgoals(1).succ should contain only "x!=m".asFormula
-    result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula, "t_>=0".asFormula, "\\forall s_ (0<=s_&s_<=t_ -> true)".asFormula)
+    result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula, "t_>=0".asFormula)
     //@todo improve simplifier
     result.subgoals(2).succ should contain only ("J(a/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,a*(0+1*t_-0)+v)".asFormula, "SB(x,m)".asFormula)
-    result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula, "t_>=0".asFormula, "\\forall s_ (0<=s_&s_<=t_ -> true)".asFormula)
+    result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula, "t_>=0".asFormula)
     result.subgoals(3).succ should contain only "J((-b)/2*(0+1*t_-0)^2+v*(0+1*t_-0)+x,(-b)*(0+1*t_-0)+v)".asFormula
   }
 
