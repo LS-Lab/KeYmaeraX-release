@@ -289,18 +289,18 @@ object PolynomialArith {
     }
   }
 
-  val axMov = proveBy("f_() + -1 * a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
+  private val axMov: ProvableSig = proveBy("f_() + -1 * a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
 
-  val ax6 = proveBy("[f_:=1; {a_:=*;f_:=a_*a_ + f_;}*] !(f_ = 0)".asFormula,
+  private val ax6: ProvableSig = proveBy("[f_:=1; {a_:=*;f_:=a_*a_ + f_;}*] !(f_ = 0)".asFormula,
     chase(1)& allR(1) & implyR(1) & loop("f_>0".asFormula)(1) & Idioms.<(implyRi & RCF,implyRi & RCF,chase(1) & allR(1) & implyRi & RCF))
 
-  val ax6contra = proveBy(" <f_:=1; {a_:=*;f_:=a_*a_ + f_;}*> (f_ = 0) -> false".asFormula,
+  private val ax6contra: ProvableSig = proveBy(" <f_:=1; {a_:=*;f_:=a_*a_ + f_;}*> (f_ = 0) -> false".asFormula,
     implyR(1) & useAt("<> diamond",PosInExpr(1::Nil))(-1)&
       cut(ax6.conclusion.succ.head) <(notL(-1) & close,cohideR(2) & by(ax6)))
 
   //Manual proof outline for Fig2
-  val antes = IndexedSeq("x + -1 * y + -1*a*a = 0".asFormula,"z+ -1*b*b = 0".asFormula,"(y*z+-1*x*z)*c*c+-1 = 0".asFormula)
-  val proof = proveBy(Sequent(antes,IndexedSeq("false".asFormula)),
+  private val antes: IndexedSeq[Formula] = IndexedSeq("x + -1 * y + -1*a*a = 0".asFormula,"z+ -1*b*b = 0".asFormula,"(y*z+-1*x*z)*c*c+-1 = 0".asFormula)
+  private val proof: ProvableSig = proveBy(Sequent(antes,IndexedSeq("false".asFormula)),
     //Normalise the polynomials on th left?
     //normaliseAt(AntePosition(1,0::Nil)) &
     //normaliseAt(AntePosition(2,0::Nil)) &
@@ -326,13 +326,13 @@ object PolynomialArith {
       exhaustiveEqL2R(true)('Llast) &
       //z-b^2
       implyRi(AntePos(1),SuccPos(0)) &
-      useAt(axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*a*a*c*c".asTerm)::Nil))(1) &
+      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*a*a*c*c".asTerm)::Nil))(1) &
       //x-y-a^2
       implyRi(AntePos(0),SuccPos(0)) &
-      useAt(axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*z*c*c".asTerm)::Nil))(1) &
+      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*z*c*c".asTerm)::Nil))(1) &
       //(yz-xz)c^2 - 1
       implyRi(AntePos(0),SuccPos(0)) &
-      useAt(axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1".asTerm)::Nil))(1) &
+      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1".asTerm)::Nil))(1) &
       normaliseAt(SuccPosition(1,0::Nil)) &
       byUS("= reflexive")
   )
