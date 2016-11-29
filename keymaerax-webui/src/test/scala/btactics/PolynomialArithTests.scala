@@ -1,9 +1,15 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, RenUSubst, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
+import scala.collection.immutable._
 
 /**
   * Created by yongkiat on 11/27/16.
@@ -117,12 +123,32 @@ class PolynomialArithTests extends TacticTestBase {
     println(r5)
   }
 
+  "PolynomialArith" should "do iterated squares with proof" in withMathematica { qeTool =>
+
+    println(iterSquare("(x+yz+k)".asTerm,3))
+    println(iterSquare("(x+z+y)".asTerm,9))
+    println(iterSquare("(xyz+yzx)".asTerm,12))
+
+  }
+
   "PolynomialArith" should "do poly normalize with proof" in withMathematica { qeTool =>
     val p1 = "x * x + y + z * 5".asTerm
     val p2 = "y*(z + z + x ) * (x* y)".asTerm
+    val p3 = "- (x^2 + y^2*z)".asTerm
+    val p4 = "x^2 - (x^2 + y^2*z)".asTerm
+    val p5 = "(x+y*z -x - y*z + a)^3".asTerm
 
     println(normalise(p1))
     println(normalise(p2))
+    println(normalise(p3))
+    println(normalise(p4))
+    println(normalise(p5))
   }
 
+  "PolynomialArith" should "do ax" in withMathematica { qeTool =>
+    //RWV part of example in Fig 2
+
+    //val test = proveBy("x=0 -> x^2 = 0".asFormula,QE)
+    //val test2 = proveBy(Sequent(IndexedSeq("x = 0".asFormula),IndexedSeq()),CEat(test)(-1))
+  }
 }
