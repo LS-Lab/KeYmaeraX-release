@@ -135,13 +135,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * @see [[Idioms.<()]]
    * @see [[sublabel()]]
    */
-  def label(s: String): BelleExpr = LabelBranch(s)
+  def label(s: String): BelleExpr = LabelBranch(BelleTopLevelLabel(s))
 
   /** Mark the current proof branch and all subbranches s
     *
     * @see [[label()]]
     */
-  def sublabel(s: String): BelleExpr = SubLabelBranch(s)
+  def sublabel(s: String): BelleExpr = skip //LabelBranch(BelleSubLabel(???, s))
 
   // modalities
 

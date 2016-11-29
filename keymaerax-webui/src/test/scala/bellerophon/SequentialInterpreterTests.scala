@@ -241,8 +241,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "prove |- (1=1->1=1) & (!2=2  | 2=2) with labels out of order" in {
     val tactic = andR(1) & Idioms.<(label("foo"), label("bar")) & Idioms.<(
-      ("bar", orR(1) & notR(1) & close),
-      ("foo", implyR(1) & close)
+      (BelleTopLevelLabel("bar"), orR(1) & notR(1) & close),
+      (BelleTopLevelLabel("foo"), implyR(1) & close)
     )
     val v = {
       val f = "(1=1->1=1) & (!2=2 | 2=2)".asFormula

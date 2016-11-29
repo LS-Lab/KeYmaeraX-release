@@ -41,12 +41,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
         }
         case LabelBranch(label) => v match {
-          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ BelleTopLevelLabel(label)))
-          case BelleProvable(pr, None) => BelleProvable(pr, Some(BelleTopLevelLabel(label) :: Nil))
-          case _ => throw new BelleError(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
-        }
-        case SubLabelBranch(label) => v match {
-          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels ++ labels.map(l => BelleSubLabel(l, label))))
+          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
+          case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
           case _ => throw new BelleError(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
         }
         case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>

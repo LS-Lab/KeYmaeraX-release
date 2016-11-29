@@ -78,8 +78,7 @@ case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   //@todo make this an assert.
   if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
 }
-case class LabelBranch(label: String) extends BelleExpr { override def prettyString: String = s"Label $label" }
-case class SubLabelBranch(label: String) extends BelleExpr { override def prettyString: String = s"Sublabel $label" }
+case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = s"Label ${label.prettyString}" }
 
 /** ⎵: Placeholder for tactics. Reserved tactic expression */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }

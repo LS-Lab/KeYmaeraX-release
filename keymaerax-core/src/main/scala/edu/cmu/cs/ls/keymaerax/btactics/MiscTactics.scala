@@ -166,10 +166,10 @@ object Idioms {
   /** Execute ts by branch label, fall back to branch order if branches come without labels.
     * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
     */
-  def <(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = new LabelledGoalsDependentTactic("onBranch") {
+  def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = new LabelledGoalsDependentTactic("onBranch") {
     override def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = {
       val labelledTactics = (s1 +: spec).toMap
-      Idioms.<(labels.map(l => labelledTactics(l.prettyString)):_*)
+      Idioms.<(labels.map(l => labelledTactics(l)):_*)
     }
     override def computeExpr(provable: ProvableSig): BelleExpr = {
       if (DEBUG) println("No branch labels, executing by branch order")
