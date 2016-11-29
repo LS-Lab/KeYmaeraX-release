@@ -4,10 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
 
 /**
   * Created by yongkiat on 11/27/16.
@@ -271,4 +273,67 @@ object PolynomialArith {
       case _ => ???
     }
   }
+
+  val normaliseAt:DependentPositionTactic = new DependentPositionTactic("normalise at"){
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        sequent.sub(pos) match
+        {
+          case Some(t:Term) =>
+            val(tt,pr) = normalise(t)
+            println(tt,pr)
+            CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
+          case _ => ident
+        }
+      }
+    }
+  }
+
+  val axMov = proveBy("f_() + -1 * a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
+
+  val ax6 = proveBy("[f_:=1; {a_:=*;f_:=a_*a_ + f_;}*] !(f_ = 0)".asFormula,
+    chase(1)& allR(1) & implyR(1) & loop("f_>0".asFormula)(1) & Idioms.<(implyRi & RCF,implyRi & RCF,chase(1) & allR(1) & implyRi & RCF))
+
+  val ax6contra = proveBy(" <f_:=1; {a_:=*;f_:=a_*a_ + f_;}*> (f_ = 0) -> false".asFormula,
+    implyR(1) & useAt("<> diamond",PosInExpr(1::Nil))(-1)&
+      cut(ax6.conclusion.succ.head) <(notL(-1) & close,cohideR(2) & by(ax6)))
+
+  //Manual proof outline for Fig2
+  val antes = IndexedSeq("x + -1 * y + -1*a*a = 0".asFormula,"z+ -1*b*b = 0".asFormula,"(y*z+-1*x*z)*c*c+-1 = 0".asFormula)
+  val proof = proveBy(Sequent(antes,IndexedSeq("false".asFormula)),
+    //Normalise the polynomials on th left?
+    //normaliseAt(AntePosition(1,0::Nil)) &
+    //normaliseAt(AntePosition(2,0::Nil)) &
+    //normaliseAt(AntePosition(3,0::Nil)) &
+    //Introduce Ax 6
+    useAt(ax6contra,PosInExpr(1::Nil))(1) &
+      useAt("<;> compose")(1) &
+      //Stick in some 0^2 witnesses for now
+      //Probably want a version of <*> iterate that doesn't give the extra branches
+      useAt("<*> iterate")(SuccPosition(1,1::Nil)) &
+      useAt("<*> iterate")(SuccPosition(1,1::1::1::Nil)) &
+      useAt("<*> iterate")(SuccPosition(1,1::1::1::1::1::Nil)) &
+      useAt("<*> approx")(SuccPosition(1,1::1::1::1::1::1::1::Nil)) &
+      chase(1) & orR(1) & hideR(1) &
+      //First witness (also clears away the forall f_)
+      chase(1) & existsR("0".asTerm)(1) & allR(1) & implyR(1) & orR(1) & hideR(1) &
+      //Second witness
+      chase(1) &  existsR("0".asTerm)(1) & chase(1) & orR(1) & hideR(1) &
+      //Third witness
+      chase(1) & existsR("0".asTerm)(1) &
+      //The example actually only has one s^2 term
+      chase(1) & existsR("a*b*c".asTerm)(1) &
+      exhaustiveEqL2R(true)('Llast) &
+      //z-b^2
+      implyRi(AntePos(1),SuccPos(0)) &
+      useAt(axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*a*a*c*c".asTerm)::Nil))(1) &
+      //x-y-a^2
+      implyRi(AntePos(0),SuccPos(0)) &
+      useAt(axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*z*c*c".asTerm)::Nil))(1) &
+      //(yz-xz)c^2 - 1
+      implyRi(AntePos(0),SuccPos(0)) &
+      useAt(axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1".asTerm)::Nil))(1) &
+      normaliseAt(SuccPosition(1,0::Nil)) &
+      byUS("= reflexive")
+  )
 }
