@@ -254,6 +254,17 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
+  it should "work with loop labels" in {
+    val tactic = implyR(1) & loop("x>1".asFormula)(1)
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>0".asFormula))
+    val result = theInterpreter.apply(tactic, v)
+
+    result.isInstanceOf[BelleProvable] shouldBe true
+    val presult = result.asInstanceOf[BelleProvable]
+    presult.p.subgoals should have size 3
+    presult.label shouldBe Some(BelleLabels.initCase :: BelleLabels.useCase :: BelleLabels.indStep :: Nil)
+  }
+
   it should "not screw up empty labels" in {
     proveBy(
       "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula, prop) shouldBe 'proved
