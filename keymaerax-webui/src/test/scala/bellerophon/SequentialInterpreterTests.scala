@@ -20,8 +20,8 @@ import scala.language.postfixOps
  * @author Nathan Fulton
  */
 class SequentialInterpreterTests extends FlatSpec with Matchers {
-  val initializingK = KeYmaera.init(Map.empty)
-  val theInterpreter = SequentialInterpreter()
+  private val initializingK = KeYmaera.init(Map.empty)
+  private val theInterpreter = SequentialInterpreter()
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
     val tactic = andR(1)
@@ -239,6 +239,26 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     )
   }
 
+  it should "prove |- (1=1->1=1) & (!2=2  | 2=2) with labels out of order" in {
+    val tactic = andR(1) & Idioms.<(label("foo"), label("bar")) & Idioms.<(
+      ("bar", orR(1) & notR(1) & close),
+      ("foo", implyR(1) & close)
+    )
+    val v = {
+      val f = "(1=1->1=1) & (!2=2 | 2=2)".asFormula
+      BelleProvable(ProvableSig.startProof(f))
+    }
+    val result = theInterpreter.apply(tactic, v)
+
+    result.isInstanceOf[BelleProvable] shouldBe true
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
+  }
+
+  it should "not screw up empty labels" in {
+    proveBy(
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula, prop) shouldBe 'proved
+  }
+
   "Unification" should "work on 1=1->1=1" in {
     val pattern = SequentType(toSequent("p() -> p()"))
     val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & close)))
@@ -315,7 +335,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 //  }
 
   /*"A failing tactic"*/
-  ignore should "print nice errors and provide a stack trace" in {
+  it should "print nice errors and provide a stack trace" ignore {
     val itFails = new BuiltInTactic("fails") {
       override def result(provable: ProvableSig) = throw new ProverException("Fails...")
     }

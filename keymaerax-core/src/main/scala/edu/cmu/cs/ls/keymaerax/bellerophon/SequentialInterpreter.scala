@@ -40,6 +40,15 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
           case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
         }
+        case LabelBranch(label) => v match {
+          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ BelleTopLevelLabel(label)))
+          case BelleProvable(pr, None) => BelleProvable(pr, Some(BelleTopLevelLabel(label) :: Nil))
+          case _ => throw new BelleError(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
+        }
+        case SubLabelBranch(label) => v match {
+          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels ++ labels.map(l => BelleSubLabel(l, label))))
+          case _ => throw new BelleError(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
+        }
         case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
           throw new BelleError(s"Need to apply position tactic at a position before executing it: ${expr}(???)").inContext(expr, "")
         case AppliedPositionTactic(positionTactic, pos) => v match {
@@ -136,7 +145,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             if (children.length != p.subgoals.length)
               throw new BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
             //Compute the results of piecewise applications of children to provable subgoals.
-            val results: Seq[ProvableSig] =
+            val results: Seq[BelleProvable] =
               (children zip p.subgoals) map (pair => {
                 val e_i = pair._1
                 val s_i = pair._2
@@ -146,21 +155,32 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                   case e: BelleError => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
                 }
                 ithResult match {
-                  case BelleProvable(resultingProvable, _) =>
-                    if (resultingProvable.isProved || e_i.isInstanceOf[PartialTactic] || true) resultingProvable
-                    else throw new BelleError("Every branching tactic must close its associated goal or else be annotated by partial").inContext(expr, "")
+                  case b@BelleProvable(_, _) => b
                   case _ => throw new BelleError("Each piecewise application in a Branching tactic should result in a provable.").inContext(expr, "")
                 }
               })
 
             // Compute a single provable that contains the combined effect of all the piecewise computations.
             // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-            // is replaced with 0 new subgoals.
+            // is replaced with 0 new subgoals (also means: drop labels).
+            def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
+
+            //@todo preserve labels from parent p (turn new labels into sublabels)
             val combinedEffect =
-              results.foldLeft((p, 0))((op: (ProvableSig, Int), subderivation: ProvableSig) => {
-                replaceConclusion(op._1, op._2, subderivation)
-              })
-            BelleProvable(combinedEffect._1)
+              results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({ case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) => {
+                val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p)
+                val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
+                  case (Some(origLabels), Some(newLabels)) =>
+                    Some(origLabels.patch(cidx, newLabels, 0))
+                  case (Some(origLabels), None) =>
+                    Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + (nextIdx - cidx)), 0))
+                  case (None, Some(newLabels)) =>
+                    Some(createLabels(0, cidx) ++ newLabels)
+                  case (None, None) => None
+                }
+                (combinedProvable, nextIdx, combinedLabels)
+              }})
+            BelleProvable(combinedEffect._1, if (combinedEffect._3.isEmpty) None else combinedEffect._3)
           case _ => throw new BelleError("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
         }
         case OnAll(e) =>
