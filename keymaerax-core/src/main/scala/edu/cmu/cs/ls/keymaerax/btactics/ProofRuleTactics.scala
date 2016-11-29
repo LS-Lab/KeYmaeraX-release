@@ -34,11 +34,11 @@ private object ProofRuleTactics {
   }
 
   def cut(f: Formula) = new InputTactic[Formula]("cut", f) {
-    override def computeExpr() = new BuiltInTactic(s"${name}(${input.prettyString})") {
+    override def computeExpr(): BelleExpr = new BuiltInTactic(s"$name(${input.prettyString})") {
       override def result(provable: ProvableSig): ProvableSig = {
         provable(core.Cut(input), 0)
       }
-    }
+    } & Idioms.<(label(BelleLabels.cutUse.label), label(BelleLabels.cutShow.label))
   }
 
   //@todo AntePos or AntePosition?
