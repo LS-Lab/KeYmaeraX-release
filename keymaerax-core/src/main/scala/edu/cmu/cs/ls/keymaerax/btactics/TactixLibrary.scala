@@ -130,26 +130,18 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // conditional tactics
 
-  /**
-   * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
-   *
-   * @note Probably this String should be a BelleLabel, and we should move BranchLabels into BelleLabel.
-   * @see [[label()]]
-   */
-  def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
-
   /** Call/label the current proof branch s
    *
-   * @see [[onBranch()]]
+   * @see [[Idioms.<()]]
    * @see [[sublabel()]]
    */
-  def label(s: String): BelleExpr = skip //new LabelBranch(s)
+  def label(s: String): BelleExpr = LabelBranch(BelleTopLevelLabel(s))
 
   /** Mark the current proof branch and all subbranches s
     *
     * @see [[label()]]
     */
-  def sublabel(s: String): BelleExpr = skip //new SubLabelBranch(s)
+  def sublabel(s: String): BelleExpr = skip //LabelBranch(BelleSubLabel(???, s))
 
   // modalities
 

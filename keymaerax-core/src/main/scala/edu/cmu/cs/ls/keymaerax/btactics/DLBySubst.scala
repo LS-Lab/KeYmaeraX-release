@@ -224,15 +224,17 @@ private object DLBySubst {
                 if (consts.size > 1) And(invariant, consts.reduceRight(And))
                 else if (consts.size == 1) And(invariant, consts.head)
                 else And(invariant, True)
-              cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
-                /* c */ useAt("I induction")(pos) & andR(pos) <(
-                andR(pos) <(ident /* indInit */, ((andR(pos) <(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) partial(initCase),
-                cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
-                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
-                  andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & ProofRuleTactics.trivialCloser) partial
-                ) partial,
+              cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
+                /* c */ useAt("I induction")(pos) & andR(pos) & Idioms.<(
+                andR(pos) & Idioms.<(
+                  label(initCase.label),
+                  (((andR(pos) & Idioms.<(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) & done),
+                cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
+                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep.label),
+                  andL(-1) & hideL(-1, invariant) & V(1) & close(-1, 1) & done)
+                ),
                 /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase)
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(useCase.label)
                 )
             }
        }}))(pos)})

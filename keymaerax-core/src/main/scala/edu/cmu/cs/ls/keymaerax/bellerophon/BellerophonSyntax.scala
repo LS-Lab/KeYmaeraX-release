@@ -79,6 +79,7 @@ case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   //@todo make this an assert.
   if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
 }
+case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = s"Label ${label.prettyString}" }
 
 /** ⎵: Placeholder for tactics. Reserved tactic expression */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
@@ -421,6 +422,20 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
     computeExpr(provable.subgoals.head)
   }
 }
+abstract class LabelledGoalsDependentTactic(override val name: String) extends DependentTactic(name) {
+  def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new BelleError("Not implemented")
+  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
+  override def computeExpr(v : BelleValue): BelleExpr = try { v match {
+    case BelleProvable(provable, Some(labels)) => computeExpr(provable, labels)
+    case BelleProvable(provable, None) => computeExpr(provable)
+    case e: BelleError => super.computeExpr(e)
+  }
+  } catch {
+    case be: BelleError => throw be
+    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
+  }
+}
+
 /** DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
   *
   * @see [[AtPosition]] */

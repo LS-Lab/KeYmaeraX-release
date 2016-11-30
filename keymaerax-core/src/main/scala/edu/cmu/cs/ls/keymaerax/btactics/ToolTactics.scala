@@ -35,7 +35,7 @@ private object ToolTactics {
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(qeTool: QETool) = {
+  def partialQE(qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("pQE",
       toSingleFormula & rcf(qeTool)
@@ -43,7 +43,7 @@ private object ToolTactics {
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: QETool) = TacticFactory.anon ((sequent: Sequent) => {
+  def rcf(qeTool: QETool): BelleExpr = TacticFactory.anon ((sequent: Sequent) => {
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
@@ -53,9 +53,9 @@ private object ToolTactics {
     val qeFact = ProvableSig.proveArithmetic(qeTool, sequent.succ.head).fact
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
-    ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
-      (close | skip) partial,
-      equivifyR(1) & commuteEquivR(1) & by(qeFact)
+    cutLR(result)(1) & Idioms.<(
+      /*use*/ close | skip,
+      /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
       )
   })
 
