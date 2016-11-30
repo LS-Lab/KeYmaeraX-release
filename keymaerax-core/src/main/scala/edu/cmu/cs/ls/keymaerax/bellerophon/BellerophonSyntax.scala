@@ -31,14 +31,15 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def &(other: BelleExpr)             = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
-  /** this*: saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
+  /** (this*): saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
   def * = SaturateTactic(this)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
-  def + = this & this.*
-  /** this*: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
-  def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times)
-  /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
-  @deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
+  //def + = this & this.*
+  /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
+  def *(n: Int) = RepeatTactic(this, n)
+  /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
+    * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
+  //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
