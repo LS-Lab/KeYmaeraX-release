@@ -927,7 +927,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "fail if any of the formulas is not an invariant" in withMathematica { qeTool =>
-    a [BelleError] should be thrownBy proveBy(
+    a [BelleThrowable] should be thrownBy proveBy(
       Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
   }
@@ -1192,15 +1192,15 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "not allow non-linear ghosts (1)" in {
-    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=y*y+1}".asDifferentialProgram)(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=y*y+1}".asDifferentialProgram)(1))
   }
 
   it should "not allow non-linear ghosts (2)" in {
-    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=1*y+y}".asDifferentialProgram)(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=1*y+y}".asDifferentialProgram)(1))
   }
 
   it should "not allow ghosts that are already present in the ODE" in {
-    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{x'=0*x+1}".asDifferentialProgram)(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{x'=0*x+1}".asDifferentialProgram)(1))
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { tool =>

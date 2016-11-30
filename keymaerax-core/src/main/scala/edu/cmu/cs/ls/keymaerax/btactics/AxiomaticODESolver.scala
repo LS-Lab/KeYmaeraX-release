@@ -39,7 +39,7 @@ object AxiomaticODESolver {
     val (ode, q) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)
-      case Some(Diamond(ODESystem(o, qq), _)) if  instEnd => throw BelleUserGeneratedError("Cannot instantiate evolution domain check with duration in diamonds")
+      case Some(Diamond(ODESystem(o, qq), _)) if  instEnd => throw new BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
     }
 
     val osize = odeSize(ode)
@@ -110,7 +110,7 @@ object AxiomaticODESolver {
     val ode: DifferentialProgram = s.sub(pos) match {
       case Some(Box(ODESystem(o, _), _)) => o
       case Some(Diamond(ODESystem(o, _), _)) => o
-      case sub => throw BelleUserGeneratedError("Expected [] or <> modality at position " + pos + ", but got " + sub)
+      case sub => throw new BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
     }
 
     if (!isCanonicallyLinear(ode)) DebuggingTactics.error("Expected ODE to be linear and in correct order.")

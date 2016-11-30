@@ -234,7 +234,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos),
-        throw new BelleError("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
+        throw new BelleThrowable("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
@@ -516,14 +516,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleError("QE requires a QETool, but got None")))
+  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")))
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleError("partialQE requires a QETool, but got None")))
+  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None")))
 
   /** Splits propositional into many smallest possible QE calls */
   def atomicQE: BelleExpr = prop & onAll(QE) //@todo less splitting (try with timeouts?)
@@ -605,8 +605,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param to The transformed formula that is desired as the result of this transformation.
     */
   def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleError("transform requires a QETool, but got None")).qeEvidence(formula)
-    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]] = ToolProvider.cexTool().getOrElse(throw new BelleError("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
+    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleThrowable("transform requires a QETool, but got None")).qeEvidence(formula)
+    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]] = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
   })
 
   //
@@ -668,7 +668,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleError("RCF requires a QETool, but got None")))
+  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -717,7 +717,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     //@todo fetch from some factory
     SequentialInterpreter()(tactic, v) match {
       case BelleProvable(provable, _) => provable
-      case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
+//      //@note there is no other case at the moment
+//      case r => throw BelleIllFormedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
     }
   }
 
@@ -747,7 +748,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleError("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
+  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
 
 
   ///

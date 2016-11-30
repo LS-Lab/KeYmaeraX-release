@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -42,8 +42,8 @@ class ArithmeticTests extends TacticTestBase {
     val tool = new MockTool(
       "\\forall x_1 \\forall v_1 \\forall t_0 \\forall s_0 (v_1>0&x_1 < s_0&-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1>=0&t_0>=0->1/2*(-1*(v_1^2/(2*(s_0-x_1)))*t_0^2+2*t_0*v_1+2*x_1)+(-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1)^2/(2*(v_1^2/(2*(s_0-x_1))))<=s_0)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
-    //@note actual assertions are made by MockTool, expect a BelleError since MockTool returns false as QE answer
-    the [BelleError] thrownBy proveBy(
+    //@note actual assertions are made by MockTool, expect a BelleThrowable since MockTool returns false as QE answer
+    the [BelleThrowable] thrownBy proveBy(
       Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
                                          |Expected proved provable, but got NoProofTermProvable(Provable(v_0>0&x_0 < s, a=v_0^2/(2*(s-x_0)), t_0=0
@@ -61,7 +61,7 @@ class ArithmeticTests extends TacticTestBase {
     val tool = new MockTool(
       "\\forall y_0 \\forall x_0 \\forall r_0 (x_0^2+y_0^2=r_0^2&r_0>0->y_0<=r_0)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
-    the [BelleError] thrownBy proveBy(
+    the [BelleThrowable] thrownBy proveBy(
       Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
                                          |Expected proved provable, but got NoProofTermProvable(Provable(x^2+y^2=r^2, r>0
@@ -76,19 +76,19 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   it should "not support differential symbols" in withMathematica { tool =>
-    the [BelleError] thrownBy { proveBy(
+    the [BelleThrowable] thrownBy { proveBy(
       Sequent(IndexedSeq(), IndexedSeq("5=5 | x' = 1'".asFormula)),
       TactixLibrary.QE) } should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got NoProofTermProvable(Provable(  ==>  5=5|x'=(1)'\n  from     ==>  5=5, x'=(1)'))"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
-    the [BelleError] thrownBy proveBy(
+    the [BelleThrowable] thrownBy proveBy(
       Sequent(IndexedSeq(), IndexedSeq("x' = y'".asFormula)),
       TactixLibrary.QE) should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got NoProofTermProvable(Provable(  ==>  x'=y'\n  from     ==>  x'=y'))"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
-    the [BelleError] thrownBy proveBy(
+    the [BelleThrowable] thrownBy proveBy(
       Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a=a()".asFormula)),
       TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
                                                                             |Expected proved provable, but got NoProofTermProvable(Provable(a=1, a()=2

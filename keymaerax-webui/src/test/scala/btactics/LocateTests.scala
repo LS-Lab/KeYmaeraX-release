@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Find, BelleError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Find, BelleThrowable}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -52,7 +52,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "throw an exception if no applicable position can be found" in {
-    val e = intercept[BelleError] { proveBy(
+    val e = intercept[BelleThrowable] { proveBy(
       Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 | y>0".asFormula), immutable.IndexedSeq()),
       TactixLibrary.andL('L)
     )}
@@ -111,7 +111,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "throw an exception if no applicable position can be found" in {
-    val e = intercept[BelleError] { proveBy(
+    val e = intercept[BelleThrowable] { proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
       TactixLibrary.orR('R)
     )}
@@ -170,7 +170,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "throw an exception if no applicable position can be found" in {
-    val e = intercept[BelleError] { proveBy(
+    val e = intercept[BelleThrowable] { proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
       TactixLibrary.orR('_)
     )}

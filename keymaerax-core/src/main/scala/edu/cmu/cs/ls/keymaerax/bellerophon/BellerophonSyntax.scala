@@ -66,22 +66,25 @@ trait NamedBelleExpr extends BelleExpr {
   override def prettyString = name
 }
 
-abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
-  private[bellerophon] final def execute(provable: ProvableSig): ProvableSig = try {
-    result(provable)
-  } catch {
-    case be: BelleError => throw be
-    case t: Throwable => throw new BelleError(t.getMessage, t)
-  }
-  private[bellerophon] def result(provable : ProvableSig): ProvableSig
-}
+/** Give a code name to the given tactic `tactic` for serialization purposes. */
 case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   //@todo make this an assert.
   if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
 }
+
+/* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
+abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
+  private[bellerophon] final def execute(provable: ProvableSig): ProvableSig = try {
+    result(provable)
+  } catch {
+    case be: BelleThrowable => throw be
+    case e: MatchError => throw new BelleTacticFailure(s"Formula did not have the shape expected by ${name}: " + e.getMessage, e)
+  }
+  private[bellerophon] def result(provable : ProvableSig): ProvableSig
+}
 case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = s"Label ${label.prettyString}" }
 
-/** ⎵: Placeholder for tactics. Reserved tactic expression */
+/** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
 object BelleDot extends BelleDot()
 
@@ -223,7 +226,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     case '_ => this match {
       case _: BuiltInLeftTactic => apply(FindL(0, None))
       case _: BuiltInRightTactic => apply(FindR(0, None))
-      case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
+      case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     case 'Llast => apply(LastAnte(0))
     case 'Rlast => apply(LastSucc(0))
@@ -248,7 +251,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     case '_ => this match {
       case _: BuiltInLeftTactic => apply(FindL(0, Some(expected)))
       case _: BuiltInRightTactic => apply(FindR(0, Some(expected)))
-      case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
+      case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
     case 'Llast => println("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
@@ -266,27 +269,30 @@ trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] 
   final override def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
 
+/** Built-in position tactics such as assertAt */
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic with NamedBelleExpr
 
+/** Built-in position tactics that are to be applied on the left */
 abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: ProvableSig, position:Position) = position match {
     case p: AntePosition => computeAnteResult(provable, p)
-    case _ => throw new BelleError("LeftTactics can only be applied at a AntePos")
+    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
   }
 
   def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig
 }
 
+/** Built-in position tactics that are to be applied on the right */
 abstract case class BuiltInRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: ProvableSig, position:Position) = position match {
     case p: SuccPosition => computeSuccResult(provable, p)
-    case _ => throw new BelleError("RightTactics can only be applied at a SuccPos")
+    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
   }
 
   def computeSuccResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
 }
 
-
+@deprecated
 abstract case class DependentTwoPositionTactic(name: String) extends NamedBelleExpr {
   override def prettyString: String = s"UnappliedTwoPositionTactic of name ${name}" //@todo
 
@@ -294,7 +300,7 @@ abstract case class DependentTwoPositionTactic(name: String) extends NamedBelleE
 
   def apply(p1: Position, p2: Position) = AppliedDependentTwoPositionTactic(this, p1, p2)
 }
-
+@deprecated
 case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: Position, p2: Position) extends BelleExpr {
   /** pretty-printed form of this Bellerophon tactic expression */
   override def prettyString: String = t.prettyString + "(" + p1 + "," + p2 + ")"
@@ -304,7 +310,7 @@ case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: 
   * Stores the position tactic and position at which the tactic was applied.
   * Useful for storing execution traces.
   */
-case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
+case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: PositionLocator) extends BelleExpr {
   import Augmentors._
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
       //@note interprets PositionLocator
@@ -316,7 +322,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
-            throw new BelleError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
+            throw new BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
               " is not of expected shape " + f)
           }
         case None => positionTactic.computeResult(provable, pos)
@@ -329,36 +335,38 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
       case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1))
     }
   } catch {
-    case be: BelleError => throw be
-    case t: Throwable => throw new BelleError(t.getMessage, t)
+    //@todo shouldn't catch stuff
+    case be: BelleThrowable => throw be
+    case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
   private def tryAllAfter(provable: ProvableSig, goal: Int, shape: Option[Expression], pos: Position, exact: Boolean,
-                          cause: BelleError): ProvableSig =
+                          cause: BelleThrowable): ProvableSig =
     if (pos.isIndexDefined(provable.subgoals(goal))) {
       try {
         shape match {
           case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
             positionTactic.computeResult(provable, pos)
           case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
-            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
           case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) == f => positionTactic.computeResult(provable, pos)
           case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) != f =>
-            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
           case Some(t: Term) if exact =>
             val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), _ == t)
-            if (tPos.isEmpty) tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+            if (tPos.isEmpty) tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
             else positionTactic.computeResult(provable, pos.topLevel ++ tPos.head)
           //@todo inexact terms
           case None => positionTactic.computeResult(provable, pos)
         }
       } catch {
+        //@todo should catch only fails not eat problems
         case e: Throwable =>
-          val newCause = if (cause == null) new BelleError(s"Position tactic ${positionTactic.prettyString} is not " +
+          val newCause = if (cause == null) new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not " +
             s"applicable at ${pos.prettyString}", e)
           else new CompoundException(
-            new BelleError(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
+            new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
             cause)
           tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, newCause)
       }
@@ -385,8 +393,8 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
   final def computeResult(provable: ProvableSig) : ProvableSig = try {
     positionTactic.computeResult(provable, posOne, posTwo)
   } catch {
-    case be: BelleError => throw be
-    case t: Throwable => throw new BelleError(t.getMessage, t)
+    case be: BelleThrowable => throw be
+    case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
 
   override def prettyString = positionTactic.prettyString + "(" + posOne.prettyString + "," + posTwo.prettyString + ")"
@@ -403,16 +411,16 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
  * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
 abstract case class DependentTactic(name: String) extends NamedBelleExpr {
-  def computeExpr(provable: ProvableSig): BelleExpr = throw new BelleError("Not implemented")
-  def computeExpr(e: BelleValue with BelleError): BelleExpr = throw e
-  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
+  def computeExpr(provable: ProvableSig): BelleExpr = throw new BelleThrowable("Not implemented")
+  def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = throw e
+  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
   def computeExpr(v : BelleValue): BelleExpr = try { v match {
       case BelleProvable(provable, _) => computeExpr(provable)
-      case e: BelleError => computeExpr(e)
+      case e: BelleThrowable => computeExpr(e)
     }
   } catch {
-    case be: BelleError => throw be
-    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
+    case be: BelleThrowable => throw be
+    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleThrowable(t.getMessage, t)
   }
 }
 abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
@@ -423,16 +431,16 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
   }
 }
 abstract class LabelledGoalsDependentTactic(override val name: String) extends DependentTactic(name) {
-  def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new BelleError("Not implemented")
-  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
+  def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new BelleThrowable("Not implemented")
+  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
   override def computeExpr(v : BelleValue): BelleExpr = try { v match {
     case BelleProvable(provable, Some(labels)) => computeExpr(provable, labels)
     case BelleProvable(provable, None) => computeExpr(provable)
-    case e: BelleError => super.computeExpr(e)
+    case e: BelleThrowable => super.computeExpr(e)
   }
   } catch {
-    case be: BelleError => throw be
-    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
+    case be: BelleThrowable => throw be
+    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleThrowable(t.getMessage, t)
   }
 }
 
@@ -472,7 +480,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
             (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             pt.factory(pos).computeExpr(v)
           } else {
-            throw new BelleError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
+            throw new BelleThrowable("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
               " is not of expected shape " + f)
           }
       }
@@ -487,7 +495,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
   private def tryAllAfter(goal: Int, shape: Option[Expression], pos: Position, exact: Boolean,
-                          cause: BelleError): DependentTactic = new DependentTactic(name) {
+                          cause: BelleThrowable): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (pos.isIndexDefined(provable.subgoals(goal))) {
@@ -496,31 +504,31 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
               case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
-                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
               case Some(f: Formula) if exact && f == provable.subgoals(goal)(pos.top) =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
               case Some(f: Formula) if exact && f != provable.subgoals(goal)(pos.top) =>
-                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
               case Some(t: Term) if exact =>
                 val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), _ == t)
-                if (tPos.isEmpty) tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+                if (tPos.isEmpty) tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
                 else pt.factory(pos.topLevel ++ tPos.head).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
               //@todo inexact terms
               case None =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
             }
           } catch {
-            // also advance if computeExpr already throws a BelleError
-            case e: BelleError =>
-              val newCause = if (cause == null) new BelleError(s"Dependent position tactic ${pt.prettyString} is not " +
+            // also advance if computeExpr already throws a BelleThrowable
+            case e: BelleThrowable =>
+              val newCause = if (cause == null) new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not " +
                 s"applicable at ${pos.prettyString}", e)
               else new CompoundException(
-                new BelleError(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}", e),
+                new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}", e),
                 cause)
               tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
           }
         } else if (cause == null) {
-          throw new BelleError(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}")
+          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}")
         } else throw cause
       case _ => pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
     }

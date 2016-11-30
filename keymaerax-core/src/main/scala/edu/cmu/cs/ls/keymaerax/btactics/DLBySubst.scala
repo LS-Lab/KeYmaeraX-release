@@ -75,7 +75,7 @@ private object DLBySubst {
               /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeIdWith('Llast))) partial,
               /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
-              topAbstraction(1) & ProofRuleTactics.trivialCloser
+              topAbstraction(1) & closeId
               )
         }
       }
@@ -145,7 +145,7 @@ private object DLBySubst {
                       case _ => false
                     }
                     case _ => true
-                  }, "abstractionb: foralls must match") & ProofRuleTactics.trivialCloser
+                  }, "abstractionb: foralls must match") & closeId
                 )) partial,
               /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
             )
@@ -179,6 +179,7 @@ private object DLBySubst {
     * @incontext
     */
   lazy val assignEquality: DependentPositionTactic = "assignEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
     case Some(fml@Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
@@ -325,7 +326,7 @@ private object DLBySubst {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw BelleUserGeneratedError("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
   })
 
@@ -344,7 +345,7 @@ private object DLBySubst {
     case Some(Forall(vars, p)) =>
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw BelleUserGeneratedError("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
   })
 }

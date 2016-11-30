@@ -94,7 +94,7 @@ class TraceRecordingListener(db: DBAbstraction,
     }
   }
 
-  def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, BelleError]): Unit = {
+  def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, BelleThrowable]): Unit = {
     synchronized {
       depth = depth - 1
       if(isDead) return

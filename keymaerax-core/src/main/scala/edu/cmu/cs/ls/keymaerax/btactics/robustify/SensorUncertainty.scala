@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.robustify
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, BelleValue, DependentTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleExpr, BelleValue, DependentTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.{DifferentialHelper, ProgramHelpers}
 import edu.cmu.cs.ls.keymaerax.core._

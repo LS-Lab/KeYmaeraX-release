@@ -164,8 +164,6 @@ trait SequentCalculus {
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  //@todo improve efficiency by avoiding the unnecessary cohide2 step
-  //@todo compare with ProofRuleTactics.close
   def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     new BuiltInTactic("close") {
       override def result(provable: ProvableSig) = {
@@ -202,19 +200,9 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  val closeT            : DependentTactic = new SingleGoalDependentTactic("closeTrue") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
-      ProofRuleTactics.closeTrue('R, True)
-    }
-  }
+  val closeT            = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  val closeF            : DependentTactic = new SingleGoalDependentTactic("closeFalse") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
-      ProofRuleTactics.closeFalse('L, False)
-    }
-  }
+  val closeF            = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
   // derived propositional
 

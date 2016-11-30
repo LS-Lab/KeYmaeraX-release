@@ -91,7 +91,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
     val tactic = implyR(1) & DebuggingTactics.done | (skip & skip) & DebuggingTactics.done
     val f = "1=2 -> 1=2".asFormula
-    a[BelleError] should be thrownBy theInterpreter(tactic, BelleProvable(ProvableSig.startProof(f))
+    a[BelleThrowable] should be thrownBy theInterpreter(tactic, BelleProvable(ProvableSig.startProof(f))
     )
   }
 
@@ -151,7 +151,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "fail when not at least 1 repetition is possible" in {
-    a [BelleError] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
+    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
       (andL('Llast)+))
   }
 
@@ -161,7 +161,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   "must idiom" should "fail when no change occurs" in {
-    a [BelleError] should be thrownBy proveBy("x=2".asFormula, Idioms.must(skip))
+    a [BelleThrowable] should be thrownBy proveBy("x=2".asFormula, Idioms.must(skip))
   }
 
   it should "do nothing when change occurred" in {
@@ -221,7 +221,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       implyR(SuccPos(0)) & close & DebuggingTactics.done
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
-    a[BelleError] shouldBe thrownBy(
+    a[BelleThrowable] shouldBe thrownBy(
       theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof(f)))
     )
   }

@@ -144,7 +144,7 @@ object DebuggingTactics {
   def done(msg: String = ""): BelleExpr = new BuiltInTactic("done") {
     override def result(provable : ProvableSig): ProvableSig =
       if (provable.isProved) provable
-      else throw new BelleError((if (msg.nonEmpty) msg+"\n" else "") + "Expected proved provable, but got " + provable)
+      else throw new BelleThrowable((if (msg.nonEmpty) msg+"\n" else "") + "Expected proved provable, but got " + provable)
   }
 }
 
@@ -181,7 +181,7 @@ object Idioms {
   def must(t: BelleExpr): BelleExpr = new DependentTactic("must") {
     override def computeExpr(before: ProvableSig): BelleExpr = t & new BuiltInTactic(name) {
       override def result(after: ProvableSig): ProvableSig = {
-        if (before == after) throw new BelleError("Tactic " + t + " did not result in mandatory change")
+        if (before == after) throw new BelleThrowable("Tactic " + t + " did not result in mandatory change")
         after
       }
     }
@@ -191,7 +191,7 @@ object Idioms {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      case _ => throw new BelleError("Cannot perform AtSubgoal on a non-Provable value.")
+      case _ => throw new BelleThrowable("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
 
@@ -359,7 +359,7 @@ object TacticFactory {
 //  def scheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
 //    //@see [[Legacy.defaultInitialization]]
 //    if(!Tactics.KeYmaeraScheduler.isInitialized)
-//      throw new BelleError("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
+//      throw new BelleThrowable("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
 //
 //    override def result(provable: Provable): Provable = {
 //      //@todo don't know if we can create a proof node from a provable.

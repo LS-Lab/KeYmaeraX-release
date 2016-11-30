@@ -24,7 +24,7 @@ private object ProofRuleTactics {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String) =
-    if(provable.subgoals.length != 1) throw new BelleError(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
@@ -224,15 +224,6 @@ private object ProofRuleTactics {
       shapeCheck(TactixLibrary.proveBy(fml, tactic(1))).subgoals.head.succ.head
     })
 
-
-  def skolemize = new BuiltInPositionTactic("Skolemize") {
-    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      require(pos.isTopLevel, "Skolemization only at top-level")
-      provable(core.Skolemize(pos.top), 0)
-    }
-  }
-
   def skolemizeR = new BuiltInRightTactic("skolemizeR") {
     override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
@@ -241,43 +232,16 @@ private object ProofRuleTactics {
     }
   }
 
-  def skolemizeL = new BuiltInLeftTactic("skolemizeL") {
-    override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      require(pos.isTopLevel, "Skolemization only at top-level")
-      provable(core.Skolemize(pos.top), 0)
-    }
-  }
-
-  /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
-  @deprecated("Use SequentCalculus.close(0,0) instead")
-  private[btactics] def trivialCloser = new BuiltInTactic("TrivialCloser") {
-    override def result(provable: ProvableSig) = {
-      requireOneSubgoal(provable, name)
-      if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)
-        throw new BelleError(s"${this.name} should only be applied to formulas of the form \\phi |- \\phi")
-      provable(core.Close(AntePos(0), SuccPos(0)), 0)
-    }
-  }
-
-  /** Closes the goal using specified positions. */
-  //@todo compare with SequentCalculus.close
-  def close = new BuiltInTwoPositionTactic("Close") {
-    override def computeResult(provable: ProvableSig, posOne: Position, posTwo: Position): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      require(posOne.isAnte && posTwo.isSucc, "Position one should be in the Antecedent, position two in the Succedent.")
-      provable(core.Close(posOne.checkAnte.top, posTwo.checkSucc.top), 0)
-    }
-  }
-
-  def closeTrue = new BuiltInRightTactic("CloseTrue") {
+  @deprecated("Use SequentCalculus.closeTrue instead")
+  private[btactics] def closeTrue = new BuiltInRightTactic("CloseTrue") {
     override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseTrue(pos.top), 0)
     }
   }
 
-  def closeFalse = new BuiltInLeftTactic("CloseFalse") {
+  @deprecated("Use SequentCalculus.closeFalse instead")
+  private[btactics] def closeFalse = new BuiltInLeftTactic("CloseFalse") {
     override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseFalse(pos.top), 0)
