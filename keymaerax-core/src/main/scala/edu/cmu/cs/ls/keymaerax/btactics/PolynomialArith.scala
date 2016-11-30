@@ -246,14 +246,51 @@ object PolynomialArith {
     }
   }
 
+  private val powLem1 = proveBy("F_()^0 = 1".asFormula,QE)
+  private val powLem2 = proveBy("F_()^1 = F_()".asFormula,QE)
+  private val powLem3 = proveBy("(F_()^K_())^2 = F_()^(2*K_())".asFormula,QE)
+  private val powLem4 = proveBy("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula,QE)
+  private val powLem5 = proveBy("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
+    byUS("const congruence"))
+
+  //Reduces t^n to iterated squares
+  def iterSquare(l:Term,p:Int) : (Term,ProvableSig) = {
+    val lhs = Power(l,Number(p))
+    if (p == 0) (Number(1),proveBy(Equal(lhs,Number(1)),byUS(powLem1)))
+    else if (p == 1) (l,proveBy(Equal(lhs,l),byUS(powLem2)))
+    else if (p % 2 == 0)
+    {
+      val (rec,pr) = iterSquare(l,p/2)
+      val rhs = Power(rec,Number(2))
+      (rhs,proveBy(Equal(lhs,rhs),
+        useAt(pr,PosInExpr(1::Nil))(SuccPosition(1,1::0::Nil)) &
+        useAt(powLem3)(SuccPosition(1,1::Nil)) &
+        useAt(powLem5,PosInExpr(1::Nil))(1) & RCF))
+    }
+    else
+    {
+      val (rec,pr) = iterSquare(l,p/2)
+      val rhs = Times(Power(rec,Number(2)),l)
+      (rhs,proveBy(Equal(lhs,rhs),
+        useAt(pr,PosInExpr(1::Nil))(SuccPosition(1,1::0::0::Nil)) &
+        useAt(powLem4)(SuccPosition(1,1::Nil)) &
+        useAt(powLem5,PosInExpr(1::Nil))(1) & RCF))
+    }
+  }
+
+  private val negNormalise = proveBy("-P_() = P_() * (-1 * 1)".asFormula,QE)
+  private val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE)
+  private val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE)
+
   //Normalizes an otherwise un-normalized term
-  //Not many bells and whistles yet
   def normalise(l:Term) : (Term,ProvableSig) = {
     l match {
       case n:Number =>
+        //0 + 1 * n
         val res = Plus(Number(0), Times(n,Number(1)))
         (res,proveBy(Equal(l,res), RCF ))
       case v:Variable =>
+        //0 + 1 * (1 * v^1)
         val res = Plus(Number(0),Times(Number(1), Times(Number(1),Power(v,Number(1))) ))
         (res,proveBy(Equal(l,res), RCF ))
       case Plus(ln,rn) =>
@@ -270,6 +307,37 @@ object PolynomialArith {
         (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3)))
+      case Power(_:Variable,_:Number) =>
+        //0 + 1 * (1 * v^n)
+        val res = Plus(Number(0),Times(Number(1), Times(Number(1),l) ))
+        (res,proveBy(Equal(l,res),RCF))
+      case Power(ln,n:Number) if n.value == 2 =>
+        val (rec1,pr1) = normalise(ln)
+        //Square the polynomial by hand
+        val (res,pr2) = mulPoly(rec1,rec1)
+        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(powNormalise)(SuccPosition(1,0::Nil))
+          & by(pr2)))
+      case Power(ln,n:Number) if n.value.isValidInt =>
+        val(rec1,pr1) = iterSquare(ln,n.value.intValue())
+        val(res,pr2) = normalise(rec1)
+        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
+          & by(pr2)))
+      case Neg(ln) =>
+        //Negation ~= multiply by -1 monomial
+        val (rec1,pr1) = normalise(ln)
+        val (res,pr2) = mulPolyMono(rec1,Number(-1),Number(1))
+        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(negNormalise)(SuccPosition(1,0::Nil)) & by(pr2) ))
+      case Minus(ln,rn) =>
+        //Minus ~= move - into negation
+        val (rec1,pr1) = normalise(ln)
+        val (rec2,pr2) = normalise(Neg(rn))
+        val (res,pr3) = addPoly(rec1,rec2)
+        (res,proveBy(Equal(l,res), useAt(minusNormalise)(SuccPosition(1,0::Nil))
+          & useAt(pr1)(SuccPosition(1,0::0::Nil))
+          & useAt(pr2)(SuccPosition(1,0::1::Nil))
+          & by(pr3) ))
       case _ => ???
     }
   }
@@ -299,12 +367,9 @@ object PolynomialArith {
       cut(ax6.conclusion.succ.head) <(notL(-1) & close,cohideR(2) & by(ax6)))
 
   //Manual proof outline for Fig2
-  private val antes: IndexedSeq[Formula] = IndexedSeq("x + -1 * y + -1*a*a = 0".asFormula,"z+ -1*b*b = 0".asFormula,"(y*z+-1*x*z)*c*c+-1 = 0".asFormula)
+  private val antes: IndexedSeq[Formula] = IndexedSeq("x - y -1*a^2 = 0".asFormula,"z-b^2 = 0".asFormula,"z*(y-x)*c^2-1 = 0".asFormula)
   private val proof: ProvableSig = proveBy(Sequent(antes,IndexedSeq("false".asFormula)),
-    //Normalise the polynomials on th left?
-    //normaliseAt(AntePosition(1,0::Nil)) &
-    //normaliseAt(AntePosition(2,0::Nil)) &
-    //normaliseAt(AntePosition(3,0::Nil)) &
+
     //Introduce Ax 6
     useAt(ax6contra,PosInExpr(1::Nil))(1) &
       useAt("<;> compose")(1) &
@@ -320,16 +385,16 @@ object PolynomialArith {
       //Second witness
       chase(1) &  existsR("0".asTerm)(1) & chase(1) & orR(1) & hideR(1) &
       //Third witness
-      chase(1) & existsR("0".asTerm)(1) &
-      //The example actually only has one s^2 term
       chase(1) & existsR("a*b*c".asTerm)(1) &
+      //The example actually only has one s^2 term
+      chase(1) & existsR("0".asTerm)(1) &
       exhaustiveEqL2R(true)('Llast) &
       //z-b^2
       implyRi(AntePos(1),SuccPos(0)) &
-      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*a*a*c*c".asTerm)::Nil))(1) &
+      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-a^2*c^2".asTerm)::Nil))(1) &
       //x-y-a^2
       implyRi(AntePos(0),SuccPos(0)) &
-      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1*z*c*c".asTerm)::Nil))(1) &
+      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-z*c^2".asTerm)::Nil))(1) &
       //(yz-xz)c^2 - 1
       implyRi(AntePos(0),SuccPos(0)) &
       useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1".asTerm)::Nil))(1) &
