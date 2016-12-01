@@ -87,18 +87,35 @@ class PolynomialArithTests extends TacticTestBase {
     val p1 = "0 + 2 * (1 * x^ 1) + 2 * (1 * b^2)".asTerm
     val p2 = "0 + -2 * (1 * x^1) + 2 * (1 * a^2)".asTerm
 
-    println(addPoly(p1,p2)) //Cancelling coefficients
-    println(addPoly(p1,p1)) //Adding coefficients
-    println(addPoly(p2,p1)) //Inverse
+    val (p3,r3) = addPoly(p1,p2) //Cancelling coefficients
+    val (p4,r4) = addPoly(p1,p1) //Adding coefficients
+    val (p5,r5) = addPoly(p2,p1) //Inverse
+
+    p3 shouldBe "0+2*(1*b^2)+2*(1*a^2)".asTerm
+    p4 shouldBe "0+4*(1*x^1)+4*(1*b^2)".asTerm
+    p5 shouldBe "0+2*(1*b^2)+2*(1*a^2)".asTerm
+
+    r3 shouldBe 'proved
+    r4 shouldBe 'proved
+    r5 shouldBe 'proved
   }
 
   "PolynomialArith" should "do mono mul with proof" in withMathematica { qeTool =>
+    //Note: ^0.5 isn't actually allowed
     val m1 = "(1 * y^ 0.5 * x^2)".asTerm
     val m2 = "1* y^-0.5 * a^2 ".asTerm
 
-    println(mulMono(m1,m2)) //Cancelling coefficients
-    println(mulMono(m1,m1)) //Adding coefficients
-    println(mulMono(m2,m1)) //Inverse
+    val (m3,r3) = mulMono(m1,m2) //Cancelling coefficients
+    val (m4,r4) = mulMono(m1,m1) //Adding coefficients
+    val (m5,r5) = mulMono(m2,m1) //Inverse
+
+    m3 shouldBe "1*x^2*a^2".asTerm
+    m4 shouldBe "1*y^1.0*x^4".asTerm
+    m5 shouldBe "1*x^2*a^2".asTerm
+
+    r3 shouldBe 'proved
+    r4 shouldBe 'proved
+    r5 shouldBe 'proved
   }
 
   "PolynomialArith" should "do poly mono mul with proof" in withMathematica { qeTool =>
@@ -106,7 +123,8 @@ class PolynomialArithTests extends TacticTestBase {
     val p1 = "0 + 5 * (1 * x^2) + 5 * (1 * y^2)".asTerm
     val (p2,r2) = mulPolyMono(p1,Number(5),m1)
 
-    println(p2,r2)
+    p2 shouldBe "0+25*(1*x^7*a^5)+25*(1*y^2*x^5*a^5)".asTerm
+    r2 shouldBe 'proved
   }
 
   "PolynomialArith" should "do poly mul with proof" in withMathematica { qeTool =>
@@ -117,18 +135,26 @@ class PolynomialArithTests extends TacticTestBase {
     val (p4,r4) = mulPoly(p1,p2)
     val (p5,r5) = mulPoly(p3,p4)
 
-    println(p4)
-    println(r4)
-    println(p5)
-    println(r5)
+    p4 shouldBe "0+2*(1*y^1*x^2)+2*(1*y^1*a^2)+1*(1*x^2*a^2)+1*(1*a^4)".asTerm
+    p5 shouldBe "0+4*(1*y^2*x^2)+4*(1*y^2*a^2)+2*(1*y^1*x^4)+8*(1*y^1*x^2*a^2)+6*(1*y^1*a^4)+1*(1*x^4*a^2)+3*(1*x^2*a^4)+2*(1*a^6)".asTerm
+
+    r4 shouldBe 'proved
+    r5 shouldBe 'proved
   }
 
   "PolynomialArith" should "do iterated squares with proof" in withMathematica { qeTool =>
 
-    println(iterSquare("(x+yz+k)".asTerm,3))
-    println(iterSquare("(x+z+y)".asTerm,9))
-    println(iterSquare("(xyz+yzx)".asTerm,12))
+    val (t1,r1) = iterSquare("(x+yz+k)".asTerm,3)
+    val (t2,r2) = iterSquare("(x+z+y)".asTerm,9)
+    val (t3,r3) = iterSquare("(xyz+yzx)".asTerm,12)
 
+    t1 shouldBe "(x+yz+k)^2*(x+yz+k)".asTerm
+    t2 shouldBe "(((x+z+y)^2)^2)^2*(x+z+y)".asTerm
+    t3 shouldBe "(((xyz+yzx)^2*(xyz+yzx))^2)^2".asTerm
+
+    r1 shouldBe 'proved
+    r2 shouldBe 'proved
+    r3 shouldBe 'proved
   }
 
   "PolynomialArith" should "do poly normalize with proof" in withMathematica { qeTool =>
@@ -139,13 +165,20 @@ class PolynomialArithTests extends TacticTestBase {
     val p5 = "(x+y*z -x - y*z + a)^3".asTerm
     val p6 = "1+(a*b*c)^2-(x-y-1*a^2)*(0+-1*(1*y^1*c^2*b^2))".asTerm
 
-    println(normalise(p6))
-//
-//    println(normalise(p1))
-//    println(normalise(p2))
-//    println(normalise(p3))
-//    println(normalise(p4))
-//    println(normalise(p5))
+    val (t1,r1) = (normalise(p1))
+    val (t2,r2) = (normalise(p2))
+    val (t3,r3) = (normalise(p3))
+    val (t4,r4) = (normalise(p4))
+    val (t5,r5) = (normalise(p5))
+    val (t6,r6) = (normalise(p6))
+
+    (checkPoly(t1),checkPoly(t2),checkPoly(t3),checkPoly(t4),checkPoly(t5),checkPoly(t6)) shouldBe (true,true,true,true,true,true)
+    r1 shouldBe 'proved
+    r2 shouldBe 'proved
+    r3 shouldBe 'proved
+    r4 shouldBe 'proved
+    r5 shouldBe 'proved
+    r6 shouldBe 'proved
   }
 
   "PolynomialArith" should "do mono div" in withMathematica { qeTool =>
@@ -179,10 +212,17 @@ class PolynomialArithTests extends TacticTestBase {
     val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
 
     //Guided reduction
-    println(proveWithWitness(List(p1,p2,p3),List(w),Some(insts)))
+    val pr1 = proveWithWitness(List(p1,p2,p3),List(w),Some(insts))
 
-    //Automated reduction
-    println(proveWithWitness(List(p1,p2,p3),List(w)))
+    //Confluent automated reduction
+    val pr2 = proveWithWitness(List(p1,p2,p3),List(w))
+    val pr3 = proveWithWitness(List(p2,p1,p3),List(w))
+    val pr4 = proveWithWitness(List(p3,p2,p1),List(w))
+
+    pr1 shouldBe 'proved
+    pr2 shouldBe 'proved
+    pr3 shouldBe 'proved
+    pr4 shouldBe 'proved
   }
 
   "PolynomialArith" should "generate non-zero squares witness" in withMathematica { qeTool =>

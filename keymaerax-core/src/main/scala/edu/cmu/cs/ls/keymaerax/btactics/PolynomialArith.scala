@@ -1,10 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 import scala.collection.immutable.{Map, _}
@@ -42,7 +40,7 @@ object PolynomialArith {
     t match {
       case n:Number => n.value == 1
       case Times(l,Power(s:Variable,n:Number)) =>
-        n.value.isValidInt && s.name > maxs && checkMono(l,s.name)
+        n.value.isValidInt && n.value.toInt > 0 && s.name > maxs && checkMono(l,s.name)
       case _ => false
     }
   }
@@ -106,33 +104,39 @@ object PolynomialArith {
   private val plusCoeff2 = proveBy("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula,
     byUS("const congruence"))
 
+  //This seems like it might be a bad idea ...
+  private def getProver(skip_proofs:Boolean) :(Formula,BelleExpr)=>ProvableSig =
+    if (skip_proofs) ( (f:Formula,b:BelleExpr) => DerivedAxioms.equivReflexiveAxiom.fact ) else proveBy
+
   //Takes and returns normalised polynomials
-  def addPoly(l:Term,r:Term): (Term,ProvableSig) = {
+  //The returned provable is just reflexivity if no proof is required
+  def addPoly(l:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
     val lhs = Plus(l,r)
+    val prover = getProver(skip_proofs)
     val res = (l,r) match {
       case (n:Number,_) => //Left unit for addition
-        (r,proveBy(Equal(lhs,r), byUS("0+")))
+        (r,prover(Equal(lhs,r), byUS("0+")))
       case (_,n:Number) => //Right unit for addition
-        (l,proveBy(Equal(lhs,l), byUS("+0")))
+        (l,prover(Equal(lhs,l), byUS("+0")))
       case (Plus(nl,Times(cl:Number,ml)),Plus(nr,Times(cr:Number,mr))) => {
         if(cmpMono(ml,mr)) {
-          val (rec,pr) = addPoly(l,nr)
+          val (rec,pr) = addPoly(l,nr,skip_proofs)
           val res = Plus(rec,Times(cr:Number,mr))
-          (res,proveBy(Equal(lhs,res), useAt(plusAssoc1)(SuccPosition(1,0::Nil))
+          (res,prover(Equal(lhs,res), useAt(plusAssoc1)(SuccPosition(1,0::Nil))
             & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
         }
         else if (ml == mr) {
-          val (rec,pr) = addPoly(nl,nr)
+          val (rec,pr) = addPoly(nl,nr,skip_proofs)
           val cnew = cl.value + cr.value
           if(cnew == 0) //Canceling out the 0
-            (rec, proveBy(Equal(lhs,rec), useAt(plusAssoc2)(SuccPosition(1,0::Nil))
+            (rec, prover(Equal(lhs,rec), useAt(plusAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(plusCoeff1,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
               & TactixLibrary.RCF))
           else {
             val res = Plus(rec,Times(Number(cl.value+cr.value),ml))
-            (res, proveBy(Equal(lhs,res), useAt(plusAssoc2)(SuccPosition(1,0::Nil))
+            (res, prover(Equal(lhs,res), useAt(plusAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(plusCoeff2,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
@@ -140,9 +144,9 @@ object PolynomialArith {
           }
         }
         else {
-          val (rec,pr) = addPoly(r,l)
+          val (rec,pr) = addPoly(r,l,skip_proofs)
           //Flip the +
-          (rec,useFor("+ commute")(SuccPosition(1,0::Nil))(pr))
+          (rec,if (skip_proofs) DerivedAxioms.equivReflexiveAxiom.fact else useFor("+ commute")(SuccPosition(1,0::Nil))(pr))
         }
       }
       case _ => ???
@@ -166,31 +170,32 @@ object PolynomialArith {
     byUS("const congruence"))
 
   //Multiplies and returns normalised monomials (this is basically the same as the implementation for adding polynomials)
-  def mulMono(l:Term,r:Term): (Term,ProvableSig) = {
+  def mulMono(l:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
     val lhs = Times(l,r)
+    val prover = getProver(skip_proofs)
     (l,r) match {
-      case(n:Number,_) => (r,proveBy(Equal(lhs,r),byUS(onetimes)))  //Unit
-      case (_,n:Number) => (l,proveBy(Equal(lhs,l),byUS(timesone))) //Unit
+      case(n:Number,_) => (r,prover(Equal(lhs,r),byUS(onetimes)))  //Unit
+      case (_,n:Number) => (l,prover(Equal(lhs,l),byUS(timesone))) //Unit
       case (Times(nl,Power(sl:Variable,ml:Number)),Times(nr,Power(sr:Variable,mr:Number))) =>
         if(sl.name > sr.name)
         {
-          val(rec,pr) = mulMono(l,nr)
+          val(rec,pr) = mulMono(l,nr,skip_proofs)
           val res = Times(rec,Power(sr:Variable,mr:Number))
-          (res,proveBy(Equal(lhs,res), useAt(timesAssoc1)(SuccPosition(1,0::Nil))
+          (res,prover(Equal(lhs,res), useAt(timesAssoc1)(SuccPosition(1,0::Nil))
             & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
         }
         else if(sl.name == sr.name) {
-          val(rec,pr) = mulMono(nl,nr)
+          val(rec,pr) = mulMono(nl,nr,skip_proofs)
           val mnew = ml.value + mr.value
           if(mnew == 0) //Canceling out the 0
-            (rec, proveBy(Equal(lhs,rec), useAt(timesAssoc2)(SuccPosition(1,0::Nil))
+            (rec, prover(Equal(lhs,rec), useAt(timesAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(timesCoeff1,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
               & RCF))
           else {
             val res = Times(rec,Power(sl,Number(ml.value+mr.value)))
-            (res, proveBy(Equal(lhs,res), useAt(timesAssoc2)(SuccPosition(1,0::Nil))
+            (res, prover(Equal(lhs,res), useAt(timesAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(timesCoeff2,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
@@ -198,9 +203,9 @@ object PolynomialArith {
           }
         }
         else {
-          val (rec,pr) = mulMono(r,l)
+          val (rec,pr) = mulMono(r,l,skip_proofs)
           //Flip the *
-          (rec,useFor("* commute")(SuccPosition(1,0::Nil))(pr))
+          (rec,if (skip_proofs) DerivedAxioms.equivReflexiveAxiom.fact else useFor("* commute")(SuccPosition(1,0::Nil))(pr))
         }
       case _ => ???
     }
@@ -210,16 +215,17 @@ object PolynomialArith {
     "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE)
 
   //Multiplies a normalized polynomial by a constant and a normalized monomial
-  def mulPolyMono(l:Term,c:Number,r:Term): (Term,ProvableSig) = {
+  def mulPolyMono(l:Term,c:Number,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
     val lhs = Times(l,Times(c,r))
+    val prover = getProver(skip_proofs)
     l match {
-      case n:Number => (n,proveBy(Equal(lhs,n),byUS("0*"))) // Multiplication by 0 poly
+      case n:Number => (n,prover(Equal(lhs,n),byUS("0*"))) // Multiplication by 0 poly
       case Plus(nl,Times(cl:Number,ml)) =>
-        val (rec1,pr1) = mulPolyMono(nl,c,r)
-        val (rec2,pr2) = mulMono(ml,r)
+        val (rec1,pr1) = mulPolyMono(nl,c,r,skip_proofs)
+        val (rec2,pr2) = mulMono(ml,r,skip_proofs)
         val res =  Plus(rec1,Times(Number(cl.value*c.value),rec2) )
 
-        (res,proveBy(Equal(lhs,res),useAt(timesAssoc3)(SuccPosition(1,0::Nil))
+        (res,prover(Equal(lhs,res),useAt(timesAssoc3)(SuccPosition(1,0::Nil))
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::1::Nil))
           & useAt(plusCoeff2,PosInExpr(1::Nil))(1)
@@ -231,15 +237,16 @@ object PolynomialArith {
   }
 
   //Multiplies and returns normalised polynomials
-  def mulPoly(l:Term,r:Term): (Term,ProvableSig) = {
+  def mulPoly(l:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
     val lhs = Times(l,r)
+    val prover = getProver(skip_proofs)
     r match {
-      case n:Number => (n,proveBy(Equal(lhs,n),byUS("*0"))) //Multiplication by 0 poly
+      case n:Number => (n,prover(Equal(lhs,n),byUS("*0"))) //Multiplication by 0 poly
       case Plus(nr,Times(cr:Number,mr)) =>
-        val (rec1,pr1) = mulPoly(l,nr)
-        val (rec2,pr2) = mulPolyMono(l,cr,mr)
-        val (res,pr3) = addPoly(rec1,rec2)
-        (res,proveBy(Equal(lhs,res),useAt("distributive")(SuccPosition(1,0::Nil))
+        val (rec1,pr1) = mulPoly(l,nr,skip_proofs)
+        val (rec2,pr2) = mulPolyMono(l,cr,mr,skip_proofs)
+        val (res,pr3) = addPoly(rec1,rec2,skip_proofs)
+        (res,prover(Equal(lhs,res),useAt("distributive")(SuccPosition(1,0::Nil))
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3)
@@ -257,24 +264,25 @@ object PolynomialArith {
     byUS("const congruence"))
 
   //Reduces t^n to iterated squares
-  def iterSquare(l:Term,p:Int) : (Term,ProvableSig) = {
+  def iterSquare(l:Term,p:Int,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
     val lhs = Power(l,Number(p))
-    if (p == 0) (Number(1),proveBy(Equal(lhs,Number(1)),byUS(powLem1)))
-    else if (p == 1) (l,proveBy(Equal(lhs,l),byUS(powLem2)))
+    val prover = getProver(skip_proofs)
+    if (p == 0) (Number(1),prover(Equal(lhs,Number(1)),byUS(powLem1)))
+    else if (p == 1) (l,prover(Equal(lhs,l),byUS(powLem2)))
     else if (p % 2 == 0)
     {
-      val (rec,pr) = iterSquare(l,p/2)
+      val (rec,pr) = iterSquare(l,p/2,skip_proofs)
       val rhs = Power(rec,Number(2))
-      (rhs,proveBy(Equal(lhs,rhs),
+      (rhs,prover(Equal(lhs,rhs),
         useAt(pr,PosInExpr(1::Nil))(SuccPosition(1,1::0::Nil)) &
         useAt(powLem3)(SuccPosition(1,1::Nil)) &
         useAt(powLem5,PosInExpr(1::Nil))(1) & RCF))
     }
     else
     {
-      val (rec,pr) = iterSquare(l,p/2)
+      val (rec,pr) = iterSquare(l,p/2,skip_proofs)
       val rhs = Times(Power(rec,Number(2)),l)
-      (rhs,proveBy(Equal(lhs,rhs),
+      (rhs,prover(Equal(lhs,rhs),
         useAt(pr,PosInExpr(1::Nil))(SuccPosition(1,1::0::0::Nil)) &
         useAt(powLem4)(SuccPosition(1,1::Nil)) &
         useAt(powLem5,PosInExpr(1::Nil))(1) & RCF))
@@ -286,58 +294,59 @@ object PolynomialArith {
   private val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE)
 
   //Normalizes an otherwise un-normalized term
-  def normalise(l:Term) : (Term,ProvableSig) = {
+  def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
+    val prover = getProver(skip_proofs)
     val res = l match {
       case n:Number =>
         //0 + 1 * n (unless n = 0)
         val res = if (n.value == 0) n else Plus(Number(0), Times(n,Number(1)))
-        (res,proveBy(Equal(l,res), RCF ))
+        (res,prover(Equal(l,res), RCF ))
       case v:Variable =>
         //0 + 1 * (1 * v^1)
         val res = Plus(Number(0),Times(Number(1), Times(Number(1),Power(v,Number(1))) ))
-        (res,proveBy(Equal(l,res), RCF ))
+        (res,prover(Equal(l,res), RCF ))
       case Plus(ln,rn) =>
-        val (rec1,pr1) = normalise(ln)
-        val (rec2,pr2) = normalise(rn)
-        val (res,pr3) = addPoly(rec1,rec2)
-        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+        val (rec1,pr1) = normalise(ln,skip_proofs)
+        val (rec2,pr2) = normalise(rn,skip_proofs)
+        val (res,pr3) = addPoly(rec1,rec2,skip_proofs)
+        (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3)))
       case Times(ln,rn) =>
-        val (rec1,pr1) = normalise(ln)
-        val (rec2,pr2) = normalise(rn)
-        val (res,pr3) = mulPoly(rec1,rec2)
-        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+        val (rec1,pr1) = normalise(ln,skip_proofs)
+        val (rec2,pr2) = normalise(rn,skip_proofs)
+        val (res,pr3) = mulPoly(rec1,rec2,skip_proofs)
+        (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3)))
       case Power(_:Variable,_:Number) =>
         //0 + 1 * (1 * v^n)
         val res = Plus(Number(0),Times(Number(1), Times(Number(1),l) ))
-        (res,proveBy(Equal(l,res),RCF))
+        (res,prover(Equal(l,res),RCF))
       case Power(ln,n:Number) if n.value == 2 =>
-        val (rec1,pr1) = normalise(ln)
+        val (rec1,pr1) = normalise(ln,skip_proofs)
         //Square the polynomial by hand
-        val (res,pr2) = mulPoly(rec1,rec1)
-        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+        val (res,pr2) = mulPoly(rec1,rec1,skip_proofs)
+        (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(powNormalise)(SuccPosition(1,0::Nil))
           & by(pr2)))
       case Power(ln,n:Number) if n.value.isValidInt =>
-        val(rec1,pr1) = iterSquare(ln,n.value.intValue())
-        val(res,pr2) = normalise(rec1)
-        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
+        val(rec1,pr1) = iterSquare(ln,n.value.intValue(),skip_proofs)
+        val(res,pr2) = normalise(rec1,skip_proofs)
+        (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
           & by(pr2)))
       case Neg(ln) =>
         //Negation ~= multiply by -1 monomial
-        val (rec1,pr1) = normalise(ln)
-        val (res,pr2) = mulPolyMono(rec1,Number(-1),Number(1))
-        (res,proveBy(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
+        val (rec1,pr1) = normalise(ln,skip_proofs)
+        val (res,pr2) = mulPolyMono(rec1,Number(-1),Number(1),skip_proofs)
+        (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(negNormalise)(SuccPosition(1,0::Nil)) & by(pr2) ))
       case Minus(ln,rn) =>
         //Minus ~= move - into negation
-        val (rec1,pr1) = normalise(ln)
-        val (rec2,pr2) = normalise(Neg(rn))
-        val (res,pr3) = addPoly(rec1,rec2)
-        (res,proveBy(Equal(l,res), useAt(minusNormalise)(SuccPosition(1,0::Nil))
+        val (rec1,pr1) = normalise(ln,skip_proofs)
+        val (rec2,pr2) = normalise(Neg(rn),skip_proofs)
+        val (res,pr3) = addPoly(rec1,rec2,skip_proofs)
+        (res,prover(Equal(l,res), useAt(minusNormalise)(SuccPosition(1,0::Nil))
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3) ))
@@ -352,7 +361,7 @@ object PolynomialArith {
         sequent.sub(pos) match
         {
           case Some(t:Term) =>
-            val(tt,pr) = normalise(t)
+            val(tt,pr) = normalise(t,false)
             //println(tt,pr)
             CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
           case _ => ident
@@ -392,7 +401,7 @@ object PolynomialArith {
     }
   }
 
-  //Polynomial division on head monomials
+  //Polynomial division on head monomials (no proofs)
 
   //Find the first non-zero monomial in l that r divides if it exists & returns the quotient along with its coefficient
   def divPolyMono(l:Term,r:Term) : Option[(Number,Term)] = {
@@ -417,7 +426,7 @@ object PolynomialArith {
             //The actual coefficient we need to return for the reduction:
             val divisor = Times(Number(-1 * c.value / (cr.value)),q)
             //For division, we need to use the normalized version internally
-            val quotient = addPoly(l, mulPolyMono(r, Number(-1 * c.value / (cr.value)), q)._1)._1
+            val quotient = addPoly(l, mulPolyMono(r, Number(-1 * c.value / (cr.value)), q,true)._1,true)._1
             Some(divisor,quotient)
         }
     }
@@ -496,9 +505,10 @@ object PolynomialArith {
     val pf = useFor(gtNotZero,PosInExpr(0::Nil))(SuccPosition(1))(pfi)
     //assert(pf.isProved)
     //Generate our own reduction instructions if not available
+    //Proofs skipped
     val inst = instopt.getOrElse({
-      val wit_norm = normalise(wit)._1
-      val ctx_norm = ctx.map( t=> normalise(t)._1)
+      val wit_norm = normalise(wit,true)._1
+      val ctx_norm = ctx.map( t=> normalise(t,true)._1)
       reduction(ctx_norm,wit_norm)
     })
     proveBy(Sequent(antes.toIndexedSeq,IndexedSeq()),
