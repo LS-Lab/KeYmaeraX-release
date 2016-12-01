@@ -448,6 +448,41 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>0".asFormula
   }
 
+  it should "not rename variables bound somewhere else if not top-level 2" in {
+    val result = proveBy(Sequent(IndexedSeq("x>0 & (\\forall x x>0 | \\forall x x<0)".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & (\\forall x x>0 | \\forall x x<0)".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "not rename variables bound somewhere else if not top-level 3" in {
+    val result = proveBy(Sequent(IndexedSeq("x>0 & (\\forall y \\forall x x>0 | \\forall y \\forall x x<0)".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & (\\forall y \\forall x x>0 | \\forall y \\forall x x<0)".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "not rename variables bound somewhere else if not top-level 4" in {
+    val result = proveBy(Sequent(IndexedSeq("x>0 & (\\forall x \\forall x x>0 | \\forall x \\forall x x<0)".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & (\\forall x \\forall x x>0 | \\forall x \\forall x x<0)".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "not rename bound inside formula" in {
+    val result = proveBy("\\forall a (a>0 | \\forall a a<0)".asFormula, allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a>0 | \\forall a a<0".asFormula
+  }
+
+  it should "not rename bound inside formula 2" in {
+    val result = proveBy("\\forall a (a>0 -> [a:=a+1;]a>0)".asFormula, allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a>0 -> [a:=a+1;]a>0".asFormula
+  }
+
   "exists skolemize" should "skolemize simple" in {
     val result = proveBy(Sequent(IndexedSeq("\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-1))
     result.subgoals should have size 1
