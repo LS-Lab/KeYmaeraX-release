@@ -237,88 +237,96 @@ class AcasXSafeTwoSided extends AcasXBase {
     storeLemma(ucLoLemma, Some("twosided_implicit_usecase"))
   }
 
-  it should "prove Theorem 3: correctness of implicit two-sided safe regions" in withMathematica { tool =>
+  it should "prove Theorem 3: correctness of implicit two-sided safe regions" in {
+    if (lemmaDB.contains("twosided_implicit")) lemmaDB.remove("twosided_implicit")
+    runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
+    runLemmaTest("2side_safe_upimplicit", "ACAS X 2-sided safe should prove Theorem 3, lemma up safe implicit")
+    runLemmaTest("2side_safe_implicit", "ACAS X 2-sided safe should prove Theorem 3, lemma safe implicit")
 
-    def applyLemma(formula: Formula, apply: BelleExpr) = cut(formula) & Idioms.<(
-      (cutUse, dT("use Lemma " + formula) & SimplifierV2.simpTac('L, formula) & closeId & done)
-      ,
-      (cutShow, cohideR('Rlast, formula) & dT("apply Lemma " + formula) & apply)
-    )
+    withMathematica { tool =>
+      beforeEach()
 
-    val evolutionDomain =
-      ("(( w * dhd >= w * dhf  | w * ao >= a ) &" +
-        " ((w * dhd <= w * dhfM & w * ao <= aM) | w * ao <= 0))").asFormula
+      def applyLemma(formula: Formula, apply: BelleExpr) = cut(formula) & Idioms.<(
+        (cutUse, dT("use Lemma " + formula) & SimplifierV2.simpTac('L, formula) & closeId & done)
+        ,
+        (cutShow, cohideR('Rlast, formula) & dT("apply Lemma " + formula) & apply)
+      )
 
-    val ode = "r'=-rv,h'=-dhd,dhd'=ao".asDifferentialProgram
+      val evolutionDomain =
+        ("(( w * dhd >= w * dhf  | w * ao >= a ) &" +
+          " ((w * dhd <= w * dhfM & w * ao <= aM) | w * ao <= 0))").asFormula
 
-    /*** Main safe theorem and its tactic ***/
-    val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
+      val ode = "r'=-rv,h'=-dhd,dhd'=ao".asDifferentialProgram
 
-    val safeTac = implyR('R) &
-      // do not keep constants around, otherwise simplifier will simplify those first and won't recognize invariant
-      DLBySubst.loop(invariant, skip)('R) & Idioms.<(
-      (initCase, dT("Base case") & prop & done),
-      (useCase, dT("Use case") &
-        andR('R) & Idioms.<(
+      /** * Main safe theorem and its tactic ***/
+      val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
+
+      val safeTac = implyR('R) &
+        // do not keep constants around, otherwise simplifier will simplify those first and won't recognize invariant
+        DLBySubst.loop(invariant, skip)('R) & Idioms.<(
+        (initCase, dT("Base case") & prop & done),
+        (useCase, dT("Use case") &
+          andR('R) & Idioms.<(
           cohide2(-1, 1) & implyRi & by(lemmaDB.get("twosided_implicit_usecase").getOrElse(throw new Exception("Lemma twosided_implicit_usecase must be proved first"))) & done,
           (andL('L) *) & closeId & done
         ) & done)
-      ,
-      (indStep, dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
-        /*show*/ dT("Generalization Holds") & chase('R) & dT("After chase") & ((SimplifierV2.simpTac('R) & (andL('L)*))*) & dT("Simplified") & normalize & done
+        ,
+        (indStep, dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
+          /*show*/ dT("Generalization Holds") & chase('R) & dT("After chase") & ((SimplifierV2.simpTac('R) & (andL('L) *)) *) & dT("Simplified") & normalize & done
           ,
-        /*use*/ dT("Generalization Strong Enough") &
-          cutEZ(Or(Not(evolutionDomain), evolutionDomain),
-            cohideR('R, Or(Not(evolutionDomain), evolutionDomain)) & prop & done) &
-          orL('L, Or(Not(evolutionDomain), evolutionDomain)) & Idioms.<(
+          /*use*/ dT("Generalization Strong Enough") &
+            cutEZ(Or(Not(evolutionDomain), evolutionDomain),
+              cohideR('R, Or(Not(evolutionDomain), evolutionDomain)) & prop & done) &
+            orL('L, Or(Not(evolutionDomain), evolutionDomain)) & Idioms.<(
             hideL('L, invariant) &
-            dT("Before DI") &
-            cutEZ(Box(ODESystem(ode, evolutionDomain), "0=1".asFormula),
-              hideR('R, Box(ODESystem(ode, evolutionDomain), invariant)) & diffInd()('Rlast)) &
-            hideL('L, Not(evolutionDomain)) &
-            dT("After DI") & diffCut("0=1".asFormula)('R) & Idioms.<(
+              dT("Before DI") &
+              cutEZ(Box(ODESystem(ode, evolutionDomain), "0=1".asFormula),
+                hideR('R, Box(ODESystem(ode, evolutionDomain), invariant)) & diffInd()('Rlast)) &
+              hideL('L, Not(evolutionDomain)) &
+              dT("After DI") & diffCut("0=1".asFormula)('R) & Idioms.<(
               /*use*/ dT("After DC 2") & diffWeaken('R) & dT("after DW") &
                 implyR('R) & andL('L) & cohideL('L, "0=1".asFormula) & dT("before QE") & QE,
               /*show*/ dT("After DC 1") & closeId & done
             )
-          ,
-          dT("Before diff. solution") &
-            EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
-            EqualityTactics.abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) &
-            diffSolveEnd('R) &
-            dT("Diff. Solution") & allR('R) & implyR('R)*2 & (andL('L)*) &
-            andR('R) & Idioms.<(
+            ,
+            dT("Before diff. solution") &
+              EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
+              EqualityTactics.abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) &
+              diffSolveEnd('R) &
+              dT("Diff. Solution") & allR('R) & implyR('R) * 2 & (andL('L) *) &
+              andR('R) & Idioms.<(
               andR('R) & Idioms.<(
                 closeId,
                 dT("bla2") & orR('R) &
-                orL('L, "\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)|\\forall t \\forall ro \\forall ho (0<=t&t < maxIM/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=maxIM/aM&ro=rv*t&ho=(dhd+w*maxIM)*t-w*maxIM^2/(2*aM)->abs(r-ro)>rp|w*h>w*ho+hp)".asFormula)
-                & Idioms.<(
+                  orL('L, "\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)|\\forall t \\forall ro \\forall ho (0<=t&t < maxIM/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=maxIM/aM&ro=rv*t&ho=(dhd+w*maxIM)*t-w*maxIM^2/(2*aM)->abs(r-ro)>rp|w*h>w*ho+hp)".asFormula)
+                  & Idioms.<(
                   hideL('L, "maxIM=max((0,w*(dhfM-dhd)))".asFormula) & hideL('L, "aM>0".asFormula) &
-                  hideL('L, "w*dhd<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
-                  hideL('L, "w*(ao*t_+dhd)<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
-                  hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhfM-(ao*t_+dhd))))/aM&ro=rv*t&ho=w*aM/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhfM-(ao*t_+dhd))))/aM&ro=rv*t&ho=((ao*t_+dhd)+w*max((0,w*(dhfM-(ao*t_+dhd)))))*t-w*max((0,w*(dhfM-(ao*t_+dhd))))^2/(2*aM)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h)>w*ho+hp)".asFormula) &
-                  dT("lower lemma") &
-                  applyLemma(safeLemmaFormula, by(lemmaDB.get("2side_safe_implicit").getOrElse(throw new Exception("Lemma 2side_safe_implicit must be proved first")))) & done
+                    hideL('L, "w*dhd<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
+                    hideL('L, "w*(ao*t_+dhd)<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
+                    hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhfM-(ao*t_+dhd))))/aM&ro=rv*t&ho=w*aM/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhfM-(ao*t_+dhd))))/aM&ro=rv*t&ho=((ao*t_+dhd)+w*max((0,w*(dhfM-(ao*t_+dhd)))))*t-w*max((0,w*(dhfM-(ao*t_+dhd))))^2/(2*aM)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h)>w*ho+hp)".asFormula) &
+                    dT("lower lemma") &
+                    applyLemma(safeLemmaFormula, by(lemmaDB.get("2side_safe_implicit").getOrElse(throw new Exception("Lemma 2side_safe_implicit must be proved first")))) & done
                   ,
                   hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & hideL('L, "a>0".asFormula) &
-                  hideL('L, "w*dhd>=w*dhf|w*ao>=a".asFormula) &
-                  hideL('L, "w*(ao*t_+dhd)>=w*dhf|w*ao>=a".asFormula) &
-                  hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h) < w*ho-hp)".asFormula) &
-                  dT("upper lemma") &
-                  applyLemma(safeUpLemmaFormula, by(lemmaDB.get("2side_safe_upimplicit").getOrElse(throw new Exception("Lemma 2side_safe_upimplicit must be proved first")))) & done
+                    hideL('L, "w*dhd>=w*dhf|w*ao>=a".asFormula) &
+                    hideL('L, "w*(ao*t_+dhd)>=w*dhf|w*ao>=a".asFormula) &
+                    hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h) < w*ho-hp)".asFormula) &
+                    dT("upper lemma") &
+                    applyLemma(safeUpLemmaFormula, by(lemmaDB.get("2side_safe_upimplicit").getOrElse(throw new Exception("Lemma 2side_safe_upimplicit must be proved first")))) & done
                 )
               ),
-            QE
+              QE
             )
           ) /* end orL on cutEZ */
           /* End cutUseLbl "Generalization strong enough" */
-      )) /* End indStepLbl */
-    )
+        )) /* End indStepLbl */
+      )
 
-    val safeTheorem = proveBy(safeSeq, safeTac)
-    safeTheorem shouldBe 'proved
-    //storeLemma(safeTheorem, Some("twosided_implicit")) // stack overflow
+      val safeTheorem = proveBy(safeSeq, safeTac)
+      safeTheorem shouldBe 'proved
+      //storeLemma(safeTheorem, Some("twosided_implicit")) // stack overflow
+    }
   }
 
 //  it should "prove Lemma 3a: implicit-explicit lower equivalence" in {

@@ -8,14 +8,13 @@ package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Lemma, Provable}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Lemma}
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.scalatest.events.Event
-import org.scalatest.Reporter
+import org.scalatest.{Args, Reporter}
 
 import scala.collection._
 import scala.language.postfixOps
@@ -28,25 +27,21 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  * @author Andre Platzer
  */
-object AcasXBase {
-  /* khalil needs the commented path to compile with sbt */
-  //var folder = "/Users/kghorbal/KeYmaeraX-release/keymaerax-webui/src/test/scala/casestudies/acasx/"
-  var modelFolder = "keymaerax-webui/src/test/scala/casestudies/acasxhstp/safeable/"
-}
 @SlowTest
 class AcasXBase extends TacticTestBase {
 
   private val DEBUG = true
 
-  val folder = AcasXBase.modelFolder
+  /* Running tests programmatically: where to report test results. */
+  private val nilReporter: Reporter = new Reporter() { override def apply(event: Event): Unit = {} }
 
-  val lemmaDB = LemmaDBFactory.lemmaDB
-  val nilReporter = new Reporter() { override def apply(event: Event): Unit = {} }
+  /* The lemma database for storing/retrieving lemmas. */
+  val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
 
   /* Common tactics */
-  def dT(s: => String) = /*Tactics.SubLabelBranch(s) &*/ DebuggingTactics.debug(s, doPrint = DEBUG, _.prettyString)
+  def dT(s: => String): BelleExpr = /*Tactics.SubLabelBranch(s) &*/ DebuggingTactics.debug(s, doPrint = DEBUG, _.prettyString)
 
-  def cutEZ(c: Formula, t: BelleExpr) = cut(c) & Idioms.<(skip, /* show */ t & done)
+  def cutEZ(c: Formula, t: BelleExpr): BelleExpr = cut(c) & Idioms.<(skip, /* show */ t & done)
 
   /* Lemmas */
   def storeLemma(fact: ProvableSig, name: Option[String]): String = {
@@ -55,6 +50,15 @@ class AcasXBase extends TacticTestBase {
     val id = lemmaDB.add(Lemma(fact, evidence, name))
     println(s"Lemma ${name.getOrElse("")} stored as $id")
     id
+  }
+
+  /** Proves a lemma by running its test case. */
+  def runLemmaTest(name: String, proofCaseName: String): Unit = {
+    if (!lemmaDB.contains(name)) {
+      println(s"Proving $name...")
+      runTest(proofCaseName, Args(nilReporter))
+      println("...done")
+    }
   }
 
 }

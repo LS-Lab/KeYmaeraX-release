@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import org.scalatest.Args
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -131,18 +130,8 @@ class AcasXSafe extends AcasXBase {
 
   it should "prove Theorem 1: correctness of implicit safe regions" in {
     if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
-
-    if (!lemmaDB.contains("nodelay_ucLoLemma")) {
-      println("Proving nodelay_ucLoLemma...")
-      runTest("ACAS X safe should prove use case lemma", Args(nilReporter))
-      println("...done")
-    }
-
-    if (!lemmaDB.contains("nodelay_safeLoLemma")) {
-      println("Proving nodelay_safeLoLemma...")
-      runTest("ACAS X safe should prove lower bound safe lemma", Args(nilReporter))
-      println("...done")
-    }
+    runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
+    runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     withMathematica { tool =>
       beforeEach()
@@ -553,16 +542,8 @@ class AcasXSafe extends AcasXBase {
     // proof dependency
     // execute other proofs to create lemmas, so that this proof does not fail when run in isolation on
     // a fresh machine
-    if (!(lemmaDB.contains("safe_implicit") && lemmaDB.contains("nodelay_ucLoLemma"))) {
-      println("Proving safe_implicit lemma and nodelay_ucLoLemma...")
-      runTest("ACAS X safe should prove Theorem 1: correctness of implicit safe regions", Args(nilReporter))
-      println("...done")
-    }
-    if (!lemmaDB.contains("safe_equivalence")) {
-      println("Proving safe_equivalence lemma...")
-      runTest("ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation", Args(nilReporter))
-      println("...done")
-    }
+    runLemmaTest("safe_implicit", "ACAS X safe should prove Theorem 1: correctness of implicit safe regions")
+    runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
 
     withMathematica { tool =>
 
