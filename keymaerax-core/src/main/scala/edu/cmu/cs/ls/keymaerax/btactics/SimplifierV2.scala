@@ -590,13 +590,18 @@ object SimplifierV2 {
               hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
             hideR(SuccPos(0))& by(lpr))))
       case q:Quantified =>
-        //Simplest thing to do is discard context completely
-        //In this case upr has the form |- A <-> B so useFor
-        val (uf,upr) = formulaSimp(q.child,IndexedSeq())
-        val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
-          USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
-        val pr = useFor(upr, PosInExpr(0 :: Nil))(SuccPosition(1, 1:: 0 :: Nil))(init)
-        (extract(pr).asInstanceOf[Formula],pr)
+        val (remainingCtx, droppedCtx) = ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
+        val (uf,upr) = formulaSimp(q.child,remainingCtx)
+        val nf = q.reapply(q.vars, uf)
+
+        val instantiate = q match {
+          case Forall(_, _) => allR(1) & allL('Llast)
+          case Exists(_, _) => existsL('Llast) & existsR(1)
+        }
+
+        (nf, proveBy(Sequent(ctx, IndexedSeq(Equiv(q, nf))),
+          droppedCtx.map(f => hideL('L, f)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
+          equivR(1) & onAll(instantiate & implyRi(AntePos(remainingCtx.length)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
         val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(

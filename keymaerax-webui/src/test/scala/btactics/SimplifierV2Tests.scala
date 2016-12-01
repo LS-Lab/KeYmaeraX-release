@@ -41,13 +41,24 @@ class SimplifierV2Tests extends TacticTestBase {
   }
 
   it should "simplify terms" in withMathematica { qeTool =>
+    val fml = "(\\forall t \\forall s (t>=0 & 0 <= s & s<=t -> x=v_0*(0+1*t-0) -> x >= 5))".asFormula
+    val ctxt = IndexedSeq("x_0=0".asFormula,"v_0=5".asFormula)
+    val tactic = simpTac
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0=0".asFormula,"v_0=5".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t \\forall s (t>=0&0<=s&s<=t->x=5*t->x>=5)".asFormula
+  }
+
+  it should "simplify terms 2" in withMathematica { qeTool =>
     val fml = "(\\forall t \\forall s (t>=0 & 0 <= s & s<=t -> x=v_0*(0+1*t-0) -> x >= 0))".asFormula
     val ctxt = IndexedSeq("x_0=0".asFormula,"v_0=0".asFormula)
     val tactic = simpTac
     val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0=0".asFormula,"v_0=0".asFormula)
-    result.subgoals.head.succ should contain only "\\forall t \\forall s (t>=0&0<=s&s<=t->x=v_0*t->x>=0)".asFormula
+    //@todo vacuous quantifier
+    result.subgoals.head.succ should contain only "\\forall t \\forall s true".asFormula
   }
 
   it should "simplify terms when applied to term position" in withMathematica { qeTool =>
@@ -116,5 +127,19 @@ class SimplifierV2Tests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "f()>=0".asFormula
+  }
+
+  it should "simplify in quantified" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0".asFormula)
+    val succ = IndexedSeq("\\forall y (x>0&y>2)".asFormula)
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(1))
+    result.subgoals.head.succ should contain only "\\forall y y>2".asFormula
+  }
+
+  it should "simplify in quantified 2" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0".asFormula, "y>3".asFormula)
+    val succ = IndexedSeq("\\forall y (x>0&y>2)".asFormula)
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(1))
+    result.subgoals.head.succ should contain only "\\forall y y>2".asFormula
   }
 }
