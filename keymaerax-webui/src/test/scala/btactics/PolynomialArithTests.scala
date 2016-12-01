@@ -137,18 +137,56 @@ class PolynomialArithTests extends TacticTestBase {
     val p3 = "- (x^2 + y^2*z)".asTerm
     val p4 = "x^2 - (x^2 + y^2*z)".asTerm
     val p5 = "(x+y*z -x - y*z + a)^3".asTerm
+    val p6 = "1+(a*b*c)^2-(x-y-1*a^2)*(0+-1*(1*y^1*c^2*b^2))".asTerm
 
-    println(normalise(p1))
-    println(normalise(p2))
-    println(normalise(p3))
-    println(normalise(p4))
-    println(normalise(p5))
+    println(normalise(p6))
+//
+//    println(normalise(p1))
+//    println(normalise(p2))
+//    println(normalise(p3))
+//    println(normalise(p4))
+//    println(normalise(p5))
   }
 
-  "PolynomialArith" should "do ax" in withMathematica { qeTool =>
-    //RWV part of example in Fig 2
+  "PolynomialArith" should "do mono div" in withMathematica { qeTool =>
+    val m1 = "1 * x^5 * a^5".asTerm
+    val m2 = "1 * z^1 * x^7 * b^8".asTerm
+    val m3 = "1 * z^8 * x^7 * a^1".asTerm
+    val m4 = "1 * z^5 * x^2".asTerm
 
-    //val test = proveBy("x=0 -> x^2 = 0".asFormula,QE)
-    //val test2 = proveBy(Sequent(IndexedSeq("x = 0".asFormula),IndexedSeq()),CEat(test)(-1))
+    println(divMono(m2,m1)) //Not Divisible
+    println(divMono(m2,m2)) //Divisible
+    println(divMono(m3,m2)) //Not Divisible
+    println(divMono(m3,m4)) //Divisible
+
+  }
+
+  "PolynomialArith" should "do poly div" in withMathematica { qeTool =>
+    val p1 = normalise("x - y -1*a^2".asTerm)._1
+    val p2 = normalise("z-b^2".asTerm)._1
+    val p3 = normalise("z*(y-x)*c^2-1".asTerm)._1
+    val p = normalise("1+(a*b*c)^2".asTerm)._1
+
+    println(reduction(List(p1,p2,p3),p))
+  }
+
+  "PolynomialArith" should "prove with oracle witness" in withMathematica { qeTool =>
+    val p1 = "x - y -1*a^2".asTerm
+    val p2 = "z-b^2".asTerm
+    val p3 = "z*(y-x)*c^2-1".asTerm
+    val w = "(a*b*c)".asTerm
+
+    val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
+
+    //Guided reduction
+    println(proveWithWitness(List(p1,p2,p3),List(w),Some(insts)))
+
+    //Automated reduction
+    println(proveWithWitness(List(p1,p2,p3),List(w)))
+  }
+
+  "PolynomialArith" should "generate non-zero squares witness" in withMathematica { qeTool =>
+    val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm)
+    println(assertWitness(witness))
   }
 }

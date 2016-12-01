@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 import scala.collection.immutable.{Map, _}
@@ -19,7 +20,7 @@ object PolynomialArith {
   /**
     * Normalised polynomial arithmetic
     *
-    * A normalised monomial has the following shape in KeYmaeraX's term grammar (n is a number > 0):
+    * A normalised monomial has the following shape in KeYmaeraX's term grammar (n is a natural number > 0):
     *
     * mono:= 1 | mono * (Var)^n
     *
@@ -33,6 +34,7 @@ object PolynomialArith {
     *
     * The units are included for now to get a nicer definition??
     *
+    * todo: Add ability to turn off proof generation everywhere
     */
 
   //Sanity check that a term representing a monomial satisfies the monomial normalisation requirement
@@ -107,7 +109,7 @@ object PolynomialArith {
   //Takes and returns normalised polynomials
   def addPoly(l:Term,r:Term): (Term,ProvableSig) = {
     val lhs = Plus(l,r)
-    (l,r) match {
+    val res = (l,r) match {
       case (n:Number,_) => //Left unit for addition
         (r,proveBy(Equal(lhs,r), byUS("0+")))
       case (_,n:Number) => //Right unit for addition
@@ -145,6 +147,7 @@ object PolynomialArith {
       }
       case _ => ???
     }
+    res
   }
 
   //One of these is missing in DerivedAxioms
@@ -284,10 +287,10 @@ object PolynomialArith {
 
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term) : (Term,ProvableSig) = {
-    l match {
+    val res = l match {
       case n:Number =>
-        //0 + 1 * n
-        val res = Plus(Number(0), Times(n,Number(1)))
+        //0 + 1 * n (unless n = 0)
+        val res = if (n.value == 0) n else Plus(Number(0), Times(n,Number(1)))
         (res,proveBy(Equal(l,res), RCF ))
       case v:Variable =>
         //0 + 1 * (1 * v^1)
@@ -340,6 +343,7 @@ object PolynomialArith {
           & by(pr3) ))
       case _ => ???
     }
+    res
   }
 
   val normaliseAt:DependentPositionTactic = new DependentPositionTactic("normalise at"){
@@ -349,7 +353,7 @@ object PolynomialArith {
         {
           case Some(t:Term) =>
             val(tt,pr) = normalise(t)
-            println(tt,pr)
+            //println(tt,pr)
             CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
           case _ => ident
         }
@@ -357,48 +361,160 @@ object PolynomialArith {
     }
   }
 
-  private val axMov: ProvableSig = proveBy("f_() + -1 * a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
+  //Polynomial division: no proof needed, although the polynomials need to be pre-normalised
+  //todo: Might this be implemented in terms of mulMono with -ve power? (probably not because ordering gets messed up)
 
-  private val ax6: ProvableSig = proveBy("[f_:=1; {a_:=*;f_:=a_*a_ + f_;}*] !(f_ = 0)".asFormula,
-    chase(1)& allR(1) & implyR(1) & loop("f_>0".asFormula)(1) & Idioms.<(implyRi & RCF,implyRi & RCF,chase(1) & allR(1) & implyRi & RCF))
+  //Monomial division l/r : returns the normalised quotient monomial q * r = l only if it is truly divisible
+  def divMono(l:Term,r:Term): Option[Term] = {
+    val lhs = Times(l,r)
+    (l,r) match {
+      case (_,n:Number) => Some(l) //Divide by 1
+      case(n:Number,_) => None //Dividing 1 by something not 1
+      case (Times(nl,Power(sl:Variable,ml:Number)),Times(nr,Power(sr:Variable,mr:Number))) =>
+        if(sl.name > sr.name) None
+        else if(sl.name == sr.name) {
+          val mnew = ml.value - mr.value
+          if (mnew < 0) None
+          divMono(nl, nr) match {
+            case None => None
+            case Some(q) =>
+              Some (if (mnew == 0) q else Times(q, Power(sr, Number(mnew))))
+          }
+        }
+        else {
+          divMono(nl,r) match
+          {
+            case None => None
+            case Some(q) => Some(Times(q,Power(sl,ml)))
+          }
+        }
+      case _ => ???
+    }
+  }
 
-  private val ax6contra: ProvableSig = proveBy(" <f_:=1; {a_:=*;f_:=a_*a_ + f_;}*> (f_ = 0) -> false".asFormula,
-    implyR(1) & useAt("<> diamond",PosInExpr(1::Nil))(-1)&
-      cut(ax6.conclusion.succ.head) <(notL(-1) & close,cohideR(2) & by(ax6)))
+  //Polynomial division on head monomials
 
-  //Manual proof outline for Fig2
-  private val antes: IndexedSeq[Formula] = IndexedSeq("x - y -1*a^2 = 0".asFormula,"z-b^2 = 0".asFormula,"z*(y-x)*c^2-1 = 0".asFormula)
-  private val proof: ProvableSig = proveBy(Sequent(antes,IndexedSeq("false".asFormula)),
+  //Find the first non-zero monomial in l that r divides if it exists & returns the quotient along with its coefficient
+  def divPolyMono(l:Term,r:Term) : Option[(Number,Term)] = {
+    l match {
+      case n: Number => None //We want non-zero monomials only
+      case Plus(nl, Times(cl: Number, ml)) =>
+        divMono(ml, r) match {
+          case None => divPolyMono(nl, r)
+          case Some(q) => Some(Number(cl.value), q)
+        }
+    }
+  }
 
-    //Introduce Ax 6
-    useAt(ax6contra,PosInExpr(1::Nil))(1) &
-      useAt("<;> compose")(1) &
-      //Stick in some 0^2 witnesses for now
-      //Probably want a version of <*> iterate that doesn't give the extra branches
-      useAt("<*> iterate")(SuccPosition(1,1::Nil)) &
-      useAt("<*> iterate")(SuccPosition(1,1::1::1::Nil)) &
-      useAt("<*> iterate")(SuccPosition(1,1::1::1::1::1::Nil)) &
-      useAt("<*> approx")(SuccPosition(1,1::1::1::1::1::1::1::Nil)) &
-      chase(1) & orR(1) & hideR(1) &
-      //First witness (also clears away the forall f_)
-      chase(1) & existsR("0".asTerm)(1) & allR(1) & implyR(1) & orR(1) & hideR(1) &
-      //Second witness
-      chase(1) &  existsR("0".asTerm)(1) & chase(1) & orR(1) & hideR(1) &
-      //Third witness
-      chase(1) & existsR("a*b*c".asTerm)(1) &
-      //The example actually only has one s^2 term
-      chase(1) & existsR("0".asTerm)(1) &
-      exhaustiveEqL2R(true)('Llast) &
-      //z-b^2
-      implyRi(AntePos(1),SuccPos(0)) &
-      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-a^2*c^2".asTerm)::Nil))(1) &
-      //x-y-a^2
-      implyRi(AntePos(0),SuccPos(0)) &
-      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-z*c^2".asTerm)::Nil))(1) &
-      //(yz-xz)c^2 - 1
-      implyRi(AntePos(0),SuccPos(0)) &
-      useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,"-1".asTerm)::Nil))(1) &
-      normaliseAt(SuccPosition(1,0::Nil)) &
-      byUS("= reflexive")
-  )
+  //Returns the divisor and quotient (if one exists)
+  def divPoly(l:Term,r:Term): Option[(Term,Term)] = {
+    r match {
+      case n:Number => None //Division by 0
+      case Plus(nr,Times(cr:Number,mr)) =>
+        divPolyMono(l,mr) match {
+          case None => None //No monomial in l divisible by r
+          case Some((c,q)) => //The monomial c*(q*mr) was in l
+            //The actual coefficient we need to return for the reduction:
+            val divisor = Times(Number(-1 * c.value / (cr.value)),q)
+            //For division, we need to use the normalized version internally
+            val quotient = addPoly(l, mulPolyMono(r, Number(-1 * c.value / (cr.value)), q)._1)._1
+            Some(divisor,quotient)
+        }
+    }
+  }
+
+  //Don't know how to do this in Scala neatly
+  def firstDivisor(l:List[Term],i:Int,r:Term) : Option[(Int,Term,Term)] ={
+    l match {
+      case Nil => None
+      case (x::xs) =>
+        divPoly(r,x) match {
+          case None => firstDivisor(xs,i+1,r)
+          case Some((d,q)) => Some(i,d,q)
+        }
+    }
+  }
+
+  //Repeated division of normalized things
+  //Returns the sequence of reduction steps, each a pair of the index and divisor of the dividing polynomial
+  def reduction(l:List[Term],r:Term): List[(Int,Term)] ={
+    firstDivisor(l,0,r) match {
+      case None => Nil
+      case Some((i,d,q)) =>
+        (i,d)::reduction(l,q)
+    }
+  }
+
+  //This lemma should be in DerivedAxioms together with 1>0 and f_()^2 >= 0
+  private val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE)
+
+  //Doesn't use QE, but the DerivedAxioms used do
+  val notZeroGt: ProvableSig = proveBy("!(0>0)".asFormula,
+    notR(1) & useAt(">2!=")(-1) & useAt("! =",PosInExpr(1::Nil))(-1) & notL(-1) & byUS("= reflexive"))
+
+  //Generate a proof for |- !(1 + s_1^2 + ... + s_n^2 = 0) (without QE)
+  def assertWitness(l:List[Term]) : (Term,ProvableSig) =
+  {
+    l match {
+      case Nil => (Number(1),DerivedAxioms.oneGreaterZero.fact)
+      case (x::xs) =>
+        val (rec,pr) = assertWitness(xs) //1 + foo > 0
+        val res = Plus(rec,Power(x,Number(2)))
+        (res,proveBy(Greater(res,Number(0)), // (1+ foo) + x^2 >0
+          useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <( by(pr), byUS("nonnegative squares") ) ))
+    }
+  }
+
+  //todo: more convenient to cut in, can be derived without QE from something else
+  private val gtNotZero: ProvableSig = proveBy("f_() > 0 -> !(f_() = 0)".asFormula,QE)
+
+  // Given a list representing a (hopefully Groebner) basis g_1, ... g_k, a witness, and
+  // an optional list of instructions (detailing the coefficients) and a list of witnesses s_i ^2
+  // Proves the contradiction g_1 = 0 ; ... g_k = 0 |-
+  // Nothing needs to be normalized?
+
+  //Copy of implyRi that keeps the anteposition around
+  def implyRiKeep(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new SingleGoalDependentTactic("inverse imply right") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(sequent.ante.length > antePos.getIndex && sequent.succ.length > succPos.getIndex,
+        "Ante position " + antePos + " or succ position " + succPos + " is out of bounds; provable has ante size " +
+          sequent.ante.length + " and succ size " + sequent.succ.length)
+      val left = sequent.ante(antePos.getIndex)
+      val right = sequent.succ(succPos.getIndex)
+      val cutUsePos = AntePos(sequent.ante.length)
+      cut(Imply(left, right)) <(
+        /* use */ implyL(cutUsePos) & OnAll(TactixLibrary.close),
+        /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) ) partial /* This is the result. */)
+    }
+  }
+
+  private val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
+
+  def proveWithWitness(ctx:List[Term], witness:List[Term], instopt:Option[List[(Int,Term)]] = None) : ProvableSig = {
+    val antes = ctx.map( t => Equal(t,Number(0)))
+    val (wit,pfi) = assertWitness(witness)
+    val pf = useFor(gtNotZero,PosInExpr(0::Nil))(SuccPosition(1))(pfi)
+    //assert(pf.isProved)
+    //Generate our own reduction instructions if not available
+    val inst = instopt.getOrElse({
+      val wit_norm = normalise(wit)._1
+      val ctx_norm = ctx.map( t=> normalise(t)._1)
+      reduction(ctx_norm,wit_norm)
+    })
+    proveBy(Sequent(antes.toIndexedSeq,IndexedSeq()),
+      //1+s_i^2 > 0
+      cut(pf.conclusion.succ.head) <(
+        notL('Llast) &
+        //Run the instructions
+        inst.foldRight(ident)(
+          (h,tac) =>
+          implyRiKeep(AntePos(h._1),SuccPos(0))
+          & useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,h._2)::Nil))(1)
+          & tac) &
+        normaliseAt(SuccPosition(1,0::Nil)) &
+        ?(cohideR(1) & byUS("= reflexive"))
+        ,
+        cohideR(1) & by(pf)
+        ))
+  }
 }
