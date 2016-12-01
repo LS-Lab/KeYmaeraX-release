@@ -706,11 +706,14 @@ object SimplifierV2 {
             //If simplification was at the top level, then we can use the existing context
             if (pos.isTopLevel)
             {
-              val (ff,pr) = formulaSimp(f,sequent.ante)
+              val (ctx, cutPos, commute) =
+                if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
+                else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
+              val (ff,pr) = formulaSimp(f, ctx)
               cutAt(ff)(pos) < (
                 ident,
                 //todo: to remove the succ.length == 1 restriction, this needs to hide the other succ positions
-                cohideRonly(pos)& equivifyR(1) & commuteEquivR(1) & by(pr)
+                cohideRonly(cutPos) & equivifyR(1) & commute & by(pr)
                 )
             }
             //Otherwise we only do the simplification under empty context and CEat the result

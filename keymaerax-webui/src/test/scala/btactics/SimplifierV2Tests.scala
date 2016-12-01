@@ -142,4 +142,18 @@ class SimplifierV2Tests extends TacticTestBase {
     val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(1))
     result.subgoals.head.succ should contain only "\\forall y y>2".asFormula
   }
+
+  it should "simplify in antecedent" in withMathematica { tool =>
+    val ante = IndexedSeq("true -> x>0*y".asFormula)
+    val succ = IndexedSeq()
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(-1))
+    result.subgoals.head.ante should contain only "x>0".asFormula
+  }
+
+  it should "simplify in antecedent with context" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0".asFormula, "x>0 -> y>3".asFormula)
+    val succ = IndexedSeq()
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(-2))
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>3".asFormula)
+  }
 }
