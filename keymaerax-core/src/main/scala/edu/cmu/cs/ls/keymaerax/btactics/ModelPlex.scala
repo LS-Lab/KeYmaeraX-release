@@ -399,39 +399,6 @@ object ModelPlex extends ModelPlexTrait {
     sequent.succ.indices.map(i => SimplifierV2.simpTac(SuccPosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
-  /** Simplifies implications, conjunctions, and disjunctions having one operand true. */
-  private def simplifyTrue: DependentTactic = "ModelPlex Simplify True" by ((sequent: Sequent) => {
-    def m(e: Expression) = e match {
-      case Imply(True, _) => true
-      case Imply(_, True) => true
-      case And(True, _) => true
-      case And(_, True) => true
-      case Or(True, _) => true
-      case Or(_, True) => true
-      case _ => false
-    }
-    val positions =
-      sequent.ante.indices.flatMap(i => collectSubpositions(AntePos(i), sequent, m)) ++
-      sequent.succ.indices.flatMap(i => collectSubpositions(SuccPos(i), sequent, m))
-
-    positions.map(chase(_)).reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
-  })
-
-  private def trueFact(fact: Formula, factProof: Lemma): ProvableSig =
-    TactixLibrary.proveBy(Equiv(fact, True), equivR(1) <(closeT, cohide(1) & byUS(factProof)))
-
-  /** Collects the subpositions at/under pos that satisfy condition cond. Ordered: reverse depth (deepest first). */
-  private def collectSubpositions(pos: Position, sequent: Sequent, cond: Expression => Boolean): List[Position] = {
-    var positions: List[Position] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-        if (cond(e)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
-      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-        if (cond(t)) { positions = (pos ++ p) :: positions; Left(None) } else Left(None)
-    }, sequent.sub(pos).get.asInstanceOf[Formula])
-    positions
-  }
-
   private def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
     var result: List[T] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
