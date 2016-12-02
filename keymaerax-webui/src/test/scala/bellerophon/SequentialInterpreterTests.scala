@@ -144,7 +144,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      (andL('Llast)+))
+      (andL('Llast) & (andL('Llast)*)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
@@ -152,12 +152,12 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "fail when not at least 1 repetition is possible" in {
     a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
-      (andL('Llast)+))
+      (andL('Llast) & (andL('Llast)*)))
   }
 
   it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in {
     proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      (((andL('Llast)+) partial) | close)*) shouldBe 'proved
+      (((andL('Llast) & (andL('Llast)*)) partial) | close)*) shouldBe 'proved
   }
 
   "must idiom" should "fail when no change occurs" in {
