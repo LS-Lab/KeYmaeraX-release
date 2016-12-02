@@ -2759,4 +2759,70 @@ object DerivedAxioms {
       )
     )
   )
+
+  // Metric Normal Form
+
+  /**
+    * {{{Axiom "= expand".
+    *   f_()=g_() <-> f_()<=g_()&g_()<=f_()
+    * End.
+    * }}}
+    */
+  lazy val equalExpand: Lemma = derivedAxiom("= expand", Sequent(IndexedSeq(), IndexedSeq("f_()=g_() <-> f_()<=g_()&g_()<=f_()".asFormula)), QE)
+
+  /**
+    * {{{Axiom "<= to <".
+    *   f_()<=0 <- f_()<0
+    * End.
+    * }}}
+    */
+  lazy val le2l: Lemma = derivedAxiom("<= to <", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 <- f_()<0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <".
+    *   f_()<g_() <-> f_()-g_()<0
+    * End.
+    * }}}
+    */
+  lazy val metricLess: Lemma = derivedAxiom("metric <", Sequent(IndexedSeq(), IndexedSeq("f_()<g_() <-> f_()-g_()<0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <=".
+    *   f_()<=g_() <-> f_()-g_()<=0
+    * End.
+    * }}}
+    */
+  lazy val metricLessEqual: Lemma = derivedAxiom("metric <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=g_() <-> f_()-g_()<=0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <= & <=".
+    *   f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0
+    * End.
+    * }}}
+    */
+  lazy val metricAndLe: Lemma = derivedAxiom("metric <= & <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric < & <".
+    *   f_()<0 & g_()<0 <-> max(f_(), g_())<0
+    * End.
+    * }}}
+    */
+  lazy val metricAndLt: Lemma = derivedAxiom("metric < & <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 & g_()<0 <-> max(f_(), g_())<0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <= | <=".
+    *   f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0
+    * End.
+    * }}}
+    */
+  lazy val metricOrLe: Lemma = derivedAxiom("metric <= | <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric < | <".
+    *   f_()<0 | g_()<0 <-> min(f_(), g_())<0
+    * End.
+    * }}}
+    */
+  lazy val metricOrLt: Lemma = derivedAxiom("metric < | <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 | g_()<0 <-> min(f_(), g_())<0".asFormula)), QE)
 }

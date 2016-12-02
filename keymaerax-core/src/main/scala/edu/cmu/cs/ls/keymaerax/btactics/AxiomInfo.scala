@@ -518,6 +518,16 @@ object DerivationInfo {
     new DerivedAxiomInfo("+*' expand dummy", "DUMMY", "dummyDplustimesexpandAxiom", {case () => ???}),
     new DerivedAxiomInfo("^' dummy", "DUMMY", "dummyDpowerconsequence", {case () => ???}),
 
+    // metric axioms
+    new DerivedAxiomInfo("= expand", "equalExpand", "equalExpand", {case () => useAt(DerivedAxioms.equalExpand)}),
+    new DerivedAxiomInfo("<= to <", "leApprox", "leApprox", {case () => useAt(DerivedAxioms.le2l)}),
+    new DerivedAxiomInfo("metric <=", "metricLe", "metricLe", {case () => useAt(DerivedAxioms.metricLessEqual)}),
+    new DerivedAxiomInfo("metric <", "metricLt", "metricLt", {case () => useAt(DerivedAxioms.metricLess)}),
+    new DerivedAxiomInfo("metric <= & <=", "metricAndLe", "metricAndLe", {case () => useAt(DerivedAxioms.metricAndLe)}),
+    new DerivedAxiomInfo("metric < & <", "metricAndLt", "metricAndLt", {case () => useAt(DerivedAxioms.metricAndLt)}),
+    new DerivedAxiomInfo("metric <= | <=", "metricOrLe", "metricOrLe", {case () => useAt(DerivedAxioms.metricOrLe)}),
+    new DerivedAxiomInfo("metric < | <", "metricOrLt", "metricOrLt", {case () => useAt(DerivedAxioms.metricOrLt)}),
+
     // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
     new PositionTacticInfo("notL"
