@@ -617,14 +617,16 @@ case class BelleProvable(p : ProvableSig, label: Option[List[BelleLabel]] = None
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 trait BelleLabel {
   protected val LABEL_DELIMITER: String = ":"
-
-  def prettyString : String = this match {
-    case topLevel: BelleTopLevelLabel    => topLevel.label
-    case BelleSubLabel(parent, theLabel) => parent.prettyString + LABEL_DELIMITER + theLabel
-  }
-  }
-case class BelleTopLevelLabel(label: String) extends BelleLabel {require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")}
-case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")}
+  def prettyString: String
+}
+case class BelleTopLevelLabel(label: String) extends BelleLabel {
+  require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")
+  override def prettyString: String = label
+}
+case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
+  require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")
+  override def prettyString: String = parent.prettyString + LABEL_DELIMITER + label
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Types
