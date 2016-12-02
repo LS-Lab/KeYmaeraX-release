@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.btactics.{DLBySubst, EqualityTactics, Idioms, SimplifierV2}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 
 import scala.language.postfixOps
@@ -329,181 +329,201 @@ class AcasXSafeTwoSided extends AcasXBase {
     }
   }
 
-//  it should "prove Lemma 3a: implicit-explicit lower equivalence" in {
-//    if (!lemmaDB.contains("safe_equivalence")) {
-//      println("Proving safe_equivalence lemma...")
-//      // Lemma 3a: lower bound proof is the same as Lemma 1, see AcasXSafe
-//      (new AcasXSafe).execute("ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
-//      println("...done")
-//    }
-//  }
-//
-//  it should "prove Lemma 3b: implicit-explicit upper equivalence" in {
-//    val reductionStr = io.Source.fromFile(folder + "upper_equivalence.key").mkString
-//    val reductionSeq = new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(KeYmaeraXProblemParser(reductionStr)))
-//
-//    /*** Helper tactics ***/
-//    def oG(s : String) = Tactics.SubLabelBranch(s)
-//
-//    def instantiateVars(tString : String, roString : String, hoString : String) = la(instantiateT(Variable("t"), tString.asTerm)) & la(instantiateT(Variable("ro"), roString.asTerm)) & la(instantiateT(Variable("ho"), hoString.asTerm))
-//
-//    def substTactic0(hoString : String) = implyR(1) & la(instantiateT(Variable("t"), "(r-rp)/rv".asTerm)) &
-//      la(instantiateT(Variable("ro"), "(r-rp)".asTerm)) &
-//      la(instantiateT(Variable("ho"), hoString.asTerm)) &
-//      la(implyL) &&
-//      (orR(2) & hideL(-1) & hideL(-4) & hideR(1) & cut("r<rp+rv*maxAbbrv/aM | r=rp+rv*maxAbbrv/aM".asFormula) &
-//        //TODO: cutting with a<0 | a=0 when we have a<=0 in the antecedant should prove cutShow automatically
-//        //or use useAt() instead
-//        onBranch(
-//          (cutShowLbl, hideR(1) & hideR(1) & hideL(-1) & hideL(-2) & QE
-//            ),
-//          (cutUseLbl, orL(-5) &&
-//            // TODO: tactic for proving A|B -> (C|D) by proving A->C and B->D
-//            (
-//              hideR(2) & QE
-//              ,
-//              hideR(1) & QE
-//              )
-//            )
-//        )
-//        ,
-//        orL(-7) &&
-//          (/* abs(r-(r-rp))>rp <-> false */
-//            hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & hideR(1) & QE // TODO: is there a better way to hide a list
-//            ,
-//            /* amenable to the form G,A -> A */
-//            hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE
-//            )
-//        )
-//
-//    def substTactic00(hoString : String) = la(instantiateT(Variable("t"), "(r-rp)/rv".asTerm)) &
-//      la(instantiateT(Variable("ro"), "(r-rp)".asTerm)) &
-//      la(instantiateT(Variable("ho"), hoString.asTerm)) &
-//      la(implyL) &&
-//      (orR(2) & hideL(-1) & hideL(-4) & hideR(1) & cut("r>rp+rv*maxAbbrv/aM | r=rp+rv*maxAbbrv/aM".asFormula) &
-//        //TODO: cutting with a<0 | a=0 when we have a<=0 in the antecedant should prove cutShow automatically
-//        onBranch(
-//          (cutShowLbl, hideR(1) & hideR(1) & hideL(-1) & hideL(-2) & QE
-//            ),
-//          (cutUseLbl, orL(-5) &&
-//            // TODO: tactic for proving A|B -> (C|D) by proving A->C and B->D
-//            (
-//              oG("-- i --") & QE//& hideR(2) //& QE
-//              ,
-//              oG("-- ii --") & QE//& hideR(1) //& QE
-//              )
-//            )
-//        )
-//        ,
-//        orL(-7) &&
-//          (/* abs(r-(r-rp))>rp <-> false */
-//            hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & hideR(1) & QE // TODO: is there a better way to hide a list
-//            ,
-//            /* amenable to the form G,A -> A */
-//            hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE
-//            )
-//        )
-//
-//    def substTactic1(hoString : String, hidePos: Int) = implyR(1) & la(instantiateT(Variable("t"), "(r+rp)/rv".asTerm)) & la(instantiateT(Variable("ro"), "(r+rp)".asTerm)) & la(instantiateT(Variable("ho"), hoString.asTerm)) & la(implyL) &&
-//      (
-//        oG("__01___") & ls(hideR) & ls(orR) & hideR(hidePos) & hideL(-1) & hideL(-1) & QE
-//        ,
-//        oG("__02__") & la(orL) && (oG("rp>0 & abs(rp)>rp") & ls(hideR) & hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & QE , oG("rv>0 & A*rv^2>0 -> A>0") & hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE)
-//        )
-//
-//    def tac1() = implyR(1) & ls(andR) &&
-//      (
-//        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & hideL(-1) & la(implyL) &&
-//          (
-//            hideR(1) & hideL(-3) & hideL(-3) & QE
-//            ,
-//            hideL(-1) & hideL(-2) & QE
-//            )
-//        ,
-//        oG("(^R 1.2)") & ls(andR) &&
-//          (
-//            oG("(^R 1.2.1)") & substTactic0("(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv")
-//            ,
-//            oG("^R 1.2.2)") & andR(1) &&
-//              (
-//                oG("___0___") & substTactic1("(w * aM) / 2 * (r+rp)^2/rv^2 + dhd * (r+rp)/rv",2)
-//                ,
-//                oG("___1___") & substTactic1("(dhd+w*maxAbbrv)*(r+rp)/rv-w*maxAbbrv^2/(2*aM)",1)
-//                )
-//            )
-//        )
-//    def tac1rv0() = implyR(1) & ls(andR) &&
-//      (
-//        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & la(implyL) &&
-//          (
-//            oG("___0___") & hideL(-1) & QE
-//            ,
-//            oG("___1___") & hideL(-1) & QE
-//            )
-//        ,
-//        oG("(^R 1.2)") & ls(andR) &&
-//          (
-//            oG("(^R 1.2.1)") & hideL(-1) & hideL(-1) & hideL(-1) & ls(implyR) & QE
-//            ,
-//            oG("^R 1.2.2)") & andR(1) &&
-//              (
-//                oG("___0___") & hideL(-1) & hideL(-1) & hideL(-1) & ls(implyR) & QE
-//                ,
-//                /* this branch showed the bug in equivalence_up.key */
-//                /*TODO: simplify further before calling QE*/
-//                oG("___1___") & implyR(1) & orR(1) & la(MinMaxT, "", Some("max(0,w*(dhfM-dhd))".asTerm)) & la(TacticLibrary.eqLeft(exhaustive=true), "maxAbbrv=max_0") & la(hideT, "maxAbbrv=max_0") & orL(-2) && (
-//                  oG("++0++") & andL(-2) & la(TacticLibrary.eqLeft(exhaustive=true), "max_0=0") & la(hideT, "max_0=0") & QE
-//                  , oG("++1++") & andL(-2) & la(TacticLibrary.eqLeft(exhaustive=true), "max_0=w*(dhfM-dhd)") & la(hideT, "max_0=w*(dhfM-dhd)") & hideR(2) &  QE
-//                  )
-//                )
-//            )
-//        )
-//
-//    def tac2() = implyR(1) & ls(andR) &&
-//      (
-//        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & hideL(-1) & la(implyL) &&
-//          (
-//            hideR(1) & hideL(-3) & hideL(-3) & QE
-//            ,
-//            hideL(-1) & hideL(-2) & QE
-//            )
-//        ,
-//        oG("(^R 1.2)") & ls(andR) &&
-//          (
-//            oG("(^R 1.2.1)") & substTactic0("(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv")
-//            ,
-//            oG("^R 1.2.2)") & implyR(1) & orR(1) & hideR(1) &
-//              substTactic00("(dhd+w*maxAbbrv)*(r-rp)/rv-w*maxAbbrv^2/(2*aM)")
-//            )
-//        )
-//
-//    def tac2rv0() = implyR(1) & ls(andR) &&
-//      (
-//        oG("(^R 2.1)") & implyR(1) & instantiateVars("0","0","0") & la(implyL) &&
-//          (
-//            oG("___0___") & hideL(-1) & QE
-//            ,
-//            oG("___1___") & hideL(-1) & QE
-//            )
-//        ,
-//        oG("(^R 2.2)") & ls(andR) &&
-//          (
-//            oG("(^R 2.2.1)") & hideL(-1) & hideL(-1) & hideL(-1) & ls(implyR) & QE
-//            ,
-//            oG("^R 2.2.2)") & ls(implyR) & ls(orR) & cut("((r>rp)|(r=rp))".asFormula) &
-//              onBranch (
-//                (cutShowLbl, hideR(1) & hideR(1) & hideL(-1) & hideL(-1) & hideL(-2) & QE
-//                  ),
-//                /*TODO: eqleft sensitive to the ordering */
-//                (cutUseLbl, orL(-7) && (oG("r>rp") & hideR(1) & hideL(-4) & QE, oG("r=rp")&la(TacticLibrary.eqLeft(exhaustive=true), "r=rp") & la(hideT, "r=rp") & QE   ))
-//              )
-//            )
-//        )
-//
-//    def concreteQEHammer1() = andL(-4) & andL(-11) & andL(-12) & la(TacticLibrary.eqLeft(exhaustive=true), "ro=rv*t") & la(hideT, "ro=rv*t") & la(TacticLibrary.eqLeft(exhaustive=true), "ho=w*aM/2*t^2+dhd*t") & la(hideT, "ho=w*aM/2*t^2+dhd*t") & implyL(-4) && (oG("___ A ___") & implyL(-4) && (oG("___ 0 ___")& (la(hideL)*) & hideR(1) & QE,oG("___ 1 ___") & andL(-10) & andL(-11) & implyL(-12) && (oG("___ a ___") & implyL(-11) && (oG("*** i ***") & cut("maxAbbrv>0|maxAbbrv=0".asFormula) & onBranch((cutShowLbl,oG("Show") & hideR(1) & hideR(1) & hideR(1) & hideR(1) & QE),(cutUseLbl,oG("USE") & orL(-11) && (oG(">>") & hideL(-1) & QE,oG("==") & la(TacticLibrary.eqLeft(exhaustive=true), "maxAbbrv=0") & la(hideT, "maxAbbrv=0") & hideR(4) & QE)))  ,oG("*** ii ***") & hideL(-1) & QE),oG("___ b ___") & implyL(-11) && (oG("*** i ***") & orL(-11) && (implyL(-10) && (hideL(-1) & QE, hideL(-1) & QE),implyL(-10) && (hideL(-1) & QE, hideL(-1) & QE)) ,oG("*** ii ***") & orL(-11) && (oG("+++ left +++") & implyL(-10) && (hideL(-1) & QE, hideL(-1) & QE) ,oG("+++ right +++") & implyL(-10) && (oG("  x  ") & hideL(-1) & QE,oG("  y  ") & hideL(-1) & hideL(-10) & QE) )) )) ,oG("___ B ___") & andL(-11) & implyL(-4) && (oG("___ 0 ___") & andL(-11) & andL(-12) & implyL(-11) && (oG("___ a ___") & implyL(-12) && (oG("1") & implyL(-11) && (oG(" i ") & hideL(-1) & QE,oG(" ii ") & hideL(-1) & QE),oG("2") & implyL(-11) & (oG("1") & orL(-11) && (hideL(-1) & QE,hideL(-1)& QE),oG("2") & orL(-11) && (oG(" i ") & implyL(-10) && (hideL(-1) & QE, hideL(-1) & QE),oG(" ii ") & implyL(-10) && (oG("* a *") & orL(-4) && (hideL(-1) & QE,hideL(-1) & QE)   , oG("* b *") & orL(-4) && (hideL(-1) & QE,hideL(-1) & QE) )))) ,oG("___ b ___") & implyL(-12) && (oG("A") & implyL(-11) && (oG(" i ") & implyL(-10) && (hideL(-1)&QE,hideL(-1)&QE),oG(" ii ") & implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE), orL(-4) && (hideL(-1)&QE,hideL(-1)&QE))),oG("B") & orL(-13) && (oG("_i_") & implyL(-11) && (oG(" x ") & implyL(-10) && (hideL(-1)&QE,hideL(-1)&QE),oG(" y ") & implyL(-10) && (hideL(-1)&QE,hideL(-1)&QE)),oG("_ii_") & implyL(-11) && (oG(" x ") & implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG(" y ")& implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) )))),oG("___ 1 ___") & andL(-12) & andL(-11) & andL(-12) & andL(-13) & hideL(-10) & implyL(-15) && (oG("__a __") & hideL(-11) & implyL(-12) && (oG("_ i _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) ,oG("_ ii _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) ),oG("__ b __") & hideL(-11) & orL(-14) && (oG("_ i _") & implyL(-12) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) ,oG("_ ii _") & implyL(-12) && (oG("__") & implyL(-12) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG("____") & orL(-14) && (oG("1") & implyL(-11) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) ,oG("2") & implyL(-11) && (oG("i") & implyL(-11) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG("j") & implyL(-11) && (oG(" x ") & implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)), oG(" y ") & implyL(-10) && (oG("**0**") & orL(-4) && (oG("==a==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=-1") & la(hideT, "w=-1") & hideL(-1) & QE,oG("==b==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=1") & la(hideT, "w=1") & hideL(-1) & QE),oG("**1**") & orL(-4) && (oG("==a==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=-1") & la(hideT, "w=-1") & hideL(-1) & QE,oG("==b==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=1") & la(hideT, "w=1") & hideL(-1) & QE)  )  ))  ) ) )) ))
-//
-//
-//    def concreteQEHammer2() = andL(-4) & andL(-11) & la(TacticLibrary.eqLeft(exhaustive=true), "ro=rv*t") & la(hideT, "ro=rv*t") & la(TacticLibrary.eqLeft(exhaustive=true), "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & la(hideT, "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & implyL(-4) && (
+  it should "prove Lemma 3a: implicit-explicit lower equivalence" in {
+    runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
+  }
+
+  it should "prove Lemma 3b: implicit-explicit upper equivalence" ignore withMathematica { tool =>
+    val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
+
+    val rvp = max('L, "max(0, w*(dhfM - dhd))".asTerm) & equivR('R) & Idioms.<(
+      dT("rv>0 ->") & (andL('L)*) & Idioms.cases(
+        (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("Case >=0") /* todo */),
+        (Case("w*(dhd+w*maxAbbrv)<0".asFormula), dT("Case <0") /* todo */)
+      ),
+      dT("rv>0 <-") //& normalize(andR('R), skip, skip) & onAll(PropositionalTactics.toSingleFormula & dT("rv>0 <- Case"))
+    )
+
+    val start =
+      implyR('R) & (andL('L)*) & EqualityTactics.abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
+      cut("maxAbbrv>=0".asFormula) & Idioms.<(
+        (cutShow, /*cohide2('L, "maxAbbrv=max(0, w*(dhfM - dhd))")('Rlast)*/ QE)
+        ,
+        (cutUse, Idioms.cases(
+          (Case("rv=0".asFormula), atomicQE(equivR('R) | andR('R), dT("rv=0 QE case")) & done),
+          (Case("rv>0".asFormula), rvp)
+        ))
+    )
+
+    proveBy(reductionFml, start) shouldBe 'proved
+  }
+
+  it should "prove Lemma 3b: implicit-explicit upper equivalence old" ignore withMathematica { tool =>
+    val reductionSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
+
+    /*** Helper tactics ***/
+    def oG(s : String) = dT(s)//Tactics.SubLabelBranch(s)
+
+    def instantiateVars(tString : String, roString : String, hoString : String) =
+      allL(Variable("t"), tString.asTerm)('L) & allL(Variable("ro"), roString.asTerm)('L) & allL(Variable("ho"), hoString.asTerm)('L)
+
+    def substTactic0(hoString : String) = implyR(1) & allL(Variable("t"), "(r-rp)/rv".asTerm)('L) &
+      allL(Variable("ro"), "(r-rp)".asTerm)('L) &
+      allL(Variable("ho"), hoString.asTerm)('L) &
+      implyL('L) & Idioms.<(
+      orR(2) & hideL(-1) & hideL(-4) & hideR(1) & cut("r<rp+rv*maxAbbrv/aM | r=rp+rv*maxAbbrv/aM".asFormula) &
+        //TODO: cutting with a<0 | a=0 when we have a<=0 in the antecedant should prove cutShow automatically
+        //or use useAt() instead
+        Idioms.<(
+          (cutShow, hideR(1) & hideR(1) & hideL(-1) & hideL(-2) & QE
+            ),
+          (cutUse, orL(-5) & Idioms.<
+            // TODO: tactic for proving A|B -> (C|D) by proving A->C and B->D
+            (
+              hideR(2) & QE
+              ,
+              hideR(1) & QE
+              )
+            )
+        )
+        ,
+        orL(-7) & Idioms.<
+          (/* abs(r-(r-rp))>rp <-> false */
+            hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & hideR(1) & QE // TODO: is there a better way to hide a list
+            ,
+            /* amenable to the form G,A -> A */
+            hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE
+            )
+        )
+
+    def substTactic00(hoString : String) = allL(Variable("t"), "(r-rp)/rv".asTerm)('L) &
+      allL(Variable("ro"), "(r-rp)".asTerm)('L) &
+      allL(Variable("ho"), hoString.asTerm)('L) &
+      implyL('L) & Idioms.<(
+      orR(2) & hideL(-1) & hideL(-4) & hideR(1) & cut("r>rp+rv*maxAbbrv/aM | r=rp+rv*maxAbbrv/aM".asFormula) &
+        //TODO: cutting with a<0 | a=0 when we have a<=0 in the antecedant should prove cutShow automatically
+        Idioms.<(
+          (cutShow, hideR(1) & hideR(1) & hideL(-1) & hideL(-2) & QE
+            ),
+          (cutUse, orL(-5) & Idioms.<
+            // TODO: tactic for proving A|B -> (C|D) by proving A->C and B->D
+            (
+              oG("-- i --") & QE//& hideR(2) //& QE
+              ,
+              oG("-- ii --") & QE//& hideR(1) //& QE
+              )
+            )
+        )
+        ,
+        orL(-7) & Idioms.<
+          (/* abs(r-(r-rp))>rp <-> false */
+            hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & hideR(1) & QE // TODO: is there a better way to hide a list
+            ,
+            /* amenable to the form G,A -> A */
+            hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE
+            )
+        )
+
+    def substTactic1(hoString : String, hidePos: Int) = implyR(1) & allL(Variable("t"), "(r+rp)/rv".asTerm)('L) & allL(Variable("ro"), "(r+rp)".asTerm)('L) & allL(Variable("ho"), hoString.asTerm)('L) & implyL('L) & Idioms.<(
+        oG("__01___") & hideR(1) & orR('R) & hideR(hidePos) & hideL(-1) & hideL(-1) & QE
+        ,
+        oG("__02__") & orL('L) & Idioms.<(oG("rp>0 & abs(rp)>rp") & hideR(1) & hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & QE , oG("rv>0 & A*rv^2>0 -> A>0") & hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE)
+        )
+
+    def tac1() = implyR(1) & andR('R) & Idioms.<(
+        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & hideL(-1) & implyL('L) & Idioms.<
+          (
+            hideR(1) & hideL(-3) & hideL(-3) & QE
+            ,
+            hideL(-1) & hideL(-2) & QE
+            )
+        ,
+        oG("(^R 1.2)") & andR('R) & Idioms.<
+          (
+            oG("(^R 1.2.1)") & substTactic0("(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv")
+            ,
+            oG("^R 1.2.2)") & andR(1) & Idioms.<
+              (
+                oG("___0___") & substTactic1("(w * aM) / 2 * (r+rp)^2/rv^2 + dhd * (r+rp)/rv",2)
+                ,
+                oG("___1___") & substTactic1("(dhd+w*maxAbbrv)*(r+rp)/rv-w*maxAbbrv^2/(2*aM)",1)
+                )
+            )
+        )
+    def tac1rv0() = implyR(1) & andR('R) & Idioms.<(
+        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & implyL('L) & Idioms.<
+          (
+            oG("___0___") & hideL(-1) & QE
+            ,
+            oG("___1___") & hideL(-1) & QE
+            )
+        ,
+        oG("(^R 1.2)") & andR('R) & Idioms.<
+          (
+            oG("(^R 1.2.1)") & hideL(-1) & hideL(-1) & hideL(-1) & implyR('R) & QE
+            ,
+            oG("^R 1.2.2)") & andR(1) & Idioms.<
+              (
+                oG("___0___") & hideL(-1) & hideL(-1) & hideL(-1) & implyR('R) & QE
+                ,
+                /* this branch showed the bug in equivalence_up.key */
+                /*TODO: simplify further before calling QE*/
+                oG("___1___") & implyR(1) & orR(1) & max('L, "max(0,w*(dhfM-dhd))".asTerm) & exhaustiveEqL2R('L, "maxAbbrv=max_0".asFormula) & orL(-2) & Idioms.<(
+                  oG("++0++") & andL(-2) & exhaustiveEqL2R('L, "max_0=0".asFormula) & QE
+                  , oG("++1++") & andL(-2) & exhaustiveEqL2R('L, "max_0=w*(dhfM-dhd)".asFormula) & hideR(2) &  QE
+                  )
+                )
+            )
+        )
+
+    def tac2() = implyR(1) & andR('R) & Idioms.<(
+        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & hideL(-1) & implyL('L) & Idioms.<
+          (
+            hideR(1) & hideL(-3) & hideL(-3) & QE
+            ,
+            hideL(-1) & hideL(-2) & QE
+            )
+        ,
+        oG("(^R 1.2)") & andR('R) & Idioms.<
+          (
+            oG("(^R 1.2.1)") & substTactic0("(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv")
+            ,
+            oG("^R 1.2.2)") & implyR(1) & orR(1) & hideR(1) &
+              substTactic00("(dhd+w*maxAbbrv)*(r-rp)/rv-w*maxAbbrv^2/(2*aM)")
+            )
+        )
+
+    def tac2rv0() = implyR(1) & andR('R) & Idioms.<(
+        oG("(^R 2.1)") & implyR(1) & instantiateVars("0","0","0") & implyL('L) & Idioms.<
+          (
+            oG("___0___") & hideL(-1) & QE
+            ,
+            oG("___1___") & hideL(-1) & QE
+            )
+        ,
+        oG("(^R 2.2)") & andR('R) & Idioms.<
+          (
+            oG("(^R 2.2.1)") & hideL(-1) & hideL(-1) & hideL(-1) & implyR('R) & QE
+            ,
+            oG("^R 2.2.2)") & implyR('R) & orR('R) & cut("((r>rp)|(r=rp))".asFormula) &
+              Idioms.<(
+                (cutShow, hideR(1) & hideR(1) & hideL(-1) & hideL(-1) & hideL(-2) & QE
+                  ),
+                /*TODO: eqleft sensitive to the ordering */
+                (cutUse, orL(-7) & Idioms.<(oG("r>rp") & hideR(1) & hideL(-4) & QE, oG("r=rp") & QE))
+              )
+            )
+        )
+
+    def concreteQEHammer1() = atomicQE
+      //andL(-4) & andL(-11) & andL(-12) & exhaustiveEqL2R('L, "ro=rv*t".asFormula) &
+      //exhaustiveEqL2R('L, "ho=w*aM/2*t^2+dhd*t".asFormula) & implyL(-4) & Idioms.<(oG("___ A ___") & implyL(-4) & Idioms.<(oG("___ 0 ___")& (hideL('L)*) & hideR(1) & QE,oG("___ 1 ___") & andL(-10) & andL(-11) & implyL(-12) & Idioms.< (oG("___ a ___") & implyL(-11) & Idioms.<(oG("*** i ***") & cut("maxAbbrv>0|maxAbbrv=0".asFormula) & Idioms.<((cutShow,oG("Show") & hideR(1) & hideR(1) & hideR(1) & hideR(1) & QE),(cutUse,oG("USE") & orL(-11) & Idioms.<(oG(">>") & hideL(-1) & QE,oG("==") & hideR(4) & QE)))  ,oG("*** ii ***") & hideL(-1) & QE),oG("___ b ___") & implyL(-11) & Idioms.<(oG("*** i ***") & orL(-11) & Idioms.<(implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE),implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE)) ,oG("*** ii ***") & orL(-11) & Idioms.<(oG("+++ left +++") & implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE) ,oG("+++ right +++") & implyL(-10) & Idioms.<(oG("  x  ") & hideL(-1) & QE,oG("  y  ") & hideL(-1) & hideL(-10) & QE) )) )) ,oG("___ B ___") & andL(-11) & implyL(-4) & Idioms.<(oG("___ 0 ___") & andL(-11) & andL(-12) & implyL(-11) & Idioms.<(oG("___ a ___") & implyL(-12) & Idioms.<(oG("1") & implyL(-11) & Idioms.<(oG(" i ") & hideL(-1) & QE,oG(" ii ") & hideL(-1) & QE),oG("2") & implyL(-11) & Idioms.<(oG("1") & orL(-11) & Idioms.<(hideL(-1) & QE,hideL(-1)& QE),oG("2") & orL(-11) & Idioms.<(oG(" i ") & implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE),oG(" ii ") & implyL(-10) & Idioms.<(oG("* a *") & orL(-4) & Idioms.<(hideL(-1) & QE,hideL(-1) & QE)   , oG("* b *") & orL(-4) & Idioms.<(hideL(-1) & QE,hideL(-1) & QE) )))) ,oG("___ b ___") & implyL(-12) & Idioms.<(oG("A") & implyL(-11) & Idioms.<(oG(" i ") & implyL(-10) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE),oG(" ii ") & implyL(-10) & Idioms.<(orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE), orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE))),oG("B") & orL(-13) & Idioms.<(oG("_i_") & implyL(-11) & Idioms.<(oG(" x ") & implyL(-10) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE),oG(" y ") & implyL(-10) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE)),oG("_ii_") & implyL(-11) & Idioms.<(oG(" x ") & implyL(-10) & Idioms.<(orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE),orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE)),oG(" y ")& implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) )))),oG("___ 1 ___") & andL(-12) & andL(-11) & andL(-12) & andL(-13) & hideL(-10) & implyL(-15) && (oG("__a __") & hideL(-11) & implyL(-12) && (oG("_ i _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) ,oG("_ ii _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) ),oG("__ b __") & hideL(-11) & orL(-14) && (oG("_ i _") & implyL(-12) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) ,oG("_ ii _") & implyL(-12) && (oG("__") & implyL(-12) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG("____") & orL(-14) && (oG("1") & implyL(-11) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) ,oG("2") & implyL(-11) && (oG("i") & implyL(-11) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG("j") & implyL(-11) && (oG(" x ") & implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)), oG(" y ") & implyL(-10) && (oG("**0**") & orL(-4) && (oG("==a==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=-1") & la(hideT, "w=-1") & hideL(-1) & QE,oG("==b==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=1") & la(hideT, "w=1") & hideL(-1) & QE),oG("**1**") & orL(-4) & Idioms.< (oG("==a==") & hideL(-1) & QE,oG("==b==") & hideL(-1) & QE)  )  ))  ) ) )) ))
+
+
+    def concreteQEHammer2() = atomicQE
+//    andL(-4) & andL(-11) & la(TacticLibrary.eqLeft(exhaustive=true), "ro=rv*t") & la(hideT, "ro=rv*t") & la(TacticLibrary.eqLeft(exhaustive=true), "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & la(hideT, "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & implyL(-4) && (
 //      oG("___ A ___") & implyL(-4) && (
 //        oG("___ 0 ___") & (la(hideL)*) & hideR(1) & QE
 //        ,oG("___ 1 ___") & andL(-9) & andL(-10) & implyL(-11) && (
@@ -570,77 +590,69 @@ class AcasXSafeTwoSided extends AcasXBase {
 //      )
 //      )
 //      )
-//
-//    def rvp() = oG("rv>0") & ls(equivR) & onBranch(
-//      (equivLeftLbl, oG("(->)") & allR(1) & allR(1) & allR(1) & implyR(1) & andL(-5) & andL(-3) & andL(-7) & andL(-9) & andL(-10) & hideL(-10) & orL(-4) && (
-//        oG("___ T1 ___") & concreteQEHammer1  /* Closed ! */
-//        ,
-//        oG("___ T2 ___") & concreteQEHammer2 /* Closed ! */
-//        )
-//        ),
-//      (equivRightLbl, oG("(<-)")
-//        & ls(andR) &&
-//        (oG("___ R1 ___") & tac1 /* Closed ! */
-//          ,
-//          oG("___ R2 ___") & tac2 /* Closed ! */
-//          )
-//        )
-//    )
-//
-//    def rv0() = la(TacticLibrary.eqLeft(exhaustive=true), "rv=0") & la(hideT, "rv=0") & ls(equivR) & onBranch(
-//      (equivLeftLbl, oG("(->)") & allR(1) & allR(1) & allR(1) & implyR(1) & orL(-5) &&
-//        (
-//          oG("__0__") & andL(-5) & andL(-6) & andL(-7) & la(TacticLibrary.eqLeft(exhaustive=true), "ro=0*t") & la(hideT, "ro=0*t") & la(TacticLibrary.eqLeft(exhaustive=true), "ho=w*aM/2*t^2+dhd*t") & la(hideT, "ho=w*aM/2*t^2+dhd*t") & andL(-4) & implyL(-6) & (oG("__A__") & implyL(-6) && (oG("__I__") & hideR(1) & (la(hideL)*) & QE
-//            ,oG("__II__") & andL(-6) & andL(-7) & implyL(-8) && (oG("___a___") & implyL(-6) && (oG("+++ 0 +++") & hideL(-6) & QE , oG("+++ 1 +++") & hideL(-6) & QE ),oG("___b___") & orL(-8) && (oG("+++ 0 +++") & hideL(-7) & QE, oG("+++ 1 +++") & hideL(-7) & QE) ))
-//            ,oG("__B__") & implyL(-6) & (oG("__I__") & andL(-6) & andL(-7) & hideL(-7) & andL(-7) & hideL(-7) & QE  ,oG("__II__") & andL(-6) & andL(-6) & andL(-7) & hideL(-9) & andL(-9) & hideL(-9) & andL(-8) & hideL(-9) & QE)
-//            )
-//          ,
-//
-//          oG("__1__") & andL(-5) & andL(-6) & la(TacticLibrary.eqLeft(exhaustive=true), "ro=0*t") & la(hideT, "ro=0*t") & la(TacticLibrary.eqLeft(exhaustive=true), "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & la(hideT, "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)")
-//            & andL(-4) & implyL(-6) & (
-//            oG("__A__") & implyL(-5) && (oG("__I__") & hideR(1) & (la(hideL)*) & QE, oG("__II__") & andL(-5) & andL(-6) & andL(-7) & hideL(-7) & hideL(-6) & implyL(-6) && (oG("___a___") & hideL(-5) & hideL(-1) & QE ,oG("___b___") & orL(-6) && (oG("+++ 0 +++")& implyL(-5) && (oG("** i **") & QE,oG("** ii **") & QE) ,oG("+++ 1 +++") & implyL(-5) && (oG("** i **") & QE,oG("** ii **") & QE)) ) )
-//            ,
-//            oG("__B__") & implyL(-5) && (oG("__I__") & andL(-5) & andL(-6) & hideL(-6) & implyL(-6) && (oG("___a___") & orR(1) & implyL(-5) && (oG("+++ 0 +++")& (la(hideL)*) & hideR(4) & hideR(1) & hideR(1) & QE , oG("+++ 1 +++") & hideR(2) & hideR(2) & debug("___a1___") & QE) ,oG("___b___")& orL(-6) && (oG("+++ 0 +++") & andL(-6) & hideL(-5) & hideL(-1) &QE, oG("+++ 1 +++") & hideL(-5) & hideL(-1) & QE )) , oG("__II__") & andL(-5) & andL(-5) & andL(-6) & hideL(-5) & andL(-6) & hideL(-6) & hideL(-7) & andL(-7) & implyL(-8) && (oG("___a___") & implyL(-6) && (oG("** i **") & hideL(-6) & implyL(-5) && (QE,QE),oG("** ii **") & hideL(-6) & implyL(-5) && (orL(-5) && (QE,QE) ,QE)),oG("___b___") & implyL(-6) && (oG("** i **") & hideL(-6) & orL(-6) && (implyL(-5) && (QE,QE),implyL(-5) && (QE,QE)) ,oG("** ii **") & hideL(-6) & orL(-6) && (oG("--- a ---") & orL(-7) && (QE,QE),oG("--- b ---") & orL(-7) && (QE,QE)) ))  )
-//            )
-//          )
-//        ),
-//      (equivRightLbl, oG("(<-)")
-//        & ls(andR) &&
-//        (oG("___ R1 ___") & tac1rv0
-//          ,
-//          oG("___ R2 ___") & tac2rv0
-//          )
-//        )
-//    )
-//
-//    def tactic = abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
-//      cut("maxAbbrv>=0".asFormula) & onBranch(
-//      (cutShowLbl, hideR(1) & QE)
-//      ,
-//      (cutUseLbl, implyR(1) &
-//        cut("(rv=0|rv>0)".asFormula) & onBranch(
-//        (cutShowLbl, hideR(1) & hideL(-1) & QE)
-//        ,
-//        (cutUseLbl, orL(-4) &&
-//          (oG("(rv=0)") & rv0 /* Closed ! */
-//            ,
-//            oG("(rv>0)") & rvp /* Closed ! */
-//            )
-//          )
-//      )
-//        )
-//    )
-//
-//    val reductionProof = helper.runTactic(tactic, new RootNode(reductionSeq))
-//    reductionProof shouldBe 'closed
-//
-//    val lemmaDB = LemmaDBFactory.lemmaDB
-//    val equivalenceLemmaID = lemmaDB.add(Lemma(
-//      reductionProof.provableWitness,
-//      new ToolEvidence(immutable.Map("input" -> reductionStr, "output" -> "true")) :: Nil,
-//      Some("upper_equivalence")))
-//    print("upper_equivalence.key equivalence lemma proof saved as lemma " + equivalenceLemmaID)
-//  }
+
+    def rvp() = oG("rv>0") & equivR('R) & Idioms.<(
+      /*->*/oG("(->)") & allR(1) & allR(1) & allR(1) & implyR(1) & andL(-5) & andL(-3) & andL(-7) & andL(-9) & andL(-10) & hideL(-10) & orL(-4) & Idioms.<(
+        oG("___ T1 ___") & concreteQEHammer1  /* Closed ! */
+        ,
+        oG("___ T2 ___") & concreteQEHammer2 /* Closed ! */
+        )
+        ,
+      /*<-*/oG("(<-)")
+        & andR('R) & Idioms.<
+        (oG("___ R1 ___") & tac1 /* Closed ! */
+          ,
+          oG("___ R2 ___") & tac2 /* Closed ! */
+          )
+    )
+
+    def rv0() = exhaustiveEqL2R('L, "rv=0".asFormula) & equivR('R) & Idioms.<(
+      oG("(->)") & allR(1) & allR(1) & allR(1) & implyR(1) & orL(-5) & Idioms.<
+        (
+          oG("__0__") & andL(-5) & andL(-6) & andL(-7) & exhaustiveEqL2R('L, "ro=0*t".asFormula) & exhaustiveEqL2R('L, "ho=w*aM/2*t^2+dhd*t".asFormula) & andL(-4) & implyL(-6) & Idioms.<(oG("__A__") & implyL(-6) & Idioms.<(oG("__I__") & hideR(1) & (hideL('L)*) & QE
+            ,oG("__II__") & andL(-6) & andL(-7) & implyL(-8) & Idioms.<(oG("___a___") & implyL(-6) & Idioms.<(oG("+++ 0 +++") & hideL(-6) & QE , oG("+++ 1 +++") & hideL(-6) & QE ),oG("___b___") & orL(-8) & Idioms.<(oG("+++ 0 +++") & hideL(-7) & QE, oG("+++ 1 +++") & hideL(-7) & QE) ))
+            ,oG("__B__") & implyL(-6) & Idioms.<(oG("__I__") & andL(-6) & andL(-7) & hideL(-7) & andL(-7) & hideL(-7) & QE  ,oG("__II__") & andL(-6) & andL(-6) & andL(-7) & hideL(-9) & andL(-9) & hideL(-9) & andL(-8) & hideL(-9) & QE)
+            )
+          ,
+
+          oG("__1__") & andL(-5) & andL(-6) & exhaustiveEqL2R('L, "ro=0*t".asFormula) & exhaustiveEqL2R('L, "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)".asFormula)
+            & andL(-4) & implyL(-6) & Idioms.<(
+            oG("__A__") & implyL(-5) & Idioms.<(oG("__I__") & hideR(1) & (hideL('L)*) & QE, oG("__II__") & andL(-5) & andL(-6) & andL(-7) & hideL(-7) & hideL(-6) & implyL(-6) & Idioms.<(oG("___a___") & hideL(-5) & hideL(-1) & QE ,oG("___b___") & orL(-6) & Idioms.<(oG("+++ 0 +++")& implyL(-5) & Idioms.<(oG("** i **") & QE,oG("** ii **") & QE) ,oG("+++ 1 +++") & implyL(-5) & Idioms.<(oG("** i **") & QE,oG("** ii **") & QE)) ) )
+            ,
+            oG("__B__") & implyL(-5) & Idioms.<(oG("__I__") & andL(-5) & andL(-6) & hideL(-6) & implyL(-6) & Idioms.<(oG("___a___") & orR(1) & implyL(-5) & Idioms.<(oG("+++ 0 +++")& (hideL('L)*) & hideR(4) & hideR(1) & hideR(1) & QE , oG("+++ 1 +++") & hideR(2) & hideR(2) & debug("___a1___") & QE) ,oG("___b___")& orL(-6) & Idioms.<(oG("+++ 0 +++") & andL(-6) & hideL(-5) & hideL(-1) &QE, oG("+++ 1 +++") & hideL(-5) & hideL(-1) & QE )) , oG("__II__") & andL(-5) & andL(-5) & andL(-6) & hideL(-5) & andL(-6) & hideL(-6) & hideL(-7) & andL(-7) & implyL(-8) & Idioms.<(oG("___a___") & implyL(-6) & Idioms.<(oG("** i **") & hideL(-6) & implyL(-5) & Idioms.<(QE,QE),oG("** ii **") & hideL(-6) & implyL(-5) & Idioms.<(orL(-5) & Idioms.<(QE,QE) ,QE)),oG("___b___") & implyL(-6) & Idioms.<(oG("** i **") & hideL(-6) & orL(-6) & Idioms.<(implyL(-5) & Idioms.<(QE,QE),implyL(-5) & Idioms.<(QE,QE)) ,oG("** ii **") & hideL(-6) & orL(-6) & Idioms.<(oG("--- a ---") & orL(-7) & Idioms.<(QE,QE),oG("--- b ---") & orL(-7) & Idioms.<(QE,QE)) ))  )
+            )
+          )
+        ,
+      oG("(<-)")
+        & andR('R) & Idioms.<
+        (oG("___ R1 ___") & tac1rv0
+          ,
+          oG("___ R2 ___") & tac2rv0
+          )
+    )
+
+    def tactic = EqualityTactics.abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
+      cut("maxAbbrv>=0".asFormula) & Idioms.<(
+      (cutShow, hideR(1) & QE)
+      ,
+      (cutUse, implyR(1) &
+        cut("(rv=0|rv>0)".asFormula) & Idioms.<(
+        (cutShow, hideR(1) & hideL(-1) & QE)
+        ,
+        (cutUse, orL(-4) & Idioms.<
+          (oG("(rv=0)") & rv0 /* Closed ! */
+            ,
+            oG("(rv>0)") & rvp /* Closed ! */
+            )
+          )
+      )
+        )
+    )
+
+    val reductionProof = proveBy(reductionSeq, tactic)
+    reductionProof shouldBe 'proved
+    storeLemma(reductionProof, Some("upper_equivalence"))
+  }
 //
 //  it should "prove Lemma 3 (Equivalence of two-sided explicit safe regions) from Lemma 3a (lower) and Lemma 3b (upper) bound equivalences" in {
 //    // execute dependent tests if lemmas not already proved
