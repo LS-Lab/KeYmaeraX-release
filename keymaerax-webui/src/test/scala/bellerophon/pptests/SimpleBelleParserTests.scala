@@ -244,9 +244,9 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "get precedence right" in {
-    val tactic = BelleParser("andR(1) & andR(2)+")
+    val tactic = BelleParser("andR(1) & andR(2)*")
     tactic shouldBe a [SeqTactic]
-    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)+)
+    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
   }
 
   "doall combinator parser" should "parse doall(closeId)" in {

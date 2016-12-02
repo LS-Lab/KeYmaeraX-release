@@ -607,9 +607,7 @@ object DerivationInfo {
     new PositionTacticInfo("closeTrue"
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
         ,{case () => TactixLibrary.closeT}),
-    new PositionTacticInfo("skolemizeL", "skolem", {case () => ProofRuleTactics.skolemizeL}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
-    new PositionTacticInfo("skolemize", "skolem", {case () => ProofRuleTactics.skolemize}),
     new PositionTacticInfo("coHide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
@@ -679,7 +677,6 @@ object DerivationInfo {
       , {case () => (x:Term) => DLBySubst.stutter(x.asInstanceOf[Variable])}),
 
   //
-    new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
     new InputPositionTacticInfo(

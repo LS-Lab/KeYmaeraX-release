@@ -24,7 +24,7 @@ class DatabaseTacticSerializer(db: DBAbstraction) extends IOListener {
     }
   }
 
-  def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue,BelleError]): Unit = {
+  def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue,BelleThrowable]): Unit = {
     if (ignoreUntilAfter.isEmpty) {
       expr match {
           //@todo print(l + ")")???

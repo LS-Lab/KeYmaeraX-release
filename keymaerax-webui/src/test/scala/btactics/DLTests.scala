@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -579,7 +579,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not allow arbitrary terms t when no ghost name is specified" in {
-    a [BelleError] should be thrownBy proveBy("y>0".asFormula, discreteGhost("x+5".asTerm)(1))
+    a [BelleThrowable] should be thrownBy proveBy("y>0".asFormula, discreteGhost("x+5".asTerm)(1))
   }
 
   it should "use same variable if asked to do so" in {
@@ -590,7 +590,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not accept variables present in f" in {
-    a [BelleError] should be thrownBy proveBy("y>z+1".asFormula, discreteGhost("y".asVariable, Some("z".asVariable))(1))
+    a [BelleThrowable] should be thrownBy proveBy("y>z+1".asFormula, discreteGhost("y".asVariable, Some("z".asVariable))(1))
   }
 
   it should "work on assignments" in {
@@ -615,7 +615,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not introduce self-assignment ghosts in the middle of formulas when bound" in {
-    a [BelleError] should be thrownBy proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil))
+    a [BelleThrowable] should be thrownBy proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil))
   }
 //
 //  ignore should "introduce ghosts in modality predicates" in {

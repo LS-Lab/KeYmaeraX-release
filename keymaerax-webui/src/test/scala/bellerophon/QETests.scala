@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import scala.collection.immutable.IndexedSeq
@@ -25,7 +25,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "fail on |-" in withMathematica { qeTool =>
-    a [BelleError] should be thrownBy proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.fullQE(qeTool))
+    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.fullQE(qeTool))
   }
 
   "Partial QE" should "not fail on |-" in withMathematica { qeTool =>

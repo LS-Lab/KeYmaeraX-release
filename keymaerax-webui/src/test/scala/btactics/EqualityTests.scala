@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -150,7 +150,7 @@ class EqualityTests extends TacticTestBase {
 
   // rewriting numbers is disallowed, because otherwise we run into endless rewriting
   it should "not rewrite numbers" in {
-    a [BelleError] should be thrownBy proveBy(Sequent(IndexedSeq("0<5".asFormula, "0=0".asFormula), IndexedSeq()), exhaustiveEqL2R(-2))
+    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("0<5".asFormula, "0=0".asFormula), IndexedSeq()), exhaustiveEqL2R(-2))
   }
 
   it should "not try to rewrite bound occurrences" in {

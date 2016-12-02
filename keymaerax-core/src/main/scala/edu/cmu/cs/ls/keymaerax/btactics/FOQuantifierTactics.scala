@@ -40,6 +40,7 @@ protected object FOQuantifierTactics {
   })
 
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
+  //@note can be internalized to a USubst tactic with internalized if-condition language
     //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
     "allL" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
@@ -69,11 +70,11 @@ protected object FOQuantifierTactics {
             cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate") & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-          throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
+          throw new BelleThrowable("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
-          throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
+          throw new BelleThrowable("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
         case _ =>
-          throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
+          throw new BelleThrowable("Position " + pos + " is not defined in " + sequent.prettyString)
       }
     })
 
@@ -109,23 +110,24 @@ protected object FOQuantifierTactics {
               cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-          throw new BelleError("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
+          throw new BelleThrowable("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
-          throw new BelleError("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
+          throw new BelleThrowable("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
         case _ =>
-          throw new BelleError("Position " + pos + " is not defined in " + sequent.prettyString)
+          throw new BelleThrowable("Position " + pos + " is not defined in " + sequent.prettyString)
       }
     })
 
 
   /** @see [[SequentCalculus.allR]] */
   lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
+    //@note could also try to skolemize directly and then skolemize to a fresh name index otherwise
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc, "All skolemize only in succedent")
         val xs = sequent.sub(pos) match {
           case Some(Forall(vars, _)) => vars
-          case f => throw new BelleError("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
+          case f => throw new BelleThrowable("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
         }
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
         //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
@@ -209,7 +211,7 @@ protected object FOQuantifierTactics {
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast) partial) partial,
             /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiomOrRule("exists generalize")(subst))
             )
-        case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
+        case _ => throw new BelleThrowable("Position " + pos + " must refer to a formula in sequent " + sequent)
       }
     }
 

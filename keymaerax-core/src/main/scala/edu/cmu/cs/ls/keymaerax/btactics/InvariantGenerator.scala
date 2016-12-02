@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import Augmentors._
 
@@ -118,8 +118,8 @@ object InvariantGenerator {
     */
   val inverseCharacteristicDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) => {
     import FormulaTools._
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleError("inverse characteristic method needs a computer algebra tool")
-    if (ToolProvider.pdeTool().isEmpty) throw new BelleError("inverse characteristic method needs a PDE Solver")
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a computer algebra tool")
+    if (ToolProvider.pdeTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a PDE Solver")
     val (ode, constraint, post) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
       case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
@@ -129,9 +129,9 @@ object InvariantGenerator {
     val solutions = try {
       ToolProvider.pdeTool().get.pdeSolve(ode)
     } catch {
-      case e: Throwable => throw new BelleError("inverseCharacteristic generation unsuccessful", e)
+      case e: Throwable => throw new BelleThrowable("inverseCharacteristic generation unsuccessful", e)
     }
-    if (!solutions.hasNext) throw new BelleError("No solutions found that would construct invariants")
+    if (!solutions.hasNext) throw new BelleThrowable("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
       case Equal(p,q)        => Minus(p,q)
       case GreaterEqual(p,q) => Minus(p,q)

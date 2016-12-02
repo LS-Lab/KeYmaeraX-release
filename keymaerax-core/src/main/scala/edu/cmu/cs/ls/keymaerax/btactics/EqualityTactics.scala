@@ -125,8 +125,8 @@ private object EqualityTactics {
   /** @see [[TactixLibrary.abbrv()]] */
   def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(t: Term) => abbrv(t, Some(abbrvV))
-    case Some(e) => throw new BelleError("Expected a term at position " + pos + ", but got " + e)
-    case _ => throw new BelleError("Position " + pos + " is undefined in sequent " + sequent)
+    case Some(e) => throw new BelleThrowable("Expected a term at position " + pos + ", but got " + e)
+    case _ => throw new BelleThrowable("Position " + pos + " is undefined in sequent " + sequent)
   })
 
   /**

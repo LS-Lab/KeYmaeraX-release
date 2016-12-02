@@ -86,7 +86,7 @@ trait UnifyUSCalculus {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
-      else throw new BelleError("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
+      else throw new BelleThrowable("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
     }
   }
   /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
@@ -205,7 +205,7 @@ trait UnifyUSCalculus {
       useAt("useAt", lem.fact, key, inst)
     }
   }
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem, PosInExpr(0::Nil))
 
@@ -265,7 +265,7 @@ trait UnifyUSCalculus {
       if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
       val subst = UnificationMatch(fact.conclusion, sequent)
       if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
-      Predef.assert(sequent == subst(fact.conclusion), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
+      if (sequent != subst(fact.conclusion)) throw BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
       by(subst.toForward(fact))
     }
   }
@@ -308,8 +308,8 @@ trait UnifyUSCalculus {
   def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
 
   def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
-  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution")))
-  private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic = useAt("ANON", fact, key, us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic = useAt("ANON", fact, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic = useAt(fact, PosInExpr(0::Nil))
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.
@@ -353,7 +353,7 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
-  def useAt(codeName: String, fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleError("No substitution found by unification, try to patch locally with own substitution"))): DependentPositionTactic = new DependentPositionTactic(codeName) {
+  def useAt(codeName: String, fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution"))): DependentPositionTactic = new DependentPositionTactic(codeName) {
     private val (keyCtx:Context[_],keyPart) = fact.conclusion.succ.head.at(key)
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -651,7 +651,7 @@ trait UnifyUSCalculus {
             //@todo could optimize to build directly since ctx already known
             CE(fmlPos) & CQ(termPos)
           }
-        case fml => throw new BelleError("Expected equivalence, but got " + fml)
+        case fml => throw new BelleThrowable("Expected equivalence, but got " + fml)
       }
     }
   }
@@ -692,7 +692,7 @@ trait UnifyUSCalculus {
             require(ctxP.isFormulaContext, "Formula context expected for CE")
             by("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
           }
-        case fml => throw new BelleError("Expected equivalence, but got " + fml)
+        case fml => throw new BelleThrowable("Expected equivalence, but got " + fml)
       }
     }
   }
@@ -1606,7 +1606,7 @@ trait UnifyUSCalculus {
             inst: String=>(Subst=>Subst) = ax=>us=>us): DependentPositionTactic = new DependentPositionTactic("chase") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        if (sequent.sub(pos).isEmpty) throw new BelleError("ill-positioned " + pos + " in " + sequent + "\nin " +
+        if (sequent.sub(pos).isEmpty) throw new BelleThrowable("ill-positioned " + pos + " in " + sequent + "\nin " +
           "chase\n(" + sequent + ")")
         CEat(chaseProof(sequent.sub(pos).get))(pos)
       }

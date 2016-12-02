@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Position, BelleError, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Position, BelleThrowable, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -290,7 +290,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "reject positions that refer to different terms" in {
-    a [BelleError] should be thrownBy proveBy(Sequent(IndexedSeq("a+b=a+c".asFormula), IndexedSeq()),
+    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("a+b=a+c".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(-1))
   }
 
@@ -396,7 +396,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "not be applicable when the order is not a subset of the free variables plus signature" in {
-    a [BelleError] should be thrownBy proveBy("a>0 & x>5 & y<2".asFormula, universalClosure(Variable("b")::Nil)(1))
+    a [BelleThrowable] should be thrownBy proveBy("a>0 & x>5 & y<2".asFormula, universalClosure(Variable("b")::Nil)(1))
   }
 
 //  "Exists eliminate" should "instantiate example from axiomatic ODE solver" in {
