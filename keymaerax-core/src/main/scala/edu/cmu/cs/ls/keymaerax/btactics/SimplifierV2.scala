@@ -683,19 +683,6 @@ object SimplifierV2 {
     }
   }
 
-  //Commented out in ProofRuleTactics
-  def exchangeR (posOne:SuccPos,posTwo:SuccPos) : BelleExpr = new BuiltInTactic("exchangeR") {
-    override def result(provable: ProvableSig) = {
-      provable(ExchangeRightRule(posOne,posTwo), 0)
-    }
-  }
-
-  //cohiding on one side of the sequent only
-  def cohideRonly(pos:Position):BelleExpr ={
-    assert(pos.isTopLevel & pos.isSucc)
-    (exchangeR(SuccPos(0),pos.checkSucc.top)) & (hideR(2)*)
-  }
-
   //Simplifies a formula including sub-terms occuring in the formula
   val simpTac:DependentPositionTactic = new DependentPositionTactic("formula simp"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -713,7 +700,7 @@ object SimplifierV2 {
               cutAt(ff)(pos) < (
                 ident,
                 //todo: to remove the succ.length == 1 restriction, this needs to hide the other succ positions
-                cohideRonly(cutPos) & equivifyR(1) & commute & by(pr)
+                cohideOnlyR(cutPos) & equivifyR(1) & commute & by(pr)
                 )
             }
             //Otherwise we only do the simplification under empty context and CEat the result

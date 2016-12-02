@@ -106,14 +106,13 @@ private object ProofRuleTactics {
 //      provable(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
 //    }
 //  }
-//
-//  def exchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
-//    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
-//      requireOneSubgoal(provable)
-//      require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
-//      provable(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
-//    }
-//  }
+
+  def exchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
+    def computeResult(provable : ProvableSig, posOne: Position, posTwo: Position) : ProvableSig = {
+      require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
+      provable(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
+    }
+  }
 
   /**
     * Uniform renaming `what~>repl` and vice versa.
