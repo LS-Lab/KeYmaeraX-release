@@ -156,4 +156,12 @@ class SimplifierV2Tests extends TacticTestBase {
     val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(-2))
     result.subgoals.head.ante should contain only ("x>0".asFormula, "y>3".asFormula)
   }
+
+  it should "simplify entire sequent (forwards)" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0".asFormula, "x>0 -> y>3".asFormula, "x>=0 -> y>4".asFormula, "x>0 -> y>5".asFormula,"5=z".asFormula)
+    val succ = IndexedSeq("z>3".asFormula)
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.fullSimpTac)
+
+    result.subgoals.head.succ should contain only ("5>3".asFormula)
+  }
 }

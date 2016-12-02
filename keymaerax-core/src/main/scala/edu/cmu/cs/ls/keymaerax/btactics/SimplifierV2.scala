@@ -684,7 +684,7 @@ object SimplifierV2 {
   }
 
   //Simplifies a formula including sub-terms occuring in the formula
-  val simpTac:DependentPositionTactic = new DependentPositionTactic("formula simp"){
+  val simpTac:DependentPositionTactic = new DependentPositionTactic("simp"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         sequent.sub(pos) match
@@ -717,7 +717,29 @@ object SimplifierV2 {
       }
     }
   }
+  def flip[A1, A2, B](f: (A1,A2) => B): (A2,A1) => B = (x1, x2) => f(x2,x1)
 
+  // Simplifies an entire sequent, throwing out unnecessary things in the context
+  // 1) Moves all antecedents into implication |- (A_1 & ... & A_n) -> (S_1 \/ ... )
+  // 2) Simplifies
+  // 3) Moves the implications back
+
+  // This might be slightly too unpredictable for some purposes, so use simpTac instead
+  val fullSimpTac:DependentTactic = new SingleGoalDependentTactic("full simp") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
+      val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
+      val (ff,pr) = formulaSimp(Imply(anteAnd,succOr), IndexedSeq())
+      ff match {
+        case Imply(l,r) =>
+          val (_, tac) = addContext (l, IndexedSeq () )
+          println (ff, pr)
+          PropositionalTactics.toSingleFormula & useAt (pr) (1) & implyR (1) & tac //(implyRi*) & useAt(pr)(1)
+        case _ => ident
+      }
+
+    }
+  }
 
   private val nop = Assign(Variable("x_"),Variable("x_"))
 
@@ -803,7 +825,8 @@ object SimplifierV2 {
         val seq = proveBy(Sequent(IndexedSeq(f),IndexedSeq(tar)),
           implyR(1) &
           modusPonens(AntePos(1),AntePos(0)) &
-          hideL(-2) & (by(pr) *))
+          hideL(-2) & ?(by(pr))
+        )
         return (tar,seq)
 
       case (Box(Loop(prog),fml))=>
@@ -818,7 +841,7 @@ object SimplifierV2 {
             useAt("[*] iterate")(-1) & andL(-1) &
               chase(3,3, (e:Expression)=>hideBox(e))(SuccPosition(1,Nil)) &
               chase(3,3, (e:Expression)=>hideBox(e))(AntePosition(2,Nil)) &
-              (close *) ))
+              (? (close) )))
         (tar,seq)
       case _ => throw new ProverException("loop rewriting expects input shape [{a*}]f or p -> ")
     }
