@@ -135,7 +135,11 @@ object AxiomIndex {
     case "+<= up" | "-<= up" | "abs<= up" | "max<= up" | "min<= up" | "<=+ down" | "<=- down" | "<=abs down" | "<=max down" | "<=min down" | "pow<= up" | "<=pow down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
     case "*<= up" | "<=* down" | "Div<= up" | "<=Div down" => (PosInExpr(1::Nil),  PosInExpr(0::0::0::Nil)::PosInExpr(0::0::1::Nil)::PosInExpr(0::1::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
 
-    case "<= to <" => (PosInExpr(1::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    case "<= to <" => (PosInExpr(1::Nil), Nil)
+    case "metric < & <" => (PosInExpr(0::Nil), Nil)
+    case "metric <= & <=" => (PosInExpr(0::Nil), Nil)
+    case "metric < | <" => (PosInExpr(0::Nil), Nil)
+    case "metric <= | <=" => (PosInExpr(0::Nil), Nil)
 
     // default position
     case _ => (PosInExpr(0::Nil), Nil)
