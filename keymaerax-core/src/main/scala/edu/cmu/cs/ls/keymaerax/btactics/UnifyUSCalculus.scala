@@ -1603,7 +1603,10 @@ trait UnifyUSCalculus {
     */
   def chase(keys: Expression=>List[String],
             modifier: (String,Position)=>ForwardTactic,
-            inst: String=>(Subst=>Subst) = ax=>us=>us): DependentPositionTactic = new DependentPositionTactic("chase") {
+            inst: String=>(Subst=>Subst) = ax=>us=>us): DependentPositionTactic = chaseFor2Back("chase", chaseFor(keys, modifier, inst))
+
+  /** Converts a forward chase tactic into a backwards chase by CEat. */
+  private def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (sequent.sub(pos).isEmpty) throw new BelleThrowable("ill-positioned " + pos + " in " + sequent + "\nin " +
@@ -1624,7 +1627,7 @@ trait UnifyUSCalculus {
           "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
         //@note start the chase on the left-hand side
-        val r = chaseFor(keys, modifier, inst) (SuccPosition(1, 0::Nil))(initial)
+        val r = forward(SuccPosition(1, 0::Nil))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
@@ -1700,7 +1703,9 @@ trait UnifyUSCalculus {
     * i.e. it takes keys of the form Expression => List[(Provable,PosInExpr, List[PosInExpr])]
     * This allows customised rewriting
     */
-  def chaseCustom(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): ForwardPositionTactic = pos => de => {
+  def chaseCustom(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): DependentPositionTactic = chaseFor2Back("chaseCustom", chaseCustomFor(keys))
+
+  def chaseCustomFor(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): ForwardPositionTactic = pos => de => {
     /** Recursive chase implementation */
     def doChase(de: ProvableSig, pos: Position): ProvableSig = {
       if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")

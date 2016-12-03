@@ -278,7 +278,7 @@ object IsabelleSyntax {
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), p_()^2 -> p_() * p_()
   def normalise(f:Formula) : (Formula,ProvableSig) = {
     val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
-    val nnf = chaseCustom((exp: Expression) => exp match {
+    val nnf = chaseCustomFor((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil
       case Imply(_,_) => fromAxIndex("-> expand") :: Nil
@@ -288,7 +288,7 @@ object IsabelleSyntax {
       case _ => Nil
     })(SuccPosition(1,1::Nil))(refl)
 
-    val flip = chaseCustom((exp: Expression) => exp match {
+    val flip = chaseCustomFor((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil
       case Greater(_,_) => fromAxIndex("> flip")::Nil
@@ -297,7 +297,7 @@ object IsabelleSyntax {
     })(SuccPosition(1,1::Nil))(nnf)
 
     //Recurses into all sub terms
-    val arith = chaseCustom((exp:Expression) => exp match {
+    val arith = chaseCustomFor((exp:Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil
       case LessEqual(a,b) => binaryDefault(lessEqualRec)::Nil
