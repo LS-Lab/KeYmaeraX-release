@@ -450,22 +450,22 @@ object SimplifierV2 {
   }
 
   //Annoying truth tables...
-//  val ltLeFalse = qeFormulaProof(Some("F_()<=G_()"),"G_()<F_()","false")
-//  val ltEqFalse1 = qeFormulaProof(Some("G_()=F_()"),"G_()<F_()","false")
-//  val ltEqFalse2 = qeFormulaProof(Some("F_()=G_()"),"G_()<F_()","false")
-//
-//  val leLtTrue = qeFormulaProof(Some("G_()<F_()"),"G_()<=F_()","true")
-//  val leLtFalse = qeFormulaProof(Some("F_()<G_()"),"G_()<=F_()","false")
-//
-//  val neLtTrue1 = qeFormulaProof(Some("F_()<G_()"),"G_()!=F_()","true")
-//  val neLtTrue2 = qeFormulaProof(Some("G_()<F_()"),"G_()!=F_()","true")
-//  //todo: Unification problems...
-//  //val neNeqSym = qeFormulaProof(Some("F_()!=G_()"),"G_()!=F_()","true")
-//  //val neEqFalse1 = qeFormulaProof(Some("F_()=G_()"),"G_()!=F_()","false")
-//  //val neEqFalse2 = qeFormulaProof(Some("G_()=F_()"),"G_()!=F_()","false")
-//
-//  val eqLtFalse1 = qeFormulaProof(Some("F_()<G_()"),"G_()=F_()","false")
-//  val eqLtFalse2 = qeFormulaProof(Some("G_()<F_()"),"G_()=F_()","false")
+  //  val ltLeFalse = qeFormulaProof(Some("F_()<=G_()"),"G_()<F_()","false")
+  //  val ltEqFalse1 = qeFormulaProof(Some("G_()=F_()"),"G_()<F_()","false")
+  //  val ltEqFalse2 = qeFormulaProof(Some("F_()=G_()"),"G_()<F_()","false")
+  //
+  //  val leLtTrue = qeFormulaProof(Some("G_()<F_()"),"G_()<=F_()","true")
+  //  val leLtFalse = qeFormulaProof(Some("F_()<G_()"),"G_()<=F_()","false")
+  //
+  //  val neLtTrue1 = qeFormulaProof(Some("F_()<G_()"),"G_()!=F_()","true")
+  //  val neLtTrue2 = qeFormulaProof(Some("G_()<F_()"),"G_()!=F_()","true")
+  //  //todo: Unification problems...
+  //  //val neNeqSym = qeFormulaProof(Some("F_()!=G_()"),"G_()!=F_()","true")
+  //  //val neEqFalse1 = qeFormulaProof(Some("F_()=G_()"),"G_()!=F_()","false")
+  //  //val neEqFalse2 = qeFormulaProof(Some("G_()=F_()"),"G_()!=F_()","false")
+  //
+  //  val eqLtFalse1 = qeFormulaProof(Some("F_()<G_()"),"G_()=F_()","false")
+  //  val eqLtFalse2 = qeFormulaProof(Some("G_()<F_()"),"G_()=F_()","false")
   //todo: Unification problems...
   //val eqEqSym = qeFormulaProof(Some("F_()=G_()"),"G_()=F_()","true")
   //val eqNeqFalse1 = qeFormulaProof(Some("F_()!=G_()"),"G_()=F_()","false")
@@ -494,28 +494,28 @@ object SimplifierV2 {
     //3. Special cases for (in) equational reasoning
 
     val init:Option[ProvableSig] =
-    f match {
-//      case Less(l,r) =>
-//        search(ctx,LessEqual(r,l),f,False,ltLeFalse) orElse
-//        search(ctx,Equal(l,r),f,False,ltEqFalse1) orElse
-//        search(ctx,Equal(r,l),f,False,ltEqFalse2)
-//      case LessEqual(l,r) =>
-//        search(ctx,Less(l,r),f,True,leLtTrue) orElse
-//        search(ctx,Less(r,l),f,False,leLtFalse)
-//      case NotEqual(l,r) =>
-//        search(ctx,Less(r,l),f,True,neLtTrue1) orElse
-//        search(ctx,Less(l,r),f,True,neLtTrue2) //orElse
-//        //search(ctx,NotEqual(r,l),f,True,neNeqSym) orElse
-////        search(ctx,Equal(l,r),f,False,neEqFalse1) orElse
-////        search(ctx,Equal(r,l),f,False,neEqFalse2)
-//      case Equal(l,r) =>
-//        search(ctx,Less(r,l),f,False,eqLtFalse1) orElse
-//        search(ctx,Less(l,r),f,False,eqLtFalse2) //orElse
+      f match {
+        //      case Less(l,r) =>
+        //        search(ctx,LessEqual(r,l),f,False,ltLeFalse) orElse
+        //        search(ctx,Equal(l,r),f,False,ltEqFalse1) orElse
+        //        search(ctx,Equal(r,l),f,False,ltEqFalse2)
+        //      case LessEqual(l,r) =>
+        //        search(ctx,Less(l,r),f,True,leLtTrue) orElse
+        //        search(ctx,Less(r,l),f,False,leLtFalse)
+        //      case NotEqual(l,r) =>
+        //        search(ctx,Less(r,l),f,True,neLtTrue1) orElse
+        //        search(ctx,Less(l,r),f,True,neLtTrue2) //orElse
+        //        //search(ctx,NotEqual(r,l),f,True,neNeqSym) orElse
+        ////        search(ctx,Equal(l,r),f,False,neEqFalse1) orElse
+        ////        search(ctx,Equal(r,l),f,False,neEqFalse2)
+        //      case Equal(l,r) =>
+        //        search(ctx,Less(r,l),f,False,eqLtFalse1) orElse
+        //        search(ctx,Less(l,r),f,False,eqLtFalse2) //orElse
         //search(ctx,Equal(r,l),f,True,eqEqSym) orElse
-//        search(ctx,NotEqual(l,r),f,False,eqNeqFalse1) orElse
-//        search(ctx,NotEqual(r,l),f,False,eqNeqFalse2)
-      case _ => None
-    }
+        //        search(ctx,NotEqual(l,r),f,False,eqNeqFalse1) orElse
+        //        search(ctx,NotEqual(r,l),f,False,eqNeqFalse2)
+        case _ => None
+      }
 
     init match {
       case Some(pr) => Some(pr)
@@ -709,11 +709,11 @@ object SimplifierV2 {
     val chasef = extract(chasepr).asInstanceOf[Formula]
 
     //Normalise > to <, >= to <=
-//    val (normpr,normf) = chasef match {
-//      case Greater(l, r) => (useFor("> flip")(SuccPosition(1, 1 :: Nil))(chasepr), Less(r, l))
-//      case GreaterEqual(l, r) => (useFor(">= flip")(SuccPosition(1, 1 :: Nil))(chasepr), LessEqual(r, l))
-//      case _ => (chasepr,chasef)
-//    }
+    //    val (normpr,normf) = chasef match {
+    //      case Greater(l, r) => (useFor("> flip")(SuccPosition(1, 1 :: Nil))(chasepr), Less(r, l))
+    //      case GreaterEqual(l, r) => (useFor(">= flip")(SuccPosition(1, 1 :: Nil))(chasepr), LessEqual(r, l))
+    //      case _ => (chasepr,chasef)
+    //    }
     val (normpr,normf) = (chasepr,chasef)
 
     val closepr = closeHeuristics(ctx,normf)
@@ -781,6 +781,32 @@ object SimplifierV2 {
     }
   }
 
+  //Simplifies at a (succ) position, restricting only to the requested part of the context and in the required order
+  def rsimpTac(ipos:IndexedSeq[Integer]):DependentPositionTactic = new DependentPositionTactic("restricted simp"){
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        //todo: Change to raise the correct kind of error
+        assert(pos.isTopLevel & pos.isSucc) //We can only do this at the top level because CE can't take antecedent contexts
+
+        val positions = ipos.distinct.filter(i => i < sequent.ante.length) //Tactic doesn't work if the positions aren't distinct
+
+        val ctx = positions.map(i => sequent.ante(i)) //todo: Check that these all exist in the sequent
+
+        val f = sequent.sub(pos).get.asInstanceOf[Formula]
+
+        val (ff,pr) = formulaSimp(f,ctx)
+
+        cutAt(ff)(pos) < (
+          ident,
+          cohideOnlyR(pos) & equivifyR(1) & commuteEquivR(1) &
+          positions.foldLeft(ident)(
+              (tac: BelleExpr,i:Integer) =>
+                implyRi(AntePos(i),SuccPos(0),true) & tac) & cohideR(1) & implyR(1)*positions.length & by(pr)
+          )
+      }
+    }
+  }
+
   def flip[A1, A2, B](f: (A1,A2) => B): (A2,A1) => B = (x1, x2) => f(x2,x1)
 
   // Simplifies an entire sequent, throwing out unnecessary things in the context
@@ -798,7 +824,9 @@ object SimplifierV2 {
         case Imply(l,r) =>
           val (_, tac) = addContext (l, IndexedSeq () )
           PropositionalTactics.toSingleFormula & useAt (pr) (1) & implyR (1) & tac //(implyRi*) & useAt(pr)(1)
-        case _ => ident
+        case _ =>
+          //This should only occur if the tactic managed to reduce the formula to false or the antecedents to true
+          PropositionalTactics.toSingleFormula & useAt (pr) (1)
       }
 
     }

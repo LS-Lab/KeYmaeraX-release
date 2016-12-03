@@ -98,7 +98,7 @@ trait SequentCalculus {
     *   G, a, G' |- D, b, D'
     * }}}
     */
-  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
+  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0),keep: Boolean = false): DependentTactic = PropositionalTactics.implyRi(antePos, succPos, keep)
   val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   val equivL  : BuiltInLeftTactic = "equivL" by { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
