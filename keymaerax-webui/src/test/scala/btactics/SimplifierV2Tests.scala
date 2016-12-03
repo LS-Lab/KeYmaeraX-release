@@ -164,4 +164,31 @@ class SimplifierV2Tests extends TacticTestBase {
 
     result.subgoals.head.succ should contain only ("5>3".asFormula)
   }
+
+  it should "(attempt to) simplify ground terms" in withMathematica { tool =>
+    val succ = "(1+2+3+4+5+6)^2/6-5-4-3-2*5 = 7".asFormula
+    val result = proveBy(succ, SimplifierV2.simpTac(1))
+    println(result)
+  }
+
+  it should "rewrite simple equalities" in withMathematica { tool =>
+    val succ = "x+y+(x+y)+(x+y+z)".asTerm
+
+    val fml = "x+y = 0 -> z =0 -> x+y+(x+y)+(x+y+z) = 0".asFormula
+    val result = proveBy(fml, SimplifierV2.simpTac(1))
+
+    result.subgoals.head.succ should contain only True
+
+  }
+
+
+  it should "search for close heuristics" in withMathematica { tool =>
+
+    val fml = " x>0 -> x >= 0 & x != 0 & y < 5 & 5 > y & 5!= y | y!=5 & z = 5 & z != 5 & 5 = z".asFormula
+    val result = proveBy(fml, SimplifierV2.simpTac(1))
+
+    println(result)
+//    result.subgoals.head.succ should contain only True
+
+  }
 }

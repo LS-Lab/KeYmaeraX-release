@@ -26,8 +26,8 @@ object SimplifierV2 {
   }
 
   //todo: All of these should be moved to derived axioms (some are already there, but missing the other side)
-  //Proves |- f -> t = tt or just t = tt if f is given
-  private def qeProof(f:Option[String],t:String,tt:String):(Term,ProvableSig) =
+  //Proves |- f -> t = tt or just t = tt
+  private def qeTermProof(f:Option[String],t:String,tt:String):(Term,ProvableSig) =
   {
     val ttt  = tt.asTerm
     (ttt,
@@ -39,31 +39,29 @@ object SimplifierV2 {
 
   val arithProps = List(
     //Multiplication
-    qeProof(None,"0*F_()","0"),
-    qeProof(None,"F_()*0","0"),
-    qeProof(None,"1*F_()","F_()"),
-    qeProof(None,"F_()*1","F_()"),
-    //qeProof(Some("F_()!=0"),"F_()*(F_()^-1)","1"),
-    //qeProof(Some("F_()!=0"),"(F_()^-1)*F_()","1"),
+    qeTermProof(None,"0*F_()","0"),
+    qeTermProof(None,"F_()*0","0"),
+    qeTermProof(None,"1*F_()","F_()"),
+    qeTermProof(None,"F_()*1","F_()"),
+    //qeTermProof(Some("F_()!=0"),"F_()*(F_()^-1)","1"),
+    //qeTermProof(Some("F_()!=0"),"(F_()^-1)*F_()","1"),
     //Addition
-    qeProof(None,"0+F_()","F_()"),
-    qeProof(None,"F_()+0","F_()"),
-    qeProof(None,"F_()+(-F_())","0"),
-    qeProof(None,"(-F_())+F_()","0"),
+    qeTermProof(None,"0+F_()","F_()"),
+    qeTermProof(None,"F_()+0","F_()"),
+    qeTermProof(None,"F_()+(-F_())","0"),
+    qeTermProof(None,"(-F_())+F_()","0"),
     //Minus
-    qeProof(None,"0-F_()","-F_()"),
-    qeProof(None,"F_()-0","F_()"),
-    qeProof(None,"x-x","0"),
-    qeProof(None,"F_()+G_()-F_()","G_()"),
+    qeTermProof(None,"0-F_()","-F_()"),
+    qeTermProof(None,"F_()-0","F_()"),
+    //todo: change to F_() - F_()
+    qeTermProof(None,"x-x","0"),
+    qeTermProof(None,"F_()+G_()-F_()","G_()"),
     //Division
-    qeProof(None,"F_()/1","F_()"),
-    //qeProof(Some("F_()!=0"),"F_()/F_()","1"),
-    //qeProof(Some("F_()!=0"),"0/F_()","0"),
+    qeTermProof(None,"F_()/1","F_()"),
+    //qeTermProof(Some("F_()!=0"),"F_()/F_()","1"),
+    //qeTermProof(Some("F_()!=0"),"0/F_()","0"),
     //Negation
-    qeProof(None,"-0","0"),
-    qeProof(None,"-(-F_())","F_()"),
-    //Power, temporary special case
-    qeProof(None,"0^2","0")
+    qeTermProof(None,"-(-F_())","F_()")
   )
 
   def mksubst(s:Subst) :Subst = {
@@ -131,14 +129,35 @@ object SimplifierV2 {
     }
   }
 
+  //If a term is purely arithmetic, then simplify it away (decided using RCF)
+  //This doesn't work for things like: (1+ (x+2))
+  def groundTermEval(t:Term) : Option[(Term,ProvableSig)] =
+  {
+    val res = t match {
+      case Plus(n:Number,m:Number) => Some(n.value+m.value)
+      case Minus(n:Number,m:Number) => Some(n.value-m.value)
+      case Times(n:Number,m:Number) => Some(n.value*m.value)
+      case Divide(n:Number,m:Number) => Some(n.value/m.value)
+      case Power(n:Number,m:Number) => Some(n.value.pow(m.value.toInt))
+      case Neg(n:Number) => Some(-n.value)
+      case _ => None
+    }
+    res match {
+      case None => None
+      case Some(v) =>
+        val pr = proveBy(Equal(t,Number(v)),?(RCF))
+        if(pr.isProved) Some(Number(v),pr)
+        else None
+    }
+  }
+
   /**
     * Recursive term simplification using chase, proving |- t = t'
     * @param t The term to be simplifed
     */
   def termSimp(t:Term): (Term,ProvableSig) =
   {
-    //todo: This may need to be generalized to do allow term simplification under a context
-    //todo: reflect out ground terms
+    //Recursive simplification in sub-terms
     val recpf = t match {
       case bop: BinaryCompositeTerm =>
         val l = bop.left
@@ -167,9 +186,18 @@ object SimplifierV2 {
         USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     }
 
-    //Apply arithmetic propositions
+    val rt = extract(recpf).asInstanceOf[Term]
+
+    //Get rid of completely ground terms (that RCF can handle)
+    val _ = groundTermEval(rt) match {
+      case Some((t,eq)) =>
+        return (t,useFor(eq, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(recpf))
+      case _ => ()
+    }
+
+    //Arithmetic propositions (non-ground rewrites like 0+x = x, x+0 = x , etc.)
     val apf = qeHeuristics(recpf) match { case None => recpf case Some(pr) => pr}
-    //println("Simplified: "+pf)
+
     //val fin = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(apf)
     val ft = extract(apf).asInstanceOf[Term]
     //println("Final: "+fin)
@@ -194,76 +222,38 @@ object SimplifierV2 {
       "(A() = B()) & (X() = Y()) -> (A()^X() = B()^Y())".asFormula,
       implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
 
-  //Uses const congruence rule on a t and eq to generate |- eq -> t = t'
-  def fwdeqL2R(eq:Formula,t:Term): ProvableSig =
-  {
-    eq match
-    {
-      //Only rewrite equalities
-      case Equal(l,r) =>
-        val tdot = t.replaceFree(l,DotTerm())
-        val tr = t.replaceFree(l,r)
-        ProvableSig.axioms("const congruence")(
-          USubst(SubstitutionPair(FuncOf(Function("ctxT_", None, Real, Real), DotTerm()), tdot)::
-            SubstitutionPair(FuncOf(Function("s", None, Unit, Real), Nothing), l) ::
-            SubstitutionPair(FuncOf(Function("t", None, Unit, Real), Nothing), r) :: Nil))
-      case _ => ???
-    }
-  }
-
   /**
-    * Takes a term t, with an equality context ctx and returns ctx |- t = t' using simple equalities (v=n or f()=n)
+    * Takes a term t, with an equality context ctx and returns ctx |- t = t' using all equalities of the shape
+    * t'' = n:Number
     * This is probably hopelessly slow...
     * @param t
     * @param ctx
     * @return
     */
   def equalityRewrites(t:Term,ctx:IndexedSeq[Formula]) :ProvableSig = {
-    t match {
-      case _:Variable | _:ApplicationOf =>
-        val pos = ctx.indexWhere( f => f match {
-          case (Equal(l,n:Number)) => t.equals(l)
-          case _ => false})
-        if (pos >= 0){
-          proveBy(Sequent(ctx,IndexedSeq(ctx(pos))),close)
+
+    val rest = ctx.foldLeft(t)(
+      (t: Term, f: Formula) =>
+        f match {
+          case Equal(l, n: Number) =>
+            t.replaceFree(l, n)
+          case _ => t
         }
-        else {
-          weaken(ctx)(DerivedAxioms.equalReflex.fact(
-            USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil)))
-        }
-      case bop:BinaryCompositeTerm =>
-        val l = bop.left
-        val r = bop.right
-        val lpr = equalityRewrites(l,ctx)
-        val rpr = equalityRewrites(r,ctx)
-        val lt = extract(lpr).asInstanceOf[Term]
-        val rt = extract(rpr).asInstanceOf[Term]
-        val lem = bop match{
-          case Plus(_,_) => plusLemma
-          case Minus(_,_) => minusLemma
-          case Times(_,_) => timesLemma
-          case Divide(_,_) => divideLemma
-          case Power(_,_) => powerLemma
-        }
-        proveBy(Sequent(ctx,IndexedSeq(Equal(bop.reapply(l,r),bop.reapply(lt,rt)))),
-          cut(Equal(l,lt)) <(
-            cut(Equal(r,rt)) <(
-              useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-                closeId,closeId
-                ),
-              hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
-            hideR(SuccPos(0))& by(lpr)
-            ))
-      case _ =>
-        weaken(ctx)(DerivedAxioms.equalReflex.fact(
-          USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil)))
-    }
+    )
+    proveBy(Sequent(ctx, IndexedSeq(Equal(t, rest))),
+      ctx.zipWithIndex.foldRight(ident)(
+        (f: (Formula, Int), tac: BelleExpr) =>
+          f match {
+            case (Equal(l, n: Number), i) =>
+              eqL2R(-(i + 1))(1) & tac
+            case _ => tac
+          }
+      ) & cohideR(1) & byUS("= reflexive"))
   }
 
   def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): (Term,ProvableSig) =
   {
-    //todo: filter context and keep only equalities around
-    //todo: maybe do repeated equality rewriting
+    //todo: filter context and keep only equalities around?
     val teq = equalityRewrites(t,ctx)
     val tt = extract(teq).asInstanceOf[Term]
     val (ttf,tpr) = termSimp(tt)
@@ -405,58 +395,143 @@ object SimplifierV2 {
   val notT = propProof("!true","false")
   val notF = propProof("!false","true")
 
-  val ltNotReflex = qeEquivProof("F()<F()","false")
-  val gtNotReflex = qeEquivProof("F()>F()","false")
-  val neqNotReflex = qeEquivProof("F()!=F()","false")
 
-  private def propHeuristics(f:Formula) : Option[(Formula,ProvableSig)] =
+  //Proves |- f -> t = tt or just t = tt
+  private def qeFormulaProof(f:Option[String],t:String,tt:String):ProvableSig =
   {
+    val ttt  = tt.asFormula
+    f match{
+      case None => proveBy(Equiv(t.asFormula,ttt),prop & QE)
+      case Some(f) => proveBy(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE)
+    }
+  }
+
+  val ltNotReflex = qeFormulaProof(None,"F()<F()","false")
+  val gtNotReflex = qeFormulaProof(None,"F()>F()","false")
+  val neqNotReflex = qeFormulaProof(None,"F()!=F()","false")
+  val equalReflex = qeFormulaProof(None,"F() = F()","true")
+  val lessequalReflex = qeFormulaProof(None,"F() <= F()","true")
+  val greaterequalReflex = qeFormulaProof(None,"F() >= F()","true")
+
+  private def propHeuristics(f:Formula) : Option[(Formula,ProvableSig)] = {
     f match {
-      case And(l,True) => Some(l,andT)
-      case And(True,r) => Some(r,Tand)
-      case And(_,False) => Some(False,andF)
-      case And(False,_) => Some(False,Fand)
+      case And(l, True) => Some(l, andT)
+      case And(True, r) => Some(r, Tand)
+      case And(_, False) => Some(False, andF)
+      case And(False, _) => Some(False, Fand)
 
-      case Or(l,True) => Some(True,orT)
-      case Or(True,r) => Some(True,Tor)
-      case Or(l,False) => Some(l,orF)
-      case Or(False,r) => Some(r,For)
+      case Or(l, True) => Some(True, orT)
+      case Or(True, r) => Some(True, Tor)
+      case Or(l, False) => Some(l, orF)
+      case Or(False, r) => Some(r, For)
 
-      case Imply(l,True) => Some(True,implyT)
-      case Imply(True,r) => Some(r,Timply)
-      case Imply(l,False) => Some(Not(l),implyF)
-      case Imply(False,r) => Some(True,Fimply)
+      case Imply(l, True) => Some(True, implyT)
+      case Imply(True, r) => Some(r, Timply)
+      case Imply(l, False) => Some(Not(l), implyF)
+      case Imply(False, r) => Some(True, Fimply)
 
-      case Equiv(l,True) => Some(l,equivT)
-      case Equiv(True,r) => Some(r,Tequiv)
-      case Equiv(l,False) => Some(Not(l),equivF)
-      case Equiv(False,r) => Some(Not(r),Fequiv)
+      case Equiv(l, True) => Some(l, equivT)
+      case Equiv(True, r) => Some(r, Tequiv)
+      case Equiv(l, False) => Some(Not(l), equivF)
+      case Equiv(False, r) => Some(Not(r), Fequiv)
 
-      case Not(True) => Some(False,notT)
-      case Not(False) => Some(True,notF)
+      case Not(True) => Some(False, notT)
+      case Not(False) => Some(True, notF)
 
-      case Equal(l,r) if l == r => Some(True,equalReflex)
-      case LessEqual(l,r) if l == r => Some(True,lessequalReflex)
-      case GreaterEqual(l,r) if l == r => Some(True,greaterequalReflex)
-      case Less(l,r) if l == r => Some(False,ltNotReflex)
-      case Greater(l,r) if l == r => Some(False,gtNotReflex)
-      case NotEqual(l,r) if l == r => Some(False,neqNotReflex)
+      case Equal(l, r) if l == r => Some(True, equalReflex)
+      case LessEqual(l, r) if l == r => Some(True, lessequalReflex)
+      case GreaterEqual(l, r) if l == r => Some(True, greaterequalReflex)
+      case Less(l, r) if l == r => Some(False, ltNotReflex)
+      case Greater(l, r) if l == r => Some(False, gtNotReflex)
+      case NotEqual(l, r) if l == r => Some(False, neqNotReflex)
 
       case _ => None
     }
   }
 
-  //Reflexivity for comparison formulae
-  //These should be in DerivedAxioms
-  // (some already are)
-  private def qeEquivProof(f:String,ff:String):ProvableSig =
-  {
-    proveBy(Equiv(f.asFormula,ff.asFormula),QE)
+  //Annoying truth tables...
+  val ltLeFalse = qeFormulaProof(Some("F_()<=G_()"),"G_()<F_()","false")
+  val ltEqFalse1 = qeFormulaProof(Some("G_()=F_()"),"G_()<F_()","false")
+  val ltEqFalse2 = qeFormulaProof(Some("F_()=G_()"),"G_()<F_()","false")
+
+  val leLtTrue = qeFormulaProof(Some("G_()<F_()"),"G_()<=F_()","true")
+  val leLtFalse = qeFormulaProof(Some("F_()<G_()"),"G_()<=F_()","false")
+
+  val neLtTrue1 = qeFormulaProof(Some("F_()<G_()"),"G_()!=F_()","true")
+  val neLtTrue2 = qeFormulaProof(Some("G_()<F_()"),"G_()!=F_()","true")
+  //todo: Unification problems...
+  //val neNeqSym = qeFormulaProof(Some("F_()!=G_()"),"G_()!=F_()","true")
+  //val neEqFalse1 = qeFormulaProof(Some("F_()=G_()"),"G_()!=F_()","false")
+  //val neEqFalse2 = qeFormulaProof(Some("G_()=F_()"),"G_()!=F_()","false")
+
+  val eqLtFalse1 = qeFormulaProof(Some("F_()<G_()"),"G_()=F_()","false")
+  val eqLtFalse2 = qeFormulaProof(Some("G_()<F_()"),"G_()=F_()","false")
+  //todo: Unification problems...
+  //val eqEqSym = qeFormulaProof(Some("F_()=G_()"),"G_()=F_()","true")
+  //val eqNeqFalse1 = qeFormulaProof(Some("F_()!=G_()"),"G_()=F_()","false")
+  //val eqNeqFalse2 = qeFormulaProof(Some("G_()!=F_()"),"G_()=F_()","false")
+
+  val trueReflex = qeFormulaProof(Some("F_()"),"F_()","true")
+  val falseReflex = qeFormulaProof(Some("!F_()"),"F_()","false")
+
+  //Finds a formula f in the antecedents to try and prove ctx |- g <-> h
+  //If it exists, move it to get f -> (g <-> h)
+  //Throws away the context and closes with the lemma provided
+  def search(ctx:IndexedSeq[Formula],f:Formula,g:Formula,h:Formula,lem:ProvableSig) :Option[ProvableSig] ={
+    val ind = ctx.indexOf(f)
+    if(ind >= 0) {
+      return Some(proveBy(Sequent(ctx, IndexedSeq(Equiv(g, h))),
+        cohide2(AntePos(ind), SuccPos(0)) & implyRi & byUS(lem)))
+    }
+    else None
   }
 
-  val equalReflex = qeEquivProof("F() = F()","true")
-  val lessequalReflex = qeEquivProof("F() <= F()","true")
-  val greaterequalReflex = qeEquivProof("F() >= F()","true")
+  //  //Proves ctx |- f <-> true or ctx |- f <-> false if possible
+  def closeHeuristics(ctx:IndexedSeq[Formula],f:Formula) : Option[ProvableSig] = {
+    //Closing heuristics
+    //1. If formula appears in context, then close with true
+    //2. If formula appears negated in context, close with false
+    //3. Special cases for (in) equational reasoning
+
+    val init =
+    f match {
+      case Less(l,r) =>
+        search(ctx,LessEqual(r,l),f,False,ltLeFalse) orElse
+        search(ctx,Equal(l,r),f,False,ltEqFalse1) orElse
+        search(ctx,Equal(r,l),f,False,ltEqFalse2)
+      case LessEqual(l,r) =>
+        search(ctx,Less(l,r),f,True,leLtTrue) orElse
+        search(ctx,Less(r,l),f,False,leLtFalse)
+      case NotEqual(l,r) =>
+        search(ctx,Less(r,l),f,True,neLtTrue1) orElse
+        search(ctx,Less(l,r),f,True,neLtTrue2) //orElse
+        //search(ctx,NotEqual(r,l),f,True,neNeqSym) orElse
+//        search(ctx,Equal(l,r),f,False,neEqFalse1) orElse
+//        search(ctx,Equal(r,l),f,False,neEqFalse2)
+      case Equal(l,r) =>
+        search(ctx,Less(r,l),f,False,eqLtFalse1) orElse
+        search(ctx,Less(l,r),f,False,eqLtFalse2) //orElse
+        //search(ctx,Equal(r,l),f,True,eqEqSym) orElse
+//        search(ctx,NotEqual(l,r),f,False,eqNeqFalse1) orElse
+//        search(ctx,NotEqual(r,l),f,False,eqNeqFalse2)
+      case _ => None
+    }
+
+    init match {
+      case Some(pr) => Some(pr)
+      case None =>
+        val trueReflex = qeFormulaProof(Some("F_()"), "F_()", "true")
+        val falseReflex = qeFormulaProof(Some("!F_()"), "F_()", "false")
+
+        //Case 1
+        search(ctx, f, f, True, trueReflex) match {
+          case Some(v) => Some(v)
+          case None =>
+            search(ctx, Not(f), f, False, falseReflex)
+        }
+    }
+
+  }
 
   /**
     * Recursive formula simplification under a context using chase, proving ctx |- f <-> f'
@@ -475,14 +550,14 @@ object SimplifierV2 {
       case And(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
         //short circuit
-//        if (lf.equals(False))
-//        {
-//          return (False,
-//            proveBy(Sequent(ctx,IndexedSeq(Equiv(f,False))),
-//              cut(Equiv(l,lf))<(
-//                prop,
-//                hideR(SuccPos(0))& by(lpr))))
-//        }
+        //        if (lf.equals(False))
+        //        {
+        //          return (False,
+        //            proveBy(Sequent(ctx,IndexedSeq(Equiv(f,False))),
+        //              cut(Equiv(l,lf))<(
+        //                prop,
+        //                hideR(SuccPos(0))& by(lpr))))
+        //        }
         //Update context with new formula
         val (out,tac) = addContext(lf,ctx)
         //Use lf as part of context on the right
@@ -501,13 +576,13 @@ object SimplifierV2 {
       case Imply(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
         //short circuit
-//        if (lf.equals(False))
-//        {
-//          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
-//            cut(Equiv(l,lf))<(
-//              prop,
-//              hideR(SuccPos(0))& by(lpr))))
-//        }
+        //        if (lf.equals(False))
+        //        {
+        //          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
+        //            cut(Equiv(l,lf))<(
+        //              prop,
+        //              hideR(SuccPos(0))& by(lpr))))
+        //        }
         val (out,tac) = addContext(lf,ctx)
         //Use lf as part of context on the right
         val (rf,rpr) = formulaSimp(r, out)
@@ -525,13 +600,13 @@ object SimplifierV2 {
       case Or(l, r) =>
         val (lf,lpr) = formulaSimp(l, ctx)
         //short circuit
-//        if (lf.equals(True))
-//        {
-//          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
-//            cut(Equiv(l,lf))<(
-//              prop,
-//              hideR(SuccPos(0))& by(lpr))))
-//        }
+        //        if (lf.equals(True))
+        //        {
+        //          return (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
+        //            cut(Equiv(l,lf))<(
+        //              prop,
+        //              hideR(SuccPos(0))& by(lpr))))
+        //        }
         val (out,tac) = addContext(Not(lf),ctx)
         //Use lf as part of context on the right
         val (rf,rpr) = formulaSimp(r, out)
@@ -601,7 +676,7 @@ object SimplifierV2 {
 
         (nf, proveBy(Sequent(ctx, IndexedSeq(Equiv(q, nf))),
           droppedCtx.map(f => hideL('L, f)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
-          equivR(1) & onAll(instantiate & implyRi(AntePos(remainingCtx.length)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
+            equivR(1) & onAll(instantiate & implyRi(AntePos(remainingCtx.length)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
         val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
@@ -633,40 +708,27 @@ object SimplifierV2 {
     val chasepr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(proppr)
     val chasef = extract(chasepr).asInstanceOf[Formula]
 
-    //Prove the formula if it occurs positively or negatively in the context
-    //todo: Also check for negations of comparison formulae in context
-    val tind = ctx.indexOf(chasef)
-    if(tind>=0)
-    {
-      val prT = proveBy(Sequent(ctx,IndexedSeq(Equiv(chasef,True))),
-        cohide2(AntePos(tind),SuccPos(0)) &
-          useAt(equivT,PosInExpr(0::Nil))(SuccPos(0)) & close)
-      (True,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,True))),
-        cut(Equiv(f,chasef)) <(
-          cut(Equiv(chasef,True)) <(
-            implyRi(AntePos(ctx.length+1)) &
-              implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
-            hideL('Llast) & hideR(SuccPos(0)) & by(prT)),
-          hideR(SuccPos(0))& by(chasepr))))
+    //Normalise > to <, >= to <=
+    val (normpr,normf) = chasef match {
+      case Greater(l, r) => (useFor("> flip")(SuccPosition(1, 1 :: Nil))(chasepr), Less(r, l))
+      case GreaterEqual(l, r) => (useFor(">= flip")(SuccPosition(1, 1 :: Nil))(chasepr), LessEqual(r, l))
+      case _ => (chasepr,chasef)
     }
-    else
-    {
-      val find = ctx.indexOf(Not(chasef))
-      if(find>=0){
-        val prF = proveBy(Sequent(ctx,IndexedSeq(Equiv(chasef,False))),
-          cohide2(AntePos(find),SuccPos(0)) &
-            useAt(equivF,PosInExpr(0::Nil))(SuccPos(0)) & close)
-        (False,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,False))),
-          cut(Equiv(f,chasef)) <(
-            cut(Equiv(chasef,False)) <(
+
+    val closepr = closeHeuristics(ctx,normf)
+
+    closepr match{
+      case None => (normf,normpr)
+      case Some(pr) =>
+        val closef = extract(pr).asInstanceOf[Formula]
+        (closef,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,closef))),
+          cut(Equiv(f,normf)) <(
+            cut(Equiv(normf,closef)) <(
               implyRi(AntePos(ctx.length+1)) &
                 implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
-              hideL('Llast) & hideR(SuccPos(0)) & by(prF)),
-            hideR(SuccPos(0))& by(chasepr))))
-      }
-      else{
-        (chasef,chasepr)
-      }
+              hideL('Llast) & hideR(SuccPos(0)) & by(pr)),
+            hideR(SuccPos(0))& by(normpr))))
+
     }
   }
 
@@ -717,6 +779,7 @@ object SimplifierV2 {
       }
     }
   }
+
   def flip[A1, A2, B](f: (A1,A2) => B): (A2,A1) => B = (x1, x2) => f(x2,x1)
 
   // Simplifies an entire sequent, throwing out unnecessary things in the context
@@ -740,6 +803,8 @@ object SimplifierV2 {
 
     }
   }
+
+  //todo: Everything below is not part of the simplifier and should be moved elsewhere
 
   private val nop = Assign(Variable("x_"),Variable("x_"))
 
@@ -824,8 +889,8 @@ object SimplifierV2 {
         val tar = Imply(pre,rf)
         val seq = proveBy(Sequent(IndexedSeq(f),IndexedSeq(tar)),
           implyR(1) &
-          modusPonens(AntePos(1),AntePos(0)) &
-          hideL(-2) & ?(by(pr))
+            modusPonens(AntePos(1),AntePos(0)) &
+            hideL(-2) & ?(by(pr))
         )
         return (tar,seq)
 
@@ -836,12 +901,12 @@ object SimplifierV2 {
         val seq = proveBy(Sequent(IndexedSeq(f),IndexedSeq(tar)),
           loop(f)(1) <
             (close,
-            useAt("[*] iterate")(-1) & andL(-1) & close,
-            //Crucial case, fails if the rewrite was bad:
-            useAt("[*] iterate")(-1) & andL(-1) &
-              chase(3,3, (e:Expression)=>hideBox(e))(SuccPosition(1,Nil)) &
-              chase(3,3, (e:Expression)=>hideBox(e))(AntePosition(2,Nil)) &
-              (? (close) )))
+              useAt("[*] iterate")(-1) & andL(-1) & close,
+              //Crucial case, fails if the rewrite was bad:
+              useAt("[*] iterate")(-1) & andL(-1) &
+                chase(3,3, (e:Expression)=>hideBox(e))(SuccPosition(1,Nil)) &
+                chase(3,3, (e:Expression)=>hideBox(e))(AntePosition(2,Nil)) &
+                (? (close) )))
         (tar,seq)
       case _ => throw new ProverException("loop rewriting expects input shape [{a*}]f or p -> ")
     }
