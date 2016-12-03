@@ -156,6 +156,8 @@ case class Case(fml: Formula) {
  * @author Nathan Fulton
  */
 object Idioms {
+  import TacticFactory._
+
   lazy val nil: BelleExpr = new BuiltInTactic("nil") {
     override def result(provable: ProvableSig): ProvableSig = provable
   }
@@ -183,7 +185,6 @@ object Idioms {
 
   /* branch by case distinction */
   def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = {
-    import TacticFactory._
     val cases = c1 +: cs
     val caseFml = cases.map({ case (Case(fml), _) => fml }).reduceRight(Or)
 
@@ -204,6 +205,11 @@ object Idioms {
         TactixLibrary.cohideR('Rlast) & TactixLibrary.master() |
         TactixLibrary.cohideOnlyR('Rlast) & TactixLibrary.master()) & TactixLibrary.done
     )
+  }
+
+  /** Repeats t while condition at position is true. */
+  def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = "loopwhile" by {(pos: Position) =>
+    (DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)*
   }
 
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
