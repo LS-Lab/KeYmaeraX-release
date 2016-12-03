@@ -808,6 +808,26 @@ class ModelplexTacticTests extends TacticTestBase {
     stop shouldBe "((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0".asFormula
   }
 
+  "ModelPlex formula metric" should "convert simple formula" in withMathematica { tool =>
+    val fml = "x>=y & a=b & c<=d+e".asFormula
+    ModelPlex.toMetric(fml) shouldBe "max(y-x, max(max(a-b, b-a), c-(d+e)))<=0".asFormula
+  }
+
+  it should "convert simple formula 2" in withMathematica { tool =>
+    val fml = "x>=y&a=b | c<=d+e".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min((max((y-x,max((a-b,b-a)))),c-(d+e)))<=0".asFormula
+  }
+
+  it should "convert simple formula 3" in withMathematica { tool =>
+    val fml = "x>=y&a=b&c<=d | c<=d+e | f<=g&h<=0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min((max((y-x,max((max((a-b,b-a)),c-d)))),min((c-(d+e),max((f-g,h))))))<=0".asFormula
+  }
+
+  it should "convert mixed open/closed formula" in withMathematica { tool =>
+    val fml = "x>=y & a<b".asFormula
+    ModelPlex.toMetric(fml) shouldBe "max(y-x, a-b)<0".asFormula
+  }
+
 //
 //  "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")

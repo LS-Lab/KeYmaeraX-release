@@ -399,6 +399,49 @@ object ModelPlex extends ModelPlexTrait {
     sequent.succ.indices.map(i => SimplifierV2.simpTac(SuccPosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
+  /** Turns the formula `fml` into a single inequality. */
+  def toMetric(fml: Formula): Formula = {
+    val cmpNF = chase(3, 3, (e: Expression) => e match {
+      case Equal(_, _) => "= expand"::Nil
+      case And(_, _) => "& recursor"::Nil
+      case Or(_, _) => "| recursor"::Nil
+      case _ => Nil
+    })
+
+    val arithNF = chase(3, 3, (e: Expression) => e match {
+      case Less(_, r) if r != Number(0) => "metric <"::Nil
+      case LessEqual(_, r) if r != Number(0) => "metric <="::Nil
+      case And(_,_) => "& recursor"::Nil
+      case Or(_,_) => "| recursor"::Nil
+      case _ => Nil
+    })
+
+    val propNF = chaseCustom({
+      case LessEqual(_, _) => fromAxIndex("<= to <")::Nil
+      case And(Less(_, _), Less(_, _)) => fromAxIndex("metric < & <")::Nil
+      case And(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= & <=")::Nil
+      case And(LessEqual(_, _), Less(_, _)) => fromAxIndex("& recursor")::Nil
+      case And(Less(_, _), LessEqual(_, _)) => fromAxIndex("& recursor")::Nil
+      case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("& recursor")::Nil
+      case And(_: BinaryCompositeFormula, _) => (DerivedAxioms.andRecursor.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case And(_, _: BinaryCompositeFormula) => (DerivedAxioms.andRecursor.fact, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case Or(Less(_, _), Less(_, _)) => fromAxIndex("metric < | <")::Nil
+      case Or(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= | <=")::Nil
+      case Or(LessEqual(_, _), Less(_, _)) => fromAxIndex("| recursor")::Nil
+      case Or(Less(_, _), LessEqual(_, _)) => fromAxIndex("| recursor")::Nil
+      case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("| recursor")::Nil
+      case Or(_: BinaryCompositeFormula, _) => (DerivedAxioms.orRecursor.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case Or(_, _: BinaryCompositeFormula) => (DerivedAxioms.orRecursor.fact, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case _ => Nil
+    })
+
+    val (nnf, _) = IsabelleSyntax.normalise(fml)
+    val result = proveBy(nnf, cmpNF(1) & arithNF(1) &
+      Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
+    assert(result.subgoals.length == 1 && result.subgoals.head.ante.isEmpty && result.subgoals.head.succ.length == 1)
+    result.subgoals.head.succ.head
+  }
+
   private def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
     var result: List[T] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
