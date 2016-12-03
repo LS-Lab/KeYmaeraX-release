@@ -29,8 +29,8 @@ object Kaisar {
 
     def time(a:ProgramVariable):Int = vmap(a.a)._1
     def tmax:Int = tmap.size-1
-    def extent(tp:(Int, Formula)):Int = {
-      var (t, phi) = tp
+    def extent(tp:(Int, Formula,Provable)):Int = {
+      var (t, phi,_) = tp
       var fv = StaticSemantics(phi).fv
       while (fv.intersect(StaticSemantics(tmap(t)._2).bv).isEmpty) {
         t = t + 1
@@ -49,17 +49,21 @@ object Kaisar {
       p
     }
   }
+  object History {
+    var empty = new History(Map(), Map())
+  }
 
-  case class Context (map:Map[Variable,(Int,Formula)]){
-    def concat(other: Context): Context = Context(map.++(other.map))
-    def apply(p:FactVariable):(Int, Formula) = map(p)
-    def add(a:Variable, phi:Formula): Context = {
-      val nextTime = map.size
-      Context(map.+((a,(nextTime,phi))))
+  case class Context (xmap:Map[Variable,(Int,Formula,Provable)], fmap:Map[Formula, Provable]){
+    def concat(other: Context): Context = Context(xmap.++(other.xmap), fmap.++(other.fmap))
+    def apply(p:FactVariable):(Int, Formula,Provable) = xmap(p.p)
+    def add(a:Variable, phi:Formula, pr:Provable): Context = {
+      val nextTime = xmap.size
+      Context(xmap.+((a,(nextTime,phi,pr))),fmap.+((phi,pr)))
     }
+    def findProvable(fml:Formula):Provable = fmap(fml)
   }
   object Context {
-    var empty = new Context(Map())
+    var empty = new Context(Map(),Map())
   }
 
   private def min(seq:Seq[Int]):Int =
@@ -81,15 +85,15 @@ object Kaisar {
         }
         val concl:Formula = hist.extend(phi, tmin, tmax)
         val pr:Provable = Provable.startProof(Sequent(assms.toIndexedSeq, collection.immutable.IndexedSeq(concl)))
-        val addedProvable =
+        val addedProvable:Provable =
           SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
             case BelleProvable(result, _) =>
               assert(result.isProved)
-              result
+              result.underlyingProvable
               /* Need to actually plug in the assumptions here. */
               /*??? */
           }
-        (hist, ctx.add(x,phi))
+        (hist, ctx.add(x,phi,addedProvable))
     }
   }
 
@@ -101,5 +105,14 @@ object Kaisar {
         var AD2 = eval(AD1._1, AD1._2, steps)
         (AD2._1, AD1._2.concat(AD2._2))
     }
+  }
+
+  def eval(pf:Proof):Provable = {
+    val (fml, steps) = pf
+    val (h,c) = eval(History.empty,Context.empty, steps)
+    val pr:Provable = c.findProvable(fml)
+    assert(pr.conclusion == Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml)))
+    assert(pr.isProved)
+    pr
   }
 }
