@@ -21,6 +21,8 @@ import spray.routing
 import spray.util.LoggingContext
 import spray.http.StatusCodes.{Unauthorized, Forbidden}
 
+import scala.language.postfixOps
+
 class RestApiActor extends Actor with RestApi {
   implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
     case e: Throwable => ctx =>
@@ -198,6 +200,27 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val modelplex = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment) { (modelId, monitorKind, conditionKind) => pathEnd {
+    get {
+      parameters('vars.as[String] ?) { vars => {
+        val theVars: List[String] = vars match {
+          case Some(v) => v.parseJson match {
+            case a: JsArray => a.elements.map({ case JsString(s) => s}).toList
+          }
+          case None => List.empty
+        }
+        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, conditionKind, theVars)
+        completeRequest(r, t)
+    }}}
+  }}}
+
+  val modelplexMandatoryVars = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "mandatoryVars") { modelId => pathEnd {
+    get {
+      val r = new ModelPlexMandatoryVarsRequest(database, userId, modelId)
+      completeRequest(r, t)
+    }
+  }}}
+
   //Because apparently FTP > modern web.
   val userModel2 = (t : SessionToken) => userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
   {pathEnd {
@@ -211,7 +234,12 @@ trait RestApi extends HttpService with SLF4JLogging {
     get {
       val request = new GetModelTacticRequest(database, userId, modelId)
       completeRequest(request, t)
-    }
+    } ~
+    post {
+      entity(as[String]) { contents => {
+        val request = new AddModelTacticRequest(database, userId, modelId, contents)
+        completeRequest(request, t)
+      }}}
   }}
 
   val extractTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (userId, proofId) => { pathEnd {
@@ -219,6 +247,15 @@ trait RestApi extends HttpService with SLF4JLogging {
       val request = new ExtractTacticRequest(database, proofId)
       completeRequest(request, t)
     }
+  }}}
+
+  val tacticDiff = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "tacticDiff") { (userId, proofId) => { pathEnd {
+    post {
+      entity(as[String]) { contents => {
+        val tactics = contents.parseJson.asJsObject
+        val request = new TacticDiffRequest(database, proofId, tactics.fields("old").asInstanceOf[JsString].value, tactics.fields("new").asInstanceOf[JsString].value)
+        completeRequest(request, t)
+      }}}
   }}}
 
   val extractLemma = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "lemma") { (userId, proofId) => { pathEnd {
@@ -787,6 +824,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskResult            ::
     stopTask              ::
     extractTactic         ::
+    tacticDiff            ::
     extractLemma          ::
     downloadProblemSolution ::
     counterExample        ::
@@ -794,6 +832,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     simulate              ::
     pruneBelow            ::
     dashInfo              ::
+    modelplex             ::
+    modelplexMandatoryVars::
     exportSequent         ::
     exportFormula         ::
     logoff                ::

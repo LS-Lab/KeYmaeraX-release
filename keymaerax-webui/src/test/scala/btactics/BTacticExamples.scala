@@ -9,9 +9,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import scala.collection.immutable._
 
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
  * Tactic Examples with different proof styles.
@@ -23,7 +24,7 @@ class BTacticExamples extends TacticTestBase  {
   "Explicit Proof Certificates" should "prove !!p() <-> p()" in {
     import edu.cmu.cs.ls.keymaerax.core._
     // explicit proof certificate construction of |- !!p() <-> p()
-    val proof = (Provable.startProof(
+    val proof = (ProvableSig.startProof(
       Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
       (EquivRight(SuccPos(0)), 0)
       // right branch

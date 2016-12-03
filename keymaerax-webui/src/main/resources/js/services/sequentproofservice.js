@@ -81,6 +81,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       lastExecutedTacticText: "",
       currentSuggestions: undefined,
       tacticDiff: "",
+      tacticDel: "",
 
       fetch: function(userId, proofId) {
         var theTactic = this;
@@ -88,6 +89,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theTactic.tacticText = response.data.tacticText;
           theTactic.lastExecutedTacticText = theTactic.tacticText;
           theTactic.tacticDiff = "";
+          theTactic.tacticDel = "";
         });
       },
 
@@ -95,6 +97,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         this.tacticText = "";
         this.lastExecutedTacticText = "";
         this.tacticDiff = "";
+        this.tacticDel = "";
         this.currentSuggestions = undefined;
       }
     },

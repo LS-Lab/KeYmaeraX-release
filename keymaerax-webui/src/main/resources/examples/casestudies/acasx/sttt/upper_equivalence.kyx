@@ -1,0 +1,75 @@
+Functions.
+  R abs(R).
+  R min(R, R).
+  R max(R, R).
+End.
+
+ProgramVariables.
+  /** Variables **/
+   /* horizontal */
+  R r.    /* relative distance in ft; xi - xo */
+          /* x = r */
+  R rv.   /* relative speed -(vi - vo) */
+   /* vertical */
+  R h.    /* relative altitude in ft */
+          /* if negative: the intruder is lower than the ownship */
+          /* h := hi - ho */
+          /* z = h */
+  R dhd.  /* vertical velocity of ownship */
+  R dhfM.  /* taMget maximum velocity */
+  R w.    /* velocity bound 1 = lower, -1 = upper */
+  R ao.   /* vertical acceleration of ownship */
+  /** Constants **/
+  R hp.   /* puck height */
+  R rp.   /* puck radius */
+  R aM.   /* maximum vertical acceleration. Typically g/3 or g/2 */
+
+  R t.
+  R ro.
+  R ho.
+End.
+
+Problem.
+(hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & (w=-1 | w=1) -> (
+(
+  ((w * (dhd + w * max(0, w * (dhfM - dhd))) >= 0) ->
+    ((-rp <= r & r <= rp) ->
+      (w * h > hp))
+    &
+    (rp < r & r <= rp + rv * max(0, w*(dhfM - dhd))/aM ->
+      (w * rv^2 * h > aM/2 * (r - rp)^2 + w * rv * dhd * (r - rp) + rv^2 * hp))
+    &
+    ((-rp <= r & r < -rp + rv * max(0, w*(dhfM - dhd))/aM) ->
+      (w * rv^2 * h > aM/2 * (r + rp)^2 + w * rv * dhd * (r + rp) + rv^2 * hp))
+    &
+    ((-rp + rv * max(0, w*(dhfM - dhd))/aM <= r) ->
+      ((rv = 0 & (abs(r)>rp | ((w*h > hp & ((w*(dhfM - dhd) <= 0 & w*dhd < 0) | (w*dhd <= 0 & w*dhfM <= 0)))))) |
+       (w * rv * h > w * (dhd + w * max(0, w * (dhfM - dhd))) * (r + rp)
+                     - rv * max(0, w*(dhfM - dhd))^2 / (2*aM) + rv*hp)))
+  )
+  &
+  ((w * (dhd + w * max(0, w * (dhfM - dhd))) < 0) ->
+    ((-rp <= r & r <= rp) ->
+      (w * h > hp))
+    &
+    (rp < r & r <= rp + rv * max(0, w*(dhfM - dhd))/aM ->
+      (w * rv^2 * h > aM/2 * (r - rp)^2 + w * rv * dhd * (r - rp) + rv^2 * hp))
+    &
+    ((rp + rv * max(0, w*(dhfM - dhd))/aM <= r) ->
+      ((rv = 0 & (abs(r)>rp | ((w*h > hp & ((w*(dhfM - dhd) <= 0 & w*dhd < 0) | (w*dhd <= 0 & w*dhfM <= 0)))))) |
+       (w * rv * h > w * (dhd + w * max(0, w * (dhfM - dhd))) * (r - rp)
+                     - rv * max(0, w*(dhfM - dhd))^2 / (2*aM) + rv*hp)))
+  )
+) <->
+(
+  \forall t \forall ro \forall ho
+  ((0 <= t & t < max(0, w * (dhfM - dhd)) / aM &
+    ro = rv * t & ho = (w * aM) / 2 * t^2 + dhd * t) |
+   (t >= max(0, w * (dhfM - dhd)) / aM &
+    ro = rv * t &
+    ho = (dhd + w * max(0, w * (dhfM-dhd))) * t
+          - w * max(0, w * (dhfM - dhd))^2 / (2*aM))
+   -> (abs(r - ro) > rp | w * h > w * ho + hp))
+)
+)
+End.

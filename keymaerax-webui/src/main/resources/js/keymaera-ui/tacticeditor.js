@@ -1,6 +1,6 @@
-angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'diff-match-patch'])
-  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData', '$window',
-      function($http, derivationInfos, Textcomplete, sequentProofData, $window) {
+angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
+  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData',
+      function($http, derivationInfos, Textcomplete, sequentProofData) {
     return {
         restrict: 'AE',
         scope: {
@@ -12,12 +12,15 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
         },
         link: function(scope, elem, attr) {
           scope.tactic = sequentProofData.tactic;
-
-          var DiffMatchPatch = $window.diff_match_patch;
+          scope.tacticError = {
+            error: "",
+            details: "",
+            isVisible: false
+          }
 
           var combinators = ['*', '|', '&', '<'];
-          var ta = elem.find('textarea');
-          var textcomplete = new Textcomplete(ta, [
+          var tacticContent = elem.find('#tacticcontent');
+          var textComplete = new Textcomplete(tacticContent, [
             // combinators
             {
               match: /\B:(\w*)$/,
@@ -72,73 +75,59 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
             }
           ]);
 
-          scope.computeTacticDiff = function() {
-            dmp = new DiffMatchPatch();
-            diffs = dmp.diff_main(scope.tactic.lastExecutedTacticText, scope.tactic.tacticText);
-            dmp.Diff_EditCost = scope.diffOptions.editCost;
-            dmp.diff_cleanupEfficiency(diffs);
-
-            var intros = $.grep(diffs, function(e, i) {
-              /* e is of the form Array[type,text], where type==0 means equal, type==1 means intro */
-              return e[0] == 1;
-            });
-
-            intros = $.map(intros, function(e, i) {
-              var trimmed = e[1].trim();
-              //@note charAt(0) without trailing nil, at end with trailing nil
-              return trimmed.charAt(0) == '&' ? trimmed.substring(1, trimmed.length) : trimmed;
-              //return trimmed.charAt(trimmed.length-1) == '&' ? trimmed.substring(0, trimmed.length-1) : trimmed;
-            })
-
-            //@todo what if more than 1 intro?
-            return intros[0];
-          }
-
           scope.executeTacticDiff = function() {
-            scope.onTacticScript({tacticText: scope.computeTacticDiff()});
-          };
-
-          scope.diffOptions = {
-            editCost: 4,
-            attrs: {
-              insert: {
-                'data-attr': 'insert',
-                'class': 'insertion'
-              },
-              delete: {
-                'data-attr': 'delete'
-              },
-              equal: {
-                'data-attr': 'equal'
-              }
+            if (scope.tactic.tacticDel === '' || scope.tactic.tacticDel === 'nil') {
+              scope.onTacticScript({tacticText: scope.tactic.tacticDiff});
+            } else {
+              //todo prune deleted stuff instead of rerun from root
+              var tactic = scope.tactic.tacticText;
+              sequentProofData.prune(scope.userId, scope.proofId, sequentProofData.proofTree.root, function() {
+                scope.onTacticScript({tacticText: tactic});
+              });
             }
           };
 
           scope.$watch('tactic.tacticText', function(newValue, oldValue) {
-            scope.tactic.tacticDiff = scope.computeTacticDiff();
+            var newText = jQuery('<p>'+newValue+'</p>').text(); // strip HTML tags
+            var oldText = jQuery('<p>'+oldValue+'</p>').text();
+            if (oldText !== newText && scope.tactic.lastExecutedTacticText !== undefined && scope.tactic.tacticText !== undefined) {
+              //@note compute diff
+              var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : newText };
+              $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
+                .then(function(response) {
+                  scope.tacticError.isVisible = false;
+
+                  //@todo multiple diffs
+                  scope.tactic.tacticDel = response.data.replOld.length > 0 ? response.data.replOld[0].repl : "";
+                  scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
+
+//                  var formattedTactic = response.data.context;
+//                  $.each(response.data.replNew, function(i, e) {
+//                    var old = $.grep(response.data.replOld, function(oe, i) { return oe.dot == e.dot; });
+//                    formattedTactic = old.length > 0 ?
+//                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-repl" title="Replaces ' + old[0].repl + '">' + e.repl + '</span>') :
+//                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-new">' + e.repl + '</span>');
+//                  });
+//                  scope.tactic.tacticText = formattedTactic;
+                })
+                .catch(function(response) {
+                  if (response.data !== undefined) {
+                    var errorText = response.data.textStatus;
+                    var location = response.data.location; // { column: Int, line: Int }
+                    scope.tacticError.text = location.line + ':' + location.column + " " + errorText;
+                    scope.tacticError.isVisible = true;
+
+//                    var unparsableStart = newText.split('\n', location.line-1).join('\n').length + location.column-1;
+                    //@todo location end
+//                    scope.tactic.tacticText = newText.substring(0, unparsableStart) +
+//                      '<span class="k4-tacticeditor-error" title="' + errorText + '">' +
+//                      newText.substring(unparsableStart, newText.length) + '</span>'
+                  }
+                });
+            }
           });
 
-//          rangy.init();
-//
-//          var savedSel = {};
-//          var listener = function listener() {
-//            console.log("Diff HTML changed")
-//            if (savedSel.element !== undefined && savedSel.range !== undefined) {
-//              rangy.getSelection().restoreCharacterRanges(savedSel.element, savedSel.range);
-//            }
-//          };
-//
-//          scope.$watch('tactic.diffHtml', listener);
-//
-//          scope.tacticChange = function(event) {
-//            //@todo does not work with deletions
-//            //@todo cursor flickering
-//            savedSel.element = event.target;
-//            savedSel.range = rangy.getSelection().saveCharacterRanges(event.target);
-//            sequentProofData.tactic.tacticText = event.target.innerText;
-//          }
-
-          $(textcomplete).on({
+          $(textComplete).on({
             'textComplete:select': function(e, value) {
               scope.$apply(function() {
                 sequentProofData.tactic.tacticText = value
@@ -153,7 +142,13 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete', 'di
           });
         },
         template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                    '<textarea class="k4-tacticeditor" ng-model="tactic.tacticText" rows="10" ng-shift-enter="executeTacticDiff()"></textarea>' +
+                    '<div contenteditable id="tacticcontent" class="k4-tacticeditor" ng-model="tactic.tacticText" ng-shift-enter="executeTacticDiff()"></div>' +
+                  '</div></div>' +
+                  '<div class=row><div class="col-md-12">' +
+                  '<k4-auto-hide-alert message="tacticError.text"' +
+                                      'details="tacticError.details"' +
+                                      'is-visible="tacticError.isVisible" timeout="-1">' +
+                  '</k4-auto-hide-alert>' +
                   '</div></div>'
     };
   }]);

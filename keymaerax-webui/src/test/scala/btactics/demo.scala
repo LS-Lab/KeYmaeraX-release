@@ -1,7 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Sequent}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.{Matchers, FlatSpec}
@@ -16,7 +17,7 @@ class demo extends FlatSpec with Matchers {
     override def begin(input: BelleValue, expr: BelleExpr) : Unit = {
       println(expr.getClass)
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleError]): Unit= {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit= {
     }
     override def kill():Unit = ()
 
@@ -28,7 +29,7 @@ class demo extends FlatSpec with Matchers {
 
   "usubst style dL tactic" should "work" in {
     val s = Sequent(IndexedSeq("[x:=1;]x>0".asFormula), IndexedSeq("[x:=1;]x>0".asFormula))
-    val output = interp(TactixLibrary.monb, BelleProvable(Provable.startProof(s)))
+    val output = interp(TactixLibrary.monb, BelleProvable(ProvableSig.startProof(s)))
     output match {
       case BelleProvable(p, _) => println(p.prettyString)
     }

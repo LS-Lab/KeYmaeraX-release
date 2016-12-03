@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 
@@ -32,7 +33,7 @@ object ArithmeticSimplification {
   /** Simplifies arithmetic by removing formulas that are **probably** irrelevant to the current sub-goal.
     * Does not necessarily retain validity??? */
   lazy val smartHide = new DependentTactic("smartHide") {
-    override def computeExpr(p: Provable) = {
+    override def computeExpr(p: ProvableSig) = {
       assert(p.subgoals.length == 1, s"${this.name} is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
       //Should already be sorted highest-to-lowest, but check just in case.
@@ -49,7 +50,7 @@ object ArithmeticSimplification {
   /** Simplifies arithmetic by removing formulas that are **probably** unprovable from the current facts.
     * Does not necessarily retain validity??? */
   lazy val smartSuccHide = new DependentTactic("smartSuccHide") {
-    override def computeExpr(p: Provable) = {
+    override def computeExpr(p: ProvableSig) = {
       assert(p.subgoals.length == 1, s"${this.name} is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
       //Should already be sorted highest-to-lowest, but check just in case.

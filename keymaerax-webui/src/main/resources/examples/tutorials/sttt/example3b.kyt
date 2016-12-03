@@ -1,1 +1,1 @@
-implyR('R) & (andL('L)*) & chase('R) & normalize & doall(ODE('R))
+implyR('R) & (andL('L)*) & chase('R) & normalize & doall(diffSolve('R))

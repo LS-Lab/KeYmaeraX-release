@@ -4,7 +4,7 @@ import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -86,7 +86,7 @@ object DatabasePopulator {
     }
     val interpreter = SpoonFeedingInterpreter(listener, SequentialInterpreter)
     val parsedTactic = BelleParser(tactic)
-    interpreter(parsedTactic, BelleProvable(Provable.startProof(KeYmaeraXProblemParser(model))))
+    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(model))))
   }
 
 }

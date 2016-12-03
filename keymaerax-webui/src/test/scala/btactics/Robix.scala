@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
@@ -12,9 +14,13 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 
 import scala.language.postfixOps
+import scala.reflect.runtime._
+import scala.tools.reflect.ToolBox
 
 /**
  * Robix test cases.
@@ -41,8 +47,7 @@ class Robix extends TacticTestBase {
       s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & (andL('_)*) &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       replaceTransform("ep".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
@@ -69,8 +74,8 @@ class Robix extends TacticTestBase {
     val invariant = """v >= 0
                       | & dx^2+dy^2 = 1
                       | & r != 0
-                      | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V()*(v/B)
-                      |          | abs(y-yo) > v^2 / (2*B) + V()*(v/B))""".stripMargin.asFormula
+                      | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V*(v/B)
+                      |          | abs(y-yo) > v^2 / (2*B) + V*(v/B))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
       "t>=0".asFormula,
@@ -78,11 +83,10 @@ class Robix extends TacticTestBase {
       s"v = old(v) + $a*t".asFormula,
       s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
+      "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       //@todo auto-transform
@@ -94,7 +98,7 @@ class Robix extends TacticTestBase {
       /* induction step */ print("Induction step") & chase(1) & normalize(andR('R), skip, skip) & printIndexed("After normalize") <(
         print("Braking branch") & di("-B")(1) & dw & prop & OnAll(speculativeQE) & print("Braking branch done"),
         print("Stopped branch") & di("0")(1) & dw & prop & OnAll(speculativeQE) & print("Stopped branch done"),
-        print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V()*(v/B)|abs(y-yo_0)>v^2/(2*B)+V()*(v/B)".asFormula))) &
+        print("Acceleration branch") & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) &
           di("a")(1) & dw & prop & OnAll(hideFactsAbout("dxo", "dyo") partial) <(
             hideFactsAbout("y", "yo") & accArithTactic,
             hideFactsAbout("x", "xo") & accArithTactic
@@ -158,8 +162,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
-      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
 
     val hideIrrelevantAssumptions: BelleExpr =
       OnAll(
@@ -286,8 +289,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
     
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
-      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) &
       //@todo auto-transform
@@ -327,8 +329,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
-      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) &
       //@todo auto-transform
@@ -376,8 +377,7 @@ class Robix extends TacticTestBase {
       "w*r = v".asFormula,
       s"beta = old(beta) + t/r*(v - $a/2*t)".asFormula)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*6 /* 6 old(...) in DI */ & (andL('L)*) &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     val allImplyTactic = ((allR('R)*) & implyR('R))*
 
@@ -538,8 +538,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
-      debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       //@todo auto-transform
@@ -572,7 +571,7 @@ class Robix extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*) & loop(invariant)(1) & Idioms.<(
       print("Base case") & QE & done,
       print("Use case") & QE & done,
-      print("Induction step") & chase('R) & normalize(andR('R), skip, skip) & OnAll(ODE('R) & QE & done)
+      print("Induction step") & chase('R) & normalize(andR('R), skip, skip) & OnAll(ODE('R) & allR('R) & implyR('R)*2 & allL("t_".asVariable)('Llast) & QE & done)
     )
 
     proveBy(s, tactic) shouldBe 'proved

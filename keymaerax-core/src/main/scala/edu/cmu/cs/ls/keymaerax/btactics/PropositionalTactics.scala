@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 import scala.language.postfixOps
@@ -69,7 +70,7 @@ private object PropositionalTactics {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
    */
-  lazy val andLi: DependentTactic = implyRi()
+  lazy val andLi: DependentTactic = andLi()
   def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = new SingleGoalDependentTactic("inverse and left") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(pos1 != pos2, "Two distinct positions required")
@@ -192,7 +193,7 @@ private object PropositionalTactics {
     *   \forall x. p(x) <-> q(z), p(x) |-
     * }}}
     */
-    val equivRewriting = "equivRewriting" byTactic ((p: Provable, equivPos: Position, targetPos: Position) => {
+    val equivRewriting = "equivRewriting" byTactic ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
       assert(p.subgoals.length == 1, "Assuming one subgoal.")
       val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
       p.subgoals(0)(equivPos) match {
@@ -299,7 +300,7 @@ private object PropositionalTactics {
     *   P<->Q, Q |-
     * }}}
     */
-  private def instantiatedEquivRewritingImpl(p: Provable, equivPos: Position, targetPos: Position) = {
+  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position) = {
     import Augmentors._
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
 
@@ -373,10 +374,10 @@ private object PropositionalTactics {
         .apply(HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
     }
   }
-  val instantiatedEquivRewriting = "instantiatedEquivRewriting" by ((p: Provable, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
+  val instantiatedEquivRewriting = "instantiatedEquivRewriting" by ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
   /** @todo explain why this exists and maybe find a better name. */
   private def builtInEquivRewriting(equivPos: Position, targetPos: Position) = new BuiltInTactic("") {
-    override def result(p:Provable) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)
+    override def result(p:ProvableSig) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)
   }
 
   //endregion

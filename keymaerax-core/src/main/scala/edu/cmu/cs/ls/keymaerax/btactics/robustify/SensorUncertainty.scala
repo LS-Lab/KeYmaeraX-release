@@ -5,10 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.robustify
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleExpr, BelleValue, DependentTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleExpr, BelleValue, DependentTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.{DifferentialHelper, ProgramHelpers}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * Adds sensor noise to a provably correct model without any sensor noise. The Provable's conclusion must have the form:
@@ -29,7 +30,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 object SensorUncertainty {
   //@todo incorrect setup -- should be an applied DependentInputTactic.
   def apply(sensor: Variable) : DependentTactic = new DependentTactic("robustify.SensorUncertainty") {
-    override def computeExpr(p: Provable): BelleExpr = {
+    override def computeExpr(p: ProvableSig): BelleExpr = {
       assert(p.isProved, "Cannot robustify an unproven model.")
       assert(shapeAnalysis(p, sensor), "The Provable's conclusion does not have the correct shape to robustify against sensor uncertainty.")
       ???
@@ -37,7 +38,7 @@ object SensorUncertainty {
   }
 
   /** Returns true if the Provable's conclusion has the correct shape. */
-  private def shapeAnalysis(p: Provable, sensor: Variable): Boolean =
+  private def shapeAnalysis(p: ProvableSig, sensor: Variable): Boolean =
     p.conclusion.succ.length == 1 &&
     p.conclusion.ante.length == 0 &&
     (p.conclusion.succ.head match {

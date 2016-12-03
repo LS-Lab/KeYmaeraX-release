@@ -5,7 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Locate Positions
@@ -17,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable}
 sealed trait PositionLocator {
   def prettyString: String
 
-  def toPosition(p: Provable): Position = ??? //@todo Surely this already exists?!
+  def toPosition(p: ProvableSig): Position = ??? //@todo Surely this already exists?!
 }
 
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
@@ -32,7 +33,7 @@ object Fixed {
 }
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
-case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boolean = true) extends PositionLocator {
+case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = start match {
     case _: AntePosition => "'L"
     case _: SuccPosition => "'R"
@@ -42,9 +43,9 @@ case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boole
 
 object Find {
   /** 'L Find somewhere on the left meaning in the antecedent */
-  def FindL(goal: Int, shape: Option[Formula], exact: Boolean = true): Find = new Find(goal, shape, AntePosition(1), exact)
+  def FindL(goal: Int, shape: Option[Expression], exact: Boolean = true): Find = new Find(goal, shape, AntePosition(1), exact)
   /** 'R Find somewhere on the right meaning in the succedent */
-  def FindR(goal: Int, shape: Option[Formula], exact: Boolean = true): Find = new Find(goal, shape, SuccPosition(1), exact)
+  def FindR(goal: Int, shape: Option[Expression], exact: Boolean = true): Find = new Find(goal, shape, SuccPosition(1), exact)
 }
 
 /** 'Llast Locates the last position in the antecedent. */

@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.language.postfixOps
@@ -34,7 +35,7 @@ private object ToolTactics {
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(qeTool: QETool) = {
+  def partialQE(qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("pQE",
       toSingleFormula & rcf(qeTool)
@@ -42,19 +43,19 @@ private object ToolTactics {
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: QETool) = TacticFactory.anon ((sequent: Sequent) => {
+  def rcf(qeTool: QETool): BelleExpr = TacticFactory.anon ((sequent: Sequent) => {
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
     //Run QE and extract the resulting provable and equivalence
     //@todo how about storing the lemma, but also need a way of finding it again
     //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
-    val qeFact = core.Provable.proveArithmetic(qeTool, sequent.succ.head).fact
+    val qeFact = ProvableSig.proveArithmetic(qeTool, sequent.succ.head).fact
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
-    ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
-      (close | skip) partial,
-      equivifyR(1) & commuteEquivR(1) & by(qeFact)
+    cutLR(result)(1) & Idioms.<(
+      /*use*/ close | skip,
+      /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
       )
   })
 
@@ -75,23 +76,25 @@ private object ToolTactics {
       else tool.findCounterExample(Imply(orig, to))
     }
 
+    val keepPos = if (pos.isSucc) pos.topLevel else SuccPosition.base0(sequent.succ.size)
+
     //@note assumes that modalHide is called first
-    val smartHide = "smartHide" by ((shsequent: Sequent) => {
+    val smartAnteHide = "smartAnteHide" by ((shsequent: Sequent) => {
       val theCex = cex
       val theCexVars = theCex.get.keySet.filter(x => x.isInstanceOf[Variable]).map(x => x.asInstanceOf[Variable])
       shsequent.ante.indices.reverse.map(i =>
         if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCexVars).isEmpty) hide(AntePos(i))
-        else skip).reduceLeftOption(_&_).getOrElse(skip) &
-      shsequent.succ.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(SuccPos(i))).fv.intersect(theCexVars).isEmpty) hide(SuccPos(i))
         else skip).reduceLeftOption(_&_).getOrElse(skip)
     })
 
+    val succCohide = "succCohide" by ((pp: Position, ss: Sequent) => {
+      ss.succ.indices.filter(i => i != pp.index0).reverse.map(i => hide(SuccPos(i))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
+    })
 
     cutLR(to)(pos) <(
       /* c */ skip,
       //@note first try to prove only the transformation, then with smart hiding, if all that fails, full QE on all FOL formulas
-      /* c->d */ (cohide(pos) & QE) | (modalHide & ((smartHide & QE) | QE))
+      /* c->d */ (cohide(keepPos) & QE & done) | (succCohide(keepPos) & modalHide & ((smartAnteHide & QE & done) | (QE & done)))
       )
   })
 

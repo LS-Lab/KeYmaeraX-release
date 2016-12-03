@@ -234,6 +234,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   private def usubst(program: Program): Program = {
     program match {
       case a: ProgramConst   => subs.getOrElse(a, a).asInstanceOf[Program]
+      case a: SystemConst    => subs.getOrElse(a, a).asInstanceOf[Program]
       case Assign(x, e)      => Assign(renameVar(x, program), usubst(e))
       case AssignAny(x)      => AssignAny(renameVar(x, program))
       case Test(f)           => Test(usubst(f))

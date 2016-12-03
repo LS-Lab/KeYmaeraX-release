@@ -3,7 +3,7 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -93,7 +93,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   "Propositional Examples" should "close p() -> p()" in {
     val tactic = parser("implyR(1) & TrivialCloser")
 //    val tactic = ExposedTacticsLibrary.tactics("implyR") & ExposedTacticsLibrary.tactics("TrivialCloser")
-    val value = BelleProvable(Provable.startProof("p() -> p()".asFormula))
+    val value = BelleProvable(ProvableSig.startProof("p() -> p()".asFormula))
     val result = SequentialInterpreter()(tactic, value)
     result match {
       case BelleProvable(resultingProvable, _) => resultingProvable.isProved shouldBe true

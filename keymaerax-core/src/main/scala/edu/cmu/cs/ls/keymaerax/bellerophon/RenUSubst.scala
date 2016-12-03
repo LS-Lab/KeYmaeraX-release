@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.Predef.Pair
 import scala.collection.immutable
@@ -148,7 +149,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   def toTactic(form: Sequent): SeqTactic
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
-  def toForward: Provable => Provable
+  def toForward: ProvableSig => ProvableSig
 
   /** This RenUSubst implemented strictly from the core. */
   val toCore: Expression => Expression
@@ -213,7 +214,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
   // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   def toTactic(form: Sequent): SeqTactic = throw new UnsupportedOperationException("not implemented") //@todo getRenamingTactic & ProofRuleTactics.US(usubst, form)
 
-  def toForward: Provable => Provable = fact => {
+  def toForward: ProvableSig => ProvableSig = fact => {
     val replaced = fact(usubst)  //UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
@@ -288,7 +289,7 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
   // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   def toTactic(form: Sequent): SeqTactic = throw new UnsupportedOperationException("not implemented") //@todo getRenamingTactic & ProofRuleTactics.US(usubst, form)
 
-  val toForward: Provable => Provable = fact => {
+  val toForward: ProvableSig => ProvableSig = fact => {
     val replaced = fact(usubst)
     Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
@@ -367,7 +368,7 @@ private final class URenAboveUSubst(private[bellerophon] override val subsDefsIn
   def toTactic(form: Sequent): SeqTactic = throw new UnsupportedOperationException("not implemented") //@todo ProofRuleTactics.US(usubst, RenUSubst(rens)(form)) & getRenamingTactic
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
-  def toForward: Provable => Provable = fact => {
+  def toForward: ProvableSig => ProvableSig = fact => {
     /*UniformSubstitutionRule.UniformSubstitutionRuleForward*/
       (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }

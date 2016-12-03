@@ -18,8 +18,8 @@ import scala.io.Source
   *     - [[edu.cmu.cs.ls.keymaerax.core.Expression Syntax of dL Expressions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics Static Semantics]]
   *
-  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]] from
-  *     - [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]]
+  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.ProvableSig proof certificates]] from
+  *     - [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms axioms]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.Rule Proof rules]]
@@ -37,12 +37,12 @@ import scala.io.Source
   * constructing and searching for proofs, but they internally reduce to what is shown here.
   *
   * ===Constructing Proofs===
-  * The proof certificates of KeYmaera X are of type [[edu.cmu.cs.ls.keymaerax.core.Provable]].
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]] begins a new proof of a
+  * The proof certificates of KeYmaera X are of type [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]].
+  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.startProof]] begins a new proof of a
   * [[edu.cmu.cs.ls.keymaerax.core.Sequent]] containing the conjectured differential dynamic logic formula.
   * A proof rule of type [[edu.cmu.cs.ls.keymaerax.core.Rule]] can be applied to any subgoal of a
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable]] by [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]] to advance the proof
-  * until that Provable has been proved since [[edu.cmu.cs.ls.keymaerax.core.Provable.isProved]] is true.
+  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]] by [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply]] to advance the proof
+  * until that Provable has been proved since [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.isProved]] is true.
   * Subgoals are identified by integers.
   * {{{
   *   import scala.collection.immutable._
@@ -61,7 +61,7 @@ import scala.io.Source
   *
   * ===Combining Proofs===
   * Multiple Provable objects for subderivations obtained from different sources can also be merged
-  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply()]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
+  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply()]]([[edu.cmu.cs.ls.keymaerax.core.ProvableSig]],Int).
   * The above example can be continued to merge proofs as follows:
   * {{{
   *   // ... continued from above
@@ -76,7 +76,7 @@ import scala.io.Source
   *   // check if proof successful, i.e. no remaining subgoals
   *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
   * }}}
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable More styles for proof construction are shown in Provable's]].
+  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig More styles for proof construction are shown in Provable's]].
   *
   *
   * ==Differential Dynamic Logic==
@@ -111,15 +111,15 @@ import scala.io.Source
   * ==Theorem Prover==
   * The KeYmaera X Prover Kernel provides [[edu.cmu.cs.ls.keymaerax.core.USubst uniform substitutions]],
   * [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming uniform]] and [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming bound variable renaming]], and
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]] of differential dynamic logic.
+  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms axioms]] of differential dynamic logic.
   * For efficiency, it also directly provides propositional sequent proof rules and
   * [[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemization]].
   *
   * ===Axioms===
   * The axioms and axiomatic rules of differential dynamic logic can be looked up with
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]] and [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]] respectively.
-  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]],
-  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]]
+  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms]] and [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.rules]] respectively.
+  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms]],
+  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.rules]]
   * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
   * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Sections 4 and 5.0]]
   * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]].
@@ -132,7 +132,7 @@ import scala.io.Source
   * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
   * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubst)]],
+  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply(edu.cmu.cs.ls.keymaerax.core.USubst)]],
   * including uniform substitution instances of axioms or axiomatic rules.
   * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
@@ -166,7 +166,7 @@ import scala.io.Source
   * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
   * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Expression]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]

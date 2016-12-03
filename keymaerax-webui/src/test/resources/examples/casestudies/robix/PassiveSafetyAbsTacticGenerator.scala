@@ -7,7 +7,6 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, QETool}
 
 import scala.language.postfixOps
 
-
 class PassiveSafetyAbsTacticGenerator extends (() => BelleExpr) {
 
   def apply(): BelleExpr = {

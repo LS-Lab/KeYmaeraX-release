@@ -1,0 +1,47 @@
+Functions.
+  R brake.
+  R drive.
+  R b.
+  R ep.
+End.
+
+ProgramVariables.
+  R state.
+  R d.
+  R d0.
+  R m.
+  R m0.
+  R vdes.
+  R t.
+End.
+
+Problem.
+    b>0
+  & drive=0
+  & brake=1
+  & state=drive
+  & vdes=0
+  & d0=d
+  & m0=m
+  & ep>0
+  & d>=0
+  ->
+  [
+    {
+      m0:=m;
+      d0:=d;
+
+      /* rbc ctrl */
+      {
+         state := drive; m :=*; d :=*; vdes :=*; ?d >= 0 & d0^2 - d^2 <= 2*b*(m-m0) & vdes >= 0;
+      ++ state := brake;
+      }
+
+      t := 0;
+
+      /* rbc plant is empty, only time here */
+      { t'=1 & t<=ep }
+
+    }* @invariant((state=brake & m0=m & d0=d) | (state=drive & d >= 0 & d0^2 - d^2 <= 2*b*(m-m0) & vdes >= 0))
+  ] ((state=brake & m0=m & d0=d) | (state=drive & d >= 0 & d0^2 - d^2 <= 2*b*(m-m0) & vdes >= 0))
+End.

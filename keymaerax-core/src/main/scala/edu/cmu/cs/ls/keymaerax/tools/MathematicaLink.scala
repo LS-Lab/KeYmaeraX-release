@@ -104,7 +104,6 @@ class JLinkMathematicaLink extends MathematicaLink {
       ml = MathLinkFactory.createKernelLink(Array[String](
         "-linkmode", "launch",
         "-linkname", linkName + " -mathlink"))
-      try {
         ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
         //@note print warnings for license issues instead of shutting down immediately
@@ -119,17 +118,21 @@ class JLinkMathematicaLink extends MathematicaLink {
             //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
           case None => println("WARNING: Mathematica may not be activated or Mathematica license might be expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please check your Mathematica license manually."); true
         }
-      } catch {
-        case e: UnsatisfiedLinkError =>
-          val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
-            "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
-            diagnostic
-          println(message)
-          throw e.initCause(new Error(message))
-        case e: MathLinkException => println("Mathematica J/Link errored " + e); throw e
-      }
     } catch {
-      case ex: Throwable => shutdown(); throw ex
+      case e: UnsatisfiedLinkError =>
+        println("Shutting down since Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
+          "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
+          diagnostic +
+          "\nPlease provide paths to the J/Link native library and restart KeYmaera X.")
+        shutdown()
+        false
+      case e: MathLinkException =>
+        println("Shutting down since Mathematica J/Link errored " + e + "\nPlease double check configuration and Mathematica license." + diagnostic)
+        shutdown()
+        false
+      case ex: Throwable =>
+        println("Unknown error " + ex + "\nMathematica may or may not be working. If you experience problems, please double check configuration paths and Mathematica license." + diagnostic)
+        true
     }
   }
 
@@ -296,7 +299,12 @@ class JLinkMathematicaLink extends MathematicaLink {
     ml.waitForAnswer()
     val (major, minor) = importResult(
       ml.getExpr,
-      version => { val versionParts = version.toString.split("\\."); (versionParts(0), versionParts(1)) })
+      version => {
+        println("Running Mathematica version " + version.toString)
+        val versionParts = version.toString.split("\\.")
+        if (versionParts.length >= 2) (versionParts(0), versionParts(1))
+        else ("Unknown", "Unknown")
+      })
     ml.evaluate("$ReleaseNumber")
     ml.waitForAnswer()
     val release = importResult(ml.getExpr, _.toString)
@@ -310,29 +318,32 @@ class JLinkMathematicaLink extends MathematicaLink {
     try {
       val version = getVersion
 
-      def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[Boolean] = {
-        val date: Array[MExpr] = version match {
-          case ("9", _, _) => licenseExpirationDate.args
-          case ("10", _, _) => licenseExpirationDate.args.head.args
-          case ("11", _, _) => licenseExpirationDate.args.head.args
-          case (major, minor, _) => println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
+      def checkExpired(date: Array[MExpr]): Option[Boolean] = {
+        println("Mathematica license expires: " + date.mkString)
+        if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+          //@note month in calendar is 0-based, in Mathematica it's 1-based
+          val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
+          val today = new Date()
+          Some(expiration.getTime.after(today))
+        } else if (date.length >= 1 && date(0).equals(infinity)) {
+          Some(true)
+        } else {
+          None
         }
-        if (date == null) None
-        else try {
-          if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
-            //@note month in calendar is 0-based, in Mathematica it's 1-based
-            val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
-            val today = new Date()
-            Some(expiration.getTime.after(today))
-          } else if (date.length >= 1 && date(0).equals(infinity)) {
-            Some(true)
-          } else {
+      }
+
+      def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[Boolean] = try {
+        version match {
+          case ("9", _, _) => checkExpired(licenseExpirationDate.args)
+          case ("10", _, _) => checkExpired(licenseExpirationDate.args.head.args)
+          case ("11", _, _) => checkExpired(licenseExpirationDate.args.head.args)
+          case (major, minor, _) =>
+            if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x, 10.x, and 11.x supported. Mathematica requests may fail if license is expired.")
             None
-          }
-        } catch {
-          case e: ExprFormatException => println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
         }
         //@note date disposed as part of licenseExpirationDate
+      } catch {
+        case e: ExprFormatException => println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
       }
 
       ml.evaluate("$LicenseExpirationDate")

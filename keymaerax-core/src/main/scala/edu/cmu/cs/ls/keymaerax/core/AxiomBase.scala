@@ -52,6 +52,7 @@ private[core] object AxiomBase {
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
+    val sys = SystemConst("a_")
 
     Map(
       /**
@@ -105,24 +106,7 @@ private[core] object AxiomBase {
         */
       ("ind induction",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
-          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
-      /* UNSOUND FOR HYBRID GAMES */
-      /**
-        * Rule "Goedel".
-        * Premise p(||)
-        * Conclusion [a;]p(||)
-        * End.
-        * {{{
-        *       p(||)
-        *   ----------- G
-        *    [a;]p(||)
-        * }}}
-        * @NOTE Unsound for hybrid games
-        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
-        */
-      ("Goedel",
-        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
-          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Box(a, pany)))))
+          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany)))))
     )
   }
 
@@ -156,6 +140,7 @@ private[core] object AxiomBase {
     val gany = UnitFunctional("g", AnyArg, Real)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
+    val sys = SystemConst("a")
     val ode = DifferentialProgramConst("c", AnyArg)
 
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
@@ -172,9 +157,9 @@ private[core] object AxiomBase {
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
     //@note only sound for hybrid systems not for hybrid games
-    assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qany)), Imply(Box(a, pany), Box(a, qany))), "K modal modus ponens")
+    assert(axs("K modal modus ponens") == Imply(Box(sys, Imply(pany,qany)), Imply(Box(sys, pany), Box(sys, qany))), "K modal modus ponens")
     //@note could also have accepted axiom I for hybrid systems but not for hybrid games
-    assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
+    assert(axs("VK vacuous") == Imply(Box(a, True), Imply(p0, Box(a, p0))), "VK vacuous")
 
     /**
       * DIFFERENTIAL EQUATION AXIOMS
@@ -332,6 +317,9 @@ End.
 Axiom "DG differential ghost constant".
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
 End.
+Axiom "DG differential ghost constant all".
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
+End.
 
 Axiom "DG inverse differential ghost".
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
@@ -444,29 +432,27 @@ Axiom "exists' derive exists".
   /* sic! yet <- */
 End.
 
-/** EXCLUSIVELY FOR HYBRID PROGRAMS. UNSOUND FOR HYBRID GAMES. */
+/** HYBRID PROGRAMS NOT HYBRID GAMES. */
 
-/* @NOTE requires removing axioms unsound for hybrid games */
-/*Axiom "<d> dual".
-  <{a;}^d>p(||) <-> !<a;>!p(||)
+Axiom "<d> dual".
   <{a;}^@>p(||) <-> !<a;>!p(||)
-End.*/
-
-/* @NOTE Unsound for hybrid games */
-Axiom "V vacuous".
-  p() -> [a;]p()
-  /* @TODO (p() -> [a;]p()) <- [a;]true sound for hybrid games */
 End.
 
-/* @NOTE Unsound for hybrid games */
+Axiom "VK vacuous".
+  (p() -> [a;]p()) <- [a;]true
+End.
+
+Axiom "[]T system".
+  [a{|^@|};]true
+End.
+
 Axiom "K modal modus ponens".
-  [a;](p(||)->q(||)) -> ([a;]p(||) -> [a;]q(||))
+  [a{|^@|};](p(||)->q(||)) -> ([a{|^@|};]p(||) -> [a{|^@|};]q(||))
 End.
 
-/* @NOTE Unsound for hybrid games, use ind induction rule instead */
 Axiom "I induction".
   /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(||) -> [a;] p(||))) -> (p(||) -> [{a;}*]p(||)) THEORY */
-  (p(||) & [{a;}*](p(||) -> [a;] p(||))) -> [{a;}*]p(||)
+  (p(||) & [{a{|^@|};}*](p(||) -> [a{|^@|};] p(||))) -> [{a{|^@|};}*]p(||)
 End.
 
 /**
@@ -475,6 +461,10 @@ End.
 
 Axiom "all dual".
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
+End.
+
+Axiom "all dual y".
+  (!\exists y_ !p(||)) <-> \forall y_ p(||)
 End.
 
 Axiom "all dual time".

@@ -166,6 +166,18 @@ object FormulaTools {
     pos
   }
 
+  /** Collects the subpositions of formula that satisfy condition cond. Ordered: reverse depth (deepest first). */
+  def posOf(formula: Formula, cond: Expression=>Boolean): List[PosInExpr] = {
+    var positions: List[PosInExpr] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+        if (cond(e)) { positions = p :: positions; Left(None) } else Left(None)
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+        if (cond(t)) { positions = p :: positions; Left(None) } else Left(None)
+    }, formula)
+    positions
+  }
+
   /** Read off the set of all possible singularities coming from divisors or negative powers.
     * @example {{{
     *           singularities("x>5/b+2".asFormula)==Set(b)
@@ -226,4 +238,19 @@ object FormulaTools {
     case f:DifferentialProduct => singularities(f.left) ++ singularities(f.right)
     case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
   }
+
+  /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
+  def dualFree(program: Program): Boolean = program match {
+    case a: ProgramConst => false
+    case a: SystemConst  => true
+    case Assign(x, e)    => true
+    case AssignAny(x)    => true
+    case Test(f)         => true /* even if f contains duals, since they're different nested games) */
+    case ODESystem(a, h) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
+    case Choice(a, b)    => dualFree(a) && dualFree(b)
+    case Compose(a, b)   => dualFree(a) && dualFree(b)
+    case Loop(a)         => dualFree(a)
+    case Dual(a)         => false
+  }
+
 }

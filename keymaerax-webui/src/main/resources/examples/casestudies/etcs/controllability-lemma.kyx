@@ -1,0 +1,19 @@
+/**
+ * Braking mode of European Train Control System (ETCS)
+ * @provable
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ */
+Functions.
+  R b.
+  R m.
+  R d.
+End.
+
+ProgramVariables.
+	R v.
+	R z.
+End.
+
+Problem.
+  d >= 0 & b > 0 & z <= m & v >= 0 -> ( [{z'=v, v' = -b & v >= 0}](z >= m -> v <= d) <-> (v^2-d^2<=2*b*(m-z)) )
+End.

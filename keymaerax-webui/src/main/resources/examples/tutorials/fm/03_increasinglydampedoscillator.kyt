@@ -1,0 +1,4 @@
+implyR(1) & diffInvariant({`d>=0`}, 1) & diffInd(1) & <(
+  QE,
+  Dassignb(1.1.1) & Dassignb(1.1) & Dassignb(1) & QE
+  )

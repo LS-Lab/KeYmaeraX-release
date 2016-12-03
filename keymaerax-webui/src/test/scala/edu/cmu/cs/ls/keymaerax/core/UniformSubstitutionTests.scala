@@ -3,17 +3,15 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest}
+import edu.cmu.cs.ls.keymaerax.tags.{USubstTest, UsualTest}
 import testHelper.CustomAssertions.withSafeClue
-import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
-import scala.collection.immutable.{List, Set, Seq}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, PrivateMethodTester}
 
+import scala.collection.immutable.{List, Seq, Set}
 import scala.util.Random
-
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -1257,12 +1255,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
   
   // uniform substitution of rules
+  //@todo solve initialization order issue here
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
     val conc = Sequent(IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
       SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=0".asFormula) ::
-      SubstitutionPair(ProgramConst("a_"), "x:=x-1;".asProgram) :: Nil)
-    val pr = Provable.rules("Goedel")(s)
+      SubstitutionPair(SystemConst("a_"), "x:=x-1;".asProgram) :: Nil)
+    val pr = DerivedRuleInfo("Goedel").provable(s)
     pr.conclusion shouldBe conc
     pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }

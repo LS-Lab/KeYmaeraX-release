@@ -1,0 +1,53 @@
+Functions.
+  R ep.   /* time limit for control decisions */
+  R A.
+  R B.
+End.
+
+ProgramVariables.
+  R xl.
+  R vl.
+  R xf.
+  R vf.
+  R af.
+  R t.    /* time */
+  R xl0.
+  R vl0.
+End.
+
+Problem.
+    ep > 0
+  & A >= 0
+  & B > 0
+  & t = 0
+  & vf >= 0
+  & xf < xl & xf + vf^2/(2*B) < xl + vl^2/(2*B)
+  & xl = xl0
+  & vl = vl0
+  & 0 <= vl
+  ->
+  [
+    {
+      /* control leader */
+      {
+         af := -B;
+      ++ ?vf=0; af:=0;
+      ++ ?xf + vf^2/(2*B) + (A/B+1)*(A/2*ep^2 + ep*vf) < xl + vl^2/(2*B); af :=*; ?-B <= af & af <= A;
+      }
+
+      xl0 := xl;
+      vl0 := vl;
+
+    	t := 0;
+
+      /* dynamics */
+      { xf' = vf,
+        vf' = af,
+        t' = 1 & vf >= 0 & t <= ep
+      }
+
+      xl :=*; vl :=*; ?0 <= vl & -B*t <= vl-vl0 & vl-vl0 <= A*t & xl-xl0 >= (vl+vl0)/2*t;
+    }* @invariant(0<= vf & xf < xl & xf+vf^2/(2*B) < xl + vl^2/(2*B) & 0 <= t & t <= ep &
+                  0 <= vl & -B*t <= vl-vl0 & vl-vl0 <= A*t & xl-xl0 >= (vl+vl0)/2*t)
+  ] (xf < xl)
+End.

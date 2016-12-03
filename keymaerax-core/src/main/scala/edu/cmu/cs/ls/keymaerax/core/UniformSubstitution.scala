@@ -16,9 +16,9 @@ package edu.cmu.cs.ls.keymaerax.core
 // require favoring immutable Seqs for soundness
 
 import scala.collection.immutable
-
 import SetLattice.bottom
 import SetLattice.allVars
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 
 /**
@@ -27,7 +27,7 @@ import SetLattice.allVars
   * @param what the expression to be replaced. `what` can have one of the following forms:
   *          - [[PredOf]](p:[[Function]], [[DotTerm]]/[[Nothing]])
   *          - [[FuncOf]](f:[[Function]], [[DotTerm]]/[[Nothing]])
-  *          - [[ProgramConst]] or [[DifferentialProgramConst]]
+  *          - [[ProgramConst]] or [[DifferentialProgramConst]] or [[SystemConst]]
   *          - [[UnitPredicational]]
   *          - [[UnitFunctional]]
   *          - [[PredicationalOf]](p:[[Function]], [[DotFormula]])
@@ -61,10 +61,25 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
           case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
       }
     }
+    case _: SystemConst => dualFree(repl.asInstanceOf[Program])
     // only space-dependents have space-compatibility requirements
     case _ => true
-  }, "Space-compatible substitution expected: " + this
-  )
+  }, "Space-compatible substitution expected: " + this)
+
+  /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
+  private def dualFree(program: Program): Boolean = program match {
+    case a: ProgramConst => false
+    case a: SystemConst  => true
+    case Assign(x, e)    => true
+    case AssignAny(x)    => true
+    case Test(f)         => true /* even if f contains duals, since they're different nested games) */
+    case ODESystem(a, h) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
+    case Choice(a, b)    => dualFree(a) && dualFree(b)
+    case Compose(a, b)   => dualFree(a) && dualFree(b)
+    case Loop(a)         => dualFree(a)
+    case Dual(a)         => false
+  }
+
 
   /**
     * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
@@ -82,7 +97,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       // program constants are always admissible, since their meaning doesn't depend on state
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-           ProgramConst(_) | DifferentialProgramConst(_, _) => bottom
+           ProgramConst(_) | SystemConst(_) | DifferentialProgramConst(_, _) => bottom
     }
     case _ => StaticSemantics.freeVars(repl)
   }
@@ -110,6 +125,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case p: UnitPredicational        => p
     case f: UnitFunctional           => f
     case a: ProgramConst             => a
+    case a: SystemConst              => a
     case a: DifferentialProgramConst => a
     case PredOf(p: Function, DotTerm(_) | Nothing) if !p.interpreted => p
     case FuncOf(f: Function, DotTerm(_) | Nothing) if !f.interpreted => f
@@ -150,6 +166,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   * and all occurrences of program constant b by a hybrid program.
   *
   * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
+ *
   * @note Implements the "global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
   * Main ingredient of prover core.
   * @note soundness-critical
@@ -158,7 +175,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.UniformSubstitution)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply(edu.cmu.cs.ls.keymaerax.core.UniformSubstitution)]]
   * @example Uniform substitution can be applied to a formula
   * {{{
   *   val p = Function("p", None, Real, Bool)
@@ -292,11 +309,12 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
 
   /**
     * Apply uniform substitution to a Provable (convenience method).
+ *
     * @return `pr(this)`
     * @note Convenience method not used in the core.
-    * @see [[Provable.apply(USubst)]]
+    * @see [[ProvableSig.apply(USubst)]]
     */
-  def apply(pr: Provable): Provable = pr.apply(this)
+  def apply(pr: ProvableSig): ProvableSig = pr.apply(this)
 
 
   /** Union of uniform substitutions, i.e., both replacement lists merged.
@@ -426,6 +444,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case a: ProgramConst if subsDefs.exists(_.what == a) =>
         subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
       case a: ProgramConst if !subsDefs.exists(_.what == a) => a
+      case a: SystemConst  if subsDefs.exists(_.what == a) =>
+        subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
+      case a: SystemConst  if !subsDefs.exists(_.what == a) => a
       case Assign(x, e)      => Assign(x, usubst(e))
       case a: AssignAny      => a
       case Test(f)           => Test(usubst(f))

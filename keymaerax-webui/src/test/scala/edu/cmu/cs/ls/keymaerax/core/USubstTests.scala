@@ -5,9 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo, RandomFormula}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
@@ -74,6 +75,7 @@ class USubstTests extends SystemTestBase {
   val qn_ = Function("q_", None, Real, Bool)
   val ap = ProgramConst("a")
   val ap_ = ProgramConst("a_")
+  val sys = SystemConst("a_")
   //val f1 = Function("f", None, Real, Real)
   val f1_ = Function("f_", None, Real, Real)
   //val g1 = Function("g", None, Real, Real)
@@ -134,7 +136,7 @@ class USubstTests extends SystemTestBase {
     val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(Power(DotTerm(), Number(5)), Number(0)))))
     val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
-    Provable.startProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
+    ProvableSig.startProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
   it should "old substitute simple sequent p(x) <-> ! ! p(- - x)" in {
@@ -169,7 +171,7 @@ class USubstTests extends SystemTestBase {
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(DotTerm(), Number(2))),
       SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
     val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
-    Provable.startProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
+    ProvableSig.startProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
   it should "old substitute simple sequent [a]p(x) <-> [a](p(x)&true)" in {
     val p = Function("p", None, Real, Bool)
@@ -188,7 +190,7 @@ class USubstTests extends SystemTestBase {
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = Provable.axioms("[:=] assign")/*Equiv(
+    val prem = ProvableSig.axioms("[:=] assign")/*Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
       PredOf(p1, fn)) // axioms.axiom("[:=])
       */
@@ -213,7 +215,7 @@ class USubstTests extends SystemTestBase {
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = Provable.axioms("[:=] assign")/*Equiv(
+    val prem = ProvableSig.axioms("[:=] assign")/*Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
       PredOf(p1, fn)) // axioms.axiom("[:=])
       */
@@ -237,7 +239,7 @@ class USubstTests extends SystemTestBase {
 
   it should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = Provable.axioms("[:=] assign")/*Equiv(
+    val prem = ProvableSig.axioms("[:=] assign")/*Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
       PredOf(p1, fn)) // axioms.axiom("[:=])
       */
@@ -284,7 +286,7 @@ class USubstTests extends SystemTestBase {
   it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val x = Variable("x_",None,Real)
     val fml = GreaterEqual(x, Number(0))
-    val prem = Provable.axioms("vacuous all quantifier")
+    val prem = ProvableSig.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
     //a [SubstitutionClashException] should be thrownBy
@@ -295,7 +297,7 @@ class USubstTests extends SystemTestBase {
   }
   it should "old clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
-    val prem = Provable.axiom("vacuous all quantifier")
+    val prem = ProvableSig.axiom("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
     //a [SubstitutionClashException] should be thrownBy
@@ -310,7 +312,7 @@ class USubstTests extends SystemTestBase {
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val x = Variable("x_",None,Real)
     val fml = GreaterEqual(x, Number(0))
-    val prem = Provable.axioms("V vacuous")
+    val prem = ProvableInfo("V vacuous").provable
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
@@ -319,7 +321,7 @@ class USubstTests extends SystemTestBase {
   }
   it should "old clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
-    val prem = Provable.axiom("V vacuous")
+    val prem = DerivedAxiomInfo("V vacuous").formula
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
@@ -331,7 +333,7 @@ class USubstTests extends SystemTestBase {
   
   it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
-    val prem = Provable.axioms("c()' derive constant fn") //(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
+    val prem = ProvableSig.axioms("c()' derive constant fn") //(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x)'=0".asFormula
     val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
     a [SubstitutionClashException] should be thrownBy prem(s)
@@ -348,7 +350,7 @@ class USubstTests extends SystemTestBase {
 
   it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
-    val prem = Provable.axioms("c()' derive constant fn") //"(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
+    val prem = ProvableSig.axioms("c()' derive constant fn") //"(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x')'=0".asFormula
     val s = USubst(Seq(SubstitutionPair(aC, "x'".asTerm)))
     a [SubstitutionClashException] should be thrownBy prem(s)
@@ -365,24 +367,24 @@ class USubstTests extends SystemTestBase {
 
   it should "not allow bound variables to occur free in V with assignment" taggedAs(AdvocatusTest) in {
     a[SubstitutionClashException] shouldBe thrownBy {
-      Provable.axioms("V vacuous")(USubst(
+      ProvableInfo("V vacuous").provable(USubst(
         SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
-          SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+          SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
     }
   }
 
   it should "not allow bound variables to occur free in V with ODE" taggedAs(AdvocatusTest) in {
     a[SubstitutionClashException] shouldBe thrownBy {
-      Provable.axioms("V vacuous")(USubst(
+      ProvableInfo("V vacuous").provable(USubst(
         SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
-          SubstitutionPair(ProgramConst("a"), "{x'=2}".asProgram) :: Nil))
+          SubstitutionPair(SystemConst("a"), "{x'=2}".asProgram) :: Nil))
     }
   }
 
   it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
-    val pr = Provable.axioms("V vacuous")(USubst(
+    val pr = ProvableInfo("V vacuous").provable(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
-        SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+        SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
     pr shouldBe 'proved
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula))
     // this should not prove x=0->[x:=5;]x=0
@@ -404,9 +406,9 @@ class USubstTests extends SystemTestBase {
   }
 
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
-    val pr = Provable.axioms("V vacuous")(USubst(
+    val pr = DerivedAxiomInfo("V vacuous").provable(USubst(
       SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
-        SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram) :: Nil))
+        SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
     pr shouldBe 'proved
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
     // this should not prove x=0->[x:=5;]x=0
@@ -485,8 +487,8 @@ class USubstTests extends SystemTestBase {
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(UnitPredicational("p_", AnyArg), fml),
-      SubstitutionPair(ap_, prog)))
-    val pr = Provable.rules("Goedel")(s)
+      SubstitutionPair(sys, prog)))
+    val pr = DerivedRuleInfo("Goedel").provable(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
@@ -496,8 +498,8 @@ class USubstTests extends SystemTestBase {
     val prog = "x:=x-1;".asProgram
     val s = USubst(
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml) ::
-      SubstitutionPair(ap_, prog) :: Nil)
-    val pr = Provable.rules("Goedel")(s)
+      SubstitutionPair(sys, prog) :: Nil)
+    val pr = DerivedRuleInfo("Goedel").provable(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Box(prog, fml)))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
@@ -514,7 +516,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=y".asFormula) ::
       SubstitutionPair(UnitPredicational("q_", AnyArg), "x^2>=y".asFormula) ::
       SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box("{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram, DotFormula)) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
+    val pr = ProvableSig.rules("CE congruence")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(prem))))
   }
@@ -604,7 +606,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
           SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
           SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
-        val pr = Provable.rules("CE congruence")(s)
+        val pr = ProvableSig.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }
@@ -627,7 +629,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
       SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
       SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
+    val pr = ProvableSig.rules("CE congruence")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
   }
@@ -656,10 +658,10 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
           SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
           SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
-        val pr = Provable.rules("CE congruence")(s)
+        val pr = ProvableSig.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
-        val pr2 = s(Provable.rules("CE congruence"))
+        val pr2 = s(ProvableSig.rules("CE congruence"))
         pr2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr2.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }
@@ -693,7 +695,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1) ::
           SubstitutionPair(UnitPredicational("q_", AnyArg), prem2) ::
           SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
-        val pr = Provable.rules("CE congruence")(s)
+        val pr = ProvableSig.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }
@@ -722,7 +724,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
           SubstitutionPair(UnitPredicational("q_", AnyArg), prem2)
         ))
-        val pr = Provable.rules("<> monotone")(s)
+        val pr = ProvableSig.rules("<> monotone")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
         pr.subgoals should contain only Sequent(IndexedSeq(prem1), IndexedSeq(prem2))
       }
@@ -732,7 +734,7 @@ class USubstTests extends SystemTestBase {
   it should "instantiate random programs in Goedel" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem = "(-z1)^2>=0".asFormula
-      val prog = rand.nextProgram(randomComplexity)
+      val prog = rand.nextSystem(randomComplexity)
       val conc = Box(prog, prem)
 
       val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
@@ -744,10 +746,10 @@ class USubstTests extends SystemTestBase {
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         val s = USubst(Seq(
-          SubstitutionPair(ap_, prog),
+          SubstitutionPair(sys, prog),
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem)
         ))
-        val pr = Provable.rules("Goedel")(s)
+        val pr = DerivedRuleInfo("Goedel").provable(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }
@@ -776,7 +778,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(FuncOf(ctxt, DotTerm()), Times(Power(x, Number(3)), DotTerm())) :: Nil)
-    val pr = Provable.rules("CT term congruence")(s)
+    val pr = ProvableSig.rules("CT term congruence")(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
             Times(Power(x, Number(3)), term2))
             ))
@@ -802,7 +804,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm()), context) :: Nil)
-        val pr = Provable.rules("CT term congruence")(s)
+        val pr = ProvableSig.rules("CT term congruence")(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -829,7 +831,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm()), context) :: Nil)
-        val pr = Provable.rules("CT term congruence")(s)
+        val pr = ProvableSig.rules("CT term congruence")(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -856,7 +858,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm()), context) :: Nil)
-        val pr = Provable.rules("CT term congruence")(s)
+        val pr = ProvableSig.rules("CT term congruence")(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -873,7 +875,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), And(Greater(y, Number(1)), LessEqual(DotTerm(), Number(5)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equiv( And(Greater(y, Number(1)), LessEqual(term1, Number(5))),
                     And(Greater(y, Number(1)), LessEqual(term2, Number(5)))
@@ -890,7 +892,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(y),  LessEqual(DotTerm(), Number(5)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
                     Forall(Seq(y),  LessEqual(term2, Number(5)))
@@ -907,7 +909,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(y),  LessEqual(DotTerm(), Number(5)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
                     Forall(Seq(y),  LessEqual(term2, Number(5)))
@@ -924,7 +926,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Box(prog, GreaterEqual(DotTerm(), Number(0)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
         Sequent(IndexedSeq(), IndexedSeq(Equiv( Box(prog, GreaterEqual(term1, Number(0))),
                 Box(prog, GreaterEqual(term2, Number(0)))
@@ -941,7 +943,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Box(prog, GreaterEqual(DotTerm(), Number(0)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
         Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
                 Box(prog, GreaterEqual(term2, Number(0)))
@@ -957,7 +959,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(FuncOf(ctxt, DotTerm()), Times(Power(x, Number(3)), DotTerm())) :: Nil)
-    val pr = Provable.rules("CT term congruence")(s)
+    val pr = ProvableSig.rules("CT term congruence")(s)
     pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
                     Times(Power(x, Number(3)), term2))
@@ -974,7 +976,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(y), GreaterEqual(DotTerm(), Number(0)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
         Sequent(IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(term1, Number(0))),
                 Forall(Seq(y), GreaterEqual(term2, Number(0)))
@@ -991,7 +993,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Box(prog, GreaterEqual(DotTerm(), Number(0)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
         Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
                 Box(prog, GreaterEqual(term2, Number(0)))
@@ -1008,7 +1010,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
       SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
+    val pr = ProvableSig.rules("CE congruence")(s)
     pr.conclusion shouldBe
       Sequent(IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -1023,7 +1025,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
       SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
+    val pr = ProvableSig.rules("CE congruence")(s)
     pr.conclusion shouldBe
       Sequent(IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -1039,7 +1041,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
       SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
+    val pr = ProvableSig.rules("CE congruence")(s)
     pr.conclusion shouldBe
       Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -1055,7 +1057,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
       SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    val pr = Provable.rules("CE congruence")(s)
+    val pr = ProvableSig.rules("CE congruence")(s)
     pr.conclusion shouldBe
       Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
     pr.subgoals should be (List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -1072,7 +1074,7 @@ class USubstTests extends SystemTestBase {
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
       SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(u), Box(prog, GreaterEqual(DotTerm(), u)))) :: Nil)
-    val pr = Provable.rules("CQ equation congruence")(s)
+    val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
       Sequent(IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(u), Box(prog, GreaterEqual(term1, u))),
             Forall(Seq(u), Box(prog, GreaterEqual(term2, u)))
@@ -1099,7 +1101,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(PredOf(ctxf, DotTerm()), context) :: Nil)
-        val pr = Provable.rules("CQ equation congruence")(s)
+        val pr = ProvableSig.rules("CQ equation congruence")(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -1126,7 +1128,7 @@ class USubstTests extends SystemTestBase {
           SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
             SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
             SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-        val pr = Provable.rules("CE congruence")(s)
+        val pr = ProvableSig.rules("CE congruence")(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))

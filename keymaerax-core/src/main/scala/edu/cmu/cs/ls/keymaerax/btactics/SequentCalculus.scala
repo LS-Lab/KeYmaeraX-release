@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.language.postfixOps
 
@@ -36,27 +37,32 @@ trait SequentCalculus {
   /** Hide/weaken whether left or right */
   val hide    : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
-  val hideL   : BuiltInLeftTactic = "HideL" by { (pr:Provable, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
+  val hideL   : BuiltInLeftTactic = "HideL" by { (pr:ProvableSig, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
-  val hideR   : BuiltInRightTactic = "HideR" by { (pr:Provable, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
+  val hideR   : BuiltInRightTactic = "HideR" by { (pr:ProvableSig, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
   /** CoHide/weaken left: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  val cohideL : BuiltInLeftTactic = "cohideL" by { (pr:Provable, pos:AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
+  val cohideL : BuiltInLeftTactic = "cohideL" by { (pr:ProvableSig, pos:AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
   /** CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight CoHideRight]]) */
-  val cohideR : BuiltInRightTactic = "cohideR" by { (pr:Provable, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
+  val cohideR : BuiltInRightTactic = "cohideR" by { (pr:ProvableSig, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
-  def cohide2: BuiltInTwoPositionTactic = "coHide2" by {(pr:Provable, ante: Position, succ: Position) => {
+  def cohide2: BuiltInTwoPositionTactic = "coHide2" by {(pr:ProvableSig, ante: Position, succ: Position) => {
       require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
       pr(CoHide2(ante.checkAnte.top, succ.checkSucc.top), 0)
     }
   }
+  /** Cohides in succedent, but leaves antecedent as is. */
+  def cohideOnlyR: DependentPositionTactic = "cohideOnlyR" by { (pos: Position, seq: Sequent) =>
+    assert(pos.isTopLevel & pos.isSucc, "Expected top-level succedent position, but got " + pos)
+    ProofRuleTactics.exchangeR(SuccPos(0), pos.checkSucc.top) & (TactixLibrary.hideR(2)*)
+  }
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
-  val notL    : BuiltInLeftTactic = "notL" by { (pr:Provable, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
+  val notL    : BuiltInLeftTactic = "notL" by { (pr:ProvableSig, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
-  val notR    : BuiltInRightTactic = "notR" by { (pr:Provable, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
+  val notR    : BuiltInRightTactic = "notR" by { (pr:ProvableSig, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
-  val andL    : BuiltInLeftTactic = "andL" by { (pr:Provable, pos:AntePosition) => pr(AndLeft(pos.checkTop), 0) }
+  val andL    : BuiltInLeftTactic = "andL" by { (pr:ProvableSig, pos:AntePosition) => pr(AndLeft(pos.checkTop), 0) }
   /** Inverse of [[andL]].
     * {{{
     *   G, G', G'', a&b  |- D
@@ -67,9 +73,9 @@ trait SequentCalculus {
   def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
   val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
-  val andR    : BuiltInRightTactic = "andR" by { (pr:Provable, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
+  val andR    : BuiltInRightTactic = "andR" by { (pr:ProvableSig, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
-  val orL     : BuiltInLeftTactic = "orL" by { (pr:Provable, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
+  val orL     : BuiltInLeftTactic = "orL" by { (pr:ProvableSig, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
   /** Inverse of [[orR]].
     * {{{
     *   G |- D, D', D'', a | b
@@ -80,11 +86,11 @@ trait SequentCalculus {
   def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
   val orRi: DependentTactic = orRi()
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
-  val orR     : BuiltInRightTactic = "orR" by { (pr:Provable, pos:SuccPosition) => pr(OrRight(pos.checkTop), 0) }
+  val orR     : BuiltInRightTactic = "orR" by { (pr:ProvableSig, pos:SuccPosition) => pr(OrRight(pos.checkTop), 0) }
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
-  val implyL  : BuiltInLeftTactic = "implyL" by { (pr:Provable, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
+  val implyL  : BuiltInLeftTactic = "implyL" by { (pr:ProvableSig, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
-  val implyR  : BuiltInRightTactic = "implyR" by { (pr:Provable, pos:SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
+  val implyR  : BuiltInRightTactic = "implyR" by { (pr:ProvableSig, pos:SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
   /** Inverse of [[implyR]].
     * {{{
     *   G, G' |- D, D', a -> b
@@ -95,9 +101,9 @@ trait SequentCalculus {
   def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
   val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
-  val equivL  : BuiltInLeftTactic = "equivL" by { (pr:Provable, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
+  val equivL  : BuiltInLeftTactic = "equivL" by { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
-  val equivR  : BuiltInRightTactic = "equivR" by { (pr:Provable, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
+  val equivR  : BuiltInRightTactic = "equivR" by { (pr:ProvableSig, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
   def cut(cut : Formula)      : InputTactic[Formula]         = ProofRuleTactics.cut(cut)
@@ -145,13 +151,13 @@ trait SequentCalculus {
     case Some(t: Term) => allL(t)(pos)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
-  val existsL                         : DependentPositionTactic = "existsL" by ((pos,seq) => FOQuantifierTactics.existsSkolemize(pos))
+  val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsSkolemize(pos))
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
-  val existsR                         : DependentPositionTactic = "existsR" by ((pos,seq) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
+  val existsR                         : DependentPositionTactic = "existsR" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
@@ -163,11 +169,9 @@ trait SequentCalculus {
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  //@todo improve efficiency by avoiding the unnecessary cohide2 step
-  //@todo compare with ProofRuleTactics.close
   def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     new BuiltInTactic("close") {
-      override def result(provable: Provable) = {
+      override def result(provable: ProvableSig) = {
         ProofRuleTactics.requireOneSubgoal(provable, "close(" + a + "," + s + ")")
         provable(Close(a, s), 0)
       }
@@ -201,24 +205,14 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  val closeT            : DependentTactic = new SingleGoalDependentTactic("closeTrue") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
-      ProofRuleTactics.closeTrue('R, True)
-    }
-  }
+  val closeT            = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  val closeF            : DependentTactic = new SingleGoalDependentTactic("closeFalse") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
-      ProofRuleTactics.closeFalse('L, False)
-    }
-  }
+  val closeF            = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
   // derived propositional
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
-  val equivifyR: BuiltInRightTactic = "EquivifyR" by { (pr:Provable, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
+  val equivifyR: BuiltInRightTactic = "EquivifyR" by { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
   /** Modus Ponens: p&(p->q) -> q.
     * @example{{{
     *      p, q, G |- D
@@ -230,9 +224,9 @@ trait SequentCalculus {
     */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics.modusPonens(assumption, implication)
   /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivLeft CommuteEquivLeft]] */
-  val commuteEquivL: BuiltInLeftTactic = "CommuteEquivL" by { (pr:Provable, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
+  val commuteEquivL: BuiltInLeftTactic = "CommuteEquivL" by { (pr:ProvableSig, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]] */
-  val commuteEquivR: BuiltInRightTactic = "CommuteEquivR" by { (pr:Provable, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
+  val commuteEquivR: BuiltInRightTactic = "CommuteEquivR" by { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
   lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 

@@ -161,6 +161,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         event.target.focus();
       }
 
+      scope.proofStepParent = function(childId) {
+        var parentId = scope.proofTree.nodesMap[childId].parent;
+        var parent = scope.proofTree.nodesMap[parentId];
+        return parent;
+      }
+
       scope.highlightStepPosition = function(nodeId, highlight) {
         var parent = sequentProofData.proofTree.nodesMap[nodeId];
         var fstChild = sequentProofData.proofTree.nodesMap[parent.children[0]];
@@ -200,7 +206,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return sequentProofData.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
       }
 
-      scope.deductionPath.isCollapsed = false;
+      scope.deductionPath.isCollapsed = true;
     }
 
     return {
@@ -223,8 +229,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
   }])
   .filter('childRuleName', function () {
     return function (input, scope) {
-      var children = scope.proofTree.nodesMap[input].children;
-      var loaded = $.grep(children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
-      return loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule.name : undefined;
+      if (input !== undefined) {
+        var node = scope.proofTree.nodesMap[input];
+        if (node !== undefined) {
+          var loaded = $.grep(node.children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
+          return loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule.name : undefined;
+        }
+      }
+      return undefined;
     };
   });

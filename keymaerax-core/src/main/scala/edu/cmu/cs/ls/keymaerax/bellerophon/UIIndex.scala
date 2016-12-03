@@ -40,7 +40,6 @@ object UIIndex {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
-    //@todo cutL and cutR are always applicable on top level
     val alwaysApplicable = Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
@@ -107,13 +106,13 @@ object UIIndex {
         }
         val rules = "abstractionb" :: "generalizeb" :: maybeSplit
         a match {
-          case Assign(DifferentialSymbol(_),_) => "[:=] assign" :: rules
-          case _: Assign => "assignb" :: rules
+          case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
+          case Assign(_: BaseVariable, _) => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("hideG", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
+          case _: Dual => "[d] dual" :: Nil
           case _: Loop => "loop" :: "[*] iterate" :: rules
           case ODESystem(ode, constraint) if containsPrime => ode match {
             case _: AtomicODE => "DE differential effect" :: "diffWeaken" :: "diffCut" :: rules
@@ -133,12 +132,13 @@ object UIIndex {
         val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
         val rules = alwaysApplicable ++ maybeSplit
         a match {
-        case _: Assign => "<:=> assign" :: rules
+        case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
+        case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
         case _: AssignAny => "<:*> assign nondet" :: rules
         case _: Test => "<?> test" :: rules
         case _: Compose => "<;> compose" :: rules
         case _: Choice => "<++> choice" :: rules
-        case _: Dual => "<^d> dual" :: rules
+        case _: Dual => "<d> dual" :: rules
         case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
         case _ => rules
       }

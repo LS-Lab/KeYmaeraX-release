@@ -5,7 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 
 object TacticHelper {
 
@@ -79,4 +80,46 @@ object TacticHelper {
     //@todo not sure about that last term.
     freeInModality.intersect(freeInGamma).intersect(SetLattice.allVars -- boundInProgram).symbols
   }
+
+  /** Returns true iff {{{v^n}}} s.t. n!=0, n!=1 occurs in {{{term}}}*/
+  def variableOccursWithExponent(v: Variable, term: Term) = {
+    var occursWithExponent = false
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term) = asMonomial(t) match {
+        case Some((_, x, Some(power))) if(power != Number(1) && power != Number(0) && x==v) => {
+          occursWithExponent = true
+          Left(None)
+        }
+        case _ => Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, term).getOrElse(throw new BelleThrowable("Could not determine whether this variable occurs with an exponent."))
+    occursWithExponent
+  }
+
+  /** Transforms monomials in e using the xform function. */
+  def transformMonomials(e: Term, xform: Term => Term): Term = {
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p:PosInExpr, term:Term) = {
+        if(isMonomial(term))
+          Right(xform(term))
+        else
+          Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, e).getOrElse(throw new BelleThrowable("Expected transformMonomials to succeed."))
+  }
+
+  /** Returns monomial iff t is (approximately, locally) a monomial; i.e., has the form {{{coeff(|x|)*x^exp(|x|)}}} where coeff and exp are optional.
+    * @return Optional coefficient, variable, optional exponent; or None if this isn't a monomial
+    */
+  def asMonomial(t: Term): Option[(Option[Term], Variable, Option[Term])] = t match {
+    case v:Variable => Some(None, v, None)
+    case Times(coeff:Term, v:Variable) if !StaticSemantics.vars(coeff).contains(v) => Some(Some(coeff), v, None)
+    case Times(coeff:Term, Power(v:Variable, exp:Term))
+      if !StaticSemantics.vars(coeff).contains(v) && !StaticSemantics.vars(exp).contains(v) => Some(Some(coeff), v, Some(exp))
+    case _ => None
+  }
+
+  def isMonomial(t:Term) = asMonomial(t).nonEmpty
 }

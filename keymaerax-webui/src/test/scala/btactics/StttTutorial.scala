@@ -51,7 +51,7 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable with diffSolve" in withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
-    val tactic = implyR('_) & andL('_) & diffSolve(None)(1) & QE
+    val tactic = implyR('_) & andL('_) & diffSolve(1) & QE
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
@@ -70,7 +70,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
     val tactic = implyR('_) & (andL('_)*) & diffCut("v>=0".asFormula)(1) & Idioms.<(
       diffCut("x>=old(x)".asFormula)(1) & Idioms.<(
-        exhaustiveEqR2L('L, "x0=x".asFormula) & diffWeaken(1) & exhaustiveEqL2R('L, "x_0=x0".asFormula) & prop,
+        diffWeaken(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop,
         diffInd()(1)
       ),
       diffInd()(1)
@@ -82,7 +82,7 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with multi-arg invariant" in withMathematica { qeTool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
     val tactic = implyR('_) & (andL('_)*) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
-      exhaustiveEqR2L('L, "x0=x".asFormula) & diffWeaken(1) & exhaustiveEqL2R('L, "x_0=x0".asFormula) & prop
+      diffWeaken(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
 //    db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -106,7 +106,7 @@ class StttTutorial extends TacticTestBase {
     val tactic = implyR('_) & (andL('_)*) & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
-      chase('R) & prop & OnAll(diffSolve()('R) partial) partial
+      chase('R) & prop & OnAll(diffSolve('R) partial) partial
       ) &
       US(UnificationMatch("J(v)".asFormula, "v>=0".asFormula).usubst) &
       OnAll(close | QE)
@@ -148,25 +148,25 @@ class StttTutorial extends TacticTestBase {
 
   "Example3b" should "find correct safety condition" in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.kyx")).mkString
-    val tactic = implyR('_) & (andL('_)*) & chase('R) & normalize & OnAll(diffSolve()('R) partial) & print("Foo")
+    val tactic = implyR('_) & (andL('_)*) & chase('R) & normalize & OnAll(diffSolve('R))
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
-      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "true".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
-      IndexedSeq("((v>=0&t_>=0)&v=A*t_+v_0)&x=1/2*(A*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
+      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "true".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A*s_+v>=0) -> A/2*t_^2+v*t_+x<=S)".asFormula))
     intermediate.subgoals(1) shouldBe Sequent(
-      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "v_0=0".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
-      IndexedSeq("((v>=0&t_>=0)&v=v_0)&x=t_*v_0+x_0->x<=S".asFormula))
+      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "v=0".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S)".asFormula))
     intermediate.subgoals(2) shouldBe Sequent(
-      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
-      IndexedSeq("((v>=0&t_>=0)&v=-1*B*t_+v_0)&x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
+      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B)*s_+v>=0) -> (-B)/2*t_^2+v*t_+x<=S)".asFormula))
 
     val brake = proveBy(intermediate.subgoals(2), TactixLibrary.partialQE)
     brake.subgoals should have size 1
     brake.subgoals.head shouldBe Sequent(
       IndexedSeq(),
-      // here is our evolution domain constraint (substitute t_ = v/B into S>= ... ) -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------v------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------v
-      IndexedSeq("v_0<=0|v_0>0&(t_<=0|t_>0&(((B<=0|(0 < B&B < t_^-1*v_0)&((S < x_0|(x_0<=S&S < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)&((v < -1*B*t_+v_0|v=-1*B*t_+v_0&((t__0 < 0|t__0=0&A<=0)|t__0>0))|v>-1*B*t_+v_0))|x>1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|S>=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|B=t_^-1*v_0&((S < x_0|(x_0<=S&S < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0))&((x < 1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)|x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)&((v < 0|v=0&((t__0 < 0|t__0=0&A<=0)|t__0>0))|v>0))|x>1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|S>=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)))|B>t_^-1*v_0))".asFormula))
+      // here is our evolution domain constraint -------------------------------------------------------------------v
+      IndexedSeq("(S < x|S=x&(v<=0|v>0&(B<=0|B>0&A<=0)))|S>x&(v<=0|v>0&((B<=0|(0 < B&B < v^2*(2*S+-2*x)^-1)&A<=0)|B>=v^2*(2*S+-2*x)^-1))".asFormula))
   }}
 
   it should "stop at correct spot when tactic is parsed from file" in withMathematica { tool => withDatabase { db =>
@@ -175,14 +175,14 @@ class StttTutorial extends TacticTestBase {
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
-      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "true".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
-      IndexedSeq("((v>=0&t_>=0)&v=A*t_+v_0)&x=1/2*(A*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
+      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "true".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A*s_+v>=0) -> A/2*t_^2+v*t_+x<=S)".asFormula))
     intermediate.subgoals(1) shouldBe Sequent(
-      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "v_0=0".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
-      IndexedSeq("((v>=0&t_>=0)&v=v_0)&x=t_*v_0+x_0->x<=S".asFormula))
+      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "v=0".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S)".asFormula))
     intermediate.subgoals(2) shouldBe Sequent(
-      IndexedSeq("v_0>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x_0<=S".asFormula, "t__0=0".asFormula, "v_0>=0".asFormula),
-      IndexedSeq("((v>=0&t_>=0)&v=-1*B*t_+v_0)&x=1/2*(-1*B*t_^2+2*t_*v_0+2*x_0)->x<=S".asFormula))
+      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B)*s_+v>=0) -> (-B)/2*t_^2+v*t_+x<=S)".asFormula))
   }}
 
   "Example 4a" should "be provable with master and loop invariant from file" in withMathematica { tool => withDatabase { db =>
@@ -240,8 +240,7 @@ class StttTutorial extends TacticTestBase {
   "Example 5 with simple control" should "be provable" in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.kyx")).mkString
 
-    val plant = print("plant") & composeb('R) & assignb('R) &
-      diffSolve(None)('R) & implyR('R)
+    val plant = print("plant") & composeb('R) & assignb('R) & diffSolve('R)
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
@@ -270,7 +269,6 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic with Z3" in withZ3 { qeTool => withDatabase { db =>
-    //@todo Integrator finds the wrong time (ODE has user-defined t' and our internal t_' that we always add)
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -283,7 +281,7 @@ class StttTutorial extends TacticTestBase {
       loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
         printIndexed("Base case") & andR('R) & OnAll(closeId),
         printIndexed("Use case") & QE,
-        printIndexed("Step") & chase('R) & normalize & printIndexed("Normalized") & OnAll(diffSolve()('R) partial) &
+        printIndexed("Step") & chase('R) & printIndexed("After chase") & normalize & printIndexed("Normalized") & OnAll(diffSolve('R) partial) &
           printIndexed("After diffSolve") & OnAll(QE)
         )
 
@@ -297,7 +295,7 @@ class StttTutorial extends TacticTestBase {
       loop("J(v,x,B,S)".asFormula)('R) <(
         skip,
         skip,
-        chase('R) & normalize & OnAll(diffSolve()('R) partial) partial
+        chase('R) & normalize & OnAll(diffSolve('R) partial) partial
         ) &
       US(UnificationMatch("J(v,x,B,S)".asFormula, "v >= 0 & x+v^2/(2*B) <= S".asFormula).usubst) &
       OnAll(close | QE)
@@ -413,7 +411,7 @@ class StttTutorial extends TacticTestBase {
             diffInd()(1)),
           diffInd()(1)),
         diffInd()(1)
-        ) & exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & (andL('_)*) & diffWeaken('R)
+        ) & (andL('L)*) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
@@ -437,8 +435,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
 
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
-      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) &
-      exhaustiveEqR2L(hide=true)('Llast)*2 /* old(y)=y, old(v)=v */ & (andL('_)*) & diffWeaken('R)
+      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(

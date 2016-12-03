@@ -1,0 +1,28 @@
+ProgramVariables.
+  R m.  /* Stop-sign position */
+  R A.  /* Maximum acceleration */
+  R b.  /* Maximum braking */
+  R ep. /* Maximum control cycle duration */
+  R x.  /* Car position */
+  R v.  /* Speed */
+  R a.  /* Actual acceleration */
+  R sb. /* Start braking point */
+  R t.  /* Controller clock */
+End.
+
+Problem.
+    x <= m
+  & A >= 0
+  & b > 0
+  & ep > 0
+  & v = 0
+->
+  [{
+     {   ?m - x >= v^2/(2*b) + (A/b + 1)*(A/2*ep^2 + ep*v); a := A;
+      ++ a := -b;
+     }
+     t := 0;
+     { x'=0*x+v, v'=0*v+a, t'=0*t+1 & v >= 0 & t <= ep }
+   }*@invariant(v >= 0 & x + v^2/(2*b) <= m)
+  ]x <= m
+End.

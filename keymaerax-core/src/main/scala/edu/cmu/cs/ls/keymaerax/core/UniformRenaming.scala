@@ -148,6 +148,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case Loop(a)                     => Loop(rename(a))
     case Dual(a)                     => Dual(rename(a))
     case a: ProgramConst             => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
+    case a: SystemConst              => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: SystemConstant " + a, this.toString, program.toString)
   }
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {

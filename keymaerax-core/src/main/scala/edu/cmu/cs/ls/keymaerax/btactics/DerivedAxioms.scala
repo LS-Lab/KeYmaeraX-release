@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInvers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.collection.{immutable, mutable}
@@ -36,7 +37,7 @@ object DerivedAxioms {
   type LemmaID = String
 
   /** A Provable proving the derived axiom/rule named id (convenience) */
-  def derivedAxiomOrRule(name: String): Provable = {
+  def derivedAxiomOrRule(name: String): ProvableSig = {
     val lemmaName = DerivationInfo(name).codeName
     require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.")
     derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
@@ -45,7 +46,7 @@ object DerivedAxioms {
   private val AUTO_INSERT = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, fact: Provable): Lemma = {
+  private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
@@ -68,7 +69,7 @@ object DerivedAxioms {
     }
   }
 
-  private[btactics] def derivedRule(name: String, fact: Provable): Lemma = {
+  private[btactics] def derivedRule(name: String, fact: ProvableSig): Lemma = {
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = DerivedRuleInfo(name).codeName
@@ -167,9 +168,48 @@ object DerivedAxioms {
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
         byUS(boxMonotone) & hide(-1) partial
         ,
-        dualFree(2) //closeT
+        hide(1) & boxTrue(1)
         )
   )
+
+  /**
+    * Rule "Goedel".
+    * Premise p(||)
+    * Conclusion [a;]p(||)
+    * End.
+    * {{{
+    *       p(||)
+    *   ----------- G
+    *    [a{|^@|};]p(||)
+    * }}}
+    * @NOTE Unsound for hybrid games
+    * @derived from M and [a]true
+    */
+  lazy val Goedel = derivedRule("Goedel",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
+    cut("[a_{|^@|};]true".asFormula) <(
+      // use
+      byUS(boxMonotone) & hide(-1) partial
+      ,
+      // show
+      hide(1) & boxTrue(1)
+      )
+  )
+
+  /**
+    * {{{
+    *   Axiom "V vacuous".
+    *  p() -> [a{|^@|};]p()
+    * End.
+    * }}}
+    * @note unsound for hybrid games
+    */
+  lazy val vacuousAxiom = derivedAxiom("V vacuous",
+    Sequent(IndexedSeq(), IndexedSeq("p() -> [a{|^@|};]p()".asFormula)),
+    useAt("VK vacuous", PosInExpr(1::Nil))(1) &
+    boxTrue(1)
+  )
+
 
   /**
     * Rule "CT term congruence".
@@ -247,7 +287,7 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val equivReflexiveAxiom = derivedAxiom("<-> reflexive",
-    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
+    ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (Close(AntePos(0),SuccPos(0)), 1)
@@ -303,7 +343,7 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val doubleNegationAxiom = derivedAxiom("!! double negation",
-    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
+    ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (NotRight(SuccPos(0)), 1)
@@ -453,23 +493,58 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{
+    *   Axiom "Kd diamond modus ponens".
+    *     [a{|^@|};](p(||)->q(||)) -> (<a{|^@|};>p(||) -> <a{|^@|};>q(||))
+    *   End.
+    * }}}
+    */
+  lazy val KdAxiom = derivedAxiom("Kd diamond modus ponens",
+    Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};](p(||)->q(||)) -> (<a{|^@|};>p(||) -> <a{|^@|};>q(||))".asFormula)),
+    useExpansionAt("<> diamond")(1, 1::0::Nil) &
+      useExpansionAt("<> diamond")(1, 1::1::Nil) &
+      useAt(converseImply.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(converseImply.fact, PosInExpr(0::Nil))(1, 0::1::Nil) &
+      byUS("K modal modus ponens")
+  )
+
+  /**
+    * {{{
+    *   Axiom "Kd2 diamond modus ponens".
+    *     [a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))
+    *   End.
+    * }}}
+    */
+  lazy val Kd2Axiom = derivedAxiom("Kd2 diamond modus ponens",
+    Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))".asFormula)),
+    useExpansionAt("<> diamond")(1, 1::0::Nil) &
+      useExpansionAt("<> diamond")(1, 1::1::Nil) &
+      useAt(DerivedAxioms.converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("K modal modus ponens", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("K modal modus ponens", PosInExpr(1::Nil))(1) &
+      useAt(proveBy("(p_() -> !(p_()&q_()) -> !q_()) <-> true".asFormula, prop))(1, 1::Nil) &
+      byUS("[]T system") & TactixLibrary.done
+  )
+
+  /**
     * {{{Axiom "[]~><> propagation".
     *    [a;]p(||) & <a;>q(||) -> <a;>(p(||) & q(||))
     * End.
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val boxDiamondPropagation = {
     boxAnd //@note access dependency hidden in CMon, so that it is added to the lemma database
     derivedAxiom("[]~><> propagation",
-      Sequent(IndexedSeq(), IndexedSeq("([a_;]p_(||) & <a_;>q_(||)) -> <a_;>(p_(||) & q_(||))".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("([a_{|^@|};]p_(||) & <a_{|^@|};>q_(||)) -> <a_{|^@|};>(p_(||) & q_(||))".asFormula)),
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::1::Nil) &
         useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
-        cut("[a_;]p_(||) & [a_;]!(p_(||)&q_(||)) -> [a_;]!q_(||)".asFormula) <(
+        cut("[a_{|^@|};]p_(||) & [a_{|^@|};]!(p_(||)&q_(||)) -> [a_{|^@|};]!q_(||)".asFormula) <(
           /* use */ prop,
           /* show */ hideR(1) &
-          cut("[a_;](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
+          cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
             /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi() & CMon(PosInExpr(1::Nil)) & prop,
             /* show */ implyR(1) & TactixLibrary.boxAnd(1) & prop
             )
@@ -488,7 +563,7 @@ object DerivedAxioms {
     * @internal
     */
   private lazy val K1 = TactixLibrary.proveBy(//derivedAxiom("K1",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) -> [a_;]p_(||) & [a_;]q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)".asFormula)),
     implyR(1) & andR(1) <(
       useAt(boxSplitLeft, PosInExpr(0::Nil))(-1) & close,
       useAt(boxSplitRight, PosInExpr(0::Nil))(-1) & close
@@ -502,18 +577,19 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
     *      @internal
     */
   private lazy val K2 = TactixLibrary.proveBy(//derivedAxiom("K2",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;]p_(||) & [a_;]q_(||) -> [a_;](p_(||)&q_(||))".asFormula)),
-    cut(/*(9)*/"([a_;](q_(||)->p_(||)&q_(||)) -> ([a_;]q_(||) -> [a_;](p_(||)&q_(||))))  ->  (([a_;]p_(||) & [a_;]q_(||)) -> [a_;](p_(||)&q_(||)))".asFormula) <(
-      /* use */ cut(/*(6)*/"[a_;](q_(||) -> (p_(||)&q_(||)))  ->  ([a_;]q_(||) -> [a_;](p_(||)&q_(||)))".asFormula) <(
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};]p_(||) & [a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))".asFormula)),
+    cut(/*(9)*/"([a_{|^@|};](q_(||)->p_(||)&q_(||)) -> ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))))  ->  (([a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)) -> [a_{|^@|};](p_(||)&q_(||)))".asFormula) <(
+      /* use */ cut(/*(6)*/"[a_{|^@|};](q_(||) -> (p_(||)&q_(||)))  ->  ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||)))".asFormula) <(
       /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
-      /* show */ cut(/*(8)*/"([a_;]p_(||) -> [a_;](q_(||) -> p_(||)&q_(||)))  ->  (([a_;](q_(||)->p_(||)&q_(||)) -> ([a_;]q_(||) -> [a_;](p_(||)&q_(||))))  ->  (([a_;]p_(||) & [a_;]q_(||)) -> [a_;](p_(||)&q_(||))))".asFormula) <(
-      /* use */ cut(/*(5)*/"[a_;]p_(||) -> [a_;](q_(||) -> p_(||)&q_(||))".asFormula) <(
+      /* show */ cut(/*(8)*/"([a_{|^@|};]p_(||) -> [a_{|^@|};](q_(||) -> p_(||)&q_(||)))  ->  (([a_{|^@|};](q_(||)->p_(||)&q_(||)) -> ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))))  ->  (([a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)) -> [a_{|^@|};](p_(||)&q_(||))))".asFormula) <(
+      /* use */ cut(/*(5)*/"[a_{|^@|};]p_(||) -> [a_{|^@|};](q_(||) -> p_(||)&q_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
       /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt(implyTautology.fact)(1, 1::Nil) & V(1) & close
       ),
@@ -529,9 +605,10 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val Kand = derivedAxiom("K modal modus ponens &",
-    Sequent(IndexedSeq(), IndexedSeq("[a;](p_(||)->q_(||)) & [a;]p_(||) -> [a;]q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};](p_(||)->q_(||)) & [a{|^@|};]p_(||) -> [a{|^@|};]q_(||)".asFormula)),
     useAt(andImplies.fact, PosInExpr(0::Nil))(1) &
     byUS("K modal modus ponens")
   )
@@ -555,10 +632,11 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K3 p. 28
     */
   lazy val boxAnd = derivedAxiom("[] split",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) <-> [a_;]p_(||)&[a_;]q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) <-> [a_{|^@|};]p_(||)&[a_{|^@|};]q_(||)".asFormula)),
     equivR(1) <(
       useAt(K1, PosInExpr(1::Nil))(1) & close,
       useAt(K2, PosInExpr(1::Nil))(1) & close
@@ -572,9 +650,10 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val boxImpliesAnd = derivedAxiom("[] conditional split",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](P_(||)->Q_(||)&R_(||)) <-> [a_;](P_(||)->Q_(||)) & [a_;](P_(||)->R_(||))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](P_(||)->Q_(||)&R_(||)) <-> [a_{|^@|};](P_(||)->Q_(||)) & [a_{|^@|};](P_(||)->R_(||))".asFormula)),
     useAt(implyDistAndAxiom.fact, PosInExpr(0::Nil))(1, 0::1::Nil) &
     useAt(boxAnd.fact, PosInExpr(0::Nil))(1, 0::Nil) &
     byUS(equivReflexiveAxiom)
@@ -591,9 +670,9 @@ object DerivedAxioms {
     *      @internal
     */
   private lazy val boxSplitLeft = TactixLibrary.proveBy(//derivedAxiom("[] split left",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) -> [a_;]p_(||)".asFormula)),
-    cut(/*(2)*/"[a_;](p_(||)&q_(||) -> p_(||))".asFormula) <(
-      /* use */ cut(/*(4)*/"[a_;](p_(||)&q_(||)->p_(||)) -> ([a_;](p_(||)&q_(||)) -> [a_;]p_(||))".asFormula) <(
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]p_(||)".asFormula)),
+    cut(/*(2)*/"[a_{|^@|};](p_(||)&q_(||) -> p_(||))".asFormula) <(
+      /* use */ cut(/*(4)*/"[a_{|^@|};](p_(||)&q_(||)->p_(||)) -> ([a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]p_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
@@ -608,9 +687,10 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @note unsound for hybrid games
     */
   lazy val diamondOr = derivedAxiom("<> split",
-    Sequent(IndexedSeq(), IndexedSeq("<a_;>(p_(||)|q_(||)) <-> <a_;>p_(||)|<a_;>q_(||)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<a_{|^@|};>(p_(||)|q_(||)) <-> <a_{|^@|};>p_(||)|<a_{|^@|};>q_(||)".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
@@ -645,9 +725,9 @@ object DerivedAxioms {
     *      @internal
     */
   private lazy val boxSplitRight = TactixLibrary.proveBy(//derivedAxiom("[] split right",
-    Sequent(IndexedSeq(), IndexedSeq("[a_;](p_(||)&q_(||)) -> [a_;]q_(||)".asFormula)),
-    cut(/*7*/"[a_;](p_(||)&q_(||) -> q_(||))".asFormula) <(
-      /* use */ cut(/*(8)*/"[a_;](p_(||)&q_(||)->q_(||)) -> ([a_;](p_(||)&q_(||)) -> [a_;]q_(||))".asFormula) <(
+    Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]q_(||)".asFormula)),
+    cut(/*7*/"[a_{|^@|};](p_(||)&q_(||) -> q_(||))".asFormula) <(
+      /* use */ cut(/*(8)*/"[a_{|^@|};](p_(||)&q_(||)->q_(||)) -> ([a_{|^@|};](p_(||)&q_(||)) -> [a_{|^@|};]q_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
@@ -690,6 +770,22 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "[:=] assign all".
+    *  \forall x_ p_(||) -> [x_:=f_();]p_(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val forallImpliesAssignbAxiom = derivedAxiom("[:=] assign all",
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) -> [x_:=f_();]p_(||)".asFormula)),
+    //    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
+    //      & byUS("[:=] assign equality exists")
+      useAt("[:=] assign equality", PosInExpr(0::Nil))(1, 1::Nil) &
+      byUS(forallImpliesAxiom)
+  )
+
+  /**
     * {{{Axiom "\\exists& exists and".
     *  \exists x_ (q_(||) & p_(||)) -> \exists x_ (p_(||))
     * End.
@@ -697,10 +793,26 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val existsAndAxiom = derivedAxiom("\\exists& exists and",
+  lazy val existsAndAxiom = {
+    existsEliminate //@note access dependency hidden in CMon, so that it is added to the lemma database
+    derivedAxiom("\\exists& exists and",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (q_(||) & p_(||)) -> \\exists x_ (p_(||))".asFormula)),
     /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
-  )
+  )}
+
+  /**
+    * {{{Axiom "\\forall-> forall implies".
+    *  \forall x_ p_(||) -> \forall x_ (q_(||) -> p_(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val forallImpliesAxiom = {
+    derivedAxiom("\\forall-> forall implies",
+      Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) -> \\forall x_ (q_(||) -> p_(||))".asFormula)),
+      /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
+    )}
 
   /**
     * {{{Axiom "<:=> assign equality".
@@ -718,6 +830,18 @@ object DerivedAxioms {
       useAt("!& deMorgan")(1, 1::0::0::Nil) &
       useAt(implyExpand.fact, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
       CE(PosInExpr(0::Nil)) &
+      byUS("[:=] assign equality")
+  )
+
+  /**
+    * {{{Axiom "<:=> assign equality all".
+    *    <x:=f();>p(||) <-> \forall x (x=f() -> p(||))
+    * End.
+    * }}}
+    */
+  lazy val assigndEqualityAllAxiom = derivedAxiom("<:=> assign equality all",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\forall x_ (x_=f_() -> p_(||))".asFormula)),
+    useAt(assignDual2Axiom.fact, PosInExpr(0::Nil))(1, 0::Nil) &
       byUS("[:=] assign equality")
   )
 
@@ -749,6 +873,21 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> [x_:=f();]p(x_)".asFormula)),
     useAt(assigndAxiom.fact)(1, 0::Nil) &
       useAt("[:=] assign")(1, 1::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom ":= assign dual 2".
+    *    <x:=f();>p(||) <-> [x:=f();]p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assignDual2Axiom = derivedAxiom(":= assign dual 2",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula)),
+    useAt("[:=] assign equality exists")(1, 1::Nil) &
+      useAt("<:=> assign equality")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -834,7 +973,7 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val assignDAxiomb = Provable.axioms("[':=] differential assign")
+  lazy val assignDAxiomb = ProvableSig.axioms("[':=] differential assign")
   //@note the following derivation works if uniform renaming can mix BaseVariable with DifferentialSymbols.
   /*derivedAxiom("[':=] differential assign",
     Sequent(IndexedSeq(), IndexedSeq("[x_':=f();]p(x_') <-> p(f())".asFormula)),
@@ -1011,7 +1150,6 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
-    * @todo prove
     */
   lazy val existsEliminate = derivedAxiom("exists eliminate",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists x_ p_(||))".asFormula)),
@@ -1154,6 +1292,14 @@ object DerivedAxioms {
     * }}}
     */
   lazy val implySelf = derivedAxiom("-> self", Sequent(IndexedSeq(), IndexedSeq("(p_() -> p_()) <-> true".asFormula)), prop)
+
+  /**
+    * {{{Axiom "-> converse".
+    *    (p() -> q()) <-> (!q() -> !p())
+    * End.
+    * }}}
+    */
+  lazy val converseImply = derivedAxiom("-> converse", Sequent(IndexedSeq(), IndexedSeq("(p_() -> q_()) <-> (!q_() -> !p_())".asFormula)), prop)
 
   /**
     * {{{Axiom "!& deMorgan".
@@ -1414,6 +1560,22 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DW differential weakening and".
+    *    [{c&q(||)}]p(||) -> ([{c&q(||)}](q(||)&p(||)))
+    * End.
+    * }}}
+    */
+  lazy val DWeakeningAnd = derivedAxiom("DW differential weakening and",
+    Sequent(IndexedSeq(), IndexedSeq("[{c_&q_(||)}]p_(||) -> ([{c_&q_(||)}](q_(||)&p_(||)))".asFormula)),
+    implyR(1) & cut("[{c_&q_(||)}](q_(||)->(p_(||)->(q_(||)&p_(||))))".asFormula) <(
+      /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))('Llast) & implyL('Llast) <(
+        cohide('Rlast) & byUS("DW") & done,
+        useAt("K modal modus ponens", PosInExpr(0::Nil))('Llast) & implyL('Llast) <(close, close)),
+      /* show */ G('Rlast) & prop
+      )
+  )
+
+  /**
     * {{{Axiom "DI differential invariance".
     *  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
     *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY
@@ -1423,7 +1585,7 @@ object DerivedAxioms {
     * @Derived
     */
   private lazy val DIinvarianceF = "([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))".asFormula
-  lazy val DIinvariance = Provable.axioms("DI differential invariance") /*derivedAxiom("DI differential invariance",
+  lazy val DIinvariance = ProvableSig.axioms("DI differential invariance") /*derivedAxiom("DI differential invariance",
     Sequent(IndexedSeq(), IndexedSeq(DIinvarianceF)),
     implyR(1) & equivR(1) <(
       testb(1) &
@@ -1594,6 +1756,178 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+  // diamond differential axioms
+
+  /**
+    * {{{Axiom "DGd diamond differential ghost".
+    *    <{c{|y_|}&q(|y_|)}>p(|y_|) <-> \forall y_ <{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}>p(|y_|)
+    *    // <x'=f(x)&q(x);>p(x) <-> \forall y <{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}>p(x) THEORY
+    * End.
+    * }}}
+    */
+  lazy val DGddifferentialghost = derivedAxiom("DGd diamond differential ghost",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\forall y_ <{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("DG differential ghost")(1, 0::0::Nil) &
+      useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+
+  /**
+    * {{{Axiom "DGd diamond inverse differential ghost implicational".
+    *    <{c{|y_|}&q(|y_|)}>p(|y_|)  ->  \exists y_ <{y_'=a(||),c{|y_|}&q(|y_|)}>p(|y_|)
+    * End.
+    * }}}
+    */
+  lazy val DGdinversedifferentialghostimplicational = derivedAxiom("DGd diamond inverse differential ghost implicational",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|)  <-  \\exists y_ <{y_'=a(||),c{|y_|}&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("all dual y")(1, 0::0::Nil) &
+      useAt(boxAxiom)(1, 0::0::0::Nil) &
+      useAt(converseImply, PosInExpr(1::Nil))(1) &
+      byUS("DG inverse differential ghost implicational")
+  )
+
+  /**
+    * {{{Axiom "DGCd diamond differential ghost const".
+    *    <{c{|y_|}&q(|y_|)}>p(|y_|) <-> \forall y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)
+    * End.
+    * }}}
+    */
+  lazy val DGCddifferentialghostconst = derivedAxiom("DGd diamond differential ghost constant",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\forall y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("DG differential ghost constant")(1, 0::0::Nil) &
+      useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val DGCddifferentialghostconstexists = derivedAxiom("DGd diamond differential ghost constant exists",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\exists y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      useAt("DG differential ghost constant all")(1, 0::0::Nil) &
+      useAt("!! double negation", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("all dual y", PosInExpr(0::Nil))(1, 1::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "DWd diamond differential weakening".
+    *    <{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)&p_(||))
+    * End.
+    * }}}
+    */
+  lazy val DWddifferentialweakening = derivedAxiom("DWd diamond differential weakening",
+    Sequent(IndexedSeq(), IndexedSeq("<{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)&p_(||))".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(proveBy("!(p_() & q_()) <-> (p_() -> !q_())".asFormula, TactixLibrary.prop))(1, 1::0::1::Nil) &
+      useAt("DW differential weakening", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "DWd2 diamond differential weakening".
+    *    <{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)->p_(||))
+    * End.
+    * }}}
+    */
+  lazy val DWd2differentialweakening = derivedAxiom("DWd2 diamond differential weakening",
+    Sequent(IndexedSeq(), IndexedSeq("<{c&q_(||)}>p_(||) <-> <{c&q_(||)}>(q_(||)->p_(||))".asFormula)),
+      equivR(1) <(
+        implyRi & CMon(PosInExpr(1::Nil)) & prop & done,
+        cutAt("q_(||) & (q_(||)->p_(||))".asFormula)(1, 1::Nil) <(
+          implyRi & useAt(Kd2Axiom, PosInExpr(1::Nil))(1) & byUS("DW")
+          ,
+          cohideR(1) & CMon(PosInExpr(1::Nil)) & prop & done
+          )
+        )
+  )
+
+  /**
+    * {{{Axiom "DCd diamond differential cut".
+    *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
+    *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
+    * End.
+    * }}}
+    */
+  lazy val DCddifferentialcut = derivedAxiom("DCd diamond differential cut",
+    Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
+      useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1, 1::Nil) &
+      byUS("DC differential cut")
+  )
+
+  /**
+    * {{{Axiom "DCd diamond differential cut".
+    *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
+    *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
+    * End.
+    * }}}
+    */
+  lazy val commaCommuted = derivedAxiom(",d commute",
+    Sequent(IndexedSeq(), IndexedSeq("<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1) &
+      byUS(", commute")
+  )
+
+  /**
+    * {{{
+    *   Axiom "[d] dual".
+    *    [{a;}^@]p(||) <-> ![a;]!p(||)
+    *   End.
+    * }}}
+    * @derived
+    */
+  lazy val dualbAxiom = derivedAxiom("[d] dual",
+    Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> ![a;]!p(||)".asFormula)),
+    useExpansionAt("[] box")(1, 0::Nil) &
+      useAt("<d> dual")(1, 0::0::Nil) &
+      useAt("[] box")(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+  /**
+    * {{{
+    *   Axiom "[d] dual direct".
+    *    [{a;}^@]p(||) <-> <a;>p(||)
+    *   End.
+    * }}}
+    * @derived
+    */
+  lazy val dualbDirectAxiom = derivedAxiom("[d] dual direct",
+    Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
+    useExpansionAt("<> diamond")(1, 1::Nil) &
+      byUS(dualbAxiom.fact)
+  )
+
+  /**
+    * {{{
+    *   Axiom "<d> dual direct".
+    *    <{a;}^@>p(||) <-> [a;]p(||)
+    *   End.
+    * }}}
+    * @derived
+    */
+  lazy val dualdDirectAxiom = derivedAxiom("<d> dual direct",
+    Sequent(IndexedSeq(), IndexedSeq("<{a;}^@>p(||) <-> [a;]p(||)".asFormula)),
+    useExpansionAt("[] box")(1, 1::Nil) &
+      byUS("<d> dual")
+  )
+
+  // differentials
+
   /**
     * {{{Axiom "x' derive var commuted".
     *    (x_') = (x_)'
@@ -1613,9 +1947,9 @@ object DerivedAxioms {
     * }}}
     */
   lazy val Dvariable = derivedAxiom("x' derive variable",
-    Provable.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
+    ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
     (Skolemize(SuccPos(0)), 0)
-    (Provable.axioms("x' derive var"), 0)
+    (ProvableSig.axioms("x' derive var"), 0)
   )
   //  /**
   //   * {{{Axiom "x' derive var".
@@ -1674,6 +2008,7 @@ object DerivedAxioms {
   //    by(Dlinear)
   //)
 
+
   // real arithmetic
 
   /**
@@ -1697,6 +2032,14 @@ object DerivedAxioms {
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x (x=y <-> y=x)".asFormula, TactixLibrary.RCF))
   )
+
+  /**
+    * {{{Axiom ">= reflexive".
+    *    s() >= s()
+    * End.
+    * }}}
+    */
+  lazy val greaterEqualReflex = derivedAxiom(">= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() >= s_()".asFormula)), QE)
 
   /**
     * {{{Axiom "* commute".
@@ -2261,15 +2604,15 @@ object DerivedAxioms {
   )
   /**
     * {{{Axiom "Div<= up".
-    *    f()/g()<=h() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & ((G()<0 | gg()>0) & (ff()/gg()<=h() & ff()/G()<=h() & F()/gg()<=h() & F()/G()<=h())))
+    *    f()/g()<=h() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & ((G()<0 | 0<gg()) & (ff()/gg()<=h() & ff()/G()<=h() & F()/gg()<=h() & F()/G()<=h())))
     * End.
     * }}}
     */
   // A more efficient check is available
 
-  lazy val intervalUpDivide = derivedAxiom("Div<= up", Sequent(IndexedSeq(), IndexedSeq(("f_()/g_()<=h_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | gg_()>0) & (ff_()/gg_()<=h_() & ff_()/G_()<=h_() & F_()/gg_()<=h_() & F_()/G_()<=h_())))").asFormula)),
+  lazy val intervalUpDivide = derivedAxiom("Div<= up", Sequent(IndexedSeq(), IndexedSeq(("f_()/g_()<=h_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0<gg_()) & (ff_()/gg_()<=h_() & ff_()/G_()<=h_() & F_()/gg_()<=h_() & F_()/G_()<=h_())))").asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable), ("h_()".asTerm, "z".asVariable), ("F_()".asTerm, "X".asVariable), ("G_()".asTerm, "Y".asVariable), ("ff_()".asTerm, "xx".asVariable), ("gg_()".asTerm, "yy".asVariable))(1) &
-      byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|yy>0) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))".asFormula, TactixLibrary.RCF))
+      byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))".asFormula, TactixLibrary.RCF))
   )
 
   /**
@@ -2376,14 +2719,14 @@ object DerivedAxioms {
 
   /**
     * {{{Axiom "<=Div down".
-    *    h() <= f()/g() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & ((G()<0 | gg()>0) & (ff()/gg()<=h() & ff()/G()<=h() & F()/gg()<=h() & F()/G()<=h())))
+    *    h() <= f()/g() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & ((G()<0 | 0 < gg()) & (ff()/gg()<=h() & ff()/G()<=h() & F()/gg()<=h() & F()/G()<=h())))
     * End.
     * }}}
     */
 
-  lazy val intervalDownDivide = derivedAxiom("<=Div down", Sequent(IndexedSeq(), IndexedSeq(("h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | gg_()>0) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))").asFormula)),
+  lazy val intervalDownDivide = derivedAxiom("<=Div down", Sequent(IndexedSeq(), IndexedSeq(("h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0 < gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))").asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable), ("h_()".asTerm, "z".asVariable), ("F_()".asTerm, "X".asVariable), ("G_()".asTerm, "Y".asVariable), ("ff_()".asTerm, "xx".asVariable), ("gg_()".asTerm, "yy".asVariable))(1) &
-      byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x/y <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|yy>0) &(z<=xx/yy & z<=xx/Y & z<=X/yy & z<=X/Y))))".asFormula, TactixLibrary.RCF))
+      byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x/y <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(z<=xx/yy & z<=xx/Y & z<=X/yy & z<=X/Y))))".asFormula, TactixLibrary.RCF))
   )
 
   /**
@@ -2404,7 +2747,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  val dgZeroEquilibrium = derivedAxiom("dgZeroEquilibrium", Sequent(IndexedSeq(), IndexedSeq("x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula)),
+  lazy val dgZeroEquilibrium = derivedAxiom("dgZeroEquilibrium", Sequent(IndexedSeq(), IndexedSeq("x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula)),
     implyR(1) & DA("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, "x*y^2=0&y>0".asFormula)(1) <(
       TactixLibrary.QE,
       implyR(1) & TactixLibrary.boxAnd(1) & andR(1) <(
@@ -2416,4 +2759,70 @@ object DerivedAxioms {
       )
     )
   )
+
+  // Metric Normal Form
+
+  /**
+    * {{{Axiom "= expand".
+    *   f_()=g_() <-> f_()<=g_()&g_()<=f_()
+    * End.
+    * }}}
+    */
+  lazy val equalExpand: Lemma = derivedAxiom("= expand", Sequent(IndexedSeq(), IndexedSeq("f_()=g_() <-> f_()<=g_()&g_()<=f_()".asFormula)), QE)
+
+  /**
+    * {{{Axiom "<= to <".
+    *   f_()<=0 <- f_()<0
+    * End.
+    * }}}
+    */
+  lazy val le2l: Lemma = derivedAxiom("<= to <", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 <- f_()<0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <".
+    *   f_()<g_() <-> f_()-g_()<0
+    * End.
+    * }}}
+    */
+  lazy val metricLess: Lemma = derivedAxiom("metric <", Sequent(IndexedSeq(), IndexedSeq("f_()<g_() <-> f_()-g_()<0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <=".
+    *   f_()<=g_() <-> f_()-g_()<=0
+    * End.
+    * }}}
+    */
+  lazy val metricLessEqual: Lemma = derivedAxiom("metric <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=g_() <-> f_()-g_()<=0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <= & <=".
+    *   f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0
+    * End.
+    * }}}
+    */
+  lazy val metricAndLe: Lemma = derivedAxiom("metric <= & <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric < & <".
+    *   f_()<0 & g_()<0 <-> max(f_(), g_())<0
+    * End.
+    * }}}
+    */
+  lazy val metricAndLt: Lemma = derivedAxiom("metric < & <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 & g_()<0 <-> max(f_(), g_())<0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric <= | <=".
+    *   f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0
+    * End.
+    * }}}
+    */
+  lazy val metricOrLe: Lemma = derivedAxiom("metric <= | <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0".asFormula)), QE)
+
+  /**
+    * {{{Axiom "metric < | <".
+    *   f_()<0 | g_()<0 <-> min(f_(), g_())<0
+    * End.
+    * }}}
+    */
+  lazy val metricOrLt: Lemma = derivedAxiom("metric < | <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 | g_()<0 <-> min(f_(), g_())<0".asFormula)), QE)
 }

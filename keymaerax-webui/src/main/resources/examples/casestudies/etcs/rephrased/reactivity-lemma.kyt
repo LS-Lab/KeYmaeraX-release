@@ -1,0 +1,4 @@
+unfold & equivR(1) & <(
+  composeb(-7.0.0.1) & composeb(-7.0.0.1.1) & composeb(-7.0.0.1.1.1) & diffSolve(-7.0.0.1.1.1.1) & assignb(-7.0.0.1.1.1) & assignb(-7.0.0.1.1) & assignb(-7.0.0.1) & QE,
+  allR(1) & allR(1) & implyR(1) & unfold & diffSolve(1) & QE
+  )

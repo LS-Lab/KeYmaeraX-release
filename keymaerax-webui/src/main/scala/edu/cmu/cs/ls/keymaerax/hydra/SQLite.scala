@@ -24,7 +24,8 @@ import edu.cmu.cs.ls.keymaerax.lemma._
 import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXParser, KeYmaeraXProblemParser, ProofEvidence}
 import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.LemmaID
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent, SuccPos}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.Nil
 
@@ -346,6 +347,16 @@ object SQLite {
         else None
       })
 
+    override def addModelTactic(modelId: String, fileContents: String): Option[Int] =
+      synchronizedTransaction({
+        nSelects = nSelects + 1
+        val mId = Integer.parseInt(modelId)
+        if (Models.filter(_._Id === mId).filter(_.tactic.isEmpty).list.isEmpty) {
+          Some(Models.filter(_._Id === mId).map(_.tactic).update(Some(fileContents)))
+        }
+        else None
+      })
+
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       synchronizedTransaction({
         nInserts = nInserts + 2
@@ -452,7 +463,7 @@ object SQLite {
       })
     }
 
-    override def addAlternative(alternativeTo: Int, inputProvable: Provable, trace:ExecutionTrace):Unit = {
+    override def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace):Unit = {
       def get(stepId: Int) = {
         Executionsteps.filter(_._Id === stepId).list match {
           case Nil => throw new Exception("Execution step not found")
@@ -460,7 +471,7 @@ object SQLite {
         }
       }
       val oldStep = get(alternativeTo)
-      def addSteps(prev: Option[Int], globalProvable:Provable, steps:List[ExecutionStep]): Unit = {
+      def addSteps(prev: Option[Int], globalProvable:ProvableSig, steps:List[ExecutionStep]): Unit = {
         if (steps.nonEmpty) {
           val thisStep = steps.head
           val thisPOJO = get(thisStep.stepId)
@@ -478,7 +489,7 @@ object SQLite {
         val nilExecutable = addBelleExpr(TactixLibrary.nil)
         val localConclusion = inputProvable.subgoals(0)
         // Generate a no-op local provable whose conclusion matches with the current state of the proof.
-        val localProvable = Provable.startProof(localConclusion)
+        val localProvable = ProvableSig.startProof(localConclusion)
         val newLocalProvableID = createProvable(localProvable)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid,
@@ -501,7 +512,7 @@ object SQLite {
       })
 
     /** Stores a Provable in the database and returns its ID */
-    override def createProvable(p: Provable): Int = {
+    override def createProvable(p: ProvableSig): Int = {
       synchronizedTransaction({
         val lemma = Lemma(p, Lemma.requiredEvidence(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true")))))
         lemmaDB.add(lemma).toInt
@@ -548,11 +559,11 @@ object SQLite {
       * This is only for testing purposes. If you need the last provable of an execution,trace,
       * you should use getExecutionTrace(id).lastProvable
       * */
-    private def regenerate(proofId: Int): Provable = {
+    private def regenerate(proofId: Int): ProvableSig = {
       val trace = getExecutionTrace(proofId)
-      val inputProvable = Provable.startProof(trace.conclusion)
-      val initialProvable = Provable.startProof(inputProvable.conclusion)
-      def run(p: Provable, t:BelleExpr): Provable =
+      val inputProvable = ProvableSig.startProof(trace.conclusion)
+      val initialProvable = ProvableSig.startProof(inputProvable.conclusion)
+      def run(p: ProvableSig, t:BelleExpr): ProvableSig =
         SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
           case BelleProvable(pr, _) => pr
         }
@@ -672,7 +683,7 @@ object SQLite {
           else throw new Exception("Primary keys aren't unique in executions table.")
         })
 
-    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], inputProvable:Provable, localProvables: List[Provable]): List[ExecutionStep] = {
+    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], inputProvable:ProvableSig, localProvables: List[ProvableSig]): List[ExecutionStep] = {
       (executionSteps, executables, localProvables) match {
         case (step::steps, exe:: exes, localProvable::moreProvables) =>
           val output = inputProvable(localProvable, step.branchOrder.get)
@@ -699,7 +710,7 @@ object SQLite {
             val executableIds = steps.map { case step => step.executableId }
             val provables = loadProvables(provableIds).map(_.provable)
             val conclusion = provables.head.conclusion
-            val initProvable = Provable.startProof(conclusion)
+            val initProvable = ProvableSig.startProof(conclusion)
             val executables = getExecutables(executableIds)
             val traceSteps = zipTrace(steps, executables, initProvable, provables)
             ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)

@@ -1,0 +1,21 @@
+ProgramVariables.
+  R S.  /* Stop-sign position */
+  R ep. /* Maximum control cycle duration */
+  R x.  /* Car position */
+  R v.  /* Speed */
+  R t.  /* Controller clock */
+End.
+
+Problem.
+    x <= S
+  & ep > 0
+->
+  [{
+     {   v :=*; ?S - x >= ep*v;
+      ++ v := 0;
+     }
+     t := 0;
+     { x'=0*x+v, t'=0*t+1 & t <= ep }
+   }*@invariant(x <= S)
+  ]x <= S
+End.

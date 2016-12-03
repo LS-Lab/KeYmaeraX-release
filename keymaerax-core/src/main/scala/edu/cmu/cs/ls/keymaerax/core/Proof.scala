@@ -19,6 +19,8 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+
 import scala.collection.immutable
 
 /*--------------------------------------------------------------------------------*/
@@ -368,7 +370,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *  )
   * }}}
   */
-final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
+final case class Provable private(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
   /**
     * Position types for the subgoals of a Provable.
     */
@@ -669,7 +671,7 @@ object Provable {
     //@note soundness-critical
     val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-    Lemma(fact, Lemma.requiredEvidence(fact, evidence :: Nil), None)
+    Lemma(NoProofTermProvable(fact), Lemma.requiredEvidence(NoProofTermProvable(fact), evidence :: Nil), None)
   }
 
   /**
@@ -1079,7 +1081,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
   */
 object UniformRenaming {
   /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
-  def UniformRenamingForward(provable: Provable, what: Variable, repl: Variable): Provable =
+  def UniformRenamingForward(provable: ProvableSig, what: Variable, repl: Variable): ProvableSig =
     provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
 }
 
@@ -1142,7 +1144,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
 
   /**
     * Check whether this renaming is admissible for expression e, i.e.
-    * the new name repl does not already occur (or the renaming was the identity).
+    * the new name repl and primed version of old name what do not already occur (or the renaming was the identity).
     *
     * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
     * @note This implementation currently errors if repl.sort!=Real
@@ -1201,53 +1203,6 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
   }
 
 }
-
-/*********************************************************************************
-  * Hybrid Games
-  *********************************************************************************
-  */
-
-/**
-  * Dual-free proves [a]true for dual-free a, i.e., if a is a hybrid system not a hybrid game.
-  * {{{
-  *       *
-  * ------------------ (dual-free)
-  *   G |- [a]true, D
-  * }}}
-  *
-  * @note When using hybrid games axiomatization
-  */
-final case class DualFree(pos: SuccPos) extends RightRule {
-  val name: String = "dualFree"
-  /** Prove [a]true by showing that a is dual-free */
-  override def apply(s: Sequent): immutable.List[Sequent] = {
-    s(pos) match {
-      case Box(a, True) if dualFree(a) => Nil
-      case _ => throw new InapplicableRuleException("DualFree is not applicable to " + s + " at " + pos + " because a duality operator occurs", this, s)
-    }
-  } ensuring (s(pos).isInstanceOf[Box] && s(pos).asInstanceOf[Box].child==True && dualFree(s(pos).asInstanceOf[Box].program) && pos.isSucc && _.isEmpty, "closed if applicable")
-
-  /** Check whether given program is dual-free, so a hybrid system and not a hybrid game */
-  private def dualFree(program: Program): Boolean = program match {
-    case a: ProgramConst             => false /* @note false Unless USubst rejects Duals as substitutues for ProgramConst */
-    case Assign(x, e)                => true
-    case AssignAny(x)                => true
-    case Test(f)                     => true /* even if f contains duals, since they're different nested games) */
-    case ODESystem(a, h)             => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
-    case Choice(a, b)                => dualFree(a) && dualFree(b)
-    case Compose(a, b)               => dualFree(a) && dualFree(b)
-    case Loop(a)                     => dualFree(a)
-    case Dual(a)                     => false
-  }
-
-  /** Check whether given differential program is dual-free, which is mostly unnecessary */
-//  private def dualFreeODE(program: DifferentialProgram): Boolean = program match {
-//    case AtomicODE(DifferentialSymbol(x), e) => true
-//    case c: DifferentialProgramConst => true
-//    case DifferentialProduct(a, b)   => dualFreeODE(a) && dualFreeODE(b)
-//  }
-}
-
 
 /*********************************************************************************
   * Derived Sequent Proof Rules, for efficiency

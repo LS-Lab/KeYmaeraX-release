@@ -1,0 +1,27 @@
+/**
+ * RBC preserves controllability
+ * @provable
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ */
+Functions.
+  R b.
+  R d.
+  R v.
+  R z.
+End.
+
+ProgramVariables.
+  R vdes.
+  R m.
+  R mo.
+  R do.
+  R em. /* emergency brake: 0=off, 1=on */
+End.
+
+Problem.
+em = 0 & v^2 - d^2 <= 2*b*(m-z) & v >=0 & d >= 0 & b > 0 ->
+  [
+       vdes :=*; ?vdes >= 0; do := d; mo := m; m :=*; d :=*; ?d >= 0 & do^2 - d^2 <= 2*b*(m-mo);
+    ++ em := 1;
+  ](v^2 - d^2 <= 2*b*(m-z) & v >=0 & d >= 0 & b > 0)
+End.

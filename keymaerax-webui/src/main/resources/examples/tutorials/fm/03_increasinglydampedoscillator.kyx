@@ -1,0 +1,17 @@
+Functions.
+  R w().
+  R c().
+End.
+
+ProgramVariables.
+  R x.
+  R y.
+  R d.
+End.
+
+Problem.
+    w()^2*x^2 + y^2 <= c()^2
+  & d>=0
+->
+  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
+End.

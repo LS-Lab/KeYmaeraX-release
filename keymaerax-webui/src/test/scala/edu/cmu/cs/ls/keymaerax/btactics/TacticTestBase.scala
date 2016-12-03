@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.ExtractTacticFromTrace
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
@@ -41,7 +42,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     /** Prove sequent `s` using tactic  `t`. Record the proof in the database and check that the recorded tactic is
       * the provided tactic. */
-    def proveBy(modelContent: String, t: BelleExpr): Provable = {
+    def proveBy(modelContent: String, t: BelleExpr): ProvableSig = {
       val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
         case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
         case _ => fail("Model content " + modelContent + " cannot be parsed")
@@ -51,7 +52,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val globalProvable = trace.lastProvable
       val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
         globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
-      SequentialInterpreter(listener :: Nil)(t, BelleProvable(Provable.startProof(s))) match {
+      SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
           extractTactic(proofId) shouldBe t
           provable
@@ -132,8 +133,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(fml))
+  def proveBy(fml: Formula, tactic: BelleExpr): ProvableSig = {
+    val v = BelleProvable(ProvableSig.startProof(fml))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
@@ -142,8 +143,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(s))
+  def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
+    val v = BelleProvable(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
@@ -151,7 +152,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(p: Provable, tactic: BelleExpr): Provable = {
+  def proveBy(p: ProvableSig, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(p)
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
@@ -170,7 +171,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       override def toString: String = "whiteSpaceRemoved"
     }
 
-  def loneSucc(p: Provable) = {
+  def loneSucc(p: ProvableSig) = {
     assert(p.subgoals.length==1)
     assert(p.subgoals.last.succ.length==1)
     p.subgoals.last.succ.last

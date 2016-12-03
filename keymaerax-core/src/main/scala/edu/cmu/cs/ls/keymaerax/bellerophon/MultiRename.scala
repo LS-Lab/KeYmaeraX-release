@@ -160,6 +160,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   private def rename(program: Program): Program = program match {
     case a: ProgramConst             => if (semanticRenaming) program else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
+    case a: SystemConst              => if (semanticRenaming) program else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: SystemConstant " + a, this.toString, program.toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))

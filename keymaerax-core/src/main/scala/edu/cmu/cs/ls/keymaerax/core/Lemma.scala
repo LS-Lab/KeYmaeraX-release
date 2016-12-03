@@ -11,6 +11,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import java.security.MessageDigest
 
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
@@ -69,11 +70,11 @@ object Lemma {
     }
     //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
-    Lemma(fact, evidence, name)
+    Lemma(NoProofTermProvable(fact), evidence, name) //@todo also load proof terms.
   }
 
   /** Compute the checksum for the given Provable, which provides some protection against accidental changes. */
-  final def checksum(fact: Provable): String = checksum(fact.conclusion +: fact.subgoals)
+  final def checksum(fact: ProvableSig): String = checksum(fact.conclusion +: fact.subgoals)
 
   /** Compute the checksum for the given sequents, which provides some protection against accidental changes. */
   private[this] def checksum(sequents: immutable.IndexedSeq[Sequent]): String =
@@ -83,7 +84,7 @@ object Lemma {
   private[this] def digest(s: String): String = digest.digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
 
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
-  def requiredEvidence(fact: Provable, evidence: List[Evidence] = Nil): List[Evidence] = {
+  def requiredEvidence(fact: ProvableSig, evidence: List[Evidence] = Nil): List[Evidence] = {
     val versionEvidence = {
       val hasVersionEvidence = evidence.exists(x => x match {
         case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
@@ -112,6 +113,7 @@ object Lemma {
 /**
   * Lemmas are named Provables, supported by some evidence of how they came about.
   * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
+ *
   * @example{{{
   * // prove a lemma
   * val proved = TactixLibrary.proveBy(
@@ -133,12 +135,12 @@ object Lemma {
   * TactixLibrary.byUS(lemmaFact)
   * }}}
   * @author Stefan Mitsch
-  * @see [[Provable.proveArithmetic]]
+  * @see [[ProvableSig.proveArithmetic]]
   * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
   * @see [[Lemma.fromString]]
   * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
   */
-final case class Lemma(fact: Provable, evidence: immutable.List[Evidence], name: Option[String] = None) {
+final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], name: Option[String] = None) {
   insist(name.getOrElse("").forall(c => c!='\"'), "no escape characters in names: " + name)
   assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode) " + this)
   private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || {

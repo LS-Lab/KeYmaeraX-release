@@ -50,7 +50,7 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
     //@note e.head() by itself is not meaningful -- it combines e.head.head == Derivative and e.head.args == degree
     else if (e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1 &&
       e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
-    else if (e.symbolQ() && MathematicaNameConversion.toKeYmaera(e).name.endsWith(CONST_FN_SUFFIX))
+    else if (e.symbolQ() && MathematicaNameConversion.uncheckedUnmaskName(e.asString())._1.endsWith(CONST_FN_SUFFIX))
       MathematicaNameConversion.toKeYmaera(e) match {
         case BaseVariable(name, index, sort) => FuncOf(Function(name.substring(0, name.length - CONST_FN_SUFFIX.length), index, Unit, sort), Nothing)
       }
@@ -58,8 +58,9 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
   }
 
   /** Converts rules and rule lists, not to be used in QE! */
-  private def convertRule(e: MExpr): Formula = {
-    Equal(convert(e.args()(0)).asInstanceOf[Term], convert(e.args()(1)).asInstanceOf[Term])
+  private def convertRule(e: MExpr): Formula = convert(e.args()(0)) match {
+    case t: Term => Equal(t, convert(e.args()(1)).asInstanceOf[Term])
+    case f: Formula => Equiv(f, convert(e.args()(1)).asInstanceOf[Formula])
   }
 
   private def convertRuleList(e: MExpr): Formula = {
@@ -80,23 +81,33 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
 
 class UncheckedK2MConverter extends KeYmaeraToMathematica {
   val CONST_FN_SUFFIX = "cnstfn_"
+  val CONST_PRED_SUFFIX = "cnstpred_"
 
   //@note unchecked, because ambiguous And==&& vs. And==Rule in converse conversion
   override def m2k = null
   override def apply(e: KExpr): MExpr = convert(e)
 
   override protected def convertTerm(t: Term): MExpr = t match {
-    case FuncOf(Function(name, index, Unit, _, false), Nothing) =>
+    case FuncOf(Function(name, index, Unit, Real, false), Nothing) =>
       MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
+    case FuncOf(Function(name, index, Unit, Bool, false), Nothing) =>
+      MathematicaNameConversion.toMathematica(Variable(name + CONST_PRED_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
 
 object CEXK2MConverter extends UncheckedK2MConverter {
   override def convert(e: KExpr): MExpr = e match {
-    case Function(name, index, Unit, _, false) =>
+    case Function(name, index, Unit, Real, false) =>
       MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
+    case Function(name, index, Unit, Bool, false) =>
+      MathematicaNameConversion.toMathematica(Variable(name + CONST_PRED_SUFFIX, index))
     case _ => super.convert(e)
+  }
+
+  override protected def convertFormula(f: Formula): MExpr = f match {
+    case PredOf(Function(name, index, Unit, Bool, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(name + CONST_PRED_SUFFIX, index))
+    case _ => super.convertFormula(f)
   }
 
   override protected def convertTerm(t: Term): MExpr = t match {
@@ -105,7 +116,7 @@ object CEXK2MConverter extends UncheckedK2MConverter {
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
     case DifferentialSymbol(c) =>
       new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-    case FuncOf(Function(name, index, Unit, _, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
+    case FuncOf(Function(name, index, Unit, Real, false), Nothing) => MathematicaNameConversion.toMathematica(Variable(name + CONST_FN_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
@@ -117,7 +128,9 @@ object CEXM2KConverter extends UncheckedM2KConverter {
   override protected def convertAtomicTerm(e: MExpr): KExpr = {
     MathematicaNameConversion.toKeYmaera(e) match {
       case BaseVariable(name, index, sort) if name.endsWith(CEXK2MConverter.CONST_FN_SUFFIX) =>
-        FuncOf(Function(name.substring(0, name.length - CEXK2MConverter.CONST_FN_SUFFIX.length), index, Unit, sort), Nothing)
+        FuncOf(Function(name.substring(0, name.length - CEXK2MConverter.CONST_FN_SUFFIX.length), index, Unit, Real), Nothing)
+      case BaseVariable(name, index, sort) if name.endsWith(CEXK2MConverter.CONST_PRED_SUFFIX) =>
+        PredOf(Function(name.substring(0, name.length - CEXK2MConverter.CONST_PRED_SUFFIX.length), index, Unit, Bool), Nothing)
       case _ => super.convertAtomicTerm(e)
     }
   }
@@ -133,7 +146,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
 
   private val TIMEOUT = 10
 
-  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
+  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(k2m.convert(Not(fml)),
         new MExpr(
@@ -149,10 +162,11 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
           None
         case _ =>
           if (DEBUG) println("Counterexample " + cex.prettyString)
-          Some(ToolConversions.flattenConjunctions(cex).map({
+          Some(FormulaTools.conjuncts(cex).map({
             case Equal(name: Variable, value) => name -> value
             case Equal(name: DifferentialSymbol, value) => name -> value
             case Equal(FuncOf(fn, _), value) => fn -> value
+            case Equiv(PredOf(fn, _), value) => fn -> value
           }).toMap)
       }
       case result =>

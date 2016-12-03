@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ODESolverTool}
 
 import scala.collection.immutable._
@@ -59,27 +60,27 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step          : DependentPositionTactic = "step" by ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
-    (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
-     else HilbertCalculus.stepAt(pos) partial)
-    | (assignb(pos) partial))
+    (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
+     else HilbertCalculus.stepAt(pos))
+    | assignb(pos))
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
   /** Normalize to sequent form, customize branching with `beta`, customize simplification steps in antecedent/succedent with `stepL` and `stepR` */
   def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
     (OnAll(?(
-              (alphaRule partial)
+              alphaRule
                 | (closeId
-                | ((allR('R) partial)
-                | ((existsL('L) partial)
+                | (allR('R)
+                | (existsL('L)
                 | (close
-                | ((beta partial)
-                | ((stepL partial)
-                | ((stepR partial) partial) partial) partial) partial) partial) partial) partial) partial) partial))*
+                | (beta
+                | (stepL
+                | (stepR))))))))))*
     })
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  val unfoldProgramNormalize = "unfoldProgramNormalize" by chase('R) & normalize(andR('R), Idioms.ident, Idioms.ident)
+  val unfoldProgramNormalize = "unfold" by chase('R) & normalize(andR('R), Idioms.ident, Idioms.ident)
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   val prop                    : BelleExpr = NamedTactic("prop", {
@@ -97,7 +98,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
             | (must(normalize)
             | (loop(gen)('R)
             | (ODE('R)
-            | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
+            | (diffSolve('L) // somehow ODE aborts before even trying diffSolve
+            | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE))
   }
 
@@ -109,7 +111,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         | (must(normalize)
         | (loopauto('R)
         | (ODE('R)
-        | exhaustiveEqL2R('L) ) ) ) ) ) ))*) &
+        | (diffSolve('L) // somehow ODE aborts before even trying diffSolve
+        | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE)) & done
   }
 
@@ -127,26 +130,18 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // conditional tactics
 
-  /**
-   * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
-   *
-   * @note Probably this String should be a BelleLabel, and we should move BranchLabels into BelleLabel.
-   * @see [[label()]]
-   */
-  def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
-
   /** Call/label the current proof branch s
    *
-   * @see [[onBranch()]]
+   * @see [[Idioms.<()]]
    * @see [[sublabel()]]
    */
-  def label(s: String): BelleExpr = ??? //new LabelBranch(s)
+  def label(s: String): BelleExpr = LabelBranch(BelleTopLevelLabel(s))
 
   /** Mark the current proof branch and all subbranches s
     *
     * @see [[label()]]
     */
-  def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
+  def sublabel(s: String): BelleExpr = skip //LabelBranch(BelleSubLabel(???, s))
 
   // modalities
 
@@ -239,7 +234,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos),
-        throw new BelleError("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
+        throw new BelleThrowable("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
@@ -270,19 +265,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = (ToolProvider.odeTool(), ToolProvider.qeTool()) match {
-    case (Some(odeTool), Some(qeTool)) =>
-      DifferentialTactics.diffSolve(solution)(new ODESolverTool with QETool {
-        override def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
-          odeTool.odeSolve(diffSys, diffArg, iv)
-        override def qeEvidence(formula: Formula): (Formula, Evidence) =
-          qeTool.qeEvidence(formula)
-      })
-    case (None, _) => throw new BelleError("diffSol requires a DiffSolutionTool, but got None")
-    case (_, None) => throw new BelleError("qeEvidence requires a QETool, but got None")
-  }
+  lazy val diffSolve: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = false)
 
-
+  /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
+    * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
+  lazy val diffSolveEnd: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = true)
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
     * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
@@ -529,14 +516,18 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleError("QE requires a QETool, but got None")))
+  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")))
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleError("partialQE requires a QETool, but got None")))
+  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None")))
+
+  /** Splits propositional into many smallest possible QE calls */
+  def atomicQE(split: BelleExpr = betaRule, print: BelleExpr = skip): BelleExpr = normalize(split, skip, skip) & onAll(print & QE) //@todo less splitting (try with timeouts?)
+  lazy val atomicQE: BelleExpr = atomicQE()
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -615,8 +606,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param to The transformed formula that is desired as the result of this transformation.
     */
   def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)(new QETool with CounterExampleTool {
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleError("transform requires a QETool, but got None")).qeEvidence(formula)
-    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = ToolProvider.cexTool().getOrElse(throw new BelleError("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
+    override def qeEvidence(formula: Formula): (Formula, Evidence) = ToolProvider.qeTool().getOrElse(throw new BelleThrowable("transform requires a QETool, but got None")).qeEvidence(formula)
+    override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]] = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("transform requires a CounterExampleTool, but got None")).findCounterExample(formula)
   })
 
   //
@@ -658,27 +649,27 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  lazy val alphaRule: BelleExpr = (andL('_) ) |
-    ((orR('_) ) |
-      ((implyR('_) ) |
-        ((notL('_) ) |
-          (notR('_) )
+  lazy val alphaRule: BelleExpr = andL('_) |
+    (orR('_) |
+      (implyR('_) |
+        (notL('_) |
+          notR('_)
           )
         )
       )
   /** Beta rules are propositional rules that split */
-  lazy val betaRule: BelleExpr = (andR('_) ) |
-    ((orL('_) ) |
-      ((implyL('_) ) |
-        ((equivL('_) ) |
-          (equivR('_) )
+  lazy val betaRule: BelleExpr = andR('_) |
+    (orL('_) |
+      (implyL('_) |
+        (equivL('_) |
+          equivR('_)
           )
         )
       )
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleError("RCF requires a QETool, but got None")))
+  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -722,12 +713,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
     */
-  def proveBy(goal: Provable, tactic: BelleExpr): Provable = {
+  def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(goal)
     //@todo fetch from some factory
     SequentialInterpreter()(tactic, v) match {
       case BelleProvable(provable, _) => provable
-      case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
+//      //@note there is no other case at the moment
+//      case r => throw BelleIllFormedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
     }
   }
 
@@ -743,7 +735,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
    * }}}
    */
-  def proveBy(goal: Sequent, tactic: BelleExpr): Provable = proveBy(Provable.startProof(goal), tactic)
+  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
     *
@@ -754,10 +746,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
    * }}}
    */
-  def proveBy(goal: Formula, tactic: BelleExpr): Provable = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+  def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleError("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
+  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
 
 
   ///
@@ -766,6 +758,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
     case (True, false) => Some("closeTrue")
     case (False, true) => Some("closeFalse")
+    // prefer simplification over left-right-swaps
+    case (Not(Box(_,Not(_))), _) => Some("<> diamond")
+    case (Not(Diamond(_,Not(_))), _) => Some("[] box")
     case (_: Not, true) => Some("notL")
     case (_: Not, false) => Some("notR")
     case (_: And, true) => Some("andL")

@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -557,6 +557,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[y_0:=y;]y_0>0".asFormula
   }
 
+  it should "introduce assignment to fresh variable in antecedent" in {
+    val result = proveBy(Sequent(IndexedSeq("y>0".asFormula), IndexedSeq()), discreteGhost("y".asVariable)(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[y_0:=y;]y_0>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
   it should "assign term t to fresh variable" in {
     val result = proveBy("y+1>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
     result.subgoals should have size 1
@@ -572,18 +579,18 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not allow arbitrary terms t when no ghost name is specified" in {
-    a [BelleError] should be thrownBy proveBy("y>0".asFormula, discreteGhost("x+5".asTerm)(1))
+    a [BelleThrowable] should be thrownBy proveBy("y>0".asFormula, discreteGhost("x+5".asTerm)(1))
   }
 
   it should "use same variable if asked to do so" in {
-    val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1))
+    val result = proveBy("y>0".asFormula, DLBySubst.stutter("y".asVariable)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[y:=y;]y>0".asFormula
   }
 
   it should "not accept variables present in f" in {
-    a [BelleError] should be thrownBy proveBy("y>z+1".asFormula, discreteGhost("y".asVariable, Some("z".asVariable))(1))
+    a [BelleThrowable] should be thrownBy proveBy("y>z+1".asFormula, discreteGhost("y".asVariable, Some("z".asVariable))(1))
   }
 
   it should "work on assignments" in {
@@ -601,14 +608,14 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce self-assignment ghosts in the middle of formulas when not bound before" in {
-    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1, 1::Nil))
+    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, DLBySubst.stutter("y".asVariable)(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[x:=1;][y:=y;][y:=2;]y>0".asFormula
   }
 
   it should "not introduce self-assignment ghosts in the middle of formulas when bound" in {
-    a [BelleError] should be thrownBy proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil))
+    a [BelleThrowable] should be thrownBy proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil))
   }
 //
 //  ignore should "introduce ghosts in modality predicates" in {

@@ -18,24 +18,24 @@ import scala.collection.immutable
   *
   * @author Nathan Fulton
  * @see [[ProofTerm]]
- * @see [[Provable]]
+ * @see [[ProvableSig]]
  */
 object ProofChecker {
   private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
 
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
-  private def proofNode(phi : Formula) = Provable.startProof(goalSequent(phi))
+  private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))
 
   /**
    * Converts proof term e for goal phi into a Provable iff e indeed justifies phi.
     *
     * @todo could remove phi except no more contract then
    */
-  def apply(e: ProofTerm, phi: Formula) : Option[Provable] = {
+  def apply(e: ProofTerm, phi: Formula) : Option[ProvableSig] = {
     e match {
       case dLConstant(label) => Some(
-        Provable.startProof(goalSequent(phi))
-        (Provable.axioms(label), 0)
+        ProvableSig.startProof(goalSequent(phi))
+        (ProvableSig.axioms(label), 0)
       )
 
       case FOLRConstant(f) => {
@@ -52,7 +52,7 @@ object ProofChecker {
               //This is the ^R schematic proof rule referred to in the theory proof.
               val andR = edu.cmu.cs.ls.keymaerax.core.AndRight(SuccPos(0))
               Some(
-                Provable.startProof(goalSequent(phi))
+                ProvableSig.startProof(goalSequent(phi))
                   (andR, 0)
                   // left branch
                   (varphiCert, 0)
@@ -73,7 +73,7 @@ object ProofChecker {
         if(implCert.isDefined && implCert.get.isProved && psiCert.isDefined && psiCert.get.isProved)
           //@todo Eisegesis. Adopt implementation or adopt proof so that they are the same.
           Some(
-            Provable.startProof(goalSequent(phi))
+            ProvableSig.startProof(goalSequent(phi))
               (Cut(Imply(psi, phi)), 0)
               (HideRight(SuccPos(0)), 1)(implCert.get, 1) // hide phi and prove psi -> phi using proof produced by IH
               (Cut(psi), 0)
@@ -98,7 +98,7 @@ object ProofChecker {
            */
           //@todo Eisegesis. Adopt implementation or adopt proof so that they are the same.
           val readyForRewrite = (
-            Provable.startProof(goalSequent(phi))
+            ProvableSig.startProof(goalSequent(phi))
             (Cut(Equiv(psi, phi)), 0)
             (HideRight(SuccPos(0)), 1)(equivCert.get, 1) // hide phi and prove psi <-> phi using proof produced by IH
             (Cut(psi), 0)
@@ -132,7 +132,7 @@ object ProofChecker {
            */
           //@todo Eisegesis. Adopt implementation or adopt proof so that they are the same.
           val readyForRewrite = (
-            Provable.startProof(goalSequent(phi))
+            ProvableSig.startProof(goalSequent(phi))
             (Cut(Equiv(psi, phi)), 0)
             (HideRight(SuccPos(0)), 1)(equivCert.get, 1) // hide phi and prove psi <-> phi using proof produced by IH
             (Cut(psi), 0)
@@ -169,7 +169,7 @@ object ProofChecker {
         val phiPrimeCert = ProofChecker(e, phiPrime)
         if(phiPrimeCert.isDefined && phiPrimeCert.get.isProved) {
           val goalS = goalSequent(phi)
-          Some( UniformRenaming.UniformRenamingForward(Provable.startProof(goalS), what, repl) )
+          Some( UniformRenaming.UniformRenamingForward(ProvableSig.startProof(goalS), what, repl) )
         }
         else None
       }
@@ -178,7 +178,7 @@ object ProofChecker {
       case CTTerm(e, premise, usubst) => {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
-          Provable.startProof(goalSequent(phi))
+          ProvableSig.startProof(goalSequent(phi))
           (DerivedRuleInfo("CT term congruence").provable(usubst), 0)
           (equalityCert.get, 0)
         )
@@ -188,8 +188,8 @@ object ProofChecker {
       case CQTerm(e, premise, usubst) => {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
-          Provable.startProof(goalSequent(phi))
-          (Provable.rules("CQ term congruence")(usubst), 0)
+          ProvableSig.startProof(goalSequent(phi))
+          (ProvableSig.rules("CQ term congruence")(usubst), 0)
           (equalityCert.get, 0)
         )
         else None
@@ -198,8 +198,8 @@ object ProofChecker {
       case CETerm(e, premise, usubst) => {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
-          Provable.startProof(goalSequent(phi))
-          (Provable.rules("CE congruence")(usubst), 0)
+          ProvableSig.startProof(goalSequent(phi))
+          (ProvableSig.rules("CE congruence")(usubst), 0)
           (equalityCert.get, 0)
         )
         else None

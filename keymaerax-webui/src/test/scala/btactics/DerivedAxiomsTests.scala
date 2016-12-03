@@ -4,12 +4,13 @@ import java.io.{File, FileWriter}
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
-import edu.cmu.cs.ls.keymaerax.core.{Lemma, Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Lemma, Sequent}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable
 
@@ -31,9 +32,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   }
 
   private def useToClose(lemma: Lemma): Unit = {
-    Provable.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
+    ProvableSig.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
     //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(lemma), BelleProvable(Provable.startProof(lemma.fact.conclusion))) match {
+    theInterpreter(TactixLibrary.byUS(lemma), BelleProvable(ProvableSig.startProof(lemma.fact.conclusion))) match {
       case BelleProvable(provable, _) => provable shouldBe 'proved
       case _ => fail()
     }
@@ -52,6 +53,26 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     fw.close()
   }
 
+  "Derived Rule" should "prove allG" in withMathematica { qeTool => allGeneralize.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
+  ) }
+
+  it should "prove Goedel" in withMathematica { qeTool => Goedel.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
+  ) }
+
+  it should "prove CT" in withMathematica { qeTool => CTtermCongruence.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
+  ) }
+
+  it should "prove [] monotone" in withMathematica { qeTool => boxMonotone.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
+  ) }
+
+  it should "prove [] monotone 2" in withMathematica { qeTool => boxMonotone2.fact.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
+  ) }
+
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
@@ -64,6 +85,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove !<>" in {check(notDiamond)}
   ignore should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxAxiom)}
+  it should "prove V vacuous" in {check(vacuousAxiom)}
 //  it should "prove K1" in {check(K1)}
 //  it should "prove K2" in {check(K2)}
   //@todo nrf it should "prove box split" in {check(boxAnd)}
@@ -82,6 +104,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove exists and" in {check(existsAndAxiom)}
   it should "prove [:=] assign exists" in {check(assignbImpliesExistsAxiom)}
   it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
+  it should "prove <:=> assign dual 2" in {check(assignDual2Axiom)}
+  it should "prove <:=> assign equality all" in {check(assigndEqualityAllAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
   //@todo it should "prove [':=] differential assign" in {check(assignDAxiomb)}
@@ -93,6 +117,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove [*] approx" in {check(loopApproxb)}
+  it should "prove [d] dual" in {check(dualbAxiom)}
+  it should "prove [d] dual direct" in {check(dualbDirectAxiom)}
+  it should "prove <d> dual direct" in {check(dualdDirectAxiom)}
   it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
@@ -103,8 +130,11 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove !| deMorgan" in {check(notOr)}
   it should "prove !-> deMorgan" in {check(notImply)}
   it should "prove !<-> deMorgan" in {check(notEquiv)}
+  it should "prove -> converse" in {check(converseImply)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
+  it should "prove Kd diamond modus ponens" in {check(KdAxiom)}
+  it should "prove Kd2 diamond modus ponens" in {check(Kd2Axiom)}
   it should "prove PC1" in {check(PC1)}
   it should "prove PC2" in {check(PC2)}
   it should "prove PC3" in {check(PC3)}
@@ -116,8 +146,17 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove DIo open differential invariance >" in {check(DIOpeninvariantLess)}
   it should "prove DV differential variant <=" in withMathematica {qeTool => check(DVLessEqual)}
   it should "prove DW differential weakening" in {check(DWeakening)}
+  it should "prove DW differential weakening and" in {check(DWeakeningAnd)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
+  it should "prove DGd differential ghost" in {check(DGddifferentialghost)}
+  it should "prove DGCd diamond differential ghost const" in {check(DGCddifferentialghostconst)}
+  it should "prove DGCd diamond differential ghost const exists" in {check(DGCddifferentialghostconstexists)}
+  it should "prove DCd diamond differential cut" in {check(DCddifferentialcut)}
+  it should "prove DWd diamond differential weakening" in {check(DWddifferentialweakening)}
+  it should "prove DWd2 diamond differential weakening" in {check(DWd2differentialweakening)}
+  it should "prove comma commute diamond" in {check(commaCommuted)}
+  it should "prove DGd diamond inverse differential ghost implicational" in {check(DGdinversedifferentialghostimplicational)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove x' derive var commuted" in withMathematica { qetool => check(DvariableCommuted)}
@@ -195,7 +234,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove !!" in {check(doubleNegationAxiom)}
   it should "tactically prove exists dual" in {check(existsDualAxiom)}
   ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
-  ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
+  it should "tactically prove exists eliminate" in {check(existsEliminate)}
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}
   it should "tactically prove box dual" in {check(boxAxiom)}
   it should "tactically prove <:=> assign" in {check(assigndAxiom)}
@@ -228,19 +267,4 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove min" in withMathematica { qeTool => check(minDef)}
   it should "tactically prove max" in withMathematica { qeTool => check(maxDef)}
 
-  "Derived Rule" should "prove allG" in withMathematica { qeTool => allGeneralize.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
-
-  it should "prove CT" in withMathematica { qeTool => CTtermCongruence.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
-  ) }
-
-  it should "prove [] monotone" in withMathematica { qeTool => boxMonotone.fact.subgoals shouldBe List(
-      Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
-  ) }
-
-  it should "prove [] monotone 2" in withMathematica { qeTool => boxMonotone2.fact.subgoals shouldBe List(
-    Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
 }

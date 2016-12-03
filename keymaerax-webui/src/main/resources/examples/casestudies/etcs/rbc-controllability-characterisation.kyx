@@ -1,0 +1,40 @@
+/**
+ * Characterises the constraint ensuring that RBC preserves controllability
+ * @provable
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ *       Proposition 2
+ */
+Functions.
+  R b.
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R drive.
+  R brake.
+  R state.
+End.
+
+Problem.
+[ drive := 0; brake := 1; state := drive; ]((d >= 0 & b > 0) ->
+  [ do := d; mo := m;
+		{
+		   vdes :=*; ?vdes >= 0; do := d; mo := m; m :=*; d :=*;
+		++ state := brake;
+		}
+	] ((do^2 - d^2 <= 2*b*(m-mo) & do >= 0 & d >= 0)
+        <->
+        \forall z \forall v ((v^2 - do^2 <= 2*b*(mo-z) & v >=0 & do >= 0 & b > 0)
+                             -> (v^2 - d^2 <= 2*b*(m-z) & v >=0 & d >= 0 & b > 0))
+    )
+  )
+End.

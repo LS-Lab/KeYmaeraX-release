@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Find, BelleError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Find, BelleThrowable}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -52,7 +52,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "throw an exception if no applicable position can be found" in {
-    val e = intercept[BelleError] { proveBy(
+    val e = intercept[BelleThrowable] { proveBy(
       Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 | y>0".asFormula), immutable.IndexedSeq()),
       TactixLibrary.andL('L)
     )}
@@ -67,6 +67,26 @@ class LocateTests extends TacticTestBase {
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x>0".asFormula, "y>0".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "find formulas by shape" in {
+    val result = proveBy(
+      Sequent(immutable.IndexedSeq("a=2&b=3".asFormula, "x>0 & y>0".asFormula), immutable.IndexedSeq()),
+      TactixLibrary.andL('L, "x>0 & y>0".asFormula)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("a=2&b=3".asFormula, "x>0".asFormula, "y>0".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "find terms by shape" in {
+    val result = proveBy(
+      Sequent(immutable.IndexedSeq("abs(x)>0".asFormula), immutable.IndexedSeq()),
+      TactixLibrary.abs('L, "abs(x)".asTerm)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("abs_0>0".asFormula, "x>=0&abs_0=x|x < 0&abs_0=-x".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -91,7 +111,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "throw an exception if no applicable position can be found" in {
-    val e = intercept[BelleError] { proveBy(
+    val e = intercept[BelleThrowable] { proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
       TactixLibrary.orR('R)
     )}
@@ -107,6 +127,26 @@ class LocateTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
+  }
+
+  it should "find formulas by shape" in {
+    val result = proveBy(
+      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2|b=3".asFormula, "x>0 | y>0".asFormula)),
+      TactixLibrary.orR('R, "x>0 | y>0".asFormula)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only ("a=2|b=3".asFormula, "x>0".asFormula, "y>0".asFormula)
+  }
+
+  it should "find terms by shape" in {
+    val result = proveBy(
+      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("abs(x)>0".asFormula)),
+      TactixLibrary.abs('R, "abs(x)".asTerm)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=0&abs_0=x|x < 0&abs_0=-x".asFormula
+    result.subgoals.head.succ should contain only "abs_0>0".asFormula
   }
 
   "'_" should "locate the sole applicable formula in sequent" in {
@@ -130,7 +170,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "throw an exception if no applicable position can be found" in {
-    val e = intercept[BelleError] { proveBy(
+    val e = intercept[BelleThrowable] { proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
       TactixLibrary.orR('_)
     )}

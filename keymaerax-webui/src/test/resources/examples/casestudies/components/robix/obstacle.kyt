@@ -1,0 +1,5 @@
+implyR(1) & andL('L)* & loop({`0<=t&t<=ep&-V*t<=xo-xo0&xo-xo0<=V*t&-V*t<=yo-yo0&yo-yo0<=V*t`}, 1) & <(
+  QE,
+  QE,
+  unfold & diffInvariant({`0<=t`}, 1) & diffInvariant({`-t*V<=xo-old(xo)&xo-old(xo)<=t*V`}, 1) & diffInvariant({`-t*V<=yo-old(yo)&yo-old(yo)<=t*V`}, 1) & allR2L(-14) & allR2L(-13) & diffWeaken(1) & QE
+  )

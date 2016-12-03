@@ -1,12 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{AnyArg, Formula, Provable, UnitPredicational}
+import edu.cmu.cs.ls.keymaerax.core.{AnyArg, Formula, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, Suite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
@@ -16,8 +17,7 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
   * @author Andre Platzer
   */
 @SummaryTest
-class UnifyAxiomInstantiationTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  KeYmaera.init(Map.empty)
+class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   val randomTrials = 20
   val randomComplexity = 2
@@ -255,7 +255,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers with BeforeAndA
     "DS& differential equation solution" ::
     //"c()' derive constant fn" :: //@todo would need to avoid all variables here
     "x' derive var" ::
-    "V vacuous" :: "vacuous all quantifier" ::
+    "VK vacuous" :: "V vacuous" :: "vacuous all quantifier" ::
     "const congruence" :: "const formula congruence" ::
     Nil
 
@@ -272,7 +272,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers with BeforeAndA
 
         if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
           val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-            rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity, false)
+            rand.nextSchematicInstance(AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity, false)
           }
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {
@@ -338,7 +338,7 @@ class UnifyAxiomInstantiationTest extends FlatSpec with Matchers with BeforeAndA
 
         if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
           val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-            rand.nextSchematicInstance(Provable.axiom(ax).at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
+            rand.nextSchematicInstance(AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
           }
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {

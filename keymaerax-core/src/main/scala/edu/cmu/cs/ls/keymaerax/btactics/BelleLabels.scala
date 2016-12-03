@@ -15,4 +15,8 @@ object BelleLabels {
   val useCase = BelleTopLevelLabel("Use case")
   val initCase = BelleTopLevelLabel("Init case")
   val indStep = BelleTopLevelLabel("Induction step")
+
+  // cuts
+  val cutUse = BelleTopLevelLabel("Cut use")
+  val cutShow = BelleTopLevelLabel("Cut show")
 }

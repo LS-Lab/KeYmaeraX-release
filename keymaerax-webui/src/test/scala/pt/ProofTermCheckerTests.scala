@@ -15,11 +15,11 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @author Nathan Fulton
  */
 class ProofTermCheckerTests extends TacticTestBase {
-  private def proves(cert : Provable, f : Formula) = {
+  private def proves(cert : ProvableSig, f : Formula) = {
     val s = cert.conclusion
     s.succ.length == 1 && s.ante.length == 0 && s.succ.last.equals(f) && cert.isProved
   }
-  private def debugCert(cert: Provable) = println(cert.subgoals.mkString("\n --- \n"))
+  private def debugCert(cert: ProvableSig) = println(cert.subgoals.mkString("\n --- \n"))
 
   "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" ignore {
     val label = "[:=] assign"
@@ -87,7 +87,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   //[v:=t();]p(v) <-> p(t())
   "usubst term checker" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" ignore {
     val axiomName = "[:=] assign"
-    val axiom = Provable.axiom("[:=] assign")
+    val axiom = ProvableSig.axiom("[:=] assign")
     val instance = "[v:=1;]v=v <-> 1=1".asFormula
     val usubst = USubst(
       SubstitutionPair("t()".asTerm, "1".asTerm) ::

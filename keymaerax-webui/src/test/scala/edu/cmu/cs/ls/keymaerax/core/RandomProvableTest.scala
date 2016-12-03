@@ -11,6 +11,7 @@ import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTe
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.{FlatSpec, Matchers, TagAnnotation}
 
 import scala.collection.immutable.Map
@@ -34,32 +35,33 @@ class RandomProvableTest extends FlatSpec with Matchers {
       val e = rand.nextProvable(randomComplexity)
       e shouldBe 'proved
       // prolong with conclusion identity is a no-op
-      e(Provable.startProof(e.conclusion)) shouldBe e
+      e(ProvableSig.startProof(e.conclusion)) shouldBe e
       // use a fact that isn't proved and then continue above with a sub is a no-op
-      Provable.startProof(e.conclusion).sub(0)(Provable.startProof(e.conclusion)) shouldBe Provable.startProof(e.conclusion)
+      ProvableSig.startProof(e.conclusion).sub(0)(ProvableSig.startProof(e.conclusion)) shouldBe ProvableSig.startProof(e.conclusion)
 //      val sub = rand.rand.nextInt(e.subgoals.length)
 //      e(e.sub(sub), sub) shouldBe e
     }
 
-  "Dual-free" should "work on random formulas if no dual operators occur" in {
-    val dual = try {
-      Dual(Test(False))
-      false
-    } catch {
-      case _ => true
-    }
-    if (dual) {
-      for (i <- 1 to randomTrials) {
-        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
-        val e = Box(rand.nextProgram(randomComplexity), True)
-        if (e.find(prg=>prg.isInstanceOf[Dual])==None)
-          Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
-      }
-    } else {
-      for (i <- 1 to randomTrials) {
-        val e = Box(rand.nextProgram(randomComplexity), True)
-        Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
-      }
-    }
-  }
+//  "Dual-free" ignore should "work on random formulas if no dual operators occur" in {
+    //@todo use boxTrue instead of DualFree
+//    val dual = try {
+//      Dual(Test(False))
+//      false
+//    } catch {
+//      case _ => true
+//    }
+//    if (dual) {
+//      for (i <- 1 to randomTrials) {
+//        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
+//        val e = Box(rand.nextProgram(randomComplexity), True)
+//        if (e.find(prg=>prg.isInstanceOf[Dual])==None)
+//          Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
+//      }
+//    } else {
+//      for (i <- 1 to randomTrials) {
+//        val e = Box(rand.nextProgram(randomComplexity), True)
+//        Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved
+//      }
+//    }
+//  }
 }

@@ -94,6 +94,7 @@
                 <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
                 <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!model.hasTactic}" ng-controller="ModelProofCreateCtrl" ng-click="proveFromTactic(model.id)" uib-tooltip="Prove from tactic"><i class="fa fa-cog"></i></a>
                 <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
             </td>
         </tr>
         </tbody>

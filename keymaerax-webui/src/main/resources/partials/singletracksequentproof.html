@@ -13,7 +13,7 @@
 <!-- Conclusion -->
 <div ng-repeat="section in deductionPath.sections"
      ng-init="outerIdx=$index"
-     uib-collapse="deductionPath.isCollapsed">
+     ng-if="!deductionPath.isCollapsed">
 
     <!-- section start is always displayed -->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 && section.path.length === 1 && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
@@ -165,23 +165,71 @@
         </div>
     </div>
 </div>
-<!-- full expand -->
+<!-- full expand and previous step if full-collapsed -->
 <div class="row k4-proofrow k4-proofrow-last"
+     ng-init="outerIdx=0"
+     ng-repeat="step in [proofStepParent(deductionPath.sections[0].path[0])]"
      ng-if="deductionPath.isCollapsed">
     <ul>
-        <li>
+        <li >
+            <!-- Full collapse if the first section contains only one element (and is not collapsed) -->
             <span class="k4-prooficon">
-            <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
-               uib-tooltip="Expand all" tooltip-popup-delay="1000"><span class="fa fa-plus-square-o"></span></a>
+                <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Expand all"
+                   tooltip-popup-delay="1000">
+                    <span class="fa fa-plus-square-o"></span>
+                </a>
+                <span ng-if="step !== undefined">&nbsp;</span>
             </span>
             <span class="k4-prooficon">&nbsp;</span>
-            <span class="k4-proofrule">&nbsp;</span>
+            <!-- proof rule -->
+            <span class="k4-proofrule"
+                  ng-if="step !== undefined"
+                  tooltip-placement="right"
+                  ng-mouseover="highlightStepPosition(step.id, true)"
+                  ng-mouseleave="highlightStepPosition(step.id, false)"
+                  ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                  uib-popover-template="'proofStepPopoverPrev.html'"
+                  popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
+                    {{step.id | childRuleName:this}}
+                </span>
+            <span class="k4-proofrule" ng-if="step === undefined"></span>
         </li>
     </ul>
-    <div class="col-md-12">
+    <div class="col-md-12 k4-goalwithsiblings" id="seq_{{step.id}}" ng-if="step !== undefined">
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                    sequent="step.sequent"
+                    read-only="true" collapsed="true"></k4-sequent>
+        <ul>
+            <!-- display siblings at fork -->
+            <li ng-repeat="sibling in siblingsWithAgendaItem(step.children)">
+                <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
+                <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+                   class="badge"
+                   uib-tooltip-template="'siblingSequentTooltip.html'"
+                   tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+            </li>
+        </ul>
+    </div>
+    <div class="col-md-12 k4-proofrow-annotation" ng-if="step === undefined">
         ...
+        <ul>
+            <li>
+                <!-- load parent -->
+                <a class="k4-withcontextmenu"
+                   ng-click="fetchSectionParent(deductionPath.sections[0])"
+                   uib-tooltip="Fetch parent step"
+                   tooltip-popup-delay="1000"
+                   ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                   uib-popover-template="'navigateTowardsRootPopover.html'"
+                   popover-title="Proof history" popover-placement="auto bottom" popover-trigger="contextmenu"
+                   ng-if="!deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed"><span class="fa fa-plus-square-o"></span></a>
+            </li>
+        </ul>
     </div>
 </div>
+
+
 <script type="text/ng-template" id="navigateTowardsRootPopover.html">
     <div class="k4-nobreak">
         <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show fork</span></a><br/>
@@ -209,6 +257,12 @@
 <script type="text/ng-template" id="proofStepPopover.html">
     <div class="k4-nobreak">
         <a ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopoverPrev.html">
+    <div class="k4-nobreak">
+        <a ng-click="prune(step.id)"><span class="fa fa-eraser"> Prune</span></a><br/>
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>

@@ -4,7 +4,7 @@ import java.util.concurrent.{Callable, FutureTask, ExecutorService, Executors}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{IOListener, Interpreter, SequentialInterpreter}
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleValue, BelleExpr, Interpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleValue, BelleExpr, Interpreter}
 import scala.collection.mutable.Map
 
 /**
@@ -31,7 +31,7 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     * [[scheduledTactics]] could be at any state of execution, included finished.
     * Tactics are never removed from the [[scheduledTactics]] mapping unless explicitly via .remove()
     */
-  private val scheduledTactics : scala.collection.mutable.Map[String, ListenerFuture[Either[BelleValue, BelleError]]] = Map()
+  private val scheduledTactics : scala.collection.mutable.Map[String, ListenerFuture[Either[BelleValue, BelleThrowable]]] = Map()
 
   def tasksForUser(userId: String):List[String] = {
     scheduledTactics.flatMap{case (task, future) =>
@@ -65,7 +65,7 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
   def contains(id: String) = scheduledTactics.contains(id)
 
   /** Returns the result of the tactic, or None if the tactic is not done running. */
-  def getResult(id: String) : Option[Either[BelleValue, BelleError]] =
+  def getResult(id: String) : Option[Either[BelleValue, BelleThrowable]] =
     synchronized {
       if (isDone(id))
         Some(scheduledTactics(id).get())
@@ -110,7 +110,7 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     * @param id The schedule id of the tactic to wait on
     * @param millis The duration in milliseconds to sleep between polling attempts
     */
-  def wait(id: String, millis:Int = 10): Option[Either[BelleValue, BelleError]] = {
+  def wait(id: String, millis:Int = 10): Option[Either[BelleValue, BelleThrowable]] = {
     try {
       while(!isDone(id)) {
         Thread.sleep(millis)
@@ -123,14 +123,14 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
   }
 
   private def makeFuture(userId: String, tactic: BelleExpr, value: BelleValue, listeners: List[IOListener]) = {
-    new ListenerFuture[Either[BelleValue, BelleError]](userId, listeners, new Callable[Either[BelleValue, BelleError]]() {
-      override def call(): Either[BelleValue, BelleError] = {
+    new ListenerFuture[Either[BelleValue, BelleThrowable]](userId, listeners, new Callable[Either[BelleValue, BelleThrowable]]() {
+      override def call(): Either[BelleValue, BelleThrowable] = {
         try {
           Left(interpreter(listeners)(tactic, value))
         }
         catch {
-          case e : BelleError     => Right(e)
-          case thrown : Throwable => Right(new BelleError("Unknown throwable thrown during tactic execution", thrown))
+          case e : BelleThrowable     => Right(e)
+          case thrown : Throwable => Right(new BelleThrowable("Unknown throwable thrown during tactic execution", thrown))
         }
       }
     })

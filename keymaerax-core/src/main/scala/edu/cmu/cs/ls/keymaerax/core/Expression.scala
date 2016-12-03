@@ -592,6 +592,13 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
   namingConvention
 }
 
+/** Uninterpreted hybrid system program constant that are not hybrid games. */
+sealed case class SystemConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
+  final val index: Option[Int] = None
+  override def toString: String = name + "{|^@|}"
+  namingConvention
+}
+
 /** x:=e assignment and/or differential assignment x':=e */
 case class Assign(x: Variable, e: Term) extends AtomicProgram {
   insist(e.sort == x.sort, "assignment of compatible sort " + this)
@@ -636,9 +643,7 @@ case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 /** child* nondeterministic repetition */
 case class Loop(child: Program) extends UnaryCompositeProgram { def reapply = copy }
 /** `child^d` dual program */
-case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = copy
-  require(false, "Hybrid games are currently disabled")
-}
+case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = copy }
 
 /** Differential equation system ode with given evolution domain constraint */
 case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) extends Program

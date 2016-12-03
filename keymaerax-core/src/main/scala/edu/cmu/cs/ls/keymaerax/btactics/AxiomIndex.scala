@@ -4,8 +4,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.lang.Number
-
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
@@ -38,16 +36,19 @@ object AxiomIndex {
     // [a] modalities and <a> modalities
     case "<> diamond" | "[] box" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign" | "<:=> assign" | "[':=] differential assign" | "<':=> differential assign" => directReduction
-    case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
+    case "[:=] assign equational" | "<:=> assign equational" |
+         "[:=] assign equality" | "<:=> assign equality" | "<:=> assign equality all" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
     case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[:*] assign nondet" | "<:*> assign nondet" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
     case "[?] test"    | "<?> test"    => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "[++] choice" | "<++> choice" => binaryDefault
     case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "[d] dual"    | "<d> dual" | "[d] dual direct"    | "<d> dual direct"    => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
 
     case "DW"              => (PosInExpr(Nil), Nil)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
+    case "DCd diamond differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DE differential effect" | "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "DI differential invariance" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
@@ -91,8 +92,11 @@ object AxiomIndex {
          | "const congruence" | "const formula congruence" => reverseReduction
 
     /* @todo Adapt for hybrid games */
-    case "V vacuous" => assert(Provable.axiom(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
+    case "VK vacuous" =>
+      (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
+    case "V vacuous" => //assert(Provable.axiom(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
       (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
+    case "[]T system" => (PosInExpr(Nil), Nil)
     case "K modal modus ponens" => (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
     case "I induction" => (PosInExpr(1::Nil), /*PosInExpr(0::Nil)::*/PosInExpr(1::1::Nil)::PosInExpr(1::Nil)::Nil)
     // derived
@@ -130,6 +134,8 @@ object AxiomIndex {
     case "neg<= up" | "<=neg down" => (PosInExpr(1::Nil), PosInExpr(0::Nil)::Nil)
     case "+<= up" | "-<= up" | "abs<= up" | "max<= up" | "min<= up" | "<=+ down" | "<=- down" | "<=abs down" | "<=max down" | "<=min down" | "pow<= up" | "<=pow down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
     case "*<= up" | "<=* down" | "Div<= up" | "<=Div down" => (PosInExpr(1::Nil),  PosInExpr(0::0::0::Nil)::PosInExpr(0::0::1::Nil)::PosInExpr(0::1::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
+
+    case "<= to <" => (PosInExpr(1::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
 
     // default position
     case _ => (PosInExpr(0::Nil), Nil)
@@ -177,11 +183,10 @@ object AxiomIndex {
         case _ => Nil
       }
 
-        //@todo BigDecimal missing unapply
-//      case Plus(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0+" :: Nil
-//      case Plus(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "+0" :: Nil
-//      case Times(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0*" :: Nil
-//      case Times(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "*0" :: Nil
+      case Plus(Number(n), _) if n == 0 => "0+" :: Nil
+      case Plus(_, Number(n)) if n == 0 => "+0" :: Nil
+      case Times(Number(n), _) if n == 0 => "0*" :: Nil
+      case Times(_, Number(n)) if n == 0 => "*0" :: Nil
 
       case _ => Nil
     } else expr match {
@@ -202,14 +207,15 @@ object AxiomIndex {
 
       case Box(a, post) =>
         a match {
-        case _: Assign => "[:=] assign" :: "[:=] assign equality" :: "[:=] assign update" :: Nil
+        case Assign(_: BaseVariable, _) => "[:=] assign" :: "[:=] assign equality" :: "[:=] assign update" :: Nil
+        case Assign(_: DifferentialSymbol, _) => "[':=] differential assign" :: Nil
         //@todo "[:=] assign equality" does not automatically do the fresh renaming of "assignbTactic", which is not available forward, though.
         //case _: Assign => "assignbTactic" :: Nil
         case _: AssignAny => "[:*] assign nondet" :: Nil
         case _: Test => "[?] test" :: Nil
         case _: Compose => "[;] compose" :: Nil
         case _: Choice => "[++] choice" :: Nil
-        case _: Dual => "[^d] dual" :: Nil
+        case _: Dual => "[d] dual direct" :: Nil
         //@note Neither "loop" nor "[*] iterate" are automatic if invariant generator wrong and infinite unfolding useless.
 //        case _: Loop => "loop" :: "[*] iterate" :: Nil
         //@note This misses the case where differential formulas are not top-level, but strategically that's okay. Also strategically, DW can wait until after DE.
@@ -232,14 +238,15 @@ object AxiomIndex {
       }
 
       case Diamond(a, _) => a match {
-        case _: Assign => "<:=> assign" :: "<:=> assign equality" :: Nil
+        case Assign(_: BaseVariable, _) => "<:=> assign" :: "<:=> assign equality all" :: "<:=> assign equality" :: Nil
+        case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: Nil
         case _: AssignAny => "<:*> assign nondet" :: Nil
         case _: Test => "<?> test" :: Nil
         case _: Compose => "<;> compose" :: Nil
         case _: Choice => "<++> choice" :: Nil
-        case _: Dual => "<^d> dual" :: Nil
+        case _: Dual => "<d> dual direct" :: Nil
         case _: Loop => "<*> iterate" :: unknown
-        case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
+        case _: ODESystem => println("AxiomIndex for <ODE> still missing. Use tactic ODE"); unknown
         case _ => Nil
       }
 
@@ -256,7 +263,7 @@ object AxiomIndex {
         case _: Less => "! <" :: Nil
         case _: LessEqual => "! <=" :: Nil
         case _: Greater => "! >" :: Nil
-        //case _: GreaterEqual => "! >=" :: Nil
+        case _: GreaterEqual => "< negate" :: Nil
         case _: Not => "!! double negation" :: Nil
         case _: And => "!& deMorgan" :: Nil
         case _: Or => "!| deMorgan" :: Nil

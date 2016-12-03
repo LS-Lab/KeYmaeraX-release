@@ -2,8 +2,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import TacticExtractionErrors._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, Generator, Idioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, Generator, Idioms}
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
@@ -32,7 +32,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   def extractTextWithoutParsing(tree : ProofTree)(node: TreeNode) : String = {
     val thisTactic = node.endStep match {
       case Some(step) => db.getExecutable(step.executableId).belleExpr
-      case None =>  "nil" //why is this correct behavior? //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
+      case None =>  BellePrettyPrinter(Idioms.nil)
     }
 
     val children = node.children
@@ -64,7 +64,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val thisTactic = tacticStringAt(node)
 
     //@todo does pretty-printing
-    if (children.isEmpty || children.forall(_.endStep.isEmpty)) thisTactic
+    if (children.isEmpty) thisTactic
     else if (children.length == 1) thisTactic + " & " + getTacticString(modelId, indent)(children.head)
     else thisTactic + " & <(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
@@ -81,7 +81,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
         t.printStackTrace() //Super useful for debugging since TacticExtractionError seems to swallow its cause, or at least it doesn't always get printed out...
         throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database because $t", t)
     }
-    case None => Idioms.nil.toString //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise. More generally, why is this (or similar) correct behavior?
+    case None => BellePrettyPrinter(Idioms.nil)
   }
 }
 

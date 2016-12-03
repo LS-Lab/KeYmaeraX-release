@@ -2,9 +2,10 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.serializer
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{AntePos, Formula, Provable, SuccPos}
+import edu.cmu.cs.ls.keymaerax.core.{AntePos, Formula, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.hydra.{DatabaseTacticSerializer, SQLite}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.{FlatSpec, Matchers}
 
 
@@ -16,7 +17,7 @@ class DatabaseTacticSerializerTests extends FlatSpec with Matchers {
     val serializer = new DatabaseTacticSerializer(SQLite.TestDB)
     val interpreter = SequentialInterpreter(Seq(serializer))
 
-    val input = BelleProvable(Provable.startProof("1=1".asFormula))
+    val input = BelleProvable(ProvableSig.startProof("1=1".asFormula))
     val tactic = new InputTactic[Formula]("TestInputTactic", "1=1".asFormula) {
       override def computeExpr(): BelleExpr = PartialTactic(Idioms.nil)
     }

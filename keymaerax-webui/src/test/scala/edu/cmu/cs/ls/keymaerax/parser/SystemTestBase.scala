@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerator
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -39,7 +40,7 @@ class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       override def toString: String = "whiteSpaceRemoved"
     }
 
-  def loneSucc(p: Provable) = {
+  def loneSucc(p: ProvableSig) = {
     assert(p.subgoals.length==1)
     assert(p.subgoals.last.succ.length==1)
     p.subgoals.last.succ.last

@@ -119,7 +119,7 @@ private object MathematicaNameConversion {
      "\n Remasked to " + uncheckedMaskName(Variable(uncheckedUnmaskName(maskedName)._1, uncheckedUnmaskName(maskedName)._2, Real)))
 
   /** Unmasking without contracts. */
-  private def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
+  private[tools] def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
     def regexOf(s: String) = s.replace("$", "\\$")
 
     val uscoreMaskedName = maskedName.replaceAll(regexOf(UNDERSCORE), "_")

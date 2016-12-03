@@ -1,0 +1,39 @@
+/**
+ *
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+*/
+Functions.
+  R b.
+  R amax.
+  R ep.
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R drive.
+  R brake.
+  R state.
+  R m1. /* @note so we don't fail type analysis */
+  R z1. /* @note so we don't fail type analysis */
+End.
+
+Problem.
+[ drive := 0; brake := 1; state:= drive; ]((d >= 0 & b > 0 & ep > 0 & amax > 0 & v>=0)
+  -> ((
+        \forall m1 \forall z1 [ m := m1; z := z1; ](m-z>= SB & v^2 - d^2 <= 2*b*(m-z) & d >= 0 & b > 0 ->
+          [ t:=0; {z'=v, v' = amax, t'=1 & v >= 0 & t <= ep} ](v^2 - d^2 <= 2*b*(m-z) & d >= 0 & b > 0))
+      )
+      <->
+      SB >= (v^2 - d^2) /(2*b) + (amax/b + 1) * (amax/2 * ep^2 + ep * v)
+     )
+)
+End.

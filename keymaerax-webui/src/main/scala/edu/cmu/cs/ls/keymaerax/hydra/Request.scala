@@ -13,21 +13,23 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
-
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-
-import java.io.{File, FileInputStream, FileOutputStream, FileNotFoundException}
+import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
+
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.io.Source
 import scala.collection.immutable._
@@ -133,6 +135,27 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends UserRequest(u
 }
 
 class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
+  def allFnToVar(fml: Formula, fn: Function): Formula = {
+    fml.find(t => t match {
+        case FuncOf(func, _) if fn.sort == Real => func == fn
+        case PredOf(func, _) if fn.sort == Bool => func == fn
+        case _ => false }) match {
+      case Some((_, e: Term)) => allFnToVar(fml.replaceAll(e, Variable(fn.name, fn.index, Real)), fn)
+      case Some((_, e: Formula)) => allFnToVar(fml.replaceAll(e, PredOf(Function(fn.name, fn.index, Unit, Bool), Nothing)), fn) //@todo beware of name clashes
+      case None => fml
+    }
+  }
+
+  def findCounterExample(fml: Formula, cexTool: CounterExampleTool): Option[Map[NamedSymbol, Expression]] = {
+    val signature = StaticSemantics.signature(fml).filter({
+      case Function(_, _, _, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+    val lmf = signature.foldLeft[Formula](fml)((f, t) => allFnToVar(f, t))
+    cexTool.findCounterExample(lmf) match {
+      case Some(cex) => Some(cex.map({case (k, v) => signature.find(s => s.name == k.name && s.index == k.index).getOrElse(k) -> v }))
+      case None => None
+    }
+  }
+
   override def resultingResponses(): List[Response] = {
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
@@ -147,7 +170,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     if (fml.isFOL) {
       try {
         ToolProvider.cexTool() match {
-          case Some(cexTool) => cexTool.findCounterExample(fml) match {
+          case Some(cexTool) => findCounterExample(fml, cexTool) match {
             //@todo return actual sequent, use collapsiblesequentview to display counterexample
             case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
             case None => new CounterExampleResponse("cex.none") :: Nil
@@ -454,6 +477,11 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
         "classpath:/examples/tutorials/cpsweek/cpsweek.json",
         "/examples/tutorials/cpsweek/cpsweek.png") ::
+      new ExamplePOJO(2, "FM 2016 Tutorial",
+        "Tactics and Proofs",
+        "/dashboard.html?#/tutorials",
+        "classpath:/examples/tutorials/fm/fm.json",
+        "/examples/tutorials/fm/fm.png") ::
       Nil
     new ListExamplesResponse(examples) :: Nil
   }
@@ -540,6 +568,49 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
     new GetModelTacticResponse(model) :: Nil
   }
 }
+
+class AddModelTacticRequest(db : DBAbstraction, userId : String, modelId : String, tactic: String) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val tacticId = db.addModelTactic(modelId, tactic)
+    new BooleanResponse(tacticId.isDefined) :: Nil
+  }
+}
+
+class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
+  }
+}
+
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
+  def resultingResponses() = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
+      ++ additionalVars.map(_.asVariable)).toList
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
+      case ("controller", Some(tool)) =>
+        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
+        try {
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
+        } catch {
+          case _: Throwable => foResult
+        }
+      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
+    }
+
+    if (monitorCond.subgoals.size == 1) conditionKind match {
+      case "kym" => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+      case "c" => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+    }
+    else new ErrorResponse("ModelPlex failed") :: Nil
+  }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Proofs of models
@@ -767,7 +838,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
       val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
       tree.findNode(nodeId) match {
         case Some(node) => {
-          val provable = Provable.startProof(node.sequent)
+          val provable = ProvableSig.startProof(node.sequent)
           val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
           new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
         }
@@ -903,7 +974,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       val ruleName =
         if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
         else "custom"
-      val localProvable = Provable.startProof(node.sequent)
+      val localProvable = ProvableSig.startProof(node.sequent)
       val globalProvable = trace.lastProvable
       assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
       val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
@@ -972,7 +1043,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
           new TaskResultResponse(parentNode, parentNode.children, positionLocator, progress = true)
-        case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
+        case Some(Right(error: BelleThrowable)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
       //@note may have been cancelled in the meantime
@@ -1181,6 +1252,21 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   override def resultingResponses(): List[Response] = {
     val exprText = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(proofId))
     new ExtractTacticResponse(exprText) :: Nil
+  }
+}
+
+class TacticDiffRequest(db: DBAbstraction, proofIdStr: String, oldTactic: String, newTactic: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def resultingResponses(): List[Response] = {
+    val oldT = BelleParser(oldTactic)
+    try {
+      val newT = BelleParser(newTactic)
+      val diff = TacticDiff.diff(oldT, newT)
+      new TacticDiffResponse(diff) :: Nil
+    } catch {
+      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    }
   }
 }
 

@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
 
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
@@ -20,7 +21,7 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula
   def apply(vars: List[Variable], kind: Symbol): (Formula => Formula)
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula)
-  def createMonitorSpecificationConjecture(fml: Formula, vars: Variable*): Formula
+  def createMonitorSpecificationConjecture(fml: Formula, vars: Variable*): (Formula, List[Formula])
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
   def modelplexAxiomaticStyle(useOptOne: Boolean)(unprog: Boolean => DependentPositionTactic): DependentPositionTactic
@@ -29,6 +30,6 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def diamondDiffSolve2DT: DependentPositionTactic
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic
-  def optimizationOneWithSearch: DependentPositionTactic
+  def optimizationOneWithSearch(tool: SimplificationTool, assumptions: List[Formula]): DependentPositionTactic
   def optimizationOne(inst: Option[(Variable, Term)] = None): DependentPositionTactic
 }

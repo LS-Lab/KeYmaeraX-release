@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.tacticsinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.{ProofPOJO, ExecutionStepPOJO, DBAbstraction, ExecutionStepStatus}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
@@ -16,7 +16,7 @@ class TraceRecordingListener(db: DBAbstraction,
                              proofId: Int,
                              executionId: Int,
                              initialSibling: Option[Int],
-                             globalProvable:Provable,
+                             globalProvable:ProvableSig,
                              alternativeOrder: Int, branch:Int,
                              recursive: Boolean,
                              ruleName: String) extends IOListener {
@@ -24,8 +24,8 @@ class TraceRecordingListener(db: DBAbstraction,
     var id: Option[Int] = None
     var parent: TraceNode = null
     var sibling: Option[Int] = None
-    var output: Provable = null
-    var local: Provable = null
+    var output: ProvableSig = null
+    var local: ProvableSig = null
     var executable: BelleExpr = null
     var status: ExecutionStepStatus = null
     var reverseChildren: List[TraceNode] = Nil
@@ -94,7 +94,7 @@ class TraceRecordingListener(db: DBAbstraction,
     }
   }
 
-  def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, BelleError]): Unit = {
+  def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, BelleThrowable]): Unit = {
     synchronized {
       depth = depth - 1
       if(isDead) return

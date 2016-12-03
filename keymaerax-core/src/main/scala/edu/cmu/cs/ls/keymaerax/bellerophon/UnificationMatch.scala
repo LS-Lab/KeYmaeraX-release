@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, FormulaTools, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -348,6 +348,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
     case a: ProgramConst             => unifier(e1, e2)
+    case a: SystemConst              => if (FormulaTools.dualFree(e2)) unifier(e1, e2) else throw new UnificationException(e1.toString, e2.toString, "hybrid games with duals not allowed for SystemConst")
     case Assign(x, t)                => e2 match {case Assign(x2,t2) => unifies(x,t, x2,t2) case _ => ununifiable(e1,e2)}
     case AssignAny(x)                => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                     => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}
@@ -458,7 +459,7 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
       val ren = MultiRename(RenUSubst.renamingPartOnly(us))
       Subst(us.map(sp =>
         if (sp._1.isInstanceOf[UnitPredicational] || sp._1.isInstanceOf[UnitFunctional] ||
-          sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf])
+          sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[SystemConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf])
           (sp._1, ren(sp._2))
         else
           sp
@@ -493,7 +494,7 @@ class FreshPostUnificationMatch extends SchematicUnificationMatch {
     val ren = MultiRename(RenUSubst.renamingPartOnly(uss))
     Subst(uss.map(sp =>
       if (sp._1.isInstanceOf[UnitPredicational] || sp._1.isInstanceOf[UnitFunctional] ||
-        sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf] ||
+        sp._1.isInstanceOf[ProgramConst] || sp._1.isInstanceOf[SystemConst] || sp._1.isInstanceOf[DifferentialProgramConst] || sp._1.isInstanceOf[PredicationalOf] ||
         sp._1.isInstanceOf[ApplicationOf])
         (sp._1, ren(sp._2))
       else
