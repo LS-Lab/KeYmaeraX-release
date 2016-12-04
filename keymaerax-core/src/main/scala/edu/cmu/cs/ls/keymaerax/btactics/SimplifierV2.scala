@@ -449,27 +449,36 @@ object SimplifierV2 {
     }
   }
 
-  //Annoying truth tables...
-  //  val ltLeFalse = qeFormulaProof(Some("F_()<=G_()"),"G_()<F_()","false")
-  //  val ltEqFalse1 = qeFormulaProof(Some("G_()=F_()"),"G_()<F_()","false")
-  //  val ltEqFalse2 = qeFormulaProof(Some("F_()=G_()"),"G_()<F_()","false")
-  //
-  //  val leLtTrue = qeFormulaProof(Some("G_()<F_()"),"G_()<=F_()","true")
-  //  val leLtFalse = qeFormulaProof(Some("F_()<G_()"),"G_()<=F_()","false")
-  //
-  //  val neLtTrue1 = qeFormulaProof(Some("F_()<G_()"),"G_()!=F_()","true")
-  //  val neLtTrue2 = qeFormulaProof(Some("G_()<F_()"),"G_()!=F_()","true")
-  //  //todo: Unification problems...
-  //  //val neNeqSym = qeFormulaProof(Some("F_()!=G_()"),"G_()!=F_()","true")
-  //  //val neEqFalse1 = qeFormulaProof(Some("F_()=G_()"),"G_()!=F_()","false")
-  //  //val neEqFalse2 = qeFormulaProof(Some("G_()=F_()"),"G_()!=F_()","false")
-  //
-  //  val eqLtFalse1 = qeFormulaProof(Some("F_()<G_()"),"G_()=F_()","false")
-  //  val eqLtFalse2 = qeFormulaProof(Some("G_()<F_()"),"G_()=F_()","false")
-  //todo: Unification problems...
-  //val eqEqSym = qeFormulaProof(Some("F_()=G_()"),"G_()=F_()","true")
-  //val eqNeqFalse1 = qeFormulaProof(Some("F_()!=G_()"),"G_()=F_()","false")
-  //val eqNeqFalse2 = qeFormulaProof(Some("G_()!=F_()"),"G_()=F_()","false")
+  // There are far too many cases to enumerate here
+  // so we only handle the ones where the terms are in the same order
+  // e.g. f()<g() -> f() <= g() but not g() > f() -> f() <= g()
+  // The symmetric cases are obtained by searching in the opposite direction and applying the appropriate flipping lemma
+
+  val ltGeFalse = qeFormulaProof(Some("G_()>=F_()"),"G_()<F_()","false")
+  val ltGtFalse = qeFormulaProof(Some("G_()>F_()"),"G_()<F_()","false")
+  val ltEqFalse = qeFormulaProof(Some("G_()=F_()"),"G_()<F_()","false")
+
+  val leLtTrue = qeFormulaProof(Some("G_()<F_()"),"G_()<=F_()","true")
+  val leEqTrue = qeFormulaProof(Some("G_()=F_()"),"G_()<=F_()","true")
+  val leGtFalse = qeFormulaProof(Some("G_()>F_()"),"G_()<=F_()","false")
+
+  val gtLeFalse = qeFormulaProof(Some("G_()<=F_()"),"G_()>F_()","false")
+  val gtLtFalse = qeFormulaProof(Some("G_()<F_()"),"G_()>F_()","false")
+  val gtEqFalse = qeFormulaProof(Some("G_()=F_()"),"G_()>F_()","false")
+
+  val geGtTrue = qeFormulaProof(Some("G_()>F_()"),"G_()>=F_()","true")
+  val geEqTrue = qeFormulaProof(Some("G_()=F_()"),"G_()>=F_()","true")
+  val geLtFalse = qeFormulaProof(Some("G_()<F_()"),"G_()>=F_()","false")
+
+  val neLtTrue = qeFormulaProof(Some("G_()<F_()"),"G_()!=F_()","true")
+  val neGtTrue = qeFormulaProof(Some("G_()>F_()"),"G_()!=F_()","true")
+  val neEqFalse = qeFormulaProof(Some("G_()=F_()"),"G_()!=F_()","false")
+
+  val eqLtFalse = qeFormulaProof(Some("G_()<F_()"),"G_()=F_()","false")
+  val eqGtFalse = qeFormulaProof(Some("G_()>F_()"),"G_()=F_()","false")
+  val eqNeqFalse = qeFormulaProof(Some("G_()!=F_()"),"G_()=F_()","false")
+
+  val neqSym = proveBy("F_() != G_() <-> G_() != F_()".asFormula,QE)
 
   val trueReflex = qeFormulaProof(Some("F_()"),"F_()","true")
   val falseReflex = qeFormulaProof(Some("!F_()"),"F_()","false")
@@ -486,8 +495,9 @@ object SimplifierV2 {
     else None
   }
 
-  //  //Proves ctx |- f <-> true or ctx |- f <-> false if possible
-  def closeHeuristics(ctx:IndexedSeq[Formula],f:Formula) : Option[ProvableSig] = {
+  //  Proves ctx |- f <-> true or ctx |- f <-> false if possible
+  // Flip prevents infinite loop when swapping between A < B <-> B > A
+  def closeHeuristics(ctx:IndexedSeq[Formula],f:Formula,flip:Boolean = true) : Option[ProvableSig] = {
     //Closing heuristics
     //1. If formula appears in context, then close with true
     //2. If formula appears negated in context, close with false
@@ -495,25 +505,90 @@ object SimplifierV2 {
 
     val init:Option[ProvableSig] =
       f match {
-        //      case Less(l,r) =>
-        //        search(ctx,LessEqual(r,l),f,False,ltLeFalse) orElse
-        //        search(ctx,Equal(l,r),f,False,ltEqFalse1) orElse
-        //        search(ctx,Equal(r,l),f,False,ltEqFalse2)
-        //      case LessEqual(l,r) =>
-        //        search(ctx,Less(l,r),f,True,leLtTrue) orElse
-        //        search(ctx,Less(r,l),f,False,leLtFalse)
-        //      case NotEqual(l,r) =>
-        //        search(ctx,Less(r,l),f,True,neLtTrue1) orElse
-        //        search(ctx,Less(l,r),f,True,neLtTrue2) //orElse
-        //        //search(ctx,NotEqual(r,l),f,True,neNeqSym) orElse
-        ////        search(ctx,Equal(l,r),f,False,neEqFalse1) orElse
-        ////        search(ctx,Equal(r,l),f,False,neEqFalse2)
-        //      case Equal(l,r) =>
-        //        search(ctx,Less(r,l),f,False,eqLtFalse1) orElse
-        //        search(ctx,Less(l,r),f,False,eqLtFalse2) //orElse
-        //search(ctx,Equal(r,l),f,True,eqEqSym) orElse
-        //        search(ctx,NotEqual(l,r),f,False,eqNeqFalse1) orElse
-        //        search(ctx,NotEqual(r,l),f,False,eqNeqFalse2)
+        case Less(l,r) =>
+          search(ctx,GreaterEqual(l,r),f,False,ltGeFalse) orElse
+          search(ctx,Greater(l,r),f,False,ltGtFalse) orElse
+          search(ctx,Equal(l,r),f,False,ltEqFalse) orElse(
+            if(flip) {
+              closeHeuristics(ctx, Greater(r, l), false) match{
+                case None => None
+                case Some(pr) => {
+                  Some (useFor("> flip")(SuccPosition(1, 0 :: Nil))(pr))
+                }
+              }
+            }
+            else None
+          )
+        case LessEqual(l,r) =>
+          search(ctx,Less(l,r),f,True,leLtTrue) orElse
+          search(ctx,Equal(l,r),f,True,leEqTrue) orElse
+          search(ctx,Greater(l,r),f,False,leGtFalse) orElse(
+            if(flip) {
+              closeHeuristics(ctx, GreaterEqual(r, l), false) match{
+                case None => None
+                case Some(pr) => {
+                  Some (useFor(">= flip")(SuccPosition(1, 0 :: Nil))(pr))
+                }
+              }
+            }
+            else None
+            )
+        case Greater(l,r) =>
+          search(ctx,LessEqual(l,r),f,False,gtLeFalse) orElse
+          search(ctx,Less(l,r),f,False,gtLtFalse) orElse
+          search(ctx,Equal(l,r),f,False,gtEqFalse) orElse(
+            if(flip) {
+              closeHeuristics(ctx, Less(r, l), false) match{
+                case None => None
+                case Some(pr) => {
+                  Some (useFor("< flip")(SuccPosition(1, 0 :: Nil))(pr))
+                }
+              }
+            }
+            else None
+            )
+        case GreaterEqual(l,r) =>
+          search(ctx,Greater(l,r),f,True,geGtTrue) orElse
+          search(ctx,Equal(l,r),f,True,geEqTrue) orElse
+          search(ctx,Less(l,r),f,False,geLtFalse) orElse(
+            if(flip) {
+              closeHeuristics(ctx, LessEqual(r, l), false) match{
+                case None => None
+                case Some(pr) => {
+                  Some (useFor("<= flip")(SuccPosition(1, 0 :: Nil))(pr))
+                }
+              }
+            }
+            else None
+            )
+        case NotEqual(l,r) =>
+          search(ctx,Less(l,r),f,True,neLtTrue) orElse
+          search(ctx,Greater(l,r),f,True,neGtTrue) orElse
+          search(ctx,Equal(l,r),f,False,neEqFalse) orElse(
+            if(flip) {
+              closeHeuristics(ctx, NotEqual(r, l), false) match{
+                case None => None
+                case Some(pr) => {
+                  Some (useFor(neqSym,PosInExpr(0::Nil))(SuccPosition(1, 0 :: Nil))(pr))
+                }
+              }
+            }
+            else None
+            )
+        case Equal(l,r) =>
+          search(ctx,Less(l,r),f,False,eqLtFalse) orElse
+          search(ctx,Greater(l,r),f,False,eqGtFalse) orElse
+          search(ctx,NotEqual(l,r),f,False,eqNeqFalse) orElse(
+            if(flip) {
+              closeHeuristics(ctx, Equal(r, l), false) match{
+                case None => None
+                case Some(pr) => {
+                  Some (useFor(eqSym,PosInExpr(0::Nil))(SuccPosition(1, 0 :: Nil))(pr))
+                }
+              }
+            }
+            else None
+            )
         case _ => None
       }
 
