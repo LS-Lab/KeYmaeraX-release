@@ -909,6 +909,33 @@ object SimplifierV2 {
     }
   }
 
+  val swapImply = proveBy("(P_() -> Q_() -> R_()) <-> (Q_() -> P_() -> R_())".asFormula,prop)
+
+  //Same as fullSimpTac, except the changes to the context get thrown out
+  //todo: This doesn't work with antepositions
+  val safeFullSimpTac:DependentPositionTactic = new DependentPositionTactic("simp") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        assert(pos.isTopLevel && sequent.sub(pos).isDefined)
+        val f = sequent.sub(pos).get.asInstanceOf[Formula]
+        val (ctx, cutPos, commute) =
+          if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
+          else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
+        val ctxAnd = ctx.reduceRightOption(And).getOrElse(True)
+        val (ff, pr) = formulaSimp(Imply(ctxAnd, f), IndexedSeq())
+
+        cutAt(ff)(pos) < (
+          ident,
+          cohideOnlyR(cutPos) &
+          cut(ctxAnd) <(
+            implyRi(AntePos(sequent.ante.size),SuccPos(0)) & useAt(swapImply)(1) & cohideR(1) & equivifyR(1) & commute & by(pr)
+            ,
+            hideR(1) & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close))
+          )
+      }
+    }
+  }
+
   //todo: Everything below is not part of the simplifier and should be moved elsewhere
 
   private val nop = Assign(Variable("x_"),Variable("x_"))

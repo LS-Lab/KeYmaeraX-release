@@ -166,6 +166,16 @@ class SimplifierV2Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("5>3".asFormula)
   }
 
+  it should "simplify entire sequent (forwards) 2" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0 & (x>0 -> y>3) & (x>=0 -> y>4) & (x>0 -> y>5) & 5=z".asFormula)
+    val succ = IndexedSeq("z>3".asFormula)
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.fullSimpTac)
+
+    println(result)
+    result.subgoals.head.succ should contain only ("5>3".asFormula)
+  }
+
+
   it should "(attempt to) simplify ground terms" in withMathematica { tool =>
     val succ = "(1+2+3+4+5+6)^2/6-5-4-3-2*5 = 7".asFormula
     val result = proveBy(succ, SimplifierV2.simpTac(1))
@@ -211,8 +221,15 @@ class SimplifierV2Tests extends TacticTestBase {
 
     val fml = " 0 > x -> x <= 0 & y = 0 & z<x -> x != y+z | x >= 5 -> 5 < x | (x !=5 -> 5<x ) & a = 0 & y = z+a+b & a+z+b = y".asFormula
     val result = proveBy(fml, SimplifierV2.simpTac(1))
-
     result.subgoals.head.succ should contain only "0>x->y=0&z < x->5 < x|x=5&a=0&0=z+b".asFormula
+  }
 
+  it should "pre-expand context before simplify" in withMathematica { tool =>
+
+    val ante = IndexedSeq("P() & Q() & R()".asFormula, "Q() & R()".asFormula)
+    val succ = IndexedSeq("P()".asFormula,"Z()".asFormula)
+
+    val result = proveBy(Sequent(ante,succ), SimplifierV2.safeFullSimpTac(1))
+    println(result)
   }
 }
