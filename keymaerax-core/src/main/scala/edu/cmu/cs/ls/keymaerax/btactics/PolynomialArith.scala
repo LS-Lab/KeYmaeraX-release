@@ -482,21 +482,6 @@ object PolynomialArith {
   // Proves the contradiction g_1 = 0 ; ... g_k = 0 |-
   // Nothing needs to be normalized?
 
-  //Copy of implyRi that keeps the anteposition around
-  def implyRiKeep(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new SingleGoalDependentTactic("inverse imply right") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.ante.length > antePos.getIndex && sequent.succ.length > succPos.getIndex,
-        "Ante position " + antePos + " or succ position " + succPos + " is out of bounds; provable has ante size " +
-          sequent.ante.length + " and succ size " + sequent.succ.length)
-      val left = sequent.ante(antePos.getIndex)
-      val right = sequent.succ(succPos.getIndex)
-      val cutUsePos = AntePos(sequent.ante.length)
-      cut(Imply(left, right)) <(
-        /* use */ implyL(cutUsePos) & OnAll(TactixLibrary.close),
-        /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) ) partial /* This is the result. */)
-    }
-  }
-
   private val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
 
   def proveWithWitness(ctx:List[Term], witness:List[Term], instopt:Option[List[(Int,Term)]] = None) : ProvableSig = {
@@ -518,7 +503,7 @@ object PolynomialArith {
         //Run the instructions
         inst.foldRight(ident)(
           (h,tac) =>
-          implyRiKeep(AntePos(h._1),SuccPos(0))
+          implyRi(AntePos(h._1),SuccPos(0),true)
           & useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,h._2)::Nil))(1)
           & tac) &
         normaliseAt(SuccPosition(1,0::Nil)) &

@@ -91,7 +91,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   "Propositional Examples" should "close p() -> p()" in {
-    val tactic = parser("implyR(1) & TrivialCloser")
+    val tactic = parser("implyR(1) & closeId")
 //    val tactic = ExposedTacticsLibrary.tactics("implyR") & ExposedTacticsLibrary.tactics("TrivialCloser")
     val value = BelleProvable(ProvableSig.startProof("p() -> p()".asFormula))
     val result = SequentialInterpreter()(tactic, value)

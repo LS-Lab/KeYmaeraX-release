@@ -26,7 +26,7 @@ private object PropositionalTactics {
    * @see [[ProofRuleTactics.implyR]]
    */
   lazy val implyRi: DependentTactic = implyRi()
-  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new SingleGoalDependentTactic("inverse imply right") {
+  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0), keep: Boolean = false): DependentTactic = new SingleGoalDependentTactic("inverse imply right") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.length > antePos.getIndex && sequent.succ.length > succPos.getIndex,
         "Ante position " + antePos + " or succ position " + succPos + " is out of bounds; provable has ante size " +
@@ -36,7 +36,7 @@ private object PropositionalTactics {
       val cutUsePos = AntePos(sequent.ante.length)
       cut(Imply(left, right)) <(
         /* use */ implyL(cutUsePos) & OnAll(TactixLibrary.close),
-        /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) & hideL(antePos)) partial /* This is the result. */)
+        /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) & (if(keep) nil else hideL(antePos))) partial /* This is the result. */)
     }
   }
 

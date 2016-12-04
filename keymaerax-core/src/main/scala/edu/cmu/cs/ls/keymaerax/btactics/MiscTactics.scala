@@ -183,27 +183,33 @@ object Idioms {
     }
   }
 
-  /* branch by case distinction */
+  /* branch by case distinction
+  *  cases must be exhaustive (or easily proved to be exhaustive in context)
+  *  otherwise, the exhaustiveness case is left open
+  * */
   def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = {
     val cases = c1 +: cs
     val caseFml = cases.map({ case (Case(fml), _) => fml }).reduceRight(Or)
 
     //@todo simplify with only the case formula as simplification 'context' (adapt simplifier)
-    val simplify = (fml: Formula) => SimplifierV2.simpTac//(Some(scala.collection.immutable.IndexedSeq(fml)))
-    val simplifyAllButCase = (fml: Formula) => "ANON" by {(seq: Sequent) =>
-      (0 until seq.ante.length-1).map(i => simplify(fml)(AntePosition.base0(i))).reduce[BelleExpr](_&_) &
-      seq.succ.indices.map(i => simplify(fml)(SuccPosition.base0(i))).reduce[BelleExpr](_&_)
-    }
+//    val simplify = (fml: Formula) => SimplifierV2.simpTac//(Some(scala.collection.immutable.IndexedSeq(fml)))
+//    val simplifyAllButCase = (fml: Formula) => "ANON" by {(seq: Sequent) =>
+//      (0 until seq.ante.length-1).map(i => simplify(fml)(AntePosition.base0(i))).reduce[BelleExpr](_&_) &
+//      seq.succ.indices.map(i => simplify(fml)(SuccPosition.base0(i))).reduce[BelleExpr](_&_)
+//    }
 
-    val caseTactics = cases.map({ case (Case(fml), t) => simplifyAllButCase(fml) & t}).
-      reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL('Llast) & <(t1, t2)})
+//    val caseTactics = cases.map({ case (Case(fml), t) => println(fml) ; simplifyAllButCase(fml) & t}).
+//      reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL('Llast) & <(t1, t2)})
+
+    val caseTactics = cases.map({case (Case(fml), t) => SimplifierV2.fullSimpTac & t}).
+            reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL('Llast) & <(t1, t2)} )
 
     TactixLibrary.cut(caseFml) & Idioms.<(
       /*use*/ caseTactics,
       // cases might be exhaustive in itself (e.g., x>=0|x<0), or exhaustive per facts from antecedent (x=0|x>0 from x>=0)
       /*show*/ (
-        TactixLibrary.cohideR('Rlast) & TactixLibrary.master() |
-        TactixLibrary.cohideOnlyR('Rlast) & TactixLibrary.master()) & TactixLibrary.done
+        TactixLibrary.cohideR('Rlast) & TactixLibrary.master() & TactixLibrary.done |
+        TactixLibrary.cohideOnlyR('Rlast) & TactixLibrary.master() & TactixLibrary.done | ident)
     )
   }
 

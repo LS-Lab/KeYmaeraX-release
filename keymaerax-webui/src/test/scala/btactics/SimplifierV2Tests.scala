@@ -2,6 +2,7 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -155,5 +156,80 @@ class SimplifierV2Tests extends TacticTestBase {
     val succ = IndexedSeq()
     val result = proveBy(Sequent(ante, succ), SimplifierV2.simpTac(-2))
     result.subgoals.head.ante should contain only ("x>0".asFormula, "y>3".asFormula)
+  }
+
+  it should "simplify entire sequent (forwards)" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0".asFormula, "x>0 -> y>3".asFormula, "x>=0 -> y>4".asFormula, "x>0 -> y>5".asFormula,"5=z".asFormula)
+    val succ = IndexedSeq("z>3".asFormula)
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.fullSimpTac)
+
+    result.subgoals.head.succ should contain only ("5>3".asFormula)
+  }
+
+  it should "simplify entire sequent (forwards) 2" in withMathematica { tool =>
+    val ante = IndexedSeq("x>0 & (x>0 -> y>3) & (x>=0 -> y>4) & (x>0 -> y>5) & 5=z".asFormula)
+    val succ = IndexedSeq("z>3".asFormula)
+    val result = proveBy(Sequent(ante, succ), SimplifierV2.fullSimpTac)
+
+    println(result)
+    result.subgoals.head.succ should contain only ("5>3".asFormula)
+  }
+
+
+  it should "(attempt to) simplify ground terms" in withMathematica { tool =>
+    val succ = "(1+2+3+4+5+6)^2/6-5-4-3-2*5 = 7".asFormula
+    val result = proveBy(succ, SimplifierV2.simpTac(1))
+    println(result)
+  }
+
+  it should "rewrite simple equalities" in withMathematica { tool =>
+    val succ = "x+y+(x+y)+(x+y+z)".asTerm
+
+    val fml = "x+y = 0 -> z =0 -> x+y+(x+y)+(x+y+z) = 0".asFormula
+    val result = proveBy(fml, SimplifierV2.simpTac(1))
+
+    result.subgoals.head.succ should contain only True
+
+  }
+
+  it should "simplify in manually restricted context" in withMathematica { tool =>
+    val ante = IndexedSeq("a=0".asFormula, "b=0".asFormula, "c=0".asFormula, "d=0".asFormula, "e=0".asFormula)
+    val succ = IndexedSeq("a+b+c+d+e = 0".asFormula,"a+b+c+d+e = 0".asFormula)
+
+    val result1 = proveBy(Sequent(ante, succ), SimplifierV2.rsimpTac(IndexedSeq(0,2))(1))
+    //Out of bounds positions are thrown out
+    val result2 = proveBy(Sequent(ante, succ), SimplifierV2.rsimpTac(IndexedSeq(0,2,5,100,200))(1))
+    //Repeated positions are thrown out
+    val result3 = proveBy(Sequent(ante, succ), SimplifierV2.rsimpTac(IndexedSeq(1,3,3,3,3))(2))
+
+    result1.subgoals.head.succ should contain only ("b+d+e=0".asFormula,"a+b+c+d+e=0".asFormula)
+    result2.subgoals.head.succ should contain only ("b+d+e=0".asFormula,"a+b+c+d+e=0".asFormula)
+    result3.subgoals.head.succ should contain only ("a+b+c+d+e=0".asFormula,"a+c+e=0".asFormula)
+  }
+
+  it should "work with cases tactic" in withMathematica { tool =>
+
+    val fml = "(x>=0-> x+y >= 5) & (x < 0 -> x + z <= 5)".asFormula
+    val result = proveBy(fml,Idioms.cases((Case("x>0".asFormula),Idioms.ident),(Case("0>=x".asFormula),Idioms.ident)))
+
+    println(result)
+    //    result.subgoals.head.succ should contain only True
+
+  }
+
+  it should "search for close heuristics" in withMathematica { tool =>
+
+    val fml = " 0 > x -> x <= 0 & y = 0 & z<x -> x != y+z | x >= 5 -> 5 < x | (x !=5 -> 5<x ) & a = 0 & y = z+a+b & a+z+b = y".asFormula
+    val result = proveBy(fml, SimplifierV2.simpTac(1))
+    result.subgoals.head.succ should contain only "0>x->y=0&z < x->5 < x|x=5&a=0&0=z+b".asFormula
+  }
+
+  it should "pre-expand context before simplify" in withMathematica { tool =>
+
+    val ante = IndexedSeq("P() & Q() & R()".asFormula, "Q() & R()".asFormula)
+    val succ = IndexedSeq("P()".asFormula,"Z()".asFormula)
+
+    val result = proveBy(Sequent(ante,succ), SimplifierV2.safeFullSimpTac(1))
+    println(result)
   }
 }
