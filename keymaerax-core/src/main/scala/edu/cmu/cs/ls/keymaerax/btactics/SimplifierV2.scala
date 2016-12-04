@@ -206,20 +206,20 @@ object SimplifierV2 {
 
   //Technically, we don't need QE for these (just use the proof for divideLemma)
   private val plusLemma = proveBy(
-    "(A() = B()) & (X() = Y()) -> (A()+X() = B()+Y())".asFormula,QE)
+    "(A_() = B_()) & (X_() = Y_()) -> (A_()+X_() = B_()+Y_())".asFormula,QE)
   private val minusLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A()-X() = B()-Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()-X_() = B_()-Y_())".asFormula,QE)
   private val timesLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A()*X() = B()*Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()*X_() = B_()*Y_())".asFormula,QE)
   private val divideLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A()/X() = B()/Y())".asFormula,
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()/X_() = B_()/Y_())".asFormula,
       implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
   private val powerLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A()^X() = B()^Y())".asFormula,
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()^X_() = B_()^Y_())".asFormula,
       implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
 
   /**
@@ -293,30 +293,30 @@ object SimplifierV2 {
 
   private val equalLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A() = X() <-> B() = Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() = X_() <-> B_() = Y_())".asFormula,QE)
 
   private val notequalLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A() != X() <-> B() != Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() != X_() <-> B_() != Y_())".asFormula,QE)
 
   private val greaterequalLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A() >= X() <-> B() >= Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() >= X_() <-> B_() >= Y_())".asFormula,QE)
 
   private val greaterLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A() > X() <-> B() > Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() > X_() <-> B_() > Y_())".asFormula,QE)
 
   private val lessequalLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A() <= X() <-> B() <= Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() <= X_() <-> B_() <= Y_())".asFormula,QE)
 
   private val lessLemma =
     proveBy(
-      "(A() = B()) & (X() = Y()) -> (A() < X() <-> B() < Y())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE)
 
   private val equivTrans =
-    proveBy("(P() <-> Q()) -> (Q() <-> R()) -> (P() <-> R())".asFormula,prop)
+    proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop)
 
   private val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE)
 
@@ -372,25 +372,25 @@ object SimplifierV2 {
     proveBy(Equiv(f.asFormula,ff.asFormula),prop)
   }
 
-  val andT = propProof("F() & true","F()")
-  val Tand = propProof("true & F()","F()")
-  val andF = propProof("F() & false","false")
-  val Fand = propProof("false & F()","false")
+  val andT = propProof("F_() & true","F_()")
+  val Tand = propProof("true & F_()","F_()")
+  val andF = propProof("F_() & false","false")
+  val Fand = propProof("false & F_()","false")
 
-  val orT = propProof("F() | true","true")
-  val Tor = propProof("true | F()","true")
-  val orF = propProof("F() | false","F()")
-  val For = propProof("false | F()","F()")
+  val orT = propProof("F_() | true","true")
+  val Tor = propProof("true | F_()","true")
+  val orF = propProof("F_() | false","F_()")
+  val For = propProof("false | F_()","F_()")
 
-  val implyT = propProof("F() -> true","true")
-  val Timply = propProof("true -> F()","F()")
-  val implyF = propProof("F() -> false","!F()")
-  val Fimply = propProof("false -> F()","true")
+  val implyT = propProof("F_() -> true","true")
+  val Timply = propProof("true -> F_()","F_()")
+  val implyF = propProof("F_() -> false","!F_()")
+  val Fimply = propProof("false -> F_()","true")
 
-  val equivT = propProof("F() <-> true","F()")
-  val Tequiv = propProof("true <-> F()","F()")
-  val equivF = propProof("F() <-> false","!F()")
-  val Fequiv = propProof("false <-> F()","!F()")
+  val equivT = propProof("F_() <-> true","F_()")
+  val Tequiv = propProof("true <-> F_()","F_()")
+  val equivF = propProof("F_() <-> false","!F_()")
+  val Fequiv = propProof("false <-> F_()","!F_()")
 
   val notT = propProof("!true","false")
   val notF = propProof("!false","true")
@@ -406,12 +406,12 @@ object SimplifierV2 {
     }
   }
 
-  val ltNotReflex = qeFormulaProof(None,"F()<F()","false")
-  val gtNotReflex = qeFormulaProof(None,"F()>F()","false")
-  val neqNotReflex = qeFormulaProof(None,"F()!=F()","false")
-  val equalReflex = qeFormulaProof(None,"F() = F()","true")
-  val lessequalReflex = qeFormulaProof(None,"F() <= F()","true")
-  val greaterequalReflex = qeFormulaProof(None,"F() >= F()","true")
+  val ltNotReflex = qeFormulaProof(None,"F_()<F_()","false")
+  val gtNotReflex = qeFormulaProof(None,"F_()>F_()","false")
+  val neqNotReflex = qeFormulaProof(None,"F_()!=F_()","false")
+  val equalReflex = qeFormulaProof(None,"F_() = F_()","true")
+  val lessequalReflex = qeFormulaProof(None,"F_() <= F_()","true")
+  val greaterequalReflex = qeFormulaProof(None,"F_() >= F_()","true")
 
   private def propHeuristics(f:Formula) : Option[(Formula,ProvableSig)] = {
     f match {
@@ -834,7 +834,9 @@ object SimplifierV2 {
               val (ctx, cutPos, commute) =
                 if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
                 else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
+
               val (ff,pr) = formulaSimp(f, ctx)
+
               cutAt(ff)(pos) < (
                 ident,
                 //todo: to remove the succ.length == 1 restriction, this needs to hide the other succ positions
