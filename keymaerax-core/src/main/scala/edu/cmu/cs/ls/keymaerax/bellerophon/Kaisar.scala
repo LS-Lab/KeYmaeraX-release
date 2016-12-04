@@ -40,7 +40,7 @@ object Kaisar {
     /* TODO: Better to skip *all* skippable formulas, but that makes recovering the original theorem
      * more work, so do it later. */
     def extend(phi:Formula,tmin:Int,tmax:Int):Formula = {
-      var t = tmax - 1
+      var t = tmax
       var p = phi
       while(t >= tmin) {
         p = Box(tmap(t)._2, phi)
@@ -75,10 +75,10 @@ object Kaisar {
       case Show(x,phi,(resources, e)) =>
         val (progs:Seq[ProgramVariable], facts:Seq[FactVariable]) =
           resources.partition({case _: ProgramVariable => true case _:FactVariable => false})
+        val tmax = hist.tmax
         val tphi = min(facts.map{case p:FactVariable => hist.extent(ctx(p))})
         val ta = min(progs.map{case a:ProgramVariable => hist.time(a)})
-        val tmin = Math.min(tphi,ta)
-        val tmax = hist.tmax
+        val tmin = min(Seq(tphi,ta, tmax))
         val assms:Seq[Formula] = progs.map{case p:FactVariable =>
           val tp = ctx(p)
           hist.extend(tp._2, tmin, tp._1)
@@ -93,7 +93,7 @@ object Kaisar {
               /* Need to actually plug in the assumptions here. */
               /*??? */
           }
-        (hist, ctx.add(x,phi,addedProvable))
+        (hist, ctx.add(x,concl,addedProvable))
     }
   }
 
