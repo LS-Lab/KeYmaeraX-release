@@ -1,11 +1,6 @@
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-
-import scala.collection.mutable
+import edu.cmu.cs.ls.keymaerax.core.{Box, Sequent, _}
 
 /**
   * Created by bbohrer on 12/2/16.
