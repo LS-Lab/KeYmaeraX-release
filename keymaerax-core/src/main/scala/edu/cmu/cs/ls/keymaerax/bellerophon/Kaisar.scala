@@ -1,7 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.NoProofTermProvable
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import scala.collection.mutable
 
@@ -32,7 +34,7 @@ object Kaisar {
     def extent(tp:(Int, Formula,Provable)):Int = {
       var (t, phi,_) = tp
       var fv = StaticSemantics(phi).fv
-      while (fv.intersect(StaticSemantics(tmap(t)._2).bv).isEmpty) {
+      while (tmap.contains(t) && fv.intersect(StaticSemantics(tmap(t)._2).bv).isEmpty) {
         t = t + 1
       }
       t
@@ -43,7 +45,7 @@ object Kaisar {
       var t = tmax
       var p = phi
       while(t >= tmin) {
-        p = Box(tmap(t)._2, phi)
+        p = Box(tmap(t)._2, p)
         t = t -1
       }
       p
@@ -68,6 +70,33 @@ object Kaisar {
 
   private def min(seq:Seq[Int]):Int =
     seq.fold(Int.MaxValue)((x,y) => Math.min(x,y))
+/*
+  def prUseAt(pr:Provable, pos:Position) = {
+    useAt(NoProofTermProvable(pr))
+
+    val sig:ProvableSig = NoProofTermProvable(pr)
+    val pex:PosInExpr = ???//PosInExpr(pos)
+    useAt("useAt", sig, pex, None)
+    //useAt(codeName: String, fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst
+  }*/
+
+  def doGreatProof(): Provable = {
+    /*
+    val sg: Provable = ???
+    val fact: Provable = ???
+    cut("[x:=2;](x > 1 -> [x:=x-1;]x>0) -> [x:=2;](x > 1) -> [x:=2;][x:=x-1;]x>0".asFormula) < (
+      useAt("K")(1),
+      implyR(1) < (
+        useAt(sg)(1),
+        implyR(1) <(
+          useAt(fact)(1),
+          nil
+          )
+        )
+      )
+*/
+    ???
+  }
 
   def eval(hist: History, ctx: Context, step:Statement):(History,Context) = {
     step match {
@@ -79,20 +108,28 @@ object Kaisar {
         val tphi = min(facts.map{case p:FactVariable => hist.extent(ctx(p))})
         val ta = min(progs.map{case a:ProgramVariable => hist.time(a)})
         val tmin = min(Seq(tphi,ta, tmax))
-        val assms:Seq[Formula] = progs.map{case p:FactVariable =>
+        val assms:Seq[Formula] = facts.map{case p:FactVariable =>
           val tp = ctx(p)
           hist.extend(tp._2, tmin, tp._1)
         }
-        val concl:Formula = hist.extend(phi, tmin, tmax)
+        val concl:Formula = hist.extend(phi, 0, tmax)
         val pr:Provable = Provable.startProof(Sequent(assms.toIndexedSeq, collection.immutable.IndexedSeq(concl)))
-        val addedProvable:Provable =
-          SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
+        var concE = e
+        var t = tmin-1
+        while (t >= 0) {
+          concE = G(1) & concE
+          t = t -1
+        }
+        /*val addedProvable:Provable =
+          SequentialInterpreter()(concE, BelleProvable(NoProofTermProvable(pr))) match {
             case BelleProvable(result, _) =>
               assert(result.isProved)
               result.underlyingProvable
               /* Need to actually plug in the assumptions here. */
               /*??? */
-          }
+              /* TODO: Need to extend with previous programs. */
+          }*/
+        val addedProvable:Provable = doGreatProof()
         (hist, ctx.add(x,concl,addedProvable))
     }
   }
