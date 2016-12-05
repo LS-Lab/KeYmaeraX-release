@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.Kaisar._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.Kaisar._
+import edu.cmu.cs.ls.keymaerax.btactics.{Kaisar, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
