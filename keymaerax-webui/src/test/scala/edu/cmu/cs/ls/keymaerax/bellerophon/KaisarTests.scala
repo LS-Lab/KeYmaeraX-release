@@ -67,7 +67,7 @@ class KaisarTests extends TacticTestBase {
   }
 
   /* Use facts */
-  "Proof with using of facts" should "prove" in {
+  "Proof with one fact" should "prove" in {
     withZ3 (qeTool => {
       val box = "[x:=2;][x:= x - 1;]x>0".asFormula
       val prog1 = "x:=2;".asProgram
@@ -83,5 +83,22 @@ class KaisarTests extends TacticTestBase {
     })
   }
 
+  /* Use facts */
+  "Proof with two facts" should "prove" in {
+    withZ3 (qeTool => {
+      val box = "[x:=2;][x:= x - 1;]x>0".asFormula
+      val prog1 = "x:=2;".asProgram
+      val prog2 = "x:=x - 1;".asProgram
+      val e1: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
+      val e2: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
+      val proof: Proof = (box, List(
+        Run(Variable("a"), prog1),
+        Show(Variable("x"),"x > 1".asFormula, (Nil, e1)),
+        Show(Variable("y"),"x != 0".asFormula, (Nil, e1)),
+        Run(Variable("b"), prog2),
+        Show(Variable("z"), "x>0".asFormula, (List(FactVariable(Variable("x")), FactVariable(Variable("y"))), e2))))
+      Kaisar.eval(proof)
+    })
+  }
 
 }
