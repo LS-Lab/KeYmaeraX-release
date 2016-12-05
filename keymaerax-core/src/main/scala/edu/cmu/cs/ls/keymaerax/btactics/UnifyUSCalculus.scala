@@ -769,11 +769,25 @@ trait UnifyUSCalculus {
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        val (other,key) =
-          if(pos.isAnte && fact.conclusion.succ.head.isInstanceOf[Imply]) (keyInit,otherInit)
-          else (otherInit,keyInit)
+
+        //todo: Should this be TacticFailure or Illformed?
+        // Case for Illformed: user should not be applying tactics in sequents where positions don't exist
+        // Case for TacticFailure: some automation might need to do that
+        if(!sequent.sub(pos).isDefined) throw new BelleTacticFailure("In-applicable CE(" + fact + ")\nat " + pos +
+          "which is <ill-positioned>\n at " +sequent)
+
+        val (other,key) = {
+          if (fact.conclusion.succ.head.isInstanceOf[Imply]) {
+            val polarity = FormulaTools.polarityAt(sequent.sub(pos.top).get.asInstanceOf[Formula], pos.inExpr)
+            //polarity really shouldn't end up being 0 here..
+            if (pos.isAnte && polarity < 0 || pos.isSucc && polarity > 0) (otherInit,keyInit) //positive polarity
+            else (keyInit,otherInit) //negative
+          }
+          else (otherInit, keyInit)
+        }
 
         require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + " which is " + sequent.sub(pos).getOrElse("<ill-positioned>") + "\nat " + sequent)
+
         val (ctx, _) = sequent.at(pos)
         val (cutPos: SuccPos, commute: BelleExpr) = pos match {
           case p: SuccPosition => (p.top, ident)
