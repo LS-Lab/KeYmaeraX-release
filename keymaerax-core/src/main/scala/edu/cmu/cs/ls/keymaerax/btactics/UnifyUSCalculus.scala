@@ -778,6 +778,7 @@ trait UnifyUSCalculus {
 
         val (other,key) = {
           if (fact.conclusion.succ.head.isInstanceOf[Imply]) {
+            //The polarity of the sub position within the top level formula
             val polarity = FormulaTools.polarityAt(sequent.sub(pos.top).get.asInstanceOf[Formula], pos.inExpr)
             //polarity really shouldn't end up being 0 here..
             if (pos.isAnte && polarity < 0 || pos.isSucc && polarity > 0) (otherInit,keyInit) //positive polarity
@@ -826,23 +827,51 @@ trait UnifyUSCalculus {
     def splitFact: (Expression, Expression, BelleExpr, (Context[Formula]=>ForwardTactic)) = fact.conclusion.succ.head match {
       case Equal(l,r) => (l, r, equivifyR(SuccPos(0)), CE) //@note this CE can also use CQ
       case Equiv(l,r) => (l, r, equivifyR(SuccPos(0)), CE)
-      case Imply(l,r) => (l, r, ident, CMon)
+      case Imply(l,r) => (l, r, implyR(1), ((c:Context[Formula]) => inverseImplyR.andThen(CMon(c)) ))
       case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
     }
-    val (other, key, equivify, tactic) = splitFact
+    val (otherInit, keyInit, equivify, tactic) = splitFact
 
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(sequent.sub(pos).contains(C(key)), "In-applicable CE(" + fact + ",\n" + C + ")\nat " + pos + "\nwhich is " + sequent.sub(pos).getOrElse("none") + "\nat " + sequent)
+
+        //todo: See above
+        if(!sequent.sub(pos).isDefined) throw new BelleTacticFailure("In-applicable CE(" + fact + ")\nat " + pos +
+          "which is <ill-positioned>\n at " +sequent)
+
         val (posctx,c) = sequent.at(pos)
-        val ctx = posctx(C)
-        val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
+        val ctx = posctx(C) //The combined context at the position
+
+        val (other,key) = {
+          if (fact.conclusion.succ.head.isInstanceOf[Imply]) {
+            //Polarity of the combined context
+            val polarity = FormulaTools.polarityAt(ctx.ctx, FormulaTools.posOf(ctx.ctx, DotFormula).getOrElse(
+              throw new IllegalArgumentException(s"Context should contain DotFormula, but is ${C.ctx}")))
+            //polarity really shouldn't end up being 0 here..
+            if (pos.isAnte && polarity < 0 || pos.isSucc && polarity > 0) (otherInit,keyInit) //positive polarity
+            else (keyInit,otherInit) //negative
+          }
+          else (otherInit, keyInit)
+        }
+
+        require(sequent.sub(pos).contains(C(key)), "In-applicable CE(" + fact + ",\n" + C + ")\nat " + pos + "\nwhich is " + sequent.sub(pos).getOrElse("none") + "\nat " + sequent)
+
+        val (cutPos: SuccPos, commute: BelleExpr) = pos match {
+          case p: SuccPosition => (p.top, ident)
+          case p: AntePosition => (SuccPos(sequent.succ.length),
+            fact.conclusion.succ.head match {
+              case Equal(l,r) => commuteEqual(1)
+              case Equiv(l,r) => commuteEquivR(1)
+              case _ => ident
+            })
+        }
         cutLR(ctx(other))(pos.top) <(
           /* use */ ident partial,
           /* show */ cohideR(cutPos) & //assertT(0,1) &
           equivify & /*commuteEquivR(SuccPosition(0)) &*/
-          by(tactic(C)(fact))
+          commute &
+          by(tactic(ctx)(fact))
           )
       }
     }
@@ -982,7 +1011,7 @@ trait UnifyUSCalculus {
     */
   def CMon(C: Context[Formula]): ForwardTactic = impl => {
     import StaticSemantics.symbols
-    require(impl.conclusion.ante.length == 1 && impl.conclusion.succ.length == 1, "expected equivalence shape without antecedent and exactly one succedent " + impl)
+    require(impl.conclusion.ante.length == 1 && impl.conclusion.succ.length == 1, "expected equivalence shape with exactly one antecedent and exactly one succedent " + impl)
 
     // global polarity switch for all cases, except Modal and Equiv, which modify this switch if necessary
     val polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(

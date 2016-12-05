@@ -36,10 +36,13 @@ class UnifyUSCalculusTests extends TacticTestBase {
     val impl5 = proveBy(" Q_() = 0 -> Q_()^2 = 0 ".asFormula,QE)
     val impl6 = proveBy(" Q_()^2 = 0 -> Q_() = 0 ".asFormula,QE)
 
-    val (ctx1,_) = Context.at("Q_() = 0 -> F_() = 0".asFormula,PosInExpr(1::Nil))
-    val (ctx2,_) = Context.at("Q_() = 0 -> F_()^2 = 0".asFormula,PosInExpr(0::Nil))
+    val (ctx1,_) = Context.at("(Q_() = 0 -> F_() = 0)".asFormula,PosInExpr(1::Nil))
+    val (ctx2,_) = Context.at("(Q_() = 0 -> F_()^2 = 0)".asFormula,PosInExpr(0::Nil))
     println(ctx1,ctx2)
-    val antes = IndexedSeq("F_()=0".asFormula,"F_()=0".asFormula,"Q_() = 0 -> F_()=0".asFormula,"Q_()=0 -> F_() = 0".asFormula)
+
+    val antes = IndexedSeq("F_()=0".asFormula,"F_()=0".asFormula,"P() -> (Q_() = 0 -> F_()=0)".asFormula,
+      "(Q_()=0 -> F_() = 0)".asFormula,
+      "P() -> (Q_()=0 -> F_() = 0)".asFormula)
     val succs = antes
 
     val pr = proveBy(Sequent(antes,succs),
@@ -52,11 +55,15 @@ class UnifyUSCalculusTests extends TacticTestBase {
       useAt("ANON",impl2,PosInExpr(0::Nil))(-2) & //F_() is matched and weakened to F_()^2 using F=0 -> F^2=0
       DebuggingTactics.print("After useAt") &
 
-      //Same as above, except now just giving it straight to CEat
+      //Same as above, except now just giving it straight to CEat under a context
       //Default behavior: equivalences and equalities L <-> R are rewritten R to L
-      CEat(impl3,ctx1)(3) & //Equiv CEat in positive position
-      CEat(impl4,ctx2)(3) & //Equiv CEat in negative position
-      DebuggingTactics.print("After <-> CEats") &
+      CEat(impl3,ctx1)(SuccPosition(3, 1 :: Nil)) & //Equiv CEat
+      CEat(impl4,ctx2)(SuccPosition(3, 1 :: Nil)) & //Equiv CEat
+      DebuggingTactics.print("After <-> Succ contextual CEats") &
+
+      CEat(impl3,ctx1)(AntePosition(3, 1 :: Nil)) & //Equiv CEat
+      CEat(impl4,ctx2)(AntePosition(3, 1 :: Nil)) & //Equiv CEat
+      DebuggingTactics.print("After <-> Ante contextual CEats") &
 
       //Implications need to be more careful
 
@@ -77,10 +84,27 @@ class UnifyUSCalculusTests extends TacticTestBase {
 
       DebuggingTactics.print("After antecedent non-toplevel CEats")  &
 
-      //CEating with contexts
+      //CEating using implication in context in positive position
+      // In succedent
+      // rewriting A->(B->C) with D->C gives A->(B->D)
+      CEat(impl,ctx1)(SuccPosition(5, 1 :: Nil)) &
+      // rewriting A->(B->C) with B->D gives A->(D->C)
+      CEat(impl5,ctx2)(SuccPosition(5, 1 :: Nil)) &
+
+      // In antecedent
+      DebuggingTactics.print("After antecedent non-toplevel CEats in context")  &
+      // rewriting A->(B->C) with C->D gives A->(B->D)
+      CEat(impl2,ctx1)(AntePosition(5, 1 :: Nil)) &
+      // rewriting A->(B->C) with D->B gives A->(D->C)
+      CEat(impl6,ctx2)(AntePosition(5, 1 :: Nil)) &
+
+      DebuggingTactics.print("After antecedent non-toplevel CEats in context")  &
       nil //CEat(impl,ctx)
     )
-//      & useAt("ANON",impl,PosInExpr(1::Nil))(-1))
+
+    (pr.subgoals.head.ante == pr.subgoals.head.succ) shouldBe true
+    pr.subgoals.head.ante shouldBe IndexedSeq("F_()^2=0".asFormula, "F_()^2=0".asFormula, "P()->Q_()^2=0->F_()^2=0".asFormula,
+      "Q_()^2=0->F_()^2=0".asFormula, "P()->Q_()^2=0->F_()^2=0".asFormula)
 
   }
 
