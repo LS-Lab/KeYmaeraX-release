@@ -86,40 +86,64 @@ object Kaisar {
   }
   def cutEZ(c: Formula, t: BelleExpr): BelleExpr = cut(c) & Idioms.<(skip, /* show */ t & done)
 
-  def doGreatProof(): ProvableSig = {
-    def sg: ProvableSig = {
-      val start = Provable.startProof("[x:=2;](x > 1 -> [x:=x-1;]x>0)".asFormula)
-      val e:BelleExpr = G(1) & implyR(1) & chase(1) & QE
-      interpret(e, start)
+  def implicate(fs:List[Formula],acc:Formula):Formula = {
+     fs.reverse.foldLeft(acc)((acc,f) => Imply(f,acc))
+  }
+
+  def unbox(f:Formula, n:Int):Formula = {
+    (f, n) match {
+      case (_, 0) => f
+      case (Box(_,p), _) => unbox(p,n-1)
     }
-    def fact: ProvableSig = {
-      val start = Provable.startProof("[x:=2;](x > 1)".asFormula)
-      val e:BelleExpr = chase(1) & QE
-      interpret(e,start)
+  }
+
+  /* Returns a provable of [a](->{maybeFacts,result})
+  * */
+  def doGreatProof(acc:BelleExpr, a:Program, maybeFacts:List[Formula], result:Formula): ProvableSig = {
+    maybeFacts match {
+      case Nil => acc
+        val theorem:Formula = Box(a,result)/*"[x:=2;][x:=x-1;]x>0".asFormula*/
+        val start:Provable = Provable.startProof(theorem)
+        interpret(acc, start)
+      case firstFact::remainingFacts =>
+        def sg: ProvableSig = {
+          val start = Provable.startProof(Box(a, implicate(maybeFacts,result)))
+          val e:BelleExpr =
+              G(1) &
+              implyR(1) &
+              //close
+              chase(1) &
+              QE
+          interpret(e, start)
+        }
+        def factPf: ProvableSig = {
+          val start = Provable.startProof(Box(a,firstFact))
+          val e:BelleExpr = chase(1) & QE
+          interpret(e,start)
+        }
+        val tac:BelleExpr =
+          cutEZ(Imply(Box(a, implicate(maybeFacts,result)), Imply(Box(a,firstFact),Box(a,implicate(remainingFacts,result)))),
+            /*)
+            cutEZ(("([x:=2;](x > 1 -> [x:=x-1;]x>0)) " +
+                "-> ([x:=2;](x > 1)) " +
+                "-> [x:=2;][x:=x-1;]x>0").asFormula,*/
+            hide(1) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
+            implyL(-1) <(
+              hide(1) & useAt(sg, PosInExpr(Nil))(1),
+              implyL(-1) <(
+                hide(1) & useAt(factPf, PosInExpr(Nil))(1),
+                close
+                )
+              )// & nil
+
+        val theorem:Formula = Box(a,implicate(remainingFacts,result))/*"[x:=2;][x:=x-1;]x>0".asFormula*/
+      val start:Provable = Provable.startProof(theorem)
+        interpret(tac, start)
     }
-    val tac:BelleExpr =
-      cutEZ(("([x:=2;](x > 1 -> [x:=x-1;]x>0)) " +
-          "-> ([x:=2;](x > 1)) " +
-          "-> [x:=2;][x:=x-1;]x>0").asFormula,
-        hide(1) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
-      implyL(-1) <(
-        debug("whaddap") & hide(1) & useAt(sg, PosInExpr(Nil))(1),
-        debug("whadwhere") &
-        implyL(-1) <(
-          debug("whaddown") & hide(1) & useAt(fact, PosInExpr(Nil))(1),
-          debug("whadsideways") & close
-          )
-        ) & nil
-    /*implyR(1) < (
-          useAt(sg)(1),
-          implyR(1) <(
-            useAt(fact)(1),
-            nil
-            )
-        )*/
-    val theorem:Formula = "[x:=2;][x:=x-1;]x>0".asFormula
-    val start:Provable = Provable.startProof(theorem)
-    interpret(tac, start)
+    //val a:Program = "x := 2;".asProgram
+    /*val fact:Formula = "x > 1".asFormula
+    val facts:Formula = "[x:=x-1;]x>0".asFormula*/
+
   }
 
   def eval(hist: History, ctx: Context, step:Statement):(History,Context) = {
@@ -145,15 +169,35 @@ object Kaisar {
           t = t -1
         }
         val addedProvable:Provable =
-          /* TODO: Hilarious hack: keep tests running while I generalize doGreatProof ()*/
-          if(concl == "[x:=2;][x:=x-1;]x>0".asFormula) { doGreatProof().underlyingProvable}
+          tmin match {
+            case 0 | -1 =>
+              SequentialInterpreter()(concE, BelleProvable(NoProofTermProvable(pr))) match {
+                case BelleProvable(result, _) =>
+                  assert(result.isProved)
+                  result.underlyingProvable
+              }
+            case _ =>
+              //if (concl == "[x:=2;][x:=x-1;]x>0".asFormula) {
+                // acc:BelleExpr, a:Program, maybeFacts:List[Formula], result:Formula
+                val Box(a, _) = concl
+                val boxen = tmin
+                doGreatProof(e, a, assms.map(f => unbox(f, boxen)).toList, hist.extend(phi, tmin, tmax)).underlyingProvable
+              //}
+
+          }
+          /*if(concl == "[x:=2;][x:=x-1;]x>0".asFormula) {
+            // acc:BelleExpr, a:Program, maybeFacts:List[Formula], result:Formula
+            val Box(a, _) = concl
+            val boxen = hist.tmin
+            doGreatProof(e, a, assms.map(f => unbox(f, boxen)).toList, hist.extend(phi,tmin,tmax)).underlyingProvable
+          }
           else {
             SequentialInterpreter()(concE, BelleProvable(NoProofTermProvable(pr))) match {
               case BelleProvable(result, _) =>
                 assert(result.isProved)
                 result.underlyingProvable
             }
-          }
+          }*/
         (hist, ctx.add(x,concl,addedProvable))
     }
   }
