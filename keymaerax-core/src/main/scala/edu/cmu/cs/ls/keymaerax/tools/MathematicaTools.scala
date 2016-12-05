@@ -151,7 +151,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
       Array(k2m.convert(Not(fml)),
         new MExpr(
           MathematicaSymbols.LIST,
-          StaticSemantics.symbols(fml).toList.sorted.map(s => k2m.convert(s)).toArray),
+          StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).toList.sorted.map(s => k2m.convert(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, k2m(Number(TIMEOUT))))
 
