@@ -187,7 +187,7 @@ object Idioms {
   *  cases must be exhaustive (or easily proved to be exhaustive in context)
   *  otherwise, the exhaustiveness case is left open
   * */
-  def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = {
+  def cases(exhaustive: BelleExpr = TactixLibrary.master())(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = {
     val cases = c1 +: cs
     val caseFml = cases.map({ case (Case(fml, _), _) => fml }).reduceRight(Or)
 
@@ -206,10 +206,11 @@ object Idioms {
       /*use*/ caseTactics,
       // cases might be exhaustive in itself (e.g., x>=0|x<0), or exhaustive per facts from antecedent (x=0|x>0 from x>=0)
       /*show*/
-        TactixLibrary.cohideR('Rlast) & TactixLibrary.master() & TactixLibrary.done |
-        TactixLibrary.cohideOnlyR('Rlast) & TactixLibrary.master() & TactixLibrary.done | ident
+        TactixLibrary.cohideR('Rlast) & exhaustive & TactixLibrary.done |
+        TactixLibrary.cohideOnlyR('Rlast) & exhaustive & TactixLibrary.done | exhaustive & TactixLibrary.done | ident
     )
   }
+  def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = cases()(c1, cs:_*)
 
   /** Repeats t while condition at position is true. */
   def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = "loopwhile" by {(pos: Position) =>
