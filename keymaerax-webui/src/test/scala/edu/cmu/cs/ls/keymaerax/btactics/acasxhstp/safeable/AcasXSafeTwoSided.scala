@@ -5,15 +5,19 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
+import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleAbort, BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
@@ -333,544 +337,272 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
   }
 
-  it should "prove Lemma 3b: implicit-explicit upper equivalence" ignore withMathematica { tool =>
+  it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { tool =>
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
 
+    def caseSmasher(caseName: String): BelleExpr = dT(caseName) &
+      //@note cases are not pairwise disjoint, meaning that simplifier can't fully simplify on case split; but we can simplify a little further still
+      (andL('L)*) & (SimplifierV2.simpTac('Llike, "p_() -> q_()".asFormula)*) & (hideL('L, True)*) &
+      (onAll(betaRule*)*) & onAll(dT(s"$caseName QE") & QE) & done
+
+    def caseInst(caseName: String, tInst: String, roInst: String, hoInst: String): BelleExpr =
+      dT(caseName) &
+      allL("t".asVariable, tInst.asTerm)('L) &
+      allL("ro".asVariable, roInst.asTerm)('L) &
+      allL("ho".asVariable, hoInst.asTerm)('L) & dT(s"$caseName QE") &
+      (onAll(betaRule*)*) & onAll(dT(s"$caseName QE") & QE) & done
+
     val rvp = max('L, "max(0, w*(dhfM - dhd))".asTerm) & equivR('R) & Idioms.<(
-      dT("rv>0 ->") & (andL('L)*) & Idioms.cases(
-        (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("Case >=0") /* todo */),
-        (Case("w*(dhd+w*maxAbbrv)<0".asFormula), dT("Case <0") /* todo */)
-      ),
-      dT("rv>0 <-") //& normalize(andR('R), skip, skip) & onAll(PropositionalTactics.toSingleFormula & dT("rv>0 <- Case"))
+      dT("rv>0 ->") & normalize(skip, skip, skip) & Idioms.cases(
+        //@note paper case-distinguishes >0 and <=0
+        (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("Case >=0") & Idioms.cases(
+            //@note cases are not exhaustive by themselves, only because succedent alternatives and when knowing almost everything else (except case knowledge)
+            hideL('L, "(-rp<=r&r<=rp->w*h>hp)&(rp < r&r<=rp+rv*maxAbbrv/aM->w*rv^2*h>aM/2*(r-rp)^2+w*rv*dhd*(r-rp)+rv^2*hp)&(-rp<=r&r < -rp+rv*maxAbbrv/aM->w*rv^2*h>aM/2*(r+rp)^2+w*rv*dhd*(r+rp)+rv^2*hp)&(-rp+rv*maxAbbrv/aM<=r->w*rv*h>w*(dhd+w*maxAbbrv)*(r+rp)-rv*maxAbbrv^2/(2*aM)+rv*hp)".asFormula) &
+            hideR('R, "w*h>w*ho+hp".asFormula) &
+            ArithmeticSpeculativeSimplification.speculativeQE)(
+          (Case("-rp<=r&r<=rp".asFormula), caseSmasher("-> >=0 Case 10")),
+          (Case("rp < r&r<=rp+rv*maxAbbrv/aM".asFormula), caseSmasher("-> >=0 Case 11")),
+          (Case("-rp<=r&r < -rp+rv*maxAbbrv/aM".asFormula), caseSmasher("-> >=0 Case 12")),
+          (Case("-rp+rv*maxAbbrv/aM<=r".asFormula), caseSmasher("-> >=0 Case 13"))
+        ) & dT("Case >=0 done") & done)
+        ,
+        (Case("w*(dhd+w*maxAbbrv)<0".asFormula), dT("Case <0") & Idioms.cases(
+            //@note cases are not exhaustive by themselves, only because succedent alternatives and when knowing almost everything else (except case knowledge)
+            hideL('L, "(-rp<=r&r<=rp->w*h>hp)&(rp < r&r<=rp+rv*maxAbbrv/aM->w*rv^2*h>aM/2*(r-rp)^2+w*rv*dhd*(r-rp)+rv^2*hp)&(rp+rv*maxAbbrv/aM<=r->w*rv*h>w*(dhd+w*maxAbbrv)*(r-rp)-rv*maxAbbrv^2/(2*aM)+rv*hp)".asFormula) &
+            hideR('R, "w*h>w*ho+hp".asFormula) &
+            ArithmeticSpeculativeSimplification.speculativeQE & dT("WTF???"))(
+          (Case("-rp<=r&r<=rp".asFormula), caseSmasher("-> <0 Case 10")),
+          (Case("rp < r&r<=rp+rv*maxAbbrv/aM".asFormula), caseSmasher("-> <0 Case 11")),
+          (Case("rp+rv*maxAbbrv/aM<r".asFormula), caseSmasher("-> <0 Case 14"))
+        ) & dT("Case <0 done") & done)
+      ) & dT("rv>0 -> done") & done,
+      dT("rv<0 <-") & Idioms.cases(
+        (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("<- <0 Case >=0") & normalize(andR('R), skip, skip) & Idioms.<(
+          /*-rp<=r&r<=rp*/ caseInst("<- >=0 Case 11", "0", "0", "0"),
+          /*rp < r&r<=rp+rv*maxAbbrv/aM*/ caseInst("<- >=0 Case 11", "(r-rp)/rv", "r-rp", "(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv"),
+          /*-rp<=r&r < -rp+rv*maxAbbrv/aM*/ caseInst("<- >=0 Case 12", "(r+rp)/rv", "r+rp", "(w * aM) / 2 * (r+rp)^2/rv^2 + dhd * (r+rp)/rv"),
+          /*-rp+rv*maxAbbrv/aM<=r*/ caseInst("<- >=0 Case 13", "(r+rp)/rv", "r+rp", "(dhd+w*maxAbbrv)*(r+rp)/rv-w*maxAbbrv^2/(2*aM)")
+        ) & dT("Case >=0 done") & done),
+        (Case("w*(dhd+w*maxAbbrv)<0".asFormula), dT("<- <0 Case <0") & normalize(andR('R), skip, skip) & Idioms.<(
+          /*"-rp<=r&r<=rp*/ dT("<- <0 Case 10") & caseInst("<- <0 Case 10", "0", "0", "0"),
+          /*rp < r&r<=rp+rv*maxAbbrv/aM*/ dT("<- <0 Case 11") & caseInst("<- <0 Case 11", "(r-rp)/rv", "r-rp", "(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv"),
+          /*rp+rv*maxAbbrv/aM<r*/ dT("<- <0 Case 14") & caseInst("<- <0 Case 14", "(r-rp)/rv", "r-rp", "(dhd+w*maxAbbrv)*(r-rp)/rv-w*maxAbbrv^2/(2*aM)")
+        ) & dT("Case <0 done") & done)
+      ) & dT("rv<0 <- done") & done
     )
 
-    val start =
+    val tactic =
       implyR('R) & (andL('L)*) & EqualityTactics.abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
       cut("maxAbbrv>=0".asFormula) & Idioms.<(
-        (cutShow, /*cohide2('L, "maxAbbrv=max(0, w*(dhfM - dhd))")('Rlast)*/ QE)
+        (cutShow, /*cohide2('L, "maxAbbrv=max(0, w*(dhfM - dhd))")('Rlast)*/ QE & dT("Show maxAbbrv>=0 done") & done)
         ,
         (cutUse, Idioms.cases(
-          (Case("rv=0".asFormula), atomicQE(equivR('R) | andR('R), dT("rv=0 QE case")) & done),
-          (Case("rv>0".asFormula), rvp)
+          (Case("rv=0".asFormula), dT("rv=0 case") & atomicQE(equivR('R) | andR('R), dT("rv=0 QE case")) & done),
+          (Case("rv>0".asFormula), dT("rv>0 case") & rvp & done)
         ))
     )
 
-    proveBy(reductionFml, start) shouldBe 'proved
-  }
-
-  it should "prove Lemma 3b: implicit-explicit upper equivalence old" ignore withMathematica { tool =>
-    val reductionSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
-
-    /*** Helper tactics ***/
-    def oG(s : String) = dT(s)//Tactics.SubLabelBranch(s)
-
-    def instantiateVars(tString : String, roString : String, hoString : String) =
-      allL(Variable("t"), tString.asTerm)('L) & allL(Variable("ro"), roString.asTerm)('L) & allL(Variable("ho"), hoString.asTerm)('L)
-
-    def substTactic0(hoString : String) = implyR(1) & allL(Variable("t"), "(r-rp)/rv".asTerm)('L) &
-      allL(Variable("ro"), "(r-rp)".asTerm)('L) &
-      allL(Variable("ho"), hoString.asTerm)('L) &
-      implyL('L) & Idioms.<(
-      orR(2) & hideL(-1) & hideL(-4) & hideR(1) & cut("r<rp+rv*maxAbbrv/aM | r=rp+rv*maxAbbrv/aM".asFormula) &
-        //TODO: cutting with a<0 | a=0 when we have a<=0 in the antecedant should prove cutShow automatically
-        //or use useAt() instead
-        Idioms.<(
-          (cutShow, hideR(1) & hideR(1) & hideL(-1) & hideL(-2) & QE
-            ),
-          (cutUse, orL(-5) & Idioms.<
-            // TODO: tactic for proving A|B -> (C|D) by proving A->C and B->D
-            (
-              hideR(2) & QE
-              ,
-              hideR(1) & QE
-              )
-            )
-        )
-        ,
-        orL(-7) & Idioms.<
-          (/* abs(r-(r-rp))>rp <-> false */
-            hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & hideR(1) & QE // TODO: is there a better way to hide a list
-            ,
-            /* amenable to the form G,A -> A */
-            hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE
-            )
-        )
-
-    def substTactic00(hoString : String) = allL(Variable("t"), "(r-rp)/rv".asTerm)('L) &
-      allL(Variable("ro"), "(r-rp)".asTerm)('L) &
-      allL(Variable("ho"), hoString.asTerm)('L) &
-      implyL('L) & Idioms.<(
-      orR(2) & hideL(-1) & hideL(-4) & hideR(1) & cut("r>rp+rv*maxAbbrv/aM | r=rp+rv*maxAbbrv/aM".asFormula) &
-        //TODO: cutting with a<0 | a=0 when we have a<=0 in the antecedant should prove cutShow automatically
-        Idioms.<(
-          (cutShow, hideR(1) & hideR(1) & hideL(-1) & hideL(-2) & QE
-            ),
-          (cutUse, orL(-5) & Idioms.<
-            // TODO: tactic for proving A|B -> (C|D) by proving A->C and B->D
-            (
-              oG("-- i --") & QE//& hideR(2) //& QE
-              ,
-              oG("-- ii --") & QE//& hideR(1) //& QE
-              )
-            )
-        )
-        ,
-        orL(-7) & Idioms.<
-          (/* abs(r-(r-rp))>rp <-> false */
-            hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & hideR(1) & QE // TODO: is there a better way to hide a list
-            ,
-            /* amenable to the form G,A -> A */
-            hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE
-            )
-        )
-
-    def substTactic1(hoString : String, hidePos: Int) = implyR(1) & allL(Variable("t"), "(r+rp)/rv".asTerm)('L) & allL(Variable("ro"), "(r+rp)".asTerm)('L) & allL(Variable("ho"), hoString.asTerm)('L) & implyL('L) & Idioms.<(
-        oG("__01___") & hideR(1) & orR('R) & hideR(hidePos) & hideL(-1) & hideL(-1) & QE
-        ,
-        oG("__02__") & orL('L) & Idioms.<(oG("rp>0 & abs(rp)>rp") & hideR(1) & hideL(-1) & hideL(-1) & hideL(-2) & hideL(-2) & hideL(-2) & QE , oG("rv>0 & A*rv^2>0 -> A>0") & hideL(-1) & hideL(-1) & hideL(-3) & hideL(-3) & QE)
-        )
-
-    def tac1() = implyR(1) & andR('R) & Idioms.<(
-        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & hideL(-1) & implyL('L) & Idioms.<
-          (
-            hideR(1) & hideL(-3) & hideL(-3) & QE
-            ,
-            hideL(-1) & hideL(-2) & QE
-            )
-        ,
-        oG("(^R 1.2)") & andR('R) & Idioms.<
-          (
-            oG("(^R 1.2.1)") & substTactic0("(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv")
-            ,
-            oG("^R 1.2.2)") & andR(1) & Idioms.<
-              (
-                oG("___0___") & substTactic1("(w * aM) / 2 * (r+rp)^2/rv^2 + dhd * (r+rp)/rv",2)
-                ,
-                oG("___1___") & substTactic1("(dhd+w*maxAbbrv)*(r+rp)/rv-w*maxAbbrv^2/(2*aM)",1)
-                )
-            )
-        )
-    def tac1rv0() = implyR(1) & andR('R) & Idioms.<(
-        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & implyL('L) & Idioms.<
-          (
-            oG("___0___") & hideL(-1) & QE
-            ,
-            oG("___1___") & hideL(-1) & QE
-            )
-        ,
-        oG("(^R 1.2)") & andR('R) & Idioms.<
-          (
-            oG("(^R 1.2.1)") & hideL(-1) & hideL(-1) & hideL(-1) & implyR('R) & QE
-            ,
-            oG("^R 1.2.2)") & andR(1) & Idioms.<
-              (
-                oG("___0___") & hideL(-1) & hideL(-1) & hideL(-1) & implyR('R) & QE
-                ,
-                /* this branch showed the bug in equivalence_up.key */
-                /*TODO: simplify further before calling QE*/
-                oG("___1___") & implyR(1) & orR(1) & max('L, "max(0,w*(dhfM-dhd))".asTerm) & exhaustiveEqL2R('L, "maxAbbrv=max_0".asFormula) & orL(-2) & Idioms.<(
-                  oG("++0++") & andL(-2) & exhaustiveEqL2R('L, "max_0=0".asFormula) & QE
-                  , oG("++1++") & andL(-2) & exhaustiveEqL2R('L, "max_0=w*(dhfM-dhd)".asFormula) & hideR(2) &  QE
-                  )
-                )
-            )
-        )
-
-    def tac2() = implyR(1) & andR('R) & Idioms.<(
-        oG("(^R 1.1)") & implyR(1) & instantiateVars("0","0","0") & hideL(-1) & implyL('L) & Idioms.<
-          (
-            hideR(1) & hideL(-3) & hideL(-3) & QE
-            ,
-            hideL(-1) & hideL(-2) & QE
-            )
-        ,
-        oG("(^R 1.2)") & andR('R) & Idioms.<
-          (
-            oG("(^R 1.2.1)") & substTactic0("(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv")
-            ,
-            oG("^R 1.2.2)") & implyR(1) & orR(1) & hideR(1) &
-              substTactic00("(dhd+w*maxAbbrv)*(r-rp)/rv-w*maxAbbrv^2/(2*aM)")
-            )
-        )
-
-    def tac2rv0() = implyR(1) & andR('R) & Idioms.<(
-        oG("(^R 2.1)") & implyR(1) & instantiateVars("0","0","0") & implyL('L) & Idioms.<
-          (
-            oG("___0___") & hideL(-1) & QE
-            ,
-            oG("___1___") & hideL(-1) & QE
-            )
-        ,
-        oG("(^R 2.2)") & andR('R) & Idioms.<
-          (
-            oG("(^R 2.2.1)") & hideL(-1) & hideL(-1) & hideL(-1) & implyR('R) & QE
-            ,
-            oG("^R 2.2.2)") & implyR('R) & orR('R) & cut("((r>rp)|(r=rp))".asFormula) &
-              Idioms.<(
-                (cutShow, hideR(1) & hideR(1) & hideL(-1) & hideL(-1) & hideL(-2) & QE
-                  ),
-                /*TODO: eqleft sensitive to the ordering */
-                (cutUse, orL(-7) & Idioms.<(oG("r>rp") & hideR(1) & hideL(-4) & QE, oG("r=rp") & QE))
-              )
-            )
-        )
-
-    def concreteQEHammer1() = atomicQE
-      //andL(-4) & andL(-11) & andL(-12) & exhaustiveEqL2R('L, "ro=rv*t".asFormula) &
-      //exhaustiveEqL2R('L, "ho=w*aM/2*t^2+dhd*t".asFormula) & implyL(-4) & Idioms.<(oG("___ A ___") & implyL(-4) & Idioms.<(oG("___ 0 ___")& (hideL('L)*) & hideR(1) & QE,oG("___ 1 ___") & andL(-10) & andL(-11) & implyL(-12) & Idioms.< (oG("___ a ___") & implyL(-11) & Idioms.<(oG("*** i ***") & cut("maxAbbrv>0|maxAbbrv=0".asFormula) & Idioms.<((cutShow,oG("Show") & hideR(1) & hideR(1) & hideR(1) & hideR(1) & QE),(cutUse,oG("USE") & orL(-11) & Idioms.<(oG(">>") & hideL(-1) & QE,oG("==") & hideR(4) & QE)))  ,oG("*** ii ***") & hideL(-1) & QE),oG("___ b ___") & implyL(-11) & Idioms.<(oG("*** i ***") & orL(-11) & Idioms.<(implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE),implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE)) ,oG("*** ii ***") & orL(-11) & Idioms.<(oG("+++ left +++") & implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE) ,oG("+++ right +++") & implyL(-10) & Idioms.<(oG("  x  ") & hideL(-1) & QE,oG("  y  ") & hideL(-1) & hideL(-10) & QE) )) )) ,oG("___ B ___") & andL(-11) & implyL(-4) & Idioms.<(oG("___ 0 ___") & andL(-11) & andL(-12) & implyL(-11) & Idioms.<(oG("___ a ___") & implyL(-12) & Idioms.<(oG("1") & implyL(-11) & Idioms.<(oG(" i ") & hideL(-1) & QE,oG(" ii ") & hideL(-1) & QE),oG("2") & implyL(-11) & Idioms.<(oG("1") & orL(-11) & Idioms.<(hideL(-1) & QE,hideL(-1)& QE),oG("2") & orL(-11) & Idioms.<(oG(" i ") & implyL(-10) & Idioms.<(hideL(-1) & QE, hideL(-1) & QE),oG(" ii ") & implyL(-10) & Idioms.<(oG("* a *") & orL(-4) & Idioms.<(hideL(-1) & QE,hideL(-1) & QE)   , oG("* b *") & orL(-4) & Idioms.<(hideL(-1) & QE,hideL(-1) & QE) )))) ,oG("___ b ___") & implyL(-12) & Idioms.<(oG("A") & implyL(-11) & Idioms.<(oG(" i ") & implyL(-10) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE),oG(" ii ") & implyL(-10) & Idioms.<(orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE), orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE))),oG("B") & orL(-13) & Idioms.<(oG("_i_") & implyL(-11) & Idioms.<(oG(" x ") & implyL(-10) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE),oG(" y ") & implyL(-10) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE)),oG("_ii_") & implyL(-11) & Idioms.<(oG(" x ") & implyL(-10) & Idioms.<(orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE),orL(-4) & Idioms.<(hideL(-1)&QE,hideL(-1)&QE)),oG(" y ")& implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) )))),oG("___ 1 ___") & andL(-12) & andL(-11) & andL(-12) & andL(-13) & hideL(-10) & implyL(-15) && (oG("__a __") & hideL(-11) & implyL(-12) && (oG("_ i _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) ,oG("_ ii _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) ),oG("__ b __") & hideL(-11) & orL(-14) && (oG("_ i _") & implyL(-12) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) ,oG("_ ii _") & implyL(-12) && (oG("__") & implyL(-12) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG("____") & orL(-14) && (oG("1") & implyL(-11) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) ,oG("2") & implyL(-11) && (oG("i") & implyL(-11) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG("j") & implyL(-11) && (oG(" x ") & implyL(-10) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)), oG(" y ") & implyL(-10) && (oG("**0**") & orL(-4) && (oG("==a==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=-1") & la(hideT, "w=-1") & hideL(-1) & QE,oG("==b==") & la(TacticLibrary.eqLeft(exhaustive=true), "w=1") & la(hideT, "w=1") & hideL(-1) & QE),oG("**1**") & orL(-4) & Idioms.< (oG("==a==") & hideL(-1) & QE,oG("==b==") & hideL(-1) & QE)  )  ))  ) ) )) ))
-
-
-    def concreteQEHammer2() = atomicQE
-//    andL(-4) & andL(-11) & la(TacticLibrary.eqLeft(exhaustive=true), "ro=rv*t") & la(hideT, "ro=rv*t") & la(TacticLibrary.eqLeft(exhaustive=true), "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & la(hideT, "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)") & implyL(-4) && (
-//      oG("___ A ___") & implyL(-4) && (
-//        oG("___ 0 ___") & (la(hideL)*) & hideR(1) & QE
-//        ,oG("___ 1 ___") & andL(-9) & andL(-10) & implyL(-11) && (
-//        oG("___ a ___") & implyL(-10) && (
-//          oG("*** i ***") & cut("maxAbbrv>0|maxAbbrv=0".asFormula) & onBranch((cutShowLbl,oG("Show") & hideR(1) & hideR(1) & hideR(1) & hideR(1) & QE),(cutUseLbl,oG("USE") & orL(-10) && (oG(">>") & hideL(-1) & orL(-3) && (QE,QE)
-//            ,oG("==") & la(TacticLibrary.eqLeft(exhaustive=true), "maxAbbrv=0") & la(hideT, "maxAbbrv=0") & QE)))
-//          ,oG("*** ii ***") & hideL(-1) & QE
-//          )
-//        ,oG("___ b ___") & implyL(-10) && (
-//        oG("*** i ***") & orL(-10) && (
-//          orL(-4) && (hideL(-1) & QE, hideL(-1) & QE)
-//          ,orL(-4) && (hideL(-1) & QE, hideL(-1) & QE)
-//          )
-//        ,oG("*** ii ***") & orL(-10) && (
-//        oG("+++ left +++") & implyL(-9) && (hideL(-1) & QE, hideL(-1) & QE)
-//        ,oG("+++ right +++") & implyL(-9) && (
-//        oG("  x  ") & hideL(-1) & QE
-//        ,oG("  y  ") & hideL(-1) & hideL(-9) & QE
-//        )
-//        )
-//        )
-//        )
-//        )
-//      ,oG("___ B ___") & andL(-10) & implyL(-4) && (
-//      oG("___ 0 ___") & andL(-10) & andL(-11) & implyL(-10) && (
-//        oG("___ a ___") & implyL(-11) && (
-//          oG("1") & implyL(-10) && (
-//            oG(" i ") & hideL(-1) & orL(-3) && (QE,QE)
-//            ,oG(" ii ") & hideL(-1) & orL(-3) && (QE,QE)
-//            )
-//          ,oG("2") & implyL(-10) && (
-//          oG(" x ") & orL(-10) && (hideL(-1) & orL(-3) && (QE,QE),hideL(-1)& orL(-3) && (QE,QE))
-//          ,oG(" y ") & orL(-10) && (
-//          oG(" i ") & implyL(-9) && (hideL(-1) & QE, hideL(-1) & QE)
-//          ,oG(" ii ") & implyL(-9) && (
-//          oG("* a *") & orL(-4) && (hideL(-1) & QE,hideL(-1) & QE)
-//          , oG("* b *") & orL(-4) && (hideL(-1) & QE,hideL(-1) & QE)
-//          )
-//          )
-//          )
-//          )
-//        ,oG("___ b ___") & implyL(-11) && (
-//        oG("A") & implyL(-10) && (
-//          oG(" i ") & implyL(-9) && (hideL(-1)&QE,hideL(-1)&QE),oG(" ii ") & implyL(-9) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE), orL(-4) && (hideL(-1)&QE,hideL(-1)&QE))
-//          )
-//        ,oG("B") & orL(-12) && (
-//        oG("_i_") & implyL(-10) && (oG(" x ") & implyL(-9) && (hideL(-1)&QE,hideL(-1)&QE),oG(" y ") & implyL(-9) && (hideL(-1)&QE,hideL(-1)&QE))
-//        ,oG("_ii_") & implyL(-10) && (oG(" x ") & implyL(-9) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)),oG(" y ")& implyL(-9) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE),orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)) )
-//        )
-//        )
-//        )
-//      ,oG("___ 1 ___") & andL(-11) & andL(-10) & andL(-11) & andL(-12) & hideL(-9) & implyL(-14) && (
-//      oG("__ a __") & hideL(-11) & implyL(-12) && (
-//        oG("_ i _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)
-//        ,oG("_ ii _") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)
-//        )
-//      ,oG("__ b __") & orL(-14) && (
-//      oG("_ i _") & implyL(-12) && (
-//        oG("__") & orL(-4) && (hideL(-1)&QE,hideL(-1)&QE)
-//        ,oG("____") & orL(-14) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE))
-//        )
-//      ,oG("_ ii _") & implyL(-13) && (orL(-4) && (hideL(-1)&QE,hideL(-1)&QE) , orL(-4) && (hideL(-1)&QE,hideL(-1)&QE))
-//      )
-//      )
-//      )
-//      )
-
-    def rvp() = oG("rv>0") & equivR('R) & Idioms.<(
-      /*->*/oG("(->)") & allR(1) & allR(1) & allR(1) & implyR(1) & andL(-5) & andL(-3) & andL(-7) & andL(-9) & andL(-10) & hideL(-10) & orL(-4) & Idioms.<(
-        oG("___ T1 ___") & concreteQEHammer1  /* Closed ! */
-        ,
-        oG("___ T2 ___") & concreteQEHammer2 /* Closed ! */
-        )
-        ,
-      /*<-*/oG("(<-)")
-        & andR('R) & Idioms.<
-        (oG("___ R1 ___") & tac1 /* Closed ! */
-          ,
-          oG("___ R2 ___") & tac2 /* Closed ! */
-          )
-    )
-
-    def rv0() = exhaustiveEqL2R('L, "rv=0".asFormula) & equivR('R) & Idioms.<(
-      oG("(->)") & allR(1) & allR(1) & allR(1) & implyR(1) & orL(-5) & Idioms.<
-        (
-          oG("__0__") & andL(-5) & andL(-6) & andL(-7) & exhaustiveEqL2R('L, "ro=0*t".asFormula) & exhaustiveEqL2R('L, "ho=w*aM/2*t^2+dhd*t".asFormula) & andL(-4) & implyL(-6) & Idioms.<(oG("__A__") & implyL(-6) & Idioms.<(oG("__I__") & hideR(1) & (hideL('L)*) & QE
-            ,oG("__II__") & andL(-6) & andL(-7) & implyL(-8) & Idioms.<(oG("___a___") & implyL(-6) & Idioms.<(oG("+++ 0 +++") & hideL(-6) & QE , oG("+++ 1 +++") & hideL(-6) & QE ),oG("___b___") & orL(-8) & Idioms.<(oG("+++ 0 +++") & hideL(-7) & QE, oG("+++ 1 +++") & hideL(-7) & QE) ))
-            ,oG("__B__") & implyL(-6) & Idioms.<(oG("__I__") & andL(-6) & andL(-7) & hideL(-7) & andL(-7) & hideL(-7) & QE  ,oG("__II__") & andL(-6) & andL(-6) & andL(-7) & hideL(-9) & andL(-9) & hideL(-9) & andL(-8) & hideL(-9) & QE)
-            )
-          ,
-
-          oG("__1__") & andL(-5) & andL(-6) & exhaustiveEqL2R('L, "ro=0*t".asFormula) & exhaustiveEqL2R('L, "ho=(dhd+w*maxAbbrv)*t-w*maxAbbrv^2/(2*aM)".asFormula)
-            & andL(-4) & implyL(-6) & Idioms.<(
-            oG("__A__") & implyL(-5) & Idioms.<(oG("__I__") & hideR(1) & (hideL('L)*) & QE, oG("__II__") & andL(-5) & andL(-6) & andL(-7) & hideL(-7) & hideL(-6) & implyL(-6) & Idioms.<(oG("___a___") & hideL(-5) & hideL(-1) & QE ,oG("___b___") & orL(-6) & Idioms.<(oG("+++ 0 +++")& implyL(-5) & Idioms.<(oG("** i **") & QE,oG("** ii **") & QE) ,oG("+++ 1 +++") & implyL(-5) & Idioms.<(oG("** i **") & QE,oG("** ii **") & QE)) ) )
-            ,
-            oG("__B__") & implyL(-5) & Idioms.<(oG("__I__") & andL(-5) & andL(-6) & hideL(-6) & implyL(-6) & Idioms.<(oG("___a___") & orR(1) & implyL(-5) & Idioms.<(oG("+++ 0 +++")& (hideL('L)*) & hideR(4) & hideR(1) & hideR(1) & QE , oG("+++ 1 +++") & hideR(2) & hideR(2) & debug("___a1___") & QE) ,oG("___b___")& orL(-6) & Idioms.<(oG("+++ 0 +++") & andL(-6) & hideL(-5) & hideL(-1) &QE, oG("+++ 1 +++") & hideL(-5) & hideL(-1) & QE )) , oG("__II__") & andL(-5) & andL(-5) & andL(-6) & hideL(-5) & andL(-6) & hideL(-6) & hideL(-7) & andL(-7) & implyL(-8) & Idioms.<(oG("___a___") & implyL(-6) & Idioms.<(oG("** i **") & hideL(-6) & implyL(-5) & Idioms.<(QE,QE),oG("** ii **") & hideL(-6) & implyL(-5) & Idioms.<(orL(-5) & Idioms.<(QE,QE) ,QE)),oG("___b___") & implyL(-6) & Idioms.<(oG("** i **") & hideL(-6) & orL(-6) & Idioms.<(implyL(-5) & Idioms.<(QE,QE),implyL(-5) & Idioms.<(QE,QE)) ,oG("** ii **") & hideL(-6) & orL(-6) & Idioms.<(oG("--- a ---") & orL(-7) & Idioms.<(QE,QE),oG("--- b ---") & orL(-7) & Idioms.<(QE,QE)) ))  )
-            )
-          )
-        ,
-      oG("(<-)")
-        & andR('R) & Idioms.<
-        (oG("___ R1 ___") & tac1rv0
-          ,
-          oG("___ R2 ___") & tac2rv0
-          )
-    )
-
-    def tactic = EqualityTactics.abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
-      cut("maxAbbrv>=0".asFormula) & Idioms.<(
-      (cutShow, hideR(1) & QE)
-      ,
-      (cutUse, implyR(1) &
-        cut("(rv=0|rv>0)".asFormula) & Idioms.<(
-        (cutShow, hideR(1) & hideL(-1) & QE)
-        ,
-        (cutUse, orL(-4) & Idioms.<
-          (oG("(rv=0)") & rv0 /* Closed ! */
-            ,
-            oG("(rv>0)") & rvp /* Closed ! */
-            )
-          )
-      )
-        )
-    )
-
-    val reductionProof = proveBy(reductionSeq, tactic)
+    val reductionProof = proveBy(reductionFml, tactic)
     reductionProof shouldBe 'proved
     storeLemma(reductionProof, Some("upper_equivalence"))
   }
-//
+
+
 //  it should "prove Lemma 3 (Equivalence of two-sided explicit safe regions) from Lemma 3a (lower) and Lemma 3b (upper) bound equivalences" in {
+//    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
 //    // execute dependent tests if lemmas not already proved
-//    if (!lemmaDB.contains("safe_equivalence")) {
-//      println("Proving safe_equivalence lemma...")
-//      runTest("ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence", new Args(nilReporter))
-//      println("...done")
+//    runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
+//    runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
+//
+//    withMathematica { tool =>
+//
+//      beforeEach()
+//
+//      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
+//      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
+//
+//      val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
+//
+//      val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
+//
+//      lPhp shouldBe uPhp
+//      lPrp shouldBe uPrp
+//      lPrv shouldBe uPrv
+//      lPw shouldBe uPw
+//      lz shouldBe uz
+//
+//      // how to combine lower/upper equivalence
+//      val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
+//      combine shouldBe 'proved
+//
+//      // lower: weaken unused a_up >= a_lo in p
+//      val weaken = proveBy("(B() -> C()) -> (A() & B() -> C())".asFormula, prop)
+//      weaken shouldBe 'proved
+//
+//      // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
+//      //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
+//      val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
+//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+//      gen shouldBe 'proved
+//
+//      // cf. STTT: Lemma 3:
+//      // P -> (C_impl <-> C_expl), where
+//      //    C_impl == L_impl | U_impl,
+//      //    C_expl == L_expl | U_expl,
+//      //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
+//      val p = And(GreaterEqual(ua, la), lP)
+//      val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
+//      val lemma3Proof = proveBy(lemma3,
+//        useAt(combine, PosInExpr(1 :: Nil))(1) &
+//          assertE(And(Imply(p, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
+//          useAt(weaken, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
+//          useAt(gen, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
+//          andR(1) & Idioms.<(
+//            by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
+//            by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
+//      )
+//
+//      lemma3Proof shouldBe 'proved
+//      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
 //    }
-//    if (!lemmaDB.contains("upper_equivalence")) {
-//      println("Proving upper_equivalence lemma...")
-//      runTest("ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence", new Args(nilReporter))
-//      println("...done")
-//    }
-//
-//    beforeEach()
-//
-//    val lower = KeYmaeraXProblemParser(io.Source.fromFile(folder + "safe_equivalence.key").mkString)
-//    val upper = KeYmaeraXProblemParser(io.Source.fromFile(folder + "upper_equivalence.key").mkString)
-//
-//    val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
-//
-//    val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
-//
-//    lPhp shouldBe uPhp
-//    lPrp shouldBe uPrp
-//    lPrv shouldBe uPrv
-//    lPw  shouldBe uPw
-//    lz   shouldBe uz
-//
-//    // how to combine lower/upper equivalence
-//    val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
-//    combine shouldBe 'proved
-//
-//    // lower: weaken unused a_up >= a_lo in p
-//    val weaken = proveBy("(B() -> C()) -> (A() & B() -> C())".asFormula, prop)
-//    weaken shouldBe 'proved
-//
-//    // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
-//    //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
-//    val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
-//      prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//    gen shouldBe 'proved
-//
-//    // load lemmas lower/upper equivalence
-//    require(lemmaDB.contains("safe_equivalence"), "Lower equivalence lemma must be proved")
-//    require(lemmaDB.contains("upper_equivalence"), "Upper equivalence lemma must be proved")
-//
-//    // cf. STTT: Lemma 3:
-//    // P -> (C_impl <-> C_expl), where
-//    //    C_impl == L_impl | U_impl,
-//    //    C_expl == L_expl | U_expl,
-//    //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
-//    val p = And(GreaterEqual(ua, la), lP)
-//    val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
-//    val lemma3Proof = proveBy(lemma3,
-//      useAt(combine, PosInExpr(1::Nil))(1) &
-//        assertE(And(Imply(p, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
-//        useAt(weaken, PosInExpr(1::Nil))(1, 0::Nil) &
-//        assertE(And(Imply(lP, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
-//        useAt(gen, PosInExpr(1::Nil))(1, 1::Nil) &
-//        assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
-//        andR(1) && (
-//        by(LookupLemma(lemmaDB, "safe_equivalence").lemma),
-//        by(LookupLemma(lemmaDB, "upper_equivalence").lemma))
-//    )
-//    lemma3Proof shouldBe 'proved
-//
-//    lemmaDB.add(Lemma(
-//      lemma3Proof,
-//      ToolEvidence(immutable.Map("input" -> lemma3.toString, "output" -> "true")) :: Nil,
-//      Some("lemma3-safe_equivalence_lemma")))
 //  }
 //
 //  it should "prove Lemma 3 fitting the form required by Corollary 3" in {
 //    //@note alternative proof so that theorems and lemmas fit together, because twosided_implicit.key uses a>0 & aM>0 instead of aM>=a & a>0
 //    //@note this proof stores two lemmas: the actual Lemma 3, and the intermediate step necessary for Corollary 3
 //
+//    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
+//    if (lemmaDB.contains("lemma3-alt-safe_equivalence_lemma")) lemmaDB.remove("lemma3-alt-safe_equivalence_lemma")
+//
 //    // execute dependent tests if lemmas not already proved
-//    if (!lemmaDB.contains("safe_equivalence")) {
-//      println("Proving safe_equivalence lemma...")
-//      runTest("ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence", new Args(nilReporter))
-//      println("...done")
+//    runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
+//    runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
+//
+//    withMathematica { tool =>
+//
+//      beforeEach()
+//
+//      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
+//      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
+//
+//      val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
+//
+//      val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
+//
+//      lPhp shouldBe uPhp
+//      lPrp shouldBe uPrp
+//      lPrv shouldBe uPrv
+//      lPw shouldBe uPw
+//      lz shouldBe uz
+//
+//      // how to combine lower/upper equivalence
+//      val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
+//      combine shouldBe 'proved
+//
+//      // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
+//      //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
+//      val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
+//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+//      gen shouldBe 'proved
+//
+//      val weakenLeft = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula,
+//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+//      weakenLeft shouldBe 'proved
+//      val weakenRight = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula,
+//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+//      weakenRight shouldBe 'proved
+//
+//      // cf. STTT: Lemma 3:
+//      // P -> (C_impl <-> C_expl), where
+//      //    C_impl == L_impl | U_impl,
+//      //    C_expl == L_expl | U_expl,
+//      //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
+//      val p = And(GreaterEqual(ua, la), lP)
+//      val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
+//
+//      // a>0 & aM>0
+//      val q = And(And(lPhp, And(lPrp, And(lPrv, And(Greater(la, lz), Greater(ua, uz))))), lPw)
+//      val intermediate = Imply(q, Equiv(Or(lI, uI), Or(lE, uE)))
+//      val intermediateProof = proveBy(intermediate,
+//        useAt(combine, PosInExpr(1 :: Nil))(1) &
+//          assertE(And(Imply(q, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
+//          useAt(weakenLeft, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
+//          useAt(weakenRight, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
+//          andR(1) & Idioms.<(
+//          by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
+//          by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
+//      )
+//      intermediateProof shouldBe 'proved
+//      storeLemma(intermediateProof, Some("lemma3-alt-safe_equivalence_lemma"))
+//
+//      val lemma3Proof = proveBy(lemma3,
+//        useAt(gen, PosInExpr(1 :: Nil))(1) &
+//          assertE(intermediate, "Lemma 3: Unexpected intermediate form")(1) &
+//          by(intermediateProof)
+//      )
+//
+//      lemma3Proof shouldBe 'proved
+//      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
 //    }
-//    if (!lemmaDB.contains("upper_equivalence")) {
-//      println("Proving upper_equivalence lemma...")
-//      runTest("ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence", new Args(nilReporter))
-//      println("...done")
-//    }
-//
-//    beforeEach()
-//
-//    val lower = KeYmaeraXProblemParser(io.Source.fromFile(folder + "safe_equivalence.key").mkString)
-//    val upper = KeYmaeraXProblemParser(io.Source.fromFile(folder + "upper_equivalence.key").mkString)
-//
-//    val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
-//
-//    val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
-//
-//    lPhp shouldBe uPhp
-//    lPrp shouldBe uPrp
-//    lPrv shouldBe uPrv
-//    lPw  shouldBe uPw
-//    lz   shouldBe uz
-//
-//    // how to combine lower/upper equivalence
-//    val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
-//    combine shouldBe 'proved
-//
-//    // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
-//    //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
-//    val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
-//      prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//    gen shouldBe 'proved
-//
-//    val weakenLeft = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula,
-//      prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//    weakenLeft shouldBe 'proved
-//    val weakenRight = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula,
-//      prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//    weakenRight shouldBe 'proved
-//
-//    // load lemmas lower/upper equivalence
-//    require(lemmaDB.contains("safe_equivalence"), "Lower equivalence lemma must be proved")
-//    require(lemmaDB.contains("upper_equivalence"), "Upper equivalence lemma must be proved")
-//
-//    // cf. STTT: Lemma 3:
-//    // P -> (C_impl <-> C_expl), where
-//    //    C_impl == L_impl | U_impl,
-//    //    C_expl == L_expl | U_expl,
-//    //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
-//    val p = And(GreaterEqual(ua, la), lP)
-//    val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
-//
-//    // a>0 & aM>0
-//    val q = And(And(lPhp, And(lPrp, And(lPrv, And(Greater(la, lz), Greater(ua, uz))))), lPw)
-//    val intermediate = Imply(q, Equiv(Or(lI, uI), Or(lE, uE)))
-//    val intermediateProof = proveBy(intermediate,
-//      useAt(combine, PosInExpr(1::Nil))(1) &
-//        assertE(And(Imply(q, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
-//        useAt(weakenLeft, PosInExpr(1::Nil))(1, 0::Nil) &
-//        assertE(And(Imply(lP, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
-//        useAt(weakenRight, PosInExpr(1::Nil))(1, 1::Nil) &
-//        assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
-//        andR(1) && (
-//        by(LookupLemma(lemmaDB, "safe_equivalence").lemma),
-//        by(LookupLemma(lemmaDB, "upper_equivalence").lemma))
-//    )
-//    intermediateProof shouldBe 'proved
-//    lemmaDB.add(Lemma(
-//      intermediateProof,
-//      ToolEvidence(immutable.Map("input" -> intermediate.toString, "output" -> "true")) :: Nil,
-//      Some("lemma3-alt-safe_equivalence_lemma")))
-//
-//    val lemma3Proof = proveBy(lemma3,
-//      useAt(gen, PosInExpr(1::Nil))(1) &
-//        assertE(intermediate, "Lemma 3: Unexpected intermediate form")(1) &
-//        by(intermediateProof)
-//    )
-//    lemma3Proof shouldBe 'proved
-//
-//    lemmaDB.add(Lemma(
-//      lemma3Proof,
-//      ToolEvidence(immutable.Map("input" -> lemma3.toString, "output" -> "true")) :: Nil,
-//      Some("lemma3-safe_equivalence_lemma")))
 //  }
 //
 //  it should "prove Corollary 3 (safety of explicit 2-sided regions) from Theorem 3 (implicit 2-sided safety) and Lemma 3 (implicit-explicit equivalence)" in {
-//    val lemmaDB = LemmaDBFactory.lemmaDB
-//    val nilReporter = new Reporter() { override def apply(event: Event): Unit = {} }
-//    if (!(lemmaDB.contains("twosided_implicit") && lemmaDB.contains("twosided_implicit_usecase"))) {
-//      println("Proving twosided_implicit lemma and twosided_implicit_usecase...")
-//      runTest("ACAS X 2-sided safe should prove Theorem 3: correctness of implicit two-sided safe regions", new Args(nilReporter))
-//      println("...done")
-//    }
-//    if (!lemmaDB.contains("lemma3-alt-safe_equivalence_lemma")) {
-//      println("Proving lemma3-alt-safe_equivalence_lemma...")
-//      runTest("ACAS X 2-sided safe should prove Lemma 3 fitting the form required by Corollary 3", new Args(nilReporter))
-//      println("...done")
-//    }
+//    if (lemmaDB.contains("twosided_explicit")) lemmaDB.remove("twosided_explicit")
 //
-//    // rerun initialization (runTest runs afterEach() at the end)
-//    beforeEach()
+//    runLemmaTest("twosided_implicit", "ACAS X 2-sided safe should prove Theorem 3: correctness of implicit two-sided safe regions")
+//    runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
+//    runLemmaTest("lemma3-alt-safe_equivalence_lemma", "ACAS X 2-sided safe should prove Lemma 3 fitting the form required by Corollary 3")
 //
-//    val implicitSafety = KeYmaeraXProblemParser(io.Source.fromFile(folder + "twosided_implicit.key").mkString)
-//    val theorem3 = LookupLemma(lemmaDB, "twosided_implicit").lemma
-//    theorem3.fact.conclusion shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq(implicitSafety))
+//    withMathematica { tool =>
 //
-//    val lemma3 = LookupLemma(lemmaDB, "lemma3-alt-safe_equivalence_lemma").lemma
+//      // rerun initialization (runTest runs afterEach() at the end)
+//      beforeEach()
 //
-//    val Imply(And(a, w), Equiv(e, i)) = lemma3.fact.conclusion.succ.head
-//    val Imply(And(p1, And(p2, _)), Box(Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(cimpl)))), act), ode)), And(u, _))) = implicitSafety
+//      val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
 //
-//    cimpl shouldBe i
+//      val theorem3 = lemmaDB.get("twosided_implicit").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety must be proved"))
+//      theorem3.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(implicitSafety))
 //
-//    val ucLoFact = LookupLemma(lemmaDB, "twosided_implicit_usecase").lemma.fact
-//    val ucLoLemma = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(a, w, i), IndexedSeq(u)),
-//      cut(ucLoFact.conclusion.succ.head) & onBranch(
-//        (BranchLabels.cutShowLbl, cohide(2) & by(ucLoFact)),
-//        (BranchLabels.cutUseLbl, implyL(-4) && (andR(2) && (andR(2) && (closeId, closeId), closeId), closeId) )
+//      val lemma3 = lemmaDB.get("lemma3-alt-safe_equivalence_lemma").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety alternative must be proved"))
+//
+//      val Imply(And(a, w), Equiv(e, i)) = lemma3.fact.conclusion.succ.head
+//      val Imply(And(p1, And(p2, _)), Box(Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(cimpl)))), act), ode)), And(u, _))) = implicitSafety
+//
+//      cimpl shouldBe i
+//
+//      val ucLoFact = lemmaDB.get("twosided_implicit_usecase").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit usecase must be proved")).fact
+//      val ucLoLemma = TactixLibrary.proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u)),
+//        cut(ucLoFact.conclusion.succ.head) & Idioms.<(
+//          (cutShow, cohide(2) & by(ucLoFact)),
+//          (cutUse, implyL(-4) & Idioms.<(andR(2) & Idioms.<(andR(2) & Idioms.<(closeId, closeId), closeId), closeId))
+//        )
 //      )
-//    )
-//    ucLoLemma.subgoals shouldBe ucLoFact.subgoals
-//    if (!ucLoLemma.isProved) println("Proof will be partial. Prove other lemmas first")
+//      ucLoLemma.subgoals shouldBe ucLoFact.subgoals
+//      if (!ucLoLemma.isProved) println("Proof will be partial. Prove other lemmas first")
 //
-//    val explicitPrg = Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(e)))), act), ode))
+//      val explicitPrg = Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(e)))), act), ode))
 //
-//    // explicit safety, construct from implicit safety and lemma 3 (equivalence)
-//    val corollary3 = Imply(And(p1, And(p2, e)), Box(explicitPrg, And(u, e)))
-//    println("Proving Corollary 3:\n" + corollary3.prettyString)
+//      // explicit safety, construct from implicit safety and lemma 3 (equivalence)
+//      val corollary3 = Imply(And(p1, And(p2, e)), Box(explicitPrg, And(u, e)))
+//      println("Proving Corollary 3:\n" + corollary3.prettyString)
 //
-//    val proof = acasXcongruence(lemma3.fact, theorem3.fact, ucLoLemma, corollary3, QE)
-//    println("Proof has " + proof.subgoals.size + " open goals")
-//    proof shouldBe 'proved
-//    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq(corollary3))
+//      val proof: ProvableSig = acasXcongruence(lemma3.fact, theorem3.fact, ucLoLemma, corollary3, QE)
+//      println("Proof has " + proof.subgoals.size + " open goals")
+//      proof shouldBe 'proved
+//      proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(corollary3))
 //
-//    lemmaDB.add(Lemma(proof,
-//      ToolEvidence(immutable.Map("input" -> corollary3.prettyString, "output" -> "true")) :: Nil,
-//      Some("twosided_explicit")))
+//      storeLemma(proof, Some("twosided_explicit"))
+//    }
 //  }
 
 }

@@ -33,15 +33,19 @@ Problem.
 (hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & (w=-1 | w=1) -> (
 (
   ((w * (dhd + w * max(0, w * (dhfM - dhd))) >= 0) ->
+    /* case 10 */
     ((-rp <= r & r <= rp) ->
       (w * h > hp))
     &
+    /* case 11 */
     (rp < r & r <= rp + rv * max(0, w*(dhfM - dhd))/aM ->
       (w * rv^2 * h > aM/2 * (r - rp)^2 + w * rv * dhd * (r - rp) + rv^2 * hp))
     &
+    /* case 12 */
     ((-rp <= r & r < -rp + rv * max(0, w*(dhfM - dhd))/aM) ->
       (w * rv^2 * h > aM/2 * (r + rp)^2 + w * rv * dhd * (r + rp) + rv^2 * hp))
     &
+    /* case 13 */
     ((-rp + rv * max(0, w*(dhfM - dhd))/aM <= r) ->
       ((rv = 0 & (abs(r)>rp | ((w*h > hp & ((w*(dhfM - dhd) <= 0 & w*dhd < 0) | (w*dhd <= 0 & w*dhfM <= 0)))))) |
        (w * rv * h > w * (dhd + w * max(0, w * (dhfM - dhd))) * (r + rp)
@@ -49,12 +53,15 @@ Problem.
   )
   &
   ((w * (dhd + w * max(0, w * (dhfM - dhd))) < 0) ->
+    /* case 10 */
     ((-rp <= r & r <= rp) ->
       (w * h > hp))
     &
+    /* case 11 */
     (rp < r & r <= rp + rv * max(0, w*(dhfM - dhd))/aM ->
       (w * rv^2 * h > aM/2 * (r - rp)^2 + w * rv * dhd * (r - rp) + rv^2 * hp))
     &
+    /* case 14 */
     ((rp + rv * max(0, w*(dhfM - dhd))/aM <= r) ->
       ((rv = 0 & (abs(r)>rp | ((w*h > hp & ((w*(dhfM - dhd) <= 0 & w*dhd < 0) | (w*dhd <= 0 & w*dhfM <= 0)))))) |
        (w * rv * h > w * (dhd + w * max(0, w * (dhfM - dhd))) * (r - rp)
