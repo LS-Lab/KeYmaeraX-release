@@ -216,7 +216,7 @@ object Kaisar {
       case (Nil) => (hist, Context.empty)
       case (step :: steps) =>
         var AD1 = eval(hist, ctx, step)
-        var AD2 = eval(AD1._1, AD1._2, steps)N
+        var AD2 = eval(AD1._1, AD1._2, steps)
         (AD2._1, AD1._2.concat(AD2._2))
     }
   }
