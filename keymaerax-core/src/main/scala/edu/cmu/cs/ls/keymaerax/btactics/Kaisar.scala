@@ -57,9 +57,9 @@ object Kaisar {
   case class Context (xmap:Map[Variable,(Int,Formula,Provable)], fmap:Map[Formula, Provable]){
     def concat(other: Context): Context = Context(xmap.++(other.xmap), fmap.++(other.fmap))
     def apply(p:FactVariable):(Int, Formula,Provable) = xmap(p.p)
-    def add(a:Variable, phi:Formula, pr:Provable): Context = {
+    def add(a:Variable, phi:Formula, pr:Provable,time:Int): Context = {
       val nextTime = xmap.size
-      Context(xmap.+((a,(nextTime,phi,pr))),fmap.+((phi,pr)))
+      Context(xmap.+((a,(time,phi,pr))),fmap.+((phi,pr)))
     }
     def findProvable(fml:Formula):Provable = fmap(fml)
   }
@@ -121,6 +121,7 @@ object Kaisar {
           ),
             debug("e") &
             /* show */ cohideR(2) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
+        hide(-1) &
         debug("before recur")
         polyK(interpret(e, pr).underlyingProvable, facts)
     }
@@ -236,7 +237,7 @@ object Kaisar {
           chase(1) &
           QE*/
 
-        (hist, ctx.add(x,concl,addedProvable))
+        (hist, ctx.add(x,concl,addedProvable,hist.tmax))
     }
   }
 
