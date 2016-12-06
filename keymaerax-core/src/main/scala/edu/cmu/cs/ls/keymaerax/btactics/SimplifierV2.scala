@@ -61,7 +61,10 @@ object SimplifierV2 {
     //qeTermProof(Some("F_()!=0"),"F_()/F_()","1"),
     //qeTermProof(Some("F_()!=0"),"0/F_()","0"),
     //Negation
-    qeTermProof(None,"-(-F_())","F_()")
+    qeTermProof(None,"-(-F_())","F_()"),
+    //Power
+    qeTermProof(Some("F_()!=0"),"F_()^0","1"),
+    qeTermProof(None,"F_()^1","F_()")
   )
 
   def mksubst(s:Subst) :Subst = {

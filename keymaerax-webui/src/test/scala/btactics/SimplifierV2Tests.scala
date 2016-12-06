@@ -62,6 +62,16 @@ class SimplifierV2Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "\\forall t \\forall s true".asFormula
   }
 
+  it should "simplify terms 3" in withZ3 { tool =>
+    val fml = "x^1>=0^2".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>=0".asFormula
+  }
+
   it should "simplify terms when applied to term position" in withMathematica { qeTool =>
     val fml = "x=v_0*(0+1*t-0) -> x >= 0".asFormula
     val ctxt = IndexedSeq("x_0=0".asFormula,"v_0=0".asFormula)
