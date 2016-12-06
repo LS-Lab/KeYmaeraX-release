@@ -247,7 +247,9 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
     */
   final def apply(locator: Symbol, expected: Expression): T = locator match {
     case 'L => apply(FindL(0, Some(expected)))
+    case 'Llike => apply(FindL(0, Some(expected), exact=false))
     case 'R => apply(FindR(0, Some(expected)))
+    case 'Rlike => apply(FindR(0, Some(expected), exact=false))
     case '_ => this match {
       case _: BuiltInLeftTactic => apply(FindL(0, Some(expected)))
       case _: BuiltInRightTactic => apply(FindR(0, Some(expected)))
