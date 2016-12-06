@@ -107,7 +107,7 @@ object Kaisar {
   * */
   def polyK(pr:Provable, facts:List[ProvableSig]): ProvableSig = {
     facts match {
-      case Nil => NoProofTermProvable(pr) /* interpret(debug("foobar") & close, pr)*/
+      case Nil => /*NoProofTermProvable(pr) */ interpret(debug("foobar") & close, pr)
       case fact::facts =>
         val Box(a,Imply(p,q)) = pr.subgoals(0).ante(0)
         val e:BelleExpr =
@@ -117,10 +117,11 @@ object Kaisar {
               debug("c") &
             //close &
             implyL(-2) <( debug("d") & hide(1) & debug("d") & cohideR(1) & useAt(fact, PosInExpr(Nil))(1)
-              , debug("d1") & close )
+              , debug("d1") & nil )
           ),
             debug("e") &
-            /* show */ cohideR(2) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil))
+            /* show */ cohideR(2) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
+        debug("before recur")
         polyK(interpret(e, pr).underlyingProvable, facts)
     }
   }
