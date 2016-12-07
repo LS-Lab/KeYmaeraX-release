@@ -194,8 +194,8 @@ object Idioms {
     //@todo simplify with only the case formula as simplification 'context' (adapt simplifier)
     val simplify = (fml: Formula) => SimplifierV2.simpTac//(Some(scala.collection.immutable.IndexedSeq(fml)))
     val simplifyAllButCase = (fml: Formula) => "ANON" by {(seq: Sequent) =>
-      (0 until seq.ante.length-1).map(i => simplify(fml)(AntePosition.base0(i))).reduce[BelleExpr](_&_) &
-      seq.succ.indices.map(i => simplify(fml)(SuccPosition.base0(i))).reduce[BelleExpr](_&_)
+      (0 until seq.ante.length-1).map(i => simplify(fml)(AntePosition.base0(i))).reduceOption[BelleExpr](_&_).getOrElse(ident) &
+      seq.succ.indices.map(i => simplify(fml)(SuccPosition.base0(i))).reduceOption[BelleExpr](_&_).getOrElse(ident)
     }
 
     val caseTactics = cases.map({ case (Case(fml, doSimp), t) =>

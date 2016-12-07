@@ -217,13 +217,13 @@ class SimplifierV2Tests extends TacticTestBase {
   }
 
   it should "work with cases tactic" in withMathematica { tool =>
-
     val fml = "(x>=0-> x+y >= 5) & (x < 0 -> x + z <= 5)".asFormula
     val result = proveBy(fml,Idioms.cases((Case("x>0".asFormula),Idioms.ident),(Case("0>=x".asFormula),Idioms.ident)))
-
-    println(result)
-    //    result.subgoals.head.succ should contain only True
-
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "x+y>=5".asFormula
+    result.subgoals.last.ante should contain only "0>=x".asFormula
+    result.subgoals.last.succ should contain only "(x>=0 -> x+y>=5) & (x<0 -> x+z<=5)".asFormula
   }
 
   it should "search for close heuristics" in withMathematica { tool =>
