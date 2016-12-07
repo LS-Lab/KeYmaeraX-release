@@ -9,9 +9,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.printIndexed
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
@@ -230,7 +230,7 @@ object CondCongruence {
                   // W(w) invariant as above
                   printIndexed("W invariant again") &
                     andL('L, And(w,And(u, i))) & andL('L, And(u, i))
-                    & hideL('L, i) & hideL('L, u) & (hideL('L, a)*2) & // a appears duplicated
+                    & hideL('L, i) & hideL('L, u) & (hideL('L, a)*) & // a appears duplicated
                     by(invariantWe)
                   ,
                   // u&Ce invariant
@@ -402,9 +402,12 @@ object CondCongruence {
             ,
             /*use*/ sublabel("W(w) loop use") & closeId & done
             ,
-            /*step*/ sublabel("W(w) step") & (hideL('Llast)*4) &
-              /*implyR(1) &*/ printIndexed("step w=-1 | w=1") &
-              by(invariantWe)
+            /*step*/ sublabel("W(w) step") &
+              /* rebuild and hide a */
+              (("ANON" by {(seq: Sequent) =>
+                  DebuggingTactics.assertAt((_: Expression) => "Stopping repeat", (e: Expression) => e != a)(AntePos(seq.ante.length-1)) &
+                  andLi(AntePos(seq.ante.length-2), AntePos(seq.ante.length-1))})*) &
+              hideL('Llast) & printIndexed("step w=-1 | w=1") & by(invariantWe)
           )
           // end show postCut(w)
         )
