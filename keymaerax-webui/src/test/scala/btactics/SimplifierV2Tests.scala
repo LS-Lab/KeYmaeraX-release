@@ -58,8 +58,7 @@ class SimplifierV2Tests extends TacticTestBase {
     val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0=0".asFormula,"v_0=0".asFormula)
-    //@todo vacuous quantifier
-    result.subgoals.head.succ should contain only "\\forall t \\forall s true".asFormula
+    result.subgoals.head.succ should contain only "true".asFormula
   }
 
   it should "simplify terms 3" in withZ3 { tool =>
@@ -234,7 +233,7 @@ class SimplifierV2Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "0>x->y=0&z < x->5 < x|x=5&a=0&0=z+b".asFormula
   }
 
-  it should "pre-expand context before simplify" in withMathematica { tool =>
+  it should "pre-expand and use full context before top-level positional simplify" in withMathematica { tool =>
 
     val ante = IndexedSeq("P() & Q() & R()".asFormula, "Q() & R()".asFormula)
     val succ = IndexedSeq("P()".asFormula,"Z()".asFormula)
@@ -242,4 +241,5 @@ class SimplifierV2Tests extends TacticTestBase {
     val result = proveBy(Sequent(ante,succ), SimplifierV2.safeFullSimpTac(1))
     println(result)
   }
+
 }

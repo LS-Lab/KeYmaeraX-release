@@ -372,7 +372,7 @@ object SimplifierV2 {
   // (some already are)
   private def propProof(f:String,ff:String):ProvableSig =
   {
-    proveBy(Equiv(f.asFormula,ff.asFormula),prop)
+    proveBy(Equiv(f.asFormula,ff.asFormula), prop)
   }
 
   val andT = propProof("F_() & true","F_()")
@@ -397,6 +397,11 @@ object SimplifierV2 {
 
   val notT = propProof("!true","false")
   val notF = propProof("!false","true")
+
+  val forallTrue = proveBy("(\\forall x true)<->true".asFormula, auto )
+  val forallFalse = proveBy("(\\forall x false)<->false".asFormula, auto)
+  val existsTrue = proveBy("(\\exists x true)<->true".asFormula, auto )
+  val existsFalse = proveBy("(\\exists x false)<->false".asFormula, auto )
 
 
   //Proves |- f -> t = tt or just t = tt
@@ -447,6 +452,13 @@ object SimplifierV2 {
       case Less(l, r) if l == r => Some(False, ltNotReflex)
       case Greater(l, r) if l == r => Some(False, gtNotReflex)
       case NotEqual(l, r) if l == r => Some(False, neqNotReflex)
+
+      case Forall(l,True) => Some(True,forallTrue)
+      case Forall(l,False) => Some(False,forallFalse)
+
+
+      case Exists(l,True) => Some(True,existsTrue)
+      case Exists(l,False) => Some(False,existsFalse)
 
       case _ => None
     }

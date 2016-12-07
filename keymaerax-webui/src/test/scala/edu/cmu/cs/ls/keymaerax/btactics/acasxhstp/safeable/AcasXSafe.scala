@@ -149,7 +149,7 @@ class AcasXSafe extends AcasXBase {
         ) & done)
         ,
         (indStep, dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
-          dT("Generalization Holds") & chase('R) & SimplifierV2.simpTac('R) & normalize & done
+          dT("Generalization Holds") & chase('R) & (andL('L)*) & SimplifierV2.simpTac('R) & close
           ,
           dT("Generalization Strong Enough") &
             EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &

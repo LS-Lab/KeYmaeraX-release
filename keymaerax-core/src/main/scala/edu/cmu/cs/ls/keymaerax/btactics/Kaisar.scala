@@ -69,15 +69,6 @@ object Kaisar {
 
   private def min(seq:Seq[Int]):Int =
     seq.fold(Int.MaxValue)((x,y) => Math.min(x,y))
-/*
-  def prUseAt(pr:Provable, pos:Position) = {
-    useAt(NoProofTermProvable(pr))
-
-    val sig:ProvableSig = NoProofTermProvable(pr)
-    val pex:PosInExpr = ???//PosInExpr(pos)
-    useAt("useAt", sig, pex, None)
-    //useAt(codeName: String, fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst
-  }*/
 
   def interpret(e:BelleExpr, pr:Provable):ProvableSig = {
     SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
@@ -90,11 +81,35 @@ object Kaisar {
      fs.reverse.foldLeft(acc)((acc,f) => Imply(f,acc))
   }
 
-  def unbox(f:Formula, n:Int):Formula = {
+  def unboxProg(f:Formula, n:Int):(List[Program], Formula) = {
     (f, n) match {
-      case (_, 0) => f
-      case (Box(_,p), _) => unbox(p,n-1)
+      case (_, 0) => (Nil, f)
+      case (Box(a,p), _) =>
+        val (as:List[Program], p2:Formula) = unboxProg(p,n-1)
+        (a::as, p2)
     }
+  }
+
+  def unbox(f:Formula, n:Int):Formula = {
+    unboxProg(f,n)._2
+  }
+
+  def composeProgs(progs:List[Program]):Program = {
+    val (prog::progs1) = progs//.reverse
+    progs1.foldLeft(prog)((a,b) => Compose(a,b))
+  }
+
+  def composify(progs:List[Program],fml:Formula):Formula = {
+    Box(composeProgs(progs), fml)
+  }
+
+  def reboxify(progs:List[Program],fml:Formula):Formula = {
+    progs.reverse.foldLeft(fml)((p,a) => Box(a,p))
+  }
+
+  def transboxify(progs:List[Program],fml:Formula):Formula = {
+    val Box(_,p) = fml
+    reboxify(progs, p)
   }
 
   /* @requires  provable is
@@ -132,48 +147,6 @@ object Kaisar {
     val e = cutEZ(Box(a,implicate(maybeFacts,result)), debug("wat") & hide(1) & useAt(userProof,PosInExpr(Nil))(1))
     val pr2 = interpret(e,pr).underlyingProvable
     polyK(pr2, factProofs)
-    // acc:BelleExpr,
-    /*maybeFacts match {
-      case Nil => acc
-        val theorem:Formula = Box(a,result)/*"[x:=2;][x:=x-1;]x>0".asFormula*/
-        val start:Provable = Provable.startProof(theorem)
-        interpret(acc, start)
-      case firstFact::remainingFacts =>
-        def sg: ProvableSig = {
-          doGreatProof(acc, a, remainingFacts, result)
-          /*val start = Provable.startProof(Box(a, implicate(maybeFacts,result)))
-          //val e:BelleExpr =
-
-          interpret(acc, start)*/
-        }
-        def factPf: ProvableSig = {
-          val start = Provable.startProof(Box(a,firstFact))
-          val e:BelleExpr = chase(1) & QE
-          interpret(e,start)
-        }
-        val tactic:BelleExpr =
-          cutEZ(Imply(Box(a, implicate(maybeFacts,result)), Imply(Box(a,firstFact),Box(a,implicate(remainingFacts,result)))),
-            /*)
-            cutEZ(("([x:=2;](x > 1 -> [x:=x-1;]x>0)) " +
-                "-> ([x:=2;](x > 1)) " +
-                "-> [x:=2;][x:=x-1;]x>0").asFormula,*/
-            hide(1) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
-            implyL(-1) <(
-              hide(1) & useAt(sg, PosInExpr(Nil))(1),
-              implyL(-1) <(
-                hide(1) & useAt(factPf, PosInExpr(Nil))(1),
-                close
-                )
-              )// & nil
-        //doGreatProof(tactic, a, remainingFacts, result)
-        val theorem:Formula = Box(a,implicate(remainingFacts,result))/*"[x:=2;][x:=x-1;]x>0".asFormula*/
-      val start:Provable = Provable.startProof(theorem)
-        interpret(tactic, start)
-    }
-    //val a:Program = "x := 2;".asProgram
-    /*val fact:Formula = "x > 1".asFormula
-    val facts:Formula = "[x:=x-1;]x>0".asFormula*/
-*/
   }
 
   def eval(hist: History, ctx: Context, step:Statement):(History,Context) = {
@@ -207,35 +180,32 @@ object Kaisar {
                   result.underlyingProvable
               }
             case _ =>
-              val Box(a, p) = concl
               val boxen = tmin
+              val (as, p) = unboxProg(concl, boxen)
               val fmls = assms.map(f => unbox(f, boxen)).toList
-              val toProve = Box(a,implicate(fmls,p))
+              val toProve = composify(as, implicate(fmls,p))
               val seqifyTac = debug ("hmm") & G(1) & List.fill(assms.size)(implyR(1)).fold(nil)((e1,e2) => e1 & e2) & debug ("hmm2")
               val userProof = interpret(seqifyTac & e, Provable.startProof(toProve))
               val factProofs:List[ProvableSig] = facts.map{case p:FactVariable =>
                   NoProofTermProvable(ctx(p)._3)
               }.toList
-              doGreatProof(userProof, a, fmls, factProofs, p).underlyingProvable
+              val giveUp = Int.MaxValue
+              val breadth = 1
+              val facterProofs:List[ProvableSig] = factProofs.map{case (p:ProvableSig) =>
+                val pr = p.underlyingProvable
+                val (as1, p1) = unboxProg(p.conclusion.succ(0), boxen)
+                val pr2 = Provable.startProof(composify(as1,p1))
+                val e = debug("a") & chase(breadth, giveUp, ((e:Expression) => e match {case Box(Compose(_,_),_) => List("[;] compose") case _ => Nil}))(1) & debug ("b") & useAt(p, PosInExpr(Nil))(1) & debug("c")
+                val newProof = interpret(e, pr2)
+                newProof
+              }
+
+              val foo = doGreatProof(userProof, composeProgs(as), fmls, facterProofs, p)
+              val bestProof = Provable.startProof(transboxify(as,foo.underlyingProvable.conclusion.succ(0)))
+              val bestE = debug("a") & chase(breadth, giveUp, ((e:Expression) => e match {case Box(Compose(_,_),_) => List("[;] compose") case _ => Nil}))(1) & debug ("b") & useAt(foo, PosInExpr(Nil))(1) & debug("c")
+              val lastProof = interpret(e, bestProof)
+              lastProof.underlyingProvable
           }
-          /*if(concl == "[x:=2;][x:=x-1;]x>0".asFormula) {
-            // acc:BelleExpr, a:Program, maybeFacts:List[Formula], result:Formula
-            val Box(a, _) = concl
-            val boxen = hist.tmin
-            doGreatProof(e, a, assms.map(f => unbox(f, boxen)).toList, hist.extend(phi,tmin,tmax)).underlyingProvable
-          }
-          else {
-            SequentialInterpreter()(concE, BelleProvable(NoProofTermProvable(pr))) match {
-              case BelleProvable(result, _) =>
-                assert(result.isProved)
-                result.underlyingProvable
-            }
-          }*/
-        //                doGreatProof(e, a, assms.map(f => unbox(f, boxen)).toList, hist.extend(phi, tmin, tmax)).underlyingProvable
-        //}
-        /*val  e = G(1) & implyR(1) & //close
-          chase(1) &
-          QE*/
 
         (hist, ctx.add(x,concl,addedProvable,hist.tmax))
     }
