@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
-import edu.cmu.cs.ls.keymaerax.btactics.{EqualityTactics, Idioms, SimplifierV2}
+import edu.cmu.cs.ls.keymaerax.btactics.{EqualityTactics, Idioms, SimplifierV2, DifferentialTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
@@ -130,8 +130,8 @@ class AcasXSafe extends AcasXBase {
 
   it should "prove Theorem 1: correctness of implicit safe regions" in {
     if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
-    runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
-    runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
+      runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
+      runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     withMathematica { tool =>
       beforeEach()
@@ -153,29 +153,11 @@ class AcasXSafe extends AcasXBase {
           ,
           dT("Generalization Strong Enough") &
             EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
-            /*abbrv(Variable("maxI"))(AntePosition(0, PosInExpr(0::1::0::0::0::0::0::0::0::1::1::0::Nil)))*/
-            cutEZ("!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula,
-              cohide('R, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula) & prop & done) &
-            orL('L, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula) & Idioms.<(
-            hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) &
-              hideL('L, "((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>=0&rv>=0&a>0)".asFormula) &
-              dT("Before DI") &
-              // TODO there must be an easier way to use evol domain false initially
-              cutEZ("[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](0=1)".asFormula, // false as postcondition doesn't work
-                hideR('R, "[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>=0&rv>=0&a>0))".asFormula)
-                  & diffInd()('R)) &
-              hideL('L, "!(w*dhd>=w*dhf|w*ao>=a)".asFormula) &
-              dT("After DI") & diffCut("0=1".asFormula)('R) & Idioms.<(
-              /* use */ dT("After DC 1") & diffWeaken('R) & dT("after DW") &
-                implyR('R) & andL('L) & cohide('L, "0=1".asFormula) & dT("before QE") & QE & done
-              ,
-              /* show */ dT("After DC 2") & closeId & done
-            ) & done
-            ,
+
+            DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
             dT("Preparing for safeLoLemma") & (andLi *) & implyRi &
-              by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
-          ) /* end orL on cutEZ */
-        ) /* End indStepLbl */
+            by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
+          ) /* End indStepLbl */
         )
       )
 
