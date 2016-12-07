@@ -329,12 +329,13 @@ class AcasXSafeTwoSided extends AcasXBase {
 
       val safeTheorem = proveBy(safeSeq, safeTac)
       safeTheorem shouldBe 'proved
-      //storeLemma(safeTheorem, Some("twosided_implicit")) // stack overflow
+      // large lemma evidence, needs stack size -Xss128M
+      storeLemma(safeTheorem, Some("twosided_implicit"))
     }
   }
 
   it should "prove Lemma 3a: implicit-explicit lower equivalence" in {
-    runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
+    new AcasXSafe().runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
   }
 
   it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { tool =>
@@ -409,200 +410,202 @@ class AcasXSafeTwoSided extends AcasXBase {
   }
 
 
-//  it should "prove Lemma 3 (Equivalence of two-sided explicit safe regions) from Lemma 3a (lower) and Lemma 3b (upper) bound equivalences" in {
-//    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
-//    // execute dependent tests if lemmas not already proved
-//    runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
-//    runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
-//
-//    withMathematica { tool =>
-//
-//      beforeEach()
-//
-//      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
-//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
-//      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
-//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
-//
-//      val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
-//
-//      val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
-//
-//      lPhp shouldBe uPhp
-//      lPrp shouldBe uPrp
-//      lPrv shouldBe uPrv
-//      lPw shouldBe uPw
-//      lz shouldBe uz
-//
-//      // how to combine lower/upper equivalence
-//      val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
-//      combine shouldBe 'proved
-//
-//      // lower: weaken unused a_up >= a_lo in p
-//      val weaken = proveBy("(B() -> C()) -> (A() & B() -> C())".asFormula, prop)
-//      weaken shouldBe 'proved
-//
-//      // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
-//      //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
-//      val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
-//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//      gen shouldBe 'proved
-//
-//      // cf. STTT: Lemma 3:
-//      // P -> (C_impl <-> C_expl), where
-//      //    C_impl == L_impl | U_impl,
-//      //    C_expl == L_expl | U_expl,
-//      //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
-//      val p = And(GreaterEqual(ua, la), lP)
-//      val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
-//      val lemma3Proof = proveBy(lemma3,
-//        useAt(combine, PosInExpr(1 :: Nil))(1) &
-//          assertE(And(Imply(p, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
-//          useAt(weaken, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
-//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
-//          useAt(gen, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
-//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
-//          andR(1) & Idioms.<(
-//            by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
-//            by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
-//      )
-//
-//      lemma3Proof shouldBe 'proved
-//      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
-//    }
-//  }
-//
-//  it should "prove Lemma 3 fitting the form required by Corollary 3" in {
-//    //@note alternative proof so that theorems and lemmas fit together, because twosided_implicit.key uses a>0 & aM>0 instead of aM>=a & a>0
-//    //@note this proof stores two lemmas: the actual Lemma 3, and the intermediate step necessary for Corollary 3
-//
-//    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
-//    if (lemmaDB.contains("lemma3-alt-safe_equivalence_lemma")) lemmaDB.remove("lemma3-alt-safe_equivalence_lemma")
-//
-//    // execute dependent tests if lemmas not already proved
-//    runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
-//    runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
-//
-//    withMathematica { tool =>
-//
-//      beforeEach()
-//
-//      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
-//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
-//      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
-//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
-//
-//      val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
-//
-//      val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
-//
-//      lPhp shouldBe uPhp
-//      lPrp shouldBe uPrp
-//      lPrv shouldBe uPrv
-//      lPw shouldBe uPw
-//      lz shouldBe uz
-//
-//      // how to combine lower/upper equivalence
-//      val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
-//      combine shouldBe 'proved
-//
-//      // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
-//      //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
-//      val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
-//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//      gen shouldBe 'proved
-//
-//      val weakenLeft = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula,
-//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//      weakenLeft shouldBe 'proved
-//      val weakenRight = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula,
-//        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
-//      weakenRight shouldBe 'proved
-//
-//      // cf. STTT: Lemma 3:
-//      // P -> (C_impl <-> C_expl), where
-//      //    C_impl == L_impl | U_impl,
-//      //    C_expl == L_expl | U_expl,
-//      //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
-//      val p = And(GreaterEqual(ua, la), lP)
-//      val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
-//
-//      // a>0 & aM>0
-//      val q = And(And(lPhp, And(lPrp, And(lPrv, And(Greater(la, lz), Greater(ua, uz))))), lPw)
-//      val intermediate = Imply(q, Equiv(Or(lI, uI), Or(lE, uE)))
-//      val intermediateProof = proveBy(intermediate,
-//        useAt(combine, PosInExpr(1 :: Nil))(1) &
-//          assertE(And(Imply(q, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
-//          useAt(weakenLeft, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
-//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
-//          useAt(weakenRight, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
-//          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
-//          andR(1) & Idioms.<(
-//          by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
-//          by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
-//      )
-//      intermediateProof shouldBe 'proved
-//      storeLemma(intermediateProof, Some("lemma3-alt-safe_equivalence_lemma"))
-//
-//      val lemma3Proof = proveBy(lemma3,
-//        useAt(gen, PosInExpr(1 :: Nil))(1) &
-//          assertE(intermediate, "Lemma 3: Unexpected intermediate form")(1) &
-//          by(intermediateProof)
-//      )
-//
-//      lemma3Proof shouldBe 'proved
-//      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
-//    }
-//  }
-//
-//  it should "prove Corollary 3 (safety of explicit 2-sided regions) from Theorem 3 (implicit 2-sided safety) and Lemma 3 (implicit-explicit equivalence)" in {
-//    if (lemmaDB.contains("twosided_explicit")) lemmaDB.remove("twosided_explicit")
-//
-//    runLemmaTest("twosided_implicit", "ACAS X 2-sided safe should prove Theorem 3: correctness of implicit two-sided safe regions")
-//    runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
-//    runLemmaTest("lemma3-alt-safe_equivalence_lemma", "ACAS X 2-sided safe should prove Lemma 3 fitting the form required by Corollary 3")
-//
-//    withMathematica { tool =>
-//
-//      // rerun initialization (runTest runs afterEach() at the end)
-//      beforeEach()
-//
-//      val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
-//        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
-//
-//      val theorem3 = lemmaDB.get("twosided_implicit").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety must be proved"))
-//      theorem3.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(implicitSafety))
-//
-//      val lemma3 = lemmaDB.get("lemma3-alt-safe_equivalence_lemma").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety alternative must be proved"))
-//
-//      val Imply(And(a, w), Equiv(e, i)) = lemma3.fact.conclusion.succ.head
-//      val Imply(And(p1, And(p2, _)), Box(Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(cimpl)))), act), ode)), And(u, _))) = implicitSafety
-//
-//      cimpl shouldBe i
-//
-//      val ucLoFact = lemmaDB.get("twosided_implicit_usecase").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit usecase must be proved")).fact
-//      val ucLoLemma = TactixLibrary.proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u)),
-//        cut(ucLoFact.conclusion.succ.head) & Idioms.<(
-//          (cutShow, cohide(2) & by(ucLoFact)),
-//          (cutUse, implyL(-4) & Idioms.<(andR(2) & Idioms.<(andR(2) & Idioms.<(closeId, closeId), closeId), closeId))
-//        )
-//      )
-//      ucLoLemma.subgoals shouldBe ucLoFact.subgoals
-//      if (!ucLoLemma.isProved) println("Proof will be partial. Prove other lemmas first")
-//
-//      val explicitPrg = Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(e)))), act), ode))
-//
-//      // explicit safety, construct from implicit safety and lemma 3 (equivalence)
-//      val corollary3 = Imply(And(p1, And(p2, e)), Box(explicitPrg, And(u, e)))
-//      println("Proving Corollary 3:\n" + corollary3.prettyString)
-//
-//      val proof: ProvableSig = acasXcongruence(lemma3.fact, theorem3.fact, ucLoLemma, corollary3, QE)
-//      println("Proof has " + proof.subgoals.size + " open goals")
-//      proof shouldBe 'proved
-//      proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(corollary3))
-//
-//      storeLemma(proof, Some("twosided_explicit"))
-//    }
-//  }
+  it should "prove Lemma 3 (Equivalence of two-sided explicit safe regions) from Lemma 3a (lower) and Lemma 3b (upper) bound equivalences" in {
+    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
+    // execute dependent tests if lemmas not already proved
+    runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
+    runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
+
+    withMathematica { tool =>
+
+      beforeEach()
+
+      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
+      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
+
+      val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
+
+      val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
+
+      lPhp shouldBe uPhp
+      lPrp shouldBe uPrp
+      lPrv shouldBe uPrv
+      lPw shouldBe uPw
+      lz shouldBe uz
+
+      // how to combine lower/upper equivalence
+      val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
+      combine shouldBe 'proved
+
+      // lower: weaken unused a_up >= a_lo in p
+      val weaken = proveBy("(B() -> C()) -> (A() & B() -> C())".asFormula, prop)
+      weaken shouldBe 'proved
+
+      // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
+      //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
+      val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
+        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+      gen shouldBe 'proved
+
+      // cf. STTT: Lemma 3:
+      // P -> (C_impl <-> C_expl), where
+      //    C_impl == L_impl | U_impl,
+      //    C_expl == L_expl | U_expl,
+      //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
+      val p = And(GreaterEqual(ua, la), lP)
+      val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
+      val lemma3Proof = proveBy(lemma3,
+        useAt(combine, PosInExpr(1 :: Nil))(1) &
+          assertE(And(Imply(p, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
+          useAt(weaken, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(p, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
+          useAt(gen, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
+          andR(1) & Idioms.<(
+            by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
+            by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
+      )
+
+      lemma3Proof shouldBe 'proved
+      // large lemma evidence, needs stack size -Xss128M
+      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
+    }
+  }
+
+  it should "prove Lemma 3 fitting the form required by Corollary 3" in {
+    //@note alternative proof so that theorems and lemmas fit together, because twosided_implicit.key uses a>0 & aM>0 instead of aM>=a & a>0
+    //@note this proof stores two lemmas: the actual Lemma 3, and the intermediate step necessary for Corollary 3
+
+    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
+    if (lemmaDB.contains("lemma3-alt-safe_equivalence_lemma")) lemmaDB.remove("lemma3-alt-safe_equivalence_lemma")
+
+    // execute dependent tests if lemmas not already proved
+    runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
+    runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
+
+    withMathematica { tool =>
+
+      beforeEach()
+
+      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
+      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
+
+      val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
+
+      val Imply(uP@And(And(uPhp, And(uPrp, And(uPrv, Greater(ua, uz)))), uPw), Equiv(uI, uE)) = upper
+
+      lPhp shouldBe uPhp
+      lPrp shouldBe uPrp
+      lPrv shouldBe uPrv
+      lPw shouldBe uPw
+      lz shouldBe uz
+
+      // how to combine lower/upper equivalence
+      val combine = proveBy("(P() -> (B() <-> C())) & (P() -> (E() <-> F())) -> (P() -> (B()|E() <-> C()|F()))".asFormula, prop)
+      combine shouldBe 'proved
+
+      // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
+      //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
+      val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
+        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+      gen shouldBe 'proved
+
+      val weakenLeft = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula, prop)
+      weakenLeft shouldBe 'proved
+      val weakenRight = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula, prop)
+      weakenRight shouldBe 'proved
+
+      // cf. STTT: Lemma 3:
+      // P -> (C_impl <-> C_expl), where
+      //    C_impl == L_impl | U_impl,
+      //    C_expl == L_expl | U_expl,
+      //    P == aM>=a & (hp > 0 & rp >= 0 & rv >= 0 & a > 0) & (w=-1 | w=1)
+      val p = And(GreaterEqual(ua, la), lP)
+      val lemma3 = Imply(p, Equiv(Or(lI, uI), Or(lE, uE)))
+
+      // a>0 & aM>0
+      val q = And(And(lPhp, And(lPrp, And(lPrv, And(Greater(la, lz), Greater(ua, uz))))), lPw)
+      val intermediate = Imply(q, Equiv(Or(lI, uI), Or(lE, uE)))
+      val intermediateProof = proveBy(intermediate,
+        useAt(combine, PosInExpr(1 :: Nil))(1) &
+          assertE(And(Imply(q, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form A")(1) &
+          useAt(weakenLeft, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(q, Equiv(uI, uE))), "Lemma 3: Unexpected form B")(1) &
+          useAt(weakenRight, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+          assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
+          andR(1) & Idioms.<(
+          by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
+          by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
+      )
+      intermediateProof shouldBe 'proved
+      // large lemma evidence, needs stack size -Xss128M
+      storeLemma(intermediateProof, Some("lemma3-alt-safe_equivalence_lemma"))
+
+      val lemma3Proof = proveBy(lemma3,
+        useAt(gen, PosInExpr(1 :: Nil))(1) &
+          assertE(intermediate, "Lemma 3: Unexpected intermediate form")(1) &
+          by(intermediateProof)
+      )
+
+      lemma3Proof shouldBe 'proved
+      // large lemma evidence, needs stack size -Xss128M
+      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
+    }
+  }
+
+  it should "prove Corollary 3 (safety of explicit 2-sided regions) from Theorem 3 (implicit 2-sided safety) and Lemma 3 (implicit-explicit equivalence)" in {
+    if (lemmaDB.contains("twosided_explicit")) lemmaDB.remove("twosided_explicit")
+
+    runLemmaTest("twosided_implicit", "ACAS X 2-sided safe should prove Theorem 3: correctness of implicit two-sided safe regions")
+    runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
+    runLemmaTest("lemma3-alt-safe_equivalence_lemma", "ACAS X 2-sided safe should prove Lemma 3 fitting the form required by Corollary 3")
+
+    withMathematica { tool =>
+
+      // rerun initialization (runTest runs afterEach() at the end)
+      beforeEach()
+
+      val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
+
+      val theorem3 = lemmaDB.get("twosided_implicit").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety must be proved"))
+      theorem3.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(implicitSafety))
+
+      val lemma3 = lemmaDB.get("lemma3-alt-safe_equivalence_lemma").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety alternative must be proved"))
+
+      val Imply(And(a, w), Equiv(e, i)) = lemma3.fact.conclusion.succ.head
+      val Imply(And(p1, And(p2, _)), Box(Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(cimpl)))), act), ode)), And(u, _))) = implicitSafety
+
+      cimpl shouldBe i
+
+      val ucLoFact = lemmaDB.get("twosided_implicit_usecase").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit usecase must be proved")).fact
+      val ucLoLemma = TactixLibrary.proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u)),
+        cut(ucLoFact.conclusion.succ.head) & Idioms.<(
+          (cutShow, cohide('Rlast) & by(ucLoFact)),
+          (cutUse, implyL(-4) & Idioms.<(andR(2) & Idioms.<(andR(2) & Idioms.<(closeId, closeId), closeId), closeId))
+        )
+      )
+      ucLoLemma.subgoals shouldBe ucLoFact.subgoals
+      if (!ucLoLemma.isProved) println("Proof will be partial. Prove other lemmas first")
+
+      val explicitPrg = Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(e)))), act), ode))
+
+      // explicit safety, construct from implicit safety and lemma 3 (equivalence)
+      val corollary3 = Imply(And(p1, And(p2, e)), Box(explicitPrg, And(u, e)))
+      println("Proving Corollary 3:\n" + corollary3.prettyString)
+
+      val proof: ProvableSig = acasXcongruence(lemma3.fact, theorem3.fact, ucLoLemma, corollary3, QE)
+      println("Proof has " + proof.subgoals.size + " open goals")
+      proof shouldBe 'proved
+      proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(corollary3))
+
+      // large lemma evidence, needs stack size -Xss128M
+      storeLemma(proof, Some("twosided_explicit"))
+    }
+  }
 
 }
