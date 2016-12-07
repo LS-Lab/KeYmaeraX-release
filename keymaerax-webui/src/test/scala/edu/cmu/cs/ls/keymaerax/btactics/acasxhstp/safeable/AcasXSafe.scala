@@ -581,7 +581,8 @@ class AcasXSafe extends AcasXBase {
       proof shouldBe 'proved
       proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(acasxexplicit))
 
-      //storeLemma(proof, Some("safe_explicit")) //@todo stack overflow
+      // large lemma evidence, needs stack size -Xss256M
+      storeLemma(proof, Some("safe_explicit"))
     }
   }
 
