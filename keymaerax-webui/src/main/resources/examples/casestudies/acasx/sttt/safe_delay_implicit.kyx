@@ -23,10 +23,10 @@ D^d_impl (r,h,v,w,v_lo) <=>
     \forall t \forall rt \forall ht \forall hd \forall dhd
     (
         (rt  = rv * t &
-        0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
+        (0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
         (hd  = -(w*ad)/(2)* max(0,d)^2+ dho*max(0,d) & dhd-dho = -w*ad* max(0,d)) &
         ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2+ dhd * (t-max(0,d)) |
-        t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) ))
+        t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) )))
         -> ( abs(r-rt) > rp |  w*(h-ht)  < -hp)
     )
 )
@@ -76,10 +76,10 @@ Problem.
     \forall t \forall rt \forall ht \forall hd \forall dhd
     (
         (rt  = rv * t &
-        0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
+        (0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
         (hd  = -(w*ad)/(2)* max(0,d)^2+ dho*max(0,d) & dhd-dho = -w*ad* max(0,d)) &
-        ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2 + dhd * (t-max(0,d)) |
-        t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) ))
+        ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2+ dhd * (t-max(0,d)) |
+        t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) )))
         -> ( abs(r-rt) > rp |  w*(h-ht)  < -hp)
     )
   )
@@ -90,15 +90,15 @@ Problem.
       {dhf := *; {w:=-1; ++ w:=1;};
       {d := dp; ++ d := dp + dl;};
         ?(
-          \forall t \forall rt \forall ht \forall hd \forall dhd
-          (
-              (rt  = rv * t &
-              0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
-              (hd  = -(w*ad)/(2)* max(0,d)^2+ dho*max(0,d) & dhd-dho = -w*ad* max(0,d)) &
-              ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2 + dhd * (t-max(0,d)) |
-              t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) ))
-              -> ( abs(r-rt) > rp |  w*(h-ht)  < -hp)
-          )
+            \forall t \forall rt \forall ht \forall hd \forall dhd
+            (
+                (rt  = rv * t &
+                (0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
+                (hd  = -(w*ad)/(2)* max(0,d)^2+ dho*max(0,d) & dhd-dho = -w*ad* max(0,d)) &
+                ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2+ dhd * (t-max(0,d)) |
+                t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) )))
+                -> ( abs(r-rt) > rp |  w*(h-ht)  < -hp)
+            )
         );}}
       {a := *; ?(w * a >= -ad); tl := 0;}
     }
@@ -106,15 +106,15 @@ Problem.
   }* ]
   (((abs(r) > rp) | (abs(h) > hp)) &
     (
-      \forall t \forall rt \forall ht \forall hd \forall dhd
-      (
-          (rt  = rv * t &
-          0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
-          (hd  = -(w*ad)/(2)* max(0,d)^2+ dho*max(0,d) & dhd-dho = -w*ad* max(0,d)) &
-          ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2 + dhd * (t-max(0,d)) |
-          t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) ))
-          -> ( abs(r-rt) > rp |  w*(h-ht)  < -hp)
-      )
+        \forall t \forall rt \forall ht \forall hd \forall dhd
+        (
+            (rt  = rv * t &
+            (0 <= t & t < max(0,d) & ht = -(w*ad)/(2)*t^2 + dho*t |
+            (hd  = -(w*ad)/(2)* max(0,d)^2+ dho*max(0,d) & dhd-dho = -w*ad* max(0,d)) &
+            ( 0<=t-max(0,d) & t-max(0,d) < (max(0,w*(dhf-dhd)))/(ar) & ht-hd  =(w*ar)/(2)*(t-max(0,d))^2+ dhd * (t-max(0,d)) |
+            t-max(0,d) >= (max(0,w*(dhf-dhd)))/(ar) & ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) )))
+            -> ( abs(r-rt) > rp |  w*(h-ht)  < -hp)
+        )
     )
   )
 
