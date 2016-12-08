@@ -27,6 +27,7 @@ private object ToolTactics {
       (alphaRule*) &
         (varExhaustiveEqL2R('L)*) &
         (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
+        Idioms.?(close) &
       Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
       DebuggingTactics.done("QE was unable to prove: invalid formula")
   )}
