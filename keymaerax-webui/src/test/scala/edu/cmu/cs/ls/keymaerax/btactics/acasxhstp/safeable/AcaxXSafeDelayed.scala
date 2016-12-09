@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
-import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, EqualityTactics, Idioms, SimplifierV2,PolynomialArith}
+import edu.cmu.cs.ls.keymaerax.btactics.{SimplifierV2, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -108,42 +108,92 @@ class AcaxXSafeDelayed extends AcasXBase {
       "  dl>=0	".asFormula,
       "  t_>=0	".asFormula,
       "  t_+tl<=dl&(-1*t_+d<=0->w*(a*t_+dho)>=w*dhf|w*a>=ar)".asFormula)
+    //"  \\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-1*s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula)
 
     val succ = IndexedSeq("rt=rv*t&(0<=t&t < max((0,-1*t_+d))&ht=-w*ad/2*t^2+(a*t_+dho)*t|(hd=-w*ad/2*max((0,-1*t_+d))^2+(a*t_+dho)*max((0,-1*t_+d))&dhd-(a*t_+dho)=-w*ad*max((0,-1*t_+d)))&(0<=t-max((0,-1*t_+d))&t-max((0,-1*t_+d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,-1*t_+d)))^2+dhd*(t-max((0,-1*t_+d)))|t-max((0,-1*t_+d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,-1*t_+d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs((-rv)*t_+r-rt)>rp|w*(-(a/2*t_^2+dho*t_)+h-ht) < -hp".asFormula)
 
-    val pr = proveBy(Sequent(antes,succ),
+    val rewriteEq = proveBy("F_() - G_() = H_() <-> F_() = H_() + G_()".asFormula, QE)
+
+    val pr = proveBy(Sequent(antes, succ),
       implyR(1) &
-        (andL('L)*) &
+        (andL('L) *) &
         allL(Variable("t"), "t_+t".asTerm)('L) &
         allL(Variable("rt"), "rv*(t_+t)".asTerm)('L) &
-        (andL('L)*) &
+        (andL('L) *) &
         dT("case splits") &
-        orL(-18) <(
-          (andL('L)*) &
-            cut("0<=t_+t & t_+t < max(0,d)".asFormula)<(nil,
-              //Manually provide things so QE does not take forever
-              implyRi(AntePos(18),SuccPos(1)) &
-                implyRi(AntePos(17),SuccPos(1)) &
-                implyRi(AntePos(13),SuccPos(1)) &
-                cohideR(2) & QE) &
-            dT("pre") &
-            allL(Variable("ht"), "-w*ad/2*(t_+t)^2+dho*(t_+t)".asTerm )('L) &
-            allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
-            allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
-            SimplifierV2.simpTac(-6) & //Discharge the implication
-            orR(1) & orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
-            dT("sol0") &
-            hideR(1) &
-            dT("sol1") &
-            eqL2R(-20)(1) &
-            hideL(-16) &
-            hideL(-2) &
-            QE, //Takes forever, more stuff ought to be hidden
-        nil) &
-        dT("sol2")
+        cut("0<=t_+t & (t_+t < max(0,d)) | 0<=t_+t - max(0,d) &  t_+t - max(0,d) < max(0, w*(dhf - (-w*ad*max(0,d)+dho)))/ar | t_+t - max(0,d) >=max(0, w*(dhf - (-w*ad*max(0,d)+dho)))/ar".asFormula)
+          < (
+          dT("use") & orL(-19)
+            < (
+            dT("case 1: 0<=t_+t & (t_+t < max(0,d))") &
+              nil
+//              allL(Variable("ht"), "-w*ad/2*(t_+t)^2+dho*(t_+t)".asTerm )('L) &
+//              allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
+//              allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
+//              SimplifierV2.simpTac(-6) & //Discharge the implication
+//              orR(1) & orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
+//              orL(-18) <(
+//                dT("true case") &
+//                hideR(1) &
+//                hideL(-16) &
+//                hideL(-2) &
+//                (andL('L)*) &
+//                exhaustiveEqL2R(true)(-20) &
+//                ArithmeticSimplification.smartHide &
+//                QE,
+//                max('L,"max(0,d)".asTerm) & orL(-20) &
+//                dT("contra") //both or branches should be false because t- max(0,d-t_) < 0
+//              )
+            ,
+            orL(-19)
+              < (
+              dT("case 2") & nil, //SimplifierV2.simpTac(-18),
+              dT("case 3") &
+              allL(Variable("ht"), "dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(- w * ad * max(0,d) + dho))))^2/(2*ar) + (-w*ad/2*max(0,d)^2 + dho * max(0,d))".asTerm )('L) &
+              allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
+              allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
+              SimplifierV2.simpTac(-6) &
+              dT("after insts") &
+                nil //SimplifierV2.simpTac(-18)
+              )
+            )
+          ,
+          dT("show") &
+          hideR(1) &
+          orL(-18)
+          <(
+            nil,
+//                (andL('L)*) & dT("cut case 1") &
+//                implyRi(AntePos(18),SuccPos(0)) &
+//                implyRi(AntePos(17),SuccPos(0)) &
+//                implyRi(AntePos(13),SuccPos(0)) &
+//                cohideR(1) & QE,
+          (andL('L)*) & orL(-18) <(
+            (andL('L)*) &
+            ArithmeticSimplification.smartHide &
+            implyRi(AntePos(19),SuccPos(0)) &
+            implyRi(AntePos(18),SuccPos(0)) &
+            implyRi(AntePos(12),SuccPos(0)) &
+            dT("cut case 2") &
+            cohideR(1) & QE
+            ,
+          dT("cut case 3") &
+            cut("t>=0".asFormula) <(
+              implyRi(AntePos(20),SuccPos(0)) &
+              implyRi(AntePos(13),SuccPos(0)) &
+              dT("use") &
+              cohideR(1) & QE
+              ,
+              hideR(1) & (andL('L)*) &
+              dT("cut") &
+              implyRi(AntePos(19),SuccPos(0)) &
+              implyRi(AntePos(9),SuccPos(0)) &
+              cohideR(1) & QE
+              )
+            )
+          )
+        )
     )
-
-    println(pr)
   }
 
   it should "prove delay lower bound safe lemma" ignore withMathematica { tool =>
@@ -152,7 +202,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     // Formula from print in Theorem 2
     val safeLemmaFormula = """((((w=-1|w=1)&\forall t \forall rt \forall ht \forall hd \forall dhd (rt=rv*t&(0<=t&t < max((0,d))&ht=-w*ad/2*t^2+dho*t|(hd=-w*ad/2*max((0,d))^2+dho*max((0,d))&dhd-dho=-w*ad*max((0,d)))&(0<=t-max((0,d))&t-max((0,d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,d)))^2+dhd*(t-max((0,d)))|t-max((0,d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs(r-rt)>rp|w*(h-ht) < -hp))&rp>=0&hp>0&rv>=0&ar>0&ad>=0&dp>=0&dl>=0)&tl=0&w*a>=-ad)&tl<=dl&(d<=0->w*dho>=w*dhf|w*a>=ar)->[{r'=-rv,h'=-dho,dho'=a,d'=-1,tl'=1&tl<=dl&(d<=0->w*dho>=w*dhf|w*a>=ar)}](((w=-1|w=1)&\forall t \forall rt \forall ht \forall hd \forall dhd (rt=rv*t&(0<=t&t < max((0,d))&ht=-w*ad/2*t^2+dho*t|(hd=-w*ad/2*max((0,d))^2+dho*max((0,d))&dhd-dho=-w*ad*max((0,d)))&(0<=t-max((0,d))&t-max((0,d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,d)))^2+dhd*(t-max((0,d)))|t-max((0,d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs(r-rt)>rp|w*(h-ht) < -hp))&rp>=0&hp>0&rv>=0&ar>0&ad>=0&dp>=0&dl>=0)""".stripMargin.asFormula
 
-    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & diffSolveEnd('R) &
+    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & dT("solving") & diffSolve('R) &
       dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
       SimplifierV2.simpTac(1) & dT("Simplified using known facts") & (allR('R)*) &
       allL(Variable("t"), "t_+t".asTerm)('L) & // t_22+t_23: t_ == t_22, t == t_23
@@ -168,8 +218,8 @@ class AcaxXSafeDelayed extends AcasXBase {
 
   it should "prove Theorem 2: correctness of delayed implicit safe regions" ignore {
     if (lemmaDB.contains("safe_delay_implicit")) lemmaDB.remove("safe_delay_implicit")
-        runLemmaTest("delay_ucLoLemma", "ACAS X safe should prove delay use case lemma")
-        runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
+    runLemmaTest("delay_ucLoLemma", "ACAS X safe should prove delay use case lemma")
+    runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     withMathematica { tool =>
       beforeEach()
