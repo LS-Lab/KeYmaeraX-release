@@ -107,6 +107,30 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     shouldClose(expr, f)
   }
 
+  it should "support 'Rlike' unification matching" in {
+    val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
+      (orR('R)*) & (onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))*)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
+    result.subgoals.head.succ should contain only ("c=2".asFormula, "d=3->e=4".asFormula, "h=7".asFormula)
+  }
+
+  it should "support 'Llike' unification matching" in {
+    val result = proveBy("(a=0&b=1 -> c=2) & (d=3 -> e=4) & (f=5&g=6 -> h=7) -> i=8".asFormula,
+      implyR('R) & (andL('L)*) & (onAll(implyL('Llike, "p_()&q_()->r_()".asFormula))*)
+    )
+    result.subgoals should have size 4
+    result.subgoals(0).ante should contain only "d=3->e=4".asFormula
+    result.subgoals(0).succ should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula, "i=8".asFormula)
+    result.subgoals(1).ante should contain only ("d=3->e=4".asFormula, "c=2".asFormula)
+    result.subgoals(1).succ should contain only ("f=5&g=6".asFormula, "i=8".asFormula)
+    result.subgoals(2).ante should contain only ("d=3->e=4".asFormula, "h=7".asFormula)
+    result.subgoals(2).succ should contain only ("a=0&b=1".asFormula, "i=8".asFormula)
+    result.subgoals(3).ante should contain only ("d=3->e=4".asFormula, "c=2".asFormula, "h=7".asFormula)
+    result.subgoals(3).succ should contain only "i=8".asFormula
+  }
+
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
@@ -140,6 +164,15 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
+  }
+
+  it should "saturate 'Rlike' unification matching" in {
+    val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
+      (orR('R)*) & (implyR('Rlike, "p_()&q_()->r_()".asFormula)*)
+      )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
+    result.subgoals.head.succ should contain only ("c=2".asFormula, "d=3->e=4".asFormula, "h=7".asFormula)
   }
 
   "+ combinator" should "saturate with at least 1 repetition" in {
