@@ -5,8 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{nil => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.{SimplifierV2, _}
@@ -43,6 +44,11 @@ class AcaxXSafeDelayed extends AcasXBase {
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_implicit.kyx")).mkString)
   }
 
+  //inclusive
+  private def hideRange(l:Int,u:Int) : BelleExpr = {
+    List.range(l,u,1).foldLeft(nil)((tac: BelleExpr,i:Int) => hideL(-i) & tac)
+  }
+
   /*** Invariants etc. ***/
   private val invariant = ("( (w= -1 | w=1) & " +
     "\\forall t \\forall rt \\forall ht \\forall hd \\forall dhd"+
@@ -62,6 +68,15 @@ class AcaxXSafeDelayed extends AcasXBase {
     abs('R, "abs(r)".asTerm) &
       abs('R, "abs(h)".asTerm) &
       abs('L, "abs(r-0)".asTerm)
+
+  //Rewrites away every top-level equality in the antecedent
+  private val exhEq:DependentTactic = new SingleGoalDependentTactic("exhaust equalities") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      val foo = seq.ante.zipWithIndex.filter( _._1 match {case Equal(v:Variable,_) => true case  _ => false} )
+      foo.foldLeft(nil)((tac: BelleExpr,f:(Formula,Int)) => exhaustiveEqL2R(true)(-(f._2+1)) & tac)
+    }
+  }
+
 
   it should "prove delay use case lemma" ignore withMathematica { tool =>
     if (lemmaDB.contains("delay_ucLoLemma"))
@@ -93,6 +108,9 @@ class AcaxXSafeDelayed extends AcasXBase {
   }
 
   it should "foo"  in withMathematica { tool =>
+
+    val norm = PolynomialArith.normalise("w*(-(a*0.5*t_^2+dho*t_)+h-(w*ar*0.5*(t-(-1*t_+d))^2+(-w*ad*(-1*t_+d)+(a*t_+dho))*(t-(-1*t_+d))+(-w*ad*0.5*(-1*t_+d)^2+(a*t_+dho)*(-1*t_+d)))) - w*(h-(w*ar*0.5*(t_+t-d)^2+(-w*ad*d+dho)*(t_+t-d)+(-w*ad*0.5*d^2+dho*d)))".asTerm,true)
+    println(norm)
     val antes = IndexedSeq(" tl<=dl".asFormula,
       " d<=0->w*dho>=w*dhf|w*a>=ar".asFormula,
       " tl=0".asFormula,
@@ -114,6 +132,10 @@ class AcaxXSafeDelayed extends AcasXBase {
 
     val rewriteEq = proveBy("F_() - G_() = H_() <-> F_() = H_() + G_()".asFormula, QE)
 
+    val diffProps = proveBy(" F_() >= G_() | F_() < G_()".asFormula, QE)
+
+    val subInEq = proveBy("  (C_() - A_() < D_() - B_() ) -> (A_() < B_() -> C_() < D_()) ".asFormula,QE)
+
     val pr = proveBy(Sequent(antes, succ),
       implyR(1) &
         (andL('L) *) &
@@ -122,78 +144,150 @@ class AcaxXSafeDelayed extends AcasXBase {
         (andL('L) *) &
         dT("case splits") &
         cut("0<=t_+t & (t_+t < max(0,d)) | 0<=t_+t - max(0,d) &  t_+t - max(0,d) < max(0, w*(dhf - (-w*ad*max(0,d)+dho)))/ar | t_+t - max(0,d) >=max(0, w*(dhf - (-w*ad*max(0,d)+dho)))/ar".asFormula)
+          //Proof proceeds by or casing on this cut, and then casing on the original or formula, contradicting where possible
           < (
           dT("use") & orL(-19)
             < (
-            dT("case 1: 0<=t_+t & (t_+t < max(0,d))") &
-              nil
-//              allL(Variable("ht"), "-w*ad/2*(t_+t)^2+dho*(t_+t)".asTerm )('L) &
-//              allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
-//              allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
-//              SimplifierV2.simpTac(-6) & //Discharge the implication
-//              orR(1) & orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
-//              orL(-18) <(
-//                dT("true case") &
-//                hideR(1) &
-//                hideL(-16) &
-//                hideL(-2) &
-//                (andL('L)*) &
-//                exhaustiveEqL2R(true)(-20) &
-//                ArithmeticSimplification.smartHide &
-//                QE,
-//                max('L,"max(0,d)".asTerm) & orL(-20) &
-//                dT("contra") //both or branches should be false because t- max(0,d-t_) < 0
-//              )
+              dT("case 1: 0<=t_+t & (t_+t < max(0,d))") &
+              allL(Variable("ht"), "-w*ad/2*(t_+t)^2+dho*(t_+t)".asTerm )('L) &
+              allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
+              allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
+              SimplifierV2.simpTac(-6) & //Discharge the implication
+              orR(1) & orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
+              orL(-18) <(
+                dT("true case") &
+                hideR(1) &
+                hideL(-16) &
+                hideL(-2) &
+                (andL('L)*) &
+                exhaustiveEqL2R(true)(-20) &
+                ArithmeticSimplification.smartHide &
+                QE,
+                dT("contra") &
+                cutEZ("t - max(0,-1*t_+d) <0".asFormula, cohide2(-19,3) & QE) &
+                (andL('L)*) &
+                hideR(1) &
+                SimplifierV2.simpTac(-19) &
+                (andL('L)*) &
+                implyRi(AntePos(22),SuccPos(0)) &
+                implyRi(AntePos(17),SuccPos(0)) &
+                implyRi(AntePos(9),SuccPos(0)) &
+                cohideR(1) &
+                atomicQE
+              )
             ,
+            (andL('L)*) &
             orL(-19)
-              < (
-              dT("case 2") & nil, //SimplifierV2.simpTac(-18),
-              dT("case 3") &
+            < (
+              dT("case 2: 0<=t_+t - max(0,d) &  t_+t - max(0,d) < max(0, w*(dhf - (-w*ad*max(0,d)+dho)))/ar ") &
+              allL(Variable("ht"), " (w*ar/2 * ((t_+t)-max(0,d))^2)+ (-w*ad*max(0,d)+dho)*((t_+t)-max(0,d)) + (-w*ad/2*max(0,d)^2 + dho * max(0,d))".asTerm )('L) &
+              allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
+              allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
+              SimplifierV2.simpTac(-6) &
+              dT("after insts") &
+              //contradict the first branch
+              orL(-18) <( ArithmeticSimplification.smartHide &
+                implyRi(AntePos(17),SuccPos(0)) &
+                implyRi(AntePos(16),SuccPos(0)) &
+                implyRi(AntePos(9),SuccPos(0)) &
+                cohideR(1) & QE,nil) &
+              orR(1) &  orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
+              hideR(1) &
+              max('L,"max(0,-1*t_+d)".asTerm) &
+              orL(-20)
+              <(
+                dT("=0") & nil //todo: needs work, naive splits don't work
+                ,
+              dT("other way") &
+              cutEZ("0<=d & max(0,d) = d".asFormula,
+                hideR(1) & implyRi(AntePos(19),SuccPos(0)) & implyRi(AntePos(13),SuccPos(0)) & cohideR(1) & QE) &
+              (andL('L)*) &
+              exhaustiveEqL2R(true)(-24) &
+              SimplifierV2.simpTac(-6) &
+              hideL(-16) &
+              hideL(-2) &
+              ArithmeticSimplification.smartHide &
+              orL(-14) <(
+                (andL('L)*) &
+                useAt(rewriteEq)(-23) &
+                useAt(rewriteEq)(-20) &
+                exhEq &
+                SimplifierV2.simpTac(-6) &
+                SimplifierV2.simpTac(1) &
+                QE
+                ,
+                (andL('L)*) &
+                orL(-4) & OnAll(
+                useAt(rewriteEq)(-22) &
+                useAt(rewriteEq)(-20) &
+                exhEq &
+                SimplifierV2.simpTac(-3) &
+                SimplifierV2.simpTac(1) &
+                QE)
+                )
+              )
+            ,
+              dT("case 3: t_+t - max(0,d) >=max(0, w*(dhf - (-w*ad*max(0,d)+dho)))/ar") &
               allL(Variable("ht"), "dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(- w * ad * max(0,d) + dho))))^2/(2*ar) + (-w*ad/2*max(0,d)^2 + dho * max(0,d))".asTerm )('L) &
               allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
               allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
               SimplifierV2.simpTac(-6) &
               dT("after insts") &
-                nil //SimplifierV2.simpTac(-18)
-              )
-            )
-          ,
-          dT("show") &
-          hideR(1) &
-          orL(-18)
-          <(
-            nil,
-//                (andL('L)*) & dT("cut case 1") &
-//                implyRi(AntePos(18),SuccPos(0)) &
-//                implyRi(AntePos(17),SuccPos(0)) &
-//                implyRi(AntePos(13),SuccPos(0)) &
-//                cohideR(1) & QE,
-          (andL('L)*) & orL(-18) <(
-            (andL('L)*) &
-            ArithmeticSimplification.smartHide &
-            implyRi(AntePos(19),SuccPos(0)) &
-            implyRi(AntePos(18),SuccPos(0)) &
-            implyRi(AntePos(12),SuccPos(0)) &
-            dT("cut case 2") &
-            cohideR(1) & QE
-            ,
-          dT("cut case 3") &
-            cut("t>=0".asFormula) <(
-              implyRi(AntePos(20),SuccPos(0)) &
-              implyRi(AntePos(13),SuccPos(0)) &
-              dT("use") &
-              cohideR(1) & QE
-              ,
-              hideR(1) & (andL('L)*) &
-              dT("cut") &
-              implyRi(AntePos(19),SuccPos(0)) &
-              implyRi(AntePos(9),SuccPos(0)) &
-              cohideR(1) & QE
-              )
+              //contradict the first branch
+              orL(-18) <( ArithmeticSimplification.smartHide &
+                implyRi(AntePos(17),SuccPos(0)) &
+                implyRi(AntePos(16),SuccPos(0)) &
+                implyRi(AntePos(9),SuccPos(0)) &
+                cohideR(1) & QE,nil) &
+              nil
+              //todo: Naive splits don't work...
+//              orR(1) &  orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
+//              hideR(1) &
+//              (andL('L)*) &
+//              dT("try") &
+//              max('L,"max(0,-1*t_+d)".asTerm) &
+//              max('L,"max(0,d)".asTerm) &
+//              orL(-22) & OnAll(orL(-23)) & OnAll(andL('L)*) & dT("split max")
             )
           )
-        )
-    )
+          ,
+          dT("show") &
+            hideR(1) &
+            orL(-18)
+              <(
+              (andL('L)*) & dT("cut case 1") &
+              implyRi(AntePos(18),SuccPos(0)) &
+              implyRi(AntePos(17),SuccPos(0)) &
+              implyRi(AntePos(13),SuccPos(0)) &
+              cohideR(1) & QE,
+              (andL('L)*) & orL(-18) <(
+                (andL('L)*) &
+                  ArithmeticSimplification.smartHide &
+                  implyRi(AntePos(19),SuccPos(0)) &
+                  implyRi(AntePos(18),SuccPos(0)) &
+                  implyRi(AntePos(12),SuccPos(0)) &
+                  dT("cut case 2") &
+                  cohideR(1) & QE
+                ,
+                dT("cut case 3") &
+                  cut("t>=0".asFormula) <(
+                    implyRi(AntePos(20),SuccPos(0)) &
+                      implyRi(AntePos(13),SuccPos(0)) &
+                      dT("use") &
+                      cohideR(1) & QE
+                    ,
+                    hideR(1) & (andL('L)*) &
+                      dT("cut") &
+                      implyRi(AntePos(19),SuccPos(0)) &
+                      implyRi(AntePos(9),SuccPos(0)) &
+                      cohideR(1) & QE
+                    )
+                )
+              )
+          )
+          )
+    println(pr)
+
   }
 
   it should "prove delay lower bound safe lemma" ignore withMathematica { tool =>
