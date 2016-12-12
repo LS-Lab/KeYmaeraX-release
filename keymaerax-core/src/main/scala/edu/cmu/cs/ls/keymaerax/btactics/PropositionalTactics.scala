@@ -152,9 +152,9 @@ private object PropositionalTactics {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       cut(sequent.toFormula) <(
         /* use */ implyL('Llast) <(
-          hideR(1)*sequent.succ.size & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close),
-          hideL(-1)*sequent.ante.size & (orL(-1) <(close, (close | skip) partial))*(sequent.succ.size-1) & ?(close)),
-        /* show */ cohide('Rlast) partial
+          hideR(1)*sequent.succ.size & (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close),
+          hideL(-1)*sequent.ante.size & (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)),
+        /* show */ cohide('Rlast)
         )
     }
   }
