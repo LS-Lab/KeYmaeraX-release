@@ -4,8 +4,6 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
@@ -14,13 +12,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 
 import scala.language.postfixOps
-import scala.reflect.runtime._
-import scala.tools.reflect.ToolBox
 
 /**
  * Robix test cases.
@@ -162,7 +156,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     val hideIrrelevantAssumptions: BelleExpr =
       OnAll(
@@ -185,7 +179,7 @@ class Robix extends TacticTestBase {
         hideL(-10) & hideL(-9) & QE
         ),
       hideR(1) & (-12 to -6).map(hideL(_)).reduce[BelleExpr](_&_) & implyR(1) & abs(1, 0::Nil) & hideL(-10) & QE
-      ) & debug("Proved acc arithmetic: " + fml)
+      ) & print("Proved acc arithmetic: " + fml)
 
     val accArithX = "A>=0 & B>0 & V>=0 & ep>0 & abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V)) & v_0>=0 & -B<=a & a<=A & -t*V<=xo-xo_0 & xo-xo_0<=t*V & v=v_0+a*t & -t*(v-a/2*t)<=x-x_0 & x-x_0<=t*(v-a/2*t) & t>=0 & t<=ep & v>=0 -> abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
     val accArithXLemma = proveBy(accArithX, accArithTactic("abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
@@ -196,19 +190,19 @@ class Robix extends TacticTestBase {
     accArithYLemma shouldBe 'proved
 
     val tactic = implyR('_) & (andL('_)*) & loop(invariant)('R) <(
-      /* base case */ QE & debug("Base case done"),
-      /* use case */ QE & debug("Use case done"),
+      /* base case */ QE & print("Base case done"),
+      /* use case */ QE & print("Use case done"),
       /* induction step */ chase(1) & allR(1)*2 & implyR(1) & andR(1) <(
-        debug("Braking branch") & allR(1) & implyR(1) & andR(1) <(
-          implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & debug("Braking branch 1 done"),
-          implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & debug("Braking branch 2 done")
+        print("Braking branch") & allR(1) & implyR(1) & andR(1) <(
+          implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & print("Braking branch 1 done"),
+          implyR(1) & di("-B")(1) & dw & prop & brakeStoppedArith & print("Braking branch 2 done")
           ),
-        debug("Free drive branch") & andR(1) <(
+        print("Free drive branch") & andR(1) <(
           (implyR(1) & allR(1))*2 & implyR(1) & andR(1) <(
             implyR(1) & (andL('_)*) & hideL(Find.FindL(0, Some("v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula))) & di("0")(1) & dw & prop
-              & hideIrrelevantAssumptions & hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE & debug("Free drive branch 1 done"),
+              & hideIrrelevantAssumptions & hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE & print("Free drive branch 1 done"),
             implyR(1) & (andL('_)*) & hideL(Find.FindL(0, Some("v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula))) & di("-B")(1) & dw & prop
-              & hideIrrelevantAssumptions & hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE & debug("Free drive branch 2 done")
+              & hideIrrelevantAssumptions & hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & QE & print("Free drive branch 2 done")
             ),
             allR (1) & implyR(1) & andR(1) <(
               allR(1) & implyR(1) & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
@@ -219,18 +213,18 @@ class Robix extends TacticTestBase {
                       & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
                       & hideL('L, "yo-yo_0<=t*V".asFormula) & hideL('L, "-t*V<=yo-yo_0".asFormula)
                       & hideL('L, "w=0".asFormula) & hideL('L, "w=0".asFormula)
-                      & PropositionalTactics.toSingleFormula & by(accArithXLemma) & debug("Free drive branch 3 done"),
+                      & PropositionalTactics.toSingleFormula & by(accArithXLemma) & print("Free drive branch 3 done"),
                     hideR('R, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
                       & hideL('L, "dx^2+dy^2=1".asFormula)
                       & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
                       & hideL('L, "xo-xo_0<=t*V".asFormula) & hideL('L, "-t*V<=xo-xo_0".asFormula)
                       & hideL('L, "w=0".asFormula) & hideL('L, "w=0".asFormula)
-                      & PropositionalTactics.toSingleFormula & by(accArithYLemma) & debug("Free drive branch 4 done")
+                      & PropositionalTactics.toSingleFormula & by(accArithYLemma) & print("Free drive branch 4 done")
                   ),
                 implyR(1) & (andL('_)*) & cutL("!w=0".asFormula)(AntePos(8)) <(
-                    notL('L, "!w=0".asFormula) & closeId  & debug("Free drive branch 5 done"),
+                    notL('L, "!w=0".asFormula) & closeId  & print("Free drive branch 5 done"),
                     hideR('R, "[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,xo'=dxo,yo'=dyo,t'=1&t<=ep&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)))".asFormula)
-                      & implyR(1) & QE & debug("Free drive branch 6 done")
+                      & implyR(1) & QE & print("Free drive branch 6 done")
                   )
                 ),
               (allR(1) & implyR(1))*2 & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
@@ -241,13 +235,13 @@ class Robix extends TacticTestBase {
                       & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
                       & hideL('L, "yo-yo_0<=t*V".asFormula) & hideL('L, "-t*V<=yo-yo_0".asFormula)
                       & hideL('L, "r_0!=0".asFormula) & hideL('L, "w=0".asFormula) & hideL('L, "w*r=v_0".asFormula)
-                      & PropositionalTactics.toSingleFormula & by(accArithXLemma) & debug("Free drive branch 7 done"),
+                      & PropositionalTactics.toSingleFormula & by(accArithXLemma) & print("Free drive branch 7 done"),
                     hideR('R, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
                       & hideL('L, "dx^2+dy^2=1".asFormula)
                       & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
                       & hideL('L, "xo-xo_0<=t*V".asFormula) & hideL('L, "-t*V<=xo-xo_0".asFormula)
                       & hideL('L, "r_0!=0".asFormula) & hideL('L, "w=0".asFormula) & hideL('L, "w*r=v_0".asFormula)
-                      & PropositionalTactics.toSingleFormula & by(accArithYLemma) & debug("Free drive branch 8 done")
+                      & PropositionalTactics.toSingleFormula & by(accArithYLemma) & print("Free drive branch 8 done")
                   ),
                 implyR(1) & (andL('_)*) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
@@ -255,18 +249,18 @@ class Robix extends TacticTestBase {
                       & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
                       & hideL('L, "yo-yo_0<=t*V".asFormula) & hideL('L, "-t*V<=yo-yo_0".asFormula)
                       & hideL('L, "r_0!=0".asFormula)
-                      & PropositionalTactics.toSingleFormula & by(accArithXLemma) & debug("Free drive branch 9 done"),
+                      & PropositionalTactics.toSingleFormula & by(accArithXLemma) & print("Free drive branch 9 done"),
                     hideR('R, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
                       & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
                       & hideL('L, "xo-xo_0<=t*V".asFormula) & hideL('L, "-t*V<=xo-xo_0".asFormula)
                       & hideL('L, "r_0!=0".asFormula)
-                      & PropositionalTactics.toSingleFormula & by(accArithYLemma) & debug("Free drive branch 10 done")
+                      & PropositionalTactics.toSingleFormula & by(accArithYLemma) & print("Free drive branch 10 done")
                   )
                 )
               )
           )
-        ) & debug("Induction step done")
-      ) & debug("Proof done")
+        ) & print("Induction step done")
+      ) & print("Proof done")
 
     proveBy(s, tactic) shouldBe 'proved
   }
@@ -289,7 +283,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
     
-    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) &
       //@todo auto-transform
@@ -329,7 +323,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) &
       //@todo auto-transform
@@ -520,6 +514,7 @@ class Robix extends TacticTestBase {
     proveBy(fml, tactic) shouldBe 'proved
   }
 
+  //@todo fix test
   "Passive safety with curvature and uncertainty" should "prove" ignore withZ3 { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature_uncertainty.key"))
 
@@ -538,7 +533,7 @@ class Robix extends TacticTestBase {
       "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
       "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
 
-    val dw: BelleExpr = (andL('_)*) & debug("Before diffWeaken") & diffWeaken(1) & debug("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       //@todo auto-transform
