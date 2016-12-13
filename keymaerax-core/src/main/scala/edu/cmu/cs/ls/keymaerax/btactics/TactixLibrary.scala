@@ -584,11 +584,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None")))
 
   /** Splits propositional into many smallest possible QE calls.
-    * @param split Configures how the tactic splits into smaller subgoals before QE (default: betaRule).
+    * @param split Configures how the tactic splits into smaller subgoals before QE (default: exhaustive alpha and beta rules).
     * @param preQE Tactic to execute before each individual QE call (default: skip).
-    * @see [[betaRule]]
+    * @param qe How to QE
     */
-  def atomicQE(split: BelleExpr = betaRule, preQE: BelleExpr = skip): BelleExpr = (onAll(betaRule*)*) & onAll(preQE & QE & done)
+  def atomicQE(split: BelleExpr = onAll(alphaRule | betaRule)*, preQE: BelleExpr = skip, qe: BelleExpr = QE): BelleExpr =
+    split & onAll(preQE & qe & done)
   lazy val atomicQE: BelleExpr = atomicQE()
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -719,6 +720,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           )
         )
       )
+
   /** Beta rules are propositional rules that split */
   lazy val betaRule: BelleExpr = andR('_) |
     (orL('_) |
