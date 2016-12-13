@@ -167,7 +167,16 @@ trait SequentCalculus {
   // closing
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  lazy val close             : BelleExpr         = closeId | closeT | closeF
+  lazy val close: BelleExpr = TacticFactory.anon ((seq: Sequent) => {
+    seq.succ.zipWithIndex.find({ case (True, _) => true case (fml, _) => seq.ante.contains(fml) }) match {
+      case Some((True, i)) => ProofRuleTactics.closeTrue(SuccPos(i))
+      case Some((fml, i)) => close(AntePos(seq.ante.indexOf(fml)), SuccPos(i))
+      case None => seq.ante.zipWithIndex.find({ case (False, _) => true }) match {
+        case Some((False, i)) => ProofRuleTactics.closeFalse(AntePos(i))
+        case None => DebuggingTactics.error("Inapplicable close")
+      }
+    }
+  })
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     new BuiltInTactic("close") {
