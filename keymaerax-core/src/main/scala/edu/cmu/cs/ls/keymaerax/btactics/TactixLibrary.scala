@@ -65,22 +65,53 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     | assignb(pos))
 
   /** Normalize to sequent form, keeping branching factor down by precedence */
-  lazy val normalize: BelleExpr = normalize(betaRule, step('L), step('R))
+  lazy val normalize: BelleExpr = normalize(andR::orL::implyL::equivL::equivR::Nil, step, step)
   /** Normalize to sequent form, customize branching with `beta`, customize simplification steps in antecedent/succedent with `stepL` and `stepR` */
-  def normalize(beta: BelleExpr, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = NamedTactic("normalize", {
-    (OnAll(?(
-              alphaRule
-                | (closeId
-                | (allR('R)
-                | (existsL('L)
-                | (close
-                | (beta
-                | (stepL
-                | (stepR))))))))))*
+  def normalize(beta: PositionalTactic, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = normalize(beta::Nil, _ => stepL, _ => stepR)
+  def normalize(beta: List[PositionalTactic], stepL: PositionLocator => BelleExpr, stepR: PositionLocator => BelleExpr): BelleExpr = "normalize" by ((seq: Sequent) => {
+    //@todo better way to configure step and beta rule? how to make compositional (see almost duplicate prop)?
+
+    lazy val left: DependentPositionTactic = TacticFactory.anon ((pos: Position, s: Sequent) => {
+      if (pos.isAnte) s.sub(pos) match {
+        case Some(False) => ProofRuleTactics.closeFalse(pos) & done
+        case Some(fml) if s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
+        case Some(Not(l)) => notL(pos) & (done | right(SuccPosition.base0(s.succ.length), l))
+        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
+        case Some(Or(l, r)) if beta.contains(orL) => orL(pos) & (done | Idioms.<(left(pos, l), left(pos, r)))
+        case Some(Imply(l, r)) if beta.contains(implyL) => implyL(pos) & (done | Idioms.<(right(SuccPosition.base0(s.succ.length), l), left(pos, r)))
+        case Some(Equiv(l, r)) if beta.contains(equivL) => equivL(pos) & (done | Idioms.<(left(pos, And(l,r)), left(pos, And(Not(l),Not(r)))))
+        case Some(Exists(_, _)) => existsL(pos) & left(pos)
+        case Some(b@Box(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepL(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(b), "Continue only on change")(pos) & left(pos) | skip)
+        case Some(d@Diamond(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepL(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(d), "Continue only on change")(pos) & left(pos) | skip)
+        case _ => skip
+      } else skip
     })
 
+    lazy val right: DependentPositionTactic = TacticFactory.anon ((pos: Position, s: Sequent) => {
+      if (pos.isSucc) s.sub(pos) match {
+        case Some(True) => ProofRuleTactics.closeTrue(pos) & done
+        case Some(fml) if s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
+        case Some(Not(l)) => notR(pos) & (done | left(AntePosition.base0(s.ante.length), l))
+        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
+        case Some(Or(l, r)) => orR(pos) & (done | right(pos, l) & (done | onAll(right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
+        case Some(And(l, r)) if beta.contains(andR) => andR(pos) & (done | Idioms.<(right(pos, l), right(pos, r)))
+        case Some(Equiv(l, r)) if beta.contains(equivR) => equivR(pos) & (done | Idioms.<(
+          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
+          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
+        ))
+        case Some(Forall(_, _)) => allR(pos) & right(pos)
+        case Some(b@Box(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepR(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(b), "Continue only on change")(pos) & right(pos) | skip)
+        case Some(d@Diamond(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepR(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(d), "Continue only on change")(pos) & right(pos) | skip)
+        case _ => skip
+      } else skip
+    })
+
+    seq.ante.indices.map(i => onAll(left(AntePosition.base0(i)))).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
+    seq.succ.indices.map(i => onAll(right(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
+  })
+
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  val unfoldProgramNormalize = "unfold" by chase('R) & normalize(andR('R), Idioms.ident, Idioms.ident)
+  val unfoldProgramNormalize: BelleExpr = "unfold" by chase('R) & normalize(andR, Idioms.ident, Idioms.ident)
 
   /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
   val prop                    : BelleExpr = "prop" by ((seq: Sequent) => {
