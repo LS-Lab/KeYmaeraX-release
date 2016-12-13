@@ -214,52 +214,52 @@ class Robix extends TacticTestBase {
               allR(1) & implyR(1) & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
                 implyR(1) & (andL('_)*) & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
-                    hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                      & hideL(-20, "dx^2+dy^2=1".asFormula)
-                      & hideL(-16, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(-15, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                      & hideL(-12, "yo-yo_0<=t*V".asFormula) & hideL(-11, "-t*V<=yo-yo_0".asFormula)
-                      & hideL(-7, "w=0".asFormula) & hideL(-5, "w=0".asFormula)
+                    hideR('R, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
+                      & hideL('L, "dx^2+dy^2=1".asFormula)
+                      & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
+                      & hideL('L, "yo-yo_0<=t*V".asFormula) & hideL('L, "-t*V<=yo-yo_0".asFormula)
+                      & hideL('L, "w=0".asFormula) & hideL('L, "w=0".asFormula)
                       & PropositionalTactics.toSingleFormula & by(accArithXLemma) & debug("Free drive branch 3 done"),
-                    hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                      & hideL(-20, "dx^2+dy^2=1".asFormula)
-                      & hideL(-19, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(-18, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                      & hideL(-14, "xo-xo_0<=t*V".asFormula) & hideL(-13, "-t*V<=xo-xo_0".asFormula)
-                      & hideL(-7, "w=0".asFormula) & hideL(-5, "w=0".asFormula)
+                    hideR('R, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
+                      & hideL('L, "dx^2+dy^2=1".asFormula)
+                      & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
+                      & hideL('L, "xo-xo_0<=t*V".asFormula) & hideL('L, "-t*V<=xo-xo_0".asFormula)
+                      & hideL('L, "w=0".asFormula) & hideL('L, "w=0".asFormula)
                       & PropositionalTactics.toSingleFormula & by(accArithYLemma) & debug("Free drive branch 4 done")
                   ),
                 implyR(1) & (andL('_)*) & cutL("!w=0".asFormula)(AntePos(8)) <(
-                    notL(-9, "!w=0".asFormula) & closeId  & debug("Free drive branch 5 done"),
-                    hideR(1, "[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,xo'=dxo,yo'=dyo,t'=1&t<=ep&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)))".asFormula)
+                    notL('L, "!w=0".asFormula) & closeId  & debug("Free drive branch 5 done"),
+                    hideR('R, "[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,xo'=dxo,yo'=dyo,t'=1&t<=ep&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)))".asFormula)
                       & implyR(1) & QE & debug("Free drive branch 6 done")
                   )
                 ),
               (allR(1) & implyR(1))*2 & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
                 implyR(1) & (andL('_)*) & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
-                    hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                      & hideL(-21, "dx^2+dy^2=1".asFormula)
-                      & hideL(-17, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(-16, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                      & hideL(-13, "yo-yo_0<=t*V".asFormula) & hideL(-12, "-t*V<=yo-yo_0".asFormula)
-                      & hideL(-11, "r_0!=0".asFormula) & hideL(-7, "w=0".asFormula) & hideL(-5, "w*r=v_0".asFormula)
+                    hideR('R, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
+                      & hideL('L, "dx^2+dy^2=1".asFormula)
+                      & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
+                      & hideL('L, "yo-yo_0<=t*V".asFormula) & hideL('L, "-t*V<=yo-yo_0".asFormula)
+                      & hideL('L, "r_0!=0".asFormula) & hideL('L, "w=0".asFormula) & hideL('L, "w*r=v_0".asFormula)
                       & PropositionalTactics.toSingleFormula & by(accArithXLemma) & debug("Free drive branch 7 done"),
-                    hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                      & hideL(-21, "dx^2+dy^2=1".asFormula)
-                      & hideL(-20, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(-19, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                      & hideL(-15, "xo-xo_0<=t*V".asFormula) & hideL(-14, "-t*V<=xo-xo_0".asFormula)
-                      & hideL(-11, "r_0!=0".asFormula) & hideL(-7, "w=0".asFormula) & hideL(-5, "w*r=v_0".asFormula)
+                    hideR('R, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
+                      & hideL('L, "dx^2+dy^2=1".asFormula)
+                      & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
+                      & hideL('L, "xo-xo_0<=t*V".asFormula) & hideL('L, "-t*V<=xo-xo_0".asFormula)
+                      & hideL('L, "r_0!=0".asFormula) & hideL('L, "w=0".asFormula) & hideL('L, "w*r=v_0".asFormula)
                       & PropositionalTactics.toSingleFormula & by(accArithYLemma) & debug("Free drive branch 8 done")
                   ),
-                implyR(1) & (andL('_)*) & hideL(Find.FindL(0, Some("v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula))) & di("a")(1) & dw & prop
+                implyR(1) & (andL('_)*) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
-                    hideR(3, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                      & hideL(-15, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(-14, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                      & hideL(-11, "yo-yo_0<=t*V".asFormula) & hideL(-10, "-t*V<=yo-yo_0".asFormula)
-                      & hideL(-9, "r_0!=0".asFormula)
+                    hideR('R, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
+                      & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
+                      & hideL('L, "yo-yo_0<=t*V".asFormula) & hideL('L, "-t*V<=yo-yo_0".asFormula)
+                      & hideL('L, "r_0!=0".asFormula)
                       & PropositionalTactics.toSingleFormula & by(accArithXLemma) & debug("Free drive branch 9 done"),
-                    hideR(2, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR(1, "v=0".asFormula)
-                      & hideL(-18, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(-17, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                      & hideL(-13, "xo-xo_0<=t*V".asFormula) & hideL(-12, "-t*V<=xo-xo_0".asFormula)
-                      & hideL(-9, "r_0!=0".asFormula)
+                    hideR('R, "abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
+                      & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
+                      & hideL('L, "xo-xo_0<=t*V".asFormula) & hideL('L, "-t*V<=xo-xo_0".asFormula)
+                      & hideL('L, "r_0!=0".asFormula)
                       & PropositionalTactics.toSingleFormula & by(accArithYLemma) & debug("Free drive branch 10 done")
                   )
                 )
