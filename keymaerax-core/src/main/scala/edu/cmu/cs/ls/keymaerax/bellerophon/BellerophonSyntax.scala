@@ -355,11 +355,10 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
           case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) == f => positionTactic.computeResult(provable, pos)
           case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) != f =>
             tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-          case Some(t: Term) if exact =>
-            val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), _ == t)
+          case Some(t: Term) =>
+            val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
             if (tPos.isEmpty) tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
             else positionTactic.computeResult(provable, pos.topLevel ++ tPos.head)
-          //@todo inexact terms
           case None => positionTactic.computeResult(provable, pos)
         }
       } catch {
@@ -511,11 +510,10 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
               case Some(f: Formula) if exact && f != provable.subgoals(goal)(pos.top) =>
                 tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-              case Some(t: Term) if exact =>
-                val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), _ == t)
+              case Some(t: Term) =>
+                val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
                 if (tPos.isEmpty) tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
                 else pt.factory(pos.topLevel ++ tPos.head).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-              //@todo inexact terms
               case None =>
                 pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
             }
