@@ -590,7 +590,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def atomicQE(split: BelleExpr = onAll(alphaRule | betaRule)*, preQE: BelleExpr = skip, qe: BelleExpr = QE): BelleExpr =
     split & onAll(preQE & qe & done)
-  lazy val atomicQE: BelleExpr = atomicQE()
+  def atomicQE: BelleExpr = atomicQE()
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
