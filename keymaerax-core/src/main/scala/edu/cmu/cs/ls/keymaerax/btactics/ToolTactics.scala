@@ -28,7 +28,7 @@ private object ToolTactics {
         (varExhaustiveEqL2R('L)*) &
         (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
         // Idioms.?(close) & //@note performance bottleneck, rethink how optional stuff is composed here
-        Idioms.?(toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
+        (done | toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
       DebuggingTactics.done("QE was unable to prove: invalid formula")
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
@@ -55,7 +55,7 @@ private object ToolTactics {
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
     cutLR(result)(1) & Idioms.<(
-      /*use*/ close | skip,
+      /*use*/ closeT | skip,
       /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
       )
   })
