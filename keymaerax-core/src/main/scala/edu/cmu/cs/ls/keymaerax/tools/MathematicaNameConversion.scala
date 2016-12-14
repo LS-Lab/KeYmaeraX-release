@@ -36,6 +36,7 @@ private object MathematicaNameConversion {
   def toMathematica(ns: NamedSymbol): MExpr = {
     val name: String = ns match {
       case Function(_, _, _, _, true) => throw new ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
+      case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ => maskName(ns)
     }
     new MExpr(com.wolfram.jlink.Expr.SYMBOL, name)
@@ -101,6 +102,7 @@ private object MathematicaNameConversion {
     //@solution (name conflicts): symmetric name conversion in unmaskName, contract in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
       case Function(_, _, _, _, true) => throw new ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
+      case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ =>
         val identifier = ns.name.replace("_", UNDERSCORE)
         PREFIX + (ns.index match {

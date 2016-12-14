@@ -76,15 +76,13 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   it should "not support differential symbols" in withMathematica { tool =>
-    the [BelleThrowable] thrownBy { proveBy(
-      Sequent(IndexedSeq(), IndexedSeq("5=5 | x' = 1'".asFormula)),
-      TactixLibrary.QE) } should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got NoProofTermProvable(Provable(  ==>  5=5|x'=(1)'\n  from     ==>  5=5, x'=(1)'))"
+    the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1'".asFormula,
+      TactixLibrary.QE) } should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
   }
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
-    the [BelleThrowable] thrownBy proveBy(
-      Sequent(IndexedSeq(), IndexedSeq("x' = y'".asFormula)),
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE was unable to prove: invalid formula\nExpected proved provable, but got NoProofTermProvable(Provable(  ==>  x'=y'\n  from     ==>  x'=y'))"
+    the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
