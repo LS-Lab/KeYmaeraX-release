@@ -43,6 +43,8 @@ object SimplifierV2 {
     qeTermProof(None,"F_()*0","0"),
     qeTermProof(None,"1*F_()","F_()"),
     qeTermProof(None,"F_()*1","F_()"),
+    qeTermProof(None,"-1*F_()","-F_()"),
+    qeTermProof(None,"F_()*-1","-F_()"),
     //qeTermProof(Some("F_()!=0"),"F_()*(F_()^-1)","1"),
     //qeTermProof(Some("F_()!=0"),"(F_()^-1)*F_()","1"),
     //Addition
@@ -56,6 +58,7 @@ object SimplifierV2 {
     //todo: change to F_() - F_()
     qeTermProof(None,"x-x","0"),
     qeTermProof(None,"F_()+G_()-F_()","G_()"),
+    qeTermProof(None,"F_()+G_()-G_()","F_()"),
     //Division
     qeTermProof(None,"F_()/1","F_()"),
     //qeTermProof(Some("F_()!=0"),"F_()/F_()","1"),
