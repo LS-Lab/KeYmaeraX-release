@@ -228,7 +228,7 @@ class Robix extends TacticTestBase {
                   )
                 ),
               (allR(1) & implyR(1))*2 & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
-                implyR('R) & (andL('R)*) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula) & di("a")(1) & dw & prop
+                implyR('R) & (andL('L)*) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
                     hideR('R, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
                       & hideL('L, "dx^2+dy^2=1".asFormula)
@@ -245,7 +245,7 @@ class Robix extends TacticTestBase {
                       & print("Free drive branch 8 lemma prep")
                       & PropositionalTactics.toSingleFormula & by(accArithYLemma) & print("Free drive branch 8 done")
                   ),
-                implyR('R) & (andL('R)*) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula) & di("a")(1) & dw & prop
+                implyR('R) & (andL('L)*) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B)+V*(v/B)|abs(y-yo_0)>v^2/(2*B)+V*(v/B)".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
                     hideR('R, "abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) & hideR('R, "v=0".asFormula)
                       & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
