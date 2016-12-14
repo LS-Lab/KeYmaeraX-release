@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
+import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
@@ -86,9 +87,6 @@ class AcasXSafeTwoSided extends AcasXBase {
     "        )").asFormula
 
   private val condImpl = Or(condImplLower, condImplUpper)
-
-//  private val invariantStr = "(( (w=-1 | w=1) &"+ condImpl +
-//    ") & (hp > 0 & rp >= 0 & rv >= 0 & a > 0 & aM > 0))"
 
   private val invariant = And(And("w=-1 | w=1".asFormula, condImpl), "hp > 0 & rp >= 0 & rv >= 0 & a > 0 & aM > 0".asFormula) //invariantStr.asFormula
 
@@ -204,39 +202,8 @@ class AcasXSafeTwoSided extends AcasXBase {
   }
 
   it should "prove Theorem 3: uc lo lemma" in withMathematica { tool =>
-    val ucLoTac: BelleExpr =
-      dT("before orL") & orL('L, condImpl) & Idioms.<(
-        dT("before inst 0 lower") &
-          allL(Variable("t"), Number(0))('L) &
-          allL(Variable("ro"), Number(0))('L) &
-          allL(Variable("ho"), Number(0))('L) & implyL('L) & Idioms.<(
-          dT("Use case 1") & hideR('R, "abs(r)>rp|abs(h)>hp".asFormula) &
-            EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
-            max('L, "max(0,w*(dhf-dhd))".asTerm) &
-            dT("MinMax Lower") & QE & done
-          ,
-          dT("Absolute value") &
-            abs('R, "abs(r)".asTerm) &
-            abs('R, "abs(h)".asTerm) &
-            abs('L, "abs(r-0)".asTerm) &
-            dT("Use case 2") & QE & done
-        ) & done,
-        dT("before inst 0 upper") &
-          allL(Variable("t"), Number(0))('L) &
-          allL(Variable("ro"), Number(0))('L) &
-          allL(Variable("ho"), Number(0))('L) & implyL('L) & Idioms.<(
-          dT("Use case 1") & hideR('R, "abs(r)>rp|abs(h)>hp".asFormula) &
-            EqualityTactics.abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) &
-            max('L, "max(0,w*(dhfM-dhd))".asTerm) &
-            dT("MinMax Upper") & QE,
-          dT("Absolute value") &
-            abs('R, "abs(r)".asTerm) &
-            abs('R, "abs(h)".asTerm) &
-            abs('L, "abs(r-0)".asTerm) &
-            dT("Use case 2 upper") & QE & done
-        ))
-
-    val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula), implyR('R) & (andL('L)*) & ucLoTac)
+    if (lemmaDB.contains("twosided_implicit_usecase")) lemmaDB.remove("twosided_implicit_usecase")
+    val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula), implyR('R) & (andL('L)*) & ucLoTac(condImpl))
     ucLoLemma shouldBe 'proved
     storeLemma(ucLoLemma, Some("twosided_implicit_usecase"))
   }
@@ -244,8 +211,8 @@ class AcasXSafeTwoSided extends AcasXBase {
   it should "prove Theorem 3: correctness of implicit two-sided safe regions" in {
     if (lemmaDB.contains("twosided_implicit")) lemmaDB.remove("twosided_implicit")
     runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
-    runLemmaTest("2side_safe_upimplicit", "ACAS X 2-sided safe should prove Theorem 3, lemma up safe implicit")
     runLemmaTest("2side_safe_implicit", "ACAS X 2-sided safe should prove Theorem 3, lemma safe implicit")
+    runLemmaTest("2side_safe_upimplicit", "ACAS X 2-sided safe should prove Theorem 3, lemma up safe implicit")
 
     withMathematica { tool =>
       beforeEach()
@@ -339,20 +306,19 @@ class AcasXSafeTwoSided extends AcasXBase {
   }
 
   it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { tool =>
+    if (lemmaDB.contains("upper_equivalence")) lemmaDB.remove("upper_equivalence")
+
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
 
     def caseSmasher(caseName: String): BelleExpr = dT(caseName) &
       //@note cases are not pairwise disjoint, meaning that simplifier can't fully simplify on case split; but we can simplify a little further still
       (andL('L)*) & (SimplifierV2.simpTac('Llike, "p_() -> q_()".asFormula)*) & (hideL('L, True)*) &
-      (onAll(betaRule*)*) & onAll(dT(s"$caseName QE") & QE) & done
+      atomicQE(ArithmeticLibrary.exhaustiveBeta, dT(s"$caseName QE")) & done
 
     def caseInst(caseName: String, tInst: String, roInst: String, hoInst: String): BelleExpr =
-      dT(caseName) &
-      allL("t".asVariable, tInst.asTerm)('L) &
-      allL("ro".asVariable, roInst.asTerm)('L) &
-      allL("ho".asVariable, hoInst.asTerm)('L) & dT(s"$caseName QE") &
-      (onAll(betaRule*)*) & onAll(dT(s"$caseName QE") & QE) & done
+      allTRoHoL(caseName, tInst, roInst, hoInst) &
+      atomicQE(ArithmeticLibrary.exhaustiveBeta, dT(s"$caseName QE")) & done
 
     val rvp = max('L, "max(0, w*(dhfM - dhd))".asTerm) & equivR('R) & Idioms.<(
       dT("rv>0 ->") & normalize(Nil, _ => skip, _ => skip) & Idioms.cases(
@@ -372,7 +338,7 @@ class AcasXSafeTwoSided extends AcasXBase {
             //@note cases are not exhaustive by themselves, only because succedent alternatives and when knowing almost everything else (except case knowledge)
             hideL('L, "(-rp<=r&r<=rp->w*h>hp)&(rp < r&r<=rp+rv*maxAbbrv/aM->w*rv^2*h>aM/2*(r-rp)^2+w*rv*dhd*(r-rp)+rv^2*hp)&(rp+rv*maxAbbrv/aM<=r->w*rv*h>w*(dhd+w*maxAbbrv)*(r-rp)-rv*maxAbbrv^2/(2*aM)+rv*hp)".asFormula) &
             hideR('R, "w*h>w*ho+hp".asFormula) &
-            ArithmeticSpeculativeSimplification.speculativeQE & dT("WTF???"))(
+            ArithmeticSpeculativeSimplification.speculativeQE)(
           (Case("-rp<=r&r<=rp".asFormula), caseSmasher("-> <0 Case 10")),
           (Case("rp < r&r<=rp+rv*maxAbbrv/aM".asFormula), caseSmasher("-> <0 Case 11")),
           (Case("rp+rv*maxAbbrv/aM<r".asFormula), caseSmasher("-> <0 Case 14"))
@@ -399,7 +365,7 @@ class AcasXSafeTwoSided extends AcasXBase {
         (cutShow, /*cohide2('L, "maxAbbrv=max(0, w*(dhfM - dhd))")('Rlast)*/ QE & dT("Show maxAbbrv>=0 done") & done)
         ,
         (cutUse, Idioms.cases(
-          (Case("rv=0".asFormula), dT("rv=0 case") & atomicQE(equivR('R) | andR('R), dT("rv=0 QE case")) & done),
+          (Case("rv=0".asFormula), dT("rv=0 case") & atomicQE(onAll(equivR('R) | andR('R))*, dT("rv=0 QE case")) & done),
           (Case("rv>0".asFormula), dT("rv>0 case") & rvp & done)
         ))
     )
@@ -446,7 +412,7 @@ class AcasXSafeTwoSided extends AcasXBase {
       // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
       //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
       val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
-        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+        prop & hideL('L, "W()".asFormula) & hideR('R, "C()".asFormula) & QE)
       gen shouldBe 'proved
 
       // cf. STTT: Lemma 3:
@@ -511,7 +477,7 @@ class AcasXSafeTwoSided extends AcasXBase {
       // upper: generalize a_up >= a_lo & a_lo > 0 to a_up > 0 in p
       //@note can't just write (P() & aM>0) & W() -> C()) -> (aM>=a & (P() & a>0) & W() -> C()) because unification doesn't get it
       val gen = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM > 0) & W() -> C()) -> (aM>=a & ((hp > 0 & rp >= 0 & rv >= 0 & a > 0) & W()) -> C())".asFormula,
-        prop & hideL(-3) & hideL(-2) & hideR(1) & QE)
+        prop & hideL('L, "W()".asFormula) & hideR('R, "C()".asFormula) & QE)
       gen shouldBe 'proved
 
       val weakenLeft = proveBy("((hp > 0 & rp >= 0 & rv >= 0 & a>0) & W() -> C()) -> ((hp > 0 & rp >= 0 & rv >= 0 & a>0 & aM>0) & W() -> C())".asFormula, prop)
