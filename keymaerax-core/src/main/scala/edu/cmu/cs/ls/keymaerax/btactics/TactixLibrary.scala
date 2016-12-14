@@ -76,7 +76,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         case Some(False) => ProofRuleTactics.closeFalse(pos) & done
         case Some(fml) if s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
         case Some(Not(l)) => notL(pos) & (done | right(SuccPosition.base0(s.succ.length), l))
-        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
+        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left(AntePosition.base0(s.ante.length), r) | left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
         case Some(Or(l, r)) if beta.contains(orL) => orL(pos) & (done | Idioms.<(left(pos, l), left(pos, r)))
         case Some(Imply(l, r)) if beta.contains(implyL) => implyL(pos) & (done | Idioms.<(right(SuccPosition.base0(s.succ.length), l), left(pos, r)))
         case Some(Equiv(l, r)) if beta.contains(equivL) => equivL(pos) & (done | Idioms.<(left(pos, And(l,r)), left(pos, And(Not(l),Not(r)))))
@@ -92,12 +92,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         case Some(True) => ProofRuleTactics.closeTrue(pos) & done
         case Some(fml) if s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(Not(l)) => notR(pos) & (done | left(AntePosition.base0(s.ante.length), l))
-        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
-        case Some(Or(l, r)) => orR(pos) & (done | right(pos, l) & (done | onAll(right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
+        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
+        case Some(Or(l, r)) => orR(pos) & (done | right(SuccPosition.base0(s.succ.length-1), l) & (done | onAll(right(SuccPosition.base0(s.succ.length), r) | right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
         case Some(And(l, r)) if beta.contains(andR) => andR(pos) & (done | Idioms.<(right(pos, l), right(pos, r)))
-        case Some(Equiv(l, r)) if beta.contains(equivR) => equivR(pos) & (done | Idioms.<(
-          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
-          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
+        case Some(Equiv(l, r)) => equivR(pos) & (done | Idioms.<(
+          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
+          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
         ))
         case Some(Forall(_, _)) => allR(pos) & right(pos)
         case Some(b@Box(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepR(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(b), "Continue only on change")(pos) & right(pos) | skip)
@@ -106,8 +106,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       } else skip
     })
 
-    seq.ante.indices.map(i => onAll(left(AntePosition.base0(i)))).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
-    seq.succ.indices.map(i => onAll(right(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
+    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(left(AntePosition.base0(i), fml) | left('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(right(SuccPosition.base0(i), fml) | right('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
   })
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
@@ -120,7 +120,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         case Some(False) => ProofRuleTactics.closeFalse(pos) & done
         case Some(fml) if s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
         case Some(Not(l)) => notL(pos) & (done | right(SuccPosition.base0(s.succ.length), l))
-        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
+        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left(AntePosition.base0(s.ante.length), r) | left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
         case Some(Or(l, r)) => orL(pos) & (done | Idioms.<(left(pos, l), left(pos, r)))
         case Some(Imply(l, r)) => implyL(pos) & (done | Idioms.<(right(SuccPosition.base0(s.succ.length), l), left(pos, r)))
         case Some(Equiv(l, r)) => equivL(pos) & (done | Idioms.<(left(pos, And(l,r)), left(pos, And(Not(l),Not(r)))))
@@ -133,19 +133,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         case Some(True) => ProofRuleTactics.closeTrue(pos) & done
         case Some(fml) if s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(Not(l)) => notR(pos) & (done | left(AntePosition.base0(s.ante.length), l))
-        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
-        case Some(Or(l, r)) => orR(pos) & (done | right(pos, l) & (done | onAll(right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
+        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
+        case Some(Or(l, r)) => orR(pos) & (done | right(SuccPosition.base0(s.succ.length-1), l) & (done | onAll(right(SuccPosition.base0(s.succ.length), r) | right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
         case Some(And(l, r)) => andR(pos) & (done | Idioms.<(right(pos, l), right(pos, r)))
         case Some(Equiv(l, r)) => equivR(pos) & (done | Idioms.<(
-          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
-          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
+          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
+          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
         ))
         case _ => skip
       } else skip
     })
 
-    seq.ante.indices.map(i => onAll(left(AntePosition.base0(i)))).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
-    seq.succ.indices.map(i => onAll(right(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
+    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(left(AntePosition.base0(i), fml) | left('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(right(SuccPosition.base0(i), fml) | right('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
   })
 
   /** master: master tactic that tries hard to prove whatever it could
