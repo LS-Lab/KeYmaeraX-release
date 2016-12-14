@@ -174,7 +174,7 @@ class AcaxXSafeDelayed extends AcasXBase {
                 implyRi(AntePos(9),SuccPos(0)) &
                 cohideR(1) &
                 atomicQE
-                )
+              )
             ,
             (andL('L)*) &
             orL(-18)
@@ -205,16 +205,16 @@ class AcaxXSafeDelayed extends AcasXBase {
                 max('L,"max(0,d)".asTerm) &
                 cutEZ("max_1 >= 0".asFormula, hideR(1) & implyRi(AntePos(24),SuccPos(0)) & cohideR(1) & QE) &
                 dT("pos") &
-                orL(-18) <(
+                orL(-18) <(  //The big original case split
                   dT("l branch") &
                   SimplifierV2.simpTac(-15) &
                   hideL(-25) & hideL(-17) & hideL(-2) & orL(-4) &
-                  OnAll (exhEq & ArithmeticSimplification.smartHide & dT("before") & QE) //~2minutes each
+                  OnAll (exhEq & ArithmeticSimplification.smartHide & dT("before") & QE) //~1 or 2minutes each
                   ,
                   dT("r branch") &
-                    cutEZ("t_>=max_1".asFormula, hideR(1) &
-                     //todo: easier way to hide all but some assumptions for QE
-                     implyRi(AntePos(24),SuccPos(0)) & implyRi(AntePos(20),SuccPos(0)) & implyRi(AntePos(13),SuccPos(0)) & cohideR(1) & QE ) &
+                  cutEZ("t_>=max_1".asFormula, hideR(1) &
+                   //todo: easier way to hide all but some assumptions for QE
+                   implyRi(AntePos(24),SuccPos(0)) & implyRi(AntePos(20),SuccPos(0)) & implyRi(AntePos(13),SuccPos(0)) & cohideR(1) & QE ) &
                   hideL(-21) & max('L,"max(0,w * (dhf -abv1))".asTerm) & dT("maxsplit") & orL(-27)
                   <(
                     dT("lt") &
@@ -331,51 +331,164 @@ class AcaxXSafeDelayed extends AcasXBase {
               SimplifierV2.simpTac(-6) &
               dT("after insts") &
               //contradict the first branch
-              orL(-18) <( ArithmeticSimplification.smartHide &
-                implyRi(AntePos(17),SuccPos(0)) &
+              orL(-17) <( ArithmeticSimplification.smartHide &
                 implyRi(AntePos(16),SuccPos(0)) &
+                implyRi(AntePos(15),SuccPos(0)) &
                 implyRi(AntePos(9),SuccPos(0)) &
                 cohideR(1) & QE,nil) &
-              dT("res") & nil
-//              orR(1) &  orL(-6) <( eqL2R(-17)(1) & cohide2(-6,1) & QE, nil ) &
-//              hideR(1) &
-//              max('L,"max(0,-1*t_+d)".asTerm) &
-//              orL(-20)
-//              <(
-//                dT("=0") & nil //todo: needs work, naive splits don't work
-//                ,
-//              dT("other way") &
-//              cutEZ("0<=d & max(0,d) = d".asFormula,
-//                hideR(1) & implyRi(AntePos(19),SuccPos(0)) & implyRi(AntePos(13),SuccPos(0)) & cohideR(1) & QE) &
-//              (andL('L)*) &
-//              exhaustiveEqL2R(true)(-23) &
-//              SimplifierV2.simpTac(-6) &
-//              hideL(-16) &
-//              hideL(-2) &
-//              ArithmeticSimplification.smartHide &
-//              dT("here") &
-//              orL(-15) <(
-//                nil
-////                (andL('L)*) &
-////                orL(-4) & OnAll(
-////                useAt(rewriteEq)(-22) &
-////                useAt(rewriteEq)(-19) &
-////                exhEq &
-////                SimplifierV2.simpTac(-4) &
-////                SimplifierV2.simpTac(1) &
-////                QE)
-//                ,
-//                (andL('L)*) &
-//                orL(-4) & OnAll(
-//                useAt(rewriteEq)(-21) &
-//                useAt(rewriteEq)(-19) &
-//                exhEq &
-//                dT("right") &
-//                SimplifierV2.simpTac(-3) &
-//                SimplifierV2.simpTac(1) &
-//                QE)
-//                )
-//              )
+              dT("res") &
+              orR(1) &  orL(-6) <( eqL2R(-16)(1) & cohide2(-6,1) & QE, nil ) &
+              hideR(1) &
+              EqualityTactics.abbrv("- w * ad * max(0,d) +dho".asTerm, Some(Variable("abv1"))) &
+              max('L,"max(0,-1*t_+d)".asTerm) &
+              dT("abbrv, then max split") &
+              orL(-20)
+              <(
+                dT("d-t_ <= 0 case") &
+                (andL('L)*) &
+                SimplifierV2.simpTac(-20) &
+                SimplifierV2.simpTac(-19) & SimplifierV2.simpTac(-22) & SimplifierV2.simpTac(-23) &
+                cutEZ("\\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-1*s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula, cohide2(-15,2) & prop) &
+                allL(Variable("s_"),"t_".asTerm )(-15) &
+                SimplifierV2.simpTac(-15) &
+                allL(Variable("s_"),"max(0,d)".asTerm )(-24) &
+                SimplifierV2.simpTac(-24) &
+                implyL(-24) <( implyRi(AntePos(13),SuccPos(1)) & cohide2(-19,2) & QE,nil) &
+                (andL('L)*) &
+                implyL(-26) <( cohide(2) & QE,nil) &
+                max('L,"max(0,d)".asTerm) &
+                dT("pos") &
+                orL(-27) <(
+                  useAt(rewriteEq)(-22) &
+                  (andL('L)*) &
+                  dT("0>=d") &
+                  SimplifierV2.simpTac(-6) &
+                  hideL(-2) & ArithmeticSimplification.hideFactsAbout("dl") & orL(-3) &
+                  OnAll (exhEq & ArithmeticSimplification.smartHide & dT("before") & QE) //Fast
+                  ,
+                  dT("0 < d") &
+                  useAt(rewriteEq)(-22) &
+                  orL(-18) //Split on the main prop
+                  <(
+                    dT("0<=t&t < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*t^2+dhd*t branch") &
+                    (andL('L)*) &
+                    useAt(rewriteEq)(-30) &
+                    exhEq &
+                    cutEZ("w*a>=ar | !w*a>=ar".asFormula, cohideR(2) & prop) &
+                    hideL(-2) &
+                    orL(-22) <(
+                      dT("w*a>=ar") &
+                      hideL(-18) & hideL(-16) &
+                      max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) &
+                      orL(-21)
+                        <(
+                        dT("contra") & //because max(0,...) > 0
+                        implyRi(AntePos(20),SuccPos(0)) &
+                        implyRi(AntePos(18),SuccPos(0)) &
+                        implyRi(AntePos(16),SuccPos(0)) &
+                        cohideR(1) & QE
+                        ,
+                        dT("prove") &
+                        max('L,"max(0,w*(dhf-(-w*ad*d+dho)))".asTerm) &
+                        orL(-22) & OnAll(orL(-3)) &
+                        OnAll (exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
+                        )
+                      ,
+                      dT("!w*a>=ar") &
+                      SimplifierV2.simpTac(-16) &
+                      SimplifierV2.simpTac(-18) &
+                      orL(-3) &
+                      OnAll(ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
+                    )
+                    , //contra
+                    dT("t>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*ar)") &
+                      (andL('L)*) &
+                      useAt(rewriteEq)(-27) &
+                      exhEq &
+                      cutEZ("w*a>=ar | !w*a>=ar".asFormula, cohideR(2) & prop) &
+                      hideL(-2) &
+                      orL(-21) <(
+                        dT("w*a>=ar") &
+                        hideL(-18) & hideL(-16) &
+                        max('L,"max(0,w*(dhf-(-w*ad*d+dho)))".asTerm) & orL(-20)
+                        <(
+                        dT("0>=w*(dhf-(-w*ad*d+dho))") &
+                        max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-21) &
+                        OnAll(orL(-3)) &
+                        OnAll (exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
+                        ,
+                        dT("0<w*(dhf-(-w*ad*d+dho))") &
+                        max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-21) &
+                        OnAll(orL(-3)) &
+                        OnAll ((andL('L)*) & exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl"))
+                          <( QE, QE, QE,
+                          //QE chokes on the 4th case
+                          dT("4th") & nil ) // SimplifierV2.simpTac(-2) & SimplifierV2.simpTac(1) & SimplifierV2.simpTac(-7) &SimplifierV2.simpTac(-9) & QE )
+                        )
+                        ,
+                        dT("!w*a>=ar") &
+                        SimplifierV2.simpTac(-16) &
+                        SimplifierV2.simpTac(-18) &
+                        max('L,"max(0,w*(dhf-(-w*ad*d+dho)))".asTerm) & orL(-22)
+                        <(
+                          dT("0>=w*(dhf-(-w*ad*d+dho))") &
+                          max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-23) &
+                          OnAll(orL(-3)) &
+                          OnAll (exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
+                          ,
+                          dT("0<w*(dhf-(-w*ad*d+dho))") &
+                          max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-23) &
+                          OnAll(orL(-3)) &
+                          OnAll ((andL('L)*) & exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & QE)
+                        )
+                      )
+                  )
+                )
+              ,
+              dT("t_ < d") &
+              allL(Variable("s_"),"t_".asTerm )(-15) &
+              SimplifierV2.simpTac(-15) &
+              cutEZ("0<=d & max(0,d) = d".asFormula,
+                hideR(1) & implyRi(AntePos(19),SuccPos(0)) & implyRi(AntePos(13),SuccPos(0)) & cohideR(1) & QE) &
+              (andL('L)*) &
+              exhaustiveEqL2R(true)(-25) &
+              SimplifierV2.simpTac(-6) &
+              hideL(-19) &
+              hideL(-2) &
+              (andL('L)*) &
+              orL(-18) <(
+                (andL('L)*) &
+                dT("left") &
+                useAt(rewriteEq)(-25) &
+                useAt(rewriteEq)(-22) &
+                exhaustiveEqL2R(true)(-21) &
+                orL(-4) &
+                OnAll(
+                  exhEq &
+                  ArithmeticSimplification.smartHide &
+                  ArithmeticSimplification.hideFactsAbout("dl") &
+                  QE)
+                ,
+                (andL('L)*) &
+                dT("right") &
+                useAt(rewriteEq)(-24) &
+                useAt(rewriteEq)(-22) &
+                exhaustiveEqL2R(true)(-21) &
+                exhaustiveEqL2R(true)(-16) &
+                max('L,"max((0,w*(dhf-(-w*ad*d+dho))))".asTerm) &
+                orL(-23) &
+                OnAll(
+                  (andL('L)*) &
+                  orL(-4) &
+                  OnAll(max('L,"max((0,w*(dhf-dhd)))".asTerm) & orL('L)) &
+                  OnAll(
+                    (andL('L)*) &
+                    ArithmeticSimplification.smartHide &
+                    ArithmeticSimplification.hideFactsAbout("dl") &
+                    dT("QEing") & QE)
+                )
+              )
+              )
             )
           )
           ,
