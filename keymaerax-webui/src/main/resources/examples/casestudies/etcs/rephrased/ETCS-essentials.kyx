@@ -4,33 +4,41 @@
  * @provable
  */
 Functions.
-  R ep.
-  R b.
-  R A.
+  R ep. /* Control cycle duration upper bound */
+  R b.  /* Braking force */
+  R A.  /* Maximum acceleration */
 End.
 
 ProgramVariables.
-  R SB.
-  R a.
-  R v.
-  R z.
-  R t.
-  R m.
+  R SB. /* Start-braking point, latest point to avoid collision */
+  R a.  /* Actual acceleration -b <= a <= A */
+  R v.  /* Current velocity */
+  R z.  /* Train position */
+  R t.  /* Actual control cycle duration t <= ep */
+  R m.  /* End of movement authority (train must not drive past m) */
 End.
 
+/* Safety specification of the form: initial -> [{ctrl;plant}*]safe
+ * Starting in any state where initial is true,
+ * any number of repetitions of running a controller 'ctrl' and then driving according to 'plant'
+ * keeps the system safe (end up only in states where 'safe' is true).
+ */
 Problem.
-      v^2 <= 2*b*(m-z)
-    & b > 0
-    & A >= 0
+      v^2 <= 2*b*(m-z)      /* train has sufficient distance to the end of the movement authority to stop safely */
+    & b > 0                 /* brakes are working */
+    & A >= 0                /* engine is working */
   ->
     [
       {
-        SB := (v^2)/(2*b) + ((A/b) + 1)*((A/2)*ep^2 + ep*v);
-        {    ?m - z <= SB; a := -b;
-          ++ ?m - z >= SB; a :=  A;
+        /* ctrl */
+        SB := (v^2)/(2*b) + ((A/b) + 1)*((A/2)*ep^2 + ep*v);  /* compute start braking point */
+        {    ?m - z <= SB; a := -b;                           /* train protection: emergency brake on distance between train and movement authority */
+          ++ ?m - z >= SB; a :=  A;                           /* free driving: accelerate when sufficient distance between train and movement authority */
         }
-        t := 0;
-        {z'=v, v' = a, t'=1  & v >= 0 & t <= ep}
-      }*@invariant(v^2<=2*b*(m-z))
-    ] (z <= m)
+        t := 0;                                               /* reset control cycle timer */
+
+        /* plant */
+        {z'=v, v' = a, t'=1  & v >= 0 & t <= ep}              /* drive (not backwards v>=0) for at most ep time (t<=ep) until next controller run */
+      }*@invariant(v^2<=2*b*(m-z))                            /* repeat, loop invariant documents system design property */
+    ] (z <= m)                                                /* safety property: train never drives past end of movement authority */
 End.

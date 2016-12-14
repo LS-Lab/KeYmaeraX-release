@@ -1,0 +1,29 @@
+/* Proof scripts ("tactics") steer the proof search of KeYmaera X. KeYmaera X already ships tactics for many proof tasks,
+ * but can be extended with user-defined tactics.
+ * Note: KeYmaera X finds a proof automatically with builtin proof search tactic 'master'.
+ *
+ * Proof script operators:
+ *   &   a&b      sequential tactic composition, "a" must run successfully, then run "b" on a's result
+ *   <   <(a,b,c) branching composition, run "a" on 1st goal, "b" on 2nd, "c" on 3rd
+ *   'R  a('R)    position search: find a formula on the right-hand side of |- where the tactic "a" applies
+ *   'L  a('L)    position search: find a formula on the left-hand side of |- where the tactic "a" applies
+ *   *   a*       exhaustive search: repeat "a" until no more progress
+ *
+ * Builtin proof tactics used in this script:
+ *   implyR        |- p -> q     move assumptions p of an implication -> on the right-hand side of |- into the left-hand side of |-
+ *   andL          p&q |-        split conjunction & on the left-hand side of |- into its facts p and q
+ *   loop          |- [a*]safe   prove safety of a loop "a*" by induction
+ *   prop                        prove propositional logic
+ *   QE                          prove real arithmetic
+ *   unfold                      symbolically execute a program
+ *   diffSolve                   solve a differential equation
+ */
+
+implyR('R) & (andL('L)*) & loop({`v^2<=2*b*(m-z)`}, 'R) & <(  /* prove loop by induction with invariant */
+  prop,                                                       /* induction initial case */
+  QE,                                                         /* induction use case */
+  unfold & <(                                                 /* induction step, symbolically execute program until ODE */
+    diffSolve('R) & QE,                                       /* safety of train protection: solve ODE and prove arithmetic */
+    diffSolve('R) & QE                                        /* safety of free driving: solve ODE and prove arithmetic */
+  )
+)
