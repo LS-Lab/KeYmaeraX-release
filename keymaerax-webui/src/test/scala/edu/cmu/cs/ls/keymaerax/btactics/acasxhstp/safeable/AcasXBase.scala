@@ -30,18 +30,13 @@ import scala.language.postfixOps
 @SlowTest
 class AcasXBase extends TacticTestBase {
 
-  private val DEBUG = true
-
   /* Running tests programmatically: where to report test results. */
   private val nilReporter: Reporter = new Reporter() { override def apply(event: Event): Unit = {} }
 
   /* The lemma database for storing/retrieving lemmas. */
-  val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
-
-  /* Common tactics */
-  def dT(s: => String): BelleExpr = /*Tactics.SubLabelBranch(s) &*/ DebuggingTactics.debug(s, doPrint = DEBUG, _.prettyString)
-
-  def cutEZ(c: Formula, t: BelleExpr): BelleExpr = cut(c) & Idioms.<(skip, /* show */ t & done)
+  implicit val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
+  /* Whether or not to lookup lemmas in `withLemma` tactic. */
+  implicit val doLemmaLookup: Boolean = true
 
   /* Lemmas */
   def storeLemma(fact: ProvableSig, name: Option[String]): String = {

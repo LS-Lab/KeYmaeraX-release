@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
+import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.{EqualityTactics, Idioms, SimplifierV2, DifferentialTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
