@@ -21,7 +21,7 @@ import scala.collection.immutable.Map
  */
 class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
   // JLink, shared between tools
-  private val link = new JLinkMathematicaLink
+  private[tools] val link = new JLinkMathematicaLink
 
   private val mQE = new MathematicaQETool(link)
   private val mCEX = new MathematicaCEXTool(link)
