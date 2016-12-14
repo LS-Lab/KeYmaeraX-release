@@ -143,7 +143,7 @@ object IsabelleSyntax {
       (OnAll(?
       (implyR(1) & andL('Llast) & lastImplyRi & (andL('_)*) &
         ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
-          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_)))))*) & prop))
+          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_)))))*) & onAll(prop)))
   }
 
 
