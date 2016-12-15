@@ -35,8 +35,8 @@ class AcasXBase extends TacticTestBase {
 
   /* The lemma database for storing/retrieving lemmas. */
   implicit val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
-  /* Whether or not to lookup lemmas in `withLemma` tactic. */
-  implicit val doLemmaLookup: Boolean = true
+  /* Whether or not to lookup lemmas in `rememberAs` tactic. */
+  implicit val lookupRememberedLemmas: Boolean = true
 
   /* Lemmas */
   def storeLemma(fact: ProvableSig, name: Option[String]): String = {

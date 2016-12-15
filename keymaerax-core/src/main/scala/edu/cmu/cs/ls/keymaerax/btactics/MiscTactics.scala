@@ -215,23 +215,23 @@ object Idioms {
   }
   def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = cases()(c1, cs:_*)
 
-  /** Proves by lemma, if lemma `name` exists, else by tactic `t` and stores the proof found by `t` as lemma `name`.
-    * Must be used on a provable with only 1 subgoal (e.g., as created in a Case).
+  /** Proves by lemma, if lemma `lemmaName` exists, else by tactic `t` and stores the proof found by `t` as lemma `lemmaName`.
+    * Must be used on a provable with exactly 1 subgoal (e.g., as created in a Case).
     * Lemma lookup can be disabled with `doLemmaLookup` (lemma lookup enabled by default).
     */
-  def withLemma(lemmaName: String, t: BelleExpr)(implicit lemmaDB: LemmaDB, doLemmaLookup: Boolean = true): BelleExpr =
-      new BuiltInTactic("withLemma") {
+  def rememberAs(lemmaName: String, t: BelleExpr)(implicit lemmaDB: LemmaDB, lookupRememberedLemmas: Boolean = true): BelleExpr =
+      new BuiltInTactic("RememberAs") {
     override def result(provable: ProvableSig): ProvableSig = {
-      if (provable.subgoals.size > 1) throw new BelleAbort("Too many subgoals", "withLemma requires exactly 1 subgoal, but got " + provable.subgoals)
+      if (provable.subgoals.size > 1) throw new BelleAbort("Too many subgoals", "RememberAs requires exactly 1 subgoal, but got " + provable.subgoals)
       val tactic =
-        if (doLemmaLookup && lemmaDB.contains(lemmaName)) TactixLibrary.by(lemmaDB.get(lemmaName).get)
-        else t & lemma(lemmaName)
+        if (lookupRememberedLemmas && lemmaDB.contains(lemmaName)) TactixLibrary.by(lemmaDB.get(lemmaName).get)
+        else t & rememberAs(lemmaName)
       provable(TactixLibrary.proveBy(provable.subgoals.head, tactic), 0)
     }
   }
 
-  /** Stores a lemma `name` if the current provable is proved. */
-  def lemma(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = new BuiltInTactic("Lemma") {
+  /** Stores a lemma `lemmaName` if the current provable is proved. */
+  def rememberAs(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = new BuiltInTactic("RememberProof") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.isProved) {
         val evidence = ToolEvidence(immutable.List("input" -> provable.conclusion.prettyString, "output" -> "true")) :: Nil
