@@ -271,4 +271,23 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove min" in withMathematica { qeTool => check(minDef)}
   it should "tactically prove max" in withMathematica { qeTool => check(maxDef)}
 
+  "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica { qeTool =>
+    import TactixLibrary._
+    val dgZeroEquilibrium = AxiomInfo.ofCodeName("dgZeroEquilibrium")
+    dgZeroEquilibrium.formula shouldBe "x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula
+
+    TactixLibrary.proveBy(dgZeroEquilibrium.formula,
+      implyR(1) & DA("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, "x*y^2=0&y>0".asFormula)(1) <(
+        TactixLibrary.QE,
+        implyR(1) & TactixLibrary.boxAnd(1) & andR(1) <(
+          DifferentialTactics.diffInd()(1) & QE,
+          DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
+            QE,
+            implyR(1) & diffInd()(1) & QE
+          )
+        )
+      )
+    ) shouldBe 'proved
+  }
+
 }

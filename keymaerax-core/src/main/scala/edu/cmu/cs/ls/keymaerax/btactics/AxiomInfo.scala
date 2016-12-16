@@ -308,6 +308,9 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", {case () => posnil}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
 
+    // compatibility axioms (derivable with Mathematica, but not with Z3)
+    CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", _ => TactixLibrary.useAt("dgZeroEquilibrium")),
+
     // Derived axioms
     new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", {case () => HilbertCalculus.assignb}),
@@ -472,7 +475,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("<=1Div down", "<=1/", "intervalDown1Divide", {case () => useAt(DerivedAxioms.intervalDown1Divide)}),
     new DerivedAxiomInfo("<=Div down", "<=/", "intervalDownDivide", {case () => useAt(DerivedAxioms.intervalDownDivide)}),
     new DerivedAxiomInfo("<=pow down", "<=pow", "intervalDownPower", {case () => useAt(DerivedAxioms.intervalDownPower)}),
-    new DerivedAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", {case () => useAt(DerivedAxioms.dgZeroEquilibrium)}),
     new DerivedAxiomInfo("! !="
       , AxiomDisplayInfo(("¬≠","!!="), "<span class=\"k4-axiom-key\">(¬(f≠g)</span>↔(f=g))")
       , "notNotEqual", {case () => useAt(DerivedAxioms.notNotEqual)}),
