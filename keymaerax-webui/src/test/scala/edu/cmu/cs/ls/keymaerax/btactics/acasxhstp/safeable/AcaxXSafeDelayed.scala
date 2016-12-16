@@ -42,11 +42,6 @@ class AcaxXSafeDelayed extends AcasXBase {
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_implicit.kyx")).mkString)
   }
 
-  //inclusive
-  private def hideRange(l:Int,u:Int) : BelleExpr = {
-    List.range(l,u,1).foldLeft(nil)((tac: BelleExpr,i:Int) => hideL(-i) & tac)
-  }
-
   /*** Invariants etc. ***/
   private val invariant = ("( (w= -1 | w=1) & " +
     "\\forall t \\forall rt \\forall ht \\forall hd \\forall dhd"+
@@ -59,8 +54,6 @@ class AcaxXSafeDelayed extends AcasXBase {
     ).asFormula
 
   private val postcond = "(abs(r)>rp|abs(h)>hp)".asFormula
-
-  private val initDomain = "w*dhd>=w*dhf|w*ao>=a".asFormula
 
   private lazy val absmax =
     abs('R, "abs(r)".asTerm) &
@@ -76,7 +69,7 @@ class AcaxXSafeDelayed extends AcasXBase {
   }
 
 
-  it should "prove delay use case lemma" ignore withMathematica { tool =>
+  it should "prove delay use case lemma" in withMathematica { tool =>
     if (lemmaDB.contains("delay_ucLoLemma"))
       lemmaDB.remove("delay_ucLoLemma")
 
@@ -105,7 +98,10 @@ class AcaxXSafeDelayed extends AcasXBase {
     storeLemma(ucLoLemma, Some("delay_ucLoLemma"))
   }
 
-  it should "foo"  in withMathematica { tool =>
+  it should "prove implicit delay case arithmetic" ignore withMathematica { tool =>
+    if (lemmaDB.contains("delay_implicitArith"))
+      lemmaDB.remove("delay_implicitArith")
+
     val antes = IndexedSeq(" tl<=dl".asFormula,
       " d<=0->w*dho>=w*dhf|w*a>=ar".asFormula,
       " tl=0".asFormula,
@@ -120,18 +116,11 @@ class AcaxXSafeDelayed extends AcasXBase {
       "  dp>=0	".asFormula,
       "  dl>=0	".asFormula,
       "  t_>=0	".asFormula,
-      " \\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-1*s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula)
-    //"  \\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-1*s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula)
+      " \\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula)
 
-    val succ = IndexedSeq("rt=rv*t&(0<=t&t < max((0,-1*t_+d))&ht=-w*ad/2*t^2+(a*t_+dho)*t|(hd=-w*ad/2*max((0,-1*t_+d))^2+(a*t_+dho)*max((0,-1*t_+d))&dhd-(a*t_+dho)=-w*ad*max((0,-1*t_+d)))&(0<=t-max((0,-1*t_+d))&t-max((0,-1*t_+d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,-1*t_+d)))^2+dhd*(t-max((0,-1*t_+d)))|t-max((0,-1*t_+d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,-1*t_+d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs((-rv)*t_+r-rt)>rp|w*(-(a/2*t_^2+dho*t_)+h-ht) < -hp".asFormula)
+    val succ = IndexedSeq("rt=rv*t&(0<=t&t < max((0,-t_+d))&ht=-w*ad/2*t^2+(a*t_+dho)*t|(hd=-w*ad/2*max((0,-t_+d))^2+(a*t_+dho)*max((0,-t_+d))&dhd-(a*t_+dho)=-w*ad*max((0,-t_+d)))&(0<=t-max((0,-t_+d))&t-max((0,-t_+d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,-t_+d)))^2+dhd*(t-max((0,-t_+d)))|t-max((0,-t_+d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,-t_+d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs((-rv)*t_+r-rt)>rp|w*(-(a/2*t_^2+dho*t_)+h-ht) < -hp".asFormula)
 
     val rewriteEq = proveBy("F_() - G_() = H_() <-> F_() = H_() + G_()".asFormula, QE)
-
-    val diffProps = proveBy(" F_() >= G_() | F_() < G_()".asFormula, QE)
-
-    val subInEq = proveBy("  (C_() - A_() < D_() - B_() ) -> (A_() < B_() -> C_() < D_()) ".asFormula,QE)
-
-    val squareNeg = proveBy("(-F_())^2 = (F_())^2".asFormula,QE)
 
     val pr = proveBy(Sequent(antes, succ),
       implyR(1) &
@@ -195,7 +184,7 @@ class AcaxXSafeDelayed extends AcasXBase {
               hideR(1) &
               EqualityTactics.abbrv("- w * ad * max(0,d) +dho".asTerm, Some(Variable("abv1"))) &
               eqL2R(-19)(-6) &
-              max('L,"max(0,-1*t_+d)".asTerm) &
+              max('L,"max(0,-t_+d)".asTerm) &
               dT("abbrv, then max split") & //note: original proof only hides one instance of this for some reason...
               orL(-20)
               <(
@@ -222,7 +211,7 @@ class AcaxXSafeDelayed extends AcasXBase {
                       implyRi(AntePos(19),SuccPos(0)) & implyRi(AntePos(18),SuccPos(0)) & cohideR(1) & QE , //contra
                     dT("gt") &
                       //todo: Easier way to instantiate forall assumption twice?
-                      cutEZ("\\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-1*s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula, cohide2(-15,2) & prop) &
+                      cutEZ("\\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula, cohide2(-15,2) & prop) &
                       allL(Variable("s_"), "max_1".asTerm )(-15) & SimplifierV2.simpTac(-15) & (andL('L)*) &
                       implyL(-27) < ( cohide2(-22,2) & QE ,nil) &
                       orL(-22)<(
@@ -250,16 +239,7 @@ class AcaxXSafeDelayed extends AcasXBase {
                             SimplifierV2.simpTac(1) )
                           <(
                             dT("1") & QE,
-                            dT("2") &
-                            //useAt(squareNeg)(0,("-(-(a/2*t_^2+dho*t_)+h-(dhf*t-(-(-(dhf-(a*t_+dho)))^2)/(2*ar))) < -hp".asFormula).find("(-(dhf-(a*t_+dho)))^2".asTerm).get) &
-                            nil //QE chokes on second case for some reason
-//                              EqualityTactics.abbrv("-ad".asTerm, Some(Variable("add"))) &
-//                              cutEZ("add<=0".asFormula, exhaustiveEqL2R(-14) & cohide2(-5,2) & QE) &dT("abbrv") &
-//                              cutEZ("!(0>=-1*(dhf-(dho+a*t_)))".asFormula, cohide2(-13,2) & QE) & hideL(-14) & hideL(-13) & hideL(-5) &
-//                              notL('L) & dT("foo") &
-//                              cutEZ("d>=0".asFormula,cohide2(-11,3) & QE) & hideL(-11) &
-//                              QE
-                            ,
+                            dT("2") & QE(List(Variable("hp"),Variable("ad"),Variable("h"),Variable("ar"),Variable("a"),Variable("dhf"),Variable("dho"),Variable("t"),Variable("t_"),Variable("d"))),
                             dT("3") & QE,dT("4") & QE)
                           ,
                           dT("!w*a>=ar")  &
@@ -340,7 +320,7 @@ class AcaxXSafeDelayed extends AcasXBase {
               orR(1) &  orL(-6) <( eqL2R(-16)(1) & cohide2(-6,1) & QE, nil ) &
               hideR(1) &
               EqualityTactics.abbrv("- w * ad * max(0,d) +dho".asTerm, Some(Variable("abv1"))) &
-              max('L,"max(0,-1*t_+d)".asTerm) &
+              max('L,"max(0,-t_+d)".asTerm) &
               dT("abbrv, then max split") &
               orL(-20)
               <(
@@ -348,7 +328,7 @@ class AcaxXSafeDelayed extends AcasXBase {
                 (andL('L)*) &
                 SimplifierV2.simpTac(-20) &
                 SimplifierV2.simpTac(-19) & SimplifierV2.simpTac(-22) & SimplifierV2.simpTac(-23) &
-                cutEZ("\\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-1*s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula, cohide2(-15,2) & prop) &
+                cutEZ("\\forall s_ (0<=s_&s_<=t_->s_+tl<=dl&(-s_+d<=0->w*(a*s_+dho)>=w*dhf|w*a>=ar))".asFormula, cohide2(-15,2) & prop) &
                 allL(Variable("s_"),"t_".asTerm )(-15) &
                 SimplifierV2.simpTac(-15) &
                 allL(Variable("s_"),"max(0,d)".asTerm )(-24) &
@@ -422,8 +402,9 @@ class AcaxXSafeDelayed extends AcasXBase {
                         OnAll(orL(-3)) &
                         OnAll ((andL('L)*) & exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl"))
                           <( QE, QE, QE,
-                          //QE chokes on the 4th case
-                          dT("4th") & nil ) // SimplifierV2.simpTac(-2) & SimplifierV2.simpTac(1) & SimplifierV2.simpTac(-7) &SimplifierV2.simpTac(-9) & QE )
+                          //Normal ordering for QE chokes on the 4th case
+                          dT("4th") & SimplifierV2.simpTac(-2) & SimplifierV2.simpTac(1) & SimplifierV2.simpTac(-7) &SimplifierV2.simpTac(-9) &
+                          QE(List(Variable("hp"),Variable("t"),Variable("ar"),Variable("dho"),Variable("dhf"),Variable("ad"),Variable("d"),Variable("a"),Variable("t_"))) ) //  QE )
                         )
                         ,
                         dT("!w*a>=ar") &
@@ -527,11 +508,13 @@ class AcaxXSafeDelayed extends AcasXBase {
               )
         )
     )
-    println(pr)
+
+    pr shouldBe 'proved
+    storeLemma(pr, Some("delay_implicitArith"))
 
   }
 
-  it should "prove delay lower bound safe lemma" ignore withMathematica { tool =>
+  it should "prove delay lower bound safe lemma" in withMathematica { tool =>
     if (lemmaDB.contains("delay_safeLoLemma")) lemmaDB.remove("delay_safeLoLemma")
 
     // Formula from print in Theorem 2
@@ -540,21 +523,19 @@ class AcaxXSafeDelayed extends AcasXBase {
     val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & dT("solving") & diffSolve('R) &
       dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
       SimplifierV2.simpTac(1) & dT("Simplified using known facts") & (allR('R)*) &
-      allL(Variable("t"), "t_+t".asTerm)('L) & // t_22+t_23: t_ == t_22, t == t_23
-      allL(Variable("ro"), "rv*(t_+t)".asTerm)('L) & // rv*(t_22+t_23)
-      dT("Before CUT")
+      by(lemmaDB.get("delay_implicitArith").getOrElse(throw new Exception("Lemma delay_implicitArith must be proved first")))
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
-    //    safeLemma shouldBe 'proved
+    safeLemma shouldBe 'proved
 
-    println(safeLemma)
-    //    storeLemma(safeLemma, Some("nodelay_safeLoLemma"))
+    storeLemma(safeLemma, Some("delay_safeLoLemma"))
   }
 
-  it should "prove Theorem 2: correctness of delayed implicit safe regions" ignore {
+  it should "prove Theorem 2: correctness of delayed implicit safe regions" in {
     if (lemmaDB.contains("safe_delay_implicit")) lemmaDB.remove("safe_delay_implicit")
     runLemmaTest("delay_ucLoLemma", "ACAS X safe should prove delay use case lemma")
-    runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
+    runLemmaTest("delay_implicitArith", "ACAS X safe should prove implicit delay case arithmetic")
+    runLemmaTest("delay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     withMathematica { tool =>
       beforeEach()
@@ -583,9 +564,9 @@ class AcaxXSafeDelayed extends AcasXBase {
               dT("Generalization Strong Enough") &
                 //EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
                 DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
-                dT("Preparing for safeLoLemma") & (andLi *) & implyRi &
-                dT("status")
-              //by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
+                dT("Preparing for delay_safeLoLemma") & (andLi *) & implyRi &
+                dT("status") &
+                by(lemmaDB.get("delay_safeLoLemma").getOrElse(throw new Exception("Lemma delay_safeLoLemma must be proved first"))) & done
 
               )
 
@@ -595,8 +576,8 @@ class AcaxXSafeDelayed extends AcasXBase {
       val safeTheorem = proveBy(safeSeq, safeTac)
 
       println(safeTheorem)
-      //      safeTheorem shouldBe 'proved
-      //      storeLemma(safeTheorem, Some("safe_implicit"))
+      safeTheorem shouldBe 'proved
+      storeLemma(safeTheorem, Some("safe_delay_implicit"))
     }
   }
 
