@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.language.postfixOps
+import scala.math.Ordering.Implicits._
 
 /**
  * Implementation: Tactics that execute and use the output of tools.
@@ -32,6 +33,98 @@ private object ToolTactics {
       DebuggingTactics.done("QE was unable to prove: invalid formula")
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
+
+  // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)
+  // www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf
+  //For each variable, we need to compute:
+  // 1) max degree of variable in the sequent
+  // 2) max total-degree of terms containing that variable
+  // 3) number of terms containing that variable
+  // "Terms" ~= "monomials"
+  // This isn't accurate for divisions (which is treated as a multiplication)
+  // Map[String,(Int,Int,Int)]
+  private def addy(p1:(Int,Int)=>Int,p2:(Int,Int)=>Int,p3:(Int,Int)=>Int,l:(Int,Int,Int),r:(Int,Int,Int)) : (Int,Int,Int) = {
+    (p1(l._1,r._1), p2(l._2,r._2), p3(l._3,r._3) )
+  }
+
+  private def merge(m1:Map[Variable,(Int,Int,Int)],m2:Map[Variable,(Int,Int,Int)],p1:(Int,Int)=>Int,p2:(Int,Int)=>Int,p3:(Int,Int)=>Int) : Map[Variable,(Int,Int,Int)] = {
+    val matches = m1.keySet.intersect(m2.keySet)
+    val updm1 = matches.foldLeft(m1)( (m,s) => m+(s->addy(p1,p2,p3,m1(s),m2(s))))
+    updm1 ++ (m2 -- m1.keySet)
+  }
+
+  private def termDegs(t:Term) : Map[Variable,(Int,Int,Int)] = {
+
+    t match {
+      case v:Variable => Map((v,(1,1,1)))
+      case Neg(t) => termDegs(t)
+      case Plus(l,r) => merge( termDegs(l),termDegs(r),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
+      case Minus(l,r) => termDegs(Plus(l,r))
+      case Times(l,r) => {
+        val lm = termDegs(l)
+        val lmax = lm.values.map(p=>p._2).foldLeft(0)((l,r)=>math.max(l,r))
+        val rm = termDegs(r)
+        val rmax = rm.values.map(p=>p._2).foldLeft(0)((l,r)=>math.max(l,r))
+        val lmap = lm.mapValues(p=>(p._1,p._2+rmax,p._3) )
+        val rmap = rm.mapValues(p=>(p._1,p._2+lmax,p._3) ) //Updated max term degrees
+        merge(lmap,rmap,(x,y)=>x+y,(x,y)=>math.max(x,y),(x,y)=>x+y) /* The 3rd one probably isn't correct for something like x*x*x */
+      }
+      case Divide(l,r) => termDegs(Times(l,r))
+      case Power(p,n:Number) => {
+        val pm = termDegs(p)
+        //Assume integer powers
+        pm.mapValues( (p:(Int,Int,Int)) => (p._1*n.value.toInt,p._2*n.value.toInt,p._3) )
+      }
+      case FuncOf(f,t) => termDegs(t)
+      case Pair(l,r) => merge(termDegs(l),termDegs(r),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
+      case _ => Map[Variable,(Int,Int,Int)]()
+    }
+  }
+
+  //This just takes the max or sum where appropriate
+  private def fmlDegs(f:Formula) : Map[Variable,(Int,Int,Int)] = {
+    f match {
+      case b:BinaryCompositeFormula => merge(fmlDegs(b.left),fmlDegs(b.right),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
+      case u:UnaryCompositeFormula => fmlDegs(u.child)
+      case f:ComparisonFormula => merge(termDegs(f.left),termDegs(f.right),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
+      case q:Quantified => fmlDegs(q.child) -- q.vars
+      case m:Modal => fmlDegs(m.child) //QE wouldn't understand this anyway...
+      case _ => Map() //todo: pred symbols?
+    }
+  }
+
+  private def seqDegs(s:Sequent) : Map[Variable,(Int,Int,Int)] = {
+    (s.ante++s.succ).foldLeft(Map[Variable,(Int,Int,Int)]())(
+      (m:Map[Variable,(Int,Int,Int)],f:Formula) => merge(m,fmlDegs(f),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y))
+  }
+
+  private def orderHeuristic(s:Sequent) : List[Variable] = {
+    val m = seqDegs(s)
+    val ls = m.keySet.toList.sortWith( (x,y) => m(x) < m(y) )
+//    println("From ",s)
+//    println("Got ",ls,m)
+    ls
+  }
+
+  private def orderedClosure = new SingleGoalDependentTactic("ordered closure") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      val order = orderHeuristic(seq)
+      FOQuantifierTactics.universalClosure(order)(1)
+    }
+  }
+
+  //Note: the same as fullQE except it uses a rough heuristic order
+  def heuristicQE(qeTool: QETool): BelleExpr = {
+    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+    Idioms.NamedTactic("ordered QE",
+      //      DebuggingTactics.recordQECall() &
+      (alphaRule*) &
+        (varExhaustiveEqL2R('L)*) &
+        (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
+        // Idioms.?(close) & //@note performance bottleneck, rethink how optional stuff is composed here
+        (done | toSingleFormula & orderedClosure & rcf(qeTool)) &
+        DebuggingTactics.done("QE was unable to prove: invalid formula")
+    )}
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent

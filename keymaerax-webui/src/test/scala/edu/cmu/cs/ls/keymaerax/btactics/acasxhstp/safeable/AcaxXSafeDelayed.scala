@@ -98,7 +98,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     storeLemma(ucLoLemma, Some("delay_ucLoLemma"))
   }
 
-  it should "prove implicit delay case arithmetic" ignore withMathematica { tool =>
+  it should "prove implicit delay case arithmetic" in withMathematica { tool =>
     if (lemmaDB.contains("delay_implicitArith"))
       lemmaDB.remove("delay_implicitArith")
 
@@ -239,8 +239,9 @@ class AcaxXSafeDelayed extends AcasXBase {
                             SimplifierV2.simpTac(1) )
                           <(
                             dT("1") & QE,
-                            dT("2") & QE(List(Variable("hp"),Variable("ad"),Variable("h"),Variable("ar"),Variable("a"),Variable("dhf"),Variable("dho"),Variable("t"),Variable("t_"),Variable("d"))),
-                            dT("3") & QE,dT("4") & QE)
+                            dT("2") & heuQE,
+                            dT("3") & QE,
+                            dT("4") & QE)
                           ,
                           dT("!w*a>=ar")  &
                             allL(Variable("s_"), "t_".asTerm )(-24) &
@@ -403,8 +404,9 @@ class AcaxXSafeDelayed extends AcasXBase {
                         OnAll ((andL('L)*) & exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl"))
                           <( QE, QE, QE,
                           //Normal ordering for QE chokes on the 4th case
-                          dT("4th") & SimplifierV2.simpTac(-2) & SimplifierV2.simpTac(1) & SimplifierV2.simpTac(-7) &SimplifierV2.simpTac(-9) &
-                          QE(List(Variable("hp"),Variable("t"),Variable("ar"),Variable("dho"),Variable("dhf"),Variable("ad"),Variable("d"),Variable("a"),Variable("t_"))) ) //  QE )
+                          dT("4th") &
+                          SimplifierV2.simpTac(-2) & SimplifierV2.simpTac(1) & SimplifierV2.simpTac(-7) &SimplifierV2.simpTac(-9) &
+                          heuQE)
                         )
                         ,
                         dT("!w*a>=ar") &
