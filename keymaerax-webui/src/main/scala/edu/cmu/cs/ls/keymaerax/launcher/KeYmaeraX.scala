@@ -42,7 +42,8 @@ object KeYmaeraX {
       |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse filename.kyx |
-      |  -bparse filename.kyt
+      |  -bparse filename.kyt |
+      |  -repl filename.kyx filename.kyt
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
@@ -51,6 +52,7 @@ object KeYmaeraX {
       |  -ui        start web user interface with optional arguments
       |  -parse     return error code !=0 if the input problem file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
+      |  -repl      prove interactively from command line
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for arithmetic
@@ -105,6 +107,7 @@ object KeYmaeraX {
             case Some("prove") => prove(options)
             case Some("modelplex") => modelplex(options)
             case Some("codegen") => codegen(options)
+            case Some("repl") => repl(options)
             case Some("ui") => assert(false, "already handled above since no prover needed"); ???
           }
         } finally {
@@ -141,6 +144,11 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
+      case "-repl" :: model :: tactic :: tail =>
+        if(model.nonEmpty  && !model.toString.startsWith("-")
+        && tactic.nonEmpty && !tactic.toString.startsWith("-"))
+          nextOption(map ++ Map('mode -> "repl", 'model -> model, 'tactic -> tactic), tail)
+        else optionErrorReporter("-repl")
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
       // action options
       case "-out" :: value :: tail =>
@@ -470,7 +478,24 @@ object KeYmaeraX {
     }
   }
 
-
+  def repl(options: OptionMap) = {
+    require(options.contains('model), usage)
+    require(options.contains('tactic), usage)
+    val modelFileNameDotKyx = options('model).toString
+    val tacticFileNameDotKyt = options('tactic).toString
+    assert(modelFileNameDotKyx.endsWith(".kyx"),
+      "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
+    assert(tacticFileNameDotKyt.endsWith(".kyt"),
+      "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
+    val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
+    val tacticInput = scala.io.Source.fromFile(tacticFileNameDotKyt).mkString
+    val inputFormula:Formula = KeYmaeraXProblemParser(modelInput) match {
+      case f:Formula => f
+      case _ => ???
+    }
+    val initTactic:BelleExpr = BelleParser(tacticInput)
+    new BelleREPL(inputFormula, initTactic, tacticInput).run
+  }
 
   /**
    * Code generation
