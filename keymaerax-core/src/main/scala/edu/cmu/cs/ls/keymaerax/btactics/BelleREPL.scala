@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
+import scala.util.Try
+
 
 /**
   * Created by bbohrer on 12/19/16.
@@ -14,10 +16,13 @@ import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
   * @TODO Make input tactic optional
   */
 class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:String){
+  private final val DEFAULT_NSTEPS:Int = 10
   private abstract class Command
   private case class Quit(filename:String) extends Command
   private case class Tactic(e:BelleExpr) extends Command
   private case class Usage() extends Command
+  private case class Head(n:Int, verbose:Boolean) extends Command
+  private case class Tail(n:Int, verbose:Boolean) extends Command
 
   private class REPLParseException(err:String) extends Exception
 
@@ -55,6 +60,17 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
     pw.close()
   }
 
+  def printSteps(msg:String, steps:List[(Provable,BelleExpr)], verbose:Boolean):Unit = {
+    Console.println(msg)
+    val iSteps:List[((Provable,BelleExpr),Int)] = steps.zipWithIndex
+    iSteps.foreach { case ((pr, e), i) =>
+      val displayI = i + 1
+      Console.println(displayI + " " + BellePrettyPrinter(e))
+      if(verbose)
+        Console.println(pr.prettyString)
+    }
+  }
+
   def interp(cmd:Command):Boolean = {
     cmd match {
       case Quit(filename) =>
@@ -72,12 +88,19 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
         else {
           false
         }
+      case Tail(n, verbose) =>
+        printSteps("Most recent " + n + " steps:", hist.take(n), verbose)
+        false
+      case Head(n, verbose) =>
+        printSteps("First " + n + " steps:", hist.reverse.take(n), verbose)
+        false
       case Usage() =>
-        Console.println("Type quit to save current progress and quit")
         Console.println("Type ? to view this help")
+        Console.println("Type quit to save current progress and quit")
+        Console.println("Type head [n] [-v] to view first n steps (default: " + DEFAULT_NSTEPS + ")")
+        Console.println("Type tail [n] [-v] to view last n steps (default: " + DEFAULT_NSTEPS + ")")
         Console.println("Anything else will be interpreted as a Bellerophon tactic")
         false
-
     }
   }
 
@@ -89,13 +112,30 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
       Quit(split(1))
     } else if (str.startsWith("?")) {
       Usage()
-    }
-    else {
+    } else if (str.startsWith("head")) {
+      val maybeInt = Try (split(1).toInt).toOption
+      val verbose = split.contains("-v") || split.contains("--verbose")
+      val nsteps =
+        if (split.length <= 1 || maybeInt.isEmpty)
+          DEFAULT_NSTEPS
+        else
+          maybeInt.get
+      Head(nsteps, verbose)
+    } else if (str.startsWith("tail")) {
+      val maybeInt = Try (split(1).toInt).toOption
+      val verbose = split.contains("-v") || split.contains("--verbose")
+      val nsteps =
+        if (split.length <= 1 || maybeInt.isEmpty)
+          DEFAULT_NSTEPS
+        else
+          maybeInt.get
+      Tail(nsteps, verbose)
+    } else {
       Tactic(BelleParser(str))
     }
   }
 
-  def run:Unit = {
+  def run():Unit = {
     var line:String = null
     Console.println("Bellerophon REPL started. Type ? for usage info")
     Console.println("Initial proof state:")
@@ -107,7 +147,6 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
         Console.println("Current proof state:")
         Console.println(state.prettyString)
       }
-
     }
   }
 }

@@ -494,7 +494,7 @@ object KeYmaeraX {
       case _ => ???
     }
     val initTactic:BelleExpr = BelleParser(tacticInput)
-    new BelleREPL(inputFormula, initTactic, tacticInput).run
+    new BelleREPL(inputFormula, initTactic, tacticInput).run()
   }
 
   /**
