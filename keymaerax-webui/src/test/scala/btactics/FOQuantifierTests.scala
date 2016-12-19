@@ -520,4 +520,14 @@ class FOQuantifierTests extends TacticTestBase {
     result should not be 'proved
     result.isProved shouldBe false
   }
+
+  it should "fail to instantiate non-existent quantified variables" in {
+    val result = proveBy(" (\\forall x q(x)) -> \\exists y q(y) ".asFormula,
+      implyR(1) & (allL(Variable("z"),Variable("y"))(-1) | nil)
+        & (existsR(Variable("z"),Variable("x"))(1) | nil)
+        & (close | skip))
+
+    result should not be 'proved
+    result.isProved shouldBe false
+  }
 }
