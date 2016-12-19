@@ -4,11 +4,13 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, EqualityTactics, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Number, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.SequentAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{nil => _, _}
 
 /**
   * Tactics used to prove several lemmas/theorems.
@@ -67,5 +69,36 @@ object SharedTactics {
           abs('L, "abs(r-0)".asTerm) &
           dT("Use case 2 upper") & QE & done
       ))
+
+  // Hides everything except the positions requested
+  // Used to hide positions in a sequent for calls to QE when only a few of them are used
+  def hideAllBut(keep:Int*) = new SingleGoalDependentTactic("hide all but") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      assert(keep.forall(n => seq.sub(Position(n)).isDefined))
+      val antehide =
+        (List.range(-1,-(seq.ante.length+1),-1).foldLeft(nil)
+        ((tac:BelleExpr,i:Int)=> (if (keep.contains(i)) skip else hideL(i)) & tac))
+      (List.range(1,seq.succ.length+1,1).foldLeft(antehide)
+        ((tac:BelleExpr,i:Int)=> (if (keep.contains(i)) skip else hideR(i)) & tac))
+    }
+  }
+
+  //Exhaustive andL*
+  val eAndL = (andL('L)*)
+
+  //Exhaustive or cases at a position
+  def eOrLPos(i:Int) = ((OnAll(?( orL(i))))*)
+
+  //Cuts a duplicate of an antecedent at the end of the sequent
+  def dupL(i:Int) = new SingleGoalDependentTactic("dup L") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      assert(i<0 && seq.ante.length>= -i)
+      cutEZ(seq.ante(-(i+1)), cohide2(i,seq.succ.length+1) & close)
+    }
+  }
+
+  //Simplified case tactic for binary case on a formula
+  def bCases(f:Formula) : BelleExpr =
+    cutEZ(Or(f,Not(f)),cohide(2) & prop) & orL('Llast)
 
 }
