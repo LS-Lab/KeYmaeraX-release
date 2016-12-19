@@ -25,12 +25,14 @@ import scala.util.Random
  * @author Stefan Mitsch
  * @author Andre Platzer
  * @author Ran Ji
+ * @author Brandon Bohrer
  */
 object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information.
+    *
     * @note Formatted to 80 characters width. */
   val usage = "KeYmaera X Prover" + " " + VERSION +
     """
@@ -144,11 +146,20 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
-      case "-repl" :: model :: tactic :: tail =>
-        if(model.nonEmpty  && !model.toString.startsWith("-")
-        && tactic.nonEmpty && !tactic.toString.startsWith("-"))
-          nextOption(map ++ Map('mode -> "repl", 'model -> model, 'tactic -> tactic), tail)
-        else optionErrorReporter("-repl")
+      case "-repl" :: model :: tactic_and_tail =>
+        def oneArg() = {
+          if (model.nonEmpty  && !model.toString.startsWith("-"))
+            nextOption(map ++ Map('mode -> "repl", 'model -> model), tactic_and_tail)
+          else optionErrorReporter("-repl")
+        }
+        tactic_and_tail match {
+          case Nil => oneArg()
+          case (tactic::tail) =>
+            if(model.nonEmpty  && !model.toString.startsWith("-")
+              && tactic.nonEmpty && !tactic.toString.startsWith("-")) {
+              nextOption(map ++ Map('mode -> "repl", 'model -> model, 'tactic -> tactic), tail)
+            } else oneArg()
+        }
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
       // action options
       case "-out" :: value :: tail =>
@@ -480,20 +491,18 @@ object KeYmaeraX {
 
   def repl(options: OptionMap) = {
     require(options.contains('model), usage)
-    require(options.contains('tactic), usage)
     val modelFileNameDotKyx = options('model).toString
-    val tacticFileNameDotKyt = options('tactic).toString
+    val tacticFileNameDotKyt = options.get('tactic).map(_.toString)
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
-    assert(tacticFileNameDotKyt.endsWith(".kyt"),
-      "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
+    tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
     val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
-    val tacticInput = scala.io.Source.fromFile(tacticFileNameDotKyt).mkString
+    val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
     val inputFormula:Formula = KeYmaeraXProblemParser(modelInput) match {
       case f:Formula => f
       case _ => ???
     }
-    val initTactic:BelleExpr = BelleParser(tacticInput)
+    val initTactic:Option[BelleExpr] = tacticInput.map(tac => BelleParser(tac))
     new BelleREPL(inputFormula, initTactic, tacticInput).run()
   }
 

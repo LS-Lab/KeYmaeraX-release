@@ -16,7 +16,7 @@ import scala.util.Try
   *
   * @TODO Make input tactic optional
   */
-class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:String){
+class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaultOutput:Option[String]){
   private final val DEFAULT_NSTEPS:Int = 10
   private abstract class Command
   private case class Quit(filename:String) extends Command
@@ -38,8 +38,17 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
 
   val initProvable = Provable.startProof(concl)
   /* All belle exprs run so far and snapshots of proof state before each tactic was run */
-  var hist:List[(Provable, BelleExpr)] = List((initProvable, initTactic))
-  var state:Provable = interpret(initTactic, initProvable).underlyingProvable
+  var hist:List[(Provable, BelleExpr)] =
+    initTactic match {
+      case None => Nil
+      case Some(e) => List((initProvable, e))
+    }
+
+  var state:Provable =
+    initTactic match {
+      case None => initProvable
+      case Some(e) => interpret(e, initProvable).underlyingProvable
+    }
 
   def ignore[A](a:Any,b:A):A = b
 
@@ -53,10 +62,15 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
     Console.println(PrettyPrinter(concl))
     Console.println("The following tactic proves the formula:")
     Console.println(fullTactic)
-    Console.println("Please enter a filename in which to save the resulting tactic (default: overwrite input file " + defaultOutput + "):")
-    val out = scala.io.StdIn.readLine()
-    if (out == "") defaultOutput else out
-  }
+    defaultOutput match {
+      case None =>
+        Console.println("Please enter a filename in which to save the resulting tactic:")
+        scala.io.StdIn.readLine()
+      case Some(default) =>
+        Console.println("Please enter a filename in which to save the resulting tactic (default: overwrite input file " + defaultOutput + "):")
+        val out = scala.io.StdIn.readLine()
+        if (out == "") default else out
+    }}
 
   def saveTo(filename:String):Unit = {
     val pw = new PrintWriter(filename)
@@ -170,13 +184,16 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
     }
   }
 
+  def printState(pr:Provable):Unit = {
+    Console.println("Proof state:")
+    Console.println(state.prettyString)
+    Console.print(">")
+  }
+
   def run():Unit = {
     var line:String = null
     Console.println("Bellerophon REPL started. Type ? for usage info")
-    Console.println("Initial proof state:")
-    Console.println(state.prettyString)
-    Console.print(">")
-    while (ignore(line = scala.io.StdIn.readLine(),  line != null)) {
+    while (ignore(ignore(printState(state), line = scala.io.StdIn.readLine()),  line != null)) {
       breakable {
         val parsed =
           try { parse(line) }
@@ -198,11 +215,6 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
           }
         if (done)
           return
-        else {
-          Console.println("Current proof state:")
-          Console.println(state.prettyString)
-          Console.print(">")
-        }
       }
     }
   }
