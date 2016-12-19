@@ -24,6 +24,9 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
   private case class Usage() extends Command
   private case class Head(n:Int, verbose:Boolean) extends Command
   private case class Tail(n:Int, verbose:Boolean) extends Command
+  private case class PrintTactic() extends Command
+  private case class RewindTo(n:Int) extends Command
+  private case class RewindBy(n:Int) extends Command
 
   private class REPLParseException(err:String) extends Exception
 
@@ -71,7 +74,17 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
         Console.println(pr.prettyString)
     }
   }
-
+  def rewindby(n:Int):Boolean = {
+    if (n <= 0)
+      false
+    else {
+      val hds = hist.take(n)
+      val tls = hist.drop(n)
+      state = hds.last._1
+      hist = tls
+      false
+    }
+  }
   def interp(cmd:Command):Boolean = {
     cmd match {
       case Quit(filename) =>
@@ -100,13 +113,24 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
         Console.println("Type 'quit' to save current progress and quit")
         Console.println("Type 'head [n] [-v]' to view first n steps (default: " + DEFAULT_NSTEPS + ")")
         Console.println("Type 'tail [n] [-v]' to view last n steps (default: " + DEFAULT_NSTEPS + ")")
+        Console.println("Type 'tactic' to view a tactic for the proof so far")
+        Console.println("Type 'rewindBy n' or 'rb n' to rewind by n steps")
+        Console.println("Type 'rewindTo n' or 'rt n' to rewind to step n")
         Console.println("Anything else will be interpreted as a Bellerophon tactic")
         false
+      case PrintTactic() =>
+        Console.println("Current tactic:")
+        Console.println(fullTactic)
+        false
+      case RewindBy(n) =>
+        rewindby(n)
+      case RewindTo(n) =>
+        rewindby(hist.length - n)
     }
   }
 
   private def parse(str:String):Command = {
-    val split = str.split(" ")
+    val split =  str.split(" ").map(_.toLowerCase)
     if(str.startsWith("quit")) {
       if(split.length <= 1 || !split(1).endsWith(".kyt"))
         throw new REPLParseException ("Quit command must specify .kyt file to save tactic in")
@@ -123,14 +147,24 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
           maybeInt.get
       Head(nsteps, verbose)
     } else if (str.startsWith("tail")) {
-      val maybeInt = Try (split(1).toInt).toOption
       val verbose = split.contains("-v") || split.contains("--verbose")
       val nsteps =
-        if (split.length <= 1 || maybeInt.isEmpty)
+        if (split.length <= 1 || Try (split(1).toInt).toOption.isEmpty) {
           DEFAULT_NSTEPS
-        else
-          maybeInt.get
+        } else {
+          Try(split(1).toInt).toOption.get
+        }
       Tail(nsteps, verbose)
+    } else if (str.startsWith("tactic")) {
+      PrintTactic()
+    } else if (str.startsWith("rb") || str.startsWith("rewindby")) {
+      if(split.length <= 1 || Try (split(1).toInt).toOption.isEmpty)
+        throw new REPLParseException ("rewindBy command must take integer argument")
+      RewindBy(Try (split(1).toInt).toOption.get)
+    } else if (str.startsWith("rt") || str.startsWith("rewindto")) {
+      if(split.length <= 1 || Try (split(1).toInt).toOption.isEmpty)
+        throw new REPLParseException ("rewindTo command must take integer argument")
+      RewindTo(Try (split(1).toInt).toOption.get)
     } else {
       Tactic(BelleParser(str))
     }
@@ -141,6 +175,7 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
     Console.println("Bellerophon REPL started. Type ? for usage info")
     Console.println("Initial proof state:")
     Console.println(state.prettyString)
+    Console.print(">")
     while (ignore(line = scala.io.StdIn.readLine(),  line != null)) {
       breakable {
         val parsed =
@@ -166,6 +201,7 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
         else {
           Console.println("Current proof state:")
           Console.println(state.prettyString)
+          Console.print(">")
         }
       }
     }
