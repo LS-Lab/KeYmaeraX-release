@@ -4,6 +4,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.mxdata = {
     modelid: modelid,
     monitorkind: 'controller',
+    monitorShape: 'boolean',
     monitor: undefined,
     additionalMonitorVars: [],
     mandatoryMonitorVars: []
@@ -17,7 +18,8 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.modelplex = function() {
     spinnerService.show('modelplexExecutionSpinner')
     $http({method: 'GET',
-           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" + $scope.mxdata.monitorkind + "/kym",
+           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
+                $scope.mxdata.monitorkind + "/" + $scope.mxdata.monitorShape + "/kym",
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
         $scope.mxdata.monitor = response.data.monitor;

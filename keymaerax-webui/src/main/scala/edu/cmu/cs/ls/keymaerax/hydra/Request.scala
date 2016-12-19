@@ -584,8 +584,9 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   }
 }
 
-class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
-  def resultingResponses() = {
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, monitorShape: String,
+                       conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
+  def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser(model.keyFile)
     val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
@@ -603,9 +604,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
-    if (monitorCond.subgoals.size == 1) conditionKind match {
-      case "kym" => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
-      case "c" => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+    if (monitorCond.subgoals.size == 1) (conditionKind, monitorShape) match {
+      case ("kym", "boolean") => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+      case ("kym", "metric") => new ModelPlexResponse(model, ModelPlex.toMetric(monitorCond.subgoals.head.toFormula)) :: Nil
+      case ("c", "boolean") => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
     }
     else new ErrorResponse("ModelPlex failed") :: Nil
   }

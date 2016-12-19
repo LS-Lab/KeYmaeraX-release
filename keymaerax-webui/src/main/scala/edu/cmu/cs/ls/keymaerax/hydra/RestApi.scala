@@ -200,7 +200,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val modelplex = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment) { (modelId, monitorKind, conditionKind) => pathEnd {
+  val modelplex = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment / Segment) { (modelId, monitorKind, monitorShape, conditionKind) => pathEnd {
     get {
       parameters('vars.as[String] ?) { vars => {
         val theVars: List[String] = vars match {
@@ -209,7 +209,7 @@ trait RestApi extends HttpService with SLF4JLogging {
           }
           case None => List.empty
         }
-        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, conditionKind, theVars)
+        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, monitorShape, conditionKind, theVars)
         completeRequest(r, t)
     }}}
   }}}
