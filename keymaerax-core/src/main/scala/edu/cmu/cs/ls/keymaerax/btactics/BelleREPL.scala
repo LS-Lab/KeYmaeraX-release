@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import scala.util.control.Breaks._
 
 import scala.util.Try
 
@@ -95,10 +96,10 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
         printSteps("First " + n + " steps:", hist.reverse.take(n), verbose)
         false
       case Usage() =>
-        Console.println("Type ? to view this help")
-        Console.println("Type quit to save current progress and quit")
-        Console.println("Type head [n] [-v] to view first n steps (default: " + DEFAULT_NSTEPS + ")")
-        Console.println("Type tail [n] [-v] to view last n steps (default: " + DEFAULT_NSTEPS + ")")
+        Console.println("Type '?' to view this help")
+        Console.println("Type 'quit' to save current progress and quit")
+        Console.println("Type 'head [n] [-v]' to view first n steps (default: " + DEFAULT_NSTEPS + ")")
+        Console.println("Type 'tail [n] [-v]' to view last n steps (default: " + DEFAULT_NSTEPS + ")")
         Console.println("Anything else will be interpreted as a Bellerophon tactic")
         false
     }
@@ -141,11 +142,31 @@ class BelleREPL (val concl:Formula, val initTactic:BelleExpr, val defaultOutput:
     Console.println("Initial proof state:")
     Console.println(state.prettyString)
     while (ignore(line = scala.io.StdIn.readLine(),  line != null)) {
-      if (interp(parse(line)))
-        return
-      else {
-        Console.println("Current proof state:")
-        Console.println(state.prettyString)
+      breakable {
+        val parsed =
+          try { parse(line) }
+          catch {
+            case e:Exception =>
+              Console.println("Exception while parsing following line:")
+              Console.println(line)
+              Console.println("Exception: " + e)
+              break()
+          }
+        val done =
+          try { interp(parsed) }
+          catch {
+            case e:Exception =>
+              Console.println("Exception while executing following line:")
+              Console.println(parsed)
+              Console.println("Exception: " + e)
+              break()
+          }
+        if (done)
+          return
+        else {
+          Console.println("Current proof state:")
+          Console.println(state.prettyString)
+        }
       }
     }
   }
