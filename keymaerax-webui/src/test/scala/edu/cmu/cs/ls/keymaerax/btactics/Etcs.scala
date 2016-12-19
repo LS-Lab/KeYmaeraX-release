@@ -195,11 +195,13 @@ class Etcs extends TacticTestBase {
 
     val ts = new TestSynthesis(tool)
     // search for sunshine test case values (initial+expected)
-    val testConfig = ts.synthesizeTestConfig(fml, 1, Some(20))
-    testConfig.keys.map({case v: Variable => v case FuncOf(fn, _) => fn}) should contain theSameElementsAs StaticSemantics.symbols(fml)
+    val testConfig = ts.synthesizeTestConfig(fml, 2, Some(20))
+    testConfig should have size 2
+    testConfig.foreach(_.keys.map({case v: Variable => v case FuncOf(fn, _) => fn})
+      should contain theSameElementsAs StaticSemantics.symbols(fml))
 
     // compute safety margin of test case
-    val safetyMargin = ts.synthesizeSafetyMarginCheck(fml, testConfig)
+    val safetyMargin = ts.synthesizeSafetyMarginCheck(fml, testConfig.head)
     safetyMargin shouldBe "0".asTerm //@note first findInstance result is usually exactly at the boundary
   }
 

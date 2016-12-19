@@ -20,17 +20,19 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematicaBridge[KExpr](mathematicaTool.link, CEXK2MConverter, CEXM2KConverter) {
 
   /** Synthesize test configurations of both initial values and expected outcomes satisfying formula `fml`. */
-  def synthesizeTestConfig(fml: Formula, amount: Int = 1, timeout: Option[Int] = None): Map[Term, Term] = {
+  def synthesizeTestConfig(fml: Formula, amount: Int = 1, timeout: Option[Int] = None): List[Map[Term, Term]] = {
     val cmd = findInstance(fml, amount, timeout)
     println("Execute in Mathematica to search for sunshine test case values (initial+expected): " + cmd)
-    //@todo what happens with more than 1 findInstance?
+
+    def toConfigMap(fml: Formula): Map[Term, Term] = FormulaTools.conjuncts(fml).map({
+      case Equal(name: Variable, value) => name -> value
+      //case Equal(name: DifferentialSymbol, value) => name -> value
+      case Equal(fn: FuncOf, value) => fn -> value
+    }).toMap
+
     run(cmd) match {
-      case (_, config: Formula) =>
-          FormulaTools.conjuncts(config).map({
-            case Equal(name: Variable, value) => name -> value
-            //case Equal(name: DifferentialSymbol, value) => name -> value
-            case Equal(fn: FuncOf, value) => fn -> value
-          }).toMap
+      case (_, fml: And) => toConfigMap(fml) :: Nil
+      case (_, fml: Or) => FormulaTools.disjuncts(fml).map(toConfigMap)
     }
   }
 
