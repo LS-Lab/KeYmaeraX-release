@@ -221,6 +221,18 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val testSynthesis = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment ) { (modelId, monitorKind, amount, timeout) => pathEnd {
+    get {
+      parameters('kinds.as[String] ?) { kinds => {
+        val theKinds: Map[String,Boolean] = kinds match {
+          case Some(v) => v.parseJson.asJsObject.fields.map({case (k, JsBoolean(v)) => k -> v})
+        }
+      val to = timeout match { case "0" => None case s => Some(Integer.parseInt(s)) }
+      val r = new TestSynthesisRequest(database, userId, modelId, monitorKind, theKinds, Integer.parseInt(amount), to)
+      completeRequest(r, t)
+    }}}
+  }}}
+
   //Because apparently FTP > modern web.
   val userModel2 = (t : SessionToken) => userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
   {pathEnd {
@@ -836,6 +848,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     modelplexMandatoryVars::
     exportSequent         ::
     exportFormula         ::
+    testSynthesis         ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

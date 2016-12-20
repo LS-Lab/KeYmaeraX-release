@@ -139,6 +139,18 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     })
   }
 
+  $scope.testsynthesis = function(modelid) {
+      var modalInstance = $uibModal.open({
+        templateUrl: 'templates/testsynthesis.html',
+        controller: 'TestSynthCtrl',
+        size: 'lg',
+        resolve: {
+          userid: function() { return $cookies.get('userId'); },
+          modelid: function() { return modelid; }
+        }
+      })
+    }
+
   $scope.$watch('models',
       function (newModels) { if (newModels) Models.setModels(newModels); }
   );

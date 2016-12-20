@@ -171,6 +171,42 @@ class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
   )
 }
 
+class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
+                           //@todo class: List[(SeriesName, List[(Var->Val, SafetyMargin, Variance)])]
+                            testCases: List[(String, List[(Map[Term, Term], Number, Number)])]) extends Response {
+  private val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(metric))
+  private val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(metric))
+  private val fmlPlainString = JsString(KeYmaeraXPrettyPrinter(metric))
+
+  private val minRadius = 5  // minimum radius of bubbles even when all pre are equal to their post
+  private val maxRadius = 30 // maximum radius of bubbles even when wildly different values
+
+  private val Number(maxVariance) = testCases.flatMap(_._2).maxBy(_._3.value)._3
+
+  private def radius(n: BigDecimal): BigDecimal = minRadius + (maxRadius-minRadius)*(n/maxVariance)
+
+  private def scatterData(tc: List[(Map[Term, Term], Number, Number)]) = JsArray(tc.zipWithIndex.map(
+      { case ((_, Number(safetyMargin), Number(variance)), idx) => JsObject(
+    "x" -> JsNumber(idx),
+    "y" -> JsNumber(safetyMargin),
+    "r" -> JsNumber(radius(variance))
+  ) }):_*)
+
+  def getJson = JsObject(
+    "modelid" -> JsString(model.modelId.toString),
+    "metric" -> JsObject(
+      "html" -> fmlHtml,
+      "string" -> fmlString,
+      "plainString" -> fmlPlainString
+    ),
+    "plot" -> JsObject(
+      "data" -> JsArray(testCases.map({ case (_, tc) => scatterData(tc) }):_*),
+      "series" -> JsArray(testCases.map({ case (name, _) => JsString(name) }):_*),
+      "labels" -> JsArray(JsString("Case"), JsString("Safety Margin"), JsString("Variance"))
+    )
+  )
+}
+
 class ModelPlexCCodeResponse(model: ModelPOJO, monitor: Formula) extends Response {
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
