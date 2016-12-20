@@ -70,7 +70,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
   private final val DEFAULT_NSTEPS:Int = 10
   private abstract class Command
   private case class Quit(filename:String, sname:Option[String]) extends Command
-  private case class Tactic(e:BelleExpr, source:String) extends Command
+  private case class Tactic( source:String) extends Command
   private case class Usage() extends Command
   private case class Head(n:Int, verbose:Boolean) extends Command
   private case class Tail(n:Int, verbose:Boolean) extends Command
@@ -89,30 +89,27 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
 
   val initProvable = Provable.startProof(concl)
   /* All belle exprs run so far and snapshots of proof state before each tactic was run */
-  var hist:List[(Provable, BelleExpr, String)] =
+  var hist:List[(Provable, String)] =
     initTactic match {
       case None => Nil
-      case Some(e) => List((initProvable, Eval.tactic(e), e))
-    }
-
-  var state:Provable =
-    initTactic match {
-      case None => initProvable
-      case Some(e) => interpret(Eval.tactic(e), initProvable).underlyingProvable
+      case Some(e) => List((initProvable, e))
     }
 
   var scalaState:String = initScala.getOrElse("")
-  Eval(scalaState)
+  var state:Provable =
+    initTactic match {
+      case None => initProvable
+      case Some(e) => interpret(Eval.tactic(scalaState + e), initProvable).underlyingProvable
+    }
 
   def ignore[A](a:Any,b:A):A = b
 
   def fullTactic:String = {
-    val tac:BelleExpr = hist.map(_._2).foldLeft(TactixLibrary.nil)((acc,e) => e&acc)
-    BellePrettyPrinter(tac)
+    hist.map(_._2).foldLeft("nil")((acc,e) => e + " &\n " + acc)
   }
 
   def fullScala:String = {
-    scalaState.reverse.mkString("\n\n")
+    scalaState
   }
 
   def acquireOutputFile:(String,Option[String]) = {
@@ -154,10 +151,10 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
       spw.close()})
   }
 
-  def printSteps(msg:String, steps:List[(Provable,BelleExpr,String)], verbose:Boolean):Unit = {
+  def printSteps(msg:String, steps:List[(Provable,String)], verbose:Boolean):Unit = {
     Console.println(msg)
-    val iSteps:List[((Provable,BelleExpr,String),Int)] = steps.zipWithIndex
-    iSteps.foreach { case ((pr, _, e), i) =>
+    val iSteps:List[((Provable,String),Int)] = steps.zipWithIndex
+    iSteps.foreach { case ((pr, e), i) =>
       val displayI = i + 1
       Console.println(displayI + " " + e)
       if(verbose)
@@ -175,23 +172,29 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
       false
     }
   }
+
+  def saveIfDone(pr:Provable):Boolean = {
+    if(pr.isProved) {
+      val (kout,sout) = acquireOutputFile
+      saveTo(kout,sout)
+      true
+    }
+    else {
+      false
+    }
+  }
+
   def interp(cmd:Command):Boolean = {
     cmd match {
       case Quit(filename, sname) =>
         saveTo(filename, sname)
         true
-      case Tactic(e, s) =>
+      case Tactic(s) =>
+        val e = Eval.tactic(scalaState + s)
         val newState = interpret(e, state).underlyingProvable
-        hist = (state, e,s)::hist
+        hist = (state, s)::hist
         state = newState
-        if(newState.isProved) {
-          val (kout,sout) = acquireOutputFile
-          saveTo(kout,sout)
-          true
-        }
-        else {
-          false
-        }
+        saveIfDone(newState)
       case Tail(n, verbose) =>
         printSteps("Most recent " + n + " steps:", hist.take(n), verbose)
         false
@@ -206,6 +209,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
         Console.println("Type 'tactic' to view a tactic for the proof so far")
         Console.println("Type 'rewindBy n' or 'rb n' to rewind by n steps")
         Console.println("Type 'rewindTo n' or 'rt n' to rewind to step n")
+        Console.println("To enter Scala definitions, type 'scala' on a line by itself, then write the definitions, then a blank line when done.)")
         Console.println("Anything else will be interpreted as a Bellerophon tactic")
         false
       case PrintTactic() =>
@@ -217,8 +221,8 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
       case RewindTo(n) =>
         rewindby(hist.length - n)
       case EvalScala(code) =>
-        Eval(code)
-        scalaState = scalaState + "\n" + code
+        scalaState = scalaState  + code + "\n"
+        Eval(scalaState)
         false
 
     }
@@ -262,8 +266,16 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
       if(split.length <= 1 || Try (split(1).toInt).toOption.isEmpty)
         throw new REPLParseException ("rewindTo command must take integer argument")
       RewindTo(Try (split(1).toInt).toOption.get)
+    } else if(str.startsWith("scala")) {
+      var allText = ""
+      var nextLine = ""
+      do {
+        nextLine = scala.io.StdIn.readLine()
+        allText = allText + nextLine
+      } while(nextLine != "")
+      EvalScala(allText)
     } else {
-      Tactic(BelleParser(str),str)
+      Tactic(str)
     }
   }
 
@@ -275,6 +287,10 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
 
   def run():Unit = {
     var line:String = null
+    if(saveIfDone(state)) {
+      Console.println("Initial tactic proved model. Goodbye!")
+      return
+    }
     Console.println("Bellerophon REPL started. Type ? for usage info")
     while (ignore(ignore(printState(state), line = scala.io.StdIn.readLine()),  line != null)) {
       breakable {
