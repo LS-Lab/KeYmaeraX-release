@@ -10,29 +10,17 @@ import scala.util.control.Breaks._
 
 import scala.util.Try
 
+/** Credit for Eval class to https://gist.github.com/xuwei-k/9ba39fe22f120cb098f4 */
 private object Eval {
   import scala.reflect.runtime.currentMirror
   import scala.tools.reflect.ToolBox
   import java.io.File
   import edu.cmu.cs.ls.keymaerax.bellerophon._
-  import edu.cmu.cs.ls.keymaerax.btactics._
   import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-  import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
-  import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
-  /*val _ = DebuggingTactics.done
-  var hasImports:Boolean = false*/
   val toolbox = currentMirror.mkToolBox()
 
   def apply[A](string: String): A = {
-    Console.println(string)
-    nil
-  /*  if(!hasImports) {
-      val itree = toolbox.parse(tacticParsePrefix)
-      toolbox.eval(itree)
-      hasImports = true
-    }*/
-    val tree = toolbox.parse(tacticParsePrefix+string)
+    val tree = toolbox.parse(tacticImports+string)
     toolbox.eval(tree).asInstanceOf[A]
   }
 
@@ -42,7 +30,7 @@ private object Eval {
   def fromFileName[A](file: String): A =
     fromFile(new File(file))
 
-  private val tacticParsePrefix =
+  private val tacticImports =
     """
       |import edu.cmu.cs.ls.keymaerax.bellerophon._;
       |import edu.cmu.cs.ls.keymaerax.btactics._;
@@ -52,10 +40,6 @@ private object Eval {
       |
     """.stripMargin
 
-  private val tacticParseSuffix =
-    """
-
-    """.stripMargin
 
   def tactic(tac:String):BelleExpr = {
     apply[BelleExpr](tac)
