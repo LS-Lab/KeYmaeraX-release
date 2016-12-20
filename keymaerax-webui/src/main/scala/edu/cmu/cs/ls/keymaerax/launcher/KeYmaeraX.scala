@@ -45,7 +45,7 @@ object KeYmaeraX {
       |  -ui [web server options] |
       |  -parse filename.kyx |
       |  -bparse filename.kyt |
-      |  -repl filename.kyx filename.kyt
+      |  -repl filename.kyx [filename.kyt] [scaladefs]
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
@@ -146,20 +146,13 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
-      case "-repl" :: model :: tactic_and_tail =>
-        def oneArg() = {
-          if (model.nonEmpty  && !model.toString.startsWith("-"))
-            nextOption(map ++ Map('mode -> "repl", 'model -> model), tactic_and_tail)
-          else optionErrorReporter("-repl")
-        }
-        tactic_and_tail match {
-          case Nil => oneArg()
-          case (tactic::tail) =>
-            if(model.nonEmpty  && !model.toString.startsWith("-")
-              && tactic.nonEmpty && !tactic.toString.startsWith("-")) {
-              nextOption(map ++ Map('mode -> "repl", 'model -> model, 'tactic -> tactic), tail)
-            } else oneArg()
-        }
+      case "-repl" :: model :: tactic_and_scala_and_tail =>
+        val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
+        val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
+        val newMap = List('tactic, 'scaladefs).zip(posArgs).foldLeft(map){case (acc,(k,v)) => acc ++ Map(k -> v)}
+        if (model.nonEmpty  && !model.toString.startsWith("-"))
+          nextOption(newMap ++ Map('mode -> "repl", 'model -> model), restArgs)
+        else optionErrorReporter("-repl")
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
       // action options
       case "-out" :: value :: tail =>
@@ -493,17 +486,18 @@ object KeYmaeraX {
     require(options.contains('model), usage)
     val modelFileNameDotKyx = options('model).toString
     val tacticFileNameDotKyt = options.get('tactic).map(_.toString)
+    val scaladefsFilename = options.get('scaladefs).map(_.toString)
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
     val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
     val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
+    val defsInput = scaladefsFilename.map(scala.io.Source.fromFile(_).mkString)
     val inputFormula:Formula = KeYmaeraXProblemParser(modelInput) match {
       case f:Formula => f
       case _ => ???
     }
-    val initTactic:Option[BelleExpr] = tacticInput.map(tac => BelleParser(tac))
-    new BelleREPL(inputFormula, initTactic, tacticInput).run()
+    new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
 
   /**

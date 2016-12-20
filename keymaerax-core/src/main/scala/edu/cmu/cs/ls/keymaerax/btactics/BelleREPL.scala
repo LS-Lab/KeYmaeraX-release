@@ -10,23 +10,74 @@ import scala.util.control.Breaks._
 
 import scala.util.Try
 
+private object Eval {
+  import scala.reflect.runtime.currentMirror
+  import scala.tools.reflect.ToolBox
+  import java.io.File
+  import edu.cmu.cs.ls.keymaerax.bellerophon._
+  import edu.cmu.cs.ls.keymaerax.btactics._
+  import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+  import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
+  import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
+  /*val _ = DebuggingTactics.done
+  var hasImports:Boolean = false*/
+  val toolbox = currentMirror.mkToolBox()
+
+  def apply[A](string: String): A = {
+    Console.println(string)
+    nil
+  /*  if(!hasImports) {
+      val itree = toolbox.parse(tacticParsePrefix)
+      toolbox.eval(itree)
+      hasImports = true
+    }*/
+    val tree = toolbox.parse(tacticParsePrefix+string)
+    toolbox.eval(tree).asInstanceOf[A]
+  }
+
+  def fromFile[A](file: File): A =
+    apply(scala.io.Source.fromFile(file).mkString(""))
+
+  def fromFileName[A](file: String): A =
+    fromFile(new File(file))
+
+  private val tacticParsePrefix =
+    """
+      |import edu.cmu.cs.ls.keymaerax.bellerophon._;
+      |import edu.cmu.cs.ls.keymaerax.btactics._;
+      |import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._;
+      |import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._;
+      |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._;
+      |
+    """.stripMargin
+
+  private val tacticParseSuffix =
+    """
+
+    """.stripMargin
+
+  def tactic(tac:String):BelleExpr = {
+    apply[BelleExpr](tac)
+  }
+}
 /**
   * Created by bbohrer on 12/19/16.
   *
-  * @TODO Make input tactic optional
   */
-class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaultOutput:Option[String]){
+class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala:Option[String], val defaultKytOutput:Option[String], val defaultScalaOutput:Option[String]){
+
   private final val DEFAULT_NSTEPS:Int = 10
   private abstract class Command
-  private case class Quit(filename:String) extends Command
-  private case class Tactic(e:BelleExpr) extends Command
+  private case class Quit(filename:String, sname:Option[String]) extends Command
+  private case class Tactic(e:BelleExpr, source:String) extends Command
   private case class Usage() extends Command
   private case class Head(n:Int, verbose:Boolean) extends Command
   private case class Tail(n:Int, verbose:Boolean) extends Command
   private case class PrintTactic() extends Command
   private case class RewindTo(n:Int) extends Command
   private case class RewindBy(n:Int) extends Command
+  private case class EvalScala(code:String) extends Command
 
   private class REPLParseException(err:String) extends Exception
 
@@ -38,17 +89,20 @@ class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaul
 
   val initProvable = Provable.startProof(concl)
   /* All belle exprs run so far and snapshots of proof state before each tactic was run */
-  var hist:List[(Provable, BelleExpr)] =
+  var hist:List[(Provable, BelleExpr, String)] =
     initTactic match {
       case None => Nil
-      case Some(e) => List((initProvable, e))
+      case Some(e) => List((initProvable, Eval.tactic(e), e))
     }
 
   var state:Provable =
     initTactic match {
       case None => initProvable
-      case Some(e) => interpret(e, initProvable).underlyingProvable
+      case Some(e) => interpret(Eval.tactic(e), initProvable).underlyingProvable
     }
+
+  var scalaState:String = initScala.getOrElse("")
+  Eval(scalaState)
 
   def ignore[A](a:Any,b:A):A = b
 
@@ -57,33 +111,55 @@ class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaul
     BellePrettyPrinter(tac)
   }
 
-  def acquireOutputFile:String = {
+  def fullScala:String = {
+    scalaState.reverse.mkString("\n\n")
+  }
+
+  def acquireOutputFile:(String,Option[String]) = {
     Console.println("You have finished proving the formula:")
     Console.println(PrettyPrinter(concl))
     Console.println("The following tactic proves the formula:")
     Console.println(fullTactic)
-    defaultOutput match {
-      case None =>
-        Console.println("Please enter a filename in which to save the resulting tactic:")
-        scala.io.StdIn.readLine()
-      case Some(default) =>
-        Console.println("Please enter a filename in which to save the resulting tactic (default: overwrite input file " + defaultOutput + "):")
-        val out = scala.io.StdIn.readLine()
-        if (out == "") default else out
-    }}
-
-  def saveTo(filename:String):Unit = {
-    val pw = new PrintWriter(filename)
-    pw.write(fullTactic)
-    pw.close()
+    val kytOut =
+      defaultKytOutput match {
+        case None =>
+          Console.println("Please enter a filename in which to save the resulting tactic:")
+          scala.io.StdIn.readLine()
+        case Some(default) =>
+          Console.println("Please enter a filename in which to save the resulting tactic (default: overwrite input file " + defaultKytOutput + "):")
+          val out = scala.io.StdIn.readLine()
+          if (out == "") default else out
+      }
+    val scalaOut:Option[String] =
+      defaultScalaOutput match {
+        case None =>
+          Console.println("Please enter a filename in which to save the associated Scala definitions:")
+          val out = scala.io.StdIn.readLine()
+          if (out == "") defaultScalaOutput else Some(out)
+        case Some(default) =>
+          Console.println("Please enter a filename in which to save the associated Scala definitions (default: overwrite input file " + defaultScalaOutput + "):")
+          val out = scala.io.StdIn.readLine()
+          if (out == "") defaultScalaOutput else Some(out)
+      }
+    (kytOut, scalaOut)
   }
 
-  def printSteps(msg:String, steps:List[(Provable,BelleExpr)], verbose:Boolean):Unit = {
+  def saveTo(kytFilename:String, scalaFilename:Option[String]):Unit = {
+    val kpw = new PrintWriter(kytFilename)
+    kpw.write(fullTactic)
+    kpw.close()
+    scalaFilename.foreach(name => {
+      val spw = new PrintWriter(name)
+      spw.write(fullScala)
+      spw.close()})
+  }
+
+  def printSteps(msg:String, steps:List[(Provable,BelleExpr,String)], verbose:Boolean):Unit = {
     Console.println(msg)
-    val iSteps:List[((Provable,BelleExpr),Int)] = steps.zipWithIndex
-    iSteps.foreach { case ((pr, e), i) =>
+    val iSteps:List[((Provable,BelleExpr,String),Int)] = steps.zipWithIndex
+    iSteps.foreach { case ((pr, _, e), i) =>
       val displayI = i + 1
-      Console.println(displayI + " " + BellePrettyPrinter(e))
+      Console.println(displayI + " " + e)
       if(verbose)
         Console.println(pr.prettyString)
     }
@@ -101,16 +177,16 @@ class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaul
   }
   def interp(cmd:Command):Boolean = {
     cmd match {
-      case Quit(filename) =>
-        saveTo(filename)
+      case Quit(filename, sname) =>
+        saveTo(filename, sname)
         true
-      case Tactic(e) =>
+      case Tactic(e, s) =>
         val newState = interpret(e, state).underlyingProvable
-        hist = (state, e)::hist
+        hist = (state, e,s)::hist
         state = newState
         if(newState.isProved) {
-          val out = acquireOutputFile
-          saveTo(out)
+          val (kout,sout) = acquireOutputFile
+          saveTo(kout,sout)
           true
         }
         else {
@@ -140,6 +216,11 @@ class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaul
         rewindby(n)
       case RewindTo(n) =>
         rewindby(hist.length - n)
+      case EvalScala(code) =>
+        Eval(code)
+        scalaState = scalaState + "\n" + code
+        false
+
     }
   }
 
@@ -148,7 +229,9 @@ class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaul
     if(str.startsWith("quit")) {
       if(split.length <= 1 || !split(1).endsWith(".kyt"))
         throw new REPLParseException ("Quit command must specify .kyt file to save tactic in")
-      Quit(split(1))
+      else if (split.length == 1)
+        Quit(split(1), None)
+      else Quit(split(1), Some(split(2)))
     } else if (str.startsWith("?")) {
       Usage()
     } else if (str.startsWith("head")) {
@@ -180,7 +263,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[BelleExpr], val defaul
         throw new REPLParseException ("rewindTo command must take integer argument")
       RewindTo(Try (split(1).toInt).toOption.get)
     } else {
-      Tactic(BelleParser(str))
+      Tactic(BelleParser(str),str)
     }
   }
 
