@@ -19,7 +19,8 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
   */
 class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematicaBridge[KExpr](mathematicaTool.link, CEXK2MConverter, CEXM2KConverter) {
 
-  /** Synthesize test configurations of both initial values and expected outcomes satisfying formula `fml`. */
+  /** Synthesize test configurations of both initial values and expected outcomes satisfying formula `fml`. The values
+    * are numeric approximations (avoids Mathematica precision limit issues). */
   def synthesizeTestConfig(fml: Formula, amount: Int = 1, timeout: Option[Int] = None): List[Map[Term, Term]] = {
     val cmd = findInstance(fml, amount, timeout)
     println("Execute in Mathematica to search for sunshine test case values (initial+expected): " + cmd)
@@ -52,15 +53,17 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
     }
   }
 
+  private def numeric(e: MExpr): MExpr = new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(e))
+
   /** Uses FindInstance to search for values that satisfy the formula `fml`. `amount` indicates how many sets. */
   private def findInstance(fml: Formula, amount: Int, timeout: Option[Int]): MExpr = {
-    val fi = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+    val fi = numeric(new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(k2m.convert(fml),
         new MExpr(
           MathematicaSymbols.LIST,
           StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).
             toList.sorted.map(s => CEXK2MConverter.convert(s)).toArray),
-        new MExpr(Expr.SYMBOL, "Reals"), k2m(Number(amount))))
+        new MExpr(Expr.SYMBOL, "Reals"), k2m(Number(amount)))))
 
     timeout match {
       case Some(to) => new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(fi, k2m(Number(to))))
