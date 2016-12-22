@@ -41,6 +41,10 @@ object SimplifierV3 {
   private val timesAxs = termAx(Times.apply)
   private val divAxs = termAx(Divide.apply)
   private val powAxs = termAx(Power.apply)
+
+  private val negAx = proveBy( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"))
+
+
   private val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE)
 
   //Dependent term simplification workhorse
@@ -79,6 +83,7 @@ object SimplifierV3 {
     val (rect,recpropt) =
       t match {
         case bop: BinaryCompositeTerm =>
+          //todo: Doesn't work with pairs
           val (lf, lpropt) = termSimp(bop.left, ctx, taxs)
           val (rf, rpropt) = termSimp(bop.right, ctx, taxs)
           val concl = bop.reapply(lf, rf)
@@ -106,6 +111,18 @@ object SimplifierV3 {
               val pr = proveBy(fml, useAt(lem._3, PosInExpr(1 :: Nil))(1) & andR(1) < (by(lpr), by(rpr)))
               (concl, Some((premise, pr)))
           }
+        case Neg(u) =>
+          //todo: It is not sound to go under a differential if there is context (x=0 |-/- x' = 0'
+          //tactic needs to throw away the context if it wants to go under one
+          val (ut,upropt) = termSimp(u,ctx,taxs)
+          val nt = Neg(ut)
+          upropt match {
+            case None => (t,None)
+            case Some((uprem,upr)) =>
+              val fml = Imply(uprem,Equal(t,nt))
+              (nt,Some((uprem,proveBy(fml, useAt(negAx, PosInExpr(1 :: Nil))(1) & by(upr)))))
+          }
+        //todo: Function arguments
         case _ => (t, None)
       }
 
@@ -341,7 +358,29 @@ object SimplifierV3 {
             val pr = proveBy(fml,useAt(lem._3,PosInExpr(1::Nil))(1) & andR(1) <(by(lpr),by(rpr)))
             (concl,Some((premise,pr)))
         }
+      case q:Quantified =>
+        //todo:existential quantifier
+        val (remainingCtx, droppedCtx) = ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
+        val (uf,upropt) = formulaSimp(q.child,remainingCtx,faxs,taxs)
+        val nf = q.reapply(q.vars, uf)
 
+        upropt match {
+          case None => (f,None)
+          case Some((uprem,upr)) =>
+            val premise = q.reapply(q.vars,uprem)
+            val fml = Imply(premise, Equiv(f, nf))
+
+            //This is nasty, there might be a better way to deal with the quantifiers
+            val pr = proveBy(fml, implyR(1) & equivR(1) &
+              OnAll(allR(1) & allL(-1) & allL(-2) & implyRi(AntePos(1),SuccPos(0)) & equivifyR(1)) <(
+                implyRi & by(upr),
+                commuteEquivR(1) & implyRi & by(upr)
+                )
+            )
+
+            (nf,Some((premise,pr)))
+        }
+      //todo: Equiv, Not , and modal
       case _ => (f,None)
     }
 
@@ -367,6 +406,20 @@ object SimplifierV3 {
     }
   }
 
+  def fastCloser(f:Formula): BelleExpr = {
+    f match{
+      case True => closeT
+      case And(l,r) =>
+        andR(1) <( closeT | close | fastCloser(l), closeT | close | fastCloser(r))
+      case Imply(l,r) =>
+        implyR(1) & (andL('L)*) & (allL('L)*) & fastCloser(r)
+      case Forall(vars,f) =>
+        allR('R) &
+        fastCloser(f)
+      case _ => close
+    }
+  }
+
   def simpWithDischarge(ctx:IndexedSeq[Formula],f:Formula,
                         faxs:Formula=>List[ProvableSig],taxs:Term=>List[ProvableSig]) : (Formula,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
@@ -378,7 +431,7 @@ object SimplifierV3 {
       case Some((prem,recpr)) =>
         val pr =
         Some(proveBy( Sequent(ctx,IndexedSeq(Equiv(f,recf))),
-          cut(prem) <( cohide2(-(ctx.length+1),1) & implyRi & by(recpr) , hideR(1) & prop )))
+          cut(prem) <( cohide2(-(ctx.length+1),1) & implyRi & by(recpr) , hideR(1) & fastCloser(prem) )))
         pr
       }
     )
@@ -387,10 +440,36 @@ object SimplifierV3 {
   val defaultFaxs:Formula=>List[ProvableSig] = composeIndex(baseIndex,boolIndex,cmpIndex)
   val defaultTaxs:Term=>List[ProvableSig] = arithBaseIndex
 
+  //Allow the user to directly specify a list of theorems for rewriting
+  private def thWrapper(ths: List[ProvableSig]) : (Formula=>List[ProvableSig],Term=>List[ProvableSig]) = {
+    //Formula rewrites
+    val fths = ths.filter(th =>
+      th.conclusion.succ(0) match{
+        case (Imply(_,Equiv(_,_))) => true
+        case (Equiv(_,_)) => true
+        case _=> false
+      }
+    )
+    //Term rewrites
+    val tths = ths.filter(th =>
+      th.conclusion.succ(0) match{
+        case (Imply(_,Equal(_,_))) => true
+        case (Equal(_,_)) => true
+        case _=> false
+      }
+    )
+    (f => fths,t=>tths)
+  }
+
   //Simplifies a formula including sub-terms occuring in the formula
-  def simpTac(faxs:Formula=>List[ProvableSig]=defaultFaxs,
+  def simpTac(ths:List[ProvableSig]=List(),
+              faxs:Formula=>List[ProvableSig]=defaultFaxs,
               taxs:Term=>List[ProvableSig]=defaultTaxs):DependentPositionTactic = new DependentPositionTactic("simp"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      val (fths,tths) = thWrapper(ths)
+      val augmentFaxs:Formula=>List[ProvableSig] = composeIndex(fths,faxs)
+      val augmentTaxs:Term=>List[ProvableSig] = composeIndex(tths,taxs)
+
       override def computeExpr(sequent: Sequent): BelleExpr = {
         sequent.sub(pos) match
         {
@@ -402,7 +481,7 @@ object SimplifierV3 {
                 if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
                 else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
 
-              val (ff,pr) = simpWithDischarge(ctx,f,faxs,taxs)
+              val (ff,pr) = simpWithDischarge(ctx,f,augmentFaxs,augmentTaxs)
 
               pr match {
                 case None => ident
@@ -426,13 +505,18 @@ object SimplifierV3 {
   }
 
   //Full sequent simplification tactic
-  val fullSimpTac:DependentTactic = new SingleGoalDependentTactic("full simp") {
+  def fullSimpTac(ths:List[ProvableSig]=List(),
+                  faxs:Formula=>List[ProvableSig]=defaultFaxs,
+                  taxs:Term=>List[ProvableSig]=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("full simp") {
+
+    val simps = simpTac(ths,faxs,taxs)
+
     override def computeExpr(seq: Sequent): BelleExpr = {
       val succ =
         (List.range(1,seq.succ.length+1,1).foldRight(ident)
-        ((i:Int,tac:BelleExpr)=> simpTac()(i) & tac))
+        ((i:Int,tac:BelleExpr)=> simps(i) & tac))
       (List.range(-1,-(seq.ante.length+1),-1).foldRight(succ)
-        ((i:Int,tac:BelleExpr)=> simpTac()(i) & tac))
+        ((i:Int,tac:BelleExpr)=> simps(i) & tac))
     }
   }
 
