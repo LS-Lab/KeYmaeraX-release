@@ -208,6 +208,22 @@ object SimplifierV3 {
   proveBy(("(A_() -> (L_() <-> LL_())) & (B_() -> (R_() <-> RR_())) ->" +
     " ( (A_() & (!LL_() -> B_())) -> (L_() | R_() <-> LL_() | RR_()) )").asFormula,prop)
 
+  //Negate
+  private val notAx =
+  proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> (!L_() <-> !LL_()))".asFormula,prop)
+
+  //Equiv
+  //only L changes
+  private val equivAxL =
+  proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> ( (L_() <-> R_()) <-> (LL_() <-> R_())))".asFormula,prop)
+  //only R changes
+  private val equivAxR =
+  proveBy("(B_() -> (R_() <-> RR_())) -> (B_() -> ( (L_() <-> R_()) <-> (L_() <-> RR_())))".asFormula,prop)
+  //both changed
+  private val equivAxLR =
+  proveBy(("(A_() -> (L_() <-> LL_())) & (B_() -> (R_() <-> RR_())) ->" +
+    " ( (A_() & B_()) -> ((L_() <-> R_()) <-> (LL_() <-> RR_())) )").asFormula,prop)
+
   private val equivTrans = proveBy("(P_() -> (F_() <-> FF_())) & (Q_() -> (FF_() <-> FFF_())) -> (P_() & Q_() -> (F_() <-> FFF_())) ".asFormula,prop)
 
   def composeIndex[A<:Expression]( is:(A => List[ProvableSig])*)
@@ -326,6 +342,37 @@ object SimplifierV3 {
             val pr = proveBy(fml,useAt(orAxLR,PosInExpr(1::Nil))(1) & andR(1) <(by(lpr),by(rpr)))
             (concl,Some((premise,pr)))
         }
+      case Not(u) =>
+        val (uf,upropt) = formulaSimp(u,ctx,faxs,taxs)
+        val concl = Not(uf)
+        upropt match {
+          case None => (f,None)
+          case Some((uprem,upr)) =>
+            val fml = Imply(uprem, Equiv(f, concl))
+            val pr = proveBy(fml,useAt(notAx,PosInExpr(1::Nil))(1) & by(upr))
+            (concl,Some((uprem,pr)))
+        }
+      case Equiv(l,r) =>
+        val (lf,lpropt) = formulaSimp(l,ctx,faxs,taxs)
+        val (rf,rpropt) = formulaSimp(r,ctx,faxs,taxs)
+        val concl = Equiv(lf,rf)
+        (lpropt,rpropt) match {
+          case (None,None) => (f,None)
+          case (Some((lprem,lpr)),None) =>
+            val fml = Imply(lprem, Equiv(f, concl))
+            val pr = proveBy(fml,useAt(equivAxL,PosInExpr(1::Nil))(1) & by(lpr))
+            (concl,Some((lprem,pr)))
+          case (None,Some((rprem,rpr))) =>
+            val fml = Imply(rprem , Equiv(f, concl))
+            val pr = proveBy(fml, useAt(equivAxR,PosInExpr(1::Nil))(1) & by(rpr))
+            (concl,Some((rprem,pr)))
+          case (Some((lprem,lpr)),Some((rprem,rpr))) =>
+            val premise = And(lprem,rprem)
+            val fml = Imply(premise , Equiv(f, concl))
+            val pr = proveBy(fml,useAt(equivAxLR,PosInExpr(1::Nil))(1) & andR(1) <(by(lpr),by(rpr)))
+            (concl,Some((premise,pr)))
+        }
+
       case cf:ComparisonFormula =>
         val l = cf.left
         val r = cf.right
@@ -359,7 +406,6 @@ object SimplifierV3 {
             (concl,Some((premise,pr)))
         }
       case q:Quantified =>
-        //todo:existential quantifier
         val (remainingCtx, droppedCtx) = ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
         val (uf,upropt) = formulaSimp(q.child,remainingCtx,faxs,taxs)
         val nf = q.reapply(q.vars, uf)
@@ -367,12 +413,17 @@ object SimplifierV3 {
         upropt match {
           case None => (f,None)
           case Some((uprem,upr)) =>
-            val premise = q.reapply(q.vars,uprem)
+            val premise = Forall(q.vars,uprem) //Implicitly, we are doing a forall quantification over the smaller simps
             val fml = Imply(premise, Equiv(f, nf))
+
+            val seq = q match {
+              case Forall(_,_) => allR(1) & allL(-1) & allL(-2)
+              case Exists(_,_) => existsL(-2) & allL(-1) & existsR(1)
+            }
 
             //This is nasty, there might be a better way to deal with the quantifiers
             val pr = proveBy(fml, implyR(1) & equivR(1) &
-              OnAll(allR(1) & allL(-1) & allL(-2) & implyRi(AntePos(1),SuccPos(0)) & equivifyR(1)) <(
+              OnAll(seq & implyRi(AntePos(1),SuccPos(0)) & equivifyR(1)) <(
                 implyRi & by(upr),
                 commuteEquivR(1) & implyRi & by(upr)
                 )
@@ -380,7 +431,36 @@ object SimplifierV3 {
 
             (nf,Some((premise,pr)))
         }
-      //todo: Equiv, Not , and modal
+
+      case m:Modal =>
+        //todo: This could keep some of the context around, maybe?
+        //val (remainingCtx, droppedCtx) =
+        //  ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(StaticSemantics.boundVars(m).toSet).isEmpty)
+
+        val (uf,upropt) = formulaSimp(m.child,HashSet(),faxs,taxs)
+
+        upropt match {
+          case None =>(f,None)
+          case Some((uprem,upr)) =>
+            //Simplification under modalities is tricky
+            //The premises from the subprovable should be discharged first
+            val concl = Equiv(m.child,uf)
+            // |- p <-> q
+            val upr2 = proveBy(concl, useAt(upr,PosInExpr(1 :: Nil))(1) & fastCloser(uprem))
+            val res = m.reapply(m.program,uf)
+
+            // |- [a]p <-> [a]p
+            val init = DerivedAxioms.equivReflexiveAxiom.fact(
+              USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil))
+
+            // |- [a]p <-> [a]q
+            val pr1 = useFor(upr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1:: 1 :: Nil))(init)
+
+            val pr = proveBy(Imply(True,Equiv(f,res)),implyR(1) & cohideR(1) & by(pr1))
+            (res,Some(True,pr))
+
+        }
+      //Predicates, Differentials
       case _ => (f,None)
     }
 
@@ -407,6 +487,7 @@ object SimplifierV3 {
   }
 
   def fastCloser(f:Formula): BelleExpr = {
+    //todo: auto close for NNF
     f match{
       case True => closeT
       case And(l,r) =>
@@ -419,6 +500,10 @@ object SimplifierV3 {
       case _ => close
     }
   }
+
+//  private def splitAnds(f:Formula) : List[Formula] = {
+//
+//  }
 
   def simpWithDischarge(ctx:IndexedSeq[Formula],f:Formula,
                         faxs:Formula=>List[ProvableSig],taxs:Term=>List[ProvableSig]) : (Formula,Option[ProvableSig]) = {
@@ -534,7 +619,7 @@ object SimplifierV3 {
   private val mulArith = List(qeTermProof("0*F_()","0"), qeTermProof("F_()*0","0"), qeTermProof("1*F_()","F_()"),
     qeTermProof("F_()*1","F_()"), qeTermProof("-1*F_()","-F_()"), qeTermProof("F_()*-1","-F_()"))
   private val plusArith = List(qeTermProof("0+F_()","F_()"), qeTermProof("F_()+0","F_()"))
-  private val minusArith = List(qeTermProof("0-F_()","-F_()"), qeTermProof("F_()-0","F_()"))
+  private val minusArith = List( qeTermProof("F_()-0","F_()"),qeTermProof("0-F_()","-F_()"))
   //This is enabled by dependent rewriting
   private val divArith = List(qeTermProof("0/F_()","0",Some("F_()>0")), qeTermProof("0/F_()","0",Some("F_()<0")))
   private val powArith = List(qeTermProof("F_()^0","1",Some("F_()>0")), qeTermProof("F_()^0","1",Some("F_()<0")),
@@ -558,8 +643,47 @@ object SimplifierV3 {
     }
   }
 
-  /** Formula simplification indices */
+  //This generates theorems on the fly to simplify arithmetic
+  def arithGroundIndex (t:Term) : List[ProvableSig] = {
+    val res = t match {
+      case Plus(n:Number,m:Number) => Some(n.value+m.value)
+      case Minus(n:Number,m:Number) => Some(n.value-m.value)
+      case Times(n:Number,m:Number) => Some(n.value*m.value)
+      case Divide(n:Number,m:Number) => Some(n.value/m.value)
+      case Power(n:Number,m:Number) if m.value.isValidInt => Some(n.value.pow(m.value.toInt))
+      case Neg(n:Number) => Some(-n.value)
+      case _ => None
+    }
+    res match {
+      case None => List()
+      case Some(v) =>
+        val pr = proveBy(Equal(t,Number(v)),?(RCF))
+        if(pr.isProved) List(pr)
+        else List()
+    }
+  }
 
+  def groundTermEval(t:Term) : Option[(Term,ProvableSig)] =
+  {
+    val res = t match {
+      case Plus(n:Number,m:Number) => Some(n.value+m.value)
+      case Minus(n:Number,m:Number) => Some(n.value-m.value)
+      case Times(n:Number,m:Number) => Some(n.value*m.value)
+      case Divide(n:Number,m:Number) => Some(n.value/m.value)
+      case Power(n:Number,m:Number) => Some(n.value.pow(m.value.toInt))
+      case Neg(n:Number) => Some(-n.value)
+      case _ => None
+    }
+    res match {
+      case None => None
+      case Some(v) =>
+        val pr = proveBy(Equal(t,Number(v)),?(RCF))
+        if(pr.isProved) Some(Number(v),pr)
+        else None
+    }
+  }
+
+  /** Formula simplification indices */
   private def propProof(f:String,ff:String,precond:Option[String] = None):ProvableSig =
   {
     precond match {
@@ -682,6 +806,11 @@ object SimplifierV3 {
   val notT = propProof("!true","false")
   val notF = propProof("!false","true")
 
+  val forallTrue = proveBy("(\\forall x_ true)<->true".asFormula, auto )
+  val forallFalse = proveBy("(\\forall x_ false)<->false".asFormula, auto)
+  val existsTrue = proveBy("(\\exists x_ true)<->true".asFormula, auto )
+  val existsFalse = proveBy("(\\exists x_ false)<->false".asFormula, auto )
+
   def boolIndex (f:Formula) : List[ProvableSig] ={
     f match {
       //Note: more pattern matching possible here
@@ -689,7 +818,9 @@ object SimplifierV3 {
       case Imply(l,r) => List(implyT,Timply,implyF,Fimply)
       case Or(l,r) => List(orT,Tor,orF,For)
       case Equiv(l,r) =>  List(equivT,Tequiv,equivF,Fequiv)
-      case Not(u) => List(notT,notF)
+      case Not(u) => List(notT,notF,DerivedAxioms.doubleNegationAxiom.fact)
+      case Forall(_,_) => List(forallTrue,forallFalse)
+      case Exists(_,_) => List(existsTrue,existsFalse)
       case _ => List()
     }
   }

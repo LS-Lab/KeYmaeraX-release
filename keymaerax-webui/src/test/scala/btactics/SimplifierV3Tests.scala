@@ -1,6 +1,5 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -49,9 +48,8 @@ class SimplifierV3Tests extends TacticTestBase {
         IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"dhd-(a*t_+dho)=-(0)".asFormula)
       )
 
-    val zeroSq = proveBy("0^2 = 0".asFormula,TactixLibrary.QE)
-    val zeroNeg = proveBy("-(0) = 0".asFormula,TactixLibrary.QE)
-    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(List(zeroSq,zeroNeg)))
+    //If ground arithmetic simplification is desired, it can be mixed in
+    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(taxs=composeIndex(arithGroundIndex,defaultTaxs)))
     pr2.subgoals should contain only
       Sequent(
         IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y".asFormula,"dhd-(a*t_+dho)=0".asFormula),
@@ -83,12 +81,60 @@ class SimplifierV3Tests extends TacticTestBase {
 
   it should "simplify terms under quantifiers" in withMathematica { qeTool =>
     val fml = "(\\forall t \\forall s \\forall y (t>=0 & 0 <= s & s<=t & y>0-> x=v_0*(0+1*t-0) -> x >= 0/y))".asFormula
-    val ctxt = IndexedSeq("x_0=0".asFormula,"v_0=5".asFormula)
-    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), SimplifierV3.simpTac()(1))
+    val ctxt = IndexedSeq("x_0=0".asFormula, "v_0=5".asFormula)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), SimplifierV3.simpTac()(1))
 
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0=0".asFormula,"v_0=5".asFormula)
+    result.subgoals.head.ante should contain only("x_0=0".asFormula, "v_0=5".asFormula)
     result.subgoals.head.succ should contain only "\\forall t \\forall s \\forall y  (t>=0&0<=s&s<=t&y>0->x=v_0*t->x>=0)".asFormula
+  }
+
+  it should "handle existentials" in withMathematica { qeTool =>
+    val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,TactixLibrary.QE)
+    val fml = "\\exists y (y = 0 -> y-x = 0)".asFormula
+    val ctxt = IndexedSeq("x=0".asFormula)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), SimplifierV3.simpTac(List(custom1))(1) & TactixLibrary.close)
+
+    result shouldBe 'proved
+  }
+
+  it should "handle modalities (poorly) " in withMathematica { qeTool =>
+    //note: k=0 is constant across the diamond, but it is difficult to keep around
+    val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,TactixLibrary.QE)
+    val fml = "<{x_'=v&q(x_)}>(z = 0 -> x_' * y + z >= x' + k) & [{x_'=v&q(x_)}](z = 0 -> x_' * y + z >= x' + k)".asFormula
+    val ctxt = IndexedSeq("k=0".asFormula)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), SimplifierV3.simpTac(List(custom1))(1))
+
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only("k=0".asFormula)
+    result.subgoals.head.succ should contain only "<{x_'=v&q(x_)}>(z=0->x_'*y>=x'+k) & [{x_'=v&q(x_)}](z=0->x_'*y>=x'+k)".asFormula
+  }
+
+  it should "handle equiv and not " in withMathematica { qeTool =>
+    val fml = "!!!!!!!!!!P() <-> !!!!!!!!!!!P()".asFormula
+    val result = proveBy(fml, SimplifierV3.simpTac()(1))
+
+    result.subgoals should have size 1
+    result.subgoals.head.succ should contain only "P() <-> !P()".asFormula
+  }
+
+  it should "avoid unification pitfalls" in withMathematica { qeTool =>
+
+    //The indexes support using Scala externally (outside the unifier) to specify when a rewrite applies
+    //The following rewrite works badly with the first simplifier (because of a bad unification)
+    //In general, a rewrite with repeated symbols should probably be checked externally using this mechanism to be safe
+    val rw = proveBy("F_() - F_() = 0".asFormula, TactixLibrary.QE)
+    val minus = ( (t:Term) =>
+      t match {
+        case Minus(l, r) if l == r => List(rw)
+        case _ => List()
+      }
+    )
+    val fml = "(F_() - G_()) - (H_() - H_()) + (Z_()-Z_()) = F_() - G_()".asFormula
+    val result = proveBy(fml, SimplifierV3.simpTac(taxs = composeIndex(minus,defaultTaxs))(1))
+
+    result.subgoals should have size 1
+    result.subgoals.head.succ should contain only "true".asFormula
   }
 
 }
