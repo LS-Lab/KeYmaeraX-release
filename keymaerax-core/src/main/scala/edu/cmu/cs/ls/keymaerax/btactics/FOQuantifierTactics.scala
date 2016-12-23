@@ -50,7 +50,8 @@ protected object FOQuantifierTactics {
         case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt("all eliminate")(pos)
         case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
-          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
+          (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
           useAt("all instantiate", uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
@@ -88,7 +89,8 @@ protected object FOQuantifierTactics {
         case (ctx, f@Exists(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt("exists eliminate")(pos)
         case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
-          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty =>
+          StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
+          (quantified.isEmpty || vars.contains(quantified.get))  =>
           //@todo assumes any USubstAboveURen
           useAt("exists generalize", PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>

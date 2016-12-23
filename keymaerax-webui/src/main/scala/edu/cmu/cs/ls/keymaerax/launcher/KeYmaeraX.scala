@@ -25,12 +25,14 @@ import scala.util.Random
  * @author Stefan Mitsch
  * @author Andre Platzer
  * @author Ran Ji
+ * @author Brandon Bohrer
  */
 object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information.
+    *
     * @note Formatted to 80 characters width. */
   val usage = "KeYmaera X Prover" + " " + VERSION +
     """
@@ -42,7 +44,8 @@ object KeYmaeraX {
       |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse filename.kyx |
-      |  -bparse filename.kyt
+      |  -bparse filename.kyt |
+      |  -repl filename.kyx [filename.kyt] [scaladefs]
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
@@ -51,6 +54,7 @@ object KeYmaeraX {
       |  -ui        start web user interface with optional arguments
       |  -parse     return error code !=0 if the input problem file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
+      |  -repl      prove interactively from command line
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for arithmetic
@@ -105,6 +109,7 @@ object KeYmaeraX {
             case Some("prove") => prove(options)
             case Some("modelplex") => modelplex(options)
             case Some("codegen") => codegen(options)
+            case Some("repl") => repl(options)
             case Some("ui") => assert(false, "already handled above since no prover needed"); ???
           }
         } finally {
@@ -141,6 +146,13 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
+      case "-repl" :: model :: tactic_and_scala_and_tail =>
+        val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
+        val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
+        val newMap = List('tactic, 'scaladefs).zip(posArgs).foldLeft(map){case (acc,(k,v)) => acc ++ Map(k -> v)}
+        if (model.nonEmpty  && !model.toString.startsWith("-"))
+          nextOption(newMap ++ Map('mode -> "repl", 'model -> model), restArgs)
+        else optionErrorReporter("-repl")
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
       // action options
       case "-out" :: value :: tail =>
@@ -470,7 +482,23 @@ object KeYmaeraX {
     }
   }
 
-
+  def repl(options: OptionMap) = {
+    require(options.contains('model), usage)
+    val modelFileNameDotKyx = options('model).toString
+    val tacticFileNameDotKyt = options.get('tactic).map(_.toString)
+    val scaladefsFilename = options.get('scaladefs).map(_.toString)
+    assert(modelFileNameDotKyx.endsWith(".kyx"),
+      "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
+    tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
+    val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
+    val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
+    val defsInput = scaladefsFilename.map(scala.io.Source.fromFile(_).mkString)
+    val inputFormula:Formula = KeYmaeraXProblemParser(modelInput) match {
+      case f:Formula => f
+      case _ => ???
+    }
+    new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
+  }
 
   /**
    * Code generation
