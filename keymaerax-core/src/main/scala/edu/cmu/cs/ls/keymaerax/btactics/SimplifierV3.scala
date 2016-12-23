@@ -80,7 +80,7 @@ object SimplifierV3 {
 
   //Given prem -> (left = right), returns left = right
   def completeDischarge(prem:Formula, left:Term, right:Term, pr:ProvableSig ) : ProvableSig = {
-    proveBy(Equal(left,right), useAt(pr,PosInExpr(1 :: Nil))(1) & fastCloser(prem))
+    proveBy(Equal(left,right), useAt(pr,PosInExpr(1 :: Nil))(1) & fastCloser(HashSet(),prem))
   }
 
   def termSimp(t:Term, ctx:HashSet[Formula], taxs:Term => List[ProvableSig]) : (Term, Option[(Formula,ProvableSig)]) =
@@ -158,6 +158,7 @@ object SimplifierV3 {
     rw match {
       case None => (rect,recpropt)
       case Some((tt,prem,pr)) =>
+        //println("Simplified ",t," to ",tt)
         recpropt match {
           case None => (tt,Some(prem,pr))
           case Some((prem2,pr2)) =>
@@ -287,15 +288,18 @@ object SimplifierV3 {
     }
   }
 
-  def addCtx(ctx:HashSet[Formula],f:Formula) : HashSet[Formula] =
+  //Returns the number of conjuncts that got split up
+  def addCtx(ctx:HashSet[Formula],f:Formula,ctr:Int = 0) : (Int,HashSet[Formula]) =
   {
     if(ctx.contains(f) | f.equals(True) | f.equals(Not(False))){
-      return ctx
+      return (ctr,ctx)
     }
     f match {
-      case And(l,r) => addCtx(addCtx(ctx,l),r)
+      case And(l,r) =>
+        val (nctr,nctx) = addCtx(ctx,l,ctr+1)
+        addCtx(nctx,r,nctr)
       //todo: is it possible to make Nots smart here?
-      case _ => ctx+f
+      case _ => (ctr,ctx+f)
     }
   }
 
@@ -307,7 +311,7 @@ object SimplifierV3 {
     f match {
       case And(l,r) =>
         val (lf,lpropt) = formulaSimp(l,ctx,faxs,taxs)
-        val (rf,rpropt) = formulaSimp(r,addCtx(ctx,lf),faxs,taxs)
+        val (rf,rpropt) = formulaSimp(r,addCtx(ctx,lf)._2,faxs,taxs)
         val concl = And(lf,rf)
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
@@ -328,7 +332,7 @@ object SimplifierV3 {
         }
       case Imply(l,r) =>
         val (lf,lpropt) = formulaSimp(l,ctx,faxs,taxs)
-        val (rf,rpropt) = formulaSimp(r,addCtx(ctx,lf),faxs,taxs)
+        val (rf,rpropt) = formulaSimp(r,addCtx(ctx,lf)._2,faxs,taxs)
         val concl = Imply(lf,rf)
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
@@ -350,7 +354,7 @@ object SimplifierV3 {
       case Or(l,r) =>
         //todo: Add some rewriting to handle the negation
         val (lf,lpropt) = formulaSimp(l,ctx,faxs,taxs)
-        val (rf,rpropt) = formulaSimp(r,addCtx(ctx,Not(lf)),faxs,taxs)
+        val (rf,rpropt) = formulaSimp(r,addCtx(ctx,Not(lf))._2,faxs,taxs)
         val concl = Or(lf,rf)
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
@@ -473,7 +477,7 @@ object SimplifierV3 {
             //The premises from the subprovable should be discharged first
             val concl = Equiv(m.child,uf)
             // |- p <-> q
-            val upr2 = proveBy(concl, useAt(upr,PosInExpr(1 :: Nil))(1) & fastCloser(uprem))
+            val upr2 = proveBy(concl, useAt(upr,PosInExpr(1 :: Nil))(1) & fastCloser(HashSet(),uprem))
             val res = m.reapply(m.program,uf)
 
             // |- [a]p <-> [a]p
@@ -513,27 +517,23 @@ object SimplifierV3 {
     }
   }
 
-  def fastCloser(f:Formula): BelleExpr = {
+  def fastCloser(hs:HashSet[Formula],f:Formula): BelleExpr = {
     //todo: auto close for NNF
-    //todo: the quantifier handling is slowing things down
-    //also, imply case splits unnecessarily
-    f match{
-      case True => closeT
-      case And(l,r) =>
-        andR(1) <( closeT | close | fastCloser(l), closeT | close | fastCloser(r))
-      case Imply(l,r) =>
-        implyR(1) & (andL('L)*)& fastCloser(r)
-      case Forall(vars,f) =>
-        allR('R) &
-        (allL(vars(0),vars(0))('L)*) & //This isn't right
-        fastCloser(f)
-      case _ => close
+    if (f.equals(True)) closeT
+    else if (hs.contains(f)) closeId
+    else {
+      f match {
+        case And(l, r) =>
+          andR(1) < (fastCloser(hs, l), fastCloser(hs, r))
+        case Imply(l, r) =>
+          val (ctr, newctx) = addCtx(hs, l)
+          implyR(1) & (andL('Llast) * ctr) & fastCloser(newctx, r)
+        case Forall(vars, f) =>
+          allR(1) &
+          fastCloser(hs, f)
+      }
     }
   }
-
-//  private def splitAnds(f:Formula) : List[Formula] = {
-//
-//  }
 
   def simpWithDischarge(ctx:IndexedSeq[Formula],f:Formula,
                         faxs:Formula=>List[ProvableSig],taxs:Term=>List[ProvableSig]) : (Formula,Option[ProvableSig]) = {
@@ -546,7 +546,7 @@ object SimplifierV3 {
       case Some((prem,recpr)) =>
         val pr =
         Some(proveBy( Sequent(ctx,IndexedSeq(Equiv(f,recf))),
-          cut(prem) <( cohide2(-(ctx.length+1),1) & implyRi & by(recpr) , hideR(1) & fastCloser(prem) )))
+          cut(prem) <( cohide2(-(ctx.length+1),1) & implyRi & by(recpr) , hideR(1) & fastCloser(hs,prem) )))
         pr
       }
     )
