@@ -78,6 +78,11 @@ object SimplifierV3 {
     }
   }
 
+  //Given prem -> (left = right), returns left = right
+  def completeDischarge(prem:Formula, left:Term, right:Term, pr:ProvableSig ) : ProvableSig = {
+    proveBy(Equal(left,right), useAt(pr,PosInExpr(1 :: Nil))(1) & fastCloser(prem))
+  }
+
   def termSimp(t:Term, ctx:HashSet[Formula], taxs:Term => List[ProvableSig]) : (Term, Option[(Formula,ProvableSig)]) =
   {
     val (rect,recpropt) =
@@ -121,6 +126,28 @@ object SimplifierV3 {
             case Some((uprem,upr)) =>
               val fml = Imply(uprem,Equal(t,nt))
               (nt,Some((uprem,proveBy(fml, useAt(negAx, PosInExpr(1 :: Nil))(1) & by(upr)))))
+          }
+
+        //todo: this currently throws the context away, but I think it can probably be done better using eqL2R
+        case FuncOf(fn, c) if c != Nothing =>
+          val args = FormulaTools.argumentList(c)
+          val simp = args.map(t=>(t,termSimp(t,ctx,taxs)))
+          if (simp.forall(_._2._2.isEmpty))
+            (t,None)
+          else{
+            val nArgs = simp.map(_._2._1).reduce[Term](Pair)
+            //Completely discharge the contexts used by the subterms
+            val proofs = simp.map( (topt:(Term,(Term,Option[(Formula,ProvableSig)]))) =>
+              topt match {
+                case (t,(tt,None)) => None
+                case (t,(tt,Some((f,pr)))) => Some(completeDischarge(f,t,tt,pr))
+              })
+            val nt = FuncOf(fn, nArgs)
+
+            val pref = if (args.size <= 1) 0::Nil else 0::0::Nil
+            val tactic = proofs.zipWithIndex.map({ case (None,_) => ident case (Some(eqPr), i) => useAt(eqPr)(1, pref ++ PosInExpr.parseInt(i).pos) }).
+              reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflex)
+            (nt,Some(True,proveBy(Imply(True,Equal(t, nt)), implyR(1) & cohideR(1) & tactic)))
           }
         //todo: Function arguments
         case _ => (t, None)
@@ -488,14 +515,17 @@ object SimplifierV3 {
 
   def fastCloser(f:Formula): BelleExpr = {
     //todo: auto close for NNF
+    //todo: the quantifier handling is slowing things down
+    //also, imply case splits unnecessarily
     f match{
       case True => closeT
       case And(l,r) =>
         andR(1) <( closeT | close | fastCloser(l), closeT | close | fastCloser(r))
       case Imply(l,r) =>
-        implyR(1) & (andL('L)*) & (allL('L)*) & fastCloser(r)
+        implyR(1) & (andL('L)*)& fastCloser(r)
       case Forall(vars,f) =>
         allR('R) &
+        (allL(vars(0),vars(0))('L)*) & //This isn't right
         fastCloser(f)
       case _ => close
     }
@@ -556,6 +586,7 @@ object SimplifierV3 {
       val augmentTaxs:Term=>List[ProvableSig] = composeIndex(tths,taxs)
 
       override def computeExpr(sequent: Sequent): BelleExpr = {
+        //println("Simplifying at",pos)
         sequent.sub(pos) match
         {
           case Some(f:Formula) =>

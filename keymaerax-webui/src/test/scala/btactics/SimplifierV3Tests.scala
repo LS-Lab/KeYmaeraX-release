@@ -137,4 +137,43 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "true".asFormula
   }
 
+  it should "simplify ACAS X goal" in withMathematica { qeTool =>
+    val ax = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
+    val minus = ( (t:Term) =>
+      t match {
+        case Minus(Plus(a,b), c) if b == c => List(ax)
+        case _ => List()
+      }
+    )
+    val fml = "(-w*ad/2*max((0,d))^2+dho*max((0,d))=-w*ad/2*max((0,d))^2+dho*max((0,d))&-w*ad*max((0,d))+dho-dho=-w*ad*max((0,d)))".asFormula
+    val result = proveBy(fml, SimplifierV3.simpTac(taxs = composeIndex(minus,defaultTaxs))(1))
+    println(result)
+  }
+
+  it should "simplify sole function arguments" in withMathematica { tool =>
+    val fml = "abs(0*1+0)>=0".asFormula
+    val result = proveBy(fml, SimplifierV3.simpTac()(1))
+
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "abs(0)>=0".asFormula
+  }
+
+
+  it should "simplify multiple function arguments" in withMathematica { tool =>
+    val fml = "max(0*1+0, 0+1*y-0)>=0".asFormula
+    val result = proveBy(fml, SimplifierV3.simpTac()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "max(0,y)>=0".asFormula
+  }
+
+  it should "not choke on noarg functions" in withMathematica { tool =>
+    val fml = "f()>=0".asFormula
+    val result = proveBy(fml, SimplifierV3.simpTac()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "f()>=0".asFormula
+  }
+
 }
