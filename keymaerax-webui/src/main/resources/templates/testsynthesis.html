@@ -9,6 +9,13 @@
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
 </spinner>
+<script type="text/ng-template" id="testCasePopover.html">
+    <canvas class="chart chart-bar"
+            chart-series="['Input', 'Expected Outcome']"
+            chart-data="testCase.seriesData"
+            chart-labels="testCase.labels">
+    </canvas>
+</script>
 <div class="modal-header">
     <div class="row">
         <div class="col-md-11">
@@ -84,7 +91,34 @@
         </span>
         </p>
         <!-- table with test cases -->
-        <!-- ng-if="testsynthdata.testCases.caseInfos !== undefined" -->
+        <div ng-if="testsynthdata.testCases.caseInfos !== undefined" ng-cloak>
+            <uib-tabset active="true">
+                <uib-tab ng-repeat="testSeries in testsynthdata.testCases.caseInfos" heading="{{testSeries.series}}">
+                    <table class="table table-hover table-condensed">
+                        <thead>
+                        <tr>
+                            <td>Name</td>
+                            <td>Safety Margin</td>
+                            <td>Variance</td>
+                            <td>Values</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="testCase in testSeries.data | orderBy:'name'">
+                            <td>Test {{ testCase.name }}</td>
+                            <td>{{ testCase.safetyMargin }}</td>
+                            <td>{{ testCase.variance }}</td>
+                            <!-- popover-trigger="'mouseenter'" popover-title="Values" -->
+                            <td><a uib-popover-template="'testCasePopover.html'">Values</a></td>
+                            <!--<td>-->
+                            <!--<a class="btn btn-default" ng-click="downloadCase(testCase.name)"><i class="fa fa-download"></i></a>-->
+                            <!--</td>-->
+                        </tr>
+                        </tbody>
+                    </table>
+                </uib-tab>
+            </uib-tabset>
+        </div>
     </div>
     <div class="well" ng-if="testsynthdata.testCases.plot !== undefined">
         <p><b>Test Case Analysis</b></p>

@@ -192,6 +192,43 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
     "r" -> JsNumber(radius(variance))
   ) }):_*)
 
+  // pre/post/labels/series
+  private def prePostVals(vals: Map[Term, Term]): (JsArray, JsArray, JsArray, JsArray) = {
+    val (pre, post) = vals.partition({ case (v, _) => v.isInstanceOf[BaseVariable] })
+    val preByPost: Map[Term, Term] = post.map({
+      case (post@FuncOf(Function(name, idx, Unit, Real, _), _), _) if name.endsWith("post") =>
+        post -> Variable(name.substring(0, name.length-"post".length), idx)
+      case (v, _) => v -> v
+    })
+    val preJson = pre.map({ case (v, Number(value)) => JsObject("v" -> JsString(v.prettyString), "val" -> JsNumber(value)) })
+    val postJson = post.map({ case (v, Number(value)) => JsObject("v" -> JsString(preByPost(v).prettyString), "val" -> JsNumber(value)) })
+    val sortedKeys = pre.keys.toList.sortBy(_.prettyString)
+    val labels = sortedKeys.map(v => JsString(v.prettyString))
+    val preSeries = sortedKeys.map(k => pre.get(k) match { case Some(Number(v)) => JsNumber(v) })
+    val postSeries = sortedKeys.map({ case k@BaseVariable(n, i, _) =>
+      post.get(FuncOf(Function(n + "post", i, Unit, Real), Nothing)) match {
+        case Some(Number(v)) => JsNumber(v)
+        case None => pre.get(k) match { case Some(Number(v)) => JsNumber(v) } //@note constants
+      }
+    })
+    (JsArray(preJson.toVector), JsArray(postJson.toVector), JsArray(labels.toVector),
+      JsArray(JsArray(preSeries.toVector), JsArray(postSeries.toVector)))
+  }
+
+  private def seriesData(data: List[(Map[Term, Term], Number, Number)]): JsArray = JsArray(data.zipWithIndex.map({
+    case ((vals: Map[Term, Term], Number(safetyMargin), Number(variance)), idx) =>
+      val (preVals, postVals, labels, series) = prePostVals(vals)
+      JsObject(
+        "name" -> JsString(""+idx),
+        "safetyMargin" -> JsNumber(safetyMargin),
+        "variance" -> JsNumber(variance),
+        "pre" -> preVals,
+        "post" -> postVals,
+        "labels" -> labels,
+        "seriesData" -> series
+      )
+  }):_*)
+
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "metric" -> JsObject(
@@ -203,7 +240,8 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
       "data" -> JsArray(testCases.map({ case (_, tc) => scatterData(tc) }):_*),
       "series" -> JsArray(testCases.map({ case (name, _) => JsString(name) }):_*),
       "labels" -> JsArray(JsString("Case"), JsString("Safety Margin"), JsString("Variance"))
-    )
+    ),
+    "caseInfos" -> JsArray(testCases.map({ case (name, data) => JsObject("series" -> JsString(name), "data" -> seriesData(data)) }):_*)
   )
 }
 

@@ -10,20 +10,7 @@ angular.module('keymaerax.controllers').controller('TestSynthCtrl',
     metric: undefined,
     testCases: {
       plot: undefined,
-      caseInfos: [
-        { name: "Foo",
-          // bar chart comparing pre/post
-          // test case runs? series of test cases that test a simulation run...
-          pre: [ { v: "x", val: 5.13}, { v: "y", val: 1 } ],
-          post: [ { v: "x", val: 6.34}, { v: "y", val: 0.5 } ]
-        },
-        { name: "Bar",
-          // bar chart comparing pre/post
-          // test case runs? series of test cases that test a simulation run...
-          pre: [ { v: "x", val: 4.87}, { v: "y", val: 2 } ],
-          post: [ { v: "x", val: 3.54}, { v: "y", val: 2.3 } ]
-        }
-      ]
+      caseInfos: undefined
     }
   }
 
@@ -36,6 +23,7 @@ angular.module('keymaerax.controllers').controller('TestSynthCtrl',
       .then(function(response) {
         $scope.testsynthdata.testCases.plot = response.data.plot;
         $scope.testsynthdata.testCases.metric = response.data.metric; //.(html|string|plainString)
+        $scope.testsynthdata.testCases.caseInfos = response.data.caseInfos;
       })
       .finally(function() { spinnerService.hide('testSynthesisExecutionSpinner'); });
   }
