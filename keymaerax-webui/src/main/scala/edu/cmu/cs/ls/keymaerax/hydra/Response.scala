@@ -183,7 +183,9 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
 
   private val Number(maxVariance) = testCases.flatMap(_._2).maxBy(_._3.value)._3
 
-  private def radius(n: BigDecimal): BigDecimal = minRadius + (maxRadius-minRadius)*(n/maxVariance)
+  private def radius(n: BigDecimal): BigDecimal =
+    if (maxVariance > 0) minRadius + (maxRadius-minRadius)*(n/maxVariance)
+    else minRadius
 
   private def scatterData(tc: List[(Map[Term, Term], Number, Number)]) = JsArray(tc.zipWithIndex.map(
       { case ((_, Number(safetyMargin), Number(variance)), idx) => JsObject(
