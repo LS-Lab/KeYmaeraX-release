@@ -28,6 +28,27 @@ angular.module('keymaerax.controllers').controller('TestSynthCtrl',
       .finally(function() { spinnerService.hide('testSynthesisExecutionSpinner'); });
   }
 
+  $scope.downloadAllCases = function() {
+    var fileContent = {
+      modelId: $scope.testsynthdata.modelid,
+      metricExpression: $scope.testsynthdata.metric,
+      testData: $scope.testsynthdata.testCases.caseInfos
+    }
+    var data = new Blob([JSON.stringify(fileContent)], { type: 'text/plain;charset=utf-8' });
+    FileSaver.saveAs(data, 'testcases_' + $scope.testsynthdata.modelid + '.kyc');
+  }
+
+  $scope.downloadTestCase = function(kind, testCase) {
+    var fileContent = {
+      modelId: $scope.testsynthdata.modelid,
+      metricExpression: $scope.testsynthdata.metric,
+      kind: kind,
+      testData: testCase
+    }
+    var data = new Blob([JSON.stringify(fileContent)], { type: 'text/plain;charset=utf-8' });
+    FileSaver.saveAs(data, 'testcase_' + $scope.testsynthdata.modelid + '_' + kind + '_' + testCase.name + '.kyc');
+  }
+
   $scope.cancel = function() {
     $uibModalInstance.dismiss('cancel');
   }

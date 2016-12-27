@@ -94,6 +94,7 @@
         <div ng-if="testsynthdata.testCases.caseInfos !== undefined" ng-cloak>
             <uib-tabset active="true">
                 <uib-tab ng-repeat="testSeries in testsynthdata.testCases.caseInfos" heading="{{testSeries.series}}">
+                    <!-- TODO: highlight in bubble chart on hover -->
                     <table class="table table-hover table-condensed">
                         <thead>
                         <tr>
@@ -101,6 +102,7 @@
                             <td>Safety Margin</td>
                             <td>Variance</td>
                             <td>Values</td>
+                            <td></td>
                         </tr>
                         </thead>
                         <tbody>
@@ -110,9 +112,10 @@
                             <td>{{ testCase.variance }}</td>
                             <!-- popover-trigger="'mouseenter'" popover-title="Values" -->
                             <td><a uib-popover-template="'testCasePopover.html'">Values</a></td>
-                            <!--<td>-->
-                            <!--<a class="btn btn-default" ng-click="downloadCase(testCase.name)"><i class="fa fa-download"></i></a>-->
-                            <!--</td>-->
+                            <td>
+                                <a class="btn btn-default" ng-click="downloadTestCase(testSeries.series, testCase)">
+                                    <i class="fa fa-download"></i></a>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -133,5 +136,7 @@
     </div>
 </div>
 <div class="modal-footer">
-
+    <button class="btn btn-default" ng-if="testsynthdata.testCases.caseInfos !== undefined"
+            ng-click="downloadAllCases()"><i class="fa fa-download"></i> Download all</button>
+    </div>
 </div>
