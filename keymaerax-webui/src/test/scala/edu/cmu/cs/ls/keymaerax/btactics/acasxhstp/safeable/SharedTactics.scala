@@ -5,12 +5,16 @@
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, EqualityTactics, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{nil => _, _}
+
+import scala.language.postfixOps
 
 /**
   * Tactics used to prove several lemmas/theorems.
@@ -29,6 +33,30 @@ object SharedTactics {
   def dT(s: => String): BelleExpr = /*Tactics.SubLabelBranch(s) &*/ DebuggingTactics.debug(s, doPrint = DEBUG, _.prettyString)
 
   def cutEZ(c: Formula, t: BelleExpr): BelleExpr = cut(c) & Idioms.<(skip, /* show */ t & done)
+
+  /** Insert a lemma that has no assumptions. */
+  def insertLemma(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = {
+    val lemma = lemmaDB.get(lemmaName).getOrElse(throw new BelleAbort("Incomplete", "Lemma " + lemmaName + " must be proved first"))
+    // when no hyp in lemma
+    cut(lemma.fact.conclusion.succ.head) & Idioms.<(
+      (cutShow, cohideR('Rlast) & by(lemma)),
+      (cutUse, skip)
+    )
+  }
+
+  /** Apply a lemma whose conclusion does not match exactly, but close enough for QE to figure it out */
+  def applyTweakLemma(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = {
+    val lemma = lemmaDB.get(lemmaName).getOrElse(throw new BelleAbort("Incomplete", "Lemma " + lemmaName + " must be proved first"))
+    val formula = lemma.fact.conclusion.succ.head
+    cut(formula) & Idioms.<(
+      (cutShow, cohideR('Rlast, formula) & by(lemma) & done),
+      (cutUse, dT("use Lemma " + formula) &
+        implyL('L, formula) & Idioms.<(
+          ((andR('R) & Idioms.<(close & done, close | skip))*) & done, // checking hyps
+          (close | QE) & done // apply concl
+      ))
+    )
+  }
 
   def allTRoHoL(caseName: String, tInst: String, roInst: String, hoInst: String): BelleExpr =
     dT(caseName) &
@@ -84,10 +112,10 @@ object SharedTactics {
   }
 
   //Exhaustive andL*
-  val eAndL = (andL('L)*)
+  val eAndL: BelleExpr = andL('L)*
 
   //Exhaustive or cases at a position
-  def eOrLPos(i:Int) = ((OnAll(?( orL(i))))*)
+  def eOrLPos(i: Int): BelleExpr = OnAll(?(orL(i)))*
 
   //Cuts a duplicate of an antecedent at the end of the sequent
   def dupL(i:Int) = new SingleGoalDependentTactic("dup L") {
@@ -98,6 +126,7 @@ object SharedTactics {
   }
 
   //Simplified case tactic for binary case on a formula
+  @deprecated("Use Idioms.cases((Case(f), ...), (Case(Not(f)), ...)) instead")
   def bCases(f:Formula) : BelleExpr =
     cutEZ(Or(f,Not(f)),cohide(2) & prop) & orL('Llast)
 
