@@ -1,19 +1,14 @@
 <div class="panel panel-default">
     <!-- Default panel contents -->
-    <div class="panel-heading" ng-if="modelId === undefined" ng-cloak>All Proofs</div>
+    <div class="panel-heading" ng-if="modelId === undefined" ng-cloak><b>All Proofs</b></div>
 
-    <div ng-if="modelId !== undefined" ng-cloak>
-        <div class="panel-heading">Proofs of Model {{modelId}}</div>
-        <div class="panel-body">
-            <div class="row">
-                <!-- upload form -->
-                <div class="col-md-6">
-                    <form novalidate class="simple-form" ng-submit="createProof(modelId, '', '')" ng-controller="ModelProofCreateCtrl">
-                        <div class="input-group">
-                            <input type="submit" value="Create New Proof" class="form-control" />
-                        </div>
-                    </form>
-                </div>
+    <div class="panel-heading" ng-if="modelId !== undefined" ng-cloak>
+        <div class="row">
+            <div class="col-md-6"><b>Proofs of Model {{modelId}}</b></div>
+            <div class="col-md-6">
+                <a class="btn btn-default pull-right" ng-controller="ModelProofCreateCtrl"
+                   ng-click="createProof(model.id, '', '')"
+                   uib-tooltip="Start new proof"><i class="fa fa-gears"></i> Start new proof</a>
             </div>
         </div>
     </div>
