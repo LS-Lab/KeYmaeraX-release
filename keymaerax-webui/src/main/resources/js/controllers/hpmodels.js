@@ -86,7 +86,8 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal, $location, Models) {
+angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
+    $location, FileSaver, Blob, Models) {
   $scope.models = [];
   $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
       $scope.models = data;
@@ -107,6 +108,14 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         }
       });
   };
+
+  $scope.downloadModel = function(modelid) {
+    $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).then(function(response) {
+      var modelName = response.data.name;
+      var fileContent = new Blob([response.data.keyFile], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(fileContent, modelName + '.kyx');
+    });
+  }
 
   $scope.openTactic = function (modelid) {
       var modalInstance = $uibModal.open({
