@@ -89,13 +89,15 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
     $location, FileSaver, Blob, Models) {
   $scope.models = [];
-  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-      $scope.models = data;
+  $scope.userId = $cookies.get('userId');
+
+  $http.get("models/users/" + $scope.userId).then(function(response) {
+      $scope.models = response.data;
   });
 
   $scope.examples = [];
-  $http.get("examplesList/").success(function(data) {
-      $scope.examples = data;
+  $http.get("examplesList/").then(function(response) {
+      $scope.examples = response.data;
   });
 
   $scope.open = function (modelid) {
@@ -110,7 +112,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   };
 
   $scope.downloadModel = function(modelid) {
-    $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).then(function(response) {
+    $http.get("user/" + $scope.userId + "/model/" + modelid).then(function(response) {
       var modelName = response.data.name;
       var fileContent = new Blob([response.data.keyFile], { type: 'text/plain;charset=utf-8' });
       FileSaver.saveAs(fileContent, modelName + '.kyx');
@@ -129,10 +131,9 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   };
 
   $scope.runTactic = function (modelid) {
-    $http.post("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic/run")
-    .success(function(data) {
-        if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Error While Running Tactic")
-        else console.log("Done running tactic")
+    $http.post("user/" + $scope.userId + "/model/" + modelid + "/tactic/run").then(function(response) {
+        if (respnse.data.errorThrown) showCaughtErrorMessage($uibModal, response.data, "Error While Running Tactic");
+        else console.log("Done running tactic");
     });
   }
 
@@ -142,7 +143,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       controller: 'ModelPlexCtrl',
       size: 'lg',
       resolve: {
-        userid: function() { return $cookies.get('userId'); },
+        userid: function() { return $scope.userId; },
         modelid: function() { return modelid; }
       }
     })
@@ -154,7 +155,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         controller: 'TestSynthCtrl',
         size: 'lg',
         resolve: {
-          userid: function() { return $cookies.get('userId'); },
+          userid: function() { return $scope.userId; },
           modelid: function() { return modelid; }
         }
       })
@@ -167,17 +168,17 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 })
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
-  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).success(function(data) {
-      $scope.model = data
+  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).then(function(response) {
+      $scope.model = response.data;
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
 });
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
-  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").success(function(data) {
+  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").then(function(response) {
       $scope.modelId = modelid;
-      $scope.tactic = data
+      $scope.tactic = response.data;
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
