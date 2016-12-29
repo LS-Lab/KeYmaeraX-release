@@ -1350,7 +1350,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) exten
   override def resultingResponses(): List[Response] = {
     val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)))
     val problem = db.getModel(db.getProofInfo(proofId).modelId).keyFile
-    new ExtractProblemSolutionResponse(problem + "\n" + "Solution.\n" + exprText + "\nEnd.") :: Nil
+    new ExtractProblemSolutionResponse(problem + "\n" + "Tactic.\n" + exprText + "\nEnd.") :: Nil
   }
 }
 

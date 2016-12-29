@@ -38,13 +38,14 @@
             <!--<td>{{ proof.modelName }}</td>-->
             <td>{{ proof.date }}</td>
             <!--<td>{{ proof.stepCount }}</td>-->
-            <td><span ng-if="proof.status" class="fa fa-check"> Proved</span>
-                <span ng-if="proof.status === false" class="fa fa-pencil"> In Progress</span>
+            <td><span ng-if="proof.status"><i class="fa fa-check"></i> Proved</span>
+                <span ng-if="proof.status === false"><i class="fa fa-pencil"></i> In Progress</span>
             </td>
             <td>
                 <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
                 <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
+                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (completed proof)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
+                <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download (partial) proof" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>

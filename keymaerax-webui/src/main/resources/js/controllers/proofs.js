@@ -110,6 +110,14 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
     });
   }
 
+  //@todo duplicate with provingawesome.js downloadProofArchive
+  $scope.downloadPartialProof = function(proof) {
+    $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/download").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, proof.name + '.kya');
+    });
+  }
+
   //Load the proof list and emit as a view.
   if ($scope.modelId !== undefined) {
     $http.get('models/users/' + $scope.userId + "/model/" + $scope.modelId + "/proofs").success(function(data) {
