@@ -8,8 +8,9 @@ package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{SimplifierV2, _}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -72,9 +73,6 @@ class AcaxXSafeDelayed extends AcasXBase {
     if (lemmaDB.contains("delay_ucLoLemma"))
       lemmaDB.remove("delay_ucLoLemma")
 
-    val orConv = proveBy("(P_() | Q_()) <-> (!P_() -> Q_())".asFormula, prop)
-    val maxConv = proveBy("!(0<max((0,F_()))) -> max(0,F_()) = 0".asFormula, QE)
-
     val ucLoFormula = Imply(invariant, postcond)
 
     //The main change in this tactic from the no-delay case was the extra quantifiers
@@ -119,12 +117,25 @@ class AcaxXSafeDelayed extends AcasXBase {
 
     val succ = IndexedSeq("rt=rv*t&(0<=t&t < max((0,-t_+d))&ht=-w*ad/2*t^2+(a*t_+dho)*t|(hd=-w*ad/2*max((0,-t_+d))^2+(a*t_+dho)*max((0,-t_+d))&dhd-(a*t_+dho)=-w*ad*max((0,-t_+d)))&(0<=t-max((0,-t_+d))&t-max((0,-t_+d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,-t_+d)))^2+dhd*(t-max((0,-t_+d)))|t-max((0,-t_+d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,-t_+d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs((-rv)*t_+r-rt)>rp|w*(-(a/2*t_^2+dho*t_)+h-ht) < -hp".asFormula)
 
-    //todo: Make it possible to pass this automatically to simplifier
     val rewriteEq = proveBy("F_() - G_() = H_() <-> F_() = H_() + G_()".asFormula, QE)
+    val minusSimp1 = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
+    val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
+    val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,implyR(1) & close)
+
+    val minus = ( (t:Term) =>
+      t match {
+        case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
+        case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
+        case _ => List()
+      }
+    )
+
+    //Common useful rewrites in this tactic (rewriteEq should be applied more judiciously)
+    val fullSimp = SimplifierV3.fullSimpTac(List(custom1),taxs = composeIndex(minus,defaultTaxs,arithGroundIndex))
+    val simp = SimplifierV3.simpTac(List(custom1),taxs = composeIndex(minus,defaultTaxs,arithGroundIndex))
 
     val pr = proveBy(Sequent(antes, succ),
-      implyR(1) &
-      eAndL &
+      implyR('R) & eAndL &
       allL(Variable("t"), "t_+t".asTerm)('L) &
       allL(Variable("rt"), "rv*(t_+t)".asTerm)('L) &
       eAndL &
@@ -138,11 +149,10 @@ class AcaxXSafeDelayed extends AcasXBase {
         <(
           dT("case 1: 0<=t_+t & (t_+t < max(0,d))") &
           allL(Variable("s_"),"t_".asTerm )('L) &
-          SimplifierV2.simpTac(-15) &
           allL(Variable("ht"), "-w*ad/2*(t_+t)^2+dho*(t_+t)".asTerm )('L) &
           allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
           allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
-          SimplifierV2.simpTac(-6) & //Discharge the implication
+          fullSimp &
           dT("pos") &
           orR(1) & orL(-6) <( eqL2R(-16)(1) & cohide2(-6,1) & QE, nil ) &
           orL(-17) <(
@@ -159,7 +169,7 @@ class AcaxXSafeDelayed extends AcasXBase {
             cutEZ("t - max(0,-t_+d) <0".asFormula, cohide2(-18,3) & QE) &
             eAndL &
             hideR(1) &
-            SimplifierV2.simpTac(-19) &
+            simp(-19) &
             eAndL &
             hideAllBut(-23,-16,-10,1) &
             atomicQE
@@ -170,7 +180,7 @@ class AcaxXSafeDelayed extends AcasXBase {
           allL(Variable("ht"), " (w*ar/2 * ((t_+t)-max(0,d))^2)+ (-w*ad*max(0,d)+dho)*((t_+t)-max(0,d)) + (-w*ad/2*max(0,d)^2 + dho * max(0,d))".asTerm )('L) &
           allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
           allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
-          SimplifierV2.simpTac(-6) &
+          simp(-6) &
           dT("after insts") &
           //  contradict the first branch
           orL(-17) <( hideAllBut(-10,-17,-18,1) & QE,nil) &
@@ -185,8 +195,7 @@ class AcaxXSafeDelayed extends AcasXBase {
           <(
             dT("d-t_ <= 0 case") &
             eAndL &
-            //todo: speed up simplifier so this can just be a full simplify
-            SimplifierV2.simpTac(-18) & SimplifierV2.simpTac(-23) & SimplifierV2.simpTac(-24) &
+            fullSimp &
             //hide max_0 = 0
             max('L,"max(0,d)".asTerm) &
             cutEZ("max_1 >= 0".asFormula, hideAllBut(-24,2) & QE) &
@@ -201,58 +210,57 @@ class AcaxXSafeDelayed extends AcasXBase {
               hideL(-20) & max('L,"max(0,w * (dhf -abv1))".asTerm) & dT("maxsplit") & orL(-26)
               <(
                 dT("lt") & hideAllBut(-16,-17,-26,1) & QE , //contra
-                dT("gt") &
-                dupL(-14) &
-                allL(Variable("s_"), "max_1".asTerm )(-14) & SimplifierV2.simpTac(-14) & eAndL &
+                dT("gt") & dupL(-14) &
+                allL(Variable("s_"), "max_1".asTerm )(-14) & simp(-14) & eAndL &
                 implyL(-26) < ( cohide2(-21,2) & QE ,nil) &
                 orL(-21)<(
                   eAndL & dT("d<=0") &
-                  hideL(-23) & SimplifierV2.simpTac(-5) & orL(-4) &
+                  hideL(-23) & simp(-5) & orL(-4) &
                   OnAll (exhEq & ArithmeticSimplification.smartHide & dT("before") & QE)
                   ,
                   dT("0<=d") &
                   bCases("w*a>=ar".asFormula)
                   <(
                     dT("w*a>=ar") &
-                    //todo: Provide as custom rewrite to simplifier?
-                    useAt(rewriteEq)(-20) &
-                    SimplifierV2.simpTac(-20) & exhEq & dT("rewritten") &
+                    SimplifierV3.simpTac(List(rewriteEq))(-20) &
+                    exhEq & dT("rewritten") &
+                    fullSimp &
                     hideL(-20) & hideL(-18) &
                     max('L,"max((0,w*(dhf-(a*t_+dho))))".asTerm) &
                     hideL(-21) &
                     hideL(-18) &
                     hideL(-16) &
                     hideL(-1) &
-                    orL(-19) & OnAll( eAndL &SimplifierV2.simpTac(-16)& dT("here") & orL(-2) ) &
-                    OnAll(exhEq & ArithmeticSimplification.smartHide &
-                      SimplifierV2.simpTac(-2) &
-                      SimplifierV2.simpTac(-8) &
-                      SimplifierV2.simpTac(1) )
+                    orL(-19) & OnAll( eAndL & simp(-16)& dT("here") & orL(-2) ) &
+                    OnAll(exhEq & ArithmeticSimplification.smartHide & fullSimp) & nil
                     <(
                       dT("1") & QE,
                       dT("2") & heuQE,
                       dT("3") & QE,
-                      dT("4") & QE)
+                      dT("4") & QE
+                    )
                     ,
                     dT("!w*a>=ar")  &
-                      allL(Variable("s_"), "t_".asTerm )(-24) &
-                      SimplifierV2.simpTac(-24) &
-                      eAndL &
-                      useAt(rewriteEq)(-20) &
-                      SimplifierV2.simpTac(-20) & exhEq &
-                      dT("rewritten") &
-                      implyL(-25) <(cohide2(-16,2) & QE, nil ) &
-                      SimplifierV2.simpTac(-18) &
-                      dT("cancel impl") &
-                      //todo:smart list hideL that sorts the indices
-                      hideL(-23) &
-                      hideL(-22) &
-                      hideL(-21) &
-                      hideL(-6) &
-                      ArithmeticSimplification.hideFactsAbout("dl") &
-                      max('L,"max((0,w*(dhf-(a*t_+dho))))".asTerm) &
-                      orL(-18) & OnAll( eAndL & SimplifierV2.simpTac(-16)& orL(-2) ) &
-                      OnAll(exhEq & ArithmeticSimplification.smartHide & SimplifierV2.simpTac(1) & QE)
+                    allL(Variable("s_"), "t_".asTerm )(-24) &
+                    simp(-24) &
+                    eAndL &
+                    SimplifierV3.simpTac(List(rewriteEq))(-20) &
+                    exhEq &
+                    dT("rewritten") &
+                    implyL(-25) <(cohide2(-16,2) & QE, nil ) &
+                    simp(-18) &
+                    dT("cancel impl") &
+                    //todo:smart list hideL that sorts the indices
+                    hideL(-23) &
+                    hideL(-22) &
+                    hideL(-21) &
+                    hideL(-6) &
+                    ArithmeticSimplification.hideFactsAbout("dl") &
+                    hideL(-1) &
+                    fullSimp &
+                    max('L,"max((0,w*(dhf-(a*t_+dho))))".asTerm) &
+                    orL(-18) & OnAll( eAndL & simp(-16)& orL(-2) ) &
+                    OnAll(exhEq & ArithmeticSimplification.smartHide & simp(1) & QE)
                   )
                 )
               )
@@ -260,31 +268,25 @@ class AcaxXSafeDelayed extends AcasXBase {
           ,
             dT("other way") &
             allL(Variable("s_"),"t_".asTerm )(-14) &
-            SimplifierV2.simpTac(-14) &
+            simp(-14) &
             cutEZ("0<=d & max(0,d) = d".asFormula, hideAllBut(-20,-13,2) & QE) &
             eAndL &
             exhaustiveEqL2R(true)(-24) &
-            SimplifierV2.simpTac(-5) &
+            simp(-5) &
             hideL(-19) &
             ArithmeticSimplification.smartHide &
             orL(-17) <(
               eAndL &
               dT("left") &
-              useAt(rewriteEq)(-24) &
-              useAt(rewriteEq)(-21) &
+              SimplifierV3.fullSimpTac(List(rewriteEq)) &
               exhEq &
-              SimplifierV2.simpTac(-5) &
-              SimplifierV2.simpTac(1) &
               QE
               ,
               eAndL &
               dT("right") &
               orL(-4) & OnAll(
-              useAt(rewriteEq)(-23) &
-              useAt(rewriteEq)(-21) &
+              SimplifierV3.fullSimpTac(List(rewriteEq)) &
               exhEq &
-              SimplifierV2.simpTac(-3) &
-              SimplifierV2.simpTac(1) &
               QE)
             )
           )
@@ -294,7 +296,7 @@ class AcaxXSafeDelayed extends AcasXBase {
           allL(Variable("ht"), "dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(- w * ad * max(0,d) + dho))))^2/(2*ar) + (-w*ad/2*max(0,d)^2 + dho * max(0,d))".asTerm )('L) &
           allL(Variable("hd"), "-w*ad/2 * max(0,d)^2 + dho*max(0,d)".asTerm )('L) &
           allL(Variable("dhd"), "- w * ad * max(0,d) + dho".asTerm )('L) &
-          SimplifierV2.simpTac(-6) &
+          simp(-6) &
           dT("after insts") &
           //contradict the first branch
           orL(-17) <( hideAllBut(-17,-18,-10,1) & QE, nil) &
@@ -308,13 +310,10 @@ class AcaxXSafeDelayed extends AcasXBase {
           <(
             dT("d-t_ <= 0 case") &
             eAndL &
-            SimplifierV2.simpTac(-20) &
-            SimplifierV2.simpTac(-19) & SimplifierV2.simpTac(-22) & SimplifierV2.simpTac(-23) &
             dupL(-15) &
             allL(Variable("s_"),"t_".asTerm )(-15) &
-            SimplifierV2.simpTac(-15) &
             allL(Variable("s_"),"max(0,d)".asTerm )(-24) &
-            SimplifierV2.simpTac(-24) &
+            fullSimp &
             implyL(-24) <( hideAllBut(-14,-20,2) & QE,nil) &
             eAndL &
             implyL(-26) <( cohide(2) & QE,nil) &
@@ -322,20 +321,18 @@ class AcaxXSafeDelayed extends AcasXBase {
             dT("pos") &
             orL(-27)
             <(
-              useAt(rewriteEq)(-22) &
               eAndL &
+              SimplifierV3.fullSimpTac(List(rewriteEq)) &
               dT("0>=d") &
-              SimplifierV2.simpTac(-6) &
-              hideL(-2) & ArithmeticSimplification.hideFactsAbout("dl") & orL(-3) &
+              hideL(-2) & ArithmeticSimplification.hideFactsAbout("dl") & hideL(-1) & orL(-3) &
               OnAll (exhEq & ArithmeticSimplification.smartHide & dT("before") & heuQE) //Fast
             ,
               dT("0 < d") &
-              useAt(rewriteEq)(-22) &
               orL(-18) //Split on the main prop
               <(
                 dT("0<=t&t < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*t^2+dhd*t branch") &
                 eAndL &
-                useAt(rewriteEq)(-30) &
+                SimplifierV3.fullSimpTac(List(rewriteEq)) &
                 exhEq &
                 hideL(-2) &
                 bCases("w*a>=ar".asFormula)
@@ -355,17 +352,16 @@ class AcaxXSafeDelayed extends AcasXBase {
                   )
                 ,
                   dT("!w*a>=ar") &
-                  SimplifierV2.simpTac(-16) &
-                  SimplifierV2.simpTac(-18) &
                   orL(-3) &
                   OnAll(ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
                 )
               ,
                 dT("t>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*ar)") &
                 eAndL &
-                useAt(rewriteEq)(-27) &
+                SimplifierV3.fullSimpTac(List(rewriteEq)) &
                 exhEq &
                 hideL(-2) &
+                fullSimp &
                 bCases("w*a>=ar".asFormula)
                 <(
                   dT("w*a>=ar") &
@@ -373,33 +369,23 @@ class AcaxXSafeDelayed extends AcasXBase {
                   max('L,"max(0,w*(dhf-(-w*ad*d+dho)))".asTerm) & orL(-20)
                   <(
                     dT("0>=w*(dhf-(-w*ad*d+dho))") &
-                    max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-21) &
+                    max('L,"max(0,w*(dhf-(a*t_+dho)))".asTerm) & orL(-21) &
                     OnAll(orL(-3)) &
                     OnAll (exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
                   ,
                     dT("0<w*(dhf-(-w*ad*d+dho))") &
-                    max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-21) &
+                    max('L,"max(0,w*(dhf-(a*t_+dho)))".asTerm) & orL(-21) &
                     OnAll(orL(-3)) &
                     OnAll (eAndL & exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl"))
-                      <( QE, QE, QE,
-                      SimplifierV2.simpTac(-2) & SimplifierV2.simpTac(1) & SimplifierV2.simpTac(-7) &SimplifierV2.simpTac(-9) &
-                      heuQE)
+                      <( QE, QE, QE, fullSimp & heuQE)
                   )
                 ,
                   dT("!w*a>=ar") &
-                  SimplifierV2.simpTac(-16) &
-                  SimplifierV2.simpTac(-18) &
-                  max('L,"max(0,w*(dhf-(-w*ad*d+dho)))".asTerm) & orL(-22)
-                  <(
-                    dT("0>=w*(dhf-(-w*ad*d+dho))") &
-                    max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-23) &
+                  fullSimp &
+                  max('L,"max(0,w*(dhf-(-w*ad*d+dho)))".asTerm) & orL(-22) & OnAll (
+                    max('L,"max(0,w*(dhf-(a*t_+dho)))".asTerm) & orL(-23) &
                     OnAll(orL(-3)) &
                     OnAll (exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & dT("before") & QE)
-                    ,
-                    dT("0<w*(dhf-(-w*ad*d+dho))") &
-                    max('L,"max(0,w*(dhf-(0+(a*t_+dho))))".asTerm) & orL(-23) &
-                    OnAll(orL(-3)) &
-                    OnAll (eAndL & exhEq & ArithmeticSimplification.smartHide & ArithmeticSimplification.hideFactsAbout("dl") & QE)
                   )
                 )
               )
@@ -407,20 +393,19 @@ class AcaxXSafeDelayed extends AcasXBase {
           ,
             dT("t_ < d") &
             allL(Variable("s_"),"t_".asTerm )(-15) &
-            SimplifierV2.simpTac(-15) &
+            simp(-15) &
             cutEZ("0<=d & max(0,d) = d".asFormula,
               hideAllBut(-20,-14,2) & QE) &
             eAndL &
             exhaustiveEqL2R(true)(-25) &
-            SimplifierV2.simpTac(-6) &
+            simp(-6) &
             hideL(-19) &
             hideL(-2) &
             eAndL &
             orL(-18) <(
               eAndL &
               dT("left") &
-              useAt(rewriteEq)(-25) &
-              useAt(rewriteEq)(-22) &
+              SimplifierV3.fullSimpTac(List(rewriteEq)) &
               exhaustiveEqL2R(true)(-21) &
               orL(-4) &
               OnAll(
@@ -431,8 +416,7 @@ class AcaxXSafeDelayed extends AcasXBase {
               ,
               eAndL &
               dT("right") &
-              useAt(rewriteEq)(-24) &
-              useAt(rewriteEq)(-22) &
+              SimplifierV3.fullSimpTac(List(rewriteEq)) &
               exhaustiveEqL2R(true)(-21) &
               exhaustiveEqL2R(true)(-16) &
               max('L,"max((0,w*(dhf-(-w*ad*d+dho))))".asTerm) &
@@ -489,7 +473,7 @@ class AcaxXSafeDelayed extends AcasXBase {
 
     val safeLemmaTac = dT("lemma") & implyR('R) & eAndL & dT("solving") & diffSolve('R) &
       dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
-      SimplifierV2.simpTac(1) & dT("Simplified using known facts") & (allR('R)*) &
+      SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & (allR('R)*) &
       by(lemmaDB.get("delay_implicitArith").getOrElse(throw new Exception("Lemma delay_implicitArith must be proved first")))
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
@@ -526,10 +510,9 @@ class AcaxXSafeDelayed extends AcasXBase {
           //Splits into G |- [discrete][ODE], then show G |- [discrete] G'  & G' |- [ODE] G
           dT("generalized") <
             (
-              dT("Generalization Holds") & chase('R) & eAndL & SimplifierV2.simpTac('R) & close
+              dT("Generalization Holds") & chase('R) & eAndL & dT("what") & SimplifierV3.simpTac()('R) &  dT("res") &close
               ,
               dT("Generalization Strong Enough") &
-                //EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
                 DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
                 dT("Preparing for delay_safeLoLemma") & (andLi *) & implyRi &
                 dT("status") &
