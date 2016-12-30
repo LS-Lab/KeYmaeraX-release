@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
@@ -497,20 +497,15 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
 
   def resultingResponses() = {
     try {
-      //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
-        case f : Formula => {
+        case _: Formula =>
           if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
             //Nope. Give a good error message.
             new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
-          }
-          else {
-            println(s"${nameOfModel} is unique in: ${db.getModelList(userId).map(_.name).mkString(",")}")
+          } else {
             createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
-            println(s"ID of model ${nameOfModel}: ${createdId}")
             new BooleanResponse(createdId.isDefined) :: Nil
           }
-        }
       }
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
@@ -520,6 +515,26 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getModelId = createdId match {
     case Some(s) => s
     case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
+  }
+}
+
+class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: String) extends UserRequest(userId) {
+  def resultingResponses(): List[Response] = {
+    try {
+      val archiveEntries = KeYmaeraXArchiveParser.parse(kyaFileContents)
+      //@todo checks: fresh names, model created etc.
+      archiveEntries.foreach({ case (name, modelFileContent, _, tactic) =>
+        val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(x => x.toString)
+        tactic match {
+          case Some(t) =>
+            val proofId = db.createProofForModel(Integer.parseInt(modelId.get), name + " proof", "Proof from archive", currentDate())
+            DatabasePopulator.executeTactic(db, modelFileContent, proofId, BellePrettyPrinter(t))
+        }
+      })
+      new BooleanResponse(true) :: Nil
+    } catch {
+      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    }
   }
 }
 
@@ -1349,8 +1364,18 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) exten
 
   override def resultingResponses(): List[Response] = {
     val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)))
-    val problem = db.getModel(db.getProofInfo(proofId).modelId).keyFile
-    new ExtractProblemSolutionResponse(problem + "\n" + "Tactic.\n" + exprText + "\nEnd.") :: Nil
+    val model = db.getModel(db.getProofInfo(proofId).modelId)
+    val archiveContent =
+      s"""ArchiveEntry "${model.name}".
+         #
+         #${model.keyFile}
+         #Tactic.
+         #  $exprText
+         #End.
+         #
+         #End.
+       """.stripMargin('#')
+    new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
 }
 

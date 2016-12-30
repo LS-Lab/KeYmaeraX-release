@@ -26,21 +26,33 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           })
       };
 
-     $scope.addModel = function() {
+     $scope.isKyxFile = function() {
+       return keyFile !== undefined && keyFile.files !== undefined &&
+         keyFile.files.length > 0 && keyFile.files[0].name.endsWith('.kyx');
+     }
+
+     $scope.addModel = function(modelName) {
           var file = keyFile.files[0];
 
           var fr = new FileReader();
           fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
           fr.onload = function(e) {
-            var model = e.target.result;
-            $http.post("user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName, model)
+
+            var fileContent = e.target.result;
+            var url = "user/" + $cookies.get('userId');
+            if (file.name.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
+            else if (file.name.endsWith('.kya')) url = url + "/archiveupload/";
+
+            spinnerService.show('caseStudyImportSpinner');
+
+            $http.post(url, fileContent)
               .then(function(response) {
                 if(!response.data.success) {
                   if(response.data.errorText) {
-                    showMessage($uibModal, "Error Uploading Model", response.data.errorText, "md")
+                    showMessage($uibModal, "Error Uploading File", response.data.errorText, "md")
                   }
                   else {
-                    showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
+                    showMessage($uibModal, "Unknown Error Uploading File", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
                   }
                 }
                 else { //Successfully uploaded model!
@@ -60,10 +72,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                   controller: 'ParseErrorCtrl',
                   size: 'lg',
                   resolve: {
-                    model: function () { return model; },
+                    model: function () { return fileContent; },
                     error: function () { return err.data; }
                 }});
-              });
+              })
+              .finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
           };
 
           fr.readAsText(file);

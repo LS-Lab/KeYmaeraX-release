@@ -242,6 +242,15 @@ trait RestApi extends HttpService with SLF4JLogging {
         completeRequest(request, t)
       }}}}}}}}
 
+  //@note somehow wouldn't match without trailing /
+  val uploadArchive = (t : SessionToken) => path("user" / Segment / "archiveupload" /) { userId => pathEnd {
+    post {
+      entity(as[String]) { contents => {
+        val request = new UploadArchiveRequest(database, userId, contents)
+        completeRequest(request, t)
+      }}}
+  }}
+
   val modelTactic = (t : SessionToken) => path("user" / Segment / "model" / Segment / "tactic") { (userId, modelId) => pathEnd {
     get {
       val request = new GetModelTacticRequest(database, userId, modelId)
@@ -849,6 +858,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     exportSequent         ::
     exportFormula         ::
     testSynthesis         ::
+    uploadArchive         ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
