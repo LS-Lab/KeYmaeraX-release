@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -30,7 +30,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
       "x>y -> x>=y".asFormula,
-      None
+      Nil
     )
   }
 
@@ -40,7 +40,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |ArchiveEntry "Entry 1".
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
-        | Tactic. implyR(1) & QE End.
+        | Tactic "Proof 1". implyR(1) & QE End.
         |End.
       """.stripMargin
     val entries = KeYmaeraXArchiveParser.parse(input)
@@ -50,7 +50,28 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
       "x>y -> x>=y".asFormula,
-      Some(implyR(1) & QE)
+      ("Proof 1", implyR(1) & QE) :: Nil
+    )
+  }
+
+  it should "parse a model with several tactics" in withMathematica { tool =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        | Tactic "Proof 1". implyR(1) & QE End.
+        | Tactic "Proof 2". implyR('R) End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 1
+    entries.head shouldBe (
+      "Entry 1",
+      """ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.""".stripMargin,
+      "x>y -> x>=y".asFormula,
+      ("Proof 1", implyR(1) & QE) :: ("Proof 2", implyR('R)) :: Nil
     )
   }
 
@@ -65,7 +86,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |  Functions. R x(). End.
         |  ProgramVariables R y. End.
         |  Problem. x()>=y -> x()>=y End.
-        |  Tactic. prop End.
+        |  Tactic "Prop Proof". prop End.
         |End.
       """.stripMargin
     val entries = KeYmaeraXArchiveParser.parse(input)
@@ -75,7 +96,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
       "x>y -> x>=y".asFormula,
-      None
+      Nil
     )
     entries.last shouldBe (
       "Entry 2",
@@ -83,7 +104,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |  ProgramVariables R y. End.
         |  Problem. x()>=y -> x()>=y End.""".stripMargin,
       "x()>=y -> x()>=y".asFormula,
-      Some(prop)
+      ("Prop Proof", prop) :: Nil
     )
   }
 

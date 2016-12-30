@@ -525,11 +525,10 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
       //@todo checks: fresh names, model created etc.
       archiveEntries.foreach({ case (name, modelFileContent, _, tactic) =>
         val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(x => x.toString)
-        tactic match {
-          case Some(t) =>
-            val proofId = db.createProofForModel(Integer.parseInt(modelId.get), name + " proof", "Proof from archive", currentDate())
-            DatabasePopulator.executeTactic(db, modelFileContent, proofId, BellePrettyPrinter(t))
-        }
+        tactic.foreach({ case (tname, texpr) =>
+          val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive", currentDate())
+          DatabasePopulator.executeTactic(db, modelFileContent, proofId, BellePrettyPrinter(texpr))
+        })
       })
       new BooleanResponse(true) :: Nil
     } catch {
@@ -1364,12 +1363,14 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) exten
 
   override def resultingResponses(): List[Response] = {
     val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)))
-    val model = db.getModel(db.getProofInfo(proofId).modelId)
+    val proofInfo = db.getProofInfo(proofId)
+    val model = db.getModel(proofInfo.modelId)
     val archiveContent =
       s"""ArchiveEntry "${model.name}".
          #
          #${model.keyFile}
-         #Tactic.
+         #
+         #Tactic "${proofInfo.name}".
          #  $exprText
          #End.
          #

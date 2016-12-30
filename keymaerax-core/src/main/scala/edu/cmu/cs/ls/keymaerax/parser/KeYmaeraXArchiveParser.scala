@@ -19,7 +19,8 @@ import edu.cmu.cs.ls.keymaerax.core.Expression
   *     Functions. ... End.
   *     ProgramVariables. ... End.
   *     Problem. ... End.
-  *     Tactics. ... End.
+  *     Tactic "Proof 1". ... End.
+  *     Tactic "Proof 2". ... End.
   *   End.
   *   ArchiveEntry "Entry 2". ... End.
   * }}}
@@ -31,22 +32,25 @@ object KeYmaeraXArchiveParser {
   private val ARCHIVE_ENTRY_END: String = "ArchiveEntryEnd."
 
   /** Two groups: entry name, model+optional tactic */
-  private val ENTRY_REGEX = "^\"([^\"]*)\"\\.(?s)(.*)".r
+  private val NAME_REGEX = "^\"([^\"]*)\"\\.(?s)(.*)".r
 
-  /** The entry name, kyx file content (model), parsed model, and parsed tactic. */
-  type ArchiveEntry = (String, String, Expression, Option[BelleExpr])
+  /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
+  type ArchiveEntry = (String, String, Expression, List[(String, BelleExpr)])
 
   /** Parses the archive content into archive entries  */
   def parse(archiveContent: String): List[ArchiveEntry] = {
     val entries = archiveContent.trim().split("ArchiveEntry").flatMap({s =>
-      ENTRY_REGEX.findAllMatchIn(s.trim().stripSuffix("End.")).map(
+      NAME_REGEX.findAllMatchIn(s.trim().stripSuffix("End.")).map(
         { m =>
-          val name = m.group(1)
-          val (model: String, tactic: Option[BelleExpr]) = m.group(2).split("Tactic.").toList match {
-            case mt :: Nil => (mt.trim(), None)
-            case mt :: t :: Nil => (mt.trim(), Some(BelleParser(t.trim.stripSuffix("End."))))
+          val modelName = m.group(1)
+          val (model: String, tactics: List[(String, BelleExpr)]) = m.group(2).split("Tactic").toList match {
+            case modelText :: ts => (modelText.trim(), ts.flatMap(tacticText => {
+              NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix("End.")).map({
+                tm => (tm.group(1), BelleParser(tm.group(2)))
+              })
+            }))
           }
-          (name, model, tactic)
+          (modelName, model, tactics)
         })
       })
     entries.map({case (name, modelText, tactic) =>
