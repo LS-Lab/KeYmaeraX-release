@@ -59,7 +59,8 @@ var pollProofStatus = function(proof, userId, http) {
 }
 
 /* Proof list (those of an individual model if the route param modelId is defined, all proofs otherwise) */
-angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($scope, $http, $cookies, $location, $routeParams, $route, FileSaver, Blob) {
+angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
+    $scope, $http, $cookies, $location, $routeParams, $route, FileSaver, Blob, spinnerService) {
   $scope.modelId = $routeParams.modelId;
   $scope.userId = $cookies.get('userId')
 
@@ -116,6 +117,35 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
       FileSaver.saveAs(data, proof.name + '.kya');
     });
+  }
+
+  currentDateString = function() {
+    var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth() + 1; //@note January is 0
+    var yyyy = today.getFullYear();
+
+    if(dd < 10) dd = '0' + dd
+    if(mm < 10) mm='0'+mm
+    return mm + dd + yyyy;
+  }
+
+  $scope.downloadModelProofs = function(modelId) {
+    spinnerService.show('proofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('proofExportSpinner'); });
+  }
+
+  $scope.downloadAllProofs = function() {
+    spinnerService.show('proofExportSpinner');
+    $http.get("/proofs/user/" + $scope.userId + "/downloadAllProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'allproofs_'+ currentDateString() +'.kya');
+    })
+    .finally(function() { spinnerService.hide('proofExportSpinner'); });
   }
 
   //Load the proof list and emit as a view.

@@ -1358,24 +1358,44 @@ class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request
   }
 }
 
-class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) extends Request {
-  private val proofId = Integer.parseInt(proofIdStr)
+object ArchiveEntryPrinter {
+  def tacticEntry(name: String, tactic: String): String =
+    s"""Tactic "$name".
+       #  $tactic
+       #End.
+       """.stripMargin('#')
 
-  override def resultingResponses(): List[Response] = {
-    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)))
-    val proofInfo = db.getProofInfo(proofId)
-    val model = db.getModel(proofInfo.modelId)
-    val archiveContent =
-      s"""ArchiveEntry "${model.name}".
-         #
+  def archiveEntry(model: ModelPOJO, tactics:List[(String, String)]): String =
+    s"""ArchiveEntry "${model.name}".
+       #
          #${model.keyFile}
-         #
-         #Tactic "${proofInfo.name}".
-         #  $exprText
-         #End.
-         #
+       #
+         #${tactics.map(t => tacticEntry(t._1, t._2)).mkString("\n")}
+       #
          #End.
        """.stripMargin('#')
+}
+
+class ExtractProblemSolutionRequest(db: DBAbstraction, proofId: String) extends Request {
+  override def resultingResponses(): List[Response] = {
+    val pid = Integer.parseInt(proofId)
+    val pi = db.getProofInfo(pid)
+    val proofName = pi.name
+    val tactic = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(pid)))
+    val model = db.getModel(pi.modelId)
+    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
+    new ExtractProblemSolutionResponse(archiveContent) :: Nil
+  }
+}
+
+class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int], exportEmptyProof: Boolean) extends Request {
+  override def resultingResponses(): List[Response] = {
+    def modelProofs(modelId: Int): List[(String, String)] = {
+      db.getProofsForModel(modelId).map(p =>
+        p.name -> BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(p.proofId))))
+    }
+    val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
+    val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs)}).mkString("\n\n")
     new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
 }

@@ -1,14 +1,37 @@
+<spinner name="proofExportSpinner" ng-cloak>
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">Exporting archive, please wait...</div>
+</spinner>
 <div class="panel panel-default">
     <!-- Default panel contents -->
-    <div class="panel-heading" ng-if="modelId === undefined" ng-cloak><b>All Proofs</b></div>
+    <div class="panel-heading" ng-if="modelId === undefined" ng-cloak>
+        <div class="row">
+            <div class="col-md-6"><b>All Proofs</b></div>
+            <div class="col-md-6">
+                <a class="btn btn-default pull-right"
+                   ng-click="downloadAllProofs()"
+                   uib-tooltip="Download all proofs"><i class="fa fa-archive"></i> Download all</a>
+            </div>
+        </div>
+    </div>
 
     <div class="panel-heading" ng-if="modelId !== undefined" ng-cloak>
         <div class="row">
             <div class="col-md-6"><b>Proofs of Model {{modelId}}</b></div>
             <div class="col-md-6">
-                <a class="btn btn-default pull-right" ng-controller="ModelProofCreateCtrl"
-                   ng-click="createProof(model.id, '', '')"
-                   uib-tooltip="Start new proof"><i class="fa fa-gears"></i> Start new proof</a>
+                <span class="pull-right">
+                    <a class="btn btn-default" ng-controller="ModelProofCreateCtrl"
+                       ng-click="createProof(modelId, '', '')"
+                       uib-tooltip="Start new proof"><i class="fa fa-gears"></i> Start new proof</a>
+                    <a class="btn btn-default"
+                       ng-click="downloadModelProofs(modelId)"
+                       uib-tooltip="Download all proofs"><i class="fa fa-archive"></i> Download all</a>
+                </span>
+
             </div>
         </div>
     </div>

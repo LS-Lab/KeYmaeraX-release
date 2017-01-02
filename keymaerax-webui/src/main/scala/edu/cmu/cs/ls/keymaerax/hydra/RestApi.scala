@@ -293,6 +293,22 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val downloadModelProofs = (t : SessionToken) => path("models" / "user" / Segment / "model" / Segment / "downloadProofs") { (userId, modelId) => { pathEnd {
+    get {
+      val request = new ExtractModelSolutionsRequest(database, Integer.parseInt(modelId) :: Nil, exportEmptyProof = false)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val downloadAllProofs = (t : SessionToken) => path("proofs" / "user" / Segment / "downloadAllProofs") { userId => { pathEnd {
+    get {
+      //@note potential performance bottleneck: loads all models just to get ids
+      val allModels = database.getModelList(userId).map(_.modelId)
+      val request = new ExtractModelSolutionsRequest(database, allModels, exportEmptyProof = false)
+      completeRequest(request, t)
+    }
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -820,6 +836,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     deleteProof           ::
     proofListForModel     ::
     proofList             ::
+    downloadAllProofs     :: //@note before openProof to match correctly
+    downloadModelProofs   ::
     openProof             ::
     getAgendaItem         ::
     setAgendaItemName     ::
