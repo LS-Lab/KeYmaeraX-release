@@ -295,7 +295,8 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val downloadModelProofs = (t : SessionToken) => path("models" / "user" / Segment / "model" / Segment / "downloadProofs") { (userId, modelId) => { pathEnd {
     get {
-      val request = new ExtractModelSolutionsRequest(database, Integer.parseInt(modelId) :: Nil, exportEmptyProof = false)
+      val request = new ExtractModelSolutionsRequest(database, Integer.parseInt(modelId) :: Nil,
+        withProofs = true, exportEmptyProof = true)
       completeRequest(request, t)
     }
   }}}
@@ -304,7 +305,16 @@ trait RestApi extends HttpService with SLF4JLogging {
     get {
       //@note potential performance bottleneck: loads all models just to get ids
       val allModels = database.getModelList(userId).map(_.modelId)
-      val request = new ExtractModelSolutionsRequest(database, allModels, exportEmptyProof = false)
+      val request = new ExtractModelSolutionsRequest(database, allModels, withProofs = true, exportEmptyProof = false)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val downloadAllModels = (t : SessionToken) => path("models" / "user" / Segment / "downloadAllModels" / Segment) { (userId, proofs) => { pathEnd {
+    get {
+      val allModels = database.getModelList(userId).map(_.modelId)
+      val request = new ExtractModelSolutionsRequest(database, allModels,
+        withProofs = proofs == "withProofs", exportEmptyProof = true)
       completeRequest(request, t)
     }
   }}}
@@ -825,6 +835,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     *
     * @see [[sessionRoutes]] is built by wrapping all of these sessions in a cookieOptional("session") {...} that extrtacts the cookie name. */
   private val partialSessionRoutes : List[SessionToken => routing.Route] =
+    downloadAllModels     :: //@note before userModel2 to match correctly
     modelList             ::
     modelTactic           ::
     userModel             ::

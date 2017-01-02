@@ -100,7 +100,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
-    $location, FileSaver, Blob, Models) {
+    $location, FileSaver, Blob, Models, spinnerService) {
   $scope.models = [];
   $scope.userId = $cookies.get('userId');
 
@@ -130,6 +130,55 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       var fileContent = new Blob([response.data.keyFile], { type: 'text/plain;charset=utf-8' });
       FileSaver.saveAs(fileContent, modelName + '.kyx');
     });
+  }
+
+  currentDateString = function() {
+    var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth() + 1; //@note January is 0
+    var yyyy = today.getFullYear();
+
+    if(dd < 10) dd = '0' + dd
+    if(mm < 10) mm='0'+mm
+    return mm + dd + yyyy;
+  }
+
+  $scope.downloadAllModels = function() {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
+  $scope.downloadModels = function() {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
+  //@note almost duplicate of proofs.js downloadAllProofs
+  $scope.downloadAllProofs = function() {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/downloadAllModels/withProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
+  //@note duplicate of proofs.js downloadModelProofs
+  $scope.downloadModelProofs = function(modelId) {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
 
   $scope.openTactic = function (modelid) {

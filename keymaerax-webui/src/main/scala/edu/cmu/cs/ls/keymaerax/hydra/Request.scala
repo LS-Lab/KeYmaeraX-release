@@ -1388,11 +1388,13 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofId: String) extends 
   }
 }
 
-class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int], exportEmptyProof: Boolean) extends Request {
+class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int],
+                                   withProofs: Boolean, exportEmptyProof: Boolean) extends Request {
   override def resultingResponses(): List[Response] = {
     def modelProofs(modelId: Int): List[(String, String)] = {
-      db.getProofsForModel(modelId).map(p =>
+      if (withProofs) db.getProofsForModel(modelId).map(p =>
         p.name -> BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(p.proofId))))
+      else Nil
     }
     val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
     val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs)}).mkString("\n\n")

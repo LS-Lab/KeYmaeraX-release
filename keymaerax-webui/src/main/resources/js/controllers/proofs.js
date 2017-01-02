@@ -143,7 +143,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     spinnerService.show('proofExportSpinner');
     $http.get("/proofs/user/" + $scope.userId + "/downloadAllProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'allproofs_'+ currentDateString() +'.kya');
+      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kya');
     })
     .finally(function() { spinnerService.hide('proofExportSpinner'); });
   }
