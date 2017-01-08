@@ -1,0 +1,48 @@
+/**
+ * Essentials of European Train Control System (ETCS)
+ * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
+ * @provable
+ */
+Functions.
+  R ep. /* Control cycle duration upper bound */
+  R b.  /* Braking force */
+  R A.  /* Maximum acceleration */
+End.
+
+ProgramVariables.
+  R SB. /* Start-braking point, latest point to avoid collision */
+  R a.  /* Actual acceleration -b <= a <= A */
+  R v.  /* Current velocity */
+  R z.  /* Train position */
+  R t.  /* Actual control cycle duration t <= ep */
+  R m.  /* End of movement authority (train must not drive past m) */
+End.
+
+/* Safety specification of the form: initial -> [{ctrl;plant}*]safe
+ * Starting in any state where initial is true,
+ * any number of repetitions of running a controller 'ctrl' and then driving according to 'plant'
+ * keeps the system safe (end up only in states where 'safe' is true).
+ *
+ * The start braking condition SB is not defined in the ETCS specification, which is modelled with a non-deterministic
+ * assignment SB := * (choose any value for SB). The model, therefore, is not provable. Instead, we use KeYmaera X
+ * to find the conditions for SB that would make the model provable.
+ */
+Problem.
+      v^2 <= 2*b*(m-z)      /* train has sufficient distance to the end of the movement authority to stop safely */
+    & b > 0                 /* brakes are working */
+    & A >= 0                /* engine is working */
+  ->
+    [
+      {
+        /* ctrl */
+        SB := *;                                              /* compute start braking point */
+        {    ?m - z <= SB; a := -b;                           /* train protection: emergency brake on distance between train and movement authority */
+          ++ ?m - z >= SB; a :=  A;                           /* free driving: accelerate when sufficient distance between train and movement authority */
+        }
+        t := 0;                                               /* reset control cycle timer */
+
+        /* plant */
+        {z'=v, v' = a, t'=1  & v >= 0 & t <= ep}              /* drive (not backwards v>=0) for at most ep time (t<=ep) until next controller run */
+      }*@invariant(v^2<=2*b*(m-z))                            /* repeat, loop invariant documents system design property */
+    ] (z <= m)                                                /* safety property: train never drives past end of movement authority */
+End.

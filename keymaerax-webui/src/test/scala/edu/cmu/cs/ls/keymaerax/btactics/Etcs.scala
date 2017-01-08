@@ -86,6 +86,16 @@ class Etcs extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  it should "find SB condition in essentials" in withMathematica { tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyt")).mkString)
+    val result = proveBy(s, tactic)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("v_1^2<=2*b*(m-z_0)".asFormula, "b>0".asFormula, "A>=0".asFormula,
+      "m-z_0>=SB".asFormula, "t>=0".asFormula, "v_1+A*t>=0".asFormula, "t<=ep".asFormula)
+    result.subgoals.head.succ should contain only "(v_1+A*t)^2<=2*b*(m-(z_0+v_1*t+A/2*t^2))".asFormula
+  }
+
   it should "prove rbc controllability characterization with master" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-characterisation.kyx"))
     proveBy(s, master()) shouldBe 'proved
