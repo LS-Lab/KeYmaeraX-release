@@ -139,8 +139,9 @@ private object EqualityTactics {
    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
    * @return The tactic.
    */
-  def abbrv(t: Term, abbrvV: Option[Variable] = None): DependentTactic = new SingleGoalDependentTactic("abbrv") {
-    def computeExpr(sequent: Sequent): BelleExpr = {
+  def abbrv(t: Term, abbrvV: Option[Variable] = None): InputTactic = new InputTactic("abbrv", t::abbrvV.get::Nil) {
+    def computeExpr(): BelleExpr = new SingleGoalDependentTactic(name) {
+      def computeExpr(sequent: Sequent): BelleExpr = {
         require(abbrvV.isEmpty ||
           !(sequent.ante.flatMap(StaticSemantics.signature)
             ++ sequent.succ.flatMap(StaticSemantics.signature)).contains(abbrvV.get),
@@ -158,6 +159,7 @@ private object EqualityTactics {
           /* use */ (existsL('Llast) & exhaustiveEqR2L('Llast)) partial,
           /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
         )
+      }
     }
   }
 
@@ -170,7 +172,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def abs: DependentPositionTactic = "abs" by ((pos, sequent) => sequent.sub(pos) match {
+  def abs: DependentPositionTactic = "absExp" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
       val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val absVar = Variable(fn, freshAbsIdx)
@@ -189,7 +191,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def minmax: DependentPositionTactic = "min/max" by ((pos, sequent) => sequent.sub(pos) match {
+  def minmax: DependentPositionTactic = "minmax" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val minmaxVar = Variable(fn, freshMinMaxIdx)
