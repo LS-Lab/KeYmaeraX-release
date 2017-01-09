@@ -93,14 +93,14 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "parse exact matching search" in {
     parser("implyR('R=={`x>0->x>=0`})") shouldBe TactixLibrary.implyR('R, "x>0->x>=0".asFormula)
     parser("andL('L=={`x>0&x>=0`})") shouldBe TactixLibrary.andL('L, "x>0&x>=0".asFormula)
-    parser("abs('L=={`abs(x*y)`})") shouldBe TactixLibrary.abs('L, "abs(x*y)".asTerm)
+    parser("absExp('L=={`abs(x*y)`})") shouldBe TactixLibrary.abs('L, "abs(x*y)".asTerm)
     parser("andL('_=={`x>0&x>=0`})") shouldBe TactixLibrary.andL('_, "x>0&x>=0".asFormula)
   }
 
   it should "parse unifiable matching search" in {
     parser("implyR('R~={`x>0->x>=0`})") shouldBe TactixLibrary.implyR('Rlike, "x>0->x>=0".asFormula)
     parser("andL('L~={`x>0&x>=0`})") shouldBe TactixLibrary.andL('Llike, "x>0&x>=0".asFormula)
-    parser("abs('L~={`abs(x)`})") shouldBe TactixLibrary.abs('Llike, "abs(x)".asTerm)
+    parser("absExp('L~={`abs(x)`})") shouldBe TactixLibrary.abs('Llike, "abs(x)".asTerm)
   }
 
   "Propositional Examples" should "close p() -> p()" in {
