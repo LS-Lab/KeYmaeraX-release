@@ -1,0 +1,4 @@
+implyR('R) & andL('L) & andL('L) & andL('L) & andL('L) & andL('L) & allL({`0`}, 'L) & allL({`0`}, 'L) & allL({`0`}, 'L) & implyL('L) & <(
+debug & hideR('R=={`abs(r)>rp|abs(h)>hp`}) & abbrv({`max((0,w*(dhf-dhd)))`}, {`maxI`}) & debug & minmax('L=={`max((0,w*(dhf-dhd)))`}) & QE,
+debug & absExp('R=={`abs(r)`}) & absExp('R=={`abs(h)`}) & absExp('L=={`abs(r-0)`}) & debug & QE
+)
