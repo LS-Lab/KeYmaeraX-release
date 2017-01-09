@@ -33,17 +33,17 @@ private object ProofRuleTactics {
     }
   }
 
-  def cut(f: Formula) = new InputTactic[Formula]("cut", f) {
-    override def computeExpr(): BelleExpr = new BuiltInTactic(s"$name(${input.prettyString})") {
+  def cut(f: Formula) = new InputTactic("cut", f::Nil) {
+    override def computeExpr(): BelleExpr = new BuiltInTactic(s"$name(${f.prettyString})") {
       override def result(provable: ProvableSig): ProvableSig = {
-        provable(core.Cut(input), 0)
+        provable(core.Cut(f), 0)
       }
     } & Idioms.<(label(BelleLabels.cutUse.label), label(BelleLabels.cutShow.label))
   }
 
   //@todo AntePos or AntePosition?
-  def cutL(f: Formula)(pos: AntePos) = new InputTactic[Formula]("cutL", f) {
-    override def prettyString = s"${name}(${f.prettyString}, ${pos.toString})"
+  def cutL(f: Formula)(pos: AntePos) = new InputTactic("cutL", f::Nil) {
+    override def prettyString = s"$name(${f.prettyString}, ${pos.toString})"
 
     override def computeExpr() = new BuiltInTactic(prettyString) {
       override def result(provable: ProvableSig): ProvableSig = {
@@ -53,7 +53,7 @@ private object ProofRuleTactics {
     }
   }
 
-  def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula]("cutR", f) {
+  def cutR(f: Formula)(pos: SuccPos) = new InputTactic("cutR", f::Nil) {
     override def computeExpr() = new BuiltInTactic("CutR") {
       override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutR(" + f + ")")
@@ -64,7 +64,7 @@ private object ProofRuleTactics {
     override def prettyString: String = s"$name(${f.prettyString}, ${pos.toString})"
   }
 
-  def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula]("cutLR", f) {
+  def cutLR(f: Formula)(pos: Position) = new InputTactic("cutLR", f::Nil) {
     override def computeExpr() = new BuiltInTactic("CutLR") {
       override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutLR(" + f + ")")

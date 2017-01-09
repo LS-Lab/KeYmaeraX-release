@@ -46,13 +46,9 @@ object BellePrettyPrinter extends (BelleExpr => String) {
             case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
           }
           case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
-          case it : InputTactic[_] => {
-            val theArg = it.input match {
-              case e : core.Expression => Left(e)
-              case _ => throw PrinterException("Cannot print input tactics that take non-expressions as input.") //@todo that class probably just shouldn't even be generic now that we have DependentPositionTactics etc.
-            }
-
-            it.name + "(" + argPrinter(theArg) + ")"
+          case it : InputTactic => {
+            val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
+            it.name + "(" + eargs + ")"
           }
           case ProveAs(lemmaName, pos, e) => "proveAs"
           case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"

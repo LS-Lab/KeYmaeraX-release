@@ -82,7 +82,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
           case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic", e).inContext(d, "")
         }
-        case it: InputTactic[_] => try {
+        case it: InputTactic => try {
           apply(it.computeExpr(), v)
         } catch {
           case e: BelleThrowable => throw e.inContext(it, v.prettyString)

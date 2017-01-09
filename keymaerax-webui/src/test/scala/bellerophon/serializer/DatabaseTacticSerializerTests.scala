@@ -18,7 +18,7 @@ class DatabaseTacticSerializerTests extends FlatSpec with Matchers {
     val interpreter = SequentialInterpreter(Seq(serializer))
 
     val input = BelleProvable(ProvableSig.startProof("1=1".asFormula))
-    val tactic = new InputTactic[Formula]("TestInputTactic", "1=1".asFormula) {
+    val tactic = new InputTactic("TestInputTactic", "1=1".asFormula::Nil) {
       override def computeExpr(): BelleExpr = PartialTactic(Idioms.nil)
     }
 
