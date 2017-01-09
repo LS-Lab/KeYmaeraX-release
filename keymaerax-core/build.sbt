@@ -5,7 +5,7 @@ name := "KeYmaeraX-Core"
 
 version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
-assemblyJarName in assembly := "keymaerax-core.jar" 
+assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar"
 
 scalaVersion := "2.11.7"
 

@@ -8,7 +8,7 @@ version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
 
-assemblyJarName in assembly := "keymaerax-web.jar"
+assemblyJarName in (Test, assembly) := s"keymaerax-${version.value}.jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
@@ -95,6 +95,8 @@ logBuffered := false
 
 // command line UI
 mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX")
+// ACAS X: run sbt test:assembly to build assembly
+//mainClass in (Test, assembly) := Some("edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.AcasXRunner")
 
+// do not run tests when building assembly
 test in assembly := {}
-
