@@ -26,8 +26,10 @@ object AcasXRunner {
   /** Usage -help information, formatted to 80 characters width. */
   private val usage = "KeYmaera X Prover (ACAS X Proofs)" + " " + core.VERSION +
     """
+      |Supersedes alpha version of ACAS X proofs at
+      |http://www.ls.cs.cmu.edu/pub/AcasX-long_alpha.zip
       |
-      |Usage: java -Xss20M -jar KeYmaeraX-ACASX.jar
+      |Usage: java -Xss256M -jar KeYmaeraX-ACASX.jar
       |  -prove [all | theorem{1,3,4,5} | lemma{1,3,4} | corollary{1,3,4} ]
       |
       |Additional options:
@@ -41,7 +43,10 @@ object AcasXRunner {
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
-    println("KeYmaera X Prover (ACAS X Proofs)" + core.VERSION + "\n" +
+    println("KeYmaera X Prover (ACAS X Proofs)" + core.VERSION + "\n\n" +
+      "Models at https://github.com/LS-Lab/KeYmaeraX/tree/master/keymaerax-webui/src/main/resources/examples/casestudies/acasx/sttt\n" +
+      "Proof sources at https://github.com/LS-Lab/KeYmaeraX/tree/master/keymaerax-webui/src/test/scala/edu/cmu/cs/ls/keymaerax/btactics/acasxhstp/safeable\n\n" +
+      "Supersedes alpha version of ACAS X proofs at\n http://www.ls.cs.cmu.edu/pub/AcasX-long_alpha.zip\n\n" +
       "Use option -help for usage and license information")
 
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); sys.exit(1)}
@@ -65,7 +70,7 @@ object AcasXRunner {
         }
       }
 
-      val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
+      val options = nextOption(Map('commandLine -> args.mkString(" "), 'tool -> "z3"), args.toList)
       require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
       initializeProver(options)
@@ -98,12 +103,7 @@ object AcasXRunner {
   }
 
   private def initializeProver(options: OptionMap) = {
-    options('tool) match {
-      case "mathematica" => initMathematica(options)
-      case "z3" => initZ3(options)
-      case tool => throw new Exception("Unknown tool " + tool)
-    }
-
+    initMathematica(options)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
     val generator = new ConfigurableGenerator[Formula]()
@@ -112,11 +112,6 @@ object AcasXRunner {
 
     //@note just in case the user shuts down the prover from the command line
     Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
-  }
-
-  /** Initializes Z3 from command line options. */
-  private def initZ3(options: OptionMap) = {
-    ToolProvider.setProvider(new Z3ToolProvider())
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
@@ -161,7 +156,8 @@ object AcasXRunner {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
-    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
+    DefaultConfiguration.currentMathematicaConfig = mathematicaConfig
+    //@note test setup will initialize Mathematica tool provider
   }
 
   private def shutdownProver() = {
@@ -176,6 +172,8 @@ object AcasXRunner {
     val failed: mutable.ListBuffer[(String, String)] = mutable.ListBuffer()
     val ignored: mutable.ListBuffer[(String, String)] = mutable.ListBuffer()
 
+    (new DerivedAxiomsTests).run(Some("The DerivedAxioms prepopulation procedure should not crash"),
+      Args(scalatestReporter(succeeded, failed, ignored)))
 
     val (tester: Suite, testName: Option[String]) = options('what).toString match {
       case "all" => (new AcasX, None)
@@ -189,9 +187,9 @@ object AcasXRunner {
     tester.run(testName, Args(scalatestReporter(succeeded, failed, ignored)))
 
     println("============= Proof summary ================")
-    println(s"Succeeded proofs (${succeeded.size}/${allTests.size}}):\n  " + succeeded.toList.map(_._1).mkString("\n  "))
-    println(s"Failed proofs (${failed.size}/${allTests.size}}):\n  " + failed.toList.map(f => f._1 + ": " + f._2).mkString("\n  "))
-    println(s"Ignored proofs (${ignored.size}/${allTests.size}}):\n  " + ignored.toList.map(_._1).mkString("\n  "))
+    println(s"Succeeded proofs (${succeeded.size}/${allTests.size+1}}):\n  " + succeeded.toList.map(_._1).mkString("\n  "))
+    println(s"Failed proofs (${failed.size}/${allTests.size+1}}):\n  " + failed.toList.map(f => f._1 + ": " + f._2).mkString("\n  "))
+    println(s"Ignored proofs (${ignored.size}/${allTests.size+1}}):\n  " + ignored.toList.map(_._1).mkString("\n  "))
   }
 
   private def testOf(abbrv: String): (Suite, String) = abbrv.toLowerCase match {
