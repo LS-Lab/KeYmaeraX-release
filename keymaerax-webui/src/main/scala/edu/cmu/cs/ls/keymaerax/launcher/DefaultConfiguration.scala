@@ -12,6 +12,9 @@ import scala.collection.immutable.Map
  */
 object DefaultConfiguration {
 
+  /** The Mathematica config as set from the command line (default config if not set) */
+  var currentMathematicaConfig: Map[String, String] = defaultMathematicaConfig
+
   def defaultMathLinkName: (String, String) = {
     var kernelName = ""
     var jlinkFileName = ""

@@ -24,7 +24,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
-    val db = {
+    val db: SQLiteDB = {
       val testLocation = File.createTempFile("testdb", ".sqlite")
       val db = new SQLiteDB(testLocation.getAbsolutePath)
       db.cleanup(testLocation.getAbsolutePath)
@@ -77,7 +77,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any) {
-    val provider = new MathematicaToolProvider(DefaultConfiguration.defaultMathematicaConfig)
+    val provider = new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
     testcode(provider.tool())
   }
@@ -115,7 +115,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   /** Test setup */
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
@@ -123,7 +123,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   /* Test teardown */
-  override def afterEach() = {
+  override def afterEach(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
     ToolProvider.shutdown()
     TactixLibrary.invGenerator = FixedGenerator(Nil)
@@ -171,7 +171,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       override def toString: String = "whiteSpaceRemoved"
     }
 
-  def loneSucc(p: ProvableSig) = {
+  def loneSucc(p: ProvableSig): Formula = {
     assert(p.subgoals.length==1)
     assert(p.subgoals.last.succ.length==1)
     p.subgoals.last.succ.last
