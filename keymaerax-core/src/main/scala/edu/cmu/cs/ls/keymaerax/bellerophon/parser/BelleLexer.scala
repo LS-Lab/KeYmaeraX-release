@@ -114,6 +114,8 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       case SEARCH_SUCCEDENT.startPattern(_*) => consumeTerminalLength(SEARCH_SUCCEDENT, loc)
       case SEARCH_ANTECEDENT.startPattern(_*) => consumeTerminalLength(SEARCH_ANTECEDENT, loc)
       case SEARCH_EVERYWHERE.startPattern(_*) => consumeTerminalLength(SEARCH_EVERYWHERE, loc)
+      case EXACT_MATCH.startPattern(_*) => consumeTerminalLength(EXACT_MATCH, loc)
+      case UNIFIABLE_MATCH.startPattern(_*) => consumeTerminalLength(UNIFIABLE_MATCH, loc)
 
       //Delimited expressions
       case EXPRESSION.startPattern(expressionString) => try {

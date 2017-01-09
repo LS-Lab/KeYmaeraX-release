@@ -97,6 +97,8 @@ private object SEARCH_ANTECEDENT extends BelleTerminal("'L") with TACTIC_ARGUMEN
 private object SEARCH_EVERYWHERE extends BelleTerminal("'_") with TACTIC_ARGUMENT {
   override def regexp = "'\\_".r
 }
+private object EXACT_MATCH extends BelleTerminal("==") with TACTIC_ARGUMENT
+private object UNIFIABLE_MATCH extends BelleTerminal("~=") with TACTIC_ARGUMENT
 
 private object PARTIAL extends BelleTerminal("partial") {
   override def regexp = "(?i)partial".r // allow case-insensitive use of the word partial.
