@@ -75,12 +75,14 @@ class AcasXSafe extends AcasXBase {
       dT("Absolute value") & absmax & dT("Use case 2") & QE & done
     )
 
-    val proofId = db.createProof(createAcasXProblemFile(ucLoFormula))
-    val interpreter = SpoonFeedingInterpreter(createListener(db.db, proofId), SequentialInterpreter)
-    val BelleProvable(ucLoLemma, _) = interpreter(ucLoTac, BelleProvable(ProvableSig.startProof(ucLoFormula)))
-
+    val ucLoLemma = proveBy(ucLoFormula, ucLoTac)
     ucLoLemma shouldBe 'proved
     storeLemma(ucLoLemma, Some("nodelay_ucLoLemma"))
+
+    // reprove with spoon-feeding interpreter to create extractable tactic
+    val proofId = db.createProof(createAcasXProblemFile(ucLoFormula))
+    val interpreter = SpoonFeedingInterpreter(createListener(db.db, proofId), SequentialInterpreter)
+    interpreter(ucLoTac, BelleProvable(ProvableSig.startProof(ucLoFormula)))
 
     val tactic = db.extractTactic(proofId)
     val expectedTactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_uclo.kyt")).mkString)
@@ -151,8 +153,9 @@ class AcasXSafe extends AcasXBase {
 
   it should "prove Theorem 1: correctness of implicit safe regions" in {
     if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
-      runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
-      runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
+
+    runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
+    runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     withMathematica { tool =>
       beforeEach()
