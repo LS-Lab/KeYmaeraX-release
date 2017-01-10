@@ -21,7 +21,7 @@ import scala.collection.immutable._
 class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int) = {
+  private def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int) = {
     val trace = db.getExecutionTrace(proofId)
     val globalProvable = trace.lastProvable
     new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
@@ -169,33 +169,41 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.head.children(1).children.head.rule shouldBe "QE"
   }}
 
-  //@todo need to compute branch indices in global provable, where branches are shifting and new ones created in-place+at the end of a provable
-  it should "work with nested branching when branches stay open" ignore withDatabase { db =>
+  it should "work when early branches remain open and later ones close" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>1|x>0 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & orL(-1) & Idioms.<(skip, closeId & done),
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(nil, closeId)")
+  }
+
+  it should "work with nested branching when branches stay open 1" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>1|x>0 -> x>0&x>=0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(skip, closeId), skip),
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(nil, closeId), nil)")
+  }
+
+  //@todo provables shift (maybe starting new provables for branches in spoonfeeding interpreter is unnecessary)
+  it should "work with nested branching when branches stay open 2" ignore withDatabase { db =>
     val modelContent = "Variables. R x. End. Problem. x>0|x>1 -> x>0&x>=0 End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
-    interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(closeId & done, skip), skip),
+    interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(closeId, skip), skip),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
-    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
-    tree.nodes should have size 7
-    tree.root.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
-    tree.root.children should have size 1
-    tree.root.children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula))
-    tree.root.children.head.rule shouldBe "implyR(1)"
-    tree.root.children.head.children should have size 2
-    tree.root.children.head.children(0).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.children.head.children(0).rule shouldBe "andR(1)"
-    tree.root.children.head.children(0).children should have size 1
-    tree.root.children.head.children(0).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
-    tree.root.children.head.children(0).children.head.rule shouldBe "closeId"
-    tree.root.children.head.children(0).children.head.children shouldBe empty
-    tree.root.children.head.children(1).sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
-    tree.root.children.head.children(1).rule shouldBe "andR(1)"
-    tree.root.children.head.children(1).children should have size 1
-    tree.root.children.head.children(1).children.head.sequent shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
-    tree.root.children.head.children(1).children.head.rule shouldBe "nil"
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(closeId, nil), nil)")
   }
 
   "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db =>
@@ -288,5 +296,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
     tree.nodes should have size 50
+  }}
+
+  "Internal steps" should "be revealed for diffInvariant" in withMathematica { tool => withDatabase { db =>
+    val problem = "x>=0 -> [{x'=1}]x>=0"
+    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
+    interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("implyR('R) & diffCut({`x>=old(x)`},1) & <(nil, diffInd(1))")
   }}
 }

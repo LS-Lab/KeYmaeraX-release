@@ -16,24 +16,24 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @author Andre Platzer
   * @author Stefan Mitsch
   */
-case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], inner: Seq[IOListener] => Interpreter) extends Interpreter {
-  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = apply((expr, v)::Nil, 0)
+case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], inner: Seq[IOListener] => Interpreter, descend: Int = 0) extends Interpreter {
+  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic((expr, v)::Nil, 0, descend)
 
-  def apply(branches: Seq[(BelleExpr, BelleValue)], branch: Int): BelleValue = {
+  private def runTactic(branches: Seq[(BelleExpr, BelleValue)], branch: Int, level: Int): BelleValue = {
     branches(branch)._1 match {
       case SeqTactic(left, right) =>
         val leftResult = try {
-          apply(branches.updated(branch, (left, branches(branch)._2)), branch)
+          runTactic(branches.updated(branch, (left, branches(branch)._2)), branch, level)
         } catch {
           case e: BelleThrowable => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
         }
         try {
-          apply(branches.updated(branch, (right, leftResult)), branch)
+          runTactic(branches.updated(branch, (right, leftResult)), branch, level)
         } catch {
           case e: BelleThrowable => throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
         }
       case EitherTactic(left, right) => try {
-        val leftResult = apply(branches.updated(branch, (left, branches(branch)._2)), branch)
+        val leftResult = runTactic(branches.updated(branch, (left, branches(branch)._2)), branch, level)
         (leftResult, left) match {
           case (BelleProvable(p, _), _) /*if p.isProved*/ => leftResult
           case (_, x: PartialTactic) => leftResult
@@ -43,7 +43,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
         case eleft: BelleThrowable =>
           val rightResult = try {
-            apply(branches.updated(branch, (right, branches(branch)._2)), branch)
+            runTactic(branches.updated(branch, (right, branches(branch)._2)), branch, level)
           } catch {
             case e: BelleThrowable => throw e.inContext(EitherTactic(eleft.context, e.context), "Failed: both left-hand side and right-hand side " + branches(branch)._1)
           }
@@ -60,7 +60,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           prev = result
           //@todo effect on listeners etc.
           try {
-            result = apply(branches.updated(branch, (child, result)), branch)
+            result = runTactic(branches.updated(branch, (child, result)), branch, level)
           } catch {
             case e: BelleThrowable => /*@note child no longer applicable */ result = prev
           }
@@ -69,7 +69,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
       case RepeatTactic(child, times) =>
         var result = branches(branch)._2
         for (i <- 1 to times) try {
-          result = apply(branches.updated(branch, (child, result)), branch)
+          result = runTactic(branches.updated(branch, (child, result)), branch, level)
         } catch {
           case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),
             "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
@@ -80,16 +80,23 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           if (children.length != p.subgoals.length)
             throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(branches(branch)._1, "")
 
+          //@todo might be unnecessarily complicated
           val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
           val newBranches = branches.updated(branch, branchTactics.head) ++ branchTactics.tail
-          val branchIdx = branches.length until (branches.length+children.length-1)
-          //@todo compose result
-          branchIdx.foldLeft((0, 0, newBranches, apply(newBranches, 0)))({
-            case ((previ, prevClosed, remainingBranches, BelleProvable(branchResult, _)), i) =>
-              val closed = prevClosed + (if (branchResult.subgoals.isEmpty) 1 else 0)
-              val remainder = remainingBranches.patch(previ, Nil, 1)
-              (i-closed, closed, remainder, apply(remainder, i-closed))
-          })._4
+          val newBranchIdx = branches.length until newBranches.length
+          val BelleProvable(first, _) = runTactic(newBranches, branch, level)
+          val result = newBranchIdx.foldLeft((branch, newBranches, p(first, branch)))({
+            case ((previ, remainingBranches, mergedProvable), i) =>
+              val remainder =
+                if (mergedProvable.subgoals.size < p.subgoals.size) remainingBranches.patch(previ, Nil, 1)
+                else remainingBranches
+              val closed = newBranches.size - remainder.size
+              val BelleProvable(branchResult, _) = runTactic(remainder, i-closed, level)
+              val branchIdx = i - branches.length + 1
+              val closedOverall = p.subgoals.size - mergedProvable.subgoals.size
+              (i-closed, remainder, mergedProvable(branchResult, branchIdx - closedOverall))
+          })._3
+          BelleProvable(result)
         case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(branches(branch)._1, "")
       }
       case OnAll(e) =>
@@ -99,7 +106,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         }
         //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
         try {
-          apply(branches.updated(branch, (BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), branches(branch)._2)), branch)
+          runTactic(branches.updated(branch, (BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), branches(branch)._2)), branch, level)
         } catch {
           case e: BelleThrowable => throw e.inContext(OnAll(e.context), "")
         }
@@ -112,7 +119,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           val o = opts.next()
           if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
           val someResult: Option[BelleValue] = try {
-            Some(apply(branches.updated(branch, (e.asInstanceOf[Formula=>BelleExpr](o.asInstanceOf[Formula]), branches(branch)._2)), branch))
+            Some(runTactic(branches.updated(branch, (e.asInstanceOf[Formula=>BelleExpr](o.asInstanceOf[Formula]), branches(branch)._2)), branch, level))
           } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
           if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
           (someResult, e) match {
@@ -123,6 +130,17 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           }
         }
         throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + options() + "\n" + errors)
+
+      // look into tactics
+      case d: DependentTactic if level > 0 => try {
+        val v = branches(branch)._2
+        val valueDependentTactic = d.computeExpr(v)
+        runTactic(branches.updated(branch, (valueDependentTactic, branches(branch)._2)), branch, level-1)
+      } catch {
+        case e: BelleThrowable => throw e.inContext(d, branches(branch)._2.prettyString)
+        //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
+        case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic", e).inContext(d, "")
+      }
 
       case _ => branches(branch)._2 match {
         case BelleProvable(provable, labels) if provable.subgoals.isEmpty=> inner(Seq())(branches(branch)._1, branches(branch)._2)
