@@ -5,10 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
-import edu.cmu.cs.ls.keymaerax.btactics.{EqualityTactics, Idioms, SimplifierV2, DifferentialTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, EqualityTactics, Idioms, SimplifierV2}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
@@ -58,7 +60,7 @@ class AcasXSafe extends AcasXBase {
       abs('R, "abs(h)".asTerm) &
       abs('L, "abs(r-0)".asTerm)
 
-  "ACAS X safe" should "prove use case lemma" in withMathematica { tool =>
+  "ACAS X safe" should "prove use case lemma" in withMathematica { tool => withDatabase { db =>
     if (lemmaDB.contains("nodelay_ucLoLemma")) lemmaDB.remove("nodelay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
@@ -74,6 +76,26 @@ class AcasXSafe extends AcasXBase {
     )
 
     val ucLoLemma = proveBy(ucLoFormula, ucLoTac)
+    ucLoLemma shouldBe 'proved
+    storeLemma(ucLoLemma, Some("nodelay_ucLoLemma"))
+
+    // reprove with spoon-feeding interpreter to create extractable tactic
+    val proofId = db.createProof(createAcasXProblemFile(ucLoFormula))
+    val interpreter = SpoonFeedingInterpreter(createListener(db.db, proofId), SequentialInterpreter)
+    interpreter(ucLoTac, BelleProvable(ProvableSig.startProof(ucLoFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    val expectedTactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_uclo.kyt")).mkString)
+    tactic shouldBe expectedTactic
+  }}
+
+  it should "prove the use case lemma with a parsed Belle tactic" in withMathematica { tool =>
+    if (lemmaDB.contains("nodelay_ucLoLemma")) lemmaDB.remove("nodelay_ucLoLemma")
+
+    val ucLoFormula = Imply(invariant, postcond)
+    val ucLoTac = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_uclo.kyt")).mkString)
+    val ucLoLemma = proveBy(ucLoFormula, ucLoTac)
+
     ucLoLemma shouldBe 'proved
     storeLemma(ucLoLemma, Some("nodelay_ucLoLemma"))
   }
@@ -131,8 +153,9 @@ class AcasXSafe extends AcasXBase {
 
   it should "prove Theorem 1: correctness of implicit safe regions" in {
     if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
-      runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
-      runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
+
+    runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
+    runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     withMathematica { tool =>
       beforeEach()

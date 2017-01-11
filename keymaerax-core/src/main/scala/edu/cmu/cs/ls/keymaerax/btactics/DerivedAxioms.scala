@@ -2747,18 +2747,19 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val dgZeroEquilibrium = derivedAxiom("dgZeroEquilibrium", Sequent(IndexedSeq(), IndexedSeq("x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula)),
-    implyR(1) & DA("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, "x*y^2=0&y>0".asFormula)(1) <(
-      TactixLibrary.QE,
-      implyR(1) & TactixLibrary.boxAnd(1) & andR(1) <(
-        DifferentialTactics.diffInd()(1) & QE,
-        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
-          QE,
-          implyR(1) & diffInd()(1) & QE
-        )
-      )
-    )
-  )
+  //@note not derivable with Z3; added to AxiomBase and tested to be derivable in DerivedAxiomsTests.
+//  lazy val dgZeroEquilibrium = derivedAxiom("dgZeroEquilibrium", Sequent(IndexedSeq(), IndexedSeq("x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula)),
+//    implyR(1) & DA("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, "x*y^2=0&y>0".asFormula)(1) <(
+//      TactixLibrary.QE,
+//      implyR(1) & TactixLibrary.boxAnd(1) & andR(1) <(
+//        DifferentialTactics.diffInd()(1) & QE,
+//        DA("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, "y*z^2 = 1".asFormula)(1) <(
+//          QE,
+//          implyR(1) & diffInd()(1) & QE
+//        )
+//      )
+//    )
+//  )
 
   // Metric Normal Form
 

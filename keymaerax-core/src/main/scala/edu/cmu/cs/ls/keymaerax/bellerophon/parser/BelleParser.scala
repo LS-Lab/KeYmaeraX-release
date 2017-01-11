@@ -473,16 +473,25 @@ object BelleParser extends (String => BelleExpr) {
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
-      val arguments = removeCommas(argList, false).map({
-        case tok@BelleToken(terminal: EXPRESSION, loc) =>
+
+      def arguments(al: List[BelleToken]): List[TacticArg] = al match {
+        case Nil => Nil
+        case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
           assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
           assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
           val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc)
           nonPosArgCount = nonPosArgCount + 1
-          theArg
-        case tok => parseArgumentToken(None)(tok, UnknownLocation)
-      })
-      (arguments, remainder)
+          theArg +: arguments(tail)
+        case BelleToken(SEARCH_SUCCEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
+          Right(Find.FindR(0, Some(expr.expression), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+        case BelleToken(SEARCH_ANTECEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
+          Right(Find.FindL(0, Some(expr.expression), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+        case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
+          Right(new Find(0, Some(expr.expression), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
+        case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
+      }
+
+      (arguments(removeCommas(argList, commaExpected=false)), remainder)
     }
   }
 

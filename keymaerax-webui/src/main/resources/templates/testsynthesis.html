@@ -1,0 +1,142 @@
+<spinner name="testSynthesisExecutionSpinner" ng-cloak="">
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">
+        <p>Test case synthesis is executing, please wait...</p>
+        <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+    </div>
+</spinner>
+<script type="text/ng-template" id="testCasePopover.html">
+    <canvas class="chart chart-bar"
+            chart-series="['Input', 'Expected Outcome']"
+            chart-data="testCase.seriesData"
+            chart-labels="testCase.labels">
+    </canvas>
+</script>
+<div class="modal-header">
+    <div class="row">
+        <div class="col-md-11">
+            <h3>Test Case Synthesis and Analysis</h3>
+        </div>
+        <div class="col-md-1">
+            <a class="pull-right" ng-click="cancel()"><span class="fa fa-close"></span>
+            </a>
+        </div>
+    </div>
+</div>
+<div class="modal-body">
+    <div class="well">
+        <form class="form-horizontal" ng-submit="testgenerate()">
+            <div class="form-group">
+                <label for="monitorkind" class="col-md-2 control-label">Monitor Kind</label>
+                <div class="col-md-10">
+                    <select class="form-control" id="monitorkind" ng-model="testsynthdata.monitorkind">
+                        <option value="controller">Controller Monitor</option>
+                        <option value="model">Model Monitor</option>
+                        <!--<option value="prediction">Prediction Monitor</option>-->
+                    </select>
+                    <datalist id="monitorkindList"></datalist>
+                    <span id="monitorkindHelpBlock" class="help-block">
+                        For canonical models of the form <code>(ctrl;plant)</code>, a controller monitor checks
+                        decisions of <code>ctrl</code>, a model monitor checks <code>ctrl;plant</code> for past plant.
+                        <!--and a prediction monitor checks <code>ctrl;plant</code> for future and disturbed plant.-->
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="testkind" class="col-md-2 control-label">Test Category</label>
+                <div class="col-md-10" id="testkind">
+                    <label ng-repeat="(tk,enabled) in testsynthdata.kinds">
+                        <input type="checkbox" ng-model="testsynthdata.kinds[tk]" /> {{tk}}&nbsp;&nbsp;
+                    </label>
+                    <span id="testkindHelpBlock" class="help-block">
+                        Compliant tests are started in a safe state and succeed when staying in safe states.
+                        Incompliant tests test outside the model.
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="numInstances" class="col-md-2 control-label">Amount</label>
+                <div class="col-md-10">
+                    <input class="form-control" id="numInstances" type="number" ng-model="testsynthdata.numInstances" />
+                    <span id="numInstancesHelpBlock" class="help-block">
+                        How many test cases to synthesize in each ticked category
+                    </span>
+                </div>
+            </div>
+            <!-- TODO timeout input -->
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <button type="submit" class="btn btn-default">Synthesize</button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+    <div class="well">
+        <p><b>Safety Margin Check</b></p>
+        <p>
+        <span ng-if="testsynthdata.testCases.metric !== undefined"
+              class="k4-formula-preformat">{{testsynthdata.testCases.metric.plainString}}</span>
+        </p>
+    </div>
+    <div class="well">
+        <p><b>Test Cases</b></p>
+        <p>
+        <span ng-if="testsynthdata.testCases.caseInfos === undefined">
+            Configure and Click <code>Synthesize</code> above to generate test cases
+        </span>
+        </p>
+        <!-- table with test cases -->
+        <div ng-if="testsynthdata.testCases.caseInfos !== undefined" ng-cloak>
+            <uib-tabset active="true">
+                <uib-tab ng-repeat="testSeries in testsynthdata.testCases.caseInfos" heading="{{testSeries.series}}">
+                    <!-- TODO: highlight in bubble chart on hover -->
+                    <table class="table table-hover table-condensed">
+                        <thead>
+                        <tr>
+                            <td>Name</td>
+                            <td>Safety Margin</td>
+                            <td>Variance</td>
+                            <td>Values</td>
+                            <td></td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="testCase in testSeries.data | orderBy:'name'">
+                            <td>Test {{ testCase.name }}</td>
+                            <td>{{ testCase.safetyMargin }}</td>
+                            <td>{{ testCase.variance }}</td>
+                            <!-- popover-trigger="'mouseenter'" popover-title="Values" -->
+                            <td><a uib-popover-template="'testCasePopover.html'">Values</a></td>
+                            <td>
+                                <a class="btn btn-default" ng-click="downloadTestCase(testSeries.series, testCase)">
+                                    <i class="fa fa-download"></i></a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </uib-tab>
+            </uib-tabset>
+        </div>
+    </div>
+    <div class="well" ng-if="testsynthdata.testCases.plot !== undefined">
+        <p><b>Test Case Analysis</b></p>
+        <!-- Compute and display test space -->
+        <!-- Help text with info icon -->
+        <p>
+        <canvas class="chart-bubble"
+                chart-data="testsynthdata.testCases.plot.data"
+                chart-legend="false"
+                chart-series="testsynthdata.testCases.plot.series"></canvas>
+        </p>
+    </div>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-default" ng-if="testsynthdata.testCases.caseInfos !== undefined"
+            ng-click="downloadAllCases()"><i class="fa fa-download"></i> Download all</button>
+    </div>
+</div>

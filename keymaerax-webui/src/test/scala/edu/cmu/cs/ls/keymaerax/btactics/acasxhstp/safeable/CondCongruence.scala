@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.printIndexed
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -541,7 +542,6 @@ object CondCongruence {
     //@note could have handled 2*composeb(1) at once
     //@note useing W(w_0) instead of W(w) or use post-postcondition
       composeb(1) & generalize(w0)(1) & Idioms.<(
-        /*show*/ printIndexed("W gen DW") & DW(1) & implyR(1) & andL(-2) & andL(-1) & andR(1) & closeId,
         /*use*/ composeb(1) & useAt("V[:*] vacuous assign nondet")(1, 1::Nil) &
           choiceb(1) & andR(1) & Idioms.<(
           sublabel("& left") & testb(1) & implyR(1) & closeId
@@ -550,16 +550,17 @@ object CondCongruence {
             composeb(1) & composeb(1, 1::Nil) & composeb(1, 1::1::Nil) & generalize(w0)(1) & Idioms.<(
             /*use*/ assignb(1) & andL(-1) & andR(1) & Idioms.<(closeId, QE),
             /*show*/ generalize(w0)(1) & Idioms.<(
+              /*use*/ printIndexed("W gen V 1") & V(1) & closeId,
               /*show*/ generalize(w0)(1) & Idioms.<(
+                /*use*/ printIndexed("W gen V 2") & V(1) & closeId,
                 /*show*/ sublabel("W arith") & andL(-1) & hideL(-1) & composeb(1) &
                   printIndexed("W arith") & choiceb(1) & useAt("[:=] assign")(1, 0::Nil) & useAt("[:=] assign")(1, 1::Nil) &
-                  useAt("[?] test")(1, 0::Nil) & useAt("[?] test")(1, 1::Nil) & QE,
-                /*use*/ printIndexed("W gen V 2") & V(1) & closeId
-              ),
-              /*use*/ printIndexed("W gen V 1") & V(1) & closeId
+                  useAt("[?] test")(1, 0::Nil) & useAt("[?] test")(1, 1::Nil) & QE
+              )
             )
           )
-          )
+          ),
+        /*show*/ (andL('L)*) & printIndexed("W gen DW") & diffWeaken(1) & prop & done
       )
 
     // W is invariant proof for both implicit and explicit models. Same tactic above.
@@ -571,49 +572,38 @@ object CondCongruence {
 
     val proof = TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
-        postCut(a)(1) & Idioms.<(
-        /*show*/ sublabel("A() vacuous") & printIndexed("vacuous global assumptions") & V(1) & close(-1, 1),
+        postCut(a)(1) & andR(1) & Idioms.<(
+        /*use*/ printIndexed("true induction need") &
 
-        /*use*/ label("") & printIndexed("true induction need") &
-
-          postCut(w)(1) & Idioms.<(
-          /*show*/ label("") & printIndexed("w=-1 | w=1") & DebuggingTactics.assert(And(w,e), "W&Ce")(-2) & andL(-2) &
-            //loop(w)(1)
-            loop(w)(1) & Idioms.<(
-            /*init*/ sublabel("W(w) init") & closeId,
-
-            /*step*/ sublabel("W(w) step") & //hide(w)(-4) & hide(w)(-2) &
-              /*implyR(1) &*/ printIndexed("step w=-1 | w=1") &
-              by(invariantWe)
-              ,
-
-            /*usecase*/ sublabel("W(w) loop use") & /*implyR(1) &*/ closeId
-          )
-            // end postCut(w)
-            ,
-
-          /*use*/ sublabel("A()&W(w) augmented") & DebuggingTactics.assert(And(w,e), "W&Ce")(-2) & andL(-2) & printIndexed("inductive use of A&W") &
+          postCut(w)(1) & andR(1) & Idioms.<(
+            /*use*/ sublabel("A()&W(w) augmented") & DebuggingTactics.assert(And(w,e), "W&Ce")(-2) & andL(-2) & printIndexed("inductive use of A&W") &
             cutL(i)(-3) & Idioms.<(
-            /*show*/ hide(1) & label("by seq-equiv") & equivifyR(1) & by(seqEquivalence),
-
             /*use*/ sublabel("Ce~>Ci reduction") & label("Ce~>Ci reduction") & printIndexed("Ce~>Ci reduction") &
-              useAt(postEquivalence)(1, 1::Nil)//CE(postEquivalence)(1, 1::Nil)
+              useAt(postEquivalence, PosInExpr(1::Nil))(1, 1::Nil)//CE(postEquivalence)(1, 1::Nil)
               & printIndexed("Ce~>Ci reduced in postcondition")
               & printIndexed("unpack and repack to replace test") &
               /*loop(And(w,And(u, i)))(1)*/
-              loop(And(a,And(w,And(u1, And(u2, i)))))(1)
+              DLBySubst.loop(And(a,And(w,And(u1, And(u2, i)))), skip)(1)
               & sublabel("loop induction")
               & Idioms.<(
               /*init*/ sublabel("W&u&Ci init") & printIndexed("W&u&Ci init") &
-                andR(1) & Idioms.<(closeId , andR(1) & Idioms.<(closeId, andR(1) & Idioms.<(
+                andR(1) & Idioms.<(closeId, andR(1) & Idioms.<(closeId, andR(1) & Idioms.<(
                 label("arith") /*& done*/
                   & printIndexed("A&W(w)&Ci->u")
                   & printIndexed("Using ucLoLemma") &
                   assertE(ucLoLemma.conclusion.succ.head, "ucLoLemma not applicable, have unexpected goal")(1) & by(ucLoLemma)
-                , andR(1) & Idioms.<(closeId, closeId)))),
+                , andR(1) & onAll(closeId))))
+              ,
+
+              /*usecase*/ sublabel("final use") & printIndexed("final use") &
+                andL('L, And(a,And(w,And(u1, And(u2, i))))) &
+                andL('L, And(w,And(u1, And(u2, i)))) & andL('L, And(u1, And(u2, i))) &
+                implyR(1)*2 & andR(1) & onAll(closeId)
+              ,
 
               /*step*/ sublabel("W&u&Ci step") & // hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) &
-                andL(-1) & assertE(a, "A()")(-1) & printIndexed("W&u&Ci step") &
+                andL('L, And(a,And(w,And(u1, And(u2, i))))) & assertE(a, "A()")(-1) & printIndexed("W&u&Ci step") &
+                hideL('L, a) & // hide one of the duplicate a
                 boxAnd(1) & andR(1) & Idioms.<(
                 // A() invariant
                 V(1) & closeId
@@ -622,8 +612,8 @@ object CondCongruence {
                 boxAnd(1) & andR(1) & Idioms.<(
                   // W(w) invariant
                   printIndexed("W invariant again") &
-                    andL(-2) & andL(-3) & andL(-4)
-                    & hideL(-5, i) & hideL(-3, u1) & hideL(-1, a) & /* hide duplicate w*/ hideL(-1, w) &
+                    andL('L, And(w,And(u1, And(u2, i)))) & andL('L, And(u1, And(u2, i))) & andL('L, And(u2, i))
+                    & hideL('L, i) & hideL('L, u1) & (hideL('L, a)*) & /* hide duplicate w*/ hideL('L, w) &
                     by(invariantWe)
                   ,
                   // u&Ce invariant
@@ -632,6 +622,50 @@ object CondCongruence {
                     & composeb(1, 1::Nil) & composeb(1, 1::1::Nil) & composeb(1, 1::1::1::Nil) & composeb(1, 1::1::1::1::Nil)
                     & printIndexed("cutting explicit dynamics away")
                     & cutAt(i0)(1, 1::1::1::1::1::0::0::Nil) & printIndexed("cuttedAt") & Idioms.<(
+                    /*use*/ sublabel("use patch") & printIndexed("use patch")
+                      // repacking
+                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::Nil)
+                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::Nil)
+                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil)
+                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil)
+                      //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
+                      // repack
+                      & useAt("[++] choice", PosInExpr(1::Nil))(1)
+                      & useAt("[;] compose", PosInExpr(1::Nil))(1)
+                      & useAt("[;] compose", PosInExpr(1::Nil))(1)
+                      & label("use patch") & printIndexed("used patch")
+                      // by unrolling implicit once
+                      //@todo rename acasximplicit to w_0 names or vice versa ....
+                      & cut(acasximplicit.asInstanceOf[Imply].right) & Idioms.<(
+                      (cutShow, /*show*/ sublabel("show implicit applicable") &
+                        hide(1) &
+                        cut(acasximplicit) & Idioms.<(
+                        (cutShow, /*show*/ cohide(2) & sublabel("lookup lemma") & label("") & by(acasximplicitP)),
+                        (cutUse, /*use*/ sublabel("show lemma assumptions") & label("") & printIndexed("show lemma assumptions") &
+                          implyL(-3) & Idioms.<(
+                          hide(1) &
+                            label("step 1") &
+                            // prove A()&(W(w)&Ci(w,dhf))
+                            andR(1) & Idioms.<(
+                            label("A id") & closeId
+                            ,
+                            // split W(w)&u&Ci finally
+                            label("step W(w)&Ci") & printIndexed("step W(w)&Ci") &
+                              andL('Llast)*3 &
+                              andR(1) & Idioms.<(
+                              label("W(w) id") & closeId // (-2,1)
+                              ,
+                              label("Ci id") & closeId //(-4,1)
+                            )
+                          )
+                          ,
+                          label("looked up") & closeId)
+                      )))
+                      ,  // show implicit applicable
+
+                      (cutUse, /*use*/ sublabel("by implicit") & useAt("[*] approx")(-3) & closeId)
+                    ) // use patch
+                    ,
                     /*show*/ sublabel("show patch") & printIndexed("showing patch")
                       & useAt("-> distributes over &", PosInExpr(0::Nil))(1)
                       & andR(1) & Idioms.<(
@@ -662,27 +696,7 @@ object CondCongruence {
                         & printIndexed("gathered")
                         // A(), W(w)&u&Ci((w,dhf)), [dhf:=*;{w:=-1;++w:=1;}][?Ci((w,dhf));][ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci((w,dhf)))  ==>  [dhf:=*;{w:=-1;++w:=1;}][?Ce((w,dhf));][ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci((w,dhf)))
                         & sublabel("postCut A()&W(w0)") & printIndexed("postCut A()&W(w0)")
-                        & postCut(And(a,w0))(1) & Idioms.<(
-                        /*show*/ sublabel("generalize post A()&W(w0)") & printIndexed("generalize post A()&W(w0)")
-                          & hide(-3) & printIndexed("Hide expects " + And(w0,And(u0,And(w0, i0))).prettyString)
-                          & hideL(-2, And(w0,And(u0,And(w0, i0)))) & sublabel("chasing") & chase(1)
-                          & allR(1) & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
-                          & sublabel("gen by arith") & printIndexed("gen by arith")
-                          & andR(1) & Idioms.<(
-                          andR(1) & Idioms.<(
-                            closeId
-                            ,
-                            done // QE
-                            )
-                          ,
-                          andR(1) & Idioms.<(
-                            closeId
-                            ,
-                            done //QE
-                            )
-                          )
-                          , // generalize post A()&W(w0)
-
+                        & postCut(And(a,w0))(1) & andR(1) & Idioms.<(
                         /*use*/ sublabel("generalized A()&W(w0)->post")
                           & testb(1, 1::1::Nil)
                           & printIndexed("do use dist equiv impl")
@@ -721,72 +735,51 @@ object CondCongruence {
                           & close(-3, 1)
                           // successfully closes
                           // generalized A()&W(w0)->post
+                        ,
+                        /*show*/ sublabel("generalize post A()&W(w0)") & printIndexed("generalize post A()&W(w0)")
+                          & hide(-3) & printIndexed("Hide expects " + And(w0,And(u0,And(w0, i0))).prettyString)
+                          & hideL(-2, And(w0,And(u0,And(w0, i0)))) & sublabel("chasing") & chase(1)
+                          & allR(1) & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
+                          & sublabel("gen by arith") & printIndexed("gen by arith")
+                          & andR(1) & Idioms.<(
+                          andR(1) & Idioms.<(
+                            closeId
+                            ,
+                            done // QE
+                            )
+                          ,
+                          andR(1) & Idioms.<(
+                            closeId
+                            ,
+                            done //QE
+                            )
+                          )
+                          // generalize post A()&W(w0)
                       )  // postCut(And(a,w0))
                       )  // andR within show patch
                       // show patch
-                    ,
-
-                    /*use*/ sublabel("use patch") & printIndexed("use patch")
-                      // repacking
-                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::Nil)
-                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::Nil)
-                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil)
-                      & useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil)
-                      //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
-                      // repack
-                      & useAt("[++] choice", PosInExpr(1::Nil))(1)
-                      & useAt("[;] compose", PosInExpr(1::Nil))(1)
-                      & useAt("[;] compose", PosInExpr(1::Nil))(1)
-                      & label("use patch") & printIndexed("used patch")
-                      // by unrolling implicit once
-                      //@todo rename acasximplicit to w_0 names or vice versa ....
-                      & cut(acasximplicit.asInstanceOf[Imply].right) & Idioms.<(
-                      /*show*/ sublabel("show implicit applicable") &
-                          hide(1) &
-                          cut(acasximplicit) & Idioms.<(
-                          /*show*/ cohide(2) & sublabel("lookup lemma") & label("") & by(acasximplicitP),
-                          /*use*/ sublabel("show lemma assumptions") & label("") & printIndexed("show lemma assumptions") &
-                              implyL(-3) & Idioms.<(
-                              hide(1) &
-                                label("step 1") &
-                                // prove A()&(W(w)&Ci(w,dhf))
-                                andR(1) & Idioms.<(
-                                label("A id") & close(-1,1)
-                                ,
-                                // split W(w)&u&Ci finally
-                                label("step W(w)&Ci") & printIndexed("step W(w)&Ci") &
-                                  andL(-2) & andL(-3) & andL(-4) &
-                                  andR(1) & Idioms.<(
-                                  label("W(w) id") & closeId // (-2,1)
-                                  ,
-                                  label("Ci id") & closeId //(-4,1)
-                                  /*andR(1) & (
-                                    label("arithmetic")
-                                    ,
-                                    label("Ci id") & closeId //(-4,1)
-                                    )
-                                    */
-                                  )
-                                )
-                              ,
-                              label("looked up") & closeId)
-                        )
-                        ,  // show implicit applicable
-
-                      /*use*/ sublabel("by implicit") & useAt("[*] approx")(-3) & closeId
-                    )
-                    // use patch
                   )  // cutAt(i0)
                   )  // u&Ce invariant
-                )
-                ,  // W(w)&Ci step
-
-              /*usecase*/ sublabel("final use") & printIndexed("final use") & andL(-1) & andL(-2) & andL(-3)
-                & implyR(1) & implyR(1)
-                & andR(1) & onAll(closeId)
+                ) // W(w)&Ci step
             ) // ind(And(a,And(w,And(u, i))))
+            ,
+            /*show*/ hide(1) & label("by seq-equiv") & equivifyR(1) & by(seqEquivalence)
           ) // cutL(i)(-3)
-        )
+          ,
+          /*show*/ label("") & printIndexed("w=-1 | w=1") & andL(-2, And(w,e)) &
+            //loop(w)(1)
+            DLBySubst.loop(w, skip)(1) & Idioms.<(
+            /*init*/ sublabel("W(w) init") & closeId,
+
+            /*usecase*/ sublabel("W(w) loop use") & closeId,
+
+            /*step*/ sublabel("W(w) step") & hideL('L, a) & printIndexed("step w=-1 | w=1") & by(invariantWe)
+
+          )
+          // end postCut(w)
+        ),
+
+        /*show*/ sublabel("A() vacuous") & printIndexed("vacuous global assumptions") & V(1) & closeId
       ) // postCut(a)
     )
 

@@ -454,10 +454,11 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic[T](name: String, input: T) extends BelleExpr {
+abstract case class InputTactic(name: String, inputs: List[Expression]) extends BelleExpr {
   //@todo extends NamedBelleExpr
   def computeExpr(): BelleExpr
-  override def prettyString: String = "input(" + input + ")"
+  override def prettyString: String =
+    s"$name(${inputs.map(input => s"{`${input.prettyString}`}").mkString(",")})"
 }
 
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Expression]) extends DependentPositionTactic(n) {

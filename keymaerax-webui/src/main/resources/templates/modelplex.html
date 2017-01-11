@@ -31,13 +31,25 @@
                         <option value="model">Model Monitor</option>
                         <!--<option value="prediction">Prediction Monitor</option>-->
                     </select>
-                    <datalist id="monitorkindList">
-
-                    </datalist>
+                    <datalist id="monitorkindList"></datalist>
                     <span id="monitorkindHelpBlock" class="help-block">
                         For canonical models of the form <code>(ctrl;plant)</code>, a controller monitor checks
                         decisions of <code>ctrl</code>, a model monitor checks <code>ctrl;plant</code> for past plant.
                         <!--and a prediction monitor checks <code>ctrl;plant</code> for future and disturbed plant.-->
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="monitorShape" class="col-md-2 control-label">Monitor Shape</label>
+                <div class="col-md-10">
+                    <select class="form-control" id="monitorShape" ng-model="mxdata.monitorShape">
+                        <option value="boolean">Boolean</option>
+                        <option value="metric">Metric</option>
+                    </select>
+                    <span id="monitorShapeHelpBlock" class="help-block">
+                        A boolean monitor checks whether or not the monitor condition is satisfied. A metric monitor
+                        indicates a "level of truth" with a real value (< 0 means false, >= 0 means true, distance to 0
+                        indicates level).
                     </span>
                 </div>
             </div>
@@ -72,5 +84,8 @@
     </div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-default" ng-click="downloadCCode()" ng-if="mxdata.monitor !== undefined"><i class="fa fa-download"></i> Download C code</button>
+    <button class="btn btn-default" ng-click="downloadCCode()"
+            ng-if="mxdata.monitor !== undefined && mxdata.monitorShape == 'boolean'">
+        <i class="fa fa-download"></i> Download C code
+    </button>
 </div>

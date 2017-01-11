@@ -34,10 +34,16 @@ object Fixed {
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
-  override def prettyString: String = start match {
-    case _: AntePosition => "'L"
-    case _: SuccPosition => "'R"
-    case _ => "'_"
+  override def prettyString: String = (start, shape, exact) match {
+    case (_: AntePosition, None, _) => "'L"
+    case (_: AntePosition, Some(s), true) => s"'L=={`${s.prettyString}`}"
+    case (_: AntePosition, Some(s), false) => s"'L~={`${s.prettyString}`}"
+    case (_: SuccPosition, None, _) => "'R"
+    case (_: SuccPosition, Some(s), true) => s"'R=={`${s.prettyString}`}"
+    case (_: SuccPosition, Some(s), false) => s"'R~={`${s.prettyString}`}"
+    case (_, None, _) => "'_"
+    case (_, Some(s), true) => s"'_=={`${s.prettyString}`}"
+    case (_, Some(s), false) => s"'_~={`${s.prettyString}`}"
   }
 }
 

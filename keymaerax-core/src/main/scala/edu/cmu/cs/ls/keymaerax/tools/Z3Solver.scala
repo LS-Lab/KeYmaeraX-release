@@ -102,10 +102,10 @@ class Z3Solver extends SMTSolver {
     val z3Output = cmd.!!
     if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
-    z3Output match {
-      case "unsat\n" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
-      case "sat\n" => throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f + "\n")
-      case "unknown\n" => throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f + "\n")
+    z3Output.stripLineEnd match {
+      case "unsat" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
+      case "sat" => throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f + "\n")
+      case "unknown" => throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f + "\n")
       case _ => throw new SMTConversionException("Back-conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
   }

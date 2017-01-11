@@ -26,21 +26,33 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           })
       };
 
-     $scope.addModel = function() {
+     $scope.isKyxFile = function() {
+       return keyFile !== undefined && keyFile.files !== undefined &&
+         keyFile.files.length > 0 && keyFile.files[0].name.endsWith('.kyx');
+     }
+
+     $scope.addModel = function(modelName) {
           var file = keyFile.files[0];
 
           var fr = new FileReader();
           fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
           fr.onload = function(e) {
-            var model = e.target.result;
-            $http.post("user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName, model)
+
+            var fileContent = e.target.result;
+            var url = "user/" + $cookies.get('userId');
+            if (file.name.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
+            else if (file.name.endsWith('.kya')) url = url + "/archiveupload/";
+
+            spinnerService.show('caseStudyImportSpinner');
+
+            $http.post(url, fileContent)
               .then(function(response) {
                 if(!response.data.success) {
                   if(response.data.errorText) {
-                    showMessage($uibModal, "Error Uploading Model", response.data.errorText, "md")
+                    showMessage($uibModal, "Error Uploading File", response.data.errorText, "md")
                   }
                   else {
-                    showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
+                    showMessage($uibModal, "Unknown Error Uploading File", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
                   }
                 }
                 else { //Successfully uploaded model!
@@ -60,10 +72,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                   controller: 'ParseErrorCtrl',
                   size: 'lg',
                   resolve: {
-                    model: function () { return model; },
+                    model: function () { return fileContent; },
                     error: function () { return err.data; }
                 }});
-              });
+              })
+              .finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
           };
 
           fr.readAsText(file);
@@ -86,15 +99,18 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal, $location, Models) {
+angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
+    $location, FileSaver, Blob, Models, spinnerService) {
   $scope.models = [];
-  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-      $scope.models = data;
+  $scope.userId = $cookies.get('userId');
+
+  $http.get("models/users/" + $scope.userId).then(function(response) {
+      $scope.models = response.data;
   });
 
   $scope.examples = [];
-  $http.get("examplesList/").success(function(data) {
-      $scope.examples = data;
+  $http.get("examplesList/").then(function(response) {
+      $scope.examples = response.data;
   });
 
   $scope.open = function (modelid) {
@@ -108,6 +124,63 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       });
   };
 
+  $scope.downloadModel = function(modelid) {
+    $http.get("user/" + $scope.userId + "/model/" + modelid).then(function(response) {
+      var modelName = response.data.name;
+      var fileContent = new Blob([response.data.keyFile], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(fileContent, modelName + '.kyx');
+    });
+  }
+
+  currentDateString = function() {
+    var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth() + 1; //@note January is 0
+    var yyyy = today.getFullYear();
+
+    if(dd < 10) dd = '0' + dd
+    if(mm < 10) mm='0'+mm
+    return mm + dd + yyyy;
+  }
+
+  $scope.downloadAllModels = function() {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
+  $scope.downloadModels = function() {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
+  //@note almost duplicate of proofs.js downloadAllProofs
+  $scope.downloadAllProofs = function() {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/downloadAllModels/withProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
+  //@note duplicate of proofs.js downloadModelProofs
+  $scope.downloadModelProofs = function(modelId) {
+    spinnerService.show('modelProofExportSpinner');
+    $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
+      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
+      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kya');
+    })
+    .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
+  }
+
   $scope.openTactic = function (modelid) {
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeltacticdialog.html',
@@ -120,10 +193,9 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   };
 
   $scope.runTactic = function (modelid) {
-    $http.post("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic/run")
-    .success(function(data) {
-        if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Error While Running Tactic")
-        else console.log("Done running tactic")
+    $http.post("user/" + $scope.userId + "/model/" + modelid + "/tactic/run").then(function(response) {
+        if (respnse.data.errorThrown) showCaughtErrorMessage($uibModal, response.data, "Error While Running Tactic");
+        else console.log("Done running tactic");
     });
   }
 
@@ -133,11 +205,23 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       controller: 'ModelPlexCtrl',
       size: 'lg',
       resolve: {
-        userid: function() { return $cookies.get('userId'); },
+        userid: function() { return $scope.userId; },
         modelid: function() { return modelid; }
       }
     })
   }
+
+  $scope.testsynthesis = function(modelid) {
+      var modalInstance = $uibModal.open({
+        templateUrl: 'templates/testsynthesis.html',
+        controller: 'TestSynthCtrl',
+        size: 'lg',
+        resolve: {
+          userid: function() { return $scope.userId; },
+          modelid: function() { return modelid; }
+        }
+      })
+    }
 
   $scope.$watch('models',
       function (newModels) { if (newModels) Models.setModels(newModels); }
@@ -146,17 +230,17 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 })
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
-  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).success(function(data) {
-      $scope.model = data
+  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).then(function(response) {
+      $scope.model = response.data;
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
 });
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
-  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").success(function(data) {
+  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").then(function(response) {
       $scope.modelId = modelid;
-      $scope.tactic = data
+      $scope.tactic = response.data;
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };

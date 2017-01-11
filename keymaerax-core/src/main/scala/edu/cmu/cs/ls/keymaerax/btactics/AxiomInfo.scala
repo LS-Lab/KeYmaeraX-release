@@ -308,6 +308,9 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", {case () => posnil}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", {case () => posnil}),
 
+    // compatibility axioms (derivable with Mathematica, but not with Z3)
+    CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", _ => TactixLibrary.useAt("dgZeroEquilibrium")),
+
     // Derived axioms
     new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", {case () => HilbertCalculus.existsE}),
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", {case () => HilbertCalculus.assignb}),
@@ -472,7 +475,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("<=1Div down", "<=1/", "intervalDown1Divide", {case () => useAt(DerivedAxioms.intervalDown1Divide)}),
     new DerivedAxiomInfo("<=Div down", "<=/", "intervalDownDivide", {case () => useAt(DerivedAxioms.intervalDownDivide)}),
     new DerivedAxiomInfo("<=pow down", "<=pow", "intervalDownPower", {case () => useAt(DerivedAxioms.intervalDownPower)}),
-    new DerivedAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", {case () => useAt(DerivedAxioms.dgZeroEquilibrium)}),
     new DerivedAxiomInfo("! !="
       , AxiomDisplayInfo(("¬≠","!!="), "<span class=\"k4-axiom-key\">(¬(f≠g)</span>↔(f=g))")
       , "notNotEqual", {case () => useAt(DerivedAxioms.notNotEqual)}),
@@ -622,6 +624,8 @@ object DerivationInfo {
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
+    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
+    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
 
     // proof management tactics
     new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
@@ -651,6 +655,12 @@ object DerivationInfo {
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
         ,List(FormulaArg("P")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
+    new InputTacticInfo("abbrv"
+      , RuleDisplayInfo(("abbrv","abbrv")
+        ,(List("&Gamma;"), List("&Delta;"))
+        ,List(
+          (List("&Gamma;", "v=t"),List("&Delta;"))))
+      ,List(TermArg("t"),VariableArg("v")), {case () => (t:Term) => (v:Variable) => EqualityTactics.abbrv(t,Some(v))}),
     // Proof rule input position tactics
     new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")),
       {case () => (fml:Formula) => TactixLibrary.cutL(fml)}),

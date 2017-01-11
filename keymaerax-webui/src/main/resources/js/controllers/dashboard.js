@@ -9,8 +9,8 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog
 
 }]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['$scope', '$uibModalInstance', function($scope, $uibModalInstance, path) {
-    $scope.extractedDatabaseLocation = path
+angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['$scope', '$uibModalInstance', 'path', function($scope, $uibModalInstance, path) {
+    $scope.extractedDatabaseLocation = path;
     $scope.close = function() {
         $uibModalInstance.dismiss('cancel');
     }
@@ -64,14 +64,14 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
 
   $scope.extractdb = function() {
       $http.post('/extractdb')
-          .success(function(data) {
-              var modalInstance = $uibModal.open({
+          .then(function(response) {
+              $uibModal.open({
                   templateUrl: 'partials/extractdb.html',
                   controller: 'DashboardCtrl.ExtractDB',
                   backdrop: "static",
                   size: 'md',
                   resolve: {
-                      path: function () { return data.path; },
+                      path: function () { return response.data.path; },
                   }
               });
           })

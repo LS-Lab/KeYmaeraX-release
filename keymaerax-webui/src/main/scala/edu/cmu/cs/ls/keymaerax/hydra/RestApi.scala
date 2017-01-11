@@ -200,7 +200,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val modelplex = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment) { (modelId, monitorKind, conditionKind) => pathEnd {
+  val modelplex = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment / Segment) { (modelId, monitorKind, monitorShape, conditionKind) => pathEnd {
     get {
       parameters('vars.as[String] ?) { vars => {
         val theVars: List[String] = vars match {
@@ -209,7 +209,7 @@ trait RestApi extends HttpService with SLF4JLogging {
           }
           case None => List.empty
         }
-        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, conditionKind, theVars)
+        val r = new ModelPlexRequest(database, userId, modelId, monitorKind, monitorShape, conditionKind, theVars)
         completeRequest(r, t)
     }}}
   }}}
@@ -221,6 +221,18 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val testSynthesis = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment ) { (modelId, monitorKind, amount, timeout) => pathEnd {
+    get {
+      parameters('kinds.as[String] ?) { kinds => {
+        val theKinds: Map[String,Boolean] = kinds match {
+          case Some(v) => v.parseJson.asJsObject.fields.map({case (k, JsBoolean(v)) => k -> v})
+        }
+      val to = timeout match { case "0" => None case s => Some(Integer.parseInt(s)) }
+      val r = new TestSynthesisRequest(database, userId, modelId, monitorKind, theKinds, Integer.parseInt(amount), to)
+      completeRequest(r, t)
+    }}}
+  }}}
+
   //Because apparently FTP > modern web.
   val userModel2 = (t : SessionToken) => userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
   {pathEnd {
@@ -229,6 +241,15 @@ trait RestApi extends HttpService with SLF4JLogging {
         val request = new CreateModelRequest(database, userId, modelNameOrId, contents)
         completeRequest(request, t)
       }}}}}}}}
+
+  //@note somehow wouldn't match without trailing /
+  val uploadArchive = (t : SessionToken) => path("user" / Segment / "archiveupload" /) { userId => pathEnd {
+    post {
+      entity(as[String]) { contents => {
+        val request = new UploadArchiveRequest(database, userId, contents)
+        completeRequest(request, t)
+      }}}
+  }}
 
   val modelTactic = (t : SessionToken) => path("user" / Segment / "model" / Segment / "tactic") { (userId, modelId) => pathEnd {
     get {
@@ -268,6 +289,32 @@ trait RestApi extends HttpService with SLF4JLogging {
   val downloadProblemSolution = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "download") { (userId, proofId) => { pathEnd {
     get {
       val request = new ExtractProblemSolutionRequest(database, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val downloadModelProofs = (t : SessionToken) => path("models" / "user" / Segment / "model" / Segment / "downloadProofs") { (userId, modelId) => { pathEnd {
+    get {
+      val request = new ExtractModelSolutionsRequest(database, Integer.parseInt(modelId) :: Nil,
+        withProofs = true, exportEmptyProof = true)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val downloadAllProofs = (t : SessionToken) => path("proofs" / "user" / Segment / "downloadAllProofs") { userId => { pathEnd {
+    get {
+      //@note potential performance bottleneck: loads all models just to get ids
+      val allModels = database.getModelList(userId).map(_.modelId)
+      val request = new ExtractModelSolutionsRequest(database, allModels, withProofs = true, exportEmptyProof = false)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val downloadAllModels = (t : SessionToken) => path("models" / "user" / Segment / "downloadAllModels" / Segment) { (userId, proofs) => { pathEnd {
+    get {
+      val allModels = database.getModelList(userId).map(_.modelId)
+      val request = new ExtractModelSolutionsRequest(database, allModels,
+        withProofs = proofs == "withProofs", exportEmptyProof = true)
       completeRequest(request, t)
     }
   }}}
@@ -788,6 +835,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     *
     * @see [[sessionRoutes]] is built by wrapping all of these sessions in a cookieOptional("session") {...} that extrtacts the cookie name. */
   private val partialSessionRoutes : List[SessionToken => routing.Route] =
+    downloadAllModels     :: //@note before userModel2 to match correctly
     modelList             ::
     modelTactic           ::
     userModel             ::
@@ -799,6 +847,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     deleteProof           ::
     proofListForModel     ::
     proofList             ::
+    downloadAllProofs     :: //@note before openProof to match correctly
+    downloadModelProofs   ::
     openProof             ::
     getAgendaItem         ::
     setAgendaItemName     ::
@@ -836,6 +886,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     modelplexMandatoryVars::
     exportSequent         ::
     exportFormula         ::
+    testSynthesis         ::
+    uploadArchive         ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

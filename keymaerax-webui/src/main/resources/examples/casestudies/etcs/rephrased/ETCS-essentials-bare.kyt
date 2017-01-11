@@ -1,0 +1,50 @@
+/* Proof scripts ("tactics") steer the proof search of KeYmaera X. KeYmaera X already ships tactics for many proof tasks,
+ * but can be extended with user-defined tactics.
+ * Note: KeYmaera X finds a proof automatically with builtin proof search tactic 'master'.
+ *
+ * Proof script operators:
+ *   &       a&b        sequential tactic composition, "a" must run successfully, then run "b" on a's result
+ *   <       <(a,b,c)   branching composition, run "a" on 1st goal, "b" on 2nd, "c" on 3rd
+ *   'R      a('R)      position search: find a formula on the right-hand side of |- where the tactic "a" applies
+ *   'L      a('L)      position search: find a formula on the left-hand side of |- where the tactic "a" applies
+ *   *       a*         exhaustive search: repeat "a" until no more progress
+ *   doall   doall(a)   do the same proof 'a' on all branches
+ *
+ * Builtin proof tactics used in this script:
+ *   implyR        |- p -> q     move assumptions p of an implication -> on the right-hand side of |- into the left-hand side of |-
+ *   andL          p&q |-        split conjunction & on the left-hand side of |- into its facts p and q
+ *   loop          |- [a*]safe   prove safety of a loop "a*" by induction
+ *                                 {`invariant`} is the loop invariant, which must be
+ *                                 - true at the beginning (initial case),
+ *                                 - strong enough to prove safety (use case), and
+ *                                 - be preserved by the loop body `a` (step, i.e. prove invariant->[a]invariant)
+ *   prop                        prove propositional logic
+ *   QE                          prove real arithmetic
+ *   unfold                      symbolically execute a program
+ *   diffSolve                   solve a differential equation
+ *   diffInvariant               prove that some formula is invariant throughout the ODE,
+ *                                 {`formula`} is the differential invariant that KeYmaera X should prove
+ *                                 old(x) refers to initial value of x at the start of the ODE
+ *   diffWeaken                  prove safety from just the differential invariants
+ */
+
+implyR('R) & (andL('L)*) & loop({`v^2<=2*b*(m-z)`}, 'R) & <(  /* prove loop by induction with invariant; intuition: always have sufficient space to stop */
+  prop,                                                       /* induction initial case */
+  QE,                                                         /* induction use case */
+  unfold & <(                                                 /* induction step, symbolically execute program until ODE */
+    /* prove ODE in train protection branch (a=-b) */
+    diffInvariant({`t>=old(t)`}, 'R) &                        /* intuition: time progresses */
+    diffInvariant({`v=old(v)-b*t`}, 'R) &                     /* intuition: new speed is old speed - decrease by braking */
+    diffInvariant({`z=old(z)+old(v)*t-b/2*t^2`}, 'R)          /* intuition: new position is old position + distance travelled with mean speed */
+    ,
+    /* prove ODE in free driving branch (a=A) */
+    diffInvariant({`t>=old(t)`}, 'R) &
+    diffInvariant({`v=old(v)+A*t`}, 'R) &
+    diffInvariant({`z=old(z)+old(v)*t+A/2*t^2`}, 'R)
+  ) & doall(diffWeaken('R)) & <(
+      QE                                                      /* braking is still safe even if we don't know anything about SB */
+      ,
+      implyR('R) & (andL('L)*) & allL2R(-8) & hideL(-8) &     /* accelerating without knowing SB is unsafe (QE would fail), rewrite to find conditions */
+      allL2R(-7) & hideL(-7) & allL2R(-6) & hideL(-6) &
+      allL2R(-5) & hideL(-5))                                 /* result: m-z <= SB & t<=ep & ... -> (v+A*t)^2<=2*b*(m-(z+v*t+A/2*t^2)), with some arithmetic rewriting we find boundary SB >= v^2/(2*b) + (A/b+1)(A/2*ep^2 + ep*v), which is used in ETCS-essentials.kyx */
+)

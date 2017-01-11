@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
@@ -497,20 +497,15 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
 
   def resultingResponses() = {
     try {
-      //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
-        case f : Formula => {
+        case _: Formula =>
           if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
             //Nope. Give a good error message.
             new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
-          }
-          else {
-            println(s"${nameOfModel} is unique in: ${db.getModelList(userId).map(_.name).mkString(",")}")
+          } else {
             createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
-            println(s"ID of model ${nameOfModel}: ${createdId}")
             new BooleanResponse(createdId.isDefined) :: Nil
           }
-        }
       }
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
@@ -520,6 +515,25 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getModelId = createdId match {
     case Some(s) => s
     case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
+  }
+}
+
+class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: String) extends UserRequest(userId) {
+  def resultingResponses(): List[Response] = {
+    try {
+      val archiveEntries = KeYmaeraXArchiveParser.parse(kyaFileContents)
+      //@todo checks: fresh names, model created etc.
+      archiveEntries.foreach({ case (name, modelFileContent, _, tactic) =>
+        val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(x => x.toString)
+        tactic.foreach({ case (tname, texpr) =>
+          val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive", currentDate())
+          DatabasePopulator.executeTactic(db, modelFileContent, proofId, BellePrettyPrinter(texpr))
+        })
+      })
+      new BooleanResponse(true) :: Nil
+    } catch {
+      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    }
   }
 }
 
@@ -584,8 +598,9 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   }
 }
 
-class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
-  def resultingResponses() = {
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, monitorShape: String,
+                       conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
+  def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser(model.keyFile)
     val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
@@ -603,11 +618,66 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
-    if (monitorCond.subgoals.size == 1) conditionKind match {
-      case "kym" => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
-      case "c" => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+    if (monitorCond.subgoals.size == 1) (conditionKind, monitorShape) match {
+      case ("kym", "boolean") => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
+      case ("kym", "metric") => new ModelPlexResponse(model, ModelPlex.toMetric(monitorCond.subgoals.head.toFormula)) :: Nil
+      case ("c", "boolean") => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
     }
     else new ErrorResponse("ModelPlex failed") :: Nil
+  }
+}
+
+class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, testKinds: Map[String, Boolean],
+                           amount: Int, timeout: Option[Int]) extends UserRequest(userId) {
+  def resultingResponses(): List[Response]  = {
+    val model = db.getModel(modelId)
+    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
+      case ("controller", Some(tool)) =>
+        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
+        try {
+          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
+        } catch {
+          case _: Throwable => foResult
+        }
+      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
+    }
+
+    def variance(vals: Map[Term, Term]): Number = {
+      val (pre, post) = vals.partition({ case (v, _) => v.isInstanceOf[BaseVariable] })
+      val postByPre: Map[Term, BigDecimal] = post.map({
+        case (FuncOf(Function(name, idx, Unit, Real, _), _), Number(value)) if name.endsWith("post") =>
+          Variable(name.substring(0, name.length-"post".length), idx) -> value
+        case (v, Number(value)) => v -> value
+        })
+      Number(pre.map({
+        case (v, Number(value)) if postByPre.contains(v) => (value - postByPre(v))*(value - postByPre(v))
+        case _ => BigDecimal(0)
+      }).sum)
+    }
+
+    val Imply(True, cond) = monitorCond.subgoals.head.toFormula
+
+    val assumptionsCond = assumptions.reduceOption(And).getOrElse(True)
+    val testSpecs: List[(String, Formula)] = testKinds.map({
+      case ("compliant", true) => Some("compliant" -> cond)
+      case ("incompliant", true) => Some("incompliant" -> Not(cond))
+      case _ => None
+    }).filter(_.isDefined).map(c => c.get._1 -> And(assumptionsCond, c.get._2)).toList
+
+    val metric = ModelPlex.toMetric(cond)
+    ToolProvider.cexTool() match {
+      case Some(tool: Mathematica) =>
+        val synth = new TestSynthesis(tool)
+        //val testCases = synth.synthesizeTestConfig(testCondition, amount, timeout)
+        val testCases = testSpecs.map(ts => ts._1 -> synth.synthesizeTestConfig(ts._2, amount, timeout))
+        val tcSmVar = testCases.map(tc => tc._1 -> tc._2.map(tcconfig => (tcconfig, synth.synthesizeSafetyMarginCheck(metric, tcconfig), variance(tcconfig))))
+        new TestSynthesisResponse(model, metric, tcSmVar) :: Nil
+      case None => new ErrorResponse("Test case synthesis failed, missing Mathematica") :: Nil
+    }
   }
 }
 
@@ -1288,13 +1358,47 @@ class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request
   }
 }
 
-class ExtractProblemSolutionRequest(db: DBAbstraction, proofIdStr: String) extends Request {
-  private val proofId = Integer.parseInt(proofIdStr)
+object ArchiveEntryPrinter {
+  def tacticEntry(name: String, tactic: String): String =
+    s"""Tactic "$name".
+       #  $tactic
+       #End.
+       """.stripMargin('#')
 
+  def archiveEntry(model: ModelPOJO, tactics:List[(String, String)]): String =
+    s"""ArchiveEntry "${model.name}".
+       #
+         #${model.keyFile}
+       #
+         #${tactics.map(t => tacticEntry(t._1, t._2)).mkString("\n")}
+       #
+         #End.
+       """.stripMargin('#')
+}
+
+class ExtractProblemSolutionRequest(db: DBAbstraction, proofId: String) extends Request {
   override def resultingResponses(): List[Response] = {
-    val exprText = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)))
-    val problem = db.getModel(db.getProofInfo(proofId).modelId).keyFile
-    new ExtractProblemSolutionResponse(problem + "\n" + "Solution.\n" + exprText + "\nEnd.") :: Nil
+    val pid = Integer.parseInt(proofId)
+    val pi = db.getProofInfo(pid)
+    val proofName = pi.name
+    val tactic = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(pid)))
+    val model = db.getModel(pi.modelId)
+    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
+    new ExtractProblemSolutionResponse(archiveContent) :: Nil
+  }
+}
+
+class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int],
+                                   withProofs: Boolean, exportEmptyProof: Boolean) extends Request {
+  override def resultingResponses(): List[Response] = {
+    def modelProofs(modelId: Int): List[(String, String)] = {
+      if (withProofs) db.getProofsForModel(modelId).map(p =>
+        p.name -> BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(p.proofId))))
+      else Nil
+    }
+    val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
+    val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs)}).mkString("\n\n")
+    new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
 }
 

@@ -1502,4 +1502,19 @@ class DifferentialTests extends TacticTestBase {
   it should "diff var flat flight progress [variable]" taggedAs(IgnoreInBuildTest) in withMathematica { tool =>
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
+
+  //Unsound
+  it should "prove x'=1" in withMathematica { qeTool =>
+    val ante = IndexedSeq()
+    val succ = IndexedSeq("x'=1".asFormula)
+
+    val result = proveBy(Sequent(ante, succ),
+      TactixLibrary.cut("true".asFormula) < (TactixLibrary.implyRi, prop) &
+        TactixLibrary.cut("[{x'=1&true}]x'=1".asFormula) < (
+          TactixLibrary.implyRi & byUS("DX differential skip"),
+          TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(DerivedAxioms.equalReflex))
+    )
+    result.isProved shouldBe true
+  }
+  
 }
