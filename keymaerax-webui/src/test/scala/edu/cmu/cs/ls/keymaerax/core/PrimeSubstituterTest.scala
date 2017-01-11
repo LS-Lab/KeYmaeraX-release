@@ -54,6 +54,22 @@ class PrimeSubstituterTest extends TacticTestBase {
   }
 
   //@author Andre Platzer
+  it should "not put primes into DS&'s postcondition elder style" in {
+    // [{x_'=c()&q(x_)}]p(||) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(||)))
+    val pr = ProvableSig.axioms("DS& differential equation solution")
+
+    pr shouldBe 'proved
+    //@todo a[CoreException] or harmless semi-no-op
+    (a [CoreException] shouldBe thrownBy {pr(USubst(
+      SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
+        SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
+        SubstitutionPair(UnitPredicational("p",AnyArg), Equal(DifferentialSymbol(x_),Number(5))) ::
+        Nil))}) || (StaticSemantics.symbols(pr.conclusion) should not contain UnitPredicational("p",AnyArg))
+    // would prove bogus [x'=2&true]x'=5 <-> \forall t>=0 (\forall 0<=s<=t true -> [x:=x+2*t;]x'=5)
+    // which is not valid in a state where x'=5
+  }
+
+  //@author Andre Platzer
   it should "not put primes into DS&'s postcondition" in {
     // [{x_'=c()&q(x_)}]p(||) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(||)))
     val pr = ProvableSig.axioms("DS& differential equation solution")
@@ -62,7 +78,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
-        SubstitutionPair(UnitPredicational("p",AnyArg), Equal(DifferentialSymbol(x_),Number(5))) ::
+        SubstitutionPair(UnitPredicational("p",Except(DifferentialSymbol(x_))), Equal(DifferentialSymbol(x_),Number(5))) ::
         Nil))}
     // would prove bogus [x'=2&true]x'=5 <-> \forall t>=0 (\forall 0<=s<=t true -> [x:=x+2*t;]x'=5)
     // which is not valid in a state where x'=5

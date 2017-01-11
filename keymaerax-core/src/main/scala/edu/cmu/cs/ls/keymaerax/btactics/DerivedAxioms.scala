@@ -1715,7 +1715,7 @@ object DerivedAxioms {
     * }}}
     */
   lazy val DSddomain = derivedAxiom("Dsol& differential equation solution",
-    Sequent(IndexedSeq(), IndexedSeq("<{x_'=c()&q(x_)}>p(||) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) & <x_:=x_+(c()*t_);>p(||)))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<{x_'=c()&q(x_)}>p(|x_'|) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) & <x_:=x_+(c()*t_);>p(|x_'|)))".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DS& differential equation solution")(1, 0::0::Nil) &
       useAt("all dual time", PosInExpr(1::Nil))(1, 0::0::Nil) &
