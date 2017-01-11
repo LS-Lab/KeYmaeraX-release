@@ -51,8 +51,11 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case sp: SpaceDependent => sp.space match {
       case AnyArg        => true
       case Except(taboo) =>
-        //@note this assumes that only sort Real is ever used for taboos, for simplicity.
-        val taboos = SetLattice(Set(taboo, DifferentialSymbol(taboo)))
+        //@note this assumes no higher-order differential symbols
+        val taboos = SetLattice(
+          if (taboo.isInstanceOf[DifferentialSymbol] || taboo.sort!=Real) Set(taboo)
+          else Set(taboo, DifferentialSymbol(taboo))
+        )
         sp match {
           //@note by previous insists, repl has to be a DifferentialProgram
           case _: DifferentialProgramConst => val vc = StaticSemantics(repl.asInstanceOf[DifferentialProgram])
