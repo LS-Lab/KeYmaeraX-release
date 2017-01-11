@@ -298,7 +298,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 50
   }}
 
-  "Internal steps" should "be revealed for diffInvariant" in withMathematica { tool => withDatabase { db =>
+  "Revealing internal steps" should "should work for diffInvariant" in withMathematica { tool => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
     val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -308,4 +308,15 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("implyR('R) & diffCut({`x>=old(x)`},1) & <(nil, diffInd(1))")
   }}
+
+  it should "should work for prop on a simple example" in withDatabase { db =>
+    val problem = "x>=0 -> x>=0"
+    val modelContent = s"Variables. R x. R y. End. Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
+    interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("nil & implyR(1) & closeId")
+  }
 }
