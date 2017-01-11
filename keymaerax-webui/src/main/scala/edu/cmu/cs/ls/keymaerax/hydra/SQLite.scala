@@ -620,11 +620,11 @@ object SQLite {
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
         Executionsteps.filter(_._Id === executionStepId)
-        .map({case dbstep => (dbstep.executionid.get, dbstep.previousstep, dbstep.parentstep,
+        .map(dbstep => (dbstep.executionid.get, dbstep.previousstep, dbstep.parentstep,
           dbstep.branchorder, dbstep.branchlabel, dbstep.alternativeorder.get, dbstep.status.get, dbstep.executableid.get,
           dbstep.inputprovableid, dbstep.resultprovableid, dbstep.localprovableid, dbstep.userexecuted.get, dbstep.childrenrecorded.get,
           dbstep.rulename.get)
-        })
+        )
         .update((step.executionId, step.previousStep, step.parentStep, step.branchOrder, step.branchLabel,
           step.alternativeOrder, ExecutionStepStatus.toString(step.status), step.executableId, step.inputProvableId, step.resultProvableId,
           step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName))
@@ -647,7 +647,7 @@ object SQLite {
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
         while(steps != Nil) {
-          val (headSteps, tailSteps) = steps.partition({step => step.previousstep == prevId})
+          val (headSteps, tailSteps) = steps.partition(_.previousstep == prevId)
           if (headSteps == Nil)
             return revResult.reverse
           val head = headSteps.head
@@ -706,8 +706,8 @@ object SQLite {
             val conclusion = getProofConclusion(proofId)
             ExecutionTrace(proofId.toString, executionId.toString, conclusion, Nil)
           } else {
-            val provableIds = steps.map { case step => step.localProvableId.get }
-            val executableIds = steps.map { case step => step.executableId }
+            val provableIds = steps.map(_.localProvableId.get)
+            val executableIds = steps.map(_.executableId)
             val provables = loadProvables(provableIds).map(_.provable)
             val conclusion = provables.head.conclusion
             val initProvable = ProvableSig.startProof(conclusion)
