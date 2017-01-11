@@ -1679,6 +1679,7 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @TODO postcondition formulation is weaker than that of DS&
     */
   lazy val DSnodomain = derivedAxiom("DS differential equation solution",
     Sequent(IndexedSeq(), IndexedSeq("[{x_'=c_()}]p_(x_) <-> \\forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))".asFormula)),
@@ -1696,6 +1697,7 @@ object DerivedAxioms {
     * }}}
     *
     * @Derived
+    * @TODO postcondition formulation is weaker than that of DS&
     */
   lazy val DSdnodomain = derivedAxiom("Dsol differential equation solution",
     Sequent(IndexedSeq(), IndexedSeq("<{x_'=c_()}>p_(x_) <-> \\exists t_ (t_>=0 & <x_:=x_+(c_()*t_);>p_(x_))".asFormula)),
