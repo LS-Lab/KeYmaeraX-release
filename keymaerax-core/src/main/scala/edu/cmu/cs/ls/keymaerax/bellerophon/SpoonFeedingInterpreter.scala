@@ -21,6 +21,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
 
   private def runTactic(branches: Seq[(BelleExpr, BelleValue)], branch: Int, level: Int): BelleValue = {
     branches(branch)._1 match {
+      // combinators
       case SeqTactic(left, right) =>
         val leftResult = try {
           runTactic(branches.updated(branch, (left, branches(branch)._2)), branch, level)
@@ -132,16 +133,18 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + options() + "\n" + errors)
 
       // look into tactics
-      case d: DependentTactic if level > 0 => try {
+      case d: DependentTactic if level > 0 || d.name == "ANON" => try {
         val v = branches(branch)._2
         val valueDependentTactic = d.computeExpr(v)
-        runTactic(branches.updated(branch, (valueDependentTactic, branches(branch)._2)), branch, level-1)
+        val levelDecrement = if (d.name == "ANON") 0 else 1
+        runTactic(branches.updated(branch, (valueDependentTactic, branches(branch)._2)), branch, level-levelDecrement)
       } catch {
         case e: BelleThrowable => throw e.inContext(d, branches(branch)._2.prettyString)
         //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
         case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic", e).inContext(d, "")
       }
 
+      // forward to inner interpreter
       case _ => branches(branch)._2 match {
         case BelleProvable(provable, labels) if provable.subgoals.isEmpty=> inner(Seq())(branches(branch)._1, branches(branch)._2)
         case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>

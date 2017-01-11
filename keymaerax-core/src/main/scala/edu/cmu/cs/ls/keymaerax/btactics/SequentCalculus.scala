@@ -179,9 +179,10 @@ trait SequentCalculus {
   })
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
-    new BuiltInTactic("close") {
+    //@note same name (closeId) as SequentCalculus.closeId for serialization
+    new BuiltInTactic("closeId") {
       override def result(provable: ProvableSig) = {
-        ProofRuleTactics.requireOneSubgoal(provable, "close(" + a + "," + s + ")")
+        ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
         provable(Close(a, s), 0)
       }
     }
