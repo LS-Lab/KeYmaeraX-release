@@ -64,7 +64,7 @@ class PrimeSubstituterTest extends TacticTestBase {
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), Equal(DifferentialSymbol(x_),Number(5))) ::
-        Nil))}) || (StaticSemantics.symbols(pr.conclusion) should not contain UnitPredicational("p",AnyArg))
+        Nil))}) //@todo || (StaticSemantics.symbols(pr.conclusion) should not contain UnitPredicational("p",AnyArg))
     // would prove bogus [x'=2&true]x'=5 <-> \forall t>=0 (\forall 0<=s<=t true -> [x:=x+2*t;]x'=5)
     // which is not valid in a state where x'=5
   }
