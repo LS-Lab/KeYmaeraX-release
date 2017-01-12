@@ -81,19 +81,24 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           if (children.length != p.subgoals.length)
             throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(branches(branch)._1, "")
 
+          // patch branches b consistent with number of p's subgoals
+          def patchBranches(p: ProvableSig, b: Seq[(BelleExpr, BelleValue)], pos: Int): Seq[(BelleExpr, BelleValue)] =
+            if (p.subgoals.isEmpty) b.patch(pos, Nil, 1)
+            else if (p.subgoals.size == 1) b
+            else b ++ p.subgoals.tail.map(sg => (b(pos)._1, BelleProvable(ProvableSig.startProof(sg))))
+
           //@note execute in reverse for stable global subgoal indexing
           val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
           val allBranches = branches.updated(branch, branchTactics.head) ++ branchTactics.tail
 
           val reverseBranches = allBranches.zipWithIndex.reverse.filter(nt => branchTactics.contains(nt._1))
           val BelleProvable(last, _) = runTactic(allBranches, reverseBranches.head._2, level)
-          //@note remove if closed, otherwise leave even if subgoal changed (subgoal will be replaced with next branch tactic)
-          val remainingBranches = if (last.subgoals.isEmpty) allBranches.patch(reverseBranches.head._2, Nil, 1) else allBranches
+          val remainingBranches = patchBranches(last, allBranches, reverseBranches.head._2)
 
           val result = reverseBranches.tail.foldLeft((p(last, p.subgoals.size-1), remainingBranches))({ case ((r, nb), (_, i)) =>
             val BelleProvable(current, _) = runTactic(nb, i, level)
             val localBranchIdx = r.subgoals.indexOf(current.conclusion)
-            (r(current, localBranchIdx), if (current.subgoals.isEmpty) nb.patch(i, Nil, 1) else nb)
+            (r(current, localBranchIdx), patchBranches(current, nb, i))
           })
 
           BelleProvable(result._1)

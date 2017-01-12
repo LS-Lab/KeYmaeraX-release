@@ -208,6 +208,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(closeId, nil), nil)")
   }
 
+  it should "should work with nested branching when branching stay open 3" in withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&x<y"
+    val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
+    interpreter(implyR(1) & orL(-1) & Idioms.<(andR(1) & Idioms.<(closeId, skip), andR(1)),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(andR(1) & <(closeId, nil), andR(1))")
+  }
+
   "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val proofId = db.createProof(modelContent)
@@ -337,5 +349,29 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(closeId, notL(-1) & nil & nil)")
+  }
+
+  it should "should work for prop with nested branching" in withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&x<y"
+    val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
+    interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser(
+      """
+        |nil & implyR(1) & orL(-1) & <(
+        |  nil & andR(1) & <(
+        |    closeId,
+        |    nil
+        |  )
+        |  ,
+        |  nil & andR(1) & <(
+        |    nil,
+        |    closeId
+        |  )
+        |)
+      """.stripMargin)
   }
 }
