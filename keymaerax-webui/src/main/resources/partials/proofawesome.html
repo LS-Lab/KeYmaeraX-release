@@ -46,7 +46,7 @@
                     </span>
                 </span>
                 <div class="nav">
-                    <ul class="nav navbar-nav">
+                    <ul class="nav navbar-nav" id="provingautomation">
                         <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="doTactic(undefined, 'unfold')"><span class="fa fa-magic"> Unfold</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
@@ -56,7 +56,7 @@
                     </ul>
                 </div>
                 <div class="nav-collapse" uib-collapse="isNavbarCollapsed">
-                    <ul class="nav navbar-nav">
+                    <ul class="nav navbar-nav" id="provingbasictactics">
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
@@ -143,7 +143,7 @@
                                 <!-- TODO -->
                             </ul>
                         </li>
-                        <li class="dropdown">
+                        <li class="dropdown" id="provingadditionaltools">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Inspect <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -177,7 +177,7 @@
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
         <uib-tabset justified="true">
-            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()">
+            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" id="provingtab">
                 <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
@@ -209,6 +209,7 @@
                 </uib-tab-heading>
 
                 <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
+                <div class="container" id="provingsequentview">
                 <k4-sequentproof user-id="userId"
                                  proof-id="proofId"
                                  node-id="task.id"
@@ -220,12 +221,13 @@
                                  on-input-tactic="doInputTactic(formulaId, tacticId, input)"
                                  on-two-position-tactic="doTwoPositionTactic(fml1Id, fml2Id, tacticId)"
                                  ng-if="task.isSelected"></k4-sequentproof>
+                </div>
 
                 <!-- vertical gap between sequent and tactic editor to provide space for collapse/expand buttons -->
                 <div style="margin-top:20px;"></div>
 
                 <!-- Tactic -->
-                <div class="row">
+                <div class="row" id="provingtactics">
                     <div class="col-md-12">
                         <div class="panel panel-default">
                             <div class="panel-heading">

@@ -17,6 +17,10 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
 }]);
 
 angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
+  $scope.intro = {
+    introOptions: {}
+  }
+
   // Set the view for menu active class
   $scope.$on('routeLoaded', function (event, args) {
     $scope.theview = args.theview;

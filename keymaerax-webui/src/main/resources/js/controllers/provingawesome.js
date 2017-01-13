@@ -9,6 +9,48 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.userId = $cookies.get('userId');
   $scope.proofId = $routeParams.proofId;
 
+  $scope.intro.introOptions = {
+    steps: [
+    {
+        element: '#provingautomation',
+        intro: "Let KeYmaera X search proofs automatically.",
+        position: 'bottom'
+    },
+    {
+        element: '#provingbasictactics',
+        intro: "Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic.",
+        position: 'bottom'
+    },
+    {
+        element: '#provingadditionaltools',
+        intro: "Advanced proof tools (inspection, finding counterexamples, synthesizing assumptions).",
+        position: 'bottom'
+    },
+    {
+        element: '#provingtab',
+        intro: "Each branch of a proof is displayed on its own tab",
+        position: 'bottom'
+    },
+    {
+        element: '#provingsequentview',
+        intro: "The sequent view shows the current open proof goal at the top. Hover over formulas to find out where tactics can be applied. Right-click to get a menu with options. Left-click to execute a default proof tactic. Hover over <code>&#8866;</code> for tactics that work on the entire sequent.",
+        position: 'bottom'
+    },
+    {
+        element: '#provingtactics',
+        intro: "Proofs can be programmed in addition to clicking. Learn by observing how the tactic is built while clicking in the sequent view above. Augment by typing into the text box. Get auto-completion by typing a formula number followed by a dot, e.g., <code>1.</code>. Either re-run the entire tactic from scratch, or execute the modifications only.",
+        position: 'bottom'
+    }
+    ],
+    showStepNumbers: false,
+    exitOnOverlayClick: true,
+    exitOnEsc: true,
+    nextLabel: 'Next', // could use HTML in labels
+    prevLabel: 'Previous',
+    skipLabel: 'Exit',
+    doneLabel: 'Done'
+  }
+
   $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId).success(function(data) {
       $scope.proofId = data.id;
       $scope.proofName = data.name;
