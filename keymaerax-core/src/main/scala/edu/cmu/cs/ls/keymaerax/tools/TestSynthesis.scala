@@ -58,12 +58,29 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
     }
   }
 
+  /** Computes the maximum safety range of fml. */
+  def getSafetyRange(fml: Formula): (Number, Number) = {
+    val metricExpr = k2m.convert(safetyMarginTerm(fml))
+    val symbols = StaticSemantics.symbols(fml)
+    val symbolsExpr = new MExpr(MathematicaSymbols.LIST, symbols.map(k2m.convert).toArray)
+    // minimize for compliant test cases
+    //@todo second argument would give values for "safest" test case
+    val cmd = new MExpr(new MExpr(Expr.SYMBOL, "First"),
+      Array(new MExpr(new MExpr(Expr.SYMBOL, "NMaximize"), Array(metricExpr, symbolsExpr))))
+
+    println("Execute in Mathematica to compute safety range: " + cmd)
+    run(cmd) match {
+      case (_, upper: Number) => (Number(0), upper)
+    }
+  }
+
   private def numeric(e: MExpr): MExpr = new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(e))
 
-  private def safetyMarginTerm(fml: Formula): Term = ModelPlex.toMetric(fml) match {
+  /** Safety margin (negated so that positive values mean good). */
+  private def safetyMarginTerm(fml: Formula): Term = Neg(ModelPlex.toMetric(fml) match {
     case LessEqual(m, _) => m
     case Less(m, _) => m
-  }
+  })
 
   /** Uses FindInstance to search for values that satisfy the formula `fml`. `amount` indicates how many sets. */
   private def findInstance(fml: Formula, amount: Int, timeout: Option[Int]): MExpr = {
