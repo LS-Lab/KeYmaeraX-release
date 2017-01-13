@@ -29,10 +29,11 @@ import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
 import scala.io.Source
 import scala.collection.immutable._
+import scala.collection.mutable
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -1405,6 +1406,60 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int],
 class MockRequest(resourceName: String) extends Request {
   override def resultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
 }
+
+//region Proof validation requests
+
+/** Global server state for proof validation requests.
+  * For now, scheduling immediately dispatches a new thread where the validation occurs. In the future, we may want
+  * to rate-limit validation requests. The easiest way to do that is to create a thread pool with a max size. */
+object ProofValidationRunner {
+  private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
+
+  case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId ${taskId} does not exist.")
+
+  /** Returns Option[Proved] which is None iff the task is still running, and True if formula didn't prove. */
+  def status(taskId: String) : Option[Boolean] = results.get(taskId) match {
+    case Some((_, _, proved)) => proved
+    case None => throw ValidationRequestDNE(taskId)
+  }
+
+  /** Schedules a proof validation request and returns the UUID. */
+  def scheduleValidationRequest(db : DBAbstraction, model : Formula, proof : BelleExpr) : String = {
+    val taskId = java.util.UUID.randomUUID().toString
+    results update (taskId, (model, proof, None))
+
+    new Thread(new Runnable() {
+      override def run() = {
+        val provable = NoProofTermProvable( Provable.startProof(model) )
+        SequentialInterpreter()(proof, BelleProvable(provable)) match {
+          case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+          case _                                 => results update (taskId, (model, proof, Some(false)))
+        }
+      }
+    }).start()
+
+    taskId
+  }
+}
+
+/** Returns a UUID whose status can be queried at a later time ({complete: true/false[, proves: true/false]}.
+  * @see CheckValidationRequest - calling this with the returned UUID should give the status of proof checking. */
+class ValidateProofRequest(db : DBAbstraction, model: Formula, proof: BelleExpr) extends Request {
+  override def resultingResponses() : List[Response] =
+    //Spawn an async validation request and return the reesulting UUID.
+    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof), None) :: Nil
+}
+
+/** An idempotent request for the status of a validation request; i.e., validation requests aren't removed until the server is resst. */
+class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request {
+  override def resultingResponses(): List[Response] = try {
+    new ValidateProofResponse(taskId, ProofValidationRunner.status(taskId)) :: Nil
+  } catch {
+    case e : ProofValidationRunner.ValidationRequestDNE => new ErrorResponse(e.getMessage, e) :: Nil
+  }
+}
+
+//endregion
 
 object RequestHelper {
   /** Queries the database for the position where the tactic that created the node `node` was applied. */

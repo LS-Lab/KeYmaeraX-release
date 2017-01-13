@@ -12,6 +12,10 @@ import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import akka.actor.Actor
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import spray.http.CacheDirectives.{`max-age`, `no-cache`}
 import spray.http.HttpHeaders.`Cache-Control`
 import spray.routing._
@@ -19,7 +23,7 @@ import spray.http._
 import spray.json._
 import spray.routing
 import spray.util.LoggingContext
-import spray.http.StatusCodes.{Unauthorized, Forbidden}
+import spray.http.StatusCodes.{Forbidden, Unauthorized}
 
 import scala.language.postfixOps
 
@@ -773,6 +777,55 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Proof validation requests
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /** Validates the proof of a lemma. */
+  val validateProof = path("validate") { pathEnd {
+    post {
+      entity(as[String]) { lemmaFileContents => {
+        val (name, sequents, evidenceList) = KeYmaeraXExtendedLemmaParser(lemmaFileContents)
+
+        //Try to extract a tactic from the lemma file's evidence list. Should be in a Tool evidence under the key "tactic".
+        var tactic : Option[BelleExpr] = None
+        try {
+          val toolWithTactic : Option[core.Evidence] = evidenceList.find(_ match {
+            case ToolEvidence(info) => info.find(_._1 == "tactic").nonEmpty
+            case _ => false
+          })
+
+          tactic = toolWithTactic match {
+            case Some(e) => {
+              val tacticString = e.asInstanceOf[ToolEvidence].info.find(_._1 == "tactic").get._2
+              val parseResult = BelleParser(tacticString)
+              Some(parseResult)
+            }
+            case None => None
+          }
+        } catch {
+          case _ : Throwable => {
+            None
+          }
+        }
+
+        //@todo use the "model" and "tacitc" keys in the above info list instead of the succedent. And/or parse and ensure it's equivalent to the sequent's head succedent.
+        if(sequents.length != 1 || sequents.head.ante.length > 0 || sequents.head.succ.length != 1)
+          complete(completeResponse(new ErrorResponse(s"Expected exactly one sequent with exactly one formula in only the succedent, but found ${sequents.length} requests") :: Nil))
+        else if(tactic.isEmpty) //We failed to extract a tactic in the above code; probably the lemma file is wrong.
+          complete(completeResponse(new ErrorResponse(s"Expected to find a tactic evidence, but did not find one.") :: Nil))
+        else
+          complete(standardCompletion(new ValidateProofRequest(database, sequents.head.succ.head, tactic.get), EmptyToken()))
+      }}
+    }
+  }}
+
+  val checkProofValidation = path("validate" / Segment) { (taskId) => {
+    get {
+      complete(standardCompletion(new CheckValidationRequest(database, taskId), EmptyToken()))
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Server management
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -829,6 +882,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathConfSuggestion ::
     devAction          ::
     examples           ::
+    checkProofValidation ::
+    validateProof ::
     Nil
 
   /** Requests that need a session token parameter.

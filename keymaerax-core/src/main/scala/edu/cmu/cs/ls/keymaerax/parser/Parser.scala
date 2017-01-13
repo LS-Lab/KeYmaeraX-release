@@ -41,3 +41,19 @@ trait Parser extends (String => Expression) {
   val printer: PrettyPrinter
 
 }
+
+object ParserHelper {
+  /** Returns (approximately!) 's' without any Byte Order Mark.
+    * @todo DANGER hack: actually just returns a version of 's' that is converted into ASCII (replacing non-ASCII bytes with '?') and then stripping all the '?' from the prefix of the string.
+    * In particular, ay also remove completely valid '?' characters if that's what's at the beginning of the string. */
+  def removeBOM(s : String) = {
+    val asASCII = new String(s.getBytes("US-ASCII"), "US-ASCII")
+    //Find the length of a uniformly-'?' prefix on asSCII, then remove that many characters from s.
+    //This preserves other unicode characters is s, only removing the potential BOM.
+    //@todo be less indiscriminate and only remove these guys: https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
+    var toRemove = 0
+    while(asASCII(toRemove) == '?')
+      toRemove += 1
+    s.substring(toRemove)
+  }
+}
