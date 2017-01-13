@@ -21,8 +21,16 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
 
   /** Synthesize test configurations of both initial values and expected outcomes satisfying formula `fml`. The values
     * are numeric approximations (avoids Mathematica precision limit issues). */
-  def synthesizeTestConfig(fml: Formula, amount: Int = 1, timeout: Option[Int] = None): List[Map[Term, Term]] = {
-    val cmd = findInstance(fml, amount, timeout)
+  def synthesizeTestConfig(fml: Formula, amount: Int = 1, timeout: Option[Int] = None,
+                           safetyMargin: Option[(Number,Number)] = None): List[Map[Term, Term]] = {
+    val safetyMetric = safetyMargin match {
+      case Some((lower, upper)) =>
+        val metric = safetyMarginTerm(fml)
+        And(LessEqual(lower, metric), LessEqual(metric, upper))
+      case None => True
+    }
+
+    val cmd = findInstance(And(fml, safetyMetric), amount, timeout)
     println("Execute in Mathematica to search for sunshine test case values (initial+expected): " + cmd)
 
     def toConfigMap(fml: Formula): Map[Term, Term] = FormulaTools.conjuncts(fml).map({
@@ -34,16 +42,13 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
     run(cmd) match {
       case (_, fml: And) => toConfigMap(fml) :: Nil
       case (_, fml: Or) => FormulaTools.disjuncts(fml).map(toConfigMap)
+      case (_, False) => Nil
     }
   }
 
   /** Synthesize a safety margin check, 0 is the boundary between safe and unsafe, positive values indicate unsafety, negative values safety. */
   def synthesizeSafetyMarginCheck(fml: Formula, vals: Map[Term, Term]): Number = {
-    val metric = ModelPlex.toMetric(fml) match {
-      case LessEqual(m, _) => m
-      case Less(m, _) => m
-    }
-    val metricExpr = k2m.convert(metric)
+    val metricExpr = k2m.convert(safetyMarginTerm(fml))
     val valsExpr = new MExpr(MathematicaSymbols.LIST, vals.map({case (k,v) =>
       new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(k2m.convert(k), k2m.convert(v)))}).toArray)
     val cmd = new MExpr(new MExpr(Expr.SYMBOL, "Module"), Array(valsExpr, metricExpr))
@@ -54,6 +59,11 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
   }
 
   private def numeric(e: MExpr): MExpr = new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(e))
+
+  private def safetyMarginTerm(fml: Formula): Term = ModelPlex.toMetric(fml) match {
+    case LessEqual(m, _) => m
+    case Less(m, _) => m
+  }
 
   /** Uses FindInstance to search for values that satisfy the formula `fml`. `amount` indicates how many sets. */
   private def findInstance(fml: Formula, amount: Int, timeout: Option[Int]): MExpr = {
