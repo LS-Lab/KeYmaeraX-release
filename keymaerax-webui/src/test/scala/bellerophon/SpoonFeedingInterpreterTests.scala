@@ -329,6 +329,24 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tactic shouldBe BelleParser("implyR('R) & diffCut({`x>=old(x)`},1) & <(nil, diffInd(1))")
   }}
 
+  it should "should work for multiple levels of diffInvariant without let" in withMathematica { tool => withDatabase { db =>
+    val problem = "x>=0 -> [{x'=1}]x>=0"
+    val modelContent = s"Variables. R x. End. Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 2)
+    interpreter(implyR('R) & diffInvariant("x>=0".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser(
+      """
+        |implyR('R) & (DCaxiom(1) & <(
+        |  (nil&nil),
+        |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
+        |    close,
+        |    partial(((derive(1.1)&DE(1))&(((((Dassignb(1.1))*1)&nil)&abstractionb(1))&(close|QE)))) ))))) ))
+      """.stripMargin)
+  }}
+
   it should "should work for prop on a simple example" in withDatabase { db =>
     val problem = "x>=0 -> x>=0"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
