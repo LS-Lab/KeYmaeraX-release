@@ -912,6 +912,20 @@ class ExtractProblemSolutionResponse(tacticText: String) extends Response {
   )
 }
 
+class ValidateProofResponse(taskId: String, proved: Option[Boolean]) extends Response {
+  def getJson = proved match {
+    case Some(isProved) => JsObject(
+      "uuid" -> JsString(taskId),
+      "running" -> JsBoolean(false),
+      "proved" -> JsBoolean(isProved)
+    )
+    case None => JsObject(
+      "uuid" -> JsString(taskId),
+      "running" -> JsBoolean(true)
+    )
+  }
+}
+
 class MockResponse(resourceName: String) extends Response {
   //@todo add schema
   def getJson = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
