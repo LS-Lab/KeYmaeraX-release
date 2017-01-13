@@ -640,6 +640,9 @@ object DerivationInfo {
     new TacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => TactixLibrary.closeId}),
+    new TacticInfo("close",
+      RuleDisplayInfo("close", (List("&Gamma;", "P", "⊥"), List("⊤", "P", "&Delta;")), Nil),
+      {case () => TactixLibrary.close}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
@@ -704,6 +707,12 @@ object DerivationInfo {
       "transformEquality",
       FormulaArg("equality") :: Nil,
       {case () => (f:Formula) => ArithmeticSimplification.transformEquality(f)}),
+
+    new InputPositionTacticInfo(
+      "discreteGhost",
+      "discreteGhost",
+      TermArg("ghostTerm") :: VariableArg("ghostName") :: Nil,
+      {case () => (t:Term) => (v:Variable) => DLBySubst.discreteGhost(t, Some(v))}),
 
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
