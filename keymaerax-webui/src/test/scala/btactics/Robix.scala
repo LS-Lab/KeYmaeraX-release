@@ -70,14 +70,18 @@ class Robix extends TacticTestBase {
       """v >= 0
         | & dx^2+dy^2 = 1
         | & (abs(x-xo) > v^2 / (2*B)
-        |   | abs(y-yo) > v^2 / (2*B) )""".stripMargin.asFormula
+        |   |abs(y-yo) > v^2 / (2*B) )""".stripMargin.asFormula
+
+    val augmentTime = HilbertCalculus.DGC("t".asVariable, Number(1))(1) & DLBySubst.assignbExists(Number(0))(1) &
+      assignb(1)
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
+      //@todo allow old(t) in multiple formulas
+      "t>=old(t)".asFormula,
       "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula)
+      s"v = old(v) + $a*(t-t_0)".asFormula,
+      s"-(t-t_0) * (v - $a/2*(t-t_0)) <= x - old(x) & x - old(x) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula,
+      s"-(t-t_0) * (v - $a/2*(t-t_0)) <= y - old(y) & y - old(y) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula)
 
     val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
@@ -85,7 +89,7 @@ class Robix extends TacticTestBase {
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") &
-      print("Braking branch") & di("-B")(1) & dw & prop & onAll(speculativeQE) & print("Braking branch done") &
+      print("Braking") & augmentTime & di("-B")(1) & dw & prop & onAll(speculativeQE) &
       print("Induction step done")
     ) & print("Proof done")
     proveBy(s, tactic) shouldBe 'proved
@@ -95,15 +99,14 @@ class Robix extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs_curvestraight_curvature_brakingonly.kyx")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
-      Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"),
-      Variable("t"), Variable("w"))
+      Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & SimplifierV2.simpTac(1))
 
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "(0<=ep&v>=0)&((((((xpost()=x&ypost()=y)&vpost()=v)&apost()=-B)&dxpost()=dx)&dypost()=dy)&tpost()=0)&wpost()=w".asFormula
+    foResult.subgoals.head.succ should contain only "(v>=0)&(((((xpost()=x&ypost()=y)&vpost()=v)&apost()=-B)&dxpost()=dx)&dypost()=dy)&wpost()=w".asFormula
   }
 
   "Passive Safety" should "be provable" in withMathematica { qeTool =>

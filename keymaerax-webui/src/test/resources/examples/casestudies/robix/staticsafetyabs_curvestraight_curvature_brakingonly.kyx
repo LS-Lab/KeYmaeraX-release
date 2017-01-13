@@ -1,5 +1,4 @@
 Functions.
-  R ep.   /* time limit for control decisions */
   R B.    /* minimum braking capability of the robot */
   R A.    /* maximum acceleration -B <= a <= A */
   R abs(R).  /* predefined function of absolute value */
@@ -16,7 +15,6 @@ ProgramVariables.
   R k.    /* curvature of curve (i)straight: k=0; (ii)curve: k!=0 */
   R xo.   /* position of obstacle */
   R yo.
-  R t.    /* time */
 End.
 
 Problem.
@@ -26,22 +24,20 @@ Problem.
   & dx^2 + dy^2 = 1
   & A >= 0
   & B > 0
-  & ep > 0
   ->
   [
     {
       /* brake on current curve */
       a := -B;
 
-    	t := 0;
       /* dynamics */
       { x' = v * dx,
         y' = v * dy,
         dx' = -w * dy,
         dy' = w * dx,
         v' = a,
-        w' = a*k,
-        t' = 1 & t <= ep & v >= 0
+        w' = a*k
+        & v >= 0
       }
     }*
   ] (x - xo)^2 + (y - yo)^2 > 0
