@@ -167,7 +167,7 @@ trait SequentCalculus {
   // closing
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  lazy val close: BelleExpr = TacticFactory.anon ((seq: Sequent) => {
+  lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
     seq.succ.zipWithIndex.find({ case (True, _) => true case (fml, _) => seq.ante.contains(fml) }) match {
       case Some((True, i)) => ProofRuleTactics.closeTrue(SuccPos(i))
       case Some((fml, i)) => close(AntePos(seq.ante.indexOf(fml)), SuccPos(i))
