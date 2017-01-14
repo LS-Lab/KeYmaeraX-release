@@ -108,12 +108,12 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     steps: [
     {
         element: '#modelarchiving',
-        intro: "Download all models (with or without) their proofs.",
+        intro: "Extract all models (with or without) their proofs into a .kya archive file.",
         position: 'bottom'
     },
     {
         element: '#modelupload',
-        intro: "Upload .kyx model files or .kya archive files here.",
+        intro: "Upload .kyx model files or .kya archive files.",
         position: 'bottom'
     },
     {

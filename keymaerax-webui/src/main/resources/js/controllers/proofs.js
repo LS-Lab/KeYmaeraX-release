@@ -68,7 +68,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     steps:[
     {
         element: '#proofsarchiving',
-        intro: "Download all proofs.",
+        intro: "Extract all proofs into .kya archives.",
         position: 'bottom'
     },
     {
