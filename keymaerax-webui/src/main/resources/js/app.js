@@ -6,6 +6,7 @@
   'ngAnimate',
   'ngTextcomplete',
   'angularSpinners',
+  'angular-intro',
   'chart.js',
   'ui.bootstrap',
   'ui.bootstrap.tabs',

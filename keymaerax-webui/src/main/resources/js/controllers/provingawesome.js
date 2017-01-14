@@ -9,6 +9,48 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.userId = $cookies.get('userId');
   $scope.proofId = $routeParams.proofId;
 
+  $scope.intro.introOptions = {
+    steps: [
+    {
+        element: '#provingautomation',
+        intro: "Automatic proof search. Unfold all operators automatically. Undo proof steps.",
+        position: 'bottom'
+    },
+    {
+        element: '#provingbasictactics',
+        intro: "Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic are applied somewhere in the goal.",
+        position: 'bottom'
+    },
+    {
+        element: '#provingadditionaltools',
+        intro: "Advanced proof tools (inspection, finding counterexamples, synthesizing assumptions).",
+        position: 'bottom'
+    },
+    {
+        element: '#provingtab',
+        intro: "Each unfinished branch of a proof is displayed on its own tab",
+        position: 'bottom'
+    },
+    {
+        element: '#provingsequentview',
+        intro: "The sequent view shows the current open proof goal at the top. Hover over formulas to find out where tactics can be applied. Left-click to apply default proof tactic. Right-click for a list of tactics to choose from. Hover over <code>&#8866;</code> for tactics that work on the entire sequent.",
+        position: 'bottom'
+    },
+    {
+        element: '#provingtactics',
+        intro: "Proofs can be programmed in addition to clicking. Learn tactic programming by observing how the tactic is built while you click in the sequent above. Augment by typing into the text box. Get auto-completion by typing a formula number <code>1.</code> followed by a dot. Either re-run the entire tactic from scratch, or execute the modifications only.",
+        position: 'bottom'
+    }
+    ],
+    showStepNumbers: false,
+    exitOnOverlayClick: true,
+    exitOnEsc: true,
+    nextLabel: 'Next', // could use HTML in labels
+    prevLabel: 'Previous',
+    skipLabel: 'Exit',
+    doneLabel: 'Done'
+  }
+
   $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId).success(function(data) {
       $scope.proofId = data.id;
       $scope.proofName = data.name;

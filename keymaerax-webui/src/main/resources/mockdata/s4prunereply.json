@@ -1,8 +1,0 @@
-{
-  "agendaItem": {
-    "id": "N5",
-    "name": "some other node",
-    "proofId": "P1",
-    "deduction": { "sections": [ { "path": ["S4"] } ] }
-  }
-}

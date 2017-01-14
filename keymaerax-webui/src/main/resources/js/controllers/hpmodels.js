@@ -104,6 +104,43 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.models = [];
   $scope.userId = $cookies.get('userId');
 
+  $scope.intro.introOptions = {
+    steps: [
+    {
+        element: '#modelarchiving',
+        intro: "Extract all models (with or without) their proofs into a .kya archive file.",
+        position: 'bottom'
+    },
+    {
+        element: '#modelupload',
+        intro: "Upload .kyx model files or .kya archive files.",
+        position: 'bottom'
+    },
+    {
+        element: '#modeltutorialimport',
+        intro: "Click 'Import' to add tutorials to your models overview.",
+        position: 'bottom'
+    },
+    {
+        element: '#modelopen',
+        intro: "Inspect model definitions.",
+        position: 'bottom'
+    },
+    {
+        element: '#modelactions',
+        intro: "Start new proofs, generate monitor conditions, and synthesize test cases here.",
+        position: 'bottom'
+    }
+    ],
+    showStepNumbers: false,
+    exitOnOverlayClick: true,
+    exitOnEsc: true,
+    nextLabel: 'Next', // could use HTML in labels
+    prevLabel: 'Previous',
+    skipLabel: 'Exit',
+    doneLabel: 'Done'
+  }
+
   $http.get("models/users/" + $scope.userId).then(function(response) {
       $scope.models = response.data;
   });

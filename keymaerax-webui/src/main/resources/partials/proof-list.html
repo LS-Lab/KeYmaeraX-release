@@ -12,9 +12,9 @@
         <div class="row">
             <div class="col-md-6"><b>All Proofs</b></div>
             <div class="col-md-6">
-                <a class="btn btn-default pull-right"
+                <a class="btn btn-default pull-right" id="proofsarchiving"
                    ng-click="downloadAllProofs()"
-                   uib-tooltip="Download all proofs"><i class="fa fa-archive"></i> Download all</a>
+                   uib-tooltip="Extract all proofs to files"><i class="fa fa-archive"></i> Extract all</a>
             </div>
         </div>
     </div>
@@ -23,7 +23,7 @@
         <div class="row">
             <div class="col-md-6"><b>Proofs of Model {{modelId}}</b></div>
             <div class="col-md-6">
-                <span class="pull-right">
+                <span class="pull-right"  id="proofsarchiving">
                     <a class="btn btn-default" ng-controller="ModelProofCreateCtrl"
                        ng-click="createProof(modelId, '', '')"
                        uib-tooltip="Start new proof"><i class="fa fa-gears"></i> Start new proof</a>
@@ -58,7 +58,7 @@
             <td><span ng-if="proof.status"><i class="fa fa-check"></i> Proved</span>
                 <span ng-if="proof.status === false"><i class="fa fa-pencil"></i> In Progress</span>
             </td>
-            <td>
+            <td id="proofsactions">
                 <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
                 <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
                 <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (completed proof)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
