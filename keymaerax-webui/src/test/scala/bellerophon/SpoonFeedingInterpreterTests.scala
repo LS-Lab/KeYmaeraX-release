@@ -343,7 +343,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  (nil&nil),
         |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
         |    close,
-        |    partial(((derive(1.1)&DE(1))&(((((Dassignb(1.1))*1)&nil)&abstractionb(1))&(close|QE)))) ))))) ))
+        |    (derive(1.1)&(DE(1)&(Dassignb(1.1)&(nil&(abstractionb(1)&QE))))) ))))) ))
       """.stripMargin)
 
     val reprove = proveBy(problem.asFormula, tactic)
