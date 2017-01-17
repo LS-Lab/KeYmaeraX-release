@@ -30,6 +30,15 @@ object KeYmaeraXProblemParser {
     }
   }
 
+  /** Tries parsing as a formula first. If that fails, tries parsing as a problem file. */
+  def parseAsProblemOrFormula(input : String): Formula = {
+    val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case e: Throwable => None }
+    result match {
+      case Some(formula) => formula
+      case None => KeYmaeraXProblemParser(input)
+    }
+  }
+
   /** Parses a file of the form Problem. ... End. Solution. ... End. */
   def parseProblemAndTactic(input: String): (Formula, BelleExpr) = try {
     firstNonASCIICharacter(input) match {

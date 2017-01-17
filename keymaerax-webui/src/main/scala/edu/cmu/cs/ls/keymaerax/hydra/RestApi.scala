@@ -181,6 +181,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}}}
 
+  val userModelFromFormula = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelFromFormula" / Segment) {modelName => {pathEnd {
+    post {
+      entity(as[String]) {formula => {
+        val request = new CreateModelFromFormulaRequest(database, userId, modelName, formula)
+        completeRequest(request, t)
+      }}
+    }
+  }}}}}
+
   val importExampleRepo = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { (userId) => { pathEnd {
     post {
       entity(as[String]) { repoUrl => {
@@ -943,6 +952,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     exportFormula         ::
     testSynthesis         ::
     uploadArchive         ::
+    userModelFromFormula  ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
