@@ -76,7 +76,9 @@
 
 .chardinjs-show-element {
   z-index: 9999999;
-  opacity: 0.8; }
+  opacity: 1;
+  filter: invert(100%);
+}
 
 .chardinjs-relative-position {
   position: relative; }
