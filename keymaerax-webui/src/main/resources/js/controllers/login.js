@@ -30,7 +30,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
           if(response.data.success) {
             sessionService.setToken(response.data.sessionToken);
             sessionService.setUser(response.data.value);
-            document.location.href = "/dashboard.html"
+            document.location.href = "dashboard.html?#/models"
           } else {
             showMessage($uibModal, "Login failed", "Please check user name and/or password");
           }
