@@ -37,7 +37,9 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
                   tooltip-placement="auto top">{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>.
         </div>
 
-        <div class="input-group">
+        <div class="input-group"
+             data-intro="Configure the path to the MathKernel executable, corresponding to your operating system and 32/64bit architecture. Look for an executable file named {{mathematicaConfigSuggestion.suggestion.kernelName}}. You might find it at {{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}."
+             data-position="top">
             <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
             <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"/>
@@ -74,7 +76,9 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
                   tooltip-placement="auto top">{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}</code>.
         </div>
 
-        <div class="input-group">
+        <div class="input-group"
+             data-intro="Configure the path to the Mathematica link library. Look for a file {{mathematicaConfigSuggestion.suggestion.jlinkName}} at {{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}."
+             data-position="bottom">
             <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
             <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"/>
