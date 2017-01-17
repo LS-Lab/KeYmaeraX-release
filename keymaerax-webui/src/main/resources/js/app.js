@@ -86,6 +86,10 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/proofawesome.html',
         controller: 'ProofCtrl'
       }).
+      when('/createModelFromFormula', {
+        templateUrl: 'partials/formula_to_model_textbox.html',
+        controller: 'FormulaUploadCtrl'
+      }).
       when('/dev', {
         templateUrl: 'partials/dev.html',
         controller: 'DevCtrl'
