@@ -498,7 +498,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
 
   def resultingResponses() = {
     try {
-      KeYmaeraXProblemParser(keyFileContents) match {
+      KeYmaeraXProblemParser.parseAsProblemOrFormula(keyFileContents) match {
         case _: Formula =>
           if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
             //Nope. Give a good error message.
@@ -594,7 +594,7 @@ class AddModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
   def resultingResponses() = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
   }
 }
@@ -603,7 +603,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
                        conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
       ++ additionalVars.map(_.asVariable)).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
@@ -632,7 +632,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
                            amount: Int, timeout: Option[Int]) extends UserRequest(userId) {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
@@ -1216,7 +1216,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
   def resultingResponses() = {
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
-    val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
+    val conclusionFormula = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
