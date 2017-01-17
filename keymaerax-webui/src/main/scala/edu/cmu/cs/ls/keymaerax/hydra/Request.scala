@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
@@ -492,6 +492,29 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/** Creates a model from a formula without variable declarations.
+  * Separate from CreateModelRequest so that we don't end up swallowing parse errors or returning the wrong parse error. */
+class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfModel: String, formula: String) extends UserRequest(userId) {
+  private var createdId : Option[String] = None
+
+  def resultingResponses() = try {
+    val f = KeYmaeraXParser(formula).asInstanceOf[Formula]
+    if(db.getModelList(userId).map(_.name).contains(nameOfModel))
+      new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
+    else {
+      createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(x => x.toString)
+      new BooleanResponse(createdId.isDefined) :: Nil
+    }
+  } catch {
+    case e : ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+  }
+
+  def getModelId = createdId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
+  }
+}
 
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends UserRequest(userId) {
   private var createdId : Option[String] = None
