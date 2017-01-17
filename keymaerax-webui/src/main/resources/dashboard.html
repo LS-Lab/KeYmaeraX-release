@@ -28,6 +28,7 @@
 
     <!-- plugins -->
     <link href="/css/intro/introjs.css" rel="stylesheet" type="text/css">
+    <link href="/css/chardin/chardinjs.css" rel="stylesheet" type="text/css">
 
 </head>
 
@@ -66,7 +67,7 @@
                     <ul class="dropdown-menu" role="menu">
                         <!--<li><a href="#">Examples</a></li>-->
                         <li><a href="dashboard.html?#/tutorials"><i class="fa fa-info-circle"></i> Tutorials</a></li>
-                        <li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Start tutorial mode</a></li>
+                        <li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Step-by-step help</a></li>
                         <li><a href="dashboard.html?#/usage"><i class="fa fa-info-circle"></i> Using KeYmaera&#160;X</a></li>
                         <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Backend Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
@@ -81,7 +82,7 @@
                     </ul>
                 </li>
                 <li class="dropdown">
-                    <a ng-click="startIntro()"><i class="fa fa-question-circle"></i></a>
+                    <a ng-click="showOverlayHelp()"><i class="fa fa-question-circle"></i></a>
                 </li>
                 <li class="dropdown">
                     <a ng-click="shutdown()" ng-show="isLocal"><!--class="dropdown-toggle" data-toggle="dropdown"--><i class="fa fa-power-off"></i></a>
@@ -144,7 +145,8 @@
 <script src="/js/rangy/rangy-textrange.min.js"></script>
 <script src="/js/angular-chart/Chart.min.js"></script> <!-- Simulation and test synthesis -->
 <script src="/js/angular-chart/angular-chart.min.js"></script> <!-- Simulation and test synthesis -->
-<script src="/js/intro/intro.min.js"></script> <!-- Help -->
+<script src="/js/intro/intro.min.js"></script> <!-- Step-by-step Help -->
+<script src="/js/chardin/chardinjs.min.js"></script> <!-- Help -->
 <script src="/js/intro/angular-intro.min.js"></script> <!-- angular wrapper for intro -->
 <script src="/js/app.js"></script>
 <!-- Load services -->

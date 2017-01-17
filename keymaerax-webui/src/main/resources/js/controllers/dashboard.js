@@ -21,6 +21,10 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     introOptions: {}
   }
 
+  $scope.showOverlayHelp = function() {
+    $('body').chardinJs('start');
+  }
+
   // Set the view for menu active class
   $scope.$on('routeLoaded', function (event, args) {
     $scope.theview = args.theview;

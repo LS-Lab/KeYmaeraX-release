@@ -331,10 +331,33 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "should work for multiple levels of diffInvariant without let" in withMathematica { tool => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"Variables. R x. End. Problem. $problem End."
+    val modelContent = s"Variables. R x. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 2)
     interpreter(implyR('R) & diffInvariant("x>=0".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser(
+      """
+        |implyR('R) & (DCdiffcut({`x>=0`},1) & <(
+        |  (nil&nil),
+        |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
+        |    close,
+        |    (derive(1.1)&(DE(1)&(Dassignb(1.1)&(nil&(abstractionb(1)&QE))))) ))))) ))
+      """.stripMargin)
+
+    val reprove = proveBy(problem.asFormula, tactic)
+    reprove.subgoals should have size 1
+    reprove.subgoals.head.ante should contain only "x>=0".asFormula
+    reprove.subgoals.head.succ should contain only "[{x'=1&true&x>=0}]x>=0".asFormula
+  }}
+
+  it should "should work for multiple levels of diffInvariant" ignore withMathematica { tool => withDatabase { db =>
+    val problem = "x>=0 -> [{x'=1}]x>=0"
+    val modelContent = s"Variables. R x. End. Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 2)
+    interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser(
@@ -345,6 +368,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |    close,
         |    partial(((derive(1.1)&DE(1))&(((((Dassignb(1.1))*1)&nil)&abstractionb(1))&(close|QE)))) ))))) ))
       """.stripMargin)
+
+    //@todo reprove
   }}
 
   it should "should work for prop on a simple example" in withDatabase { db =>

@@ -171,9 +171,9 @@ trait SequentCalculus {
     seq.succ.zipWithIndex.find({ case (True, _) => true case (fml, _) => seq.ante.contains(fml) }) match {
       case Some((True, i)) => ProofRuleTactics.closeTrue(SuccPos(i))
       case Some((fml, i)) => close(AntePos(seq.ante.indexOf(fml)), SuccPos(i))
-      case None => seq.ante.zipWithIndex.find({ case (False, _) => true }) match {
+      case None => seq.ante.zipWithIndex.find({ case (False, _) => true case _ => false }) match {
         case Some((False, i)) => ProofRuleTactics.closeFalse(AntePos(i))
-        case None => DebuggingTactics.error("Inapplicable close")
+        case _ => DebuggingTactics.error("Inapplicable close")
       }
     }
   })

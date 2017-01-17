@@ -153,6 +153,13 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , {case () => (fml: Formula) => TactixLibrary.diffCut(fml)}),
+    new InputPositionTacticInfo("DCdiffcut"
+      , RuleDisplayInfo("DCaxiom"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
+        , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
+          (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
+      , List(FormulaArg("R"))
+      , {case () => (fml: Formula) => HilbertCalculus.DC(fml)}),
 
     new InputPositionTacticInfo("diffGhost",
       RuleDisplayInfo(
