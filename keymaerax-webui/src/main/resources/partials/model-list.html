@@ -116,10 +116,10 @@
             <td>{{ model.id }}</td>
             <td id="modelopen">
                 <div data-intro="Inspect model definitions." data-position="right" ng-if="$first">
-                    <a class="btn btn-default" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
                 </div>
                 <div ng-if="!$first">
-                    <a class="btn btn-default" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
                 </div>
             </td>
             <td>
@@ -129,7 +129,7 @@
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td ng-model="model" id="modelactions"
                 data-intro="Start new proofs, generate monitor conditions, and synthesize test cases here."
-                data-position="bottom" ng-if="$first">
+                data-position="left" ng-if="$first">
                 <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
                 <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
                 <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>

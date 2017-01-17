@@ -37,20 +37,23 @@
   -moz-transition: opacity 0.1s ease-out;
   -ms-transition: opacity 0.1s ease-out;
   -o-transition: opacity 0.1s ease-out;
-  transition: opacity 0.1s ease-out;
-  max-width: 200px; }
+  transition: opacity 0.1s ease-out; }
   .chardinjs-tooltip.chardinjs-left {
     margin-left: -135px;
-    padding-right: 10px; }
+    padding-right: 10px;
+    max-width: 200px; }
   .chardinjs-tooltip.chardinjs-right {
     margin-right: -135px;
-    padding-left: 10px; }
+    padding-left: 10px;
+    max-width: 200px; }
   .chardinjs-tooltip.chardinjs-bottom {
     margin-bottom: -10px;
-    padding-top: 10px; }
+    padding-top: 10px;
+    max-width: 90%; }
   .chardinjs-tooltip.chardinjs-top {
     margin-top: -10px;
-    padding-bottom: 10px; }
+    padding-bottom: 10px;
+    max-width: 90%; }
   .chardinjs-tooltip.chardinjs-right:before, .chardinjs-tooltip.chardinjs-left:after, .chardinjs-tooltip.chardinjs-bottom:before, .chardinjs-tooltip.chardinjs-top:after {
     content: ".";
     display: inline-block;
