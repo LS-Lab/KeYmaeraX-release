@@ -29,7 +29,7 @@
             <div class="col-md-2"><b>Models</b></div>
             <div class="col-md-10">
                 <span class="pull-right" id="modelarchiving"
-                      data-intro="Download all models (with or without) their proofs."
+                      data-intro="Export all models with/without proofs to .kya files."
                       data-position="left">
                     <a class="btn btn-default"
                        ng-click="downloadAllModels()"
@@ -114,11 +114,13 @@
         <tbody>
         <tr ng-repeat="model in models | orderBy:'name'">
             <td>{{ model.id }}</td>
-            <td id="modelopen" data-intro="Inspect model definitions." data-position="right" ng-if="$first">
-                <a href="" ng-click="open(model.id)">{{ model.name }}</a>
-            </td>
-            <td ng-if="!$first">
-                <a href="" ng-click="open(model.id)">{{ model.name }}</a>
+            <td id="modelopen">
+                <div data-intro="Inspect model definitions." data-position="right" ng-if="$first">
+                    <a class="btn btn-default" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                </div>
+                <div ng-if="!$first">
+                    <a class="btn btn-default" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                </div>
             </td>
             <td>
               <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.title}}</a>
