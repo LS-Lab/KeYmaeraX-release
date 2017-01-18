@@ -38,8 +38,8 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val children = node.children
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
 
-    if(children.length == 0) thisTactic
-    else if(children.length == 1) thisTactic + " & " + extractTextWithoutParsing(tree)(children.head)
+    if (children.isEmpty) thisTactic
+    else if (children.length == 1) thisTactic + " & " + extractTextWithoutParsing(tree)(children.head)
     else thisTactic + " <(\n  " + children.map(child => extractTextWithoutParsing(tree)(child)).mkString(",\n  ") + "\n)" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
@@ -65,8 +65,8 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 
     //@todo does pretty-printing
     if (children.isEmpty) thisTactic
-    else if (children.length == 1) thisTactic + " & " + getTacticString(modelId, indent)(children.head)
-    else thisTactic + " & <(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
+    else if (children.length == 1) thisTactic + " ; " + getTacticString(modelId, indent)(children.head)
+    else thisTactic + " ; <(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
   private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), Some(gen))
