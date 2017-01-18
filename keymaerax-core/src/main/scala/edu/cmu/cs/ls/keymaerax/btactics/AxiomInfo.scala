@@ -740,6 +740,7 @@ object DerivationInfo {
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
+    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV2.fullSimpTac}, needsTool = true),
 
     // Differential tactics
     new PositionTacticInfo("ODE",

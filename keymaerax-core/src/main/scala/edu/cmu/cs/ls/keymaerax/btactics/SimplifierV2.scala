@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -910,22 +911,19 @@ object SimplifierV2 {
   // 3) Moves the implications back
 
   // This might be slightly too unpredictable for some purposes, so use simpTac instead
-  val fullSimpTac:DependentTactic = new SingleGoalDependentTactic("full simp") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
-      val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
-      val (ff,pr) = formulaSimp(Imply(anteAnd,succOr), IndexedSeq())
-      ff match {
-        case Imply(l,r) =>
-          val (_, tac) = addContext (l, IndexedSeq () )
-          PropositionalTactics.toSingleFormula & useAt (pr) (1) & implyR (1) & tac //(implyRi*) & useAt(pr)(1)
-        case _ =>
-          //This should only occur if the tactic managed to reduce the formula to false or the antecedents to true
-          PropositionalTactics.toSingleFormula & useAt (pr) (1)
-      }
-
+  val fullSimpTac:DependentTactic = "fullSimplify" by ((seq: Sequent) => {
+    val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
+    val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
+    val (ff,pr) = formulaSimp(Imply(anteAnd,succOr), IndexedSeq())
+    ff match {
+      case Imply(l,r) =>
+        val (_, tac) = addContext (l, IndexedSeq () )
+        PropositionalTactics.toSingleFormula & useAt (pr) (1) & implyR (1) & tac //(implyRi*) & useAt(pr)(1)
+      case _ =>
+        //This should only occur if the tactic managed to reduce the formula to false or the antecedents to true
+        PropositionalTactics.toSingleFormula & useAt (pr) (1)
     }
-  }
+  })
 
   val swapImply = proveBy("(P_() -> Q_() -> R_()) <-> (Q_() -> P_() -> R_())".asFormula,prop)
 
