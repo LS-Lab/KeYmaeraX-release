@@ -535,6 +535,22 @@ object SimplifierV3 {
     }
   }
 
+  def termSimpWithDischarge(ctx:IndexedSeq[Formula],t:Term,taxs:Term=>List[ProvableSig]) : (Term,Option[ProvableSig]) = {
+    val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
+    val (recf,recpropt) = termSimp(t,hs,taxs)
+
+    (recf,
+      recpropt match {
+        case None => None
+        case Some((prem,recpr)) =>
+          val pr =
+            Some(proveBy( Sequent(ctx,IndexedSeq(Equal(t,recf))),
+              cut(prem) <( cohide2(-(ctx.length+1),1) & implyRi & by(recpr) , hideR(1) & fastCloser(hs,prem) )))
+          pr
+      }
+      )
+  }
+
   def simpWithDischarge(ctx:IndexedSeq[Formula],f:Formula,
                         faxs:Formula=>List[ProvableSig],taxs:Term=>List[ProvableSig]) : (Formula,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
@@ -611,9 +627,22 @@ object SimplifierV3 {
             //Otherwise we only do the simplification under empty context and CEat the result
             else
             {
-              ???
+              val (ff,pr) = simpWithDischarge(IndexedSeq(),f,augmentFaxs,augmentTaxs)
+              pr match {
+                case None => ident
+                case Some(pr) =>
+                CEat(commuteEquivFR(SuccPosition(1))(pr))(pos)
+              }
             }
-          case Some(t:Term) => ???
+          case Some(t:Term) =>
+          {
+            val (ff,pr) = termSimpWithDischarge(IndexedSeq(),t, augmentTaxs)
+            pr match {
+              case None => ident
+              case Some(pr) =>
+                CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
+            }
+          }
           case _ => ident
         }
       }
@@ -705,6 +734,7 @@ object SimplifierV3 {
       case Neg(n:Number) => Some(-n.value)
       case _ => None
     }
+    
     res match {
       case None => None
       case Some(v) =>
