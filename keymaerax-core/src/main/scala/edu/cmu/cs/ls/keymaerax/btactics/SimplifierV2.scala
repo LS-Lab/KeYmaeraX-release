@@ -841,41 +841,37 @@ object SimplifierV2 {
   }
 
   //Simplifies a formula including sub-terms occuring in the formula
-  val simpTac:DependentPositionTactic = new DependentPositionTactic("simp"){
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        sequent.sub(pos) match
+  val simpTac:DependentPositionTactic = "simplify" by ((pos: Position, sequent: Sequent) => {
+    sequent.sub(pos) match
+    {
+      case Some(f:Formula) =>
+        //If simplification was at the top level, then we can use the existing context
+        if (pos.isTopLevel)
         {
-          case Some(f:Formula) =>
-            //If simplification was at the top level, then we can use the existing context
-            if (pos.isTopLevel)
-            {
-              val (ctx, cutPos, commute) =
-                if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
-                else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
+          val (ctx, cutPos, commute) =
+            if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
+            else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
 
-              val (ff,pr) = formulaSimp(f, ctx)
+          val (ff,pr) = formulaSimp(f, ctx)
 
-              cutAt(ff)(pos) < (
-                ident,
-                //todo: to remove the succ.length == 1 restriction, this needs to hide the other succ positions
-                cohideOnlyR(cutPos) & equivifyR(1) & commute & by(pr)
-                )
-            }
-            //Otherwise we only do the simplification under empty context and CEat the result
-            else
-            {
-              val (ff,pr) = formulaSimp(f,IndexedSeq())
-              CEat(commuteEquivFR(SuccPosition(1))(pr))(pos)
-            }
-          case Some(t:Term) =>
-            val(tt,pr) = termSimp(t)
-            CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
-          case _ => ident
+          cutAt(ff)(pos) < (
+            ident,
+            //todo: to remove the succ.length == 1 restriction, this needs to hide the other succ positions
+            cohideOnlyR(cutPos) & equivifyR(1) & commute & by(pr)
+            )
         }
-      }
+        //Otherwise we only do the simplification under empty context and CEat the result
+        else
+        {
+          val (ff,pr) = formulaSimp(f,IndexedSeq())
+          CEat(commuteEquivFR(SuccPosition(1))(pr))(pos)
+        }
+      case Some(t:Term) =>
+        val(tt,pr) = termSimp(t)
+        CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
+      case _ => ident
     }
-  }
+  })
 
   //Simplifies at a (succ) position, restricting only to the requested part of the context and in the required order
   def rsimpTac(ipos:IndexedSeq[Integer]):DependentPositionTactic = new DependentPositionTactic("restricted simp"){

@@ -124,6 +124,10 @@
                            uib-tooltip="Auto without QE" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-ban"></span></a>
                     </li>
+                    <li><a ng-click="onTactic(undefined, 'fullSimplify')"
+                           uib-tooltip="Simplify all formulas" tooltip-placement="top" tooltip-popup-delay="500">
+                        <span class="fa fa-compress"></span></a>
+                    </li>
                     <li><a ng-click="getCounterExample()"
                            uib-tooltip="Find counterexample" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-search"></span></a>
@@ -164,6 +168,10 @@
                         <a ng-click="transformFormula(f.id, f.formula, false)"
                            uib-tooltip="Transform" tooltip-placement="left" tooltip-popup-delay="5000">
                             <span class="fa fa-pencil"></span></a>
+                    </li>
+                    <li><a ng-click="onTactic(f.id, 'simplify')"
+                           uib-tooltip="Simplify formula" tooltip-placement="top" tooltip-popup-delay="500">
+                        <span class="fa fa-compress"></span></a>
                     </li>
                     <li><a ng-click="exportFormula(f.id)"
                            uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
