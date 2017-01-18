@@ -101,6 +101,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
 
       //Combinators
       case SEQ_COMBINATOR.startPattern(_*) => consumeTerminalLength(SEQ_COMBINATOR, loc)
+      case DEPRECATED_SEQ_COMBINATOR.startPattern(_*) => consumeTerminalLength(DEPRECATED_SEQ_COMBINATOR, loc)
       case EITHER_COMBINATOR.startPattern(_*) => consumeTerminalLength(EITHER_COMBINATOR, loc)
       case KLEENE_STAR.startPattern(_*) => consumeTerminalLength(KLEENE_STAR, loc)
       case SATURATE.startPattern(_*) => consumeTerminalLength(SATURATE, loc)

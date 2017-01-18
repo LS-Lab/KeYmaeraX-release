@@ -74,6 +74,12 @@ object BelleParser extends (String => BelleExpr) {
           r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc),
           st.input
         )
+        //@todo Duplicated case for DEPRECATED_SEQ_COMBINATOR
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(DEPRECATED_SEQ_COMBINATOR, seqCombinatorLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc) =>
+        ParserState(
+          r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc),
+          st.input
+        )
 
       //region Seq combinator
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR, combatinorLoc) =>
@@ -89,6 +95,25 @@ object BelleParser extends (String => BelleExpr) {
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
         st.input.headOption match {
           case Some(BelleToken(SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(KLEENE_STAR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(N_TIMES(_), _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(SATURATE, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case _ => ParserState(r :+ ParsedBelleExpr(left & right, leftLoc.spanTo(rightLoc)), st.input)
+        }
+      //@todo NEXT TWO CASES ARE COPY/PASTE OF ABOVE USING THE DEPRECATED_SEQ_COMBINATOR
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(DEPRECATED_SEQ_COMBINATOR, combatinorLoc) =>
+        st.input.headOption match {
+          case Some(BelleToken(OPEN_PAREN, oParenLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(IDENT(name), identLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(OPTIONAL, optCombinatorLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(DONE, doneLoc)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
+          case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
+        }
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(DEPRECATED_SEQ_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
+        st.input.headOption match {
+          case Some(BelleToken(DEPRECATED_SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(KLEENE_STAR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(N_TIMES(_), _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(SATURATE, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
@@ -112,6 +137,8 @@ object BelleParser extends (String => BelleExpr) {
           case Some(BelleToken(N_TIMES(_), _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(SATURATE, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          //@todo THIS CASE IS A DUPLICATE OF THE ABOVE USING DEPRECATED_SEQ_COMBINATOR
+          case Some(BelleToken(DEPRECATED_SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case _ => {
             val parsedExpr = left | right
             parsedExpr.setLocation(combatinorLoc)

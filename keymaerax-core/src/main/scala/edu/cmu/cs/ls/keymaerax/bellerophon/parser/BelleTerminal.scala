@@ -33,6 +33,8 @@ private object IDENT {
 private object SEQ_COMBINATOR extends BelleTerminal(";") {
   override def regexp = ";".r
 }
+
+private object DEPRECATED_SEQ_COMBINATOR extends BelleTerminal("&") {
   override def regexp = "\\&".r
 }
 
