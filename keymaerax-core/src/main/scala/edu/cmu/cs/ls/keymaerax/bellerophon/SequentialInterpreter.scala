@@ -335,7 +335,10 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case err:BelleThrowable =>
         listeners.foreach(l => l.end(v, expr, Right(err)))
         throw err
-      case e:Throwable => println(s"Unknown exception running $expr: $e\nDatabase recording is incomplete!"); throw e
+      case e:Throwable =>
+        println(s"Unknown exception running $expr: $e\nDatabase recording is incomplete!")
+        e.printStackTrace()
+        throw e
     }
   }
 
