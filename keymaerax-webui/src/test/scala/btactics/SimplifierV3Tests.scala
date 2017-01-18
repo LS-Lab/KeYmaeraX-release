@@ -1,6 +1,8 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -12,12 +14,20 @@ import scala.collection.immutable._
   */
 class SimplifierV3Tests extends TacticTestBase {
 
-  "SimplifierV3" should "simplify propositions" in withMathematica { qeTool =>
+  "SimplifierV3" should "simplify repeated propositions under context" in withMathematica { qeTool =>
     val fml = "R() -> P() & Q() -> P() & (R() & P()) & Q() & (R() & P() & Z() & Y())".asFormula
     val ctxt = IndexedSeq("Y()".asFormula)
-    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), SimplifierV3.simpTac()(1))
-    result.subgoals should contain only
+    val tactic = SimplifierV3.simpTac()
+    //Top level simplification at different succedents
+    proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1)).subgoals should contain only
       Sequent(ctxt, IndexedSeq("R()->P()&Q()->Z()".asFormula))
+    proveBy(Sequent(ctxt,IndexedSeq(fml,fml,fml)), tactic(2)).subgoals should contain only
+      Sequent(ctxt, IndexedSeq("R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->Z()".asFormula, "R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula))
+    //Inner simplification
+    proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1,PosInExpr(1::1::Nil))).subgoals should contain only
+      Sequent(ctxt, IndexedSeq("R()->P()&Q()->P()&R()&Q()&Z()&Y()".asFormula))
+    proveBy(Sequent(ctxt,IndexedSeq(fml,fml,fml)), tactic(3,PosInExpr(1::1::Nil))).subgoals should contain only
+      Sequent(ctxt, IndexedSeq("R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&R()&Q()&Z()&Y()".asFormula))
   }
 
   "SimplifierV3" should "do dependent arithmetic simplification" in withMathematica { qeTool =>
@@ -138,14 +148,17 @@ class SimplifierV3Tests extends TacticTestBase {
   }
 
   it should "simplify ACAS X goal" in withMathematica { qeTool =>
-    val ax = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
+    val minusSimp1 = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
+    val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
+
     val minus = ( (t:Term) =>
       t match {
-        case Minus(Plus(a,b), c) if b == c => List(ax)
+        case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
+        case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
         case _ => List()
       }
-    )
-    val fml = "(-w*ad/2*max((0,d))^2+dho*max((0,d))=-w*ad/2*max((0,d))^2+dho*max((0,d))&-w*ad*max((0,d))+dho-dho=-w*ad*max((0,d)))".asFormula
+      )
+    val fml = ("0<=t_+t&t_+t < max((0,d))&dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+(-w*ad/2*max((0,d))^2+dho*max((0,d)))=-w*ad/2*(t_+t)^2+dho*(t_+t)|dhf*(t_+t-max((0,d)))=dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)->abs(r-rv*(t_+t))>rp|w*(h-(dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+(-w*ad/2*max((0,d))^2+dho*max((0,d))))) < -hp").asFormula
     val result = proveBy(fml, SimplifierV3.simpTac(taxs = composeIndex(minus,defaultTaxs))(1))
     println(result)
   }
@@ -175,5 +188,26 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "f()>=0".asFormula
   }
+
+  it should "simplify terms" in withMathematica { qeTool =>
+    val fml = "(\\forall t \\forall s (t>=0 & 0 <= s & s<=t -> x=v_0*(0+1*t-0) -> x >= 5))".asFormula
+    val ctxt = IndexedSeq("x_0=0".asFormula,"v_0=5".asFormula)
+    val tactic = simpTac()
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0=0".asFormula,"v_0=5".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t \\forall s (t>=0&0<=s&s<=t->x=v_0*t->x>=5)".asFormula
+  }
+
+  it should "simplify terms when applied to term position" in withMathematica { qeTool =>
+    val fml = "x=v_0*(0+1*t-0) -> x >= 0".asFormula
+    val ctxt = IndexedSeq("x_0=0".asFormula,"v_0=0".asFormula)
+    val tactic = simpTac()
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1,PosInExpr(0::1::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0=0".asFormula,"v_0=0".asFormula)
+    result.subgoals.head.succ should contain only "x=v_0*t -> x>=0".asFormula
+  }
+
 
 }
