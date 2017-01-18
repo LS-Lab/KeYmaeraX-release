@@ -30,7 +30,9 @@ private object IDENT {
 
 
 // Combinator Tokens
-private object SEQ_COMBINATOR extends BelleTerminal("&") {
+private object SEQ_COMBINATOR extends BelleTerminal(";") {
+  override def regexp = ";".r
+}
   override def regexp = "\\&".r
 }
 
