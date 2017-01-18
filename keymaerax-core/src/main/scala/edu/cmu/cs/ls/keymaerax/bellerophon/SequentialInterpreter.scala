@@ -194,13 +194,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case ChooseSome(options, e) =>
           val ec = e.asInstanceOf[Formula=>BelleExpr]
           //@todo specialization to A=Formula should be undone
-          val opts: Iterator[Formula] = try {
-            options().asInstanceOf[Iterator[Formula]]
-          } catch {
-            case err: IllegalArgumentException =>
-              if (BelleExpr.DEBUG) println("ChooseSome: error listing options " + err)
-              List[Formula]().iterator
-          }
+          val opts: Iterator[Formula] = options().asInstanceOf[Iterator[Formula]]
           var errors = ""
           while (opts.hasNext) {
             val o = opts.next()

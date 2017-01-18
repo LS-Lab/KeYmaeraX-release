@@ -53,10 +53,10 @@
         <tbody>
         <tr ng-repeat="proof in proofs | orderBy:'name'">
             <td>{{ proof.id }}</td>
-            <td>{{ proof.name }}</td>
-            <!--<td>{{ proof.modelName }}</td>-->
+            <td>
+                <a class="btn btn-link" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open proof" tooltip-placement="auto top">{{ proof.name }}</a>
+            </td>
             <td>{{ proof.date }}</td>
-            <!--<td>{{ proof.stepCount }}</td>-->
             <td>
                 <div ng-if="$first">
                 <span data-intro="Is there more work to do or is the proof done?" data-position="left">

@@ -47,9 +47,10 @@
                 </span>
                 <div class="nav">
                     <ul class="nav navbar-nav" id="provingautomation"
-                        data-intro="Automatic proof search. Unfold all operators automatically. Undo proof steps." data-position="right">
+                        data-intro="Automatic proof search. Unfold all operators. Undo proof steps." data-position="right">
                         <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="doTactic(undefined, 'unfold')"><span class="fa fa-magic"> Unfold</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'fullSimplify')"><span class="fa fa-compress"> Simplify</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
@@ -186,7 +187,7 @@
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row" >
                         <div class="col-md-11"
-                             data-intro="Each unfinished branch of a proof is displayed on its own tab, which shows the current open proof goal at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list. Hover over &#8866; for tactics that work on the entire sequent."
+                             data-intro="Each unfinished subgoal of a proof is displayed on its own tab, which shows the current open proof goal at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list of tactics. Hover over &#8866; for tactics that transform the entire subgoal."
                              data-position="bottom" ng-if="$first">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
@@ -246,7 +247,7 @@
                             <div class="panel-heading">
                                 <div class="col-md-2"><h3 class="panel-title">Proof Programming</h3></div>
                                 <div class="col-md-1" data-intro="Rerun the tactic from the start" data-position="right">
-                                    <button class="btn btn-default" ng-click="rerunTactic()" uib-tooltip="Re-run tactic from original conjecture">Re-run</button>
+                                    <button class="btn btn-default" ng-click="rerunTactic()" uib-tooltip="Rerun tactic from original conjecture">Rerun</button>
                                 </div>
                                 <div class="input-group col-md-9" ng-if="tactic.tacticDel === ''">
                                     <span class="input-group-addon">Fresh steps</span>
@@ -254,7 +255,7 @@
                                            uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
                                            tooltip-placement="top-left" ng-model="tactic.tacticDiff">
                                     <span class="input-group-btn"
-                                          data-intro="Run just the changes." data-position="left">
+                                          data-intro="Run changes in the tactic." data-position="left">
                                         <button class="btn btn-default" ng-click="executeTacticDiff()"
                                                 uib-tooltip="Augment the derivation on the current tab with fresh steps"
                                                 tooltip-placement="top-left"

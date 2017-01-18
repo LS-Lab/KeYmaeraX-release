@@ -8,7 +8,8 @@ import org.scalatest.{FlatSpec, Matchers}
 class BelleLexerTests extends FlatSpec with Matchers {
   val testCases = {
     ("nil", List(IDENT("nil"))) ::
-    ("nil & nil", List(IDENT("nil"), SEQ_COMBINATOR, IDENT("nil"))) ::
+    ("nil & nil", List(IDENT("nil"), DEPRECATED_SEQ_COMBINATOR, IDENT("nil"))) ::
+    ("nil ; nil", List(IDENT("nil"), SEQ_COMBINATOR, IDENT("nil"))) ::
     ("nil | nil", List(IDENT("nil"), EITHER_COMBINATOR, IDENT("nil"))) ::
     ("(nil | nil)*", OPEN_PAREN :: IDENT("nil") :: EITHER_COMBINATOR :: IDENT("nil") :: CLOSE_PAREN :: KLEENE_STAR :: Nil) ::
     ("cut({`1=1`})", IDENT("cut") :: OPEN_PAREN :: EXPRESSION("{`1=1`}") :: CLOSE_PAREN :: Nil) ::

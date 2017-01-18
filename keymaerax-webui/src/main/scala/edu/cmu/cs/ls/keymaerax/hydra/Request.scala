@@ -389,6 +389,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
     // TODO provide classes and spray JSON protocol to convert
     val os = System.getProperty("os.name")
     val osKey = osKeyOf(os.toLowerCase)
+    val jvmBits = System.getProperty("sun.arch.data.model")
     val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
       case Some(opg) => opg.asJsObject.getFields("mathematicaPaths").head.convertTo[List[JsObject]]
       case None => throw new IllegalStateException("No default configuration for Unknown OS")
@@ -407,7 +408,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
+    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
   }
 
   private def osKeyOf(osName: String): String = {
