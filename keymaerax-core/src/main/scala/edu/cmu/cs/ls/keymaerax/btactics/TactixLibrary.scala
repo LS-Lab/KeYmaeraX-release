@@ -300,7 +300,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop(Formula)]] */
   def loopauto: DependentPositionTactic = "loopauto" by ((pos:Position,seq:Sequent) =>
     ChooseSome(
-      () => InvariantGenerator.loopInvariantGenerator(seq,pos),
+      () => try { InvariantGenerator.loopInvariantGenerator(seq,pos) } catch {
+        case err: Exception =>
+          if (BelleExpr.DEBUG) println("ChooseSome: error listing options " + err)
+          List[Formula]().iterator
+      },
       (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
     )
     )
