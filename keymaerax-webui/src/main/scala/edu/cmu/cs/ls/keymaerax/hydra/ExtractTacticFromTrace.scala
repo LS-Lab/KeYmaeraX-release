@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import TacticExtractionErrors._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParser, BellePrettyPrinter, SEQ_COMBINATOR}
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, Generator, Idioms}
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
@@ -65,8 +65,8 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 
     //@todo does pretty-printing
     if (children.isEmpty) thisTactic
-    else if (children.length == 1) thisTactic + " ; " + getTacticString(modelId, indent)(children.head)
-    else thisTactic + " ; <(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
+    else if (children.length == 1) thisTactic + " " + SEQ_COMBINATOR.img + " " + getTacticString(modelId, indent)(children.head)
+    else thisTactic + " " + SEQ_COMBINATOR.img +  " " + BRANCH_COMBINATOR.img + "(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
   private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), Some(gen))
