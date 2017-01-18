@@ -58,16 +58,7 @@
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"></k4-sequent>
-            <ul>
-                <!-- display siblings at fork -->
-                <li ng-repeat="sibling in siblingsWithAgendaItem(proofTree.nodesMap[step].children)">
-                    <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-                    <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                       class="badge"
-                       uib-tooltip-template="'siblingSequentTooltip.html'"
-                       tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
-                </li>
-            </ul>
+            <div ng-include="'siblinglinks.html'" replace-include></div>
         </div>
     </div>
 
@@ -200,16 +191,7 @@
         <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                     sequent="step.sequent"
                     read-only="true" collapsed="true"></k4-sequent>
-        <ul>
-            <!-- display siblings at fork -->
-            <li ng-repeat="sibling in siblingsWithAgendaItem(step.children)">
-                <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-                <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                   class="badge"
-                   uib-tooltip-template="'siblingSequentTooltip.html'"
-                   tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
-            </li>
-        </ul>
+        <div ng-include="'siblinglinks.html'" replace-include></div>
     </div>
     <div class="col-md-12 k4-proofrow-annotation" ng-if="step === undefined">
         ...
@@ -265,4 +247,16 @@
         <a ng-click="prune(step.id)"><span class="fa fa-eraser"> Prune</span></a><br/>
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
+</script>
+<script type="text/ng-template" id="siblinglinks.html">
+    <ul data-intro="Parent has multiple subgoals, click subgoal number to change tab" data-position="left">
+        <!-- display siblings at fork -->
+        <li ng-repeat="sibling in siblingsWithAgendaItem(step.children)">
+            <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
+            <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+               class="badge"
+               uib-tooltip-template="'siblingSequentTooltip.html'"
+               tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+        </li>
+    </ul>
 </script>
