@@ -36,15 +36,15 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   it should "print e('R)" in { roundTrip("andR('R)") }
 
-  "seq printer" should "print e & e" in { roundTrip("nil & nil") }
+  "seq printer" should "print e ; e" in { roundTrip("nil ; nil") }
 
-  it should "print e & e & e" in { roundTrip("nil & nil & nil") }
+  it should "print e ; e ; e" in { roundTrip("nil ; nil ; nil") }
 
-  it should "print (e & e) & e" in { roundTrip("(nil & nil) & nil") }
+  it should "print (e ; e) ; e" in { roundTrip("(nil ; nil) ; nil") }
 
   it should "print e | e" in { roundTrip("nil | nil") }
 
-  "doall" should "print e & doall(e)" in { roundTrip("andR(1) & doall(andL(1))") }
+  "doall" should "print e ; doall(e)" in { roundTrip("andR(1) ; doall(andL(1))") }
 
   "transform" should "print with formula" in {
     val tactic = TactixLibrary.transform("x>0".asFormula)(1)
@@ -52,13 +52,13 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
     roundTrip("transform({`x>0`}, 1)")
   }
 
-  "Operator precedence" should "bind saturate * stronger than &" in { roundTrip("implyR(1) & andL('L)*") }
+  "Operator precedence" should "bind saturate * stronger than ;" in { roundTrip("implyR(1) ; andL('L)*") }
 
-  it should "parenthesize & in saturate *" in { roundTrip("(implyR(1) & andL('L))*") }
+  it should "parenthesize ; in saturate *" in { roundTrip("(implyR(1) ; andL('L))*") }
 
-  it should "bind repeat *times stronger than &" in { roundTrip("implyR(1) & andL('L)*2") }
+  it should "bind repeat *times stronger than ;" in { roundTrip("implyR(1) ; andL('L)*2") }
 
-  it should "parenthesize partial" in { roundTrip("implyR(1) & (andL(1) partial)") }
+  it should "parenthesize partial" in { roundTrip("implyR(1) ; (andL(1) partial)") }
 
   it should "parenthesize tactic combinators" in {
     parser(BellePrettyPrinter(TactixLibrary.alphaRule*)) shouldBe (TactixLibrary.alphaRule*)
