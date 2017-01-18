@@ -38,8 +38,8 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     val children = node.children
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
 
-    if(children.length == 0) thisTactic
-    else if(children.length == 1) thisTactic + " & " + extractTextWithoutParsing(tree)(children.head)
+    if (children.isEmpty) thisTactic
+    else if (children.length == 1) thisTactic + " & " + extractTextWithoutParsing(tree)(children.head)
     else thisTactic + " <(\n  " + children.map(child => extractTextWithoutParsing(tree)(child)).mkString(",\n  ") + "\n)" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
