@@ -54,7 +54,7 @@ object KeYmaeraXArchiveParser {
         })
       })
     entries.map({case (name, modelText, tactic) =>
-      (name, modelText, KeYmaeraXProblemParser(modelText), tactic)
+      (name, modelText, KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText), tactic)
     }).toList
   }
 }
