@@ -5,7 +5,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.ExtractTacticFromTrace
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExtractTacticFromTrace}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -158,6 +158,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
+  }
+
+  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
+  def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId)
+    val globalProvable = trace.lastProvable
+    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
   }
 
   /** Removes all whitespace for string comparisons in tests.

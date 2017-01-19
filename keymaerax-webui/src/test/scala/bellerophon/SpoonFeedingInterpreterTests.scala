@@ -2,14 +2,13 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ProofTree}
+import edu.cmu.cs.ls.keymaerax.hydra.ProofTree
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable._
@@ -19,14 +18,6 @@ import scala.collection.immutable._
   * Created by smitsch on 8/24/16.
   */
 class SpoonFeedingInterpreterTests extends TacticTestBase {
-
-  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  private def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int) = {
-    val trace = db.getExecutionTrace(proofId)
-    val globalProvable = trace.lastProvable
-    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-  }
 
   "Atomic tactic" should "be simply forwarded to the inner interpreter" in withDatabase { db =>
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
