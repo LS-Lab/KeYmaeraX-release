@@ -519,7 +519,6 @@ private object DifferentialTactics {
   /** @see [[TactixLibrary.ODE]]
     * @author Andre Platzer */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
     val noCut = "ANON" by ((pos: Position) =>
       ((boxAnd(pos) & andR(pos))*) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
@@ -536,17 +535,18 @@ private object DifferentialTactics {
           (if (post match {
             case  _: Greater => true
             case _: Less => true
+            case _: Equal => true
             case _ => false
           })
           // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-            openDiffInd(pos) | DGauto(pos)  | dgZeroMonomial(pos)
+            openDiffInd(pos) | DGauto(pos)  | dgZeroMonomial(pos) | dgZeroPolynomial(pos)
           else
           //@todo check degeneracy for split to > or =
             diffInd()(pos)
               | DGauto(pos)
             )
       })) (pos))
-      )
+    )
 
     //@todo in fact even ChooseAll would work, just not recursively so.
     //@todo performance: repeat from an updated version of the same generator until saturation
@@ -563,7 +563,8 @@ private object DifferentialTactics {
           // show diffCut, but don't use yet another diffCut
           noCut(pos) & done
           )
-    ) & ODE(pos) | noCut(pos) |
+    ) & ODE(pos) |
+      noCut(pos) |
       // if no differential cut succeeded, just skip and go for a direct proof.
       //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
       TactixLibrary.diffSolve(pos) |
@@ -579,7 +580,7 @@ private object DifferentialTactics {
             // show diffCut, but don't use yet another diffCut
             noCut(pos) & done
             )
-      ) & ODE(pos)
+      ) & ODE(pos) | assertT(seq=>false, "Failed to automatically prove something about this ODE.") //@todo maybe only catch ODE-specific errors thrown here and in InvariantGenerator.scala.
   })
 
   def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {
