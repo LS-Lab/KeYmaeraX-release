@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ODESolverTool
 
 import scala.collection.immutable
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, List}
 import scala.language.postfixOps
 
 /**
@@ -524,8 +524,8 @@ private object DifferentialTactics {
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
         val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
           case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-          case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + seq)
-          case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + seq)
+          case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+          case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
         }
         val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
         val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
@@ -553,7 +553,11 @@ private object DifferentialTactics {
     //@todo turn this into repeat
     ChooseSome(
       //@todo should memoize the results of the differential invariant generator
-      () => InvariantGenerator.differentialInvariantGenerator(seq,pos),
+      () => try { InvariantGenerator.differentialInvariantGenerator(seq,pos) } catch {
+        case err: Exception =>
+          if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+          List[Formula]().iterator
+      },
       (inv:Formula) => if (false)
         diffInvariant(inv)(pos)
       else
@@ -570,7 +574,11 @@ private object DifferentialTactics {
       TactixLibrary.diffSolve(pos) |
       ChooseSome(
         //@todo should memoize the results of the differential invariant generator
-        () => InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos),
+        () => try { InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos) } catch {
+          case err: Exception =>
+            if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+            List[Formula]().iterator
+        } ,
         (inv:Formula) => if (false)
           diffInvariant(inv)(pos)
         else
