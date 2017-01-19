@@ -22,6 +22,10 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 class ODETests extends TacticTestBase {
+  "ODE" should "prove x=0 -> [{x'=-x}]x=0" in withMathematica { qeTool =>
+    TactixLibrary.proveBy("x=0 -> [{x'=-x}]x=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
   "Pretest" should "PDEify x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" in withMathematica { qeTool =>
     TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
