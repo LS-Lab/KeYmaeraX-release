@@ -336,6 +336,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         listeners.foreach(l => l.end(v, expr, Right(err)))
         throw err
       case e:Throwable =>
+        //@todo Either alert the listeners like we do in the BelleThrowable case above, or else augment the error message that's thrown here to explain the database inconsisitency problem.
         println(s"Unknown exception running $expr: $e\nDatabase recording is incomplete!")
         e.printStackTrace()
         throw e
