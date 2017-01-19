@@ -5,29 +5,43 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * @author Nathan Fulton
   */
 object CourseMain {
-  try {
-    val config = Map(
-      "linkName" -> "/usr/local/Wolfram/Mathematica/11.0/Executables/MathKernel",
-      "libDir" -> "/usr/local/Wolfram/Mathematica/11.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
-    val provider = new MathematicaToolProvider(config)
-    ToolProvider.setProvider(provider)
-    if(provider.tools().forall(_.isInitialized)) println("Initialized!")
-    else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
-  } catch {
-    case _: Throwable => println("Won't be able to parse tactics or check proofs.")
+  /** Just enough initialization. */
+  def basicInitializer() = {
+    try {
+      val config = Map(
+        "linkName" -> "/usr/local/Wolfram/Mathematica/11.0/Executables/MathKernel",
+        "libDir" -> "/usr/local/Wolfram/Mathematica/11.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
+      val provider = new MathematicaToolProvider(config)
+      ToolProvider.setProvider(provider)
+      if(provider.tools().forall(_.isInitialized)) println("Initialized!")
+      else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
+    } catch {
+      case _: Throwable => {
+        println("Falling back to Z3. Not a big deal but some features won't be available.")
+        ToolProvider.setProvider(new Z3ToolProvider())
+      }
+    }
+
+    //Intialize the printer, the configuration generator, the parser, and the invariant generator.
+    PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
+    val generator = new ConfigurableGenerator[Formula]()
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    TactixLibrary.invGenerator = generator
   }
 
-  PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
-
+  /** A command-line tool that doesn't contain any of the web UI stuff. Useful because the JAR is considerably smaller, but many features aren't available.
+    * You probably want to use KeYmaeraX.scala instead of this, unless you're setting up an AutoLab sanity checker. */
   def main(input : Array[String]) = {
+    basicInitializer()
+
     val args : Map[String, ArgValue] = GetOpt(Map(
       "check" -> StrArgType(),
       "bparse" -> StrArgType(),
@@ -141,7 +155,8 @@ object CourseMain {
         ???
       }
       case e : Error => {
-        println(s"Unkown error encountered while parsing ${fileName}")
+        println(s"Unkown error encountered while parsing ${fileName}: ${e}")
+        e.printStackTrace()
         System.exit(-1)
         ???
       }
