@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.parser.ParseException
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
@@ -29,6 +29,7 @@ object CourseMain {
 
   def main(input : Array[String]) = {
     val args : Map[String, ArgValue] = GetOpt(Map(
+      "check" -> StrArgType(),
       "bparse" -> StrArgType(),
       "tparse" -> StrArgType(),
       "exists" -> StrArgType(),
@@ -41,7 +42,8 @@ object CourseMain {
       args.foreach(pv => {
         val parameterName = pv._1
         val value = pv._2
-        if (parameterName == "bparse") parseProblemFileOrFail(value)
+        if (parameterName == "check") check(value)
+        else if (parameterName == "bparse") parseProblemFileOrFail(value)
         else if (parameterName == "tparse") parseTacticFileOrFail(value)
         else if (parameterName == "exists") fileExistsOrFail(value)
         else if (parameterName == "is-exported-db") isExportedDatabaseOrFail(value)
@@ -60,6 +62,30 @@ object CourseMain {
         e.printStackTrace()
         System.exit(-1)
       }
+    }
+  }
+
+  private def check(archiveFile : ArgValue) = {
+    val archiveEntries : List[KeYmaeraXArchiveParser.ArchiveEntry] = try {
+      parseArchiveFileOrfail(archiveFile)
+    } catch {
+      case e : Throwable => {
+        println(s"Expected a valid .kya file but could not parse file contents: ${archiveFile}")
+        System.exit(-1)
+        Nil
+      }
+    }
+
+    if(archiveEntries.length != 1) {
+      println("Expected an archive file with exactly one model. Did you export a single proof from the Proofs page?")
+      System.exit(-1)
+    }
+    else if(archiveEntries.head._4.length != 1) {
+      println("Expected an archive file with exactly one model and exactly one proof. Did you export a single proof from the Proofs page?")
+      System.exit(-1)
+    }
+    else {
+      //ok!
     }
   }
 
@@ -99,6 +125,26 @@ object CourseMain {
         println(s"Tactic in ${fileName} did not parse\n" + ex)
         System.exit(-1)
         ???
+    }
+  }
+
+  private def parseArchiveFileOrfail(v: ArgValue) : List[KeYmaeraXArchiveParser.ArchiveEntry] = {
+    val fileName = fileExistsOrFail(v)
+    try {
+      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parse(scala.io.Source.fromFile(fileName).mkString)
+    }
+    catch {
+      case e : ParseException => {
+        println(s"Auto-grader failed because file ${fileName} needs to exist and parse but failed to parse.")
+        e.printStackTrace()
+        System.exit(-1)
+        ???
+      }
+      case e : Error => {
+        println(s"Unkown error encountered while parsing ${fileName}")
+        System.exit(-1)
+        ???
+      }
     }
   }
 
