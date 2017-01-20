@@ -5,7 +5,7 @@
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraToMathematica, Mathematica}
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Map
@@ -90,5 +90,9 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
     link.qeEvidence("f(x,y,z)>0 -> f(x,y,z)>=0".asFormula)._1 shouldBe True
     link.qeEvidence("f(x,(y,z))>0 -> f(x,(y,z))>=0".asFormula)._1 shouldBe True
     link.qeEvidence("f((x,y),z)>0 -> f((x,y),z)>=0".asFormula)._1 shouldBe True
+  }
+
+  "Arithmetic" should "translate x--2 as subtraction of -2 (i.e. +2)" in withMathematica { link =>
+    link.qeEvidence("5 < 5--2".asFormula)._1 shouldBe True
   }
 }
