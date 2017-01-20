@@ -1454,11 +1454,20 @@ object ProofValidationRunner {
 
     new Thread(new Runnable() {
       override def run() = {
+        println(s"Received request to validate ${taskId}. Running in separate thread.")
         val provable = NoProofTermProvable( Provable.startProof(model) )
-        SequentialInterpreter()(proof, BelleProvable(provable)) match {
-          case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
-          case _                                 => results update (taskId, (model, proof, Some(false)))
+
+        try {
+          SequentialInterpreter()(proof, BelleProvable(provable)) match {
+            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+            case _                                 => results update (taskId, (model, proof, Some(false)))
+          }
+        } catch {
+          //Catch everything and indicate a failed proof attempt.
+          case e : Throwable => results update (taskId, (model, proof, Some(false)))
         }
+
+        println(s"Done executing validation check for ${taskId}")
       }
     }).start()
 

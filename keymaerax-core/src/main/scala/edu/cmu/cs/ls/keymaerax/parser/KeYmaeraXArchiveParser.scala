@@ -38,7 +38,8 @@ object KeYmaeraXArchiveParser {
   type ArchiveEntry = (String, String, Expression, List[(String, BelleExpr)])
 
   /** Parses the archive content into archive entries  */
-  def parse(archiveContent: String): List[ArchiveEntry] = {
+  def parse(archiveContentBOM: String): List[ArchiveEntry] = {
+    val archiveContent : String = ParserHelper.removeBOM(archiveContentBOM)
     val entries = archiveContent.trim().split("ArchiveEntry").flatMap({s =>
       NAME_REGEX.findAllMatchIn(s.trim().stripSuffix("End.")).map(
         { m =>
@@ -54,7 +55,7 @@ object KeYmaeraXArchiveParser {
         })
       })
     entries.map({case (name, modelText, tactic) =>
-      (name, modelText, KeYmaeraXProblemParser(modelText), tactic)
+      (name, modelText, KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText), tactic)
     }).toList
   }
 }
