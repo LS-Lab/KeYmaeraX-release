@@ -535,15 +535,16 @@ private object DifferentialTactics {
           (if (post match {
             case  _: Greater => true
             case _: Less => true
-            case _: Equal => true
             case _ => false
           })
           // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-            openDiffInd(pos) | DGauto(pos)  | dgZeroMonomial(pos) | dgZeroPolynomial(pos)
+            openDiffInd(pos) | DGauto(pos)
           else
           //@todo check degeneracy for split to > or =
             diffInd()(pos)
               | DGauto(pos)
+              | dgZeroMonomial(pos)
+              | dgZeroPolynomial(pos)
             )
       })) (pos))
     )
