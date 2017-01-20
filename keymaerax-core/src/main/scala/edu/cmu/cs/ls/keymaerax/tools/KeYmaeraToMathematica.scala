@@ -10,6 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 // favoring immutable Seqs
 import scala.collection.immutable._
 import com.wolfram.jlink._
+import edu.cmu.cs.ls.keymaerax.btactics.FormulaTools
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
@@ -51,13 +52,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
    * Converts a KeYmaera terms to a Mathematica expression.
    */
   protected def convertTerm(t : Term): MExpr = {
-    /** Convert tuples to list of sorts */
-    def flattenSort(s: Sort): List[Sort] = s match {
-      case Tuple(ls, rs) => flattenSort(ls) ++ flattenSort(rs)
-      case _ => s :: Nil
-    }
-
-    require(t.sort == Real || t.sort == Unit || flattenSort(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
+    require(t.sort == Real || t.sort == Unit || FormulaTools.sortsList(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       //@todo Code Review: clean up FuncOf conversion into two cases here
       //@solution: inlined and simplified the FuncOf cases, moved uniform name conversion into MathematicaNameConversion

@@ -6,7 +6,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+
+import scala.collection.immutable.List
 
 /**
  * Tactic tools for formula manipulation and extraction.
@@ -51,6 +53,15 @@ object FormulaTools {
   def argumentList(term: Term): List[Term] = term match {
     case Pair(a,b) => argumentList(a) ++ argumentList(b)
     case a => List(a)
+  }
+
+  /** Convert nested Tuple sorts to a list of its deassociated non-tuple arguments.
+    * {{{
+    *   Tuple->List[Sort]
+    * }}} */
+  def sortsList(s: Sort): List[Sort] = s match {
+    case Tuple(ls, rs) => sortsList(ls) ++ sortsList(rs)
+    case _ => s :: Nil
   }
 
   /** Negation-normal form transforms such that there are no nested negations and that
