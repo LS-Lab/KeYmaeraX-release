@@ -32,8 +32,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
 
     /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
-    def createProof(modelContent: String): Int = {
-      val modelName = ""
+    def createProof(modelContent: String, modelName: String = ""): Int = {
       db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
         case Some(modelId) => db.createProofForModel(modelId, "", "", "")
         case None => fail("Unable to create temporary model in DB")
@@ -161,9 +160,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
+  def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
     val trace = db.getExecutionTrace(proofId)
-    val globalProvable = trace.lastProvable
+    val globalProvable = initGlobal match {
+      case Some(gp) if trace.steps.isEmpty => gp
+      case _ => trace.lastProvable
+    }
     new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
       globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
   }

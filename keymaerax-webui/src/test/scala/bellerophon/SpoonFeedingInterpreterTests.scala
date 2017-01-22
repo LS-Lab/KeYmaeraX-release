@@ -4,8 +4,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Sequent
-import edu.cmu.cs.ls.keymaerax.hydra.ProofTree
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.hydra.{ExtractTacticFromTrace, InMemoryDB, ProofTree}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -407,5 +407,98 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  )
         |)
       """.stripMargin)
+  }
+
+  it should "work in the middle of a proof" in {
+    val problem = "x>=0|x<y -> x>=0&x<y"
+    val provable = ProvableSig.startProof(problem.asFormula)
+    val db = new InMemoryDB()
+    val proofId = db.createProof(provable)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & prop, BelleProvable(provable))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    tree.findNode("2") match {
+      case Some(node) =>
+        val (localProvable, step) = node.endStep match {
+          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+        }
+        step shouldBe "prop"
+        val localProofId = db.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+          SequentialInterpreter, 1)
+        innerInterpreter(BelleParser(step), BelleProvable(localProvable))
+        val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
+        tactic shouldBe BelleParser(
+          """
+            |orL(-1) & <(
+            |  nil & andR(1) & <(
+            |    closeId,
+            |    nil
+            |  )
+            |  ,
+            |  nil & andR(1) & <(
+            |    nil,
+            |    closeId
+            |  )
+            |)
+          """.stripMargin)
+    }
+  }
+
+  it should "work on a branch in the middle of a proof" in {
+    val problem = "x>=0|x<y -> x>=0&x<y"
+    val db = new InMemoryDB()
+
+    val provable = ProvableSig.startProof(problem.asFormula)
+    val proofId = db.createProof(provable)
+
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & orL(-1) & onAll(prop), BelleProvable(provable))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
+    tree.findNode("3") match {
+      case Some(node) =>
+        val (localProvable, step) = node.endStep match {
+          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+        }
+        step shouldBe "prop"
+        val localProofId = db.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+          SequentialInterpreter, 1)
+
+        innerInterpreter(BelleParser(step), BelleProvable(localProvable))
+
+        val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
+        tactic shouldBe BelleParser(
+          """
+            |nil & andR(1) & <(
+            |  closeId,
+            |  nil
+            |)
+          """.stripMargin)
+    }
+
+    tree.findNode("4") match {
+      case Some(node) =>
+        val (localProvable, step) = node.endStep match {
+          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+        }
+        step shouldBe "prop"
+        val localProofId = db.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+          SequentialInterpreter, 1)
+
+        innerInterpreter(BelleParser(step), BelleProvable(localProvable))
+
+        val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
+        tactic shouldBe BelleParser(
+          """
+            |nil & andR(1) & <(
+            |  nil,
+            |  closeId
+            |)
+          """.stripMargin)
+    }
   }
 }
