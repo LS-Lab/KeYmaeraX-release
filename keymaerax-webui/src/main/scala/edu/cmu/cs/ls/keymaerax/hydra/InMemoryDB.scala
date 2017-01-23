@@ -62,7 +62,10 @@ class InMemoryDB extends DBAbstraction {
 
   override def checkPassword(username: String, password: String): Boolean = ???
 
-  override def updateProofInfo(proof: ProofPOJO): Unit = ???
+  override def updateProofInfo(proof: ProofPOJO): Unit = {
+    val (provable, _) = proofs(proof.proofId)
+    proofs(proof.proofId) = (provable, proof)
+  }
 
   //returns id of create object
   override def getProofsForModel(modelId: Int): List[ProofPOJO] = synchronized {
