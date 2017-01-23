@@ -1,11 +1,11 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{ExtractTacticFromTrace, InMemoryDB, ProofTree}
+import edu.cmu.cs.ls.keymaerax.hydra.{ExtractTacticFromTrace, InMemoryDB, ProofTree, TreeNode}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -409,6 +409,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """.stripMargin)
   }
 
+  private def stepInto(node: TreeNode, expectedStep: String, expectedDetails: BelleExpr, depth: Int = 1) = {
+    val (localProvable, step) = node.endStep match {
+      case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+    }
+    step shouldBe expectedStep
+    val innerDb = new InMemoryDB()
+    val localProofId = innerDb.createProof(localProvable)
+    val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
+      SequentialInterpreter, depth)
+    innerInterpreter(BelleParser(step), BelleProvable(localProvable))
+    val tactic = new ExtractTacticFromTrace(innerDb).apply(innerDb.getExecutionTrace(localProofId))
+    tactic shouldBe expectedDetails
+  }
+
   it should "work in the middle of a proof" in {
     val problem = "x>=0|x<y -> x>=0&x<y"
     val provable = ProvableSig.startProof(problem.asFormula)
@@ -420,16 +434,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
       case Some(node) =>
-        val (localProvable, step) = node.endStep match {
-          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
-        }
-        step shouldBe "prop"
-        val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
-          SequentialInterpreter, 1)
-        innerInterpreter(BelleParser(step), BelleProvable(localProvable))
-        val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
-        tactic shouldBe BelleParser(
+        val expected = BelleParser(
           """
             |orL(-1) & <(
             |  nil & andR(1) & <(
@@ -443,6 +448,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
             |  )
             |)
           """.stripMargin)
+        stepInto(node, "prop", expected)
     }
   }
 
@@ -459,46 +465,56 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
     tree.findNode("3") match {
       case Some(node) =>
-        val (localProvable, step) = node.endStep match {
-          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
-        }
-        step shouldBe "prop"
-        val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
-          SequentialInterpreter, 1)
-
-        innerInterpreter(BelleParser(step), BelleProvable(localProvable))
-
-        val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
-        tactic shouldBe BelleParser(
+        val expected = BelleParser(
           """
             |nil & andR(1) & <(
             |  closeId,
             |  nil
             |)
           """.stripMargin)
+        stepInto(node, "prop", expected)
     }
 
     tree.findNode("4") match {
       case Some(node) =>
-        val (localProvable, step) = node.endStep match {
-          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
-        }
-        step shouldBe "prop"
-        val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
-          SequentialInterpreter, 1)
-
-        innerInterpreter(BelleParser(step), BelleProvable(localProvable))
-
-        val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
-        tactic shouldBe BelleParser(
+        val expected = BelleParser(
           """
             |nil & andR(1) & <(
             |  nil,
             |  closeId
             |)
           """.stripMargin)
+        stepInto(node, "prop", expected)
     }
   }
+
+  it should "should work on a typical example" in withDatabase { db => withMathematica { tool =>
+    val problem = "x>=0 & y>=1 & z<=x+y & 3>2  -> [x:=x+y;]x>=z"
+    val modelContent = s"Variables. R x. R y. R z. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+    interpreter(prop & unfoldProgramNormalize & QE, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("prop & unfold & QE")
+
+    val tree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt))
+    tree.findNode("1") match {
+      case Some(node) =>
+        val expected = BelleParser("nil & implyR(1) & andL(-1) & nil & andL(-2) & nil & andL(-3) & nil & nil & nil")
+        stepInto(node, "prop", expected)
+    }
+
+    tree.findNode("2") match {
+      case Some(node) =>
+        val expected = BelleParser("chase('R) & normalize")
+        stepInto(node, "unfold", expected)
+    }
+
+    tree.findNode("3") match {
+      case Some(node) =>
+        val expected = BelleParser("toSingleFormula & universalClosure(1) & rcf")
+        stepInto(node, "QE", expected)
+    }
+  }}
 }

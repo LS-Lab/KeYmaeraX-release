@@ -148,6 +148,10 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic", e).inContext(d, "")
       }
 
+      case n@NamedTactic(name, t) if level > 0 || name == "ANON" =>
+        val levelDecrement = if (name == "ANON") 0 else 1
+        runTactic(branches.updated(branch, (t, branches(branch)._2)), branch, level-levelDecrement)
+
       // forward to inner interpreter
       case _ => branches(branch)._2 match {
         case BelleProvable(provable, labels) if provable.subgoals.isEmpty=> inner(Seq())(branches(branch)._1, branches(branch)._2)
