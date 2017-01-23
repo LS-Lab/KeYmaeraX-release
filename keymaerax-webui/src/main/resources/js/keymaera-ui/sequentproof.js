@@ -200,6 +200,21 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         sequentProofData.prune(scope.userId, scope.proofId, nodeId);
       }
 
+      scope.stepInto = function(nodeId) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/expand').then(function(response) {
+          var foo = response;
+          var modalInstance = $uibModal.open({
+            templateUrl: 'templates/magnifyingglass.html',
+            controller: 'MagnifyingGlassDialogCtrl',
+            scope: scope,
+            size: 'lg',
+            resolve: {
+              tactic: function () { return response.data.tactic; }
+            }
+          });
+        });
+      }
+
       /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */
       scope.hasParent = function(section) {
         var step = section.path[section.path.length - 1];
@@ -238,4 +253,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
       return undefined;
     };
+  }).
+  controller('MagnifyingGlassDialogCtrl', function ($scope, $uibModalInstance, tactic) {
+    $scope.tactic = {
+      steps: tactic.steps,
+      parent: tactic.parent
+    };
+
+    $scope.close = function () { $uibModalInstance.close(); };
   });

@@ -1,0 +1,12 @@
+<div class="modal-header">
+    <h3 class="modal-title">Steps of {{tactic.parent}}</h3>
+</div>
+<div class="modal-body" style="overflow: scroll; height: 300px;">
+    <!-- TODO: sequent deduction view -->
+    <div class="well well-sm">
+        <div class="k4-tacticeditor">{{tactic.steps}}</div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="close()">Close</button>
+</div>

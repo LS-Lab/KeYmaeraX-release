@@ -883,6 +883,41 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
   }
 }
 
+class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
+  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
+  def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId)
+    val globalProvable = initGlobal match {
+      case Some(gp) if trace.steps.isEmpty => gp
+      case _ => trace.lastProvable
+    }
+    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
+  }
+
+  def resultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+    tree.findNode(nodeId) match {
+      case None => throw new Exception("Unknown node " + nodeId)
+      case Some(node) =>
+        val (localProvable, parentStep) = node.endStep match {
+          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+        }
+        val db = new InMemoryDB()
+        val localProofId = db.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+          SequentialInterpreter, 1)
+
+        innerInterpreter(BelleParser(parentStep), BelleProvable(localProvable))
+
+        val detailledSteps = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(localProofId))
+        //@todo return and display proof tree
+        new ExpandTacticResponse(parentStep, detailledSteps) :: Nil
+    }
+  }
+}
+
 
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {

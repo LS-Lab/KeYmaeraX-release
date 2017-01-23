@@ -899,6 +899,15 @@ class ExtractTacticResponse(tacticText: String) extends Response {
   )
 }
 
+class ExpandTacticResponse(tacticParent: String, tacticSteps: String) extends Response {
+  def getJson = JsObject(
+    "tactic" -> JsObject(
+      "steps" -> JsString(tacticSteps),
+      "parent" -> JsString(tacticParent)
+    )
+  )
+}
+
 class TacticDiffResponse(diff: TacticDiff.Diff) extends Response {
   def getJson = JsObject(
     "context" -> JsString(BellePrettyPrinter(diff._1.t)),

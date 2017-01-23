@@ -419,6 +419,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val proofTaskExpand: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "expand") { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new ProofTaskExpandRequest(database, userId, proofId, nodeId)
+      completeRequest(request, t)
+    }
+  }}}
+
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
   def parseFormulaId(id:String): Position = {
     val (idx :: inExprs) = id.split(',').toList.map(_.toInt)
@@ -904,6 +911,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     proofTasksParent      ::
     proofTasksPathAll     ::
     proofTasksBranchRoot  ::
+    proofTaskExpand       ::
     axiomList             ::
     twoPosList            ::
     derivationInfo        ::
