@@ -739,10 +739,13 @@ object DerivationInfo {
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
+    new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
+    //@todo universal closure may come with list of named symbols
+    new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
 
     // Differential tactics
     new PositionTacticInfo("ODE",
