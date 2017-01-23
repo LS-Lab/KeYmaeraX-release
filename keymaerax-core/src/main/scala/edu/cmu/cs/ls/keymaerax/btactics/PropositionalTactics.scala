@@ -148,16 +148,14 @@ private object PropositionalTactics {
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  val toSingleFormula: DependentTactic  = new SingleGoalDependentTactic("toSingleFormula") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      cut(sequent.toFormula) <(
-        /* use */ implyL('Llast) <(
-          hideR(1)*sequent.succ.size & (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close),
-          hideL(-1)*sequent.ante.size & (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)),
-        /* show */ cohide('Rlast)
-        )
-    }
-  }
+  val toSingleFormula: DependentTactic  = "toSingleFormula" by ((sequent: Sequent) => {
+    cut(sequent.toFormula) <(
+      /* use */ implyL('Llast) <(
+        hideR(1)*sequent.succ.size & (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close),
+        hideL(-1)*sequent.ante.size & (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)),
+      /* show */ cohide('Rlast)
+      )
+  })
 
   //region Equivalence Rewriting
 
