@@ -3,8 +3,40 @@
 </div>
 <div class="modal-body" style="overflow: scroll; height: 300px;">
     <!-- TODO: sequent deduction view -->
+    <uib-tabset justified="true">
+        <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" id="provingtab">
+            <uib-tab-heading>
+                <div class="row" >
+                    <div class="col-md-11">
+                        <span class="fa fa-tasks"></span>
+                        <span>{{task.name}} {{task.id}}</span>
+                    </div>
+                    <div class="col-md-1" cg-busy="defer" ng-if="defer"></div>
+                </div>
+            </uib-tab-heading>
+
+            <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
+            <div class="container" id="provingsequentview">
+                <k4-sequentproof user-id="proofInfo.userId"
+                                 proof-id="proofInfo.proofId"
+                                 node-id="task.id"
+                                 deduction-path="task.deduction"
+                                 proof-tree="proofTree"
+                                 agenda="agenda"
+                                 read-only="true"
+                                 on-tactic=""
+                                 on-input-tactic=""
+                                 on-two-position-tactic=""
+                                 ng-if="task.isSelected"></k4-sequentproof>
+            </div>
+        </uib-tab>
+    </uib-tabset>
+
+    <!-- vertical gap between sequent and tactic editor to provide space for collapse/expand buttons -->
+    <div style="margin-top:20px;"></div>
+
     <div class="well well-sm">
-        <div class="k4-tacticeditor">{{tactic.steps}}</div>
+        <div class="k4-tacticeditor">{{tactic.stepsTactic}}</div>
     </div>
 </div>
 <div class="modal-footer">

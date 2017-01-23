@@ -904,16 +904,19 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep) = node.endStep match {
           case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
         }
-        val db = new InMemoryDB()
-        val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+        val innerDb = new InMemoryDB()
+        val localProofId = innerDb.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
           SequentialInterpreter, 1)
-
         innerInterpreter(BelleParser(parentStep), BelleProvable(localProvable))
 
-        val detailledSteps = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(localProofId))
-        //@todo return and display proof tree
-        new ExpandTacticResponse(parentStep, detailledSteps) :: Nil
+        val trace = innerDb.getExecutionTrace(localProofId)
+        val stepDetails = new ExtractTacticFromTrace(innerDb).getTacticString(trace)
+        val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
+        val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(innerDb, n)))
+        val openGoals = innerTree.leaves
+
+        new ExpandTacticResponse(parentStep, stepDetails, innerSteps, openGoals) :: Nil
     }
   }
 }

@@ -899,12 +899,21 @@ class ExtractTacticResponse(tacticText: String) extends Response {
   )
 }
 
-class ExpandTacticResponse(tacticParent: String, tacticSteps: String) extends Response {
+class ExpandTacticResponse(tacticParent: String, stepsTactic: String, tree: List[(TreeNode, Option[PositionLocator])], openGoals: List[AgendaItem]) extends Response {
+  private val proofTree = {
+    val theNodes: List[(String, JsValue)] = tree.map(n => (n._1.id.toString, nodeJson(n._1, n._2)))
+    JsObject(
+      "nodes" -> JsObject(theNodes.toMap),
+      "root" -> nodeIdJson(tree.head._1.id))
+  }
+
   def getJson = JsObject(
     "tactic" -> JsObject(
-      "steps" -> JsString(tacticSteps),
+      "stepsTactic" -> JsString(stepsTactic),
       "parent" -> JsString(tacticParent)
-    )
+    ),
+    "proofTree" -> proofTree,
+    "openGoals" -> JsObject(openGoals.map(itemJson):_*)
   )
 }
 

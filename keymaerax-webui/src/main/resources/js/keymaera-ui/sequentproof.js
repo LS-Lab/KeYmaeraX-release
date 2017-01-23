@@ -53,50 +53,6 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
 
       /**
-       * Updates the specified section by adding the proof tree node. If the node has more than 1 child, a new section
-       * after the specified section is started.
-       * @param proofTreeNode The node to add.
-       * @param sectionIdx The section where to add the proof node.
-       */
-      updateSection = function(proofTreeNode, agendaItem, sectionIdx) {
-        // only update if node not added previously
-        if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path.indexOf(proofTreeNode.id) < 0) {
-          var section = agendaItem.deduction.sections[sectionIdx];
-          var sectionEnd = section.path[section.path.length-1];
-          if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
-            if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== null) {
-              // start new section with parent, parent section is complete if parent is root
-              agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === null});
-            } // else: parent already has its own section, see fetchBranchRoot
-            // in any case: child's section is loaded completely if it's ending in one of the children of the proof tree node
-            section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
-          } else {
-            // parent has exactly 1 child, append parent to child's section
-            if (sectionIdx === -1) {
-              showClientErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
-                ' has ' + agendaItem.sections + ' as path sections');
-            } else if (proofTreeNode.parent !== null) {
-              section.path.push(proofTreeNode.id);
-              var parentCandidate =
-                (sectionIdx+1 < agendaItem.deduction.sections.length
-                ? scope.proofTree.nodesMap[agendaItem.deduction.sections[sectionIdx+1].path[0]]
-                : undefined);
-              section.isComplete =
-                parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
-            } else {
-              if (sectionIdx+1 < agendaItem.deduction.sections.length) {
-                showClientErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
-                  ' is not last section in ' + agendaItem.deduction.sections);
-              } else {
-                agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
-                section.isComplete = proofTreeNode.children != null && proofTreeNode.children.indexOf(sectionEnd) >= 0;
-              }
-            }
-          }
-        }
-      }
-
-      /**
        * Adds a proof tree node and updates the agenda sections.
        */
       updateProof = function(proofTreeNode) {
@@ -107,7 +63,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         $.each(items, function(i, v) {
           var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
           if (childSectionIdx >= 0) {
-            updateSection(proofTreeNode, v, childSectionIdx);
+            scope.agenda.updateSection(scope.proofTree, proofTreeNode, v, childSectionIdx);
           }
         });
       }
@@ -117,14 +73,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
        */
       addBranchRoot = function(proofTreeNode, agendaItem, sectionIdx) {
         scope.proofTree.addNode(proofTreeNode);
-        updateSection(proofTreeNode, agendaItem, sectionIdx);
+        scope.agenda.updateSection(scope.proofTree, proofTreeNode, agendaItem, sectionIdx);
 
         // append parent to the appropriate section in all relevant agenda items
         if (proofTreeNode.children != null) {
           var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); });
           $.each(items, function(i, v) {
             var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
-            updateSection(proofTreeNode, v, childSectionIdx);
+            scope.agenda.updateSection(scope.proofTree, proofTreeNode, v, childSectionIdx);
           });
         }
       }
@@ -209,7 +165,16 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
             scope: scope,
             size: 'lg',
             resolve: {
-              tactic: function () { return response.data.tactic; }
+              proofInfo: function() {
+                return {
+                  userId: scope.userId,
+                  proofId: scope.proofId,
+                  nodeId: nodeId
+                }
+              },
+              tactic: function() { return response.data.tactic; },
+              proofTree: function() { return response.data.proofTree; },
+              openGoals: function() { return response.data.openGoals; }
             }
           });
         });
@@ -254,11 +219,35 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       return undefined;
     };
   }).
-  controller('MagnifyingGlassDialogCtrl', function ($scope, $uibModalInstance, tactic) {
-    $scope.tactic = {
-      steps: tactic.steps,
-      parent: tactic.parent
-    };
+  controller('MagnifyingGlassDialogCtrl', function ($scope, $uibModalInstance, Agenda, ProofTree, proofInfo, tactic, proofTree, openGoals) {
+    $scope.proofInfo = proofInfo;
+    $scope.tactic = tactic;
+
+    $scope.agenda = new Agenda();
+    $scope.proofTree = new ProofTree();
+
+    $scope.agenda.itemsMap = openGoals;
+    $scope.proofTree.nodesMap = proofTree.nodes;
+    $scope.proofTree.root = proofTree.root;
+    if ($scope.agenda.items().length > 0) {
+      // select first task if nothing is selected yet
+      if ($scope.agenda.selectedId() === undefined) $scope.agenda.items()[0].isSelected = true;
+    }
+
+    updateProof = function(proofTreeNode) {
+      var items = $.map(proofTreeNode.children, function(e) { return $scope.agenda.itemsByProofStep(e); }); // JQuery flat map
+      $.each(items, function(i, v) {
+        var childSectionIdx = $scope.agenda.childSectionIndex(v.id, proofTreeNode);
+        if (childSectionIdx >= 0) {
+          $scope.agenda.updateSection($scope.proofTree, proofTreeNode, v, childSectionIdx);
+        }
+      });
+    }
+
+    paths = $scope.proofTree.paths($scope.proofTree.rootNode());
+
+    $.each(paths.reverse(), function(i, v) { updateProof(v); });
+    //$.each(paths, function(i, v) { $.each(v.reverse, function(ii, vv) { updateProof(vv); });  });
 
     $scope.close = function () { $uibModalInstance.close(); };
   });
