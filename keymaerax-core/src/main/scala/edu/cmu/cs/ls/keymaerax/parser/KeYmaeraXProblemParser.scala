@@ -17,14 +17,27 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  def apply(input : String): Formula =
+  def apply(inputWithPossibleBOM : String): Formula = {
+    val input = ParserHelper.removeBOM(inputWithPossibleBOM)
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
         case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
       }
     }
-    catch {case e: ParseException => throw e.inInput(input)}
+    catch {
+      case e: ParseException => throw e.inInput(input)
+    }
+  }
+
+  /** Tries parsing as a formula first. If that fails, tries parsing as a problem file. */
+  def parseAsProblemOrFormula(input : String): Formula = {
+    val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case e: Throwable => None }
+    result match {
+      case Some(formula) => formula
+      case None => KeYmaeraXProblemParser(input)
+    }
+  }
 
   /** Parses a file of the form Problem. ... End. Solution. ... End. */
   def parseProblemAndTactic(input: String): (Formula, BelleExpr) = try {

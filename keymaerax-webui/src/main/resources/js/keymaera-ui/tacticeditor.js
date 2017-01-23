@@ -18,7 +18,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             isVisible: false
           }
 
-          var combinators = ['*', '|', '&', '<'];
+          var combinators = ['*', '|', ';', '<'];
           var tacticContent = elem.find('#tacticcontent');
           var textComplete = new Textcomplete(tacticContent, [
             // combinators

@@ -41,7 +41,7 @@ class RoundtripTests extends TacticTestBase {
   }
 
   it should "combinators" in {
-    roundTrip(Idioms.nil & Idioms.nil, "nil & nil")
+    roundTrip(Idioms.nil & Idioms.nil, "nil ; nil")
     roundTrip(Idioms.nil | Idioms.nil, "nil | nil")
     roundTrip(OnAll(Idioms.nil), "doall(nil)")
     roundTrip(Idioms.nil*2, "nil*2")

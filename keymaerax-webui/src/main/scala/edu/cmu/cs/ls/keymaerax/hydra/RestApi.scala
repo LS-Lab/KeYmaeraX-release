@@ -12,6 +12,11 @@ import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import akka.actor.Actor
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXExtendedLemmaParser}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import spray.http.CacheDirectives.{`max-age`, `no-cache`}
 import spray.http.HttpHeaders.`Cache-Control`
 import spray.routing._
@@ -19,7 +24,7 @@ import spray.http._
 import spray.json._
 import spray.routing
 import spray.util.LoggingContext
-import spray.http.StatusCodes.{Unauthorized, Forbidden}
+import spray.http.StatusCodes.{Forbidden, Unauthorized}
 
 import scala.language.postfixOps
 
@@ -174,6 +179,15 @@ trait RestApi extends HttpService with SLF4JLogging {
     get {
       val request = new GetModelRequest(database, userId, modelNameOrId)
       completeRequest(request, t)
+    }
+  }}}}}
+
+  val userModelFromFormula = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelFromFormula" / Segment) {modelName => {pathEnd {
+    post {
+      entity(as[String]) {formula => {
+        val request = new CreateModelFromFormulaRequest(database, userId, modelName, formula)
+        completeRequest(request, t)
+      }}
     }
   }}}}}
 
@@ -773,6 +787,35 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Proof validation requests
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /** Validates the proof of a lemma. */
+  val validateProof = path("validate") { pathEnd {
+    post {
+      entity(as[String]) { archiveFileContents => {
+        val entries = KeYmaeraXArchiveParser.parse(archiveFileContents)
+
+        if(entries.length != 1)
+          complete(completeResponse(new ErrorResponse(s"Expected exactly one model in the archive but found ${entries.length}") :: Nil))
+        else if(entries.head._4.length != 1)
+          complete(completeResponse(new ErrorResponse(s"Expected exactly one proof in the archive but found ${entries.head._4.length} proofs. Make sure you export from the Proofs page, not the Models page.") :: Nil))
+        else {
+          val model = entries.head._3.asInstanceOf[Formula]
+          val tactic = entries.head._4.head._2
+          complete(standardCompletion(new ValidateProofRequest(database, model, tactic), EmptyToken()))
+        }
+      }}
+    }
+  }}
+
+  val checkProofValidation = path("validate" / Segment) { (taskId) => {
+    get {
+      complete(standardCompletion(new CheckValidationRequest(database, taskId), EmptyToken()))
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Server management
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -829,6 +872,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathConfSuggestion ::
     devAction          ::
     examples           ::
+    checkProofValidation ::
+    validateProof ::
     Nil
 
   /** Requests that need a session token parameter.
@@ -888,6 +933,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     exportFormula         ::
     testSynthesis         ::
     uploadArchive         ::
+    userModelFromFormula  ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

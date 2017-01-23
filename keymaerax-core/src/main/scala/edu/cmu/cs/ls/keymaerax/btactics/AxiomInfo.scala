@@ -153,6 +153,13 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , {case () => (fml: Formula) => TactixLibrary.diffCut(fml)}),
+    new InputPositionTacticInfo("DCdiffcut"
+      , RuleDisplayInfo("DCaxiom"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
+        , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
+          (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
+      , List(FormulaArg("R"))
+      , {case () => (fml: Formula) => HilbertCalculus.DC(fml)}),
 
     new InputPositionTacticInfo("diffGhost",
       RuleDisplayInfo(
@@ -640,6 +647,9 @@ object DerivationInfo {
     new TacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => TactixLibrary.closeId}),
+    new TacticInfo("close",
+      RuleDisplayInfo("close", (List("&Gamma;", "P", "⊥"), List("⊤", "P", "&Delta;")), Nil),
+      {case () => TactixLibrary.close}),
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("L2R",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
@@ -705,6 +715,12 @@ object DerivationInfo {
       FormulaArg("equality") :: Nil,
       {case () => (f:Formula) => ArithmeticSimplification.transformEquality(f)}),
 
+    new InputPositionTacticInfo(
+      "discreteGhost",
+      "discreteGhost",
+      TermArg("ghostTerm") :: VariableArg("ghostName") :: Nil,
+      {case () => (t:Term) => (v:Variable) => DLBySubst.discreteGhost(t, Some(v))}),
+
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
     //@todo unify axiomatic rule and derived rules mond / mondtodo
@@ -717,6 +733,7 @@ object DerivationInfo {
     new PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
+    new PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
@@ -724,11 +741,18 @@ object DerivationInfo {
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
+    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
 
     // Differential tactics
     new PositionTacticInfo("ODE",
       "ODE",
       {case () => TactixLibrary.ODE}, needsTool = true),
+    new PositionTacticInfo("dgZeroMonomial",
+      "dgZeroMonomial",
+      {case () => DifferentialTactics.dgZeroMonomial}, needsTool = true),
+    new PositionTacticInfo("dgZeroPolynomial",
+      "dgZeroPolynomial",
+      {case () => DifferentialTactics.dgZeroPolynomial}, needsTool = true),
     new PositionTacticInfo("DIRule",
       RuleDisplayInfo("DI",
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),

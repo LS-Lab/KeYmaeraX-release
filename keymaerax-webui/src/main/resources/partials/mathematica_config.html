@@ -30,14 +30,16 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
 
         <div>
         Please configure the path to the Mathematica MathKernel. On your operating system
-            ({{mathematicaConfigSuggestion.os}}), look for an executable file named
+            ({{mathematicaConfigSuggestion.os}} with {{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine), look for an executable file named
             <code>{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>.<br/>
             If Mathematica is installed at its default location, you might find the relevant file at
             <code uib-tooltip-template="'kernelSuggestionTooltipTemplate.html'"
                   tooltip-placement="auto top">{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>.
         </div>
 
-        <div class="input-group">
+        <div class="input-group"
+             data-intro="Configure the path to the MathKernel executable, corresponding to your operating system. Look for an executable file named {{mathematicaConfigSuggestion.suggestion.kernelName}}. You might find it at <br/>{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}."
+             data-position="top" style="padding-top: 10px;">
             <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
             <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"/>
@@ -74,7 +76,9 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
                   tooltip-placement="auto top">{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}</code>.
         </div>
 
-        <div class="input-group">
+        <div class="input-group"
+             data-intro="Configure the path to the Mathematica link library. Look for a file {{mathematicaConfigSuggestion.suggestion.jlinkName}} at <br/>{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}.<br/>Make sure that you choose a {{mathematicaConfigSuggestion.jvmArchitecture}}-bit library for your system architecture, since you are running a {{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine."
+             data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
             <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
             <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"/>

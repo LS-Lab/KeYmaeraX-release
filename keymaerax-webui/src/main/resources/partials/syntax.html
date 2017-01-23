@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col-md-10">
-        <h2 id="HP-syntax">Hybrid Program Syntax</h2>
+        <h2 id="HP-syntax">Hybrid Programs</h2>
 
         <table class="table table-hover">
             <thead>
@@ -12,35 +12,35 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>\(x := e\)</td>
+                    <td>x := e</td>
                     <td><code>x := y;</code></td>
-                    <td>discrete assignment of the value of term \(e\) to variable \(x\) (jump)</td>
+                    <td>discrete assignment of the value of term <code>e</code> to variable <var>x</var> (jump)</td>
                 </tr>
                 <tr>
-                    <td>\(x := *\)</td>
+                    <td>x := *</td>
                     <td><code>x := *;</code></td>
-                    <td>nondeterministic assignment of an arbitrary real number to \(x\) </td>
+                    <td>nondeterministic assignment of an arbitrary real number to <var>x</var></td>
                 </tr>
                 <tr>
-                    <td>\(x_1'=f_1(x), \ldots x_n'=f_n(x) \& Q\)</td>
+                    <td>x<sub>1</sub>'=f<sub>1</sub>(x), ... x<sub>n</sub>'=f<sub>n</sub>(x) &amp; Q</td>
                     <td><code>{x'=2*y&#160;&amp;&#160;x&#160;&gt;=&#160;0}</code></td>
-                    <td>continuous evolution of \(x_i\) along the differential equation system \(x_i' = f_i(x)\)
-                        restricted to evolution domain described by formula \(Q\)</td>
+                    <td>continuous evolution of <var>x</var> along the differential equation system <code>x'=2*y</code>
+                        restricted to evolution domain described by formula <code>x&#160;&gt;=&#160;0</code></td>
                 </tr>
                 <tr>
-                    <td>\(\alpha;~\beta\)</td>
+                    <td>&alpha; ; &beta;</td>
                     <td><code>x&#160;:=&#160;5; x&#160;:=&#160;x+1;</code></td>
-                    <td>sequential composition where \(\beta\) starts after \(\alpha\) finishes</td>
+                    <td>sequential composition where <code>&beta;</code> starts after <code>&alpha;</code> finishes</td>
                 </tr>
                 <tr>
-                    <td>\(\alpha \cup \beta\)</td>
+                    <td>&alpha; &cup; &beta;</td>
                     <td><code>x&#160;:=&#160;5; ++ y&#160;:=&#160;x;</code></td>
-                    <td>nondeterministic choice, following either alternative \(\alpha\) or \(\beta\)</td>
+                    <td>nondeterministic choice, following either alternative <code>&alpha;</code> or <code>&beta;</code></td>
                 </tr>
                 <tr>
-                    <td>\(\alpha^*\)</td>
+                    <td>&alpha;<sup>*</sup></td>
                     <td><code>{x&#160;:=&#160;x+1;}*</code></td>
-                    <td>nondeterministic repetition, repeating \(\alpha\) \(n\) times for any \(n \in \mathbb{N}\)</td>
+                    <td>nondeterministic repetition, repeating <code>&alpha;</code> <var>n</var> times for any <code>n &isin; &#8469;</code></td>
                 </tr>
             </tbody>
         </table>
@@ -49,33 +49,33 @@
 The behavior of hybrid systems is specified as a hybrid program,
 which is a program notation for hybrid systems.
             The syntax of hybrid programs is shown together with an informal semantics in the table above. The basic terms
-            (called \(e\) in the table) are either rational number constants, real-valued variables or (possibly
+            (called <code>e</code> in the table) are either rational number constants, real-valued variables or (possibly
             nonlinear) polynomial or rational arithmetic expressions built from those.
-            The effect of \(x := e\) is an instantaneous discrete jump
-            assigning the value of \(\theta\) to the variable \(x\). The term \(e\) can be an arbitrary polynomial.
-            The controller could, for example, assign braking power \(-B\) to the acceleration
-            by the assignment \(a := −B\) when using brakes of force \(B>0\).
+            The effect of <code>x := e</code> is an instantaneous discrete jump
+            assigning the value of <code>e</code> to the variable <var>x</var>. The term <code>e</code> can be an arbitrary polynomial.
+            The controller could, for example, assign braking power <code>-B</code> to the acceleration
+            by the assignment <code>a := -B</code> when using brakes of force <code>B>0</code>.
         </p>
         <p>
-            The effect of \(x' = f(x) \& Q\) is an ongoing continuous evolution
-            controlled by the differential equation \(x' = f(x)\) that
-            is restricted to remain within the evolution domain \(Q\),
+            The effect of <code>x' = f(x) &amp; Q</code> is an ongoing continuous evolution
+            controlled by the differential equation <code>x' = f(x)</code> that
+            is restricted to remain within the evolution domain <var>Q</var>,
             which is a formula of real arithmetic over unprimed variables.
-            The evolution is allowed to stop at any point in \(Q\)
-            but it must not leave \(Q\). Systems of differential equations
+            The evolution is allowed to stop at any point in <var>Q</var>
+            but it must not leave <var>Q</var>. Systems of differential equations
             and higher-order derivatives are defined accordingly:
-            \(p' = v, v' = −B \& v \geq 0\), for instance, characterizes
-            the braking mode of a car with braking force \(B\) that
-            holds within \(v \geq 0\) and stops any time before \(v < 0\).
-            It indicates that the rate of change of the position \(p\) is given by the velocity \(v\), which in turn changes at the rate \(-B\).
+            <code>p' = v, v' = -B &amp; v &ge; 0</code>, for instance, characterizes
+            the braking mode of a car with braking force <code>B</code> that
+            holds within <code>v &ge; 0</code> and stops any time before <code>v < 0</code>.
+            It indicates that the rate of change of the position <var>P</var> is given by the velocity <code>v</code>, which in turn changes at the rate <code>-B</code>.
         </p>
         <p>
-            For discrete control, the test action \(?F\) (read as "assume
+            For discrete control, the test action <code>?F</code> (read as "assume
             F") is used as a condition statement. It succeeds
-            without changing the state if \(F\) is true in the current
+            without changing the state if <code>F</code> is true in the current
             state, otherwise it aborts all further evolution. For example,
             a car controller can check whether the chosen acceleration
-            is within physical limits by \(?(−B \leq a \leq A)\).
+            is within physical limits by <code>?(-B &le; a &le; A)</code>.
             If a computation branch does not satisfy this condition,
             that branch is discontinued and aborts. From a modeling
             perspective, tests should only fail if a branch is not
@@ -87,15 +87,15 @@ which is a program notation for hybrid systems.
         <p>
             From these basic constructs, more complex hybrid
             programs can be built in KeYmaera similar to regular
-            expressions. The sequential composition \(\alpha;~\beta\) expresses
-            that hybrid program \(\beta\) starts after hybrid program \(\alpha\) finishes. The nondeterministic choice
-            \(\alpha \cup \beta\) expresses alternatives in the behavior of the hybrid
+            expressions. The sequential composition <code>&alpha; ; &beta;</code> expresses
+            that hybrid program <code>&beta;</code> starts after hybrid program <code>&alpha;</code> finishes. The nondeterministic choice
+            <code>&alpha; &cup; &beta;</code> expresses alternatives in the behavior of the hybrid
             system that are selected nondeterministically. Nondeterministic
-            repetition \(\alpha^*\) says that the hybrid program \(\alpha\)
+            repetition <code>&alpha;<sup>*</sup></code> says that the hybrid program <code>&alpha;</code>
             repeats an arbitrary number of times, including zero.
         </p>
 
-        <h2 id="dL-syntax">Differential Dynamic Logic Syntax</h2>
+        <h2 id="dL-syntax">Differential Dynamic Logic</h2>
 
         <table class="table table-hover">
             <thead>
@@ -105,37 +105,38 @@ which is a program notation for hybrid systems.
                 <td>Meaning</td>
             </tr>
             </thead>
-            <tbody>
+<tbody>
   <tr>
-  	<tr><td>\(e\geq\tilde{e}\)</td> <td><code>x^2&gt;=5</code></td> <td>Greater equals comparison: true iff \(x^2\) is at least 5</td></tr> 
-  	<tr><td>\(\lnot P\)</td> <td><code>!(x&gt;=5)</code></td> <td>Negation (not), true iff \(P\) is not true</td></tr> 
-  	<tr><td>\(P\wedge Q\)</td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both \(P\) and \(Q\) are true</td></tr> 
-  	<tr><td>\(P\vee Q\)</td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff \(P\) is true or \(Q\) is true</td></tr> 
+    <tr><td><code>e &ge; t</code></td> <td><code>x^2&gt;=5</code></td> <td>Greater equals comparison: true iff <code>x^2</code> is at least 5</td></tr>
+    <tr><td><code>&not; P</code></td> <td><code>!(x&gt;=5)</code></td> <td>Negation (not), true iff <var>P</var> is not true</td></tr>
+  	<tr><td><code>P &and; Q</code></td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both <var>P</var> and <var>Q</var> are true</td></tr>
+  	<tr><td><code>P &or; Q</code></td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff <var>P</var> is true or <var>Q</var> is true</td></tr>
+</tr>
+  	<tr><td><code>P &rarr; Q</code></td> <td><code>x&gt;=10 -&gt; v&lt;=1</code></td> <td>Implication (implies), true iff <var>P</var> is false or <var>Q</var> is true</td></tr>
 </tr> 
-  	<tr><td>\(P\rightarrow Q\)</td> <td><code>x&gt;=10 -&gt; v&lt;=1</code></td> <td>Implication (implies), true iff \(P\) is false or \(Q\) is true</td></tr> 
+  <tr><td><code>P &#10231; Q</code></td> <td><code>x=0 &lt;-&gt; x^2=0</code></td> <td>Biimplication (equivalent), true iff <var>P</var> and <var>Q</var> are both true or both false</td></tr>
 </tr> 
-  	<tr><td>\(P\leftrightarrow Q\)</td> <td><code>x=0 &lt;-&gt; x^2=0</code></td> <td>Biimplication (equivalent), true iff \(P\) and \(Q\) are both true or both false</td></tr> 
-</tr> 
-  	<tr><td>\(\forall x\, P\)</td> <td><code>\forall&#160;x x^2&gt;=0</code></td> <td>Universal quantifier, true if \(P\) is true for all real values of variable \(x\)</td></tr>
-  	<tr><td>\(\exists x\, P\)</td> <td><code>\exists&#160;x x^2&gt;x^4</code></td> <td>Existential quantifier, true if \(P\) is true for some real value of variable \(x\)</td></tr>
-  	<tr><td>\([\alpha] P\)</td> <td><code>[x:=x^2;] x>=0</code></td> <td>Box modality: \(P\) is true after all runs of hybrid program \(\alpha\)</td></tr>
-  	<tr><td>\(\langle\alpha\rangle P\)</td> <td><code>&lt;{x:=x+1;}*&gt; x&gt;=10</code></td> <td>Diamond modality: \(P\) is true after at least one run of hybrid program \(\alpha\)</td></tr>
+    <tr><td><code>&forall;x P</code></td> <td><code>\forall&#160;x x^2&gt;=0</code></td> <td>Universal quantifier, true if <var>P</var> is true for all real values of variable <var>x</var></td></tr>
+    <tr><td><code>&exist;x P</code></td> <td><code>\exists&#160;x x^2&gt;x^4</code></td> <td>Existential quantifier, true if <var>P</var> is true for some real value of variable <var>x</var></td></tr>
+    <tr><td><code>[&alpha;]P</code></td> <td><code>[x:=x^2;] x>=0</code></td> <td>Box modality: <var>P</var> is true after all runs of hybrid program <code>&alpha;</code></td></tr>
+    <tr><td><code>&lt;&alpha;&gt;P</code></td> <td><code>&lt;{x:=x+1;}*&gt; x&gt;=10</code></td> <td>Diamond modality: <var>P</var> is true after at least one run of hybrid program <code>&alpha;</code></td></tr>
+</tbody>
 </table>
 
 <p>
-<b>Formulas of differential dynamic logic (dL)</b>, with typical names \(P\) and \(Q\), are defined by the syntax shown above.
+<b>Formulas of differential dynamic logic (dL)</b>, with typical names <var>P</var> and <var>Q</var>, are defined by the syntax shown above.
 The basic idea for <b>dL formulas</b> is to have formulas of the form
-[&#945;]&#966;
-to specify that the hybrid system &#945; always remains within region <var>P</var>, i.e.,
-all states reachable by following the transitions of hybrid system &#945; statisfy the formula <var>P</var>.
+[&alpha;]&#966;
+to specify that the hybrid system &alpha; always remains within region <var>P</var>, i.e.,
+all states reachable by following the transitions of hybrid system &alpha; statisfy the formula <var>P</var>.
 Dually, the dL formula
-<var>&lt;&#945;&gt;P</var>
-expresses that the hybrid system &#945; is able to reach region <var>P</var>, i.e.,
-there is a state reachable by following the transitions of hybrid system &#945; that satisfies the formula <var>P</var>.
-In either case, the hybrid system &#945; is given as a full operational model in terms of a hybrid program.
+<var>&lt;&alpha;&gt;P</var>
+expresses that the hybrid system &alpha; is able to reach region <var>P</var>, i.e.,
+there is a state reachable by following the transitions of hybrid system &alpha; that satisfies the formula <var>P</var>.
+In either case, the hybrid system &alpha; is given as a full operational model in terms of a hybrid program.
 Using other propositional connectives, one can state the following dL formula
-  <center>\(P \rightarrow [\alpha]Q\)</center>
-which expresses that, if hybrid program &#945; initially starts in a state satisfying <var>P</var>, then
+        <center><code>P &rarr; [&alpha;]Q</code></center>
+which expresses that, if hybrid program &alpha; initially starts in a state satisfying <var>P</var>, then
 it always remains in the region characterized by <var>Q</var>.
 For instance, the following dL formula expresses that for the state of a car controller <var>car</var>,
 the property <var>x&#x02264;m</var> always holds true when starting in a state
@@ -182,17 +183,17 @@ End.
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012</li>
   <li>Jan-David Quesel, Stefan Mitsch, Sarah Loos, Nikos Ar&#233;chiga, and Andr&#233; Platzer.
 <a href="http://dx.doi.org/10.1007/s10009-015-0367-0">How to model and prove hybrid systems with KeYmaera: A tutorial on safety</a>. 
-STTT. 2015
+STTT, <b>18</b>(1), pp. 67-91. 2016.
+  <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/usubst-complete.pdf">A complete uniform substitution calculus for differential dynamic logic</a>. 
+Journal of Automated Reasoning, 2016.</li>
   <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/freedL.pdf">Differential dynamic logic for hybrid systems</a>. 
 Journal of Automated Reasoning, <b>41</b>(2), pages 143-189, 2008.</li>
-  <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/usubst.pdf">A uniform substitution calculus for differential dynamic logic</a>. 
-In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.</li>
 </ul>
 
 <h3 id="Books">Compendia</h3>
 <ul>
-  <li>Andr&#233; Platzer. <a href="http://www.cs.cmu.edu/~aplatzer/course/fcps16.html">Foundations of Cyber-Physical Systems</a>. 
-Lecture Notes, Computer Science Department, Carnegie Mellon University. 2016.</li>
+  <li>Andr&#233; Platzer. <a href="http://www.cs.cmu.edu/~aplatzer/course/fcps17.html">Foundations of Cyber-Physical Systems</a>. 
+Lecture Notes, Computer Science Department, Carnegie Mellon University. 2017.</li>
   <li>Andr&#233; Platzer. <a href="http://dx.doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>. 
 Springer, 2010.</a></li>
 </ul>

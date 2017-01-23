@@ -167,7 +167,7 @@ object Idioms {
   lazy val ident: BelleExpr = nil
 
   /** Optional tactic */
-  def ?(t: BelleExpr): BelleExpr = (t partial) | nil
+  def ?(t: BelleExpr): BelleExpr = t | nil
 
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)

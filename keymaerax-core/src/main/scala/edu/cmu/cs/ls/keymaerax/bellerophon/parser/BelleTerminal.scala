@@ -30,7 +30,11 @@ private object IDENT {
 
 
 // Combinator Tokens
-private object SEQ_COMBINATOR extends BelleTerminal("&") {
+object SEQ_COMBINATOR extends BelleTerminal(";") {
+  override def regexp = ";".r
+}
+
+private object DEPRECATED_SEQ_COMBINATOR extends BelleTerminal("&") {
   override def regexp = "\\&".r
 }
 
@@ -38,7 +42,7 @@ private object EITHER_COMBINATOR extends BelleTerminal("|") {
   override def regexp = "\\|".r
 }
 
-private object BRANCH_COMBINATOR extends BelleTerminal("<")
+object BRANCH_COMBINATOR extends BelleTerminal("<")
 
 private object ON_ALL extends BelleTerminal("doall")
 

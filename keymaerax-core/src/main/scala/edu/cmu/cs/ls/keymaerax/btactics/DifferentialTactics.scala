@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ODESolverTool
 
 import scala.collection.immutable
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, List}
 import scala.language.postfixOps
 
 /**
@@ -136,7 +136,7 @@ private object DifferentialTactics {
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                  abstractionb(pos) & (allR(pos)*) & ?(implyR(pos)) }) partial
+                  abstractionb(pos) & (allR(pos)*) & ?(implyR(pos)) })
               } else skip
               )
           if (auto == 'full) Dconstify(t)(pos)
@@ -333,20 +333,18 @@ private object DifferentialTactics {
     * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
    * @return The tactic.
    */
-  def Dconstify(inner: BelleExpr): DependentPositionTactic = new DependentPositionTactic("IDC introduce differential constants") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(Box(ode@ODESystem(_, _), p)) =>
-          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
-          consts.foldLeft[BelleExpr](inner)((tactic, c) =>
-            let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
-        case Some(Diamond(ode@ODESystem(_, _), p)) =>
-          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
-          consts.foldLeft[BelleExpr](inner)((tactic, c) =>
-            let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
-      }
+  def Dconstify(inner: BelleExpr): DependentPositionTactic = TacticFactory.anon ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(ode@ODESystem(_, _), p)) =>
+        val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+        consts.foldLeft[BelleExpr](inner)((tactic, c) =>
+          let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
+      case Some(Diamond(ode@ODESystem(_, _), p)) =>
+        val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+        consts.foldLeft[BelleExpr](inner)((tactic, c) =>
+          let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
     }
-  }
+  })
 
   /** @see [[TactixLibrary.DG]] */
   def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
@@ -521,14 +519,13 @@ private object DifferentialTactics {
   /** @see [[TactixLibrary.ODE]]
     * @author Andre Platzer */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc && isODE(seq,pos), "ODE only applies to differential equations and currently only top-level succedent")
     val noCut = "ANON" by ((pos: Position) =>
       ((boxAnd(pos) & andR(pos))*) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
         val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
           case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-          case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + seq)
-          case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + seq)
+          case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+          case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
         }
         val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
         val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
@@ -541,21 +538,27 @@ private object DifferentialTactics {
             case _ => false
           })
           // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-            openDiffInd(pos) | DGauto(pos)  | dgZeroMonomial(pos)
+            openDiffInd(pos) | DGauto(pos)
           else
           //@todo check degeneracy for split to > or =
             diffInd()(pos)
               | DGauto(pos)
+              | dgZeroMonomial(pos)
+              | dgZeroPolynomial(pos)
             )
       })) (pos))
-      )
+    )
 
     //@todo in fact even ChooseAll would work, just not recursively so.
     //@todo performance: repeat from an updated version of the same generator until saturation
     //@todo turn this into repeat
     ChooseSome(
       //@todo should memoize the results of the differential invariant generator
-      () => InvariantGenerator.differentialInvariantGenerator(seq,pos),
+      () => try { InvariantGenerator.differentialInvariantGenerator(seq,pos) } catch {
+        case err: Exception =>
+          if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+          List[Formula]().iterator
+      },
       (inv:Formula) => if (false)
         diffInvariant(inv)(pos)
       else
@@ -565,13 +568,18 @@ private object DifferentialTactics {
           // show diffCut, but don't use yet another diffCut
           noCut(pos) & done
           )
-    ) & ODE(pos) | noCut(pos) |
+    ) & ODE(pos) |
+      noCut(pos) |
       // if no differential cut succeeded, just skip and go for a direct proof.
       //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
       TactixLibrary.diffSolve(pos) |
       ChooseSome(
         //@todo should memoize the results of the differential invariant generator
-        () => InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos),
+        () => try { InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos) } catch {
+          case err: Exception =>
+            if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+            List[Formula]().iterator
+        } ,
         (inv:Formula) => if (false)
           diffInvariant(inv)(pos)
         else
@@ -581,7 +589,7 @@ private object DifferentialTactics {
             // show diffCut, but don't use yet another diffCut
             noCut(pos) & done
             )
-      ) & ODE(pos)
+      ) & ODE(pos) | assertT(seq=>false, "Failed to automatically prove something about this ODE.") //@todo maybe only catch ODE-specific errors thrown here and in InvariantGenerator.scala.
   })
 
   def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {

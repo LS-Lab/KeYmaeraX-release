@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
+import edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
@@ -40,18 +41,20 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
   /**
     * @todo sort hcecking.
-    * @param input The contents of the lemma file.
+    * @param inputWithPossibleBOM The contents of the lemma file.
     * @return A list of named lemmas, each with tool evidence (tool input/output) occurring in the file.
     */
-  def apply(input: String) : Lemma = try {
+  def apply(inputWithPossibleBOM: String) : Lemma = try {
+    val input = parser.ParserHelper.removeBOM(inputWithPossibleBOM)
+
     val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
     if (DEBUG) println("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
     if (DEBUG) println("Declarations: " + decls)
     parseLemma(lemmaTokens)
   } catch {
-    case e: ParseException => throw e.inContext("input:  " + input)
-    case e: IllegalArgumentException => throw ParseException("Illegal argument", e).inInput(input)
+    case e: ParseException => throw e.inContext("input:  " + inputWithPossibleBOM)
+    case e: IllegalArgumentException => throw ParseException("Illegal argument", e).inInput(inputWithPossibleBOM)
   }
 
 

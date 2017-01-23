@@ -167,13 +167,13 @@ trait SequentCalculus {
   // closing
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  lazy val close: BelleExpr = TacticFactory.anon ((seq: Sequent) => {
+  lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
     seq.succ.zipWithIndex.find({ case (True, _) => true case (fml, _) => seq.ante.contains(fml) }) match {
       case Some((True, i)) => ProofRuleTactics.closeTrue(SuccPos(i))
       case Some((fml, i)) => close(AntePos(seq.ante.indexOf(fml)), SuccPos(i))
-      case None => seq.ante.zipWithIndex.find({ case (False, _) => true }) match {
+      case None => seq.ante.zipWithIndex.find({ case (False, _) => true case _ => false }) match {
         case Some((False, i)) => ProofRuleTactics.closeFalse(AntePos(i))
-        case None => DebuggingTactics.error("Inapplicable close")
+        case _ => DebuggingTactics.error("Inapplicable close")
       }
     }
   })
@@ -188,20 +188,13 @@ trait SequentCalculus {
     }
   def close(a: Int, s: Int)  : BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  val closeIdWith: DependentPositionTactic = new DependentPositionTactic("close id") {
-    /** Create the actual tactic to be applied at position pos */
-    override def factory(pos:Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v : BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-          val s = provable.subgoals.head
-          pos.top match {
-            case p@AntePos(_) => close(p, SuccPos(s.succ.indexOf(s(p))))
-            case p@SuccPos(_) => close(AntePos(s.ante.indexOf(s(p))), p)
-          }
-      }
+  val closeIdWith: DependentPositionTactic = "closeIdWith" by ((pos: Position, s: Sequent) => {
+    pos.top match {
+      case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
+      case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
+      case _ => throw BelleTacticFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
     }
-  }
+  })
   //@note do not forward to closeIdWith (performance)
   val closeId           : DependentTactic = new DependentTactic("closeId") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {

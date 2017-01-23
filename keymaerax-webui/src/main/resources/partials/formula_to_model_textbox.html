@@ -1,0 +1,14 @@
+<div>
+<form ng-controller="FormulaUploadCtrl">
+    <div class="input-group">
+        <label for="formula">Enter a dL Formula</label>
+        <textarea id="formula" ng-model="formula" name="formula"></textarea>
+    <br/>
+        <label for="modelName">Model name</label>
+        <input type="text" ng-model="modelName" class="form-control" name="modelName" id="modelName" placeholder="Model Name"/>
+    <br/>
+        <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true}"
+           ng-click="addModelFromFormula(modelName, formula)">Create Model</a>
+    </div>
+</form>
+</div>

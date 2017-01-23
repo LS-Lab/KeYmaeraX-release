@@ -24,7 +24,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 class ICCPSTutorial extends TacticTestBase {
 
   "Simple car example constructive tactic" should "parse, print, prove" in withMathematica(mathematica => {
-    val t = "implyR(1) & loop({`x != m & b > 0`}, 1) <(QE, QE, composeb(1) & composeb(1) & composeb(1) & testb(1) & assignb(1) & diffSolve(1) & QE)"
+    val t = "implyR(1) ; loop({`x != m & b > 0`}, 1) <(QE, QE, composeb(1) ; composeb(1) ; composeb(1) ; testb(1) ; assignb(1) ; diffSolve(1) ; QE)"
     val model = "1=1 -> [{?1=1; x:=1; {x'=v,v'=a}}*]1=1".asFormula
 
     val parsedTactic = BelleParser(t) //should not throw any errors.
@@ -32,10 +32,10 @@ class ICCPSTutorial extends TacticTestBase {
     val printedTactic = BellePrettyPrinter(parsedTactic)
 
      printedTactic should equal ("""
-        |(implyR(1) & loop({`x != m & b > 0`},1)) & <(
+        |(implyR(1) ; loop({`x != m & b > 0`},1)) ; <(
         |  QE,
         |  QE,
-        |  composeb(1) & composeb(1) & composeb(1) & testb(1) & assignb(1) & diffSolve(1) & QE
+        |  composeb(1) ; composeb(1) ; composeb(1) ; testb(1) ; assignb(1) ; diffSolve(1) ; QE
         |)
       """.stripMargin) (after being whiteSpaceRemoved)
 

@@ -229,7 +229,7 @@ private object DLBySubst {
                 /* c */ useAt("I induction")(pos) & andR(pos) & Idioms.<(
                 andR(pos) & Idioms.<(
                   label(initCase.label),
-                  (((andR(pos) & Idioms.<(closeIdWith(pos), ident))*(consts.size-1) & closeIdWith(pos)) | closeT) & done),
+                  (andR(pos) & Idioms.<(closeIdWith(pos), ident))*(consts.size-1) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
                   (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep.label),
                   andL(-1) & hideL(-1, invariant) & V(1) & close(-1, 1) & done)

@@ -64,6 +64,28 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
   $scope.modelId = $routeParams.modelId;
   $scope.userId = $cookies.get('userId')
 
+  $scope.intro.introOptions = {
+    steps:[
+    {
+        element: '#proofsarchiving',
+        intro: "Extract all proofs into .kya archives.",
+        position: 'bottom'
+    },
+    {
+        element: '#proofsactions',
+        intro: "Continue, inspect, export, or delete proofs here.",
+        position: 'bottom'
+    }
+    ],
+    showStepNumbers: false,
+    exitOnOverlayClick: true,
+    exitOnEsc:true,
+    nextLabel: 'Next', // could use HTML in labels
+    prevLabel: 'Previous',
+    skipLabel: 'Exit',
+    doneLabel: 'Done'
+  }
+
   $scope.openPrf = function(proofId) {
       $location.path('/proofs/' + proofId)
   }

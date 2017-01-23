@@ -155,9 +155,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           (close
             | (must(normalize)
             | (loop(gen)('R)
-            | (ODE('R)
-            | (diffSolve('L) // somehow ODE aborts before even trying diffSolve
-            | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
+            | ((ODE('R) & ?(allR('R) & implyR('R)*2 & allL(Variable("t_"))('Llast) & auto & done)) // try evolution domain proof with end time, but only if it works out
+            | (diffSolve('L)
+            | exhaustiveEqL2R('L) ) ) ) ) ) )))*) &
       ?(OnAll(QE))
   }
 
@@ -169,7 +169,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         | (must(normalize)
         | (loopauto('R)
         | (ODE('R)
-        | (diffSolve('L) // somehow ODE aborts before even trying diffSolve
+        | (diffSolve('L)
         | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
       ?(OnAll(QE)) & done
   }
@@ -300,7 +300,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop(Formula)]] */
   def loopauto: DependentPositionTactic = "loopauto" by ((pos:Position,seq:Sequent) =>
     ChooseSome(
-      () => InvariantGenerator.loopInvariantGenerator(seq,pos),
+      () => try { InvariantGenerator.loopInvariantGenerator(seq,pos) } catch {
+        case err: Exception =>
+          if (BelleExpr.DEBUG) println("ChooseSome: error listing options " + err)
+          List[Formula]().iterator
+      },
       (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
     )
     )

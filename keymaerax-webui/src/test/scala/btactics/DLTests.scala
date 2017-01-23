@@ -1,11 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleThrowable, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.hydra.ProofTree
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable.IndexedSeq
@@ -496,6 +499,24 @@ class DLTests extends TacticTestBase {
     // step
     substResult.subgoals(2).ante should contain only "x>=1".asFormula
     substResult.subgoals(2).succ should contain only "x+1>=1".asFormula
+  }
+
+  it should "use close correctly" in withDatabase { db =>
+    //@note regression test for bug where listeners were not notified correctly because of exception in close
+    val model = "Variables. R x. End.\nProblem. x>0 -> [{x:=x+1;}*]x>0 End."
+    val fml = KeYmaeraXProblemParser(model)
+    val tactic = implyR('R) & loop("x>0".asFormula)('R)
+
+    val proofId = db.createProof(model)
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
+
+    val BelleProvable(result, _) = interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
+    result.subgoals.size shouldBe 3
+    val finalTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt))
+    finalTree.theLeaves should have size result.subgoals.size
+    finalTree.root.children.foreach(c => c.endStep shouldBe 'defined)
+    finalTree.theLeaves.foreach(l => l.goal.startStep shouldBe 'defined)
+    finalTree.theLeaves.foreach(l => l.goal.endStep should not be 'defined)
   }
 
   ignore should "work with multi-variate abstract invariant" in {

@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
@@ -29,10 +29,11 @@ import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
 import scala.io.Source
 import scala.collection.immutable._
+import scala.collection.mutable
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -388,6 +389,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
     // TODO provide classes and spray JSON protocol to convert
     val os = System.getProperty("os.name")
     val osKey = osKeyOf(os.toLowerCase)
+    val jvmBits = System.getProperty("sun.arch.data.model")
     val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
       case Some(opg) => opg.asJsObject.getFields("mathematicaPaths").head.convertTo[List[JsObject]]
       case None => throw new IllegalStateException("No default configuration for Unknown OS")
@@ -406,7 +408,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
+    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
   }
 
   private def osKeyOf(osName: String): String = {
@@ -492,12 +494,35 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
 // Models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/** Creates a model from a formula without variable declarations.
+  * Separate from CreateModelRequest so that we don't end up swallowing parse errors or returning the wrong parse error. */
+class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfModel: String, formula: String) extends UserRequest(userId) {
+  private var createdId : Option[String] = None
+
+  def resultingResponses() = try {
+    val f = KeYmaeraXParser(formula).asInstanceOf[Formula]
+    if(db.getModelList(userId).map(_.name).contains(nameOfModel))
+      new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
+    else {
+      createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(x => x.toString)
+      new BooleanResponse(createdId.isDefined) :: Nil
+    }
+  } catch {
+    case e : ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+  }
+
+  def getModelId = createdId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
+  }
+}
+
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends UserRequest(userId) {
   private var createdId : Option[String] = None
 
   def resultingResponses() = {
     try {
-      KeYmaeraXProblemParser(keyFileContents) match {
+      KeYmaeraXProblemParser.parseAsProblemOrFormula(keyFileContents) match {
         case _: Formula =>
           if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
             //Nope. Give a good error message.
@@ -593,7 +618,7 @@ class AddModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
   def resultingResponses() = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
   }
 }
@@ -602,7 +627,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
                        conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
       ++ additionalVars.map(_.asVariable)).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
@@ -631,7 +656,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
                            amount: Int, timeout: Option[Int]) extends UserRequest(userId) {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser(model.keyFile)
+    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
@@ -1215,7 +1240,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
   def resultingResponses() = {
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
-    val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
+    val conclusionFormula = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.lastProvable
@@ -1405,6 +1430,69 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int],
 class MockRequest(resourceName: String) extends Request {
   override def resultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
 }
+
+//region Proof validation requests
+
+/** Global server state for proof validation requests.
+  * For now, scheduling immediately dispatches a new thread where the validation occurs. In the future, we may want
+  * to rate-limit validation requests. The easiest way to do that is to create a thread pool with a max size. */
+object ProofValidationRunner {
+  private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
+
+  case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId ${taskId} does not exist.")
+
+  /** Returns Option[Proved] which is None iff the task is still running, and True if formula didn't prove. */
+  def status(taskId: String) : Option[Boolean] = results.get(taskId) match {
+    case Some((_, _, proved)) => proved
+    case None => throw ValidationRequestDNE(taskId)
+  }
+
+  /** Schedules a proof validation request and returns the UUID. */
+  def scheduleValidationRequest(db : DBAbstraction, model : Formula, proof : BelleExpr) : String = {
+    val taskId = java.util.UUID.randomUUID().toString
+    results update (taskId, (model, proof, None))
+
+    new Thread(new Runnable() {
+      override def run() = {
+        println(s"Received request to validate ${taskId}. Running in separate thread.")
+        val provable = NoProofTermProvable( Provable.startProof(model) )
+
+        try {
+          SequentialInterpreter()(proof, BelleProvable(provable)) match {
+            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+            case _                                 => results update (taskId, (model, proof, Some(false)))
+          }
+        } catch {
+          //Catch everything and indicate a failed proof attempt.
+          case e : Throwable => results update (taskId, (model, proof, Some(false)))
+        }
+
+        println(s"Done executing validation check for ${taskId}")
+      }
+    }).start()
+
+    taskId
+  }
+}
+
+/** Returns a UUID whose status can be queried at a later time ({complete: true/false[, proves: true/false]}.
+  * @see CheckValidationRequest - calling this with the returned UUID should give the status of proof checking. */
+class ValidateProofRequest(db : DBAbstraction, model: Formula, proof: BelleExpr) extends Request {
+  override def resultingResponses() : List[Response] =
+    //Spawn an async validation request and return the reesulting UUID.
+    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof), None) :: Nil
+}
+
+/** An idempotent request for the status of a validation request; i.e., validation requests aren't removed until the server is resst. */
+class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request {
+  override def resultingResponses(): List[Response] = try {
+    new ValidateProofResponse(taskId, ProofValidationRunner.status(taskId)) :: Nil
+  } catch {
+    case e : ProofValidationRunner.ValidationRequestDNE => new ErrorResponse(e.getMessage, e) :: Nil
+  }
+}
+
+//endregion
 
 object RequestHelper {
   /** Queries the database for the position where the tactic that created the node `node` was applied. */

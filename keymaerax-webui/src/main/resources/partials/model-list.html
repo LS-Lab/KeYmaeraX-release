@@ -28,20 +28,24 @@
         <div class="row">
             <div class="col-md-2"><b>Models</b></div>
             <div class="col-md-10">
-                <span class="pull-right">
+                <span class="pull-right" id="modelarchiving"
+                      data-intro="Export all models with/without proofs to .kya files."
+                      data-position="left">
                     <a class="btn btn-default"
                        ng-click="downloadAllModels()"
-                       uib-tooltip="Download all models"><i class="fa fa-download"></i> Download all</a>
+                       uib-tooltip="Export all models"><i class="fa fa-download"></i> Export all</a>
                     <a class="btn btn-default"
                        ng-click="downloadAllProofs()"
-                       uib-tooltip="Download all models with their proofs"><i class="fa fa-archive"></i> Download all (with proofs)</a>
+                       uib-tooltip="Export all models with their proofs"><i class="fa fa-archive"></i> Export all (with proofs)</a>
                 </span>
             </div>
         </div>
     </div>
     <div class="panel-body">
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-6" id="modelupload"
+                 data-intro="Upload .kyx model files or .kya archive files here."
+                 data-position="bottom">
                 <!-- TODO https://github.com/blueimp/jQuery-File-Upload/wiki/Basic-plugin -->
                 <form ng-controller="ModelUploadCtrl">
                     <label for="keyFile">Upload</label>
@@ -72,10 +76,13 @@
                 </form>
             </div>
             <div class="col-md-2"></div>
-            <div class="col-md-4">
+            <div class="col-md-4" id="modeltutorialimport"
+                 data-intro="Click 'Import' to add tutorials to your models overview."
+                 data-position="bottom">
+                <div style="margin-bottom: 10px"> <!-- So that carousel doesn't overlap overlay help -->
                 <div uib-carousel class="k4-examples-carousel" active="active" interval="5000">
                     <div uib-slide ng-repeat="repo in examples track by repo.id" index="repo.id">
-                        <img ng-src="{{repo.image}}" style="margin:auto;">
+                        <img ng-src="{{repo.image}}">
                         <div class="k4-examples-carousel-caption">
                             <h4>{{repo.title}} <button class="btn btn-default"
                                                        ng-click="importRepo(repo.url)"
@@ -83,6 +90,7 @@
                             <p>{{repo.description}} <small><a ng-href="{{repo.infoUrl}}">Details...</a></small></p>
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
     </div>
@@ -106,21 +114,38 @@
         <tbody>
         <tr ng-repeat="model in models | orderBy:'name'">
             <td>{{ model.id }}</td>
-            <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
+            <td id="modelopen">
+                <div data-intro="Inspect model definitions." data-position="right" ng-if="$first">
+                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                </div>
+                <div ng-if="!$first">
+                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                </div>
+            </td>
             <td>
               <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.title}}</a>
               <span ng-if="!model.pubLink">{{model.title}}</span>
             </td>
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
-            <td ng-model="model">
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+            <td ng-model="model" id="modelactions"
+                data-intro="Start new proofs, generate monitor conditions, and synthesize test cases here."
+                data-position="left" ng-if="$first">
                 <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
                 <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!model.hasTactic}" ng-controller="ModelProofCreateCtrl" ng-click="proveFromTactic(model.id)" uib-tooltip="Prove from tactic"><i class="fa fa-cog"></i></a>
-                <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
                 <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
                 <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+                <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
+            </td>
+            <td ng-model="model" ng-if="!$first">
+                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
+                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+                <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>
         </tbody>

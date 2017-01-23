@@ -211,6 +211,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "associate correctly" in {
     round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
+    KeYmaeraToMathematica("5--2".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Subtract"),
+      Array(new MExpr(5), new MExpr(-2)))
   }
 
   it should "convert Apply()" in {

@@ -194,10 +194,10 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case ChooseSome(options, e) =>
           val ec = e.asInstanceOf[Formula=>BelleExpr]
           //@todo specialization to A=Formula should be undone
-          val opts = options().asInstanceOf[Iterator[Formula]]
+          val opts: Iterator[Formula] = options().asInstanceOf[Iterator[Formula]]
           var errors = ""
           while (opts.hasNext) {
-            val o = opts.next().asInstanceOf[Formula]
+            val o = opts.next()
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
             val someResult: Option[BelleValue] = try {
               Some(apply(ec(o), v))
@@ -210,7 +210,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               case (None, _) => // option o had an error, so consider next option
             }
           }
-          throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + options() + "\n" + errors)
+          throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
 
         case ProveAs(lemmaName, f, e) => {
           val BelleProvable(provable, labels) = v
@@ -335,7 +335,11 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case err:BelleThrowable =>
         listeners.foreach(l => l.end(v, expr, Right(err)))
         throw err
-      case e:Throwable => println("Unknown exception: " + e); throw e
+      case e:Throwable =>
+        //@todo Either alert the listeners like we do in the BelleThrowable case above, or else augment the error message that's thrown here to explain the database inconsisitency problem.
+        println(s"Unknown exception running $expr: $e\nDatabase recording is incomplete!")
+        e.printStackTrace()
+        throw e
     }
   }
 

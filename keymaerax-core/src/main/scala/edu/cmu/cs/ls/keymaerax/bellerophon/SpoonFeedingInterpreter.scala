@@ -81,23 +81,27 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           if (children.length != p.subgoals.length)
             throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(branches(branch)._1, "")
 
-          //@todo might be unnecessarily complicated
+          // patch branches b consistent with number of p's subgoals
+          def patchBranches(p: ProvableSig, b: Seq[(BelleExpr, BelleValue)], pos: Int): Seq[(BelleExpr, BelleValue)] =
+            if (p.subgoals.isEmpty) b.patch(pos, Nil, 1)
+            else if (p.subgoals.size == 1) b
+            else b ++ p.subgoals.tail.map(sg => (b(pos)._1, BelleProvable(ProvableSig.startProof(sg))))
+
+          //@note execute in reverse for stable global subgoal indexing
           val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
-          val newBranches = branches.updated(branch, branchTactics.head) ++ branchTactics.tail
-          val newBranchIdx = branches.length until newBranches.length
-          val BelleProvable(first, _) = runTactic(newBranches, branch, level)
-          val result = newBranchIdx.foldLeft((branch, newBranches, p(first, branch)))({
-            case ((previ, remainingBranches, mergedProvable), i) =>
-              val remainder =
-                if (mergedProvable.subgoals.size < p.subgoals.size) remainingBranches.patch(previ, Nil, 1)
-                else remainingBranches
-              val closed = newBranches.size - remainder.size
-              val BelleProvable(branchResult, _) = runTactic(remainder, i-closed, level)
-              val branchIdx = i - branches.length + 1
-              val closedOverall = p.subgoals.size - mergedProvable.subgoals.size
-              (i-closed, remainder, mergedProvable(branchResult, branchIdx - closedOverall))
-          })._3
-          BelleProvable(result)
+          val allBranches = branches.updated(branch, branchTactics.head) ++ branchTactics.tail
+
+          val reverseBranches = allBranches.zipWithIndex.reverse.filter(nt => branchTactics.contains(nt._1))
+          val BelleProvable(last, _) = runTactic(allBranches, reverseBranches.head._2, level)
+          val remainingBranches = patchBranches(last, allBranches, reverseBranches.head._2)
+
+          val result = reverseBranches.tail.foldLeft((p(last, p.subgoals.size-1), remainingBranches))({ case ((r, nb), (_, i)) =>
+            val BelleProvable(current, _) = runTactic(nb, i, level)
+            val localBranchIdx = r.subgoals.indexOf(current.conclusion)
+            (r(current, localBranchIdx), patchBranches(current, nb, i))
+          })
+
+          BelleProvable(result._1)
         case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(branches(branch)._1, "")
       }
       case OnAll(e) =>

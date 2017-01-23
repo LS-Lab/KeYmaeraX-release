@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--
+  ~ Copyright (c) Carnegie Mellon University.
+  ~ See LICENSE.txt for the conditions of this license.
+  -->
+
+<html lang="en" ng-app="ValidationStatusApp" ng-controller="ValidationStatusCtrl">
+<head>
+    <meta charset="UTF-8">
+    <title>Proof Validation Status</title>
+</head>
+<body>
+<div ng-view></div>
+</body>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery-ui.min.js"></script>
+<script src="/js/bootstrap/bootstrap.min.js"></script>
+<script src="/js/angular/angular.min.js"></script>
+<script src="/js/angular/angular-sanitize.min.js"></script>
+<script src="/js/angular/angular-cookies.min.js"></script>
+<script src="/js/angular/angular-route.min.js"></script>
+<script src="/js/angular/angular-animate.min.js"></script>
+<script src="/js/angular/bootstrap/ui-bootstrap-tpls-1.1.0.min.js" ></script>
+<!-- Load controller module -->
+<script>
+  // Mostly copy/pasta.
+  var validationStatusApp = angular.module('ValidationStatusApp', [
+    'ngRoute',
+    'ngCookies',
+    'ngSanitize',
+    'ngAnimate',
+    'ui.bootstrap'
+  ], function($rootScopeProvider) {
+    $rootScopeProvider.digestTtl(1000);
+  });
+
+  validationStatusApp.config(['$routeProvider',
+    function($routeProvider) {
+      $routeProvider.
+      when('/:taskId', {
+        templateUrl: 'partials/validationstatus.html',
+        controller: 'ValidationStatusCtrl'
+      }).
+      otherwise({
+        redirectTo: '/dashboard'
+      });
+    }]);
+
+  angular.module('ValidationStatusApp').controller('ValidationStatusCtrl', function ($scope, $http, $cookies, $routeParams, $location) {
+    $scope.taskId = $routeParams.taskId
+
+    //Load validationStatus.
+    $scope.validationStatus = 'Unknown'
+    $http.get('validate/' + $scope.taskId).success(function(data) {
+      if(data.textStatus) {
+        $scope.validationStatus = "Encountered error: " + data.textStatus
+      }
+      else {
+        if(data.running) {
+          $scope.validationStatus = 'Processing... Refresh page for update.'
+        }
+        else {
+          if(data.proved) {
+            $scope.validationStatus = "Proof Successful!"
+          }
+          else {
+            $scope.validationStatus = "Proof Failed!"
+          }
+        }
+      }
+    });
+
+    $scope.$emit('routeLoaded', {theview: '/:taskId'})
+  });
+</script>
+</html>

@@ -6,6 +6,7 @@
   'ngAnimate',
   'ngTextcomplete',
   'angularSpinners',
+  'angular-intro',
   'chart.js',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
@@ -84,6 +85,10 @@ keymaeraProofApp.config(['$routeProvider',
         //templateUrl: 'partials/proof-detail.html',
         templateUrl: 'partials/proofawesome.html',
         controller: 'ProofCtrl'
+      }).
+      when('/createModelFromFormula', {
+        templateUrl: 'partials/formula_to_model_textbox.html',
+        controller: 'FormulaUploadCtrl'
       }).
       when('/dev', {
         templateUrl: 'partials/dev.html',
