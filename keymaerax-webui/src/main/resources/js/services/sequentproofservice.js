@@ -1,79 +1,93 @@
-angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', 'spinnerService', function($http, $rootScope, spinnerService) {
+angular.module('keymaerax.services').factory('Agenda', function() {
+  var agenda = function() {
+    return {
+       itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
+       selectedId: function() {
+         var selected = $.grep(this.items(), function(e, i) { return e.isSelected; });
+         if (selected !== undefined && selected.length > 0) return selected[0].id;
+         else return undefined;
+       },
+       itemIds: function() { return Object.keys(this.itemsMap); },
+       items: function() {
+         return $.map(this.itemsMap, function(v) {return v;});
+       },
+       select: function(item) {
+         //@note bootstrap tab directive sends a select on remove -> only change selection if the item is still on the agenda
+         if (this.itemsMap[item.id] !== undefined) {
+           $.each(this.items(), function(i, e) { e.isSelected = false; });
+           item.isSelected = true;
+         }
+       },
+       selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
+       itemsByProofStep: function(ptNodeId) {
+         return $.grep(this.items(), function(e) {
+           return $.grep(e.deduction.sections, function(v, i) { return v.path.indexOf(ptNodeId) >= 0; }).length > 0; });
+       },
+       /** Returns the deduction index of the specified proof tree node in agendaItem (Object { section, pathStep} ). */
+       deductionIndexOf: function(itemId, ptNodeId) {
+         var agendaItem = this.itemsMap[itemId];
+         for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
+           var section = agendaItem.deduction.sections[i];
+           var j = section.path.indexOf(ptNodeId);
+           if (j >= 0) return { sectionIdx: i, pathStepIdx: j };
+         }
+         return { sectionIdx: -1, pathStepIdx: -1 };
+       },
+       /** Returns the index of the section where any proofTreeNode's child is last (child is unique). */
+       childSectionIndex: function(itemId, proofTreeNode) {
+         var agendaItem = this.itemsMap[itemId];
+         for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
+           var section = agendaItem.deduction.sections[i];
+           if (proofTreeNode.children.indexOf(section.path[section.path.length - 1]) >= 0) return i;
+         }
+         return -1;
+       }
+     }
+  }
+  return agenda;
+});
+
+angular.module('keymaerax.services').factory('ProofTree', function() {
+  var proofTree = function() {
+    return {
+        root: undefined, // ref PTNode, i.e., String
+        nodesMap: {}, // Map[String, PTNode], i.e., { id: { id: String, children: [ref PTNode], parent: ref PTNode } }
+        nodeIds: function() { return Object.keys(this.nodesMap); },
+        nodes: function() { return $.map(this.nodesMap, function(v) {return v;}); },
+
+        /** Prunes below the specified node */
+        pruneBelow: function(nodeId) {
+          var theProofTree = this;
+          var node = theProofTree.nodesMap[nodeId];
+          if (node.children.length > 0) {
+            $.each(node.children, function(i, c) {
+              theProofTree.pruneBelow(c);
+              delete theProofTree.nodesMap[c];
+            });
+            node.children.splice(0, node.children.length);
+          }
+        },
+        /** Adds a node to this tree if not already present; otherwise, updates the node with fetched rule and children */
+        addNode: function(node) {
+          if (this.nodesMap[node.id] === undefined) {
+            this.nodesMap[node.id] = node;
+          } else {
+            this.nodesMap[node.id].children = node.children;
+            this.nodesMap[node.id].rule = node.rule;
+          }
+        }
+      }
+  }
+  return proofTree;
+});
+
+angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', 'spinnerService', 'Agenda', 'ProofTree', function($http, $rootScope, spinnerService, Agenda, ProofTree) {
   return {
     /** The agenda model */
-    agenda: {
-      itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
-      selectedId: function() {
-        var selected = $.grep(this.items(), function(e, i) { return e.isSelected; });
-        if (selected !== undefined && selected.length > 0) return selected[0].id;
-        else return undefined;
-      },
-      itemIds: function() { return Object.keys(this.itemsMap); },
-      items: function() {
-        return $.map(this.itemsMap, function(v) {return v;});
-      },
-      select: function(item) {
-        //@note bootstrap tab directive sends a select on remove -> only change selection if the item is still on the agenda
-        if (this.itemsMap[item.id] !== undefined) {
-          $.each(this.items(), function(i, e) { e.isSelected = false; });
-          item.isSelected = true;
-        }
-      },
-      selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
-      itemsByProofStep: function(ptNodeId) {
-        return $.grep(this.items(), function(e) {
-          return $.grep(e.deduction.sections, function(v, i) { return v.path.indexOf(ptNodeId) >= 0; }).length > 0; });
-      },
-      /** Returns the deduction index of the specified proof tree node in agendaItem (Object { section, pathStep} ). */
-      deductionIndexOf: function(itemId, ptNodeId) {
-        var agendaItem = this.itemsMap[itemId];
-        for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
-          var section = agendaItem.deduction.sections[i];
-          var j = section.path.indexOf(ptNodeId);
-          if (j >= 0) return { sectionIdx: i, pathStepIdx: j };
-        }
-        return { sectionIdx: -1, pathStepIdx: -1 };
-      },
-      /** Returns the index of the section where any proofTreeNode's child is last (child is unique). */
-      childSectionIndex: function(itemId, proofTreeNode) {
-        var agendaItem = this.itemsMap[itemId];
-        for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
-          var section = agendaItem.deduction.sections[i];
-          if (proofTreeNode.children.indexOf(section.path[section.path.length - 1]) >= 0) return i;
-        }
-        return -1;
-      }
-    },
+    agenda: new Agenda(),
 
     /** The proofTree model */
-    proofTree: {
-      root: undefined, // ref PTNode, i.e., String
-      nodesMap: {}, // Map[String, PTNode], i.e., { id: { id: String, children: [ref PTNode], parent: ref PTNode } }
-      nodeIds: function() { return Object.keys(this.nodesMap); },
-      nodes: function() { return $.map(this.nodesMap, function(v) {return v;}); },
-
-      /** Prunes below the specified node */
-      pruneBelow: function(nodeId) {
-        var theProofTree = this;
-        var node = theProofTree.nodesMap[nodeId];
-        if (node.children.length > 0) {
-          $.each(node.children, function(i, c) {
-            theProofTree.pruneBelow(c);
-            delete theProofTree.nodesMap[c];
-          });
-          node.children.splice(0, node.children.length);
-        }
-      },
-      /** Adds a node to this tree if not already present; otherwise, updates the node with fetched rule and children */
-      addNode: function(node) {
-        if (this.nodesMap[node.id] === undefined) {
-          this.nodesMap[node.id] = node;
-        } else {
-          this.nodesMap[node.id].children = node.children;
-          this.nodesMap[node.id].rule = node.rule;
-        }
-      }
-    },
+    proofTree: new ProofTree(),
 
     /** The tactic model */
     tactic: {
