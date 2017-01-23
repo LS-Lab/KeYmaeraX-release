@@ -1,6 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.{core, bellerophon}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.TacticInfo
@@ -42,18 +41,18 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case adp: AppliedDependentPositionTactic => adp.pt match {
             case e: DependentPositionWithAppliedInputTactic =>
               val eargs = e.inputs.map(input => argPrinter(Left(input))).mkString(", ")
-              e.name + "(" + eargs + ", " + argPrinter(Right(adp.locator)) + ")"
+              val sep = if (e.inputs.isEmpty) "" else ", "
+              e.name + "(" + eargs + sep + argPrinter(Right(adp.locator)) + ")"
             case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
           }
           case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
-          case it : InputTactic => {
+          case it : InputTactic =>
             val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
             it.name + "(" + eargs + ")"
-          }
-          case ProveAs(lemmaName, pos, e) => "proveAs"
+          case ProveAs(_, _, _) => "proveAs"
           case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
           case dot: BelleDot => "_@" + dot.hashCode()
-          case _ => throw PrinterException(s"Do not know how to pretty-print ${e}")
+          case _ => throw PrinterException(s"Do not know how to pretty-print $e")
         }
     }
   }
