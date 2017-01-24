@@ -7,11 +7,15 @@
                     <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() === undefined">{{antePart.placeholder}}</span>
-                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2}" type="text" name="{{antePart.text}}"
+                    <div ng-class="{'form-group': true, 'has-error': tacticForm.{{antePart.text}}.$error.required}"
+                         ng-if="!premise.isClosed && antePart.isInput" >
+                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2, 'form-control': true}"
+                           type="text" name="{{antePart.text}}" id="{{antePart.text}}"
                            placeholder="{{antePart.placeholder}}"
                            ng-model="antePart.value" ng-model-options="{getterSetter: true}"
                            ng-enter="applyInputTactic(tacticPopover.formulaId(), tactic)"
-                           ng-if="!premise.isClosed && antePart.isInput" required/>
+                           required/>
+                    </div>
                 </span>
                 {{$last ? '' : ','}}
             </span>
@@ -23,11 +27,15 @@
                     <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() === undefined">{{succPart.placeholder}}</span>
-                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2}" type="text" name="{{succPart.text}}"
+                    <div ng-class="{'form-group': true, 'has-error': tacticForm.{{succPart.text}}.$error.required}"
+                         ng-if="!premise.isClosed && succPart.isInput">
+                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2, 'form-control': true}"
+                           type="text" name="{{succPart.text}}" id="{{succPart.text}}"
                            placeholder="{{succPart.placeholder}}"
                            ng-model="succPart.value" ng-model-options="{getterSetter: true}"
                            ng-enter="applyInputTactic(tacticPopover.formulaId(), tactic)"
-                           ng-if="!premise.isClosed && succPart.isInput" required/>
+                           required/>
+                    </div>
                 </span>
                 {{$last ? '' : ','}}
             </span>
