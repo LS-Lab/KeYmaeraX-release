@@ -911,7 +911,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val innerDb = new InMemoryDB()
         val localProofId = innerDb.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
-          SequentialInterpreter, 1)
+          SequentialInterpreter, 1, strict=false)
         innerInterpreter(BelleParser(parentStep), BelleProvable(localProvable))
 
         val trace = innerDb.getExecutionTrace(localProofId)
