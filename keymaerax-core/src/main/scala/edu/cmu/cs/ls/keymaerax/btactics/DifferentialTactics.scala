@@ -124,15 +124,15 @@ private object DifferentialTactics {
         }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
         if (pos.isTopLevel) {
           val t = DI(pos) &
-            (implyR(pos) & andR(pos)) <(
-              if (auto == 'full) close | QE else skip,
+            implyR(pos) & andR(pos) & Idioms.<(
+              if (auto == 'full) (close | QE) & done else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
                 (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE) & done
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
@@ -520,6 +520,7 @@ private object DifferentialTactics {
     * @author Andre Platzer */
   def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
     val noCut = "ANON" by ((pos: Position) =>
+      //@todo (boxAnd(pos) & andR(pos))* won't have expected effect (number of subgoals on second iteration doesn't match tactics)
       ((boxAnd(pos) & andR(pos))*) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
         val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
