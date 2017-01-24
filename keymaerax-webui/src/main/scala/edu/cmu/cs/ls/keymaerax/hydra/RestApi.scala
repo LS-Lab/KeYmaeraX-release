@@ -489,17 +489,26 @@ trait RestApi extends HttpService with SLF4JLogging {
         val info = DerivationInfo(tacticId)
         val expectedInputs = info.inputs
         // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
-        val paramArray = JsonParser(params).asInstanceOf[JsArray]
-        val inputs =
-          paramArray.elements.map({case elem =>
-            val obj = elem.asJsObject()
-            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-            val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-            val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
-            BelleTermInput(paramValue, paramInfo)
-          })
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList)
-        completeRequest(request, t)
+        val paramArray = JsonParser(params).asInstanceOf[JsArray].elements.map(_.asJsObject())
+        val illFormedParams = paramArray.filter({obj =>
+          val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+          val paramInfo = expectedInputs.find(_.name == paramName)
+          paramInfo.isEmpty || obj.getFields("value").isEmpty
+        })
+        if (illFormedParams.isEmpty) {
+          val inputs =
+            paramArray.map({ obj =>
+              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+              val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+              val paramInfo = expectedInputs.find(_.name == paramName)
+              BelleTermInput(paramValue, paramInfo)
+            })
+          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList)
+          completeRequest(request, t)
+        } else {
+          val missing = illFormedParams.map(_.getFields("param").head.asInstanceOf[JsString].value).mkString(", ")
+          completeRequest(new FailedRequest(userId, "Ill-formed tactic arguments, missing parameters " + missing), t)
+        }
       }
     }}
   }}}

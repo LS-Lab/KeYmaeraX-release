@@ -119,6 +119,10 @@ class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : Strin
   }
 }
 
+class FailedRequest(userId: String, msg: String, cause: Throwable = null) extends UserRequest(userId) {
+  def resultingResponses() = { new ErrorResponse(msg, cause) :: Nil }
+}
+
 /**
  * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
   *
