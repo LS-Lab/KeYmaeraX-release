@@ -94,24 +94,14 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
         }
         case EitherTactic(left, right) => try {
-          val leftResult = apply(left, v)
-          (leftResult, left) match {
-            case (BelleProvable(p, _), _) /*if p.isProved*/ => leftResult
-            case (_, x: PartialTactic) => leftResult
-            case _ => throw new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(EitherTactic(BelleDot, right), "Failed left-hand side of |:" + left)
-          }
+          apply(left, v)
         } catch {
-          //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
           case eleft: BelleThrowable =>
-            val rightResult = try {
+            try {
               apply(right, v)
             } catch {
-              case e: BelleThrowable => throw e.inContext(EitherTactic(eleft.context, e.context), "Failed: both left-hand side and right-hand side " + expr)
-            }
-            (rightResult, right) match {
-              case (BelleProvable(p, _), _) /*if p.isProved*/ => rightResult
-              case (_, x: PartialTactic) => rightResult
-              case _ => throw new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(EitherTactic(left, BelleDot), "Failed right-hand side of |: " + right)
+              case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
+                "Failed: both left-hand side and right-hand side " + expr)
             }
         }
         case SaturateTactic(child) =>
@@ -119,7 +109,6 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           var result: BelleValue = v
           do {
             prev = result
-            //@todo effect on listeners etc.
             try {
               result = apply(child, result)
             } catch {
