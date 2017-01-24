@@ -5,7 +5,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExtractTacticFromTrace}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExtractTacticFromTrace, ProofTree}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -53,7 +53,22 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
         globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
       SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
+          provable.conclusion shouldBe s
           extractTactic(proofId) shouldBe t
+          if (provable.isProved) {
+            // check that database thinks so too
+            val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
+            finalTree.theLeaves shouldBe empty
+            finalTree.nodes.foreach(n => {
+              n.endStep shouldBe 'defined
+              val end = n.endStep.get
+              end.output.get.subgoals should have length end.input.subgoals.length - 1
+              for (i <- end.input.subgoals.indices) {
+                if (i < end.branch) end.output.get.subgoals(i) shouldBe end.input.subgoals(i)
+                if (i > end.branch) end.output.get.subgoals(i-1) shouldBe end.input.subgoals(i)
+              }
+            })
+          }
           provable
         case r => fail("Unexpected tactic result " + r)
       }
@@ -135,7 +150,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def proveBy(fml: Formula, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(fml))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _) =>
+        provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+        provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
