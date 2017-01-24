@@ -4,13 +4,13 @@
     <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <!-- TODO transmit key from server and underline, make changeable -->
         <div class="row">
-            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">{{tactic.selectedDerivation().name}}</a></b></div>
+            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
     <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
-            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">{{tactic.selectedDerivation().name}}</a></b></div>
+            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
