@@ -158,7 +158,6 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
 
       scope.stepInto = function(nodeId) {
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/expand').then(function(response) {
-          var foo = response;
           var modalInstance = $uibModal.open({
             templateUrl: 'templates/magnifyingglass.html',
             controller: 'MagnifyingGlassDialogCtrl',
