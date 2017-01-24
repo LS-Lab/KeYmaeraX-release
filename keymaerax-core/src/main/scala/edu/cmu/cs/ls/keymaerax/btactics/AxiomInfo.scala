@@ -164,7 +164,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("diffGhost",
       RuleDisplayInfo(
         "diffGhost",
-        ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
+        ( List("&Gamma;"), List("[{c&Q}]P", "&Delta;") ),
         List(
           (List("&Gamma;", "y=i"), List("[{c,y'=a()*y+b&Q}]P", "&Delta;"))
         )
