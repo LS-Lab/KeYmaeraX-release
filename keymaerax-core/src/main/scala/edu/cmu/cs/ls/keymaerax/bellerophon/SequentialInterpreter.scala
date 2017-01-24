@@ -196,7 +196,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           //@todo specialization to A=Formula should be undone
           val opts: Iterator[Formula] = options().asInstanceOf[Iterator[Formula]]
           var errors = ""
-          while (opts.hasNext) {
+          var result: Option[BelleValue] = None
+          while (opts.hasNext && result.isEmpty) {
             val o = opts.next()
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
             val someResult: Option[BelleValue] = try {
@@ -204,13 +205,16 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
             (someResult, e) match {
-              case (Some(BelleProvable(p, _)), _) /*if p.isProved*/ => return someResult.get
-              case (Some(_), x: PartialTactic) => return someResult.get
+              case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
+              case (Some(p), _: PartialTactic) => result = Some(p)
               case (Some(_), _) => errors += "option " + o + " " + new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o) + "\n" // throw new BelleThrowable("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o)
               case (None, _) => // option o had an error, so consider next option
             }
           }
-          throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+          result match {
+            case Some(r) => r
+            case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+          }
 
         case ProveAs(lemmaName, f, e) => {
           val BelleProvable(provable, labels) = v
