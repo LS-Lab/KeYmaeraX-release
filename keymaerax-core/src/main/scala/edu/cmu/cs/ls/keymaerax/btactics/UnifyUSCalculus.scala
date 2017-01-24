@@ -1516,7 +1516,8 @@ trait UnifyUSCalculus {
              */
 
             // |- subst(prereq)
-            val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
+            val prereqFact = TactixLibrary.proveBy(subst(prereq),
+              TactixLibrary.prop & done | TactixLibrary.QE() & done | TactixLibrary.master() & done)
             require(prereqFact.isProved, "only globally provable requirements currently supported. Use useAt instead " + prereqFact)
 
             // |- subst(remainder{k})
