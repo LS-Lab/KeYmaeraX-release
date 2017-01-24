@@ -106,16 +106,14 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         }
 
       case ChooseSome(options, e) =>
-        val ec = e.asInstanceOf[Formula=>BelleExpr]
-        //@todo specialization to A=Formula should be undone
-        val opts: Iterator[Formula] = options().asInstanceOf[Iterator[Formula]]
+        val opts = options()
         var errors = ""
         var result: Option[BelleValue] = None
         while (opts.hasNext && result.isEmpty) {
           val o = opts.next()
           if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
           val someResult: Option[BelleValue] = try {
-            Some(runTactic(branches.updated(branch, (ec(o), branches(branch)._2)), branch, level))
+            Some(runTactic(branches.updated(branch, (e(o), branches(branch)._2)), branch, level))
           } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
           if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
           (someResult, e) match {
