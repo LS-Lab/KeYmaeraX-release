@@ -557,7 +557,8 @@ case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override d
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
 /**
-  * OnAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
+  * OnAll(e)(BelleProvable(p)) == <(e, ..., e) does the same tactic on all branches
+  * where e occurs the appropriate number of times, which is `p.subgoals.length` times.
   *
   * @todo eisegesis
   */
