@@ -885,6 +885,15 @@ object DerivationInfo {
     )
   }
 
+  /** Locate the derivation info for said tactic */
+  def locate(t: BelleExpr): Option[DerivationInfo] = t match {
+    case n: NamedBelleExpr => try { Some(ofCodeName(n.name)) } catch { case _: Exception => None }
+    case AppliedPositionTactic(n, _) => locate(n)
+    case AppliedBuiltinTwoPositionTactic(n, _, _) => locate(n)
+    //@todo probably more cases
+    case _ => None
+  }
+
   def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
 }
 
