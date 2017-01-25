@@ -438,18 +438,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """.stripMargin)
   }
 
-  private def stepInto(node: TreeNode, expectedStep: String, expectedDetails: BelleExpr, depth: Int = 1) = {
+  private def stepInto(node: TreeNode, expectedStep: String, expectedDetails: BelleExpr, depth: Int = 1)(implicit db: InMemoryDB = new InMemoryDB): Int = {
     val (localProvable, step) = node.endStep match {
       case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
     }
     step shouldBe expectedStep
-    val innerDb = new InMemoryDB()
-    val localProofId = innerDb.createProof(localProvable)
-    val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
+    val localProofId = db.createProof(localProvable)
+    val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
       SequentialInterpreter, depth, strict=false)
     innerInterpreter(BelleParser(step), BelleProvable(localProvable))
-    val tactic = new ExtractTacticFromTrace(innerDb).apply(innerDb.getExecutionTrace(localProofId))
+    val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
     tactic shouldBe expectedDetails
+    localProofId
   }
 
   it should "work in the middle of a proof" in {
@@ -546,4 +546,49 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         stepInto(node, "QE", expected)
     }
   }}
+
+  it should "work for DC+DI" in withMathematica { tool =>
+    val problem =
+      """
+        |w()^2*x^2 + y^2 <= c()^2
+        |  & d>=0
+        |->
+        |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
+      """.stripMargin
+    val p = ProvableSig.startProof(problem.asFormula)
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & diffInvariant("d>=0".asFormula)(1), BelleProvable(p))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    tree.findNode("2") match {
+      case Some(n1) =>
+        val expected = BelleParser("diffCut({`d>=0`},1) & <(nil, diffInd(1))")
+        val id1 = stepInto(n1, "diffInvariant({`d>=0`},1)", expected)
+        //diffCut
+        ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("1") match {
+          case Some(n2) =>
+            val expected = BelleParser("DCdiffcut({`d>=0`},1)")
+            val id2 = stepInto(n2, "diffCut({`d>=0`},1)", expected)
+            ProofTree.ofTrace(db.getExecutionTrace(id2)).findNode("1") match {
+              case Some(n3) =>
+                val expected = BelleParser("DCaxiom(1)")
+                val id3 = stepInto(n3, "DCdiffcut({`d>=0`},1)", expected)
+            }
+        }
+        //diffInd
+        ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("3") match {
+          case Some(n2) =>
+            val expected = BelleParser(
+              """
+                |DI(1) & implyR(1) & andR(1) & <(
+                |  nil,
+                |  derive(1.1) & DE(1) & DWeaken(1) & abstractionb(1) & allR(1) & allR(1) & allR(1) & implyR(1)
+                |)
+              """.stripMargin)
+            stepInto(n2, "diffInd(1)", expected)
+        }
+    }
+  }
 }
