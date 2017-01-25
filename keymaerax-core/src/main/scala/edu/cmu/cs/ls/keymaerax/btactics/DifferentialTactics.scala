@@ -575,6 +575,7 @@ private object DifferentialTactics {
     )
 
     //The top-level tactic:
+    //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
     TactixLibrary.diffSolve(pos) |
     proveWithoutCuts(pos)        |
     (addInvariant & ODE(pos))    |
