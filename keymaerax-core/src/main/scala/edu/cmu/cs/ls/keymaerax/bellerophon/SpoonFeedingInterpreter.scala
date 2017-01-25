@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -12,11 +13,13 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * to another interpreter.
   * @param listeners Creates listeners from tactic names.
   * @param inner Processes atomic tactics.
+  * @param descend How far to descend into depending tactics (default: do not descend)
+  * @param strict If true, follow tactic strictly; otherwise perform some optimizations (e.g., do not execute nil).
   * @author Nathan Fulton
   * @author Andre Platzer
   * @author Stefan Mitsch
   */
-case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], inner: Seq[IOListener] => Interpreter, descend: Int = 0) extends Interpreter {
+case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], inner: Seq[IOListener] => Interpreter, descend: Int = 0, strict: Boolean = true) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic((expr, v)::Nil, 0, descend)
 
   private def runTactic(branches: Seq[(BelleExpr, BelleValue)], branch: Int, level: Int): BelleValue = {
@@ -145,13 +148,15 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         runTactic(branches.updated(branch, (t, branches(branch)._2)), branch, level-levelDecrement)
 
       // forward to inner interpreter
-      case _ => branches(branch)._2 match {
-        case BelleProvable(provable, labels) if provable.subgoals.isEmpty=> inner(Seq())(branches(branch)._1, branches(branch)._2)
-        case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
-          inner(listeners(branches(branch)._1.prettyString, branch))(branches(branch)._1, BelleProvable(provable.sub(0), labels)) match {
-            case BelleProvable(innerProvable, _) => BelleProvable(provable(innerProvable, 0), labels)
-          }
-      }
+      case _ =>
+        if (!strict && branches(branch)._1 == Idioms.nil) branches(branch)._2
+        else branches(branch)._2 match {
+          case BelleProvable(provable, _) if provable.subgoals.isEmpty => inner(Seq())(branches(branch)._1, branches(branch)._2)
+          case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
+            inner(listeners(branches(branch)._1.prettyString, branch))(branches(branch)._1, BelleProvable(provable.sub(0), labels)) match {
+              case BelleProvable(innerProvable, _) => BelleProvable(provable(innerProvable, 0), labels)
+            }
+        }
     }
   }
 }

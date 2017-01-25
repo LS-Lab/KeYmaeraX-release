@@ -287,7 +287,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         controller: 'DerivationInfoDialogCtrl',
         size: 'lg',
         resolve: {
-          tactics: function() { return tactics; }
+          tactics: function() { return tactics; },
+          readOnly: function() { return false; }
         }
       });
 

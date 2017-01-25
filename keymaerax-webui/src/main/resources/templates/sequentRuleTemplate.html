@@ -6,9 +6,9 @@
                 <span ng-repeat="antePart in ante">
                     <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
-                    <span ng-if="premise.isClosed && antePart.isInput && antePart.value() === undefined">{{antePart.placeholder}}</span>
+                    <span ng-if="readOnly || (premise.isClosed && antePart.isInput && antePart.value() === undefined)">{{antePart.placeholder}}</span>
                     <div ng-class="{'form-group': true, 'has-error': tacticForm.{{antePart.text}}.$error.required}"
-                         ng-if="!premise.isClosed && antePart.isInput" >
+                         ng-if="!readOnly && !premise.isClosed && antePart.isInput" >
                     <input ng-class="{'k4-narrowinput': premise.numInputs > 2, 'form-control': true}"
                            type="text" name="{{antePart.text}}" id="{{antePart.text}}"
                            placeholder="{{antePart.placeholder}}"
@@ -26,9 +26,9 @@
                 <span ng-repeat="succPart in succ">
                     <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
-                    <span ng-if="premise.isClosed && succPart.isInput && succPart.value() === undefined">{{succPart.placeholder}}</span>
+                    <span ng-if="readOnly || (premise.isClosed && succPart.isInput && succPart.value() === undefined)">{{succPart.placeholder}}</span>
                     <div ng-class="{'form-group': true, 'has-error': tacticForm.{{succPart.text}}.$error.required}"
-                         ng-if="!premise.isClosed && succPart.isInput">
+                         ng-if="!readOnly && !premise.isClosed && succPart.isInput">
                     <input ng-class="{'k4-narrowinput': premise.numInputs > 2, 'form-control': true}"
                            type="text" name="{{succPart.text}}" id="{{succPart.text}}"
                            placeholder="{{succPart.placeholder}}"

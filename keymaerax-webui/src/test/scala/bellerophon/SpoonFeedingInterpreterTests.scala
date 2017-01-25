@@ -366,29 +366,39 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "should work for prop on a simple example" in withDatabase { db =>
     val problem = "x>=0 -> x>=0"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
-    val proofId = db.createProof(modelContent)
+    val proofId = db.createProof(modelContent, "proof1")
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("nil & implyR(1) & closeId")
+
+    val proofId2 = db.createProof(modelContent, "proof2")
+    SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
+      prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & closeId")
   }
 
   it should "should work for prop on a left-branching example" in withDatabase { db =>
     val problem = "x>=0|!x<y -> x>=0"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
-    val proofId = db.createProof(modelContent)
+    val proofId = db.createProof(modelContent, "proof1")
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(closeId, notL(-1) & nil & nil)")
+
+    val proofId2 = db.createProof(modelContent, "proof2")
+    SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
+      prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(closeId, notL(-1))")
   }
 
   it should "should work for prop with nested branching" in withDatabase { db =>
     val problem = "x>=0|x<y -> x>=0&x<y"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
-    val proofId = db.createProof(modelContent)
+    val proofId = db.createProof(modelContent, "proof1")
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1)
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
@@ -407,20 +417,39 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  )
         |)
       """.stripMargin)
+
+    val proofId2 = db.createProof(modelContent, "proof2")
+    SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
+      prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    db.extractTactic(proofId2) shouldBe BelleParser(
+      """
+        |implyR(1) & orL(-1) & <(
+        |  andR(1) & <(
+        |    closeId,
+        |    nil
+        |  )
+        |  ,
+        |  andR(1) & <(
+        |    nil,
+        |    closeId
+        |  )
+        |)
+      """.stripMargin)
   }
 
-  private def stepInto(node: TreeNode, expectedStep: String, expectedDetails: BelleExpr, depth: Int = 1) = {
+  private def stepInto(node: TreeNode, expectedStep: String, expectedDetails: BelleExpr, depth: Int = 1)(implicit db: InMemoryDB = new InMemoryDB): Int = {
     val (localProvable, step) = node.endStep match {
       case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
     }
     step shouldBe expectedStep
-    val innerDb = new InMemoryDB()
-    val localProofId = innerDb.createProof(localProvable)
-    val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
-      SequentialInterpreter, depth)
+    val localProofId = db.createProof(localProvable)
+    val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+      SequentialInterpreter, depth, strict=false)
     innerInterpreter(BelleParser(step), BelleProvable(localProvable))
-    val tactic = new ExtractTacticFromTrace(innerDb).apply(innerDb.getExecutionTrace(localProofId))
+    val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
     tactic shouldBe expectedDetails
+    localProofId
   }
 
   it should "work in the middle of a proof" in {
@@ -437,12 +466,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         val expected = BelleParser(
           """
             |orL(-1) & <(
-            |  nil & andR(1) & <(
+            |  andR(1) & <(
             |    closeId,
             |    nil
             |  )
             |  ,
-            |  nil & andR(1) & <(
+            |  andR(1) & <(
             |    nil,
             |    closeId
             |  )
@@ -467,7 +496,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       case Some(node) =>
         val expected = BelleParser(
           """
-            |nil & andR(1) & <(
+            |andR(1) & <(
             |  closeId,
             |  nil
             |)
@@ -479,7 +508,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       case Some(node) =>
         val expected = BelleParser(
           """
-            |nil & andR(1) & <(
+            |andR(1) & <(
             |  nil,
             |  closeId
             |)
@@ -501,7 +530,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt))
     tree.findNode("1") match {
       case Some(node) =>
-        val expected = BelleParser("nil & implyR(1) & andL(-1) & nil & andL(-2) & nil & andL(-3) & nil & nil & nil")
+        val expected = BelleParser("implyR(1) & andL(-1) & andL(-2) & andL(-3)")
         stepInto(node, "prop", expected)
     }
 
@@ -517,4 +546,49 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         stepInto(node, "QE", expected)
     }
   }}
+
+  it should "work for DC+DI" in withMathematica { tool =>
+    val problem =
+      """
+        |w()^2*x^2 + y^2 <= c()^2
+        |  & d>=0
+        |->
+        |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
+      """.stripMargin
+    val p = ProvableSig.startProof(problem.asFormula)
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & diffInvariant("d>=0".asFormula)(1), BelleProvable(p))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    tree.findNode("2") match {
+      case Some(n1) =>
+        val expected = BelleParser("diffCut({`d>=0`},1) & <(nil, diffInd(1))")
+        val id1 = stepInto(n1, "diffInvariant({`d>=0`},1)", expected)
+        //diffCut
+        ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("1") match {
+          case Some(n2) =>
+            val expected = BelleParser("DCdiffcut({`d>=0`},1)")
+            val id2 = stepInto(n2, "diffCut({`d>=0`},1)", expected)
+            ProofTree.ofTrace(db.getExecutionTrace(id2)).findNode("1") match {
+              case Some(n3) =>
+                val expected = BelleParser("DCaxiom(1)")
+                val id3 = stepInto(n3, "DCdiffcut({`d>=0`},1)", expected)
+            }
+        }
+        //diffInd
+        ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("3") match {
+          case Some(n2) =>
+            val expected = BelleParser(
+              """
+                |DI(1) & implyR(1) & andR(1) & <(
+                |  nil,
+                |  derive(1.1) & DE(1) & DWeaken(1) & abstractionb(1) & allR(1) & allR(1) & allR(1) & implyR(1)
+                |)
+              """.stripMargin)
+            stepInto(n2, "diffInd(1)", expected)
+        }
+    }
+  }
 }
