@@ -666,9 +666,20 @@ object SQLite {
     private def getProofConclusion(proofId: Int): Sequent = {
       val modelId = getProofInfo(proofId).modelId
       val model = getModel(modelId)
-      KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile) match {
-        case fml:Formula => Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
-        case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
+
+      //@hack we misuse model content to store provables
+      val modelContent = try {
+        Some(KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile))
+      } catch {
+        case e: Exception => None
+      }
+
+      modelContent match {
+        case Some(c) => c match {
+          case fml: Formula => Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
+          case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
+        }
+        case None => Lemma.fromString(model.keyFile).fact.conclusion
       }
     }
 

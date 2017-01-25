@@ -105,7 +105,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserRequest(userId) {
   def resultingResponses() = {
-    val proofs = db.getProofsForUser(userId).map(proof =>
+    val proofs = db.getProofsForUser(userId).filterNot(_._1.name.startsWith("$tmp")).map(proof =>
       (proof._1, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
   }
@@ -593,7 +593,7 @@ class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) ext
 
 class GetModelListRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) {
   def resultingResponses() = {
-    new ModelListResponse(db.getModelList(userId)) :: Nil
+    new ModelListResponse(db.getModelList(userId).filterNot(_.name.startsWith("$tmp"))) :: Nil
   }
 }
 
@@ -906,21 +906,36 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
       case None => throw new Exception("Unknown node " + nodeId)
       case Some(node) =>
         val (localProvable, parentStep) = node.endStep match {
-          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+          case Some(end) =>
+            (ProvableSig.startProof(end.input.subgoals(end.branch)),
+              db.getExecutable(end.executableId).belleExpr)
         }
-        val innerDb = new InMemoryDB()
-        val localProofId = innerDb.createProof(localProvable)
+        //@hack misuses model file content to store a provable
+        val innerDb = db //new InMemoryDB()
+        //val localProofId = innerDb.createProof(localProvable)
+        val modelContent = Lemma(localProvable, Lemma.requiredEvidence(localProvable, List(ToolEvidence(List("input" -> localProvable.prettyString, "output" -> "true"))))).toString
+        val name = "$tmp" + modelContent.hashCode.toString + System.currentTimeMillis()
+        val localModelId = innerDb.createModel(userId, name, modelContent, "", None, None, None, None)
+        val localProofId = innerDb.createProofForModel(localModelId.get, name, "", "")
         val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
           SequentialInterpreter, 1, strict=false)
-        innerInterpreter(BelleParser(parentStep), BelleProvable(localProvable))
+        val parentTactic = BelleParser(parentStep)
+        innerInterpreter(parentTactic, BelleProvable(localProvable))
 
         val trace = innerDb.getExecutionTrace(localProofId)
-        val stepDetails = new ExtractTacticFromTrace(innerDb).getTacticString(trace)
-        val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
-        val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(innerDb, n)))
-        val openGoals = innerTree.leaves
+        if (trace.steps.size == 1 && trace.steps.head.rule == parentStep) {
+          DerivationInfo.locate(parentTactic) match {
+            case Some(ptInfo) => new ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
+            case None => new ErrorResponse("No further details available") :: Nil
+          }
+        } else {
+          val stepDetails = new ExtractTacticFromTrace(innerDb).getTacticString(trace)
+          val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
+          val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(innerDb, n)))
+          val openGoals = innerTree.leaves
 
-        new ExpandTacticResponse(parentStep, stepDetails, innerSteps, openGoals) :: Nil
+          new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, openGoals) :: Nil
+        }
     }
   }
 }
@@ -953,15 +968,15 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
     val closed = db.getProofInfo(proofId).closed
     if (closed) return new ApplicableAxiomsResponse(Nil, None) :: Nil
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map({case step =>
-      (DerivationInfo(step), UIIndex.comfortOf(step).map(DerivationInfo(_)))})
+    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map(step =>
+      (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
     new ApplicableAxiomsResponse(tactics, None) :: Nil
   }
 }
 
 class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, axiomId: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val info = (DerivationInfo(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo(_))) :: Nil
+    val info = (DerivationInfo.ofCodeName(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo.ofCodeName)) :: Nil
     new ApplicableAxiomsResponse(info, None) :: Nil
   }
 }

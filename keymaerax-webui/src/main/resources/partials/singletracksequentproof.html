@@ -239,14 +239,14 @@
 <script type="text/ng-template" id="proofStepPopover.html">
     <div class="k4-nobreak">
         <a ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a><br/>
-        <a ng-click="stepInto(step)"><span class="fa fa-level-down"> Step into</span></a><br/>
+        <a ng-click="stepInto(proofId, step)"><span class="fa fa-book"> Details</span></a><br/>
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>
 <script type="text/ng-template" id="proofStepPopoverPrev.html">
     <div class="k4-nobreak">
         <a ng-click="prune(step.id)"><span class="fa fa-eraser"> Prune</span></a><br/>
-        <a ng-click="stepInto(step.id)"><span class="fa fa-level-down"> Step into</span></a><br/>
+        <a ng-click="stepInto(proofId, step.id)"><span class="fa fa-book"> Details</span></a><br/>
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>

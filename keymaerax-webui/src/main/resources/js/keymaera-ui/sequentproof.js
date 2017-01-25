@@ -15,7 +15,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', '$uibModal', '$q', '$timeout', 'sequentProofData', 'spinnerService', function($http, $uibModal, $q, $timeout, sequentProofData, spinnerService) {
+  .directive('k4Sequentproof', ['$http', '$uibModal', '$q', '$timeout', 'sequentProofData', 'spinnerService', 'derivationInfos',
+      function($http, $uibModal, $q, $timeout, sequentProofData, spinnerService, derivationInfos) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
 
@@ -156,26 +157,45 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         sequentProofData.prune(scope.userId, scope.proofId, nodeId);
       }
 
-      scope.stepInto = function(nodeId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/expand').then(function(response) {
-          var modalInstance = $uibModal.open({
-            templateUrl: 'templates/magnifyingglass.html',
-            controller: 'MagnifyingGlassDialogCtrl',
-            scope: scope,
-            size: 'lg',
-            resolve: {
-              proofInfo: function() {
-                return {
-                  userId: scope.userId,
-                  proofId: scope.proofId,
-                  nodeId: nodeId
-                }
-              },
-              tactic: function() { return response.data.tactic; },
-              proofTree: function() { return response.data.proofTree; },
-              openGoals: function() { return response.data.openGoals; }
-            }
-          });
+      scope.stepInto = function(proofId, nodeId) {
+        $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand').then(function(response) {
+          if (response.data.proofTree.nodes !== undefined) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/magnifyingglass.html',
+              controller: 'MagnifyingGlassDialogCtrl',
+              scope: scope,
+              size: 'lg',
+              resolve: {
+                proofInfo: function() {
+                  return {
+                    userId: scope.userId,
+                    proofId: proofId,
+                    nodeId: nodeId,
+                    detailsProofId: response.data.detailsProofId
+                  }
+                },
+                tactic: function() { return response.data.tactic; },
+                proofTree: function() { return response.data.proofTree; },
+                openGoals: function() { return response.data.openGoals; }
+              }
+            });
+          } else {
+            var tacticName = response.data.tactic.parent;
+            var tactics = derivationInfos.byName(scope.userId, scope.proofId, nodeId, tacticName)
+              .then(function(response) {
+                return response.data;
+              });
+
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/derivationInfoDialog.html',
+              controller: 'DerivationInfoDialogCtrl',
+              size: 'md',
+              resolve: {
+                tactics: function() { return tactics; },
+                readOnly: function() { return true; }
+              }
+            });
+          }
         });
       }
 

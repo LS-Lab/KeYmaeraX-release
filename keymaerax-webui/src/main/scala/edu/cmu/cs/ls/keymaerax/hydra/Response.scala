@@ -899,8 +899,8 @@ class ExtractTacticResponse(tacticText: String) extends Response {
   )
 }
 
-class ExpandTacticResponse(tacticParent: String, stepsTactic: String, tree: List[(TreeNode, Option[PositionLocator])], openGoals: List[AgendaItem]) extends Response {
-  private val proofTree = {
+class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String, tree: List[(TreeNode, Option[PositionLocator])], openGoals: List[AgendaItem]) extends Response {
+  private lazy val proofTree = {
     val theNodes: List[(String, JsValue)] = tree.map(n => (n._1.id.toString, nodeJson(n._1, n._2)))
     JsObject(
       "nodes" -> JsObject(theNodes.toMap),
@@ -912,7 +912,8 @@ class ExpandTacticResponse(tacticParent: String, stepsTactic: String, tree: List
       "stepsTactic" -> JsString(stepsTactic),
       "parent" -> JsString(tacticParent)
     ),
-    "proofTree" -> proofTree,
+    "detailsProofId" -> JsString(detailsProofId.toString),
+    if (tree.nonEmpty) "proofTree" -> proofTree else "proofTree" -> JsObject(),
     "openGoals" -> JsObject(openGoals.map(itemJson):_*)
   )
 }
