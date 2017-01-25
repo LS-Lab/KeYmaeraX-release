@@ -574,12 +574,21 @@ private object DifferentialTactics {
       }
     )
 
-    //The top-level tactic:
+    //If lateSolve is true then diffSolve will be run last, if at all.
+    val lateSolve = pos.isTopLevel //@todo come up wtih better heuristic for determining when to solving.
+
+    //The tactic:
     //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
-    TactixLibrary.diffSolve(pos) |
-    proveWithoutCuts(pos)        |
-    (addInvariant & ODE(pos))    |
-    assertT(seq=>false, "Failed to automatically prove something about this ODE.")
+    if(lateSolve)
+      proveWithoutCuts(pos)        |
+      (addInvariant & ODE(pos))    |
+      TactixLibrary.diffSolve(pos) |
+      assertT(seq=>false, "Failed to automatically prove something about this ODE.")
+    else
+      (proveWithoutCuts(pos) & done) |
+      (addInvariant & ODE(pos))      |
+      TactixLibrary.diffSolve(pos)   |
+      assertT(seq=>false, "Failed to automatically prove something about this ODE.")
   })
 
   /** @see [[TactixLibrary.ODE]]
