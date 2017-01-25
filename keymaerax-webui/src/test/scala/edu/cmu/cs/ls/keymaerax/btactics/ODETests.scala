@@ -154,6 +154,54 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "prove cheat sheet example" in withMathematica { qeTool => {
+    val f = KeYmaeraXProblemParser(
+      """
+        |/* Example from KeYmaera X Cheat Sheet */
+        |Functions.        /* function symbols cannot change their value */
+        |    R A.          /* real-valued maximum acceleration constant */
+        |    R B.          /* real-valued maximum braking constant */
+        |End.
+        |
+        |ProgramVariables. /* program variables may change their value over time */
+        |    R x.          /* real-valued position */
+        |    R v.          /* real-valued velocity */
+        |    R a.          /* current acceleration chosen by controller */
+        |End.
+        |
+        |Problem.                               /* conjecture in differential dynamic logic */
+        |    v>=0 & A>0 & B>0                   /* initial condition */
+        |  ->                                   /* implies */
+        |  [                                    /* all runs of hybrid system dynamics */
+        |    {                                  /* braces {} for grouping of programs */
+        |      {?v<=5;a:=A; ++ a:=0; ++ a:=-B;} /* nondeterministic choice of acceleration a */
+        |      {x'=v, v'=a & v>=0}              /* differential equation system with domain */
+        |    }* @invariant(v>=0)                /* loop repeats, with invariant contract */
+        |  ] v>=0                               /* safety/postcondition */
+        |End.
+      """.stripMargin
+    )
+
+    val t =
+      """
+        |implyR(1) ; andL(-1) ; andL(-2) ; loop({`v>=0`}, 1) ; <(
+        |  master,
+        |  master,
+        |  composeb(1) ; choiceb(1) ; andR(1) ; <(
+        |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1),
+        |    choiceb(1) ; assignb(1.0) ; assignb(1.1) ; andR(1) ; <(
+        |      diffSolve(1) ; master,
+        |      diffSolve(1) ; master
+        |      )
+        |    )
+        |  )
+      """.stripMargin.asTactic
+
+    TactixLibrary.proveBy(f, t) shouldBe 'proved
+
+
+  }}
+
   //@note: there's overlap as multiple methods are able to prove some of the following examples
   val list =
   // solvable cases
