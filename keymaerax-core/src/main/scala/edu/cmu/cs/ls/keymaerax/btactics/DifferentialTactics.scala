@@ -516,38 +516,107 @@ private object DifferentialTactics {
   })
 
 
-  /** @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer */
-  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
-    val noCut = "ANON" by ((pos: Position) =>
+  /**
+    * @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @author Nathan Fulton
+    */
+  def ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    val invariantCandidates = try {
+      InvariantGenerator.differentialInvariantGenerator(seq,pos)
+    } catch {
+      case err: Exception =>
+        if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+        List[Formula]().iterator
+    }
+
+    //Tries to prove without any invariant generation or solving.
+    val proveWithoutCuts = "ANON" by ((pos: Position) => {
       ((boxAnd(pos) & andR(pos))*) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-        val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-          case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-          case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-          case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-        }
-        val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
-        val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
-        //@note diffWeaken will already include all cases where V works, without much additional effort.
-        (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-          diffWeaken(pos) & QE else fail) |
-          (if (post match {
+          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
+            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+          }
+
+          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
+
+          val isOpen = post match {
             case  _: Greater => true
             case _: Less => true
             case _ => false
-          })
-          // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
+          }
+
+          //@note diffWeaken will already include all cases where V works, without much additional effort.
+          (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+            diffWeaken(pos) & QE else fail
+          ) |
+          (if (isOpen) {
             openDiffInd(pos) | DGauto(pos)
-          else
-          //@todo check degeneracy for split to > or =
-            diffInd()(pos)
-              | DGauto(pos)
-              | dgZeroMonomial(pos)
-              | dgZeroPolynomial(pos)
-            )
-      })) (pos))
+          }
+          else {
+            diffInd()(pos)       |
+            DGauto(pos)          |
+            dgZeroMonomial(pos)  |
+            dgZeroPolynomial(pos)
+          })
+        })) (pos))
+    })
+
+    //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
+    //Fails if the invariant cannot be established by proveWithoutCuts.
+    val addInvariant = ChooseSome(
+      () => invariantCandidates,
+      (inv: Formula) => {
+        debug(s"[ODE] Trying to cut in invaariant candidate: ${inv}", true) &
+          diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
+      }
     )
+
+    //The top-level tactic:
+    TactixLibrary.diffSolve(pos) |
+    proveWithoutCuts(pos)        |
+    (addInvariant & ODE(pos))    |
+    assertT(seq=>false, "Failed to automatically prove something about this ODE.")
+  })
+
+  /** @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @deprecated("Use new ODE", "4.3.1") */
+  def ODEold: DependentPositionTactic = "ODEold" by ((pos:Position,seq:Sequent) => {
+    val noCut = {
+      "ANON" by ((pos: Position) =>
+        ((boxAnd(pos) & andR(pos))*) &
+          onAll(("ANON" by ((pos: Position, seq: Sequent) => {
+            val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+              case Some(Box(ode: ODESystem, pf)) => (ode, pf)
+              case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+              case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+            }
+            val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+            val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
+            //@note diffWeaken will already include all cases where V works, without much additional effort.
+            (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+              diffWeaken(pos) & QE else fail) |
+              (if (post match {
+                case  _: Greater => true
+                case _: Less => true
+                case _ => false
+              })
+              // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
+                openDiffInd(pos) | DGauto(pos)
+              else
+              //@todo check degeneracy for split to > or =
+                diffInd()(pos)
+                  | DGauto(pos)
+                  | dgZeroMonomial(pos)
+                  | dgZeroPolynomial(pos)
+                )
+          })) (pos))
+        )
+    }
 
     //@todo in fact even ChooseAll would work, just not recursively so.
     //@todo performance: repeat from an updated version of the same generator until saturation
