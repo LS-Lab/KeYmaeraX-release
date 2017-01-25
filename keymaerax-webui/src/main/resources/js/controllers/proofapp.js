@@ -5,7 +5,7 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', fu
   $scope.themes = [
     {css: 'app', name: 'KeYmaera X'},
     {css: 'presentation_small', name: 'Presentation (Small)'},
-    {css: 'presentation', name: 'Presentation (Default)'},
+    {css: 'presentation', name: 'Presentation (Medium)'},
     {css: 'presentation_large', name: 'Presentation (Large)'}
   ];
 

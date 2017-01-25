@@ -7,12 +7,14 @@
 
 <form name="toolSelection">
     <label for="toolSelect">Arithmetic tool: </label>
-    <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()"
-            data-intro="Choose an arithmetic tool (Z3 is shipped with KeYmaera X; Mathematica requires external installation but provides more features)."
-            data-position="right">
+    <span style="padding-right: 10px;"
+         data-intro="Choose an arithmetic tool (Z3 is shipped with KeYmaera X; Mathematica requires external installation but provides more features)."
+         data-position="right">
+    <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
         <option value="mathematica">Mathematica</option>
         <option value="z3">Z3</option>
     </select>
+    </span>
 </form>
 
 <div ng-if="tool==='mathematica'">

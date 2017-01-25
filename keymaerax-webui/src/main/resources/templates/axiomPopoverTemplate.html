@@ -4,22 +4,26 @@
     <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <!-- TODO transmit key from server and underline, make changeable -->
         <div class="row">
-            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">{{tactic.selectedDerivation().name}}</a></b></div>
+            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
     <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
-            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">{{tactic.selectedDerivation().name}}</a></b></div>
+            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
     <div class="panel panel-default" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
+        <form name="tacticForm" class="form-inline" novalidate>
         <div class="panel-heading">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
+               ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
                ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a>
             <a ng-if="tactic.selectedDerivation().derivation.input.length > 0"
+               ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
                ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b>{{tactic.selectedDerivation().name}}</b></a>
+            <span class="text-danger" ng-if="tacticForm.$invalid">Tactic requires input</span>
 
             <div class="pull-right">
                 <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
@@ -29,6 +33,7 @@
         <div class="panel-body" uib-collapse="!tactic.isOpen">
             <div class="col-md-12" ng-repeat="tactic in [tactic.selectedDerivation()]" ng-include="'templates/sequentRuleTemplate.html'"></div>
         </div>
+        </form>
     </div>
     </div>
 </script>

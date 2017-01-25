@@ -287,27 +287,23 @@ protected object FOQuantifierTactics {
    * @param order The order of quantifiers.
    * @return The tactic.
    */
-  def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = new DependentPositionTactic("universalClosure") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        // fetch non-bound variables and parameterless function symbols
-        require(pos.isTopLevel, "Universal closure only at top-level")
-        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
-        require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
-          + (order.toSet -- varsFns) + " is not in the subset")
-        // use specified order in reverse, prepend the rest alphabetically
-        // @note get both: specified order and compatibility with previous sorting, which resulted in
-        //       reverse-alphabetical ordering of quantifiers
-        val sorted: List[Term] = ((varsFns -- order).
-          filter({ case BaseVariable(_, _, _) => true case Function(_, _, Unit, _, false) => true case _ => false }).
-          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable
-          toList.sorted ++ order.reverse).
-          map({ case v@BaseVariable(_, _, _) => v case fn@Function(_, _, Unit, _, false) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
+  def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = "universalClosure" byWithInputs (order, (pos: Position, sequent: Sequent) => {
+    // fetch non-bound variables and parameterless function symbols
+    require(pos.isTopLevel, "Universal closure only at top-level")
+    val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
+    require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
+      + (order.toSet -- varsFns) + " is not in the subset")
+    // use specified order in reverse, prepend the rest alphabetically
+    // @note get both: specified order and compatibility with previous sorting, which resulted in
+    //       reverse-alphabetical ordering of quantifiers
+    val sorted: List[Term] = ((varsFns -- order).
+      filter({ case BaseVariable(_, _, _) => true case Function(_, _, Unit, _, false) => true case _ => false }).
+      // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable
+      toList.sorted ++ order.reverse).
+      map({ case v@BaseVariable(_, _, _) => v case fn@Function(_, _, Unit, _, false) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
 
-        if (sorted.isEmpty) skip
-        else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
-      }
-    }
-  }
+    if (sorted.isEmpty) skip
+    else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
+  })
   lazy val universalClosure: DependentPositionTactic = universalClosure()
 }

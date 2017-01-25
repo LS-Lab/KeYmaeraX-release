@@ -66,9 +66,11 @@
                     <a class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
                         <!--<li><a href="#">Examples</a></li>-->
+                        <li><a ng-click="showOverlayHelp()"><i class="fa fa-question-circle"></i> Quick Usage Help</a></li>
                         <li><a href="dashboard.html?#/tutorials"><i class="fa fa-info-circle"></i> Tutorials</a></li>
                         <!--<li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Step-by-step help</a></li>-->
                         <li><a href="dashboard.html?#/usage"><i class="fa fa-info-circle"></i> Using KeYmaera&#160;X</a></li>
+                        <li class="divider"></li>
                         <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Backend Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
@@ -82,16 +84,13 @@
                     </ul>
                 </li>
                 <li class="dropdown">
-                    <a ng-click="showOverlayHelp()"><i class="fa fa-question-circle"></i></a>
+                    <a ng-click="showOverlayHelp()" uib-tooltip="Quick usage help" tooltip-placement="auto bottom"><i class="fa fa-question-circle"></i></a>
                 </li>
                 <li class="dropdown">
-                    <a ng-click="shutdown()" ng-show="isLocal"><!--class="dropdown-toggle" data-toggle="dropdown"--><i class="fa fa-power-off"></i></a>
-                    <!--<ul class="dropdown-menu" role="menu">-->
-                        <!--<li><a  ng-controller="DashboardCtrl">Shutdown KeYmaera X</a></li>-->
-                    <!--</ul>-->
+                    <a ng-click="shutdown()" ng-show="isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
                 </li>
                 <li class="dropdown">
-                    <a ng-click="logoff()" title="Log off"><i class="fa fa-sign-out"></i></a>
+                    <a ng-click="logoff()" uib-tooltip="Log off" tooltip-placement="auto bottom"><i class="fa fa-sign-out"></i></a>
                 </li>
             </ul>
         </div><!--/.navbar-collapse -->
@@ -113,10 +112,10 @@
 <div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
         <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
-            <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
+            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a class="text-danger" href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(could not retrieve version information from KeYmaeraX.org).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
-            &copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2017</p>
+            <i class="fa fa-copyright"></i> <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2017</p>
     </div>
 </div>
 

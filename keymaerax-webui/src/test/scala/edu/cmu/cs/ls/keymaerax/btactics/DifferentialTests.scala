@@ -1503,4 +1503,10 @@ class DifferentialTests extends TacticTestBase {
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
 
+  "ODE" should "prove FM tutorial 4" in withMathematica { _ => withDatabase { db =>
+    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/03_increasinglydampedoscillator.kyx")).mkString
+    val model = KeYmaeraXProblemParser(modelContent)
+    db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
+  }}
+
 }

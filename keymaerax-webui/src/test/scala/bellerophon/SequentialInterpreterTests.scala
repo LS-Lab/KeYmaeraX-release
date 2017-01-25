@@ -19,9 +19,7 @@ import scala.language.postfixOps
  * theInterpreter when other interpreters are implemented.
  * @author Nathan Fulton
  */
-class SequentialInterpreterTests extends FlatSpec with Matchers {
-  private val initializingK = KeYmaera.init(Map.empty)
-  private val theInterpreter = SequentialInterpreter()
+class SequentialInterpreterTests extends TacticTestBase {
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
     val tactic = andR(1)
@@ -174,6 +172,13 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
     result.subgoals.head.succ should contain only ("c=2".asFormula, "d=3->e=4".asFormula, "h=7".asFormula)
   }
+
+  it should "trace in the database" in withDatabase { db => withMathematica { _ =>
+    val fml = "[x:=3;](x>0 & x>1 & x>2)".asFormula
+    val modelContent = s"Variables. R x. End.\n Problem. ${fml.prettyString} End."
+    db.createProof(modelContent, "saturateTest")
+    db.proveBy(modelContent, ((boxAnd('R) & andR('R))*) & master()) shouldBe 'proved
+  }}
 
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
@@ -355,6 +360,24 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       Idioms.atSubgoal(0, implyR(1) & close)
     shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
   }
+
+  //@todo would need DerivationInfo entry
+  //@note: DifferentialTests."ODE" should "prove FM tutorial 4" acts as a smoke test for this
+  "ChooseSome" should "record in the database" ignore withDatabase { db => withMathematica { _ =>
+    val fml = "x>0 -> [{x:=3;}*]x>0".asFormula
+    val modelContent = s"Variables. R x. End.\n Problem. ${fml.prettyString} End."
+    db.createProof(modelContent, "chooseSomeTest")
+
+    import TacticFactory._
+
+    val tactic = "chooseSomeTest" by ((pos: Position, seq: Sequent) => { ChooseSome(
+        () => ("x>0".asFormula::Nil).iterator,
+        (inv: Formula) => loop(inv)(pos)
+      ) & Idioms.<(close, close, master())
+    })
+
+    db.proveBy(modelContent, tactic(1)) shouldBe 'proved
+  }}
 
 //  "Scheduled tactics" should "work" in {
 //    val legacyTactic = tactics.TacticLibrary.arithmeticT

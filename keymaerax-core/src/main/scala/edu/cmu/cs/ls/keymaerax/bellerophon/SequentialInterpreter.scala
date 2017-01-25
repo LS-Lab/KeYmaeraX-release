@@ -94,24 +94,14 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
         }
         case EitherTactic(left, right) => try {
-          val leftResult = apply(left, v)
-          (leftResult, left) match {
-            case (BelleProvable(p, _), _) /*if p.isProved*/ => leftResult
-            case (_, x: PartialTactic) => leftResult
-            case _ => throw new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(EitherTactic(BelleDot, right), "Failed left-hand side of |:" + left)
-          }
+          apply(left, v)
         } catch {
-          //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
           case eleft: BelleThrowable =>
-            val rightResult = try {
+            try {
               apply(right, v)
             } catch {
-              case e: BelleThrowable => throw e.inContext(EitherTactic(eleft.context, e.context), "Failed: both left-hand side and right-hand side " + expr)
-            }
-            (rightResult, right) match {
-              case (BelleProvable(p, _), _) /*if p.isProved*/ => rightResult
-              case (_, x: PartialTactic) => rightResult
-              case _ => throw new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(EitherTactic(left, BelleDot), "Failed right-hand side of |: " + right)
+              case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
+                "Failed: both left-hand side and right-hand side " + expr)
             }
         }
         case SaturateTactic(child) =>
@@ -119,7 +109,6 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           var result: BelleValue = v
           do {
             prev = result
-            //@todo effect on listeners etc.
             try {
               result = apply(child, result)
             } catch {
@@ -192,25 +181,27 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
 
         case ChooseSome(options, e) =>
-          val ec = e.asInstanceOf[Formula=>BelleExpr]
-          //@todo specialization to A=Formula should be undone
-          val opts: Iterator[Formula] = options().asInstanceOf[Iterator[Formula]]
+          val opts = options()
           var errors = ""
-          while (opts.hasNext) {
+          var result: Option[BelleValue] = None
+          while (opts.hasNext && result.isEmpty) {
             val o = opts.next()
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
             val someResult: Option[BelleValue] = try {
-              Some(apply(ec(o), v))
+              Some(apply(e(o), v))
             } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
             if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
             (someResult, e) match {
-              case (Some(BelleProvable(p, _)), _) /*if p.isProved*/ => return someResult.get
-              case (Some(_), x: PartialTactic) => return someResult.get
+              case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
+              case (Some(p), _: PartialTactic) => result = Some(p)
               case (Some(_), _) => errors += "option " + o + " " + new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o) + "\n" // throw new BelleThrowable("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o)
               case (None, _) => // option o had an error, so consider next option
             }
           }
-          throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+          result match {
+            case Some(r) => r
+            case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+          }
 
         case ProveAs(lemmaName, f, e) => {
           val BelleProvable(provable, labels) = v

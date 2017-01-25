@@ -148,10 +148,10 @@
 <div class="footer">
     <div class="container">
         <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
-            <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
+            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a class="text-danger" href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(could not retrieve version information from KeYmaeraX.org).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
-            &copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2016</p>
+            <i class="fa fa-copyright"></i> <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2017</p>
     </div>
 </div>
 

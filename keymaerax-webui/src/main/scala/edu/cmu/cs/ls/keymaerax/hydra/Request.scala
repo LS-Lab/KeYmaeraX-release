@@ -119,6 +119,10 @@ class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : Strin
   }
 }
 
+class FailedRequest(userId: String, msg: String, cause: Throwable = null) extends UserRequest(userId) {
+  def resultingResponses() = { new ErrorResponse(msg, cause) :: Nil }
+}
+
 /**
  * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
   *
@@ -879,6 +883,44 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
         }
         val positionLocator = RequestHelper.stepPosition(db, currNode)
         new GetBranchRootResponse(currNode, positionLocator) :: Nil
+    }
+  }
+}
+
+class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
+  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
+  def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId)
+    val globalProvable = initGlobal match {
+      case Some(gp) if trace.steps.isEmpty => gp
+      case _ => trace.lastProvable
+    }
+    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
+  }
+
+  def resultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+    tree.findNode(nodeId) match {
+      case None => throw new Exception("Unknown node " + nodeId)
+      case Some(node) =>
+        val (localProvable, parentStep) = node.endStep match {
+          case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
+        }
+        val innerDb = new InMemoryDB()
+        val localProofId = innerDb.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
+          SequentialInterpreter, 1)
+        innerInterpreter(BelleParser(parentStep), BelleProvable(localProvable))
+
+        val trace = innerDb.getExecutionTrace(localProofId)
+        val stepDetails = new ExtractTacticFromTrace(innerDb).getTacticString(trace)
+        val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
+        val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(innerDb, n)))
+        val openGoals = innerTree.leaves
+
+        new ExpandTacticResponse(parentStep, stepDetails, innerSteps, openGoals) :: Nil
     }
   }
 }

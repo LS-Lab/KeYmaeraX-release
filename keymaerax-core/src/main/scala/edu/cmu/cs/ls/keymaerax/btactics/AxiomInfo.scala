@@ -164,7 +164,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("diffGhost",
       RuleDisplayInfo(
         "diffGhost",
-        ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
+        ( List("&Gamma;"), List("[{c&Q}]P", "&Delta;") ),
         List(
           (List("&Gamma;", "y=i"), List("[{c,y'=a()*y+b&Q}]P", "&Delta;"))
         )
@@ -633,6 +633,7 @@ object DerivationInfo {
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
     new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
+    new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     // proof management tactics
     new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
@@ -738,10 +739,13 @@ object DerivationInfo {
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
+    new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
+    //@todo universal closure may come with list of named symbols
+    new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
 
     // Differential tactics
     new PositionTacticInfo("ODE",
