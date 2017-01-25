@@ -53,7 +53,7 @@ object AxiomaticODESolver {
 
     val simpSol = SimplifierV2.simpTac(pos ++ (if (q == True) PosInExpr(0::1::Nil) else PosInExpr(0::1::1::Nil)))
     val simpEvolDom =
-      if (q == True) TactixLibrary.skip
+      if (q == True) TactixLibrary.skip //evolution domain constraint is trivial, so simplification is not necessary.
       else if (instEnd) SimplifierV2.simpTac(pos ++ PosInExpr(0::Nil))
       else SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil))
 
