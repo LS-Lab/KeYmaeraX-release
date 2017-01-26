@@ -203,17 +203,28 @@ object SQLite {
         default
       }
     }
-    override def createUser(username: String, password: String): Unit = {
+    override def createUser(username: String, password: String, mode: String): Unit = {
       /* Store passwords as a salted hash. Allow configuring number of iterations
        * since we may conceivably want to change it after deployment for performance reasons */
       val iterations = configWithDefault("security", "passwordHashIterations", 10000)
       val saltLength = configWithDefault("security", "passwordSaltLength", 512)
       val (hash, salt) = Password.generateKey(password, iterations, saltLength)
       synchronizedTransaction({
-        Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
-          .insert((username, hash, salt, iterations))
+        Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get, u.level.get))
+          .insert((username, hash, salt, iterations, Integer.parseInt(mode)))
         nInserts = nInserts + 1
       })}
+
+    override def getUser(username: String): UserPOJO = synchronizedTransaction({
+      nSelects = nSelects + 1
+      val users =
+        Users.filter(_.email === username)
+          .list
+          .map(m => new UserPOJO(m.email.get, m.level.get))
+      if (users.length < 1) throw new Exception("getUser type should be an Option")
+      else if (users.length == 1) users.head
+      else throw new Exception("Primary keys aren't unique in models table.")
+    })
 
     /**
       * Poorly named -- either update the config, or else insert an existing key.

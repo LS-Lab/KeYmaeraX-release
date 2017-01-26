@@ -42,7 +42,9 @@ class InMemoryDB extends DBAbstraction {
 
   override def getModelList(userId: String): List[ModelPOJO] = ???
 
-  override def createUser(username: String, password: String): Unit = ???
+  override def createUser(username: String, password: String, mode: String): Unit = ???
+
+  override def getUser(username: String) = ???
 
   /**
     * Poorly named -- either update the config, or else insert an existing key.

@@ -81,12 +81,12 @@ abstract class LocalhostOnlyRequest() extends Request {
 // Users
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CreateUserRequest(db : DBAbstraction, username : String, password:String) extends Request {
+class CreateUserRequest(db: DBAbstraction, username: String, password: String, mode: String) extends Request {
   override def resultingResponses() = {
     val userExists = db.userExists(username)
     val sessionToken =
       if (!userExists) {
-        db.createUser(username,password)
+        db.createUser(username, password, mode)
         Some(SessionManager.add(username))
       } else None
     new LoginResponse(!userExists, username, sessionToken) ::  Nil
@@ -469,7 +469,7 @@ class Z3StatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = new ToolStatusResponse(true) :: Nil
 }
 
-class ListExamplesRequest(db: DBAbstraction) extends Request {
+class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     val examples =
@@ -477,19 +477,26 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/sttt/sttt.json",
-        "/examples/tutorials/sttt/sttt.png") ::
+        "/examples/tutorials/sttt/sttt.png", 1) ::
       new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
         "Proving ODEs",
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
         "classpath:/examples/tutorials/cpsweek/cpsweek.json",
-        "/examples/tutorials/cpsweek/cpsweek.png") ::
+        "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
       new ExamplePOJO(2, "FM 2016 Tutorial",
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.json",
-        "/examples/tutorials/fm/fm.png") ::
+        "/examples/tutorials/fm/fm.png", 1) ::
+      new ExamplePOJO(3, "Beginner's Tutorial",
+        "Feature Tour Tutorial",
+        "/dashboard.html?#/tutorials",
+        "classpath:/examples/tutorials/basic/basic.json",
+        "/examples/tutorials/fm/fm.png", 0) ::
       Nil
-    new ListExamplesResponse(examples) :: Nil
+
+    val user = db.getUser(userId)
+    new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
   }
 }
 

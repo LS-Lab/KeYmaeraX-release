@@ -165,7 +165,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   });
 
   $scope.examples = [];
-  $http.get("examplesList/").then(function(response) {
+  $http.get("examples/user/" + $scope.userId + "/all").then(function(response) {
       $scope.examples = response.data;
   });
 
@@ -175,6 +175,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         controller: 'ModelDialogCtrl',
         size: 'lg',
         resolve: {
+          userid: function() { return $scope.userId; },
           modelid: function () { return modelid; }
         }
       });
@@ -243,6 +244,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         controller: 'ModelTacticDialogCtrl',
         size: 'lg',
         resolve: {
+          userid: function() { return $scope.userId; },
           modelid: function () { return modelid; }
         }
       });
@@ -285,16 +287,16 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.$emit('routeLoaded', {theview: 'models'});
 })
 
-angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
-  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).then(function(response) {
+angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $uibModalInstance, userid, modelid) {
+  $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
       $scope.model = response.data;
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
 });
 
-angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
-  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").then(function(response) {
+angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $uibModalInstance, userid, modelid) {
+  $http.get("user/" + userid + "/model/" + modelid + "/tactic").then(function(response) {
       $scope.modelId = modelid;
       $scope.tactic = response.data;
   });

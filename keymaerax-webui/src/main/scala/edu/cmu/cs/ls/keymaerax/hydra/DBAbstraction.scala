@@ -43,7 +43,8 @@ object DBAbstractionObj {
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
 /** A tutorial/case study example. */
-class ExamplePOJO(val id: Int, val title: String, val description: String, val infoUrl: String, val url: String, val imageUrl: String)
+class ExamplePOJO(val id: Int, val title: String, val description: String, val infoUrl: String, val url: String,
+                  val imageUrl: String, val level: Int)
 
 /**
  * Data object for models.
@@ -59,6 +60,15 @@ class ExamplePOJO(val id: Int, val title: String, val description: String, val i
 class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
                 val description:String, val pubLink:String, val title:String, val tactic : Option[String],
                 val numProofs: Int, val temporary: Boolean) //the other guys on this linke should also be optional.
+
+/**
+  * Data object for users.
+  *
+  * @param userName Identifies the user.
+  * @param level The user's learner level.
+  */
+class UserPOJO(val userName: String, val level: Int)
+
 
 /**
  * Data object for proofs. A proof
@@ -175,7 +185,9 @@ trait DBAbstraction {
   // Users
   def userExists(username: String): Boolean
 
-  def createUser(username: String, password: String): Unit
+  def createUser(username: String, password: String, mode: String): Unit
+
+  def getUser(username: String): UserPOJO
 
   def checkPassword(username: String, password: String): Boolean
 

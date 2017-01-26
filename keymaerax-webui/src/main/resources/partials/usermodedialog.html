@@ -1,0 +1,22 @@
+<div class="modal-header" >
+    <h3 class="modal-title">KeYmaera X Mode</h3>
+</div>
+<div class="modal-body">
+
+    <form class="form-inline">
+        <div class="form-group">
+        <label for="mode">Select level of support:</label>
+        <select id="mode" name="mode" ng-model="selectedMode" class="form-control">
+            <option value="0">Learner's Mode</option>
+            <option value="1">Industry Mode</option>
+        </select>
+        </div>
+    </form>
+
+    <!-- TODO -->
+    <!--<p>You can change your preference later in the configuration.</p>-->
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="selectMode()">Next</button>
+</div>

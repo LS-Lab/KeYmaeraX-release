@@ -1,0 +1,12 @@
+{
+  "name": "Beginner's Tutorial",
+  "entries": [
+    {
+      "name": "Forward-Driving Car",
+      "description": "Simple model of straight-line driving. Car can accelerate, coast, or brake, but not drive backwards.",
+      "title": "Forward-driving 1-dimensional car",
+      "model": "classpath:/examples/tutorials/basic/basic.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/basic.kyt"
+    }
+  ]
+}
