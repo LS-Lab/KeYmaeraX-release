@@ -45,9 +45,16 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           })
       };
 
+     $scope.numFilesAvailable = function() {
+       return keyFile == undefined || keyFile.files == undefined ? 0 : keyFile.files.length
+     }
+
      $scope.isKyxFile = function() {
-       return keyFile !== undefined && keyFile.files !== undefined &&
-         keyFile.files.length > 0 && keyFile.files[0].name.endsWith('.kyx');
+       return $scope.numFilesAvailable() > 0 && keyFile.files[0].name.endsWith('.kyx');
+     }
+
+     $scope.isKyaFile = function() {
+       return $scope.numFilesAvailable() > 0 && keyFile.files[0].name.endsWith('.kya');
      }
 
      $scope.addModel = function(modelName) {
