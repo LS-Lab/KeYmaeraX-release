@@ -127,7 +127,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.head.children(1).rule shouldBe "andR(1)"
     tree.root.children.head.children(1).children should have size 1
     tree.root.children.head.children(1).children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=0->x>=0".asFormula))
-    tree.root.children.head.children(1).children.head.rule shouldBe "diffWeaken(1)"
+    tree.root.children.head.children(1).children.head.rule shouldBe "dW(1)"
     tree.root.children.head.children(1).children.head.children should have size 1
     tree.root.children.head.children(1).children.head.children.head.sequent shouldBe Sequent(IndexedSeq(), IndexedSeq("true".asFormula))
     tree.root.children.head.children(1).children.head.children.head.rule shouldBe "prop"
@@ -211,18 +211,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(andR(1) & <(closeId, nil), andR(1))")
   }
 
-  "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db =>
+  "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db => withMathematica { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
 
-    val tacticText = """implyR('R) & andL('L) & diffCut({`v>=0`}, 1) & <(diffWeaken(1) & prop, diffInd(1))"""
+    val tacticText = "implyR('R) & andL('L) & DC({`v>=0`}, 1) & <(dW(1) & prop, dI(1))"
     val tactic = BelleParser(tacticText)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val extractedTactic = db.extractTactic(proofId)
     extractedTactic shouldBe BelleParser(tacticText)
-  }
+  }}
 
   it should "record STTT tutorial example 2 steps" taggedAs SlowTest  in withMathematica { tool => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
@@ -285,7 +285,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 11
   }}
 
-  it should "record STTT tutorial example 9b steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
+  it should "record STTT tutorial example 9b steps" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyx")).mkString
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter)
@@ -293,8 +293,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyt")).mkString)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
-    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
-    tree.nodes should have size 36
+    // db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.
+    db.extractTactic(proofId) shouldBe BelleParser("(implyR(1)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(loop({`v>=0&xm<=x&xr=(xm+S)/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( QE, QE, (andL('L)&(andL('L)&(andL('L)&(composeb(1)&(choiceb(1)&(andR(1)&<( (composeb(1)&(assignb(1)&(composeb(1)&(assignb(1)&(testb(1)&(implyR(1)&(DC({`xm<=x`},1)&<( (DC({`5/4*(x-(xm+S)/2)^2+(x-(xm+S)/2)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( (dW(1)&QE), dI(1) )), dI(1) )))))))), (testb(1)&(implyR(1)&(DC({`xm<=x`},1)&<( (DC({`5/4*(x-(xm+S)/2)^2+(x-(xm+S)/2)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( (dW(1)&QE), dI(1) )), dI(1) )))) ))))))) )))))))))")
   }}
 
   it should "record STTT tutorial example 10 steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
@@ -305,8 +305,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyt")).mkString)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
-    val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
-    tree.nodes should have size 50
+    //db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.
+    db.extractTactic(proofId) shouldBe BelleParser("(implyR(1)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(loop({`v>=0&dx^2+dy^2=1&r!=0&abs(y-ly)+v^2/(2*b) < lw`},1)&<( QE, QE, (chase('R)&(normalize&<( (HideL(-9)&(DC({`c>=0`},1)&<( (DC({`dx^2+dy^2=1`},1)&<( (DC({`v=old(v)+a*c`},1)&<( (DC({`-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)`},1)&<( (dW(1)&(implyR('R)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(transformEquality({`ep=c`},-8)&(prop&smartQE)))))))))), dI(1) )), dI(1) )), dI(1) )), dI(1) ))), (DC({`c>=0`},1)&<( (DC({`dx^2+dy^2=1`},1)&<( (DC({`v=old(v)`},1)&<( (DC({`-c*v<=y-old(y)&y-old(y)<=c*v`},1)&<( (dW(1)&(prop&smartQE)), dI(1) )), dI(1) )), dI(1) )), dI(1) )), (DC({`c>=0`},1)&<( (DC({`dx^2+dy^2=1`},1)&<( (DC({`v=old(v)+a*c`},1)&<( (DC({`-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)`},1)&<( (dW(1)&(prop&smartQE)), dI(1) )), dI(1) )), dI(1) )), dI(1) )) ))) ))))))))))))")
   }}
 
   "Revealing internal steps" should "should work for diffInvariant" in withMathematica { tool => withDatabase { db =>
@@ -317,7 +317,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("implyR('R) & diffCut({`x>=old(x)`},1) & <(nil, diffInd(1))")
+    tactic shouldBe BelleParser("implyR('R) & DC({`x>=old(x)`},1) & <(nil, dI(1))")
   }}
 
   it should "should work for multiple levels of diffInvariant without let" in withMathematica { tool => withDatabase { db =>
@@ -332,9 +332,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |implyR('R) & (DCdiffcut({`x>=0`},1) & <(
         |  (nil&nil),
-        |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
+        |  (nil & (DIa(1) & (implyR(1) & (andR(1) & <(
         |    close,
-        |    (derive(1.1)&(DE(1)&(Dassignb(1.1)&(nil&(abstractionb(1)&QE))))) ))))) ))
+        |    (derive(1.1)&(DE(1)&(Dassignb(1.1)&(nil&(GV(1)&QE))))) ))))) ))
       """.stripMargin)
 
     val reprove = proveBy(problem.asFormula, tactic)
@@ -357,7 +357,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  (nil&nil),
         |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
         |    close,
-        |    partial(((derive(1.1)&DE(1))&(((((Dassignb(1.1))*1)&nil)&abstractionb(1))&(close|QE)))) ))))) ))
+        |    partial(((derive(1.1)&DE(1))&(((((Dassignb(1.1))*1)&nil)&GV(1))&(close|QE)))) ))))) ))
       """.stripMargin)
 
     //@todo reprove
@@ -564,16 +564,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
       case Some(n1) =>
-        val expected = BelleParser("diffCut({`d>=0`},1) & <(nil, diffInd(1))")
+        val expected = BelleParser("DC({`d>=0`},1) & <(nil, dI(1))")
         val id1 = stepInto(n1, "diffInvariant({`d>=0`},1)", expected)
         //diffCut
         ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("1") match {
           case Some(n2) =>
             val expected = BelleParser("DCdiffcut({`d>=0`},1)")
-            val id2 = stepInto(n2, "diffCut({`d>=0`},1)", expected)
+            val id2 = stepInto(n2, "DC({`d>=0`},1)", expected)
             ProofTree.ofTrace(db.getExecutionTrace(id2)).findNode("1") match {
               case Some(n3) =>
-                val expected = BelleParser("DCaxiom(1)")
+                val expected = BelleParser("DCa(1)")
                 val id3 = stepInto(n3, "DCdiffcut({`d>=0`},1)", expected)
             }
         }
@@ -582,12 +582,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           case Some(n2) =>
             val expected = BelleParser(
               """
-                |DI(1) & implyR(1) & andR(1) & <(
-                |  nil,
-                |  derive(1.1) & DE(1) & DWeaken(1) & abstractionb(1) & allR(1) & allR(1) & allR(1) & implyR(1)
+                |DIa(1) & implyR(1) & andR(1) & <(
+                |  QE,
+                |  derive(1.1) & DE(1) & Dassignb(1.1) & Dassignb(1.1) & Dassignb(1.1) & DWa(1) & GV(1) & QE
                 |)
               """.stripMargin)
-            stepInto(n2, "diffInd(1)", expected)
+            stepInto(n2, "dI(1)", expected)
         }
     }
   }
