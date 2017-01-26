@@ -6,7 +6,8 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io._
 import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.hydra.{StringToVersion, SQLite, UpdateChecker}
+
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, SQLite, StringToVersion, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 
 import scala.collection.JavaConversions._
@@ -20,7 +21,11 @@ import scala.collection.JavaConversions._
  */
 object Main {
   def startServer(args: Array[String]) : Unit = {
+    KeYmaeraXLock.obtainLockOrExit()
+
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
+
+
 //    try {
 ////      throw new LemmbaDatabaseInitializationException("")
 ////      LemmaDatabaseInitializer.initializeFromJAR
@@ -43,7 +48,6 @@ object Main {
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
     }
   }
-
 
   //@todo set via -log command line option
   private var logFile = false
@@ -193,6 +197,7 @@ object Main {
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
+        KeYmaeraXLock.deleteLock()
         proc.destroy()
       }
     })
@@ -282,4 +287,121 @@ object Main {
     println(prefix + s)
   }
 
+  /** A robust locking mechanism for ensuring that there's only ever one instance of KeYmaera X running.
+    * Also displays GUI messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
+    *
+    * @todo decide if java.nio lock files are a better solution. Definitely keep port-based stale checking, though
+    * @author Nathan Fulton */
+  private object KeYmaeraXLock {
+    /** Set to true when a lock is obtained. Determines if the lock file is deleted on shutdown. */
+    private var lockObtained = false
+
+    /** Obtains a lock if the lock file does not exist and the desired port is not bound.
+      * Otherwise, shows a relevant error message on GUI and STDOUT then exits with error code. */
+    def obtainLockOrExit() = {
+      if(lockObtained == true) {
+        launcherLog("ERROR: obtainLockOrExit was run more than once!")
+        System.exit(-1)
+      }
+
+      val bound = portIsBound()
+
+      if(lockFile.exists() && bound) {
+        val msg = "ERROR: There is already an instance of KeYmaera X running on this machine. Open your browser to http://127.0.0.1:8090"
+        launcherLog(msg)
+        JOptionPane.showMessageDialog(null, msg)
+        lockObtained = false
+        System.exit(-1)
+      }
+      else if(lockFile.exists() && !bound) {
+        if(!lockIsNewborn) {
+          //lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
+          val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all instances of KeYmaera X from your system's task manager."
+          KeYmaeraXLock.deleteLock()
+          launcherLog(msg)
+          JOptionPane.showMessageDialog(null, msg)
+        }
+        else {
+          //lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
+          launcherLog("ERROR: Another instance of KeYmaera X obtained a lock less than 30 seconds ago.\nIf the problem persists, kill all running versions of KeYmaera X and delete ~/.keymaerax/keymaerax.lock if it exists.")
+          lockObtained = false
+          System.exit(-1)
+        }
+      }
+      else if(!lockFile.exists() && bound) {
+        val msg = s"WARNING: The KeYmaera X lock file does not exist.\nHowever, some service is running on the KeYmaera X port (${keymaeraxPort()}).\nPerhaps you're running another service on this port?\nExiting."
+        launcherLog(msg)
+        JOptionPane.showMessageDialog(null, msg)
+        lockObtained = false
+        System.exit(-1)
+      }
+
+      //This file is later destroyed in the shutdown hook.
+      launcherLog("Obtaining lock.")
+      assert(lockFile.createNewFile(), "Could not obtain lock file even though we just checked that the file down not exist.")
+      lockObtained = true
+      lockFile.deleteOnExit()
+    }
+
+    /** Deletes the lock file.
+      * @note not strictly necessary as lont as File.deleteOnExit works properly. */
+    def deleteLock() = {
+      if (lockObtained) {
+        lockFile.delete()
+      }
+      else {
+        launcherLog("refusing to delete lock because this process's most recent attempt to obtain a lock failed.")
+      }
+    }
+
+    /** Returns true iff the lock file is less than 30s old. */
+    private def lockIsNewborn = {
+      val current = System.currentTimeMillis()
+      val lastModified = lockFile.lastModified()
+      val threshold = 30000
+
+      current - lastModified < threshold
+    }
+
+    /** Location of the KeYmaera X lock file. Choose a non-. file so that students can find it easily if they need to delete it. */
+    private def lockFile : java.io.File =
+      new java.io.File(System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "lockfile")
+
+    /** Returns the assigned port from the database, or the default port if the database or config key DNE. */
+    private def keymaeraxPort() : String = {
+      val defaultPort = "8090"
+      try {
+        DBAbstractionObj.defaultDatabase.getConfiguration("serverconfig").config.get("port") match {
+          case Some(port) => port
+          case None => defaultPort
+        }
+      } catch {
+        case _ : Throwable => defaultPort
+      }
+    }
+
+    /** Returns true iff the port is bound.
+      * @note The port is a canary for determining whether there's an instance of KeYmaera X currently running.
+      *       Running two instances can result in weird behavior, even during initialization. Merely checking
+      *       and failing when we try to bind to the port for real is insufficient, because we need to run some
+      *       initialization code before attempting to bind. That's why we perform this check instead of just catching
+      *       exceptions when the actual binding fails. */
+    private def portIsBound() = {
+      //Check if this port is bound by trying to bind to it and catching the SocketException.
+      try {
+        (new java.net.ServerSocket(Integer.parseInt(keymaeraxPort()))).close();
+        false
+      }
+      catch {
+        case e : java.net.BindException => {
+          e.printStackTrace()
+          true
+        }
+        case t : Throwable => {
+          t.printStackTrace()
+          true //Probably other thigns could happen here as well, but we'll catch all errors and assume something's fishy.
+        }
+      }
+    }
+  }
 }
