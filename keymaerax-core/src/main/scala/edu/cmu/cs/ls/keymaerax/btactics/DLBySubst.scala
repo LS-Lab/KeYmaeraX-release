@@ -53,7 +53,7 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.abstractionb]] */
-  def abstractionb: DependentPositionTactic = new DependentPositionTactic("abstractionb") {
+  def abstractionb: DependentPositionTactic = new DependentPositionTactic("GV") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(!pos.isAnte, "Abstraction only in succedent")
@@ -193,7 +193,7 @@ private object DLBySubst {
    * @todo same for diamonds by the dual of K
    */
   def generalize(c: Formula): DependentPositionTactic =
-    "generalizeb" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    "MR" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
       case (ctx, Box(a, _)) =>
         cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
           /* use */ /*label(BranchLabels.genUse)*/ ident,

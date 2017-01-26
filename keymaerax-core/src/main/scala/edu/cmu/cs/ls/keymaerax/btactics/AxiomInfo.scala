@@ -598,9 +598,9 @@ object DerivationInfo {
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
-    new PositionTacticInfo("abstractionb"
-      , RuleDisplayInfo("V++", (List("&Gamma;", "[a]P"), List("&Delta;"))
-      , List((List("&Gamma; \\ a", "P"), List("&Delta;"))))
+    new PositionTacticInfo("GV"
+      , RuleDisplayInfo("GV", (List("&Gamma;", "[a]P"), List("&Delta;"))
+      , List((List("&Gamma;<sub>const</sub>", "P"), List("&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}),
     new InputPositionTacticInfo("existsR"
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
@@ -691,8 +691,8 @@ object DerivationInfo {
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),
 
-    new InputPositionTacticInfo("generalizeb",
-    RuleDisplayInfo("G[]",(List("&Gamma;"), List("[a]P", "&Delta;")),
+    new InputPositionTacticInfo("MR",
+    RuleDisplayInfo("MR",(List("&Gamma;"), List("[a]P", "&Delta;")),
       List(
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
