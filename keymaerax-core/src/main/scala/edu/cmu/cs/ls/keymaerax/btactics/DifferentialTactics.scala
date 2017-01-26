@@ -347,7 +347,7 @@ private object DifferentialTactics {
   })
 
   /** @see [[TactixLibrary.DG]] */
-  def DG(ghost: DifferentialProgram): DependentPositionTactic = "dG" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
+  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DG" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&

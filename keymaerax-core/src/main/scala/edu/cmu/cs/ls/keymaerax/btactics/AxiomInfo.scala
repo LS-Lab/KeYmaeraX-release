@@ -176,9 +176,9 @@ object DerivationInfo {
       List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)}
     ),
-    new InputPositionTacticInfo("dG",
+    new InputPositionTacticInfo("DG",
       RuleDisplayInfo(
-        "dG",
+        "DG",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
         /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
       ),
