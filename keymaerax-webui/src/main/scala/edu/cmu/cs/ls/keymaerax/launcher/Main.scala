@@ -203,7 +203,7 @@ object Main {
 
   private def upgradeDatabase(currentVersion: String): Unit = {
     val upgradeScripts = io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
-    val scripts = upgradeScripts.parseJson.asInstanceOf[JsArray]
+    val scripts = upgradeScripts.parseJson.asJsObject.fields("autoUpgrades").asInstanceOf[JsArray]
     val currentScripts = scripts.elements.filter(_.asJsObject.fields("upgradeFrom").convertTo[String] == currentVersion)
     if (currentScripts.nonEmpty) {
       backupDatabase(currentVersion)
