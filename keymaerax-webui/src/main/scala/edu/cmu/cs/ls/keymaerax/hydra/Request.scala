@@ -461,12 +461,12 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
 class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
-    new ToolStatusResponse(config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
+    new ToolStatusResponse("Mathematica", config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
   }
 }
 
 class Z3StatusRequest(db : DBAbstraction) extends Request {
-  override def resultingResponses(): List[Response] = new ToolStatusResponse(true) :: Nil
+  override def resultingResponses(): List[Response] = new ToolStatusResponse("Z3", true) :: Nil
 }
 
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) {
