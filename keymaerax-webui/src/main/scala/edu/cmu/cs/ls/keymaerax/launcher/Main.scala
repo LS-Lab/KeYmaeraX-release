@@ -8,9 +8,13 @@ import java.io._
 import javax.swing.JOptionPane
 
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, SQLite, StringToVersion, UpdateChecker}
-import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.hydra.{SQLite, StringToVersion, UpdateChecker}
+import spray.json.JsArray
 
 import scala.collection.JavaConversions._
+
+import spray.json._
+import spray.json.DefaultJsonProtocol._
 
 /**
  * Usage:
@@ -147,19 +151,71 @@ object Main {
   private def exitIfDeprecated() = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
     println("Current database version: " + databaseVersion)
-    if(UpdateChecker.upToDate().getOrElse(false) && UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false))
-    {
+    if (UpdateChecker.upToDate().getOrElse(false) &&
+        UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
-      val message = "Your KeYmaera X database is not compatible with this version of KeYmaera X.\nPlease revert to an old version of KeYmaera X or else delete your current database (~/.keymaerax/keymaerax.sqlite*)"
-      println(message)
-      JOptionPane.showMessageDialog(null, message)
-      System.exit(-1)
+      try {
+        upgradeDatabase(databaseVersion)
+        println("Successful database upgrade to version: " + SQLite.ProdDB.getConfiguration("version").config("version"))
+      } catch {
+        case e: Throwable =>
+          val backupPath = s"~/.keymaerax/keymaerax.sqlite-$databaseVersion-*"
+          val defaultName = "keymaerax.sqlite"
+          val message =
+            s"""
+              |Your KeYmaera X database is not compatible with this version of KeYmaera X.
+              |Automated upgrade failed and changes have been rolled back.
+              |Additionally, a backup copy of your current database was placed at $backupPath.
+              |Please revert to an old version of KeYmaera X.
+              |If necessary, restore the backup database from $backupPath back to $defaultName.
+              |
+              |Internal error details:
+            """.stripMargin
+          println(message)
+          e.printStackTrace()
+          JOptionPane.showMessageDialog(null, message)
+          System.exit(-1)
+      }
     }
     else {} //getOrElse(false) ignores cases where we couldn't download some needed information.
   }
 
+  private def backupDatabase(currentVersion: String): Unit = {
+    val src = new File(SQLite.ProdDB.dblocation)
+    val dest = new File(src.getAbsolutePath + "-" + currentVersion + "-" + System.currentTimeMillis())
+    new FileOutputStream(dest).getChannel.transferFrom(new FileInputStream(src).getChannel, 0, Long.MaxValue)
+  }
 
+  private def runUpgradeScript(scriptUrl: String): Unit = {
+    val script = io.Source.fromInputStream(getClass.getResourceAsStream(scriptUrl)).mkString
+    val statements = script.split(";")
+    val conn = SQLite.ProdDB.sqldb.createConnection()
+    conn.setAutoCommit(false)
+    try {
+      conn.rollback()
+      val stmt = conn.createStatement()
+      statements.foreach(stmt.addBatch)
+      stmt.executeBatch()
+      conn.commit()
+    } catch {
+      case e: Throwable => conn.rollback(); throw e
+    } finally {
+      conn.close()
+    }
+  }
+
+  private def upgradeDatabase(currentVersion: String): Unit = {
+    val upgradeScripts = io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
+    val scripts = upgradeScripts.parseJson.asJsObject.fields("autoUpgrades").asInstanceOf[JsArray]
+    val currentScripts = scripts.elements.filter(_.asJsObject.fields("upgradeFrom").convertTo[String] == currentVersion)
+    if (currentScripts.nonEmpty) {
+      backupDatabase(currentVersion)
+      currentScripts.map(_.asJsObject.fields("scripts").asInstanceOf[JsArray]).foreach(script =>
+        script.elements.foreach(s => runUpgradeScript(s.asJsObject.fields("url").convertTo[String]))
+      )
+    }
+  }
 
   def processIsAlive(proc : Process) = {
     try {

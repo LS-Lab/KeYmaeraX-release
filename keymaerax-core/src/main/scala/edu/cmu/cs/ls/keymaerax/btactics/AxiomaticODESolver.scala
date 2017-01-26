@@ -35,7 +35,7 @@ object AxiomaticODESolver {
 
   def apply() = axiomaticSolve()
 
-  def axiomaticSolve(instEnd: Boolean = false) = "diffSolve" by ((pos:Position, s:Sequent) => {
+  def axiomaticSolve(instEnd: Boolean = false) = "solve" by ((pos:Position, s:Sequent) => {
     val (ode, q) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)

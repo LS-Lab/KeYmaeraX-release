@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import spray.json._
+import spray.json.DefaultJsonProtocol._
 
 /**
   * The JSON should be a http://keymaerax.org/version.json and should look like:
@@ -63,17 +64,12 @@ object UpdateChecker {
 
   private lazy val downloadDBVersion : Option[String] = {
     try {
-      val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
-      if(json.asJsObject.getFields("oldestAcceptableDB").isEmpty)
-        throw new Exception("Cannot retrieve oldestAcceptableDB since version.json does not contain a DBVersion key.")
-      else {
-        val versionString = json.asJsObject.getFields("oldestAcceptableDB").last.toString.replace("\"", "")
-        println("Oldest compatible database version: " + versionString)
-        Some(versionString)
-      }
-    }
-    catch {
-      case e: Throwable => None
+      val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
+      val versionString = json.parseJson.asJsObject.fields("minVersion").convertTo[String]
+      println("Oldest compatible database version: " + versionString)
+      Some(versionString)
+    } catch {
+      case _: Throwable => None
     }
   }
 

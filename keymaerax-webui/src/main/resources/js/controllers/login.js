@@ -8,23 +8,31 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
     $scope.processLogin = function() { login($scope.username, $scope.password) }
 
     $scope.processRegistration = function() {
-      var modalInstance = $uibModal.open({
-        templateUrl: 'partials/license_dialog.html',
-        controller: 'LicenseDialogCtrl',
+      var modeModalInstance = $uibModal.open({
+        templateUrl: 'partials/usermodedialog.html',
+        controller: 'UserModeDialogCtrl',
         backdrop: "static",
-        size: 'lg'
-      });
-      modalInstance.result.then(function() {
-        $http.post("/user/" + $scope.username + "/" + $scope.password)
-          .then(function(response) {
-            if (response.data.success === true) { $scope.processLogin(); }
-            else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
-          });
-      });
+        size: 'md'
+      })
+      modeModalInstance.result.then(function(selectedMode) {
+        var modalInstance = $uibModal.open({
+          templateUrl: 'partials/license_dialog.html',
+          controller: 'LicenseDialogCtrl',
+          backdrop: "static",
+          size: 'lg'
+        });
+        modalInstance.result.then(function() {
+          $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
+            .then(function(response) {
+              if (response.data.success === true) { $scope.processLogin(); }
+              else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
+            });
+        });
+      })
     }
 
     login = function(username, password) {
-      $http.get("/user/" + username + "/" + password)
+      $http.get("/user/" + username + "/" + password + "/mode/0")
       .then(function(response) {
         if(response.data.type == "LoginResponse") {
           if(response.data.success) {
@@ -38,3 +46,11 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
       });
     }
   });
+
+angular.module('keymaerax.controllers').controller('UserModeDialogCtrl',
+  ['$scope', '$uibModalInstance', function($scope, $uibModalInstance) {
+
+  $scope.selectedMode = "0";
+
+  $scope.selectMode = function() { $uibModalInstance.close($scope.selectedMode); };
+  }]);

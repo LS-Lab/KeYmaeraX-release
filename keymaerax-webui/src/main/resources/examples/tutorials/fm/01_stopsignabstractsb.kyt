@@ -2,7 +2,7 @@ implyR(1) & andL('L)* & loop({`x<=m`}, 1) & <(
   prop,
   prop,
   unfold & <(
-    diffSolve(1) & pQE & transform({`m-x>=A/2*ep^2+ep*v`}, 1),
-    diffSolve(1) & pQE & transform({`m-x>=v^2/(2*b)`}, 1)
+    solve(1) & pQE & transform({`m-x>=A/2*ep^2+ep*v`}, 1),
+    solve(1) & pQE & transform({`m-x>=v^2/(2*b)`}, 1)
     )
   )

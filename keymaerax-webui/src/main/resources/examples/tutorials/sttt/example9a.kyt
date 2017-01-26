@@ -1,1 +1,4 @@
-implyR(1) & (andL('L)*) & diffInvariant({`5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()`}, 1) & diffWeaken(1) & QE & done
+implyR(1) & (andL('L)*) & dC({`5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()`}, 1) & <(
+  dW(1) & QE & done,
+  dI(1) & done
+)

@@ -195,7 +195,7 @@ class BTacticExamples extends TacticTestBase  {
     val proof = TactixLibrary.proveBy("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula,
       CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE)) (1, 1::0::1::Nil) &
         // |- x^2<4 -> [{x'=9*x^2-x&(-2<x&<2)}](-2<x&x<2) by CE using -2<x&x<2<->x^2<4
-        useAt("DW")(1, 1::Nil) &
+        useAt("DW base")(1, 1::Nil) &
         // |- x^2<4 -> true by DW
         prop
     )

@@ -42,7 +42,9 @@ class InMemoryDB extends DBAbstraction {
 
   override def getModelList(userId: String): List[ModelPOJO] = ???
 
-  override def createUser(username: String, password: String): Unit = ???
+  override def createUser(username: String, password: String, mode: String): Unit = ???
+
+  override def getUser(username: String) = ???
 
   /**
     * Poorly named -- either update the config, or else insert an existing key.
@@ -91,7 +93,7 @@ class InMemoryDB extends DBAbstraction {
     if (!models.values.exists(_.name == name)) {
       val modelId = models.keys.size
       models(modelId) = new ModelPOJO(modelId, userId, name, date, fileContents, description.getOrElse(""),
-        publink.getOrElse(""), title.getOrElse(""), tactic, 0)
+        publink.getOrElse(""), title.getOrElse(""), tactic, 0, temporary=false)
       Some(modelId)
     } else None
   }
@@ -100,16 +102,21 @@ class InMemoryDB extends DBAbstraction {
 
   override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int = synchronized {
     val proofId = proofs.keys.size
-    //@todo create Provable from model content
-    proofs(proofId) = (null, new ProofPOJO(proofId, modelId, name, description, date, 0, closed=false))
+    val provableId = provables.keys.size
+    val model = KeYmaeraXProblemParser(models(modelId).keyFile)
+    val provable = ProvableSig.startProof(model)
+    provables(provableId) = provable
+    proofs(proofId) = (provable, new ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,
+      Some(provableId), temporary=false))
     proofId
   }
 
-  def createProof(provable: ProvableSig): Int = synchronized {
+  override def createProof(provable: ProvableSig): Int = synchronized {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
     provables(provableId) = provable
-    proofs(proofId) = (provable, new ProofPOJO(proofId, 0, "", "", "", 0, closed=false))
+    proofs(proofId) = (provable, new ProofPOJO(proofId, None, "", "", "", 0, closed=false, Some(provableId),
+      temporary=true))
     proofId
   }
 

@@ -1,5 +1,7 @@
+<form name="tacticForm" class="form-inline" novalidate>
 <div class="modal-header">
     <h3 class="modal-title">Proof Step {{tactic.selectedDerivation().name}}</h3>
+    <span class="text-danger" ng-show="!readOnly && tacticForm.$invalid">Tactic requires input</span>
 </div>
 <div class="modal-body">
     <!-- padding around content -->
@@ -12,6 +14,7 @@
                 <div ng-if="tactic.derivation.type === 'tactic'">
                     <div ng-bind-html="tactic.derivation.formula"></div>
                 </div>
+
                 <div ng-if="tactic.derivation.type === 'sequentrule'"
                      ng-include="'templates/sequentRuleTemplate.html'"></div>
             </div>
@@ -20,8 +23,8 @@
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
-    <!-- assumes to be shown for input tactics only -->
-    <button class="btn btn-primary"
+    <button ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-primary': true}"
             ng-if="!readOnly"
             ng-click="applyInputTactic(tactic.selectedDerivation().derivation.input)">{{tactic.selectedDerivation().name}}</button>
 </div>
+</form>

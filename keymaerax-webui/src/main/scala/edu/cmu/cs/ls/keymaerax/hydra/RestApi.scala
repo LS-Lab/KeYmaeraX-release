@@ -136,15 +136,15 @@ trait RestApi extends HttpService with SLF4JLogging {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Users
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  val users = pathPrefix("user" / Segment / Segment) { (username, password) => {
+  val users = pathPrefix("user" / Segment / Segment / "mode" / Segment) { (username, password, mode) => {
     implicit val sessionUser = None
     pathEnd {
       get {
-        val request = new LoginRequest(database,username,password)
+        val request = new LoginRequest(database,username, password)
         completeRequest(request, EmptyToken())
       } ~
       post {
-        val request = new CreateUserRequest(database, username, password)
+        val request = new CreateUserRequest(database, username, password, mode)
         completeRequest(request, EmptyToken())
       }
     }
@@ -765,11 +765,11 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
-  val examples = path("examplesList" /) {
+  val examples = (t : SessionToken) => path("examples" / "user" / Segment / "all") { userId =>
     pathEnd {
       get {
-        val request = new ListExamplesRequest(database)
-        completeRequest(request, EmptyToken())
+        val request = new ListExamplesRequest(database, userId)
+        completeRequest(request, t)
       }
     }
   }
@@ -869,10 +869,9 @@ trait RestApi extends HttpService with SLF4JLogging {
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  val publicRoutes =
+  val publicRoutes: List[routing.Route] =
     denied ::
     staticRoute        ::
-    denied ::
     homePage           ::
 //    license            ::
     isLocal            ::
@@ -887,7 +886,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     tool               ::
     mathConfSuggestion ::
     devAction          ::
-    examples           ::
     checkProofValidation ::
     validateProof ::
     Nil
@@ -951,6 +949,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     testSynthesis         ::
     uploadArchive         ::
     userModelFromFormula  ::
+    examples              ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

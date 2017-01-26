@@ -81,12 +81,12 @@ abstract class LocalhostOnlyRequest() extends Request {
 // Users
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CreateUserRequest(db : DBAbstraction, username : String, password:String) extends Request {
+class CreateUserRequest(db: DBAbstraction, username: String, password: String, mode: String) extends Request {
   override def resultingResponses() = {
     val userExists = db.userExists(username)
     val sessionToken =
       if (!userExists) {
-        db.createUser(username,password)
+        db.createUser(username, password, mode)
         Some(SessionManager.add(username))
       } else None
     new LoginResponse(!userExists, username, sessionToken) ::  Nil
@@ -105,7 +105,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserRequest(userId) {
   def resultingResponses() = {
-    val proofs = db.getProofsForUser(userId).filterNot(_._1.name.startsWith("$tmp")).map(proof =>
+    val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).map(proof =>
       (proof._1, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
   }
@@ -469,7 +469,7 @@ class Z3StatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = new ToolStatusResponse(true) :: Nil
 }
 
-class ListExamplesRequest(db: DBAbstraction) extends Request {
+class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     val examples =
@@ -477,19 +477,26 @@ class ListExamplesRequest(db: DBAbstraction) extends Request {
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/sttt/sttt.json",
-        "/examples/tutorials/sttt/sttt.png") ::
+        "/examples/tutorials/sttt/sttt.png", 1) ::
       new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
         "Proving ODEs",
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
         "classpath:/examples/tutorials/cpsweek/cpsweek.json",
-        "/examples/tutorials/cpsweek/cpsweek.png") ::
+        "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
       new ExamplePOJO(2, "FM 2016 Tutorial",
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.json",
-        "/examples/tutorials/fm/fm.png") ::
+        "/examples/tutorials/fm/fm.png", 1) ::
+      new ExamplePOJO(3, "Beginner's Tutorial",
+        "Feature Tour Tutorial",
+        "/dashboard.html?#/tutorials",
+        "classpath:/examples/tutorials/basic/basic.json",
+        "/examples/tutorials/fm/fm.png", 0) ::
       Nil
-    new ListExamplesResponse(examples) :: Nil
+
+    val user = db.getUser(userId)
+    new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
   }
 }
 
@@ -593,7 +600,7 @@ class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) ext
 
 class GetModelListRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) {
   def resultingResponses() = {
-    new ModelListResponse(db.getModelList(userId).filterNot(_.name.startsWith("$tmp"))) :: Nil
+    new ModelListResponse(db.getModelList(userId).filterNot(_.temporary)) :: Nil
   }
 }
 
@@ -757,7 +764,7 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends UserRequest(userId) {
-  insist(db.getModel(db.getProofInfo(proofId).modelId).userId == userId, s"User $userId does not own the model associated with proof $proofId")
+  insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
   def resultingResponses() = {
     val proofInfo = db.getProofInfo(proofId)
     new OpenProofResponse(db.getProofInfo(proofId), "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
@@ -910,28 +917,22 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
             (ProvableSig.startProof(end.input.subgoals(end.branch)),
               db.getExecutable(end.executableId).belleExpr)
         }
-        //@hack misuses model file content to store a provable
-        val innerDb = db //new InMemoryDB()
-        //val localProofId = innerDb.createProof(localProvable)
-        val modelContent = Lemma(localProvable, Lemma.requiredEvidence(localProvable, List(ToolEvidence(List("input" -> localProvable.prettyString, "output" -> "true"))))).toString
-        val name = "$tmp" + modelContent.hashCode.toString + System.currentTimeMillis()
-        val localModelId = innerDb.createModel(userId, name, modelContent, "", None, None, None, None)
-        val localProofId = innerDb.createProofForModel(localModelId.get, name, "", "")
-        val innerInterpreter = SpoonFeedingInterpreter(listener(innerDb, localProofId, Some(localProvable)),
+        val localProofId = db.createProof(localProvable)
+        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
           SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
 
-        val trace = innerDb.getExecutionTrace(localProofId)
+        val trace = db.getExecutionTrace(localProofId)
         if (trace.steps.size == 1 && trace.steps.head.rule == parentStep) {
           DerivationInfo.locate(parentTactic) match {
             case Some(ptInfo) => new ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
-          val stepDetails = new ExtractTacticFromTrace(innerDb).getTacticString(trace)
+          val stepDetails = new ExtractTacticFromTrace(db).getTacticString(trace)
           val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
-          val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(innerDb, n)))
+          val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(db, n)))
           val openGoals = innerTree.leaves
 
           new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, openGoals) :: Nil
@@ -955,7 +956,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
           map{axiom => (
             DerivationInfo(axiom),
             UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-        val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
+        val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId.get))
         val suggestedInput = generator(sequent, pos)
         new ApplicableAxiomsResponse(axioms, if (suggestedInput.hasNext) Some(suggestedInput.next) else None) :: Nil
       case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
@@ -1099,7 +1100,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     if (closed) {
       return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
     }
-    val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId))
+    val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId.get))
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val node =
@@ -1296,7 +1297,7 @@ class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: 
 class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) extends UserRequest(userId) {
   def resultingResponses() = {
     val proof = db.getProofInfo(proofId)
-    val model = db.getModel(proof.modelId)
+    val model = db.getModel(proof.modelId.get)
     val conclusionFormula = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
@@ -1427,7 +1428,7 @@ class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request
 
   override def resultingResponses(): List[Response] = {
     val proofInfo = db.getProofInfo(proofIdStr)
-    val model = db.getModel(proofInfo.modelId)
+    val model = db.getModel(proofInfo.modelId.get)
     val trace = db.getExecutionTrace(proofId)
     val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
     val provable = trace.lastProvable
@@ -1464,7 +1465,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, proofId: String) extends 
     val pi = db.getProofInfo(pid)
     val proofName = pi.name
     val tactic = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(pid)))
-    val model = db.getModel(pi.modelId)
+    val model = db.getModel(pi.modelId.get)
     val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
     new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }

@@ -53,11 +53,11 @@ class RoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic generalizeb" in {
-    roundTrip(TactixLibrary.generalize("x>0".asFormula)(1), "generalizeb({`x>0`}, 1)")
+    roundTrip(TactixLibrary.generalize("x>0".asFormula)(1), "MR({`x>0`}, 1)")
   }
 
   it should "input tactic diffCut" in {
-    roundTrip(TactixLibrary.diffCut("x>0".asFormula)(1), "diffCut({`x>0`}, 1)")
+    roundTrip(TactixLibrary.diffCut("x>0".asFormula)(1), "DC({`x>0`}, 1)")
   }
 
   it should "input tactic DA4" in {
@@ -71,7 +71,7 @@ class RoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic DGTactic" in {
-    roundTrip(TactixLibrary.DG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm))(1), "DGTactic({`x`}, {`5`}, {`2`}, 1)")
+    roundTrip(TactixLibrary.DG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm))(1), "DG({`x`}, {`5`}, {`2`}, 1)")
   }
 
   it should "input tactic cut, cutL, cutR" in {
