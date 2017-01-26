@@ -191,16 +191,17 @@ trait Tables {
    *  @param filecontents Database column fileContents DBType(TEXT)
    *  @param publink Database column publink DBType(TEXT)
    *  @param title Database column title DBType(TEXT)
-   *  @param tactic Database column tactic DBType(TEXT) */
-  case class ModelsRow(_Id: Option[Int], userid: Option[String], name: Option[String], date: Option[String], description: Option[String], filecontents: Option[String], publink: Option[String], title: Option[String], tactic: Option[String])
+   *  @param tactic Database column tactic DBType(TEXT)
+   *  @param istemporary Database column isTemporary DBType(INTEGER) */
+  case class ModelsRow(_Id: Option[Int], userid: Option[String], name: Option[String], date: Option[String], description: Option[String], filecontents: Option[String], publink: Option[String], title: Option[String], tactic: Option[String], istemporary: Option[Int])
   /** GetResult implicit for fetching ModelsRow objects using plain SQL queries */
   implicit def GetResultModelsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ModelsRow] = GR{
     prs => import prs._
-    ModelsRow.tupled((<<?[Int], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
+    ModelsRow.tupled((<<?[Int], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[Int]))
   }
   /** Table description of table models. Objects of this class serve as prototypes for rows in queries. */
   class Models(_tableTag: Tag) extends Table[ModelsRow](_tableTag, "models") {
-    def * = (_Id, userid, name, date, description, filecontents, publink, title, tactic) <> (ModelsRow.tupled, ModelsRow.unapply)
+    def * = (_Id, userid, name, date, description, filecontents, publink, title, tactic, istemporary) <> (ModelsRow.tupled, ModelsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -220,6 +221,8 @@ trait Tables {
     val title: Column[Option[String]] = column[Option[String]]("title")
     /** Database column tactic DBType(TEXT) */
     val tactic: Column[Option[String]] = column[Option[String]]("tactic")
+    /** Database column isTemporary DBType(INTEGER) */
+    val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary")
     
     /** Foreign key referencing Users (database name users_FK_1) */
     lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.email, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
@@ -233,16 +236,18 @@ trait Tables {
    *  @param name Database column name DBType(TEXT)
    *  @param description Database column description DBType(TEXT)
    *  @param date Database column date DBType(TEXT)
-   *  @param closed Database column closed DBType(INTEGER) */
-  case class ProofsRow(_Id: Option[Int], modelid: Option[Int], name: Option[String], description: Option[String], date: Option[String], closed: Option[Int])
+   *  @param closed Database column closed DBType(INTEGER)
+   *  @param lemmaid Database column lemmaId DBType(INTEGER)
+   *  @param istemporary Database column isTemporary DBType(INTEGER) */
+  case class ProofsRow(_Id: Option[Int], modelid: Option[Int], name: Option[String], description: Option[String], date: Option[String], closed: Option[Int], lemmaid: Option[Int], istemporary: Option[Int])
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
   implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR{
     prs => import prs._
-    ProofsRow.tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int]))
+    ProofsRow.tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int]))
   }
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
   class Proofs(_tableTag: Tag) extends Table[ProofsRow](_tableTag, "proofs") {
-    def * = (_Id, modelid, name, description, date, closed) <> (ProofsRow.tupled, ProofsRow.unapply)
+    def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary) <> (ProofsRow.tupled, ProofsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -256,6 +261,10 @@ trait Tables {
     val date: Column[Option[String]] = column[Option[String]]("date")
     /** Database column closed DBType(INTEGER) */
     val closed: Column[Option[Int]] = column[Option[Int]]("closed")
+    /** Database column lemmaId DBType(INTEGER) */
+    val lemmaid: Column[Option[Int]] = column[Option[Int]]("lemmaId")
+    /** Database column isTemporary DBType(INTEGER) */
+    val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary")
     
     /** Foreign key referencing Models (database name models_FK_1) */
     lazy val modelsFk = foreignKey("models_FK_1", modelid, Models)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
@@ -291,16 +300,17 @@ trait Tables {
    *  @param email Database column email DBType(TEXT), PrimaryKey
    *  @param hash Database column hash DBType(TEXT)
    *  @param salt Database column salt DBType(TEXT)
-   *  @param iterations Database column iterations DBType(INTEGER) */
-  case class UsersRow(email: Option[String], hash: Option[String], salt: Option[String], iterations: Option[Int])
+   *  @param iterations Database column iterations DBType(INTEGER)
+   *  @param level Database column level DBType(INTEGER) */
+  case class UsersRow(email: Option[String], hash: Option[String], salt: Option[String], iterations: Option[Int], level: Option[Int])
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
   implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR{
     prs => import prs._
-    UsersRow.tupled((<<?[String], <<?[String], <<?[String], <<?[Int]))
+    UsersRow.tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
   }
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends Table[UsersRow](_tableTag, "users") {
-    def * = (email, hash, salt, iterations) <> (UsersRow.tupled, UsersRow.unapply)
+    def * = (email, hash, salt, iterations, level) <> (UsersRow.tupled, UsersRow.unapply)
     
     /** Database column email DBType(TEXT), PrimaryKey */
     val email: Column[Option[String]] = column[Option[String]]("email", O.PrimaryKey)
@@ -310,6 +320,8 @@ trait Tables {
     val salt: Column[Option[String]] = column[Option[String]]("salt")
     /** Database column iterations DBType(INTEGER) */
     val iterations: Column[Option[Int]] = column[Option[Int]]("iterations")
+    /** Database column level DBType(INTEGER) */
+    val level: Column[Option[Int]] = column[Option[Int]]("level")
   }
   /** Collection-like TableQuery object for table Users */
   lazy val Users = new TableQuery(tag => new Users(tag))

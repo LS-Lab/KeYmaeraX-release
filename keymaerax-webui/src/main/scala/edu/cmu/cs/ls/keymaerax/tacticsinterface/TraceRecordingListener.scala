@@ -120,7 +120,8 @@ class TraceRecordingListener(db: DBAbstraction,
           db.updateExecutionStep(current.stepId.get, current.asPOJO)
           if (current.output.isProved) {
             val p = db.getProofInfo(proofId)
-            val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount, closed = true)
+            val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount,
+              closed = true, p.provableId, p.temporary)
             db.updateProofInfo(provedProof)
           }
         }
