@@ -141,12 +141,16 @@ object DerivationInfo {
       , "boxTrue", {case () => HilbertCalculus.boxTrue}),
 
     // differential equation axioms
-    new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
-    new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
+    new CoreAxiomInfo("DW base", "DWbase", "DWbase", {case () => HilbertCalculus.DW}),
+    new PositionTacticInfo("dW"
+      , RuleDisplayInfo("dW"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
+        , /* premises */ List((List("&Gamma;<sub>const</sub>"), List("p(x)", "&Delta;<sub>const</sub>"))))
+      , {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-    , "DCaxiom", {case () => HilbertCalculus.useAt("DC differential cut")}),
-    new InputPositionTacticInfo("diffCut"
+    , "DCa", {case () => HilbertCalculus.useAt("DC differential cut")}),
+    new InputPositionTacticInfo("DC"
     , RuleDisplayInfo("DC"
       , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
@@ -166,21 +170,19 @@ object DerivationInfo {
         "diffGhost",
         ( List("&Gamma;"), List("[{c&Q}]P", "&Delta;") ),
         List(
-          (List("&Gamma;", "y=i"), List("[{c,y'=a()*y+b&Q}]P", "&Delta;"))
+          (List("&Gamma;", "y=i"), List("[{c,y′=a()*y+b&Q}]P", "&Delta;"))
         )
       ),
       List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)}
     ),
-    new InputPositionTacticInfo("DGTactic",
+    new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
-        "DGTactic",
-        ( List("&Gamma;"), List("∃y [{c, y'=a()*y+b&Q}]P", "&Delta;") ),
-        List(
-          (List("&Gamma;"), List("[{c&Q}]P", "&Delta;"))
-        )
+        "dG",
+        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
       ),
-      List(VariableArg("y"), TermArg("a()"), TermArg("b")),
+      List(VariableArg("y"), TermArg("a(x)"), TermArg("b(x)")),
       {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))}
     ),
 
@@ -195,10 +197,10 @@ object DerivationInfo {
       , "DIequiv", {case () => ???}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
-      , "DI", {case () => HilbertCalculus.DI}),
+      , "DIa", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
-      , "DG", {case () => HilbertCalculus.useAt("DG differential ghost")}),
+      , "DGa", {case () => HilbertCalculus.useAt("DG differential ghost")}),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
       , "DGC", {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
@@ -332,7 +334,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => useAt(DerivedAxioms.DGpreghost)}),
     new DerivedAxiomInfo("DW differential weakening"
       , AxiomDisplayInfo("DW","[x′=f(x)&Q]P↔[x′=f(x)&Q](Q→P)")
-      , "DWeaken", {case () => HilbertCalculus.DW}),
+      , "DWa", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DW differential weakening and"
       , AxiomDisplayInfo("DW∧","[x′=f(x)&Q]P→[x′=f(x)&Q](Q∧P)")
       , "DWeakenAnd", {case () => HilbertCalculus.DW}),
@@ -763,23 +765,11 @@ object DerivationInfo {
         /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
           (List("&Gamma;", "Q"), List("[{x′ = f(x) & Q}](P)′","&Delta;")))),
       {case () => DifferentialTactics.DIRule}),
-    new PositionTacticInfo("autoDIRule",
-    RuleDisplayInfo("DI",
+    new PositionTacticInfo("dI",
+    RuleDisplayInfo("dI",
       (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
-        (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & Q}](P)′","&Delta;"), true))),
-    {case () => DifferentialTactics.diffInd()}, needsTool = true),
-    new PositionTacticInfo("diffInd",
-    RuleDisplayInfo("diffInd",
-      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
-        (List("Q"), List("[x′:=f(x)](P)′")))),
-    {case () => DifferentialTactics.diffIndRule}),
-    new PositionTacticInfo("autoDiffInd",
-    RuleDisplayInfo("diffInd",
-      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
-        (List("Q"), List("[x′:=f(x)](P)′"), true))),
+      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/),
+        (List("Q"), List("[x′:=f(x)](P)′"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/))),
     {case () => DifferentialTactics.diffInd()}),
     new InputPositionTacticInfo("diffInvariant"
     , RuleDisplayInfo("DC+DI"
@@ -801,7 +791,7 @@ object DerivationInfo {
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
       {case () => AxiomaticODESolver.apply}, needsTool = true),
-    new PositionTacticInfo("diffSolve",
+    new PositionTacticInfo("solve",
       RuleDisplayInfo("solve",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),

@@ -125,14 +125,14 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('diffSolve', 'R')"><span>Solve</span><code class="pull-right">diffSolve</code></a></li>
-                                <li><a ng-click="doSearch('diffWeaken', 'R')"><span>Weaken</span><code class="pull-right">diffWeaken</code></a></li>
-                                <li><a ng-click="doSearch('DIRule', 'R')"><span>Diff. Induction</span><code class="pull-right">DIRule</code></a></li>
-                                <li><a ng-click="doSearch('autoDIRule', 'R')"><span>Diff. Induction (Auto)</span><code>autoDIRule</code></a></li>
-                                <li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>
-                                <li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('diffCut', 'R')"><span>Diff. Cut ...</span><code class="pull-right">diffCut</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('diffInvariant', 'R')"><span>Diff. Invariant ...</span><code class="pull-right">diffInvariant</code></a></li>
+                                <li><a ng-click="doSearch('solve', 'R')"><span>Solve</span><code class="pull-right">solve</code></a></li>
+                                <li><a ng-click="doSearch('dW', 'R')"><span>Weaken</span><code class="pull-right">dW</code></a></li>
+                                <li><a ng-click="doSearch('dI', 'R')"><span>Diff. Induction</span><code class="pull-right">dI</code></a></li>
+                                <!-- TODO list further tactics -->
+                                <!--<li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
+                                <!--<li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
+                                <li><a ng-click="openInputTacticDialog('dC', 'R')"><span>Diff. Cut ...</span><code class="pull-right">dC</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('dG', 'R')"><span>Diff. Ghost ...</span><code class="pull-right">dG</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">

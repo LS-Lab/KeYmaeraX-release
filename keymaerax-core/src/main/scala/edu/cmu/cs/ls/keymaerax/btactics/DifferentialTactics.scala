@@ -114,7 +114,7 @@ private object DifferentialTactics {
   }
 
   /** @see [[TactixLibrary.diffInd]] */
-  def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+  def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("dI") {
     require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -267,7 +267,7 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
-    "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {
+    "DC" byWithInputs (formulas.toList, (pos, sequent) => {
       formulas.map(ghostDC(_, pos, sequent)).foldRight[BelleExpr](skip)((cut, all) => cut <(all, skip))
     })
 
@@ -347,7 +347,7 @@ private object DifferentialTactics {
   })
 
   /** @see [[TactixLibrary.DG]] */
-  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
+  def DG(ghost: DifferentialProgram): DependentPositionTactic = "dG" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
@@ -486,7 +486,7 @@ private object DifferentialTactics {
   })
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
-  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val diffWeaken: DependentPositionTactic = "dW" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
@@ -509,7 +509,7 @@ private object DifferentialTactics {
   })
 
   /** diffWeaken by DW & G */
-  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val diffWeakenG: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
       cohide(pos.top) & DW(1) & G(1)
