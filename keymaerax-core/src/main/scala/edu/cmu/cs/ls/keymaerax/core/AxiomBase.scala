@@ -165,7 +165,7 @@ private[core] object AxiomBase {
       * DIFFERENTIAL EQUATION AXIOMS
       */
     // Figure 3
-    assert(axs("DW") == Box(ODESystem(ode, qany), qany), "DW")
+    assert(axs("DW base") == Box(ODESystem(ode, qany), qany), "DW base")
     assert(axs("DC differential cut") == Imply(Box(ODESystem(ode, qany), UnitPredicational("r",AnyArg)),
       Equiv(Box(ODESystem(ode, qany), pany),
         Box(ODESystem(ode, And(qany,UnitPredicational("r",AnyArg))), pany))), "DC differential cut")
@@ -282,7 +282,7 @@ Axiom "[*] iterate".
 End.
 
 
-Axiom "DW".
+Axiom "DW base".
   [{c&q(||)}]q(||)
 /* [x'=f(x)&q(x);]q(x) THEORY */
 End.
