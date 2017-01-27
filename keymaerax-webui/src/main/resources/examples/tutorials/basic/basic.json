@@ -2,11 +2,76 @@
   "name": "Beginner's Tutorial",
   "entries": [
     {
-      "name": "Forward-Driving Car",
+      "name": "00: Forward-Driving Car",
       "description": "Simple model of straight-line driving. Car can accelerate, coast, or brake, but not drive backwards.",
       "title": "Forward-driving 1-dimensional car",
       "model": "classpath:/examples/tutorials/basic/basic.kyx",
-      "tactic": "classpath:/examples/tutorials/basic/basic.kyt"
+      "tactic": "classpath:/examples/tutorials/basic/basic.kyt",
+      "proves": true
+    },
+    {
+      "name": "05: Short Bouncing Ball: Single Hop",
+      "description": "",
+      "title": "Short bouncing ball: single hop",
+      "model": "classpath:/examples/tutorials/basic/05-dynax-single-hop-ball.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/05-dynax-single-hop-ball.kyt",
+      "proves": true
+    },
+    {
+      "name": "07: Bouncing Ball",
+      "description": "Acrophobic bouncing ball",
+      "title": "Bouncing ball",
+      "model": "classpath:/examples/tutorials/basic/07-loops-bouncing-ball.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/07-loops-bouncing-ball.kyt",
+      "proves": true
+    },
+    {
+      "name": "08: Event-triggered Ping Pong Ball",
+      "description": "Control ping pong paddle when certain events happen",
+      "title": "Event-triggered ping pong ball",
+      "model": "classpath:/examples/tutorials/basic/08-events-ping-pong-ball.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/08-events-ping-pong-ball.kyt",
+      "proves": true
+    },
+    {
+      "name": "09: Time-Triggered Ping Pong Ball",
+      "description": "Control ping pong paddle at certain time points",
+      "title": "Time-triggered ping pong ball",
+      "model": "classpath:/examples/tutorials/basic/09-time-ping-pong-ball.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/09-time-ping-pong-ball.kyt",
+      "proves": true
+    },
+    {
+      "name": "10: Simple Rotational Dynamics",
+      "description": "",
+      "title": "Simple rotational dynamics",
+      "model": "classpath:/examples/tutorials/basic/10-diffinv-rotational.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/10-diffinv-rotational.kyt",
+      "proves": true
+    },
+    {
+      "name": "10: Henon-Heiles Motion of a Star",
+      "description": "",
+      "title": "Henon-Heiles motion of a star",
+      "model": "classpath:/examples/tutorials/basic/10-diffinv-exc-Henon-Heiles.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/10-diffinv-exc-Henon-Heiles.kyt",
+      "proves": true
+    },
+    {
+      "name": "10: Motzkin Polynomial Invariant",
+      "description": "",
+      "title": "Motzkin polynomial invariant",
+      "model": "classpath:/examples/tutorials/basic/10-diffinv-Motzkin-eq.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/10-diffinv-Motzkin-eq.kyt",
+      "proves": true
+    },
+    {
+      "name": "10: Self-Crossing Invariant",
+      "description": "",
+      "title": "Self-crossing invariant",
+      "model": "classpath:/examples/tutorials/basic/10-diffinv-self-crossing.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/10-diffinv-self-crossing.kyt",
+      "proves": true
     }
   ]
 }

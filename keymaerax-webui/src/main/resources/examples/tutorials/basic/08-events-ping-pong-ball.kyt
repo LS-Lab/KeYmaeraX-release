@@ -1,0 +1,8 @@
+implyR(1) ; loop({`5>=x&x>=0&(x=5->v<=0)`}, 1) ; <(
+  QE,
+  QE,
+  composeb(1) ; choiceb(1.1) ; choiceb(1.1.1) ; composeb(1.1.0) ; composeb(1.1.1.0) ; assignb(1.1.0.1) ; testb(1.1.0) ; assignb(1.1.1.0.1) ; testb(1.1.1.0) ; testb(1.1.1.1) ; choiceb(1) ; andR(1) ; <(
+    solve(1) ; QE,
+    solve(1) ; QE
+    )
+  )

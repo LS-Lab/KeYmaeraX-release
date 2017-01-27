@@ -16,6 +16,6 @@ Problem.                                /* conjecture in differential dynamic lo
   {                                     /* braces {} for grouping of programs */
     {?v<=5;a:=A; ++ a :=0; ++ a:=-B; }  /* nondeterministic choice of acceleration a */
     {x'=v , v'=a & v>=0}                /* differential equation system with domain */
-  }@invariant(v>=0)                     /* loop repeats, with invariant contract */
+  }*@invariant(v>=0)                    /* loop repeats, with invariant contract */
 ] v>=0                                  /* safety/postcondition */
 End.

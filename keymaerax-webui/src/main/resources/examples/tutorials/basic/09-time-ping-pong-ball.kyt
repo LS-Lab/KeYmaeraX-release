@@ -1,0 +1,14 @@
+implyR(1) ; loop({`2*x=2*H-v^2&x>=0&x<=5`}, 1) ; <(
+  QE,
+  QE,
+  composeb(1) ; composeb(1) ; composeb(1.1.1) ; solve(1.1.1.1) ; assignb(1.1.1) ; choiceb(1) ; andR(1) ; <(
+    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE,
+      testb(1) ; QE
+      ),
+    testb(1) ; implyR(1) ; choiceb(1) ; andR(1) ; <(
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE,
+      testb(1) ; QE
+      )
+    )
+  )
