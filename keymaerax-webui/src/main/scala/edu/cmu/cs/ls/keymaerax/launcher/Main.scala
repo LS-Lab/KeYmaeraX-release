@@ -362,10 +362,7 @@ object Main {
     /** Obtains a lock if the lock file does not exist and the desired port is not bound.
       * Otherwise, shows a relevant error message on GUI and STDOUT then exits with error code. */
     def obtainLockOrExit() = {
-      if(lockObtained == true) {
-        launcherLog("ERROR: obtainLockOrExit was run more than once!")
-        System.exit(-1)
-      }
+      require(lockObtained == false, "ERROR: obtainLockOrExit was run more than once!")
 
       val bound = portIsBound()
 
