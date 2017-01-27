@@ -104,7 +104,7 @@ object UIIndex {
           }, post)
           foundPrime
         }
-        val rules = "GV" :: "MR" :: maybeSplit
+        val rules = maybeSplit ++ ("GV" :: "MR" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
