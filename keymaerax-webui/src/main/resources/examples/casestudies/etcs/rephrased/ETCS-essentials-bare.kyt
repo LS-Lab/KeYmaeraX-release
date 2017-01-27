@@ -21,11 +21,11 @@
  *   prop                        prove propositional logic
  *   QE                          prove real arithmetic
  *   unfold                      symbolically execute a program
- *   diffSolve                   solve a differential equation
+ *   solve                       solve a differential equation
  *   diffInvariant               prove that some formula is invariant throughout the ODE,
  *                                 {`formula`} is the differential invariant that KeYmaera X should prove
  *                                 old(x) refers to initial value of x at the start of the ODE
- *   diffWeaken                  prove safety from just the differential invariants
+ *   dW                          prove safety from just the differential invariants
  */
 
 implyR('R) & (andL('L)*) & loop({`v^2<=2*b*(m-z)`}, 'R) & <(  /* prove loop by induction with invariant; intuition: always have sufficient space to stop */
@@ -41,7 +41,7 @@ implyR('R) & (andL('L)*) & loop({`v^2<=2*b*(m-z)`}, 'R) & <(  /* prove loop by i
     diffInvariant({`t>=old(t)`}, 'R) &
     diffInvariant({`v=old(v)+A*t`}, 'R) &
     diffInvariant({`z=old(z)+old(v)*t+A/2*t^2`}, 'R)
-  ) & doall(diffWeaken('R)) & <(
+  ) & doall(dW('R)) & <(
       QE                                                      /* braking is still safe even if we don't know anything about SB */
       ,
       implyR('R) & (andL('L)*) & allL2R(-8) & hideL(-8) &     /* accelerating without knowing SB is unsafe (QE would fail), rewrite to find conditions */
