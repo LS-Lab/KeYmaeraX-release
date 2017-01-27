@@ -145,7 +145,7 @@ object DerivationInfo {
     new PositionTacticInfo("dW"
       , RuleDisplayInfo("dW"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
-        , /* premises */ List((List("&Gamma;<sub>const</sub>"), List("p(x)", "&Delta;<sub>const</sub>"))))
+        , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
       , {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
@@ -599,8 +599,8 @@ object DerivationInfo {
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
     new PositionTacticInfo("GV"
-      , RuleDisplayInfo("GV", (List("&Gamma;", "[a]P"), List("&Delta;"))
-      , List((List("&Gamma;<sub>const</sub>", "P"), List("&Delta;<sub>const</sub>"))))
+      , RuleDisplayInfo("GV", (List("&Gamma;"), List("[a]P", "&Delta;"))
+      , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}),
     new InputPositionTacticInfo("existsR"
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
