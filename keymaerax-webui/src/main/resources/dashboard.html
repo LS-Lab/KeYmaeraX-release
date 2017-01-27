@@ -97,11 +97,11 @@
     </div>
 </div>
 
-<div class="container" ng-if="!toolIsConfigured" ng-cloak>
+<div class="container" ng-if="toolConfig.tool !== undefined && (toolConfig.tool !== 'Mathematica' || !toolConfig.configured)" ng-cloak>
     <div class="alert alert-warning" role="alert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Backend tool is not configured.
-        Most problems <b>will not be proved</b> and all the existing proofs <b>will not be reloaded</b>. <a href="dashboard.html#/tools"><b>Configure now.</b></a>
+        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Limited functionality: Mathematica is not configured.
+            <a href="dashboard.html#/tools"><b>Configure now.</b></a>
     </div>
 </div>
 

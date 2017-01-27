@@ -787,6 +787,18 @@ class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, version: 
   )
 }
 
+class SystemInfoResponse(os: String, osVersion: String, jvmHome: String, jvmVendor: String,
+                         jvmVersion: String, jvmBits: String) extends Response {
+  def getJson: JsValue = JsObject(
+    "os" -> JsString(os),
+    "osVersion" -> JsString(osVersion),
+    "jvmHome" -> JsString(jvmHome),
+    "jvmVendor" -> JsString(jvmVendor),
+    "jvmVersion" -> JsString(jvmVersion),
+    "jvmArchitecture" -> JsString(jvmBits)
+  )
+}
+
 class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) extends Response {
   def getJson: JsValue = JsObject(
     "linkName" -> JsString(linkName),
@@ -794,8 +806,9 @@ class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) ex
   )
 }
 
-class ToolStatusResponse(configured : Boolean) extends Response {
+class ToolStatusResponse(tool: String, configured : Boolean) extends Response {
   def getJson: JsValue = JsObject(
+    "tool" -> JsString(tool),
     "configured" -> {if(configured) JsTrue else JsFalse}
   )
 }

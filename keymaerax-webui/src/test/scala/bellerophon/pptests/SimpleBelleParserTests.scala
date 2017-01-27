@@ -320,8 +320,8 @@ class SimpleBelleParserTests extends TacticTestBase {
               |  QE,
               |  QE,
               |  partial(composeb(1) & choiceb(1) & andR(1) <(
-              |    assignb(1) & diffSolve(1) & nil,
-              |    testb(1) & implyR(1) & diffSolve(1) & nil
+              |    assignb(1) & solve(1) & nil,
+              |    testb(1) & implyR(1) & solve(1) & nil
               |  ))
               |)""".stripMargin
     BelleParser(t) //should not cause an exception.

@@ -1,26 +1,52 @@
 <h1>Tool Configuration</h1>
 
-<p>KeYmaera X uses backend tools to prove validity of real arithmetic formulas.
-   Z3 is shipped with KeYmaera X for your convenience.
-   Please select your preferred tool.
-</p>
+<div class="row">
+    <div class="col-md-4">
+        <p>KeYmaera X uses backend tools to prove validity of real arithmetic formulas.
+           Z3 is shipped with KeYmaera X for your convenience.
+           Please select your preferred tool.
+        </p>
 
-<form name="toolSelection">
-    <label for="toolSelect">Arithmetic tool: </label>
-    <span style="padding-right: 10px;"
-         data-intro="Choose an arithmetic tool (Z3 is shipped with KeYmaera X; Mathematica requires external installation but provides more features)."
-         data-position="right">
-    <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
-        <option value="mathematica">Mathematica</option>
-        <option value="z3">Z3</option>
-    </select>
-    </span>
-</form>
+        <form name="toolSelection">
+            <label for="toolSelect">Arithmetic tool: </label>
+            <span style="padding-right: 10px;"
+                 data-intro="Choose an arithmetic tool (Z3 is shipped with KeYmaera X; Mathematica requires external installation but provides more features)."
+                 data-position="right">
+            <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
+                <option value="mathematica">Mathematica</option>
+                <option value="z3">Z3</option>
+            </select>
+            </span>
+        </form>
+    </div>
+    <div class="col-md-8">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">System Information</h3>
+            </div>
+            <div class="panel-body">
+                <dl class="dl-horizontal">
+                    <dt>Operating System</dt>
+                    <dd>{{systemInfo.os}} {{systemInfo.osVersion}}</dd>
+                    <dt>Java</dt>
+                    <dd>{{systemInfo.jvmVendor}} {{systemInfo.jvmVersion}} with {{systemInfo.jvmArchitecture}} bits</dd>
+                    <dt>Java Home</dt>
+                    <dd>{{systemInfo.jvmHome}}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div ng-if="tool==='mathematica'">
     <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
 </div>
 
 <div ng-if="tool==='z3'">
-    <p>No configuration necessary.</p>
+    <h2>Z3 Configuration</h2>
+    <p><b>Limited functionality with Z3.</b></p>
+    <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
+        simplification, and arithmetic with alternating quantifiers please select to <kbd>Mathematica</kbd> from the
+        drop-down box above.</p>
+    <p>In general, complex problems may require trying different tools.</p>
 </div>

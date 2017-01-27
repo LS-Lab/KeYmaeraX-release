@@ -384,7 +384,7 @@ object Main {
         }
         else {
           //lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
-          launcherLog("ERROR: Another instance of KeYmaera X obtained a lock less than 30 seconds ago.\nIf the problem persists, kill all running versions of KeYmaera X\nand delete ~/.keymaerax/lock if it exists.")
+          launcherLog(s"ERROR: Another instance of KeYmaera X just obtained a lock.\nIf the problem persists, kill all running versions of KeYmaera X and delete the following file if it exists:\n  ${lockFile.getAbsolutePath}")
           lockObtained = false
           SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
           System.exit(-1)

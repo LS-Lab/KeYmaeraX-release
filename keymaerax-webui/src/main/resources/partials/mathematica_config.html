@@ -29,12 +29,16 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
         <h4 for="linkName">Mathematica Kernel</h4>
 
         <div>
-        Please configure the path to the Mathematica MathKernel. On your operating system
-            ({{mathematicaConfigSuggestion.os}} with {{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine), look for an executable file named
+            <p>
+            Please configure the path to the Mathematica MathKernel. On your operating system
+            ({{mathematicaConfigSuggestion.os}}), look for an executable file named
             <code>{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>.<br/>
             If Mathematica is installed at its default location, you might find the relevant file at
+            </p>
+            <p>
             <code uib-tooltip-template="'kernelSuggestionTooltipTemplate.html'"
                   tooltip-placement="auto top">{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>.
+            </p>
         </div>
 
         <div class="input-group"
@@ -68,12 +72,16 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
         </h4>
 
         <div>
+            <p>
             Please configure the path to the J/Link native library.
-            On your operating system ({{mathematicaConfigSuggestion.os}}), look for a
+            On your operating system ({{mathematicaConfigSuggestion.os}} with {{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine), look for a
             file named <code>{{mathematicaConfigSuggestion.suggestion.jlinkName}}</code>.<br/>
             If Mathematica is installed at its default location, you might find the relevant file at
+            </p>
+            <p>
             <code uib-tooltip-template="'jlinkSuggestionTooltipTemplate.html'"
                   tooltip-placement="auto top">{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}</code>.
+            </p>
         </div>
 
         <div class="input-group"

@@ -765,6 +765,14 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
+  val systemInfo = path("config" / "systeminfo") {
+    pathEnd {
+      get {
+        completeRequest(new SystemInfoRequest(database), EmptyToken())
+      }
+    }
+  }
+
   val examples = (t : SessionToken) => path("examples" / "user" / Segment / "all") { userId =>
     pathEnd {
       get {
@@ -884,6 +892,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathematicaConfig  ::
     toolStatus         ::
     tool               ::
+    systemInfo         ::
     mathConfSuggestion ::
     devAction          ::
     checkProofValidation ::
