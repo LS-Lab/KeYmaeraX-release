@@ -34,19 +34,19 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
     def createProof(modelContent: String, modelName: String = ""): Int = {
       db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
-        case Some(modelId) => db.createProofForModel(modelId, "", "", "")
+        case Some(modelId) => db.createProofForModel(modelId, modelName + "Proof", "", "")
         case None => fail("Unable to create temporary model in DB")
       }
     }
 
     /** Prove sequent `s` using tactic  `t`. Record the proof in the database and check that the recorded tactic is
       * the provided tactic. */
-    def proveBy(modelContent: String, t: BelleExpr): ProvableSig = {
+    def proveBy(modelContent: String, t: BelleExpr, modelName: String = ""): ProvableSig = {
       val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
         case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
         case _ => fail("Model content " + modelContent + " cannot be parsed")
       }
-      val proofId = createProof(modelContent)
+      val proofId = createProof(modelContent, modelName)
       val trace = db.getExecutionTrace(proofId)
       val globalProvable = trace.lastProvable
       val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
