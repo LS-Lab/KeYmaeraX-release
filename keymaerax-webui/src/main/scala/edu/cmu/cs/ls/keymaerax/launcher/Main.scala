@@ -24,6 +24,34 @@ import spray.json.DefaultJsonProtocol._
  * @todo move functionality directly into KeYmaeraX.scala?
  */
 object Main {
+  /** This flag is set to true iff this process odes nothing but re-launch */
+  var IS_RELAUNCH_PROCESS = false
+
+  //@todo set via -log command line option
+  private var logFile = false
+
+  def main(args : Array[String]) : Unit = {
+    val isFirstLaunch = if (args.length >= 1) {
+      !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
+    } else true
+
+    if (isFirstLaunch) {
+      IS_RELAUNCH_PROCESS = true
+      val java : String = javaLocation
+      val keymaeraxjar : String = jarLocation
+      println("Restarting KeYmaera X with sufficient stack space")
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
+    }
+    else {
+      exitIfDeprecated()
+      clearCacheIfDeprecated()
+      assert(args.head.equals("-launch"))
+      startServer(args.tail)
+      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
+      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
+    }
+  }
+
   def startServer(args: Array[String]) : Unit = {
     KeYmaeraXLock.obtainLockOrExit()
 
@@ -50,29 +78,6 @@ object Main {
     else {
       LoadingDialogFactory() //Intialize the loading dialog.
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
-    }
-  }
-
-  //@todo set via -log command line option
-  private var logFile = false
-  def main(args : Array[String]) : Unit = {
-    val isFirstLaunch = if (args.length >= 1) {
-      !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
-    } else true
-
-    if (isFirstLaunch) {
-      val java : String = javaLocation
-      val keymaeraxjar : String = jarLocation
-      println("Restarting KeYmaera X with sufficient stack space")
-      runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
-    }
-    else {
-      exitIfDeprecated()
-      clearCacheIfDeprecated()
-      assert(args.head.equals("-launch"))
-      startServer(args.tail)
-      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
-      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
   }
 
@@ -253,7 +258,9 @@ object Main {
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        KeYmaeraXLock.deleteLock()
+        if(!IS_RELAUNCH_PROCESS) {
+          KeYmaeraXLock.deleteLock()
+        }
         proc.destroy()
       }
     })
@@ -355,10 +362,7 @@ object Main {
     /** Obtains a lock if the lock file does not exist and the desired port is not bound.
       * Otherwise, shows a relevant error message on GUI and STDOUT then exits with error code. */
     def obtainLockOrExit() = {
-      if(lockObtained == true) {
-        launcherLog("ERROR: obtainLockOrExit was run more than once!")
-        System.exit(-1)
-      }
+      require(lockObtained == false, "ERROR: obtainLockOrExit was run more than once!")
 
       val bound = portIsBound()
 
@@ -366,6 +370,7 @@ object Main {
         val msg = "ERROR: There is already an instance of KeYmaera X running on this machine. Open your browser to http://127.0.0.1:8090"
         launcherLog(msg)
         JOptionPane.showMessageDialog(null, msg)
+        SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
         lockObtained = false
         System.exit(-1)
       }
@@ -373,14 +378,15 @@ object Main {
         if(!lockIsNewborn) {
           //lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
           val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all instances of KeYmaera X from your system's task manager."
-          KeYmaeraXLock.deleteLock()
+          forceDeleteLock()
           launcherLog(msg)
           JOptionPane.showMessageDialog(null, msg)
         }
         else {
           //lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
-          launcherLog("ERROR: Another instance of KeYmaera X obtained a lock less than 30 seconds ago.\nIf the problem persists, kill all running versions of KeYmaera X and delete ~/.keymaerax/keymaerax.lock if it exists.")
+          launcherLog(s"ERROR: Another instance of KeYmaera X just obtained a lock.\nIf the problem persists, kill all running versions of KeYmaera X and delete the following file if it exists:\n  ${lockFile.getAbsolutePath}")
           lockObtained = false
+          SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
           System.exit(-1)
         }
       }
@@ -389,17 +395,28 @@ object Main {
         launcherLog(msg)
         JOptionPane.showMessageDialog(null, msg)
         lockObtained = false
+        SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
         System.exit(-1)
       }
 
       //This file is later destroyed in the shutdown hook.
       launcherLog("Obtaining lock.")
-      assert(lockFile.createNewFile(), "Could not obtain lock file even though we just checked that the file down not exist.")
-      lockObtained = true
-      lockFile.deleteOnExit()
-    }
+      obtainLock()
+    } ensuring(e => lockObtained == true && lockFile.exists())
 
-    /** Deletes the lock file.
+    def obtainLock() = {
+      require(!lockFile.exists(), "Cannot obtain a lock if the lock file exists.")
+      lockObtained = true
+      assert(lockFile.createNewFile(), "could not obtain lock file even though we just checked that the file does not exist.")
+      lockFile.deleteOnExit()
+    } ensuring(e => lockObtained == true && lockFile.exists())
+
+    /** Deletes the lock file regardless of whether this is the process that created the lock file. */
+    private def forceDeleteLock() = {
+      lockFile.delete()
+    } ensuring(!lockFile.exists())
+
+    /** Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
       * @note not strictly necessary as lont as File.deleteOnExit works properly. */
     def deleteLock() = {
       if (lockObtained) {

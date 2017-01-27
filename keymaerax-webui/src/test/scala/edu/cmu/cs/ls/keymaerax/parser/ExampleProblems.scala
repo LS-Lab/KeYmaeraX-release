@@ -36,4 +36,19 @@ class ExampleProblems extends FlatSpec with Matchers {
                                       |   x := x + 1;
                                       |  ] x > 0""".stripMargin)
   }
+
+  it should "parse x>0 -> \\exists d [{x'=d}]x>0" in {
+    val theProblem =
+      """
+        |ProgramVariables.
+        |  R x.
+        |End.
+        |
+        |Problem.
+        |  x>0 -> \exists d [{x'=d}]x>0
+        |End.
+      """.stripMargin
+
+    val result = KeYmaeraXProblemParser(theProblem)
+  }
 }
