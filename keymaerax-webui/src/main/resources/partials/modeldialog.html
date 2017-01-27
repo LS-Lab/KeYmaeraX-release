@@ -6,8 +6,10 @@
     <p>{{model.description}}</p>
     <!--<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>-->
     <pre><code>{{model.keyFile}}</code></pre>
-    <button class="btn btn-primary" ng-if="model.hasTactic" ng-click="ok();proveFromTactic(model.id)" ng-controller="ModelProofCreateCtrl">Prove with associated tactic</button>
 </div>
 <div class="modal-footer">
+    <button class="btn btn-primary" ng-if="model.hasTactic"
+            ng-click="ok();proveFromTactic(model.id)"
+            ng-controller="ModelProofCreateCtrl">Prove with associated tactic</button>
     <button class="btn btn-primary" ng-click="ok()">Close</button>
 </div>
