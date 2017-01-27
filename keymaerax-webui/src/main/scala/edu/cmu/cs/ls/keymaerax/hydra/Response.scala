@@ -275,8 +275,17 @@ class PossibleAttackResponse(val msg: String) extends Response {
 }
 
 class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response {
-  lazy val writer = new StringWriter
-  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
+  private lazy val writer = new StringWriter
+  private lazy val stacktrace =
+    if (exn != null) {
+      exn.printStackTrace(new PrintWriter(writer))
+      writer.toString
+        .replaceAll("[\\t]at spray\\.routing\\..*", "")
+        .replaceAll("[\\t]at java\\.util\\.concurrent\\..*", "")
+        .replaceAll("[\\t]at java\\.lang\\.Thread\\.run.*", "")
+        .replaceAll("[\\t]at scala\\.Predef\\$\\.require.*", "")
+        .replaceAll("[\\s]+$", "")
+    } else ""
   def getJson = JsObject(
     "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
