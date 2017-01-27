@@ -370,6 +370,7 @@ object Main {
         val msg = "ERROR: There is already an instance of KeYmaera X running on this machine. Open your browser to http://127.0.0.1:8090"
         launcherLog(msg)
         JOptionPane.showMessageDialog(null, msg)
+        SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
         lockObtained = false
         System.exit(-1)
       }
@@ -385,6 +386,7 @@ object Main {
           //lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
           launcherLog("ERROR: Another instance of KeYmaera X obtained a lock less than 30 seconds ago.\nIf the problem persists, kill all running versions of KeYmaera X\nand delete ~/.keymaerax/lock if it exists.")
           lockObtained = false
+          SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
           System.exit(-1)
         }
       }
@@ -393,6 +395,7 @@ object Main {
         launcherLog(msg)
         JOptionPane.showMessageDialog(null, msg)
         lockObtained = false
+        SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
         System.exit(-1)
       }
 
