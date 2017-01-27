@@ -531,6 +531,7 @@ object SimplifierV3 {
         case Forall(vars, f) =>
           allR(1) &
           fastCloser(hs, f)
+        case _ => ident
       }
     }
   }
@@ -595,7 +596,7 @@ object SimplifierV3 {
   //Simplifies a formula including sub-terms occuring in the formula
   def simpTac(ths:List[ProvableSig]=List(),
               faxs:Formula=>List[ProvableSig]=defaultFaxs,
-              taxs:Term=>List[ProvableSig]=defaultTaxs):DependentPositionTactic = new DependentPositionTactic("simp"){
+              taxs:Term=>List[ProvableSig]=defaultTaxs):DependentPositionTactic = new DependentPositionTactic("simplify"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       val (fths,tths) = thWrapper(ths)
       val augmentFaxs:Formula=>List[ProvableSig] = composeIndex(fths,faxs)
@@ -652,7 +653,7 @@ object SimplifierV3 {
   //Full sequent simplification tactic
   def fullSimpTac(ths:List[ProvableSig]=List(),
                   faxs:Formula=>List[ProvableSig]=defaultFaxs,
-                  taxs:Term=>List[ProvableSig]=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("full simp") {
+                  taxs:Term=>List[ProvableSig]=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("fullSimplify") {
 
     val simps = simpTac(ths,faxs,taxs)
 
@@ -734,7 +735,7 @@ object SimplifierV3 {
       case Neg(n:Number) => Some(-n.value)
       case _ => None
     }
-    
+
     res match {
       case None => None
       case Some(v) =>
