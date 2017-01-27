@@ -377,7 +377,7 @@ object Main {
         if(!lockIsNewborn) {
           //lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
           val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all instances of KeYmaera X from your system's task manager."
-          KeYmaeraXLock.deleteLock()
+          forceDeleteLock()
           launcherLog(msg)
           JOptionPane.showMessageDialog(null, msg)
         }
