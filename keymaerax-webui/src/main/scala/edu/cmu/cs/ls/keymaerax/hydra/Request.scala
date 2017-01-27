@@ -423,6 +423,18 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
   }
 }
 
+class SystemInfoRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    new SystemInfoResponse(
+      System.getProperty("os.name"),
+      System.getProperty("os.version"),
+      System.getProperty("java.home"),
+      System.getProperty("java.vendor"),
+      System.getProperty("java.version"),
+      System.getProperty("sun.arch.data.model")) :: Nil
+  }
+}
+
 class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
