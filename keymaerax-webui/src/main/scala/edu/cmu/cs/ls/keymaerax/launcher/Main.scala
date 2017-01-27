@@ -398,12 +398,22 @@ object Main {
 
       //This file is later destroyed in the shutdown hook.
       launcherLog("Obtaining lock.")
-      assert(lockFile.createNewFile(), "Could not obtain lock file even though we just checked that the file down not exist.")
-      lockObtained = true
-      lockFile.deleteOnExit()
-    }
+      obtainLock()
+    } ensuring(e => lockObtained == true && lockFile.exists())
 
-    /** Deletes the lock file.
+    def obtainLock() = {
+      require(!lockFile.exists(), "Cannot obtain a lock if the lock file exists.")
+      lockObtained = true
+      assert(lockFile.createNewFile(), "could not obtain lock file even though we just checked that the file does not exist.")
+      lockFile.deleteOnExit()
+    } ensuring(e => lockObtained == true && lockFile.exists())
+
+    /** Deletes the lock file regardless of whether this is the process that created the lock file. */
+    private def forceDeleteLock() = {
+      lockFile.delete()
+    } ensuring(!lockFile.exists())
+
+    /** Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
       * @note not strictly necessary as lont as File.deleteOnExit works properly. */
     def deleteLock() = {
       if (lockObtained) {
