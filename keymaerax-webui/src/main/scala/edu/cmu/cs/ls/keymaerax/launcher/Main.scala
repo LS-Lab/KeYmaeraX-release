@@ -24,6 +24,34 @@ import spray.json.DefaultJsonProtocol._
  * @todo move functionality directly into KeYmaeraX.scala?
  */
 object Main {
+  /** This flag is set to true iff this process odes nothing but re-launch */
+  var IS_RELAUNCH_PROCESS = false
+
+  //@todo set via -log command line option
+  private var logFile = false
+
+  def main(args : Array[String]) : Unit = {
+    val isFirstLaunch = if (args.length >= 1) {
+      !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
+    } else true
+
+    if (isFirstLaunch) {
+      IS_RELAUNCH_PROCESS = true
+      val java : String = javaLocation
+      val keymaeraxjar : String = jarLocation
+      println("Restarting KeYmaera X with sufficient stack space")
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
+    }
+    else {
+      exitIfDeprecated()
+      clearCacheIfDeprecated()
+      assert(args.head.equals("-launch"))
+      startServer(args.tail)
+      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
+      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
+    }
+  }
+
   def startServer(args: Array[String]) : Unit = {
     KeYmaeraXLock.obtainLockOrExit()
 
@@ -50,29 +78,6 @@ object Main {
     else {
       LoadingDialogFactory() //Intialize the loading dialog.
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
-    }
-  }
-
-  //@todo set via -log command line option
-  private var logFile = false
-  def main(args : Array[String]) : Unit = {
-    val isFirstLaunch = if (args.length >= 1) {
-      !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
-    } else true
-
-    if (isFirstLaunch) {
-      val java : String = javaLocation
-      val keymaeraxjar : String = jarLocation
-      println("Restarting KeYmaera X with sufficient stack space")
-      runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
-    }
-    else {
-      exitIfDeprecated()
-      clearCacheIfDeprecated()
-      assert(args.head.equals("-launch"))
-      startServer(args.tail)
-      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
-      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
   }
 
@@ -253,7 +258,9 @@ object Main {
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        KeYmaeraXLock.deleteLock()
+        if(!IS_RELAUNCH_PROCESS) {
+          KeYmaeraXLock.deleteLock()
+        }
         proc.destroy()
       }
     })
