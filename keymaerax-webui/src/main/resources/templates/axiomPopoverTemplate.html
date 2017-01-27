@@ -20,10 +20,13 @@
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
                ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a>
-            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0"
-               ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
+            <!-- Rule link: execute if form is valid, otherwise open details -->
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tacticForm.$valid"
+               class="btn btn-link"
                ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b>{{tactic.selectedDerivation().name}}</b></a>
-            <span class="text-danger" ng-if="tacticForm.$invalid">Tactic requires input</span>
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tacticForm.$invalid"
+               class="btn btn-link"
+               ng-click="tactic.isOpen = !tactic.isOpen"><b>{{tactic.selectedDerivation().name}} ...</b></a>
 
             <div class="pull-right">
                 <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
