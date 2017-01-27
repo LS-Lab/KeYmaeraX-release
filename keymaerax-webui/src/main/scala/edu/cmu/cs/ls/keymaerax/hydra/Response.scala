@@ -529,7 +529,7 @@ object Helpers {
 }
 
 class AgendaAwesomeResponse(proofId: String, root: TreeNode, leaves: List[(TreeNode, Option[PositionLocator])],
-                            agenda: List[AgendaItem]) extends Response {
+                            agenda: List[AgendaItem], closed: Boolean) extends Response {
   override val schema = Some("agendaawesome.js")
 
   val proofTree = {
@@ -546,7 +546,8 @@ class AgendaAwesomeResponse(proofId: String, root: TreeNode, leaves: List[(TreeN
   def getJson =
     JsObject (
       "proofTree" -> proofTree,
-      "agendaItems" -> agendaItems
+      "agendaItems" -> agendaItems,
+      "closed" -> JsBoolean(closed)
     )
 }
 

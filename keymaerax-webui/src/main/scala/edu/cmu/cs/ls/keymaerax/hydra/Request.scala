@@ -791,15 +791,14 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
   * @param proofId Identifies the proof.
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val proofIdInt = proofId.toInt
     val closed = db.isProofClosed(proofIdInt)
     val trace = db.getExecutionTrace(proofIdInt)
     val proofTree = ProofTree.ofTrace(trace, () => db.agendaItemsForProof(proofIdInt), proofFinished = closed)
     val (_ :: leaves) = proofTree.leavesAndRoot
     val leavesWithPositions = leaves.map(n => (n, RequestHelper.stepPosition(db, n)))
-    val response = new AgendaAwesomeResponse(proofId, proofTree.root, leavesWithPositions, proofTree.leaves)
-    response :: Nil
+    new AgendaAwesomeResponse(proofId, proofTree.root, leavesWithPositions, proofTree.leaves, closed) :: Nil
   }
 }
 

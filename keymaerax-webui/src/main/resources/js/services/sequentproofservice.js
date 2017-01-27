@@ -243,7 +243,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           if (theAgenda.items().length > 0) {
             // select first task if nothing is selected yet
             if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
-          } else {
+          }
+          if (response.data.closed || theAgenda.items().length == 0) {
             // proof might be finished
             if(!theAgenda.proofStatusDisplayed) {
               theAgenda.proofStatusDisplayed == true
