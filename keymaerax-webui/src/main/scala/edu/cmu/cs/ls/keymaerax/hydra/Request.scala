@@ -402,7 +402,8 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       (osPath.getFields("version").head.convertTo[String],
        osPath.getFields("kernelPath").head.convertTo[String],
        osPath.getFields("kernelName").head.convertTo[String],
-       osPath.getFields("jlinkPath").head.convertTo[String] + jvmBits + File.separator,
+       osPath.getFields("jlinkPath").head.convertTo[String] +
+         (if (jvmBits == "64") "-" + jvmBits else "") + File.separator,
        osPath.getFields("jlinkName").head.convertTo[String]))
 
     val suggestion = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
