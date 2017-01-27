@@ -13,6 +13,6 @@ implyR(1) & (andL('L)*) & loop({`r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 
       diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`t>=0`}, 1) & diffInvariant({`v=old(v)+A*t`}, 1) &
       diffInvariant({`-t*(v-A/2*t)<=x-old(x) & x-old(x)<=t*(v-A/2*t)`}, 1) &
       diffInvariant({`-t*(v-A/2*t)<=y-old(y) & y-old(y)<=t*(v-A/2*t)`}, 1) &
-      (andL('L)*) & dW(1)
+      (andL('L)*) & dW(1) /* goal remains open */
   )
 )

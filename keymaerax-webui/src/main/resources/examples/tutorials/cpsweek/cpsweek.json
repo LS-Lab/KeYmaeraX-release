@@ -7,7 +7,8 @@
       "title": "1-dimensional car",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=59",
       "model": "classpath:/examples/tutorials/cpsweek/06_robo2-full.kyx",
-      "tactic": "classpath:/examples/tutorials/cpsweek/06_robo2-full.kyt"
+      "tactic": "classpath:/examples/tutorials/cpsweek/06_robo2-full.kyt",
+      "proves": true
     },
     {
       "name": "CPSWeek Tutorial Example 2",
@@ -15,7 +16,8 @@
       "title": "Damped oscillator",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=127",
       "model": "classpath:/examples/tutorials/cpsweek/08_dampedosc.kyx",
-      "tactic": "classpath:/examples/tutorials/cpsweek/08_dampedosc.kyt"
+      "tactic": "classpath:/examples/tutorials/cpsweek/08_dampedosc.kyt",
+      "proves": true
     },
     {
       "name": "CPSWeek Tutorial Example 3",
@@ -23,7 +25,8 @@
       "title": "Motzkin",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=128",
       "model": "classpath:/examples/tutorials/cpsweek/motzkin.kyx",
-      "tactic": "classpath:/examples/tutorials/cpsweek/motzkin.kyt"
+      "tactic": "classpath:/examples/tutorials/cpsweek/motzkin.kyt",
+      "proves": true
     },
     {
       "name": "CPSWeek Tutorial Example 4",
@@ -31,7 +34,8 @@
       "title": "2-dimensional car",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=148",
       "model": "classpath:/examples/tutorials/cpsweek/07_robo3-full.kyx",
-      "tactic": "classpath:/examples/tutorials/cpsweek/07_robo3-full.kyt"
+      "tactic": "classpath:/examples/tutorials/cpsweek/07_robo3-full.kyt",
+      "proves": false
     }
   ]
 }
