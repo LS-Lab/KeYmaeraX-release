@@ -20,7 +20,6 @@ import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
 import spray.json._
@@ -387,8 +386,8 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
 class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
-    val contents : String = Source.fromInputStream(reader).getLines().mkString("\n")
-    val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
+    val contents: String = Source.fromInputStream(reader).mkString
+    val source: JsArray = contents.parseJson.asInstanceOf[JsArray]
 
     // TODO provide classes and spray JSON protocol to convert
     val os = System.getProperty("os.name")
@@ -403,7 +402,7 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
       (osPath.getFields("version").head.convertTo[String],
        osPath.getFields("kernelPath").head.convertTo[String],
        osPath.getFields("kernelName").head.convertTo[String],
-       osPath.getFields("jlinkPath").head.convertTo[String],
+       osPath.getFields("jlinkPath").head.convertTo[String] + jvmBits + File.separator,
        osPath.getFields("jlinkName").head.convertTo[String]))
 
     val suggestion = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
