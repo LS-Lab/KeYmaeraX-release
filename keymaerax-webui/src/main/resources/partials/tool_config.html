@@ -2,15 +2,15 @@
 
 <div class="row">
     <div class="col-md-4">
-        <p>KeYmaera X uses backend tools to prove validity of real arithmetic formulas.
-           Z3 is shipped with KeYmaera X for your convenience.
-           Please select your preferred tool.
+        <p>KeYmaera&#160;X uses backend tools to prove validity of real arithmetic formulas.
+           Z3 is shipped with KeYmaera&#160;X for your convenience.
+           Please select your preferred solver.
         </p>
 
         <form name="toolSelection">
-            <label for="toolSelect">Arithmetic tool: </label>
+            <label for="toolSelect">Arithmetic Solver: </label>
             <span style="padding-right: 10px;"
-                 data-intro="Choose an arithmetic tool (Z3 is shipped with KeYmaera X; Mathematica requires external installation but provides more features)."
+                 data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica requires external installation but provides more features)."
                  data-position="right">
             <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
                 <option value="mathematica">Mathematica</option>
@@ -26,11 +26,11 @@
             </div>
             <div class="panel-body">
                 <dl class="dl-horizontal">
-                    <dt>Operating System</dt>
+                    <dt>Operating System:</dt>
                     <dd>{{systemInfo.os}} {{systemInfo.osVersion}}</dd>
-                    <dt>Java</dt>
-                    <dd>{{systemInfo.jvmVendor}} {{systemInfo.jvmVersion}} with {{systemInfo.jvmArchitecture}} bits</dd>
-                    <dt>Java Home</dt>
+                    <dt>Java JVM:</dt>
+                    <dd>{{systemInfo.jvmVendor}} {{systemInfo.jvmVersion}} with <b>{{systemInfo.jvmArchitecture}} bits</b></dd>
+                    <dt>Java Home:</dt>
                     <dd>{{systemInfo.jvmHome}}</dd>
                 </dl>
             </div>
@@ -46,7 +46,7 @@
     <h2>Z3 Configuration</h2>
     <p><b>Limited functionality with Z3.</b></p>
     <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
-        simplification, and arithmetic with alternating quantifiers please select to <kbd>Mathematica</kbd> from the
+        simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> as Arithmetic Solver from the
         drop-down box above.</p>
     <p>In general, complex problems may require trying different tools.</p>
 </div>

@@ -1,6 +1,6 @@
 <h2>Mathematica Configuration</h2>
 
-Your system looks as if you are running Mathematica {{mathematicaConfigSuggestion.suggestion.version}} on {{mathematicaConfigSuggestion.os}}.
+Your system looks as if you have installed Mathematica {{mathematicaConfigSuggestion.suggestion.version}} on {{mathematicaConfigSuggestion.os}}.
 
 <script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
     <div style="text-align: left;">
@@ -15,7 +15,7 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
 
 <script type="text/ng-template" id="jlinkSuggestionTooltipTemplate.html">
     <div style="text-align: left;">
-        Other locations where you might find the JLink native library:
+        Other locations where you might find the J/Link native library:
         <ul>
             <li ng-repeat="suggestion in mathematicaConfigSuggestion.allSuggestions">
                 {{suggestion.version}}: {{suggestion.jlinkPath}}
@@ -30,10 +30,10 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
 
         <div>
             <p>
-            Please configure the path to the Mathematica MathKernel. On your operating system
-            ({{mathematicaConfigSuggestion.os}}), look for an executable file named
+            Please configure the path to the Mathematica kernel. On your operating system
+            ({{mathematicaConfigSuggestion.os}}) look for an executable file named
             <code>{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>.<br/>
-            If Mathematica is installed at its default location, you might find the relevant file at
+            If Mathematica is installed at its default location, you might find that file at
             </p>
             <p>
             <code uib-tooltip-template="'kernelSuggestionTooltipTemplate.html'"
@@ -42,7 +42,7 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
         </div>
 
         <div class="input-group"
-             data-intro="Configure the path to the MathKernel executable, corresponding to your operating system. Look for an executable file named {{mathematicaConfigSuggestion.suggestion.kernelName}}. You might find it at <br/>{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}."
+             data-intro="Configure the path to the Mathematica kernel executable, corresponding to your operating system. Look for an executable file named <code>{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>. You might find it at <br/>{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}."
              data-position="top" style="padding-top: 10px;">
             <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
@@ -73,10 +73,10 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
 
         <div>
             <p>
-            Please configure the path to the J/Link native library.
-            On your operating system ({{mathematicaConfigSuggestion.os}} with {{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine), look for a
+            Please configure the path to the J/Link native library on your system architecture.
+            On your operating system ({{mathematicaConfigSuggestion.os}} with <b>{{mathematicaConfigSuggestion.jvmArchitecture}}-bit</b> Java Virtual Machine) look for a
             file named <code>{{mathematicaConfigSuggestion.suggestion.jlinkName}}</code>.<br/>
-            If Mathematica is installed at its default location, you might find the relevant file at
+            If Mathematica is installed at its default location, you might find that file at
             </p>
             <p>
             <code uib-tooltip-template="'jlinkSuggestionTooltipTemplate.html'"
@@ -85,7 +85,7 @@ Your system looks as if you are running Mathematica {{mathematicaConfigSuggestio
         </div>
 
         <div class="input-group"
-             data-intro="Configure the path to the Mathematica link library. Look for a file {{mathematicaConfigSuggestion.suggestion.jlinkName}} at <br/>{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}.<br/>Make sure that you choose a {{mathematicaConfigSuggestion.jvmArchitecture}}-bit library for your system architecture, since you are running a {{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine."
+             data-intro="Configure the path to the Mathematica J/Link native library. Look for a file named <code>{{mathematicaConfigSuggestion.suggestion.jlinkName}}</code> at <br/>{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}.<br/>Make sure that you choose a <b>{{mathematicaConfigSuggestion.jvmArchitecture}}-bit</b> library that fits to your system architecture, since you are running a <b>{{mathematicaConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine</b>."
              data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
             <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
