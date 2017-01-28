@@ -13,9 +13,9 @@
             <div class="col-md-6"><b>All Proofs</b></div>
             <div class="col-md-6">
                 <a class="btn btn-default pull-right" id="proofsarchiving"
-                   data-intro="Export all proofs into a .kya file." data-position="left"
+                   data-intro="<strong>Extract</strong> all proofs into a single archive (.kya, includes all finished or partial proofs with their models)." data-position="left"
                    ng-click="downloadAllProofs()"
-                   uib-tooltip="Extract all proofs to files"><i class="fa fa-archive"></i> Extract all</a>
+                   uib-tooltip="Extract all proofs into a single archive (.kya)"><i class="fa fa-archive"></i> Extract all</a>
             </div>
         </div>
     </div>
@@ -25,13 +25,13 @@
             <div class="col-md-6"><b>Proofs of Model {{modelId}}</b></div>
             <div class="col-md-6">
                 <span class="pull-right" id="proofsarchiving"
-                      data-intro="Start a new proof, or export all proofs into a .kya file." data-position="left">
+                      data-intro="Start a <strong>new proof</strong>, or <strong>extract all proofs</strong> into a single archive (.kya, includes this model and all its finished or partial proofs)." data-position="left">
                     <a class="btn btn-default" ng-controller="ModelProofCreateCtrl"
                        ng-click="createProof(modelId, '', '')"
                        uib-tooltip="Start new proof"><i class="fa fa-gears"></i> Start new proof</a>
                     <a class="btn btn-default"
                        ng-click="downloadModelProofs(modelId)"
-                       uib-tooltip="Export all proofs"><i class="fa fa-archive"></i> Export all</a>
+                       uib-tooltip="Extract all proofs into a single archive (.kya)"><i class="fa fa-archive"></i> Export all</a>
                 </span>
             </div>
         </div>
@@ -59,7 +59,7 @@
             <td>{{ proof.date }}</td>
             <td>
                 <div ng-if="$first">
-                <span data-intro="Is there more work to do or is the proof done?" data-position="left">
+                <span data-intro="Is there more work to do (<i class='fa fa-pencil'></i>) or is the proof done (<i class='fa fa-check'></i>)?" data-position="left">
                     <span ng-if="proof.status"><i class="fa fa-check"></i> Proved</span>
                     <span ng-if="proof.status === false"><i class="fa fa-pencil"></i> In Progress</span>
                 </span>
@@ -72,13 +72,13 @@
                 </div>
             </td>
             <td id="proofsactions"
-                data-intro="Open, download, or delete proofs."
+                data-intro="<strong>Open</strong> proofs, <strong>download lemmas</strong> (.kyp, includes a lemma combining a model and a finished proof in a trusted certificate), <strong>download archives</strong> (.kya, includes a model and a specific finished or partial proof), or <strong>delete</strong> proofs."
                 data-position="bottom" ng-if="$first">
                 <span class="pull-right">
                 <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (completed proof)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
-                <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download (partial) proof" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
+                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic (.kyt)" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
+                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (.kyp)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
+                <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download model+proof (.kya)" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
                 </span>
             </td>
