@@ -126,9 +126,10 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
-    $location, FileSaver, Blob, Models, spinnerService) {
+    $location, FileSaver, Blob, Models, spinnerService, firstTime) {
   $scope.models = [];
   $scope.userId = $cookies.get('userId');
+  $scope.intro.firstTime = firstTime;
 
   $scope.intro.introOptions = {
     steps: [

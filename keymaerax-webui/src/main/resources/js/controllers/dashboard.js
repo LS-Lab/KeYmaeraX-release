@@ -18,7 +18,8 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
 
 angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
   $scope.intro = {
-    introOptions: {}
+    introOptions: {},
+    firstTime: false
   }
 
   $scope.showOverlayHelp = function() {

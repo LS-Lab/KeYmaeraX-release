@@ -34,6 +34,12 @@
 
 <body ng-controller="DashboardCtrl">
 
+<script type="text/ng-template" id="firstTimePopover.html">
+    <div uib-alert type="success"
+         style="margin-bottom:0px;"
+         close="intro.firstTime=false;"><strong>Quick help</strong></div>
+</script>
+
 <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
@@ -84,7 +90,14 @@
                     </ul>
                 </li>
                 <li class="dropdown">
-                    <a ng-click="showOverlayHelp()" uib-tooltip="Quick usage help" tooltip-placement="auto bottom"><i class="fa fa-question-circle"></i></a>
+                    <a>
+                        <i class="fa fa-question-circle" ng-click="showOverlayHelp()"
+                           uib-popover-template="'firstTimePopover.html'" popover-trigger="none"
+                           popover-class="increase-popover-width"
+                           popover-is-open="intro.firstTime" popover-placement="bottom"
+                           uib-tooltip="Quick usage help" tooltip-placement="auto bottom">
+                        </i>
+                    </a>
                 </li>
                 <li class="dropdown">
                     <a ng-click="shutdown()" ng-show="isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>

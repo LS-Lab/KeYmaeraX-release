@@ -5,7 +5,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
     $scope.username = ""
     $scope.password = ""
 
-    $scope.processLogin = function() { login($scope.username, $scope.password) }
+    $scope.processLogin = function() { login($scope.username, $scope.password, false); }
 
     $scope.processRegistration = function() {
       var modeModalInstance = $uibModal.open({
@@ -24,21 +24,21 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
         modalInstance.result.then(function() {
           $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
             .then(function(response) {
-              if (response.data.success === true) { $scope.processLogin(); }
+              if (response.data.success === true) { login($scope.username, $scope.password, true); }
               else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
             });
         });
       })
     }
 
-    login = function(username, password) {
+    login = function(username, password, firstTime) {
       $http.get("/user/" + username + "/" + password + "/mode/0")
       .then(function(response) {
         if(response.data.type == "LoginResponse") {
           if(response.data.success) {
             sessionService.setToken(response.data.sessionToken);
             sessionService.setUser(response.data.value);
-            document.location.href = "dashboard.html?#/models"
+            document.location.href = firstTime ? "dashboard.html?#/modelsFirstTime" : "dashboard.html?#/models";
           } else {
             showMessage($uibModal, "Login failed", "Please check user name and/or password");
           }

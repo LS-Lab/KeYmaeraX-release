@@ -300,6 +300,10 @@ del {
   width: 700px; /* @todo solve tactic popover layout problem for real */
 }
 
+.increase-popover-width {
+   width: 180px;
+}
+
 .k4-narrowinput {
   max-width: 40px;
 }

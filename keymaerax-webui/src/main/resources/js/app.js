@@ -53,7 +53,13 @@ keymaeraProofApp.config(['$routeProvider',
       }).
       when('/models', {
         templateUrl: 'partials/model-list.html',
-        controller: 'ModelListCtrl'
+        controller: 'ModelListCtrl',
+        resolve: { firstTime: function() { return false; } }
+      }).
+      when('/modelsFirstTime', {
+        templateUrl: 'partials/model-list.html',
+        controller: 'ModelListCtrl',
+        resolve: { firstTime: function() { return true; } }
       }).
       when('/tutorials', {
         templateUrl: 'partials/tutorials.html'
