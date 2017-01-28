@@ -1,6 +1,12 @@
 <h2>Mathematica Configuration</h2>
 
+<p ng-if="mathematicaConfigSuggestion.suggestionFound" ng-cloak>
 Your system looks as if you have installed Mathematica {{mathematicaConfigSuggestion.suggestion.version}} on {{mathematicaConfigSuggestion.os}}.
+</p>
+<p ng-if="!mathematicaConfigSuggestion.suggestionFound" ng-cloak>
+Your system looks like {{mathematicaConfigSuggestion.os}}, but Mathematica may not be installed, or not be installed in the default location.
+You can obtain Mathematica from <a href="http://www.wolfram.com/mathematica/">Wolfram</a>.
+</p>
 
 <script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
     <div style="text-align: left;">

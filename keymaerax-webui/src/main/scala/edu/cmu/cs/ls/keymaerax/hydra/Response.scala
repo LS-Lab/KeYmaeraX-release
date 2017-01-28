@@ -777,7 +777,8 @@ class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : 
 }
 
 //@todo these are a mess.
-class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, version: String, kernelPath: String, kernelName: String,
+class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, suggestionFound: Boolean,
+                                          version: String, kernelPath: String, kernelName: String,
                                           jlinkPath: String, jlinkName: String,
                                           allSuggestions: List[(String, String, String, String, String)]) extends Response {
 
@@ -792,6 +793,7 @@ class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, version: 
   def getJson: JsValue = JsObject(
     "os" -> JsString(os),
     "jvmArchitecture" -> JsString(jvmBits),
+    "suggestionFound" -> JsBoolean(suggestionFound),
     "suggestion" -> convertSuggestion((version, kernelPath, kernelName, jlinkPath, jlinkName)),
     "allSuggestions" -> JsArray(allSuggestions.map(convertSuggestion):_*)
   )

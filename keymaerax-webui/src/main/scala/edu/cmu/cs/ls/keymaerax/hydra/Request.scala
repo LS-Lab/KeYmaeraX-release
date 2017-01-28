@@ -406,13 +406,13 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
          (if (jvmBits == "64") "-" + jvmBits else "") + File.separator,
        osPath.getFields("jlinkName").head.convertTo[String]))
 
-    val suggestion = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
+    val (suggestionFound, suggestion) = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
         new java.io.File(path._4 + path._5).exists) match {
-      case Some(s) => s
-      case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
+      case Some(s) => (true, s)
+      case None => (false, pathTuples.head) // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
+    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestionFound, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
   }
 
   private def osKeyOf(osName: String): String = {
