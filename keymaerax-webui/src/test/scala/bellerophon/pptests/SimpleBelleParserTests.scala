@@ -66,6 +66,20 @@ class SimpleBelleParserTests extends TacticTestBase {
     BellePrettyPrinter(TactixLibrary.loop("1=1".asFormula)(1)) shouldBe "loop({`1=1`}, 1)"
   }
 
+  it should "parse a tactic with optional argument specified" in {
+    val t = TactixLibrary.discreteGhost("5".asTerm, Some("x".asVariable))(1)
+    val s = "discreteGhost({`5`}, {`x`}, 1)"
+    BelleParser(s) shouldBe t
+    BellePrettyPrinter(t) shouldBe s
+  }
+
+  it should "parse a tactic without optional argument specified" in {
+    val t = TactixLibrary.discreteGhost("5".asTerm, None)(1)
+    val s = "discreteGhost({`5`}, 1)"
+    BelleParser(s) shouldBe t
+    BellePrettyPrinter(t) shouldBe s
+  }
+
   //endregion
 
   //region Sequential combinator

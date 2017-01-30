@@ -23,7 +23,7 @@ private object EqualityTactics {
    * @param name The name of the tactic.
    * @return The tactic.
    */
-  private def exhaustiveEq(name: String): DependentPositionTactic = name by ((pos, sequent) => {
+  private def exhaustiveEq(name: String): DependentPositionTactic = name by ((pos: Position, sequent: Sequent) => {
     require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
     sequent.sub(pos) match {
       case Some(eq@Equal(lhs, rhs)) =>
@@ -88,7 +88,7 @@ private object EqualityTactics {
 
   /** @see [[TactixLibrary.eqR2L]] */
   def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos).checkAnte)
-  def eqR2L(eqPos: AntePosition): DependentPositionTactic = "eqR2L" by ((pos, sequent) => {
+  def eqR2L(eqPos: AntePosition): DependentPositionTactic = "eqR2L" by ((pos: Position, sequent: Sequent) => {
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) =>
@@ -116,14 +116,14 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos, sequent) => sequent.sub(pos) match {
+  lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(lhs, rhs)) =>
       useAt("= commute")(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
   })
 
 
   /** @see [[TactixLibrary.abbrv()]] */
-  def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos, sequent) => sequent.sub(pos) match {
+  def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(t: Term) => abbrv(t, Some(abbrvV))
     case Some(e) => throw new BelleThrowable("Expected a term at position " + pos + ", but got " + e)
     case _ => throw new BelleThrowable("Position " + pos + " is undefined in sequent " + sequent)
@@ -139,7 +139,8 @@ private object EqualityTactics {
    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
    * @return The tactic.
    */
-  def abbrv(t: Term, abbrvV: Option[Variable] = None): InputTactic = new InputTactic("abbrv", t::abbrvV.get::Nil) {
+  def abbrv(t: Term, abbrvV: Option[Variable] = None): InputTactic = new InputTactic("abbrv",
+      abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }) {
     def computeExpr(): BelleExpr = new SingleGoalDependentTactic(name) {
       def computeExpr(sequent: Sequent): BelleExpr = {
         require(abbrvV.isEmpty ||
@@ -172,7 +173,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def abs: DependentPositionTactic = "absExp" by ((pos, sequent) => sequent.sub(pos) match {
+  def abs: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
       val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val absVar = Variable(fn, freshAbsIdx)
@@ -191,7 +192,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def minmax: DependentPositionTactic = "minmax" by ((pos, sequent) => sequent.sub(pos) match {
+  def minmax: DependentPositionTactic = "minmax" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val minmaxVar = Variable(fn, freshMinMaxIdx)

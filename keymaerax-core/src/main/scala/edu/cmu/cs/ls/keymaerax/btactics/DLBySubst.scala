@@ -285,7 +285,6 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.discreteGhost()]] */
   def discreteGhost(t: Term, ghost: Option[Variable]): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
-      //@todo figure out how to serialize None when adding to AxiomInfo
       ghost match { case Some(g) => List(t, g) case _ => List(t) }, (pos: Position, seq: Sequent) => {
     require(ghost match { case Some(g) => g != t case None => true }, "Expected ghost different from t, use stutter instead")
     seq.sub(pos) match {
