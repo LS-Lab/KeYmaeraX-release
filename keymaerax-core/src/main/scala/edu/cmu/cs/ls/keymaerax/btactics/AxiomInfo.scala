@@ -97,6 +97,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
     new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
+    InputPositionTacticInfo("assignbexistsRule",
+      RuleDisplayInfo(
+        "[:=] assign exists",
+        /* conclusion */ (List("&Gamma;"), List("∃t [x:=t;]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("[t:=e;][x:=t;]P", "&Delta;")) )
+      ),
+      List(TermArg("e")),
+      {case () => (e: Term) => DLBySubst.assignbExists(e)}
+    ),
     new CoreAxiomInfo("[':=] differential assign"
       , AxiomDisplayInfo(("[′:=]","[':=]"), "[x′:=c]p(x′)↔p(c)")
       , "Dassignb", {case () => HilbertCalculus.Dassignb}),

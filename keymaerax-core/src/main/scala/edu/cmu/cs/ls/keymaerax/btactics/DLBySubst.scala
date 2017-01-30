@@ -322,7 +322,7 @@ private object DLBySubst {
    * @param f The right-hand side term of the assignment chosen as a witness for the existential quantifier.
    * @return The tactic.
    */
-  def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def assignbExists(f: Term): DependentPositionTactic = "assignbExistsRule" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
