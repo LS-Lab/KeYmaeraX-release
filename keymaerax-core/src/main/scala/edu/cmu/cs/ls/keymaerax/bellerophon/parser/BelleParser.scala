@@ -20,10 +20,15 @@ object BelleParser extends (String => BelleExpr) {
   def parseWithInvGen(s: String, g:Option[Generator.Generator[Formula]] = None): BelleExpr =
     KeYmaeraXProblemParser.firstNonASCIICharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found a non-ASCII character when parsing tactic: ${char}", loc, "<unknown>", "<unknown>", "", "")
-      case None => {
-        invariantGenerator = g;
-        parseTokenStream(BelleLexer(s))
-      }
+      case None =>
+        invariantGenerator = g
+        try {
+          parseTokenStream(BelleLexer(s))
+        } catch {
+          case e: Throwable =>
+            System.err.println("Error parsing\n" + s)
+            throw e
+        }
     }
 
   /** Runs the parser with debug mode turned on. */
