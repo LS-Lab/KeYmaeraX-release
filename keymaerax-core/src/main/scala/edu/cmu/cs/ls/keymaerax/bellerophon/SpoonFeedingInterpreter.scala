@@ -68,6 +68,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
             "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
         }
         result
+      case BranchTactic(children) if children.isEmpty => branches(branch)._2
       case BranchTactic(children) => branches(branch)._2 match {
         case BelleProvable(p, labels) =>
           if (children.length != p.subgoals.length)

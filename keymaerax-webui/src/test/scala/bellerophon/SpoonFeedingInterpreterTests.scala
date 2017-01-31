@@ -379,6 +379,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & closeId")
   }
 
+  it should "work with onAll without branches" in withDatabase { db =>
+    val problem = "x>=0 -> x>=0"
+    val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent, "proof1")
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1, strict=false)
+    interpreter(implyR(1) & closeId & onAll(nil), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("implyR(1) & closeId")
+  }
+
   it should "should work for prop on a left-branching example" in withDatabase { db =>
     val problem = "x>=0|!x<y -> x>=0"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
