@@ -389,6 +389,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tactic shouldBe BelleParser("implyR(1) & closeId")
   }
 
+  it should "should work for master on a simple example" in withDatabase { db => withMathematica { _ =>
+    val problem = "x>=0 -> x>=0"
+    val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent, "proof1")
+    val interpreter = SpoonFeedingInterpreter(listener(db.db, proofId), SequentialInterpreter, 1, strict=false)
+    interpreter(master(), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tactic = db.extractTactic(proofId)
+    tactic shouldBe BelleParser("normalize")
+    ProofTree.ofTrace(db.db.getExecutionTrace(proofId)).findNode("1") match {
+      case Some(node) => stepInto(node, "normalize", BelleParser("implyR(1) & closeId"))
+    }
+  }}
+
   it should "should work for prop on a left-branching example" in withDatabase { db =>
     val problem = "x>=0|!x<y -> x>=0"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
