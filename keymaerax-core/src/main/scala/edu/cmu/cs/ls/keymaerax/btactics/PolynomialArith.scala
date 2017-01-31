@@ -503,7 +503,7 @@ object PolynomialArith {
         //Run the instructions
         inst.foldRight(ident)(
           (h,tac) =>
-          implyRi(AntePos(h._1),SuccPos(0),true)
+          implyRi(keep=true)(AntePos(h._1),SuccPos(0))
           & useAt("ANON", axMov,PosInExpr(1::Nil),(us:Option[Subst])=>us.get++RenUSubst(("g_()".asTerm,h._2)::Nil))(1)
           & tac) &
         normaliseAt(SuccPosition(1,0::Nil)) &

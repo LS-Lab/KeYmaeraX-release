@@ -513,7 +513,7 @@ object IntervalArithmetic {
   private val lastImplyRi: DependentTactic  = new SingleGoalDependentTactic("lastImplyRi") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       assert(sequent.ante.length > 0)
-      implyRi(AntePos(sequent.ante.length-1),SuccPos(0))
+      implyRi()(AntePos(sequent.ante.length-1),SuccPos(0))
     }
   }
 

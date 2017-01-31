@@ -75,7 +75,7 @@ private object EqualityTactics {
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
-        val (equivifyCommute, closeWhere, inverseImply) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos), implyRi(eqPos.top, pos.checkSucc.top)) else (equivifyR('Rlast), LastSucc(0), implyRi(eqPos.top, SuccPos(sequent.succ.length-1)))
+        val (equivifyCommute, closeWhere, inverseImply) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos), implyRi()(eqPos, pos)) else (equivifyR('Rlast), LastSucc(0), implyRi()(eqPos, SuccPosition.base0(sequent.succ.length-1)))
         cut(condEquiv) <(
           /* use */ (implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeIdWith(closeWhere)) partial) partial) partial,
           /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(

@@ -40,8 +40,7 @@ class PropositionalTests extends TacticTestBase {
   }
 
   "implyRi" should "introduce implication from antecedent and succedent" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)),
-      implyRi())
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)), implyRi)
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "x>0 -> y>0".asFormula
@@ -49,7 +48,7 @@ class PropositionalTests extends TacticTestBase {
 
   it should "work as two-position tactic" in {
     val result = proveBy(Sequent(IndexedSeq("a=2".asFormula, "x>0".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula)),
-      implyRi(AntePos(1), SuccPos(0)))
+      implyRi()(AntePos(1), SuccPos(0)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "a=2".asFormula
     result.subgoals.head.succ should contain only ("x>0 -> y>0".asFormula, "b=3".asFormula)

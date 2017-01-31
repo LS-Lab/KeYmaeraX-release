@@ -426,7 +426,7 @@ private object DifferentialTactics {
             DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
             existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
             useAt("TODODAbaseaux", auxEquiv, PosInExpr(0::Nil))(pos ++ PosInExpr(1::Nil)) &
-            existsR(pos ++ PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
+            existsR(pos ++ PosInExpr(1::Nil)) & implyRi()(AntePosition.base0(sequent.ante.length), pos)
           )
     })
 
@@ -497,7 +497,7 @@ private object DifferentialTactics {
         val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
 
         if (consts.nonEmpty) {
-          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0))
+          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi
           val constFml = consts.map(_._1).reduceRight(And)
           diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(consts.size-1) & closeIdWith('Rlast) & done)
         } else {

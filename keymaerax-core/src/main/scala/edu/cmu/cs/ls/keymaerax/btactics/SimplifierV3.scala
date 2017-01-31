@@ -454,7 +454,7 @@ object SimplifierV3 {
 
             //This is nasty, there might be a better way to deal with the quantifiers
             val pr = proveBy(fml, implyR(1) & equivR(1) &
-              OnAll(seq & implyRi(AntePos(1),SuccPos(0)) & equivifyR(1)) <(
+              OnAll(seq & implyRi()(AntePos(1),SuccPos(0)) & equivifyR(1)) <(
                 implyRi & by(upr),
                 commuteEquivR(1) & implyRi & by(upr)
                 )
