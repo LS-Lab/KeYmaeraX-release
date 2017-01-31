@@ -67,7 +67,7 @@ object AxiomIndex {
     case "&' derive and" => binaryDefault
     case "|' derive or" => binaryDefault
     case "->' derive imply" => binaryDefault
-    case "forall' derive forall" | "exists' derive exists" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "forall' derive forall" | "exists' derive exists" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
     case "c()' derive constant fn" => nullaryDefault
     // recursors for derivative formula axioms
     case "=' derive ="   => binaryDefault

@@ -294,6 +294,7 @@ class ODETests extends TacticTestBase {
       "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
       "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
       "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" ::
+        "x>=1->[{x'=x^2+2*x^4}]x^3>=x^2" :: // @generalize(x>=1)&dI
         Nil
 
 
