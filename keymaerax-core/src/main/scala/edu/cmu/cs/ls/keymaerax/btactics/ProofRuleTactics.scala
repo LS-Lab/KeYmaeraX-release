@@ -41,39 +41,33 @@ private object ProofRuleTactics {
     } & Idioms.<(label(BelleLabels.cutUse.label), label(BelleLabels.cutShow.label))
   }
 
-  //@todo AntePos or AntePosition?
-  def cutL(f: Formula)(pos: AntePos) = new InputTactic("cutL", f::Nil) {
-    override def prettyString = s"$name(${f.prettyString}, ${pos.toString})"
-
-    override def computeExpr() = new BuiltInTactic(prettyString) {
+  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(f, (pos: Position, _: Sequent) => {
+    new BuiltInTactic("CutL") {
       override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutL(" + f + ")")
-        provable(core.CutLeft(f, pos), 0)
+        provable(core.CutLeft(f, pos.checkAnte.top), 0)
       }
     }
-  }
+  })
 
-  def cutR(f: Formula)(pos: SuccPos) = new InputTactic("cutR", f::Nil) {
-    override def computeExpr() = new BuiltInTactic("CutR") {
+  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = "cutR" byWithInput(f, (pos: Position, _: Sequent) => {
+    new BuiltInTactic("CutR") {
       override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutR(" + f + ")")
-        provable(core.CutRight(f, pos), 0)
+        provable(core.CutRight(f, pos.checkSucc.top), 0)
       }
     }
+  })
 
-    override def prettyString: String = s"$name(${f.prettyString}, ${pos.toString})"
-  }
-
-  def cutLR(f: Formula)(pos: Position) = new InputTactic("cutLR", f::Nil) {
-    override def computeExpr() = new BuiltInTactic("CutLR") {
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = "cutLR" byWithInput(f, (pos: Position, _: Sequent) => {
+    new BuiltInTactic("CutLR") {
       override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, "cutLR(" + f + ")")
         if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
         else provable(core.CutRight(f, pos.checkSucc.top), 0)
       }
     }
-  }
-
+  })
 
   def hide = new DependentPositionTactic("Hide") {
     //@todo this should not be a dependent tactic, just a by(Position=>Belle)
