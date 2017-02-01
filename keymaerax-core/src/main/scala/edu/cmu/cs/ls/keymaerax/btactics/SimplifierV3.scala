@@ -59,13 +59,21 @@ object SimplifierV3 {
 
   private val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE)
 
+  //TODO: think more about the type used to represent the current context
+  type context = HashSet[Formula]
+  type termIndex = (Term,context) => List[ProvableSig]
+  type formulaIndex = (Formula,context) => List[ProvableSig]
+
+  def composeIndex[A<:Expression] (is:((A,context) => List[ProvableSig])*)
+                                 (f:A,ctx:context) : List[ProvableSig] = is.flatMap(axs => axs(f,ctx)).toList
+
   //Dependent term simplification workhorse
   //Given provable A -> (t = t') or (t = t'), a context, and a term x,
   // Checks if x unifies with t,
   // If applicable, checks for the A[unif] in the context
   // Then unifies the conclusion appropriately
   // Note: can avoid unifying again in the proof?
-  def applyTermProvable(t:Term, ctx:HashSet[Formula], pr:ProvableSig) : Option[(Term,Formula,ProvableSig)] = {
+  def applyTermProvable(t:Term, ctx:context, pr:ProvableSig) : Option[(Term,Formula,ProvableSig)] = {
     //todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
       case Imply(prem,Equal(k,v)) => {
@@ -95,7 +103,7 @@ object SimplifierV3 {
     proveBy(Equal(left,right), useAt(pr,PosInExpr(1 :: Nil))(1) & fastCloser(HashSet(),prem))
   }
 
-  def termSimp(t:Term, ctx:HashSet[Formula], taxs:Term => List[ProvableSig]) : (Term, Option[(Formula,ProvableSig)]) =
+  def termSimp(t:Term, ctx:context, taxs: termIndex ) : (Term, Option[(Formula,ProvableSig)]) =
   {
     val (rect,recpropt) =
       t match {
@@ -161,7 +169,7 @@ object SimplifierV3 {
       }
 
     //todo: Should this rewrite to saturation? Or is once enough?
-    val rw = taxs(rect).toStream.flatMap( pr => applyTermProvable(rect,ctx,pr)).headOption
+    val rw = taxs(rect,ctx).toStream.flatMap( pr => applyTermProvable(rect,ctx,pr)).headOption
     rw match {
       case None => (rect,recpropt)
       case Some((tt,prem,pr)) =>
@@ -261,16 +269,13 @@ object SimplifierV3 {
 
   private val equivTrans = proveBy("(P_() -> (F_() <-> FF_())) & (Q_() -> (FF_() <-> FFF_())) -> (P_() & Q_() -> (F_() <-> FFF_())) ".asFormula,prop)
 
-  def composeIndex[A<:Expression]( is:(A => List[ProvableSig])*)
-                  (f:A) : List[ProvableSig] = is.flatMap(axs => axs(f)).toList
-
   //Dependent formula simplification workhorse
   //Given provable A -> (P <-> P') or (P<->P'), a context, and a formula f,
   // Checks if P unifies with f,
   // If applicable, checks for the A[unif] in the context
   // Then unifies the conclusion appropriately
   // Note: can avoid unifying again in the proof?
-  def applyFormulaProvable(f:Formula, ctx:HashSet[Formula], pr:ProvableSig) : Option[(Formula,Formula,ProvableSig)] = {
+  def applyFormulaProvable(f:Formula, ctx:context, pr:ProvableSig) : Option[(Formula,Formula,ProvableSig)] = {
     //todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
       case Imply(prem,Equiv(k,v)) => {
@@ -296,7 +301,7 @@ object SimplifierV3 {
   }
 
   //Returns the number of conjuncts that got split up
-  def addCtx(ctx:HashSet[Formula],f:Formula,ctr:Int = 0) : (Int,HashSet[Formula]) =
+  def addCtx(ctx:context,f:Formula,ctr:Int = 0) : (Int,context) =
   {
     if(ctx.contains(f) | f.equals(True) | f.equals(Not(False))){
       return (ctr,ctx)
@@ -310,8 +315,8 @@ object SimplifierV3 {
     }
   }
 
-  def formulaSimp(f:Formula, ctx:HashSet[Formula] = HashSet(),
-                  faxs: Formula => List[ProvableSig], taxs: Term => List[ProvableSig]) : (Formula,Option[(Formula,ProvableSig)]) =
+  def formulaSimp(f:Formula, ctx:context = HashSet(),
+                  faxs: formulaIndex, taxs: termIndex) : (Formula,Option[(Formula,ProvableSig)]) =
   {
     //todo: enable flag to toggle left to right, right to left rewriting?
     val (recf,recpropt) =
@@ -519,7 +524,7 @@ object SimplifierV3 {
     }
 
     //todo: Should this rewrite to saturation? Or is once enough?
-    val rw = faxs(recf).toStream.flatMap( pr => applyFormulaProvable(recf,ctx,pr)).headOption
+    val rw = faxs(recf,ctx).toStream.flatMap( pr => applyFormulaProvable(recf,ctx,pr)).headOption
 
     rw match {
       case None => (recf,recpropt)
@@ -540,7 +545,7 @@ object SimplifierV3 {
     }
   }
 
-  def fastCloser(hs:HashSet[Formula],f:Formula): BelleExpr = {
+  def fastCloser(hs:context,f:Formula): BelleExpr = {
     //todo: auto close for NNF
     if (f.equals(True)) closeT
     else if (hs.contains(f)) closeId
@@ -559,7 +564,7 @@ object SimplifierV3 {
     }
   }
 
-  def termSimpWithDischarge(ctx:IndexedSeq[Formula],t:Term,taxs:Term=>List[ProvableSig]) : (Term,Option[ProvableSig]) = {
+  def termSimpWithDischarge(ctx:IndexedSeq[Formula],t:Term,taxs:termIndex) : (Term,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
     val (recf,recpropt) = termSimp(t,hs,taxs)
 
@@ -576,7 +581,7 @@ object SimplifierV3 {
   }
 
   def simpWithDischarge(ctx:IndexedSeq[Formula],f:Formula,
-                        faxs:Formula=>List[ProvableSig],taxs:Term=>List[ProvableSig]) : (Formula,Option[ProvableSig]) = {
+                        faxs:formulaIndex,taxs:termIndex) : (Formula,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
     val (recf,recpropt) = formulaSimp(f,hs,faxs,taxs)
 
@@ -592,11 +597,11 @@ object SimplifierV3 {
     )
   }
 
-  val defaultFaxs:Formula=>List[ProvableSig] = composeIndex(baseIndex,boolIndex,cmpIndex)
-  val defaultTaxs:Term=>List[ProvableSig] = composeIndex(arithGroundIndex,arithBaseIndex)
+  val defaultFaxs:formulaIndex = composeIndex(baseIndex,boolIndex,cmpIndex)
+  val defaultTaxs:termIndex = composeIndex(arithGroundIndex,arithBaseIndex)
 
   //Allow the user to directly specify a list of theorems for rewriting
-  private def thWrapper(ths: List[ProvableSig]) : (Formula=>List[ProvableSig],Term=>List[ProvableSig]) = {
+  private def thWrapper(ths: List[ProvableSig]) : (formulaIndex,termIndex) = {
     //Formula rewrites
     val fths = ths.filter(th =>
       th.conclusion.succ(0) match{
@@ -613,17 +618,17 @@ object SimplifierV3 {
         case _=> false
       }
     )
-    (f => fths,t=>tths)
+    ((f,ctx) => fths,(t,ctx)=>tths)
   }
 
   //Simplifies a formula including sub-terms occuring in the formula
   def simpTac(ths:List[ProvableSig]=List(),
-              faxs:Formula=>List[ProvableSig]=defaultFaxs,
-              taxs:Term=>List[ProvableSig]=defaultTaxs):DependentPositionTactic = new DependentPositionTactic("simplify"){
+              faxs:formulaIndex=defaultFaxs,
+              taxs:termIndex=defaultTaxs):DependentPositionTactic = new DependentPositionTactic("simplify"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       val (fths,tths) = thWrapper(ths)
-      val augmentFaxs:Formula=>List[ProvableSig] = composeIndex(fths,faxs)
-      val augmentTaxs:Term=>List[ProvableSig] = composeIndex(tths,taxs)
+      val augmentFaxs:formulaIndex = composeIndex(fths,faxs)
+      val augmentTaxs:termIndex = composeIndex(tths,taxs)
 
       override def computeExpr(sequent: Sequent): BelleExpr = {
         //println("Simplifying at",pos)
@@ -675,8 +680,8 @@ object SimplifierV3 {
 
   //Full sequent simplification tactic
   def fullSimpTac(ths:List[ProvableSig]=List(),
-                  faxs:Formula=>List[ProvableSig]=defaultFaxs,
-                  taxs:Term=>List[ProvableSig]=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("fullSimplify") {
+                  faxs:formulaIndex=defaultFaxs,
+                  taxs:termIndex=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("fullSimplify") {
 
     val simps = simpTac(ths,faxs,taxs)
 
@@ -716,7 +721,7 @@ object SimplifierV3 {
   //  qeTermProof("F_()+G_()-F_()","G_()"),
   //  qeTermProof("F_()+G_()-G_()","F_()"),
 
-  def arithBaseIndex (t:Term) : List[ProvableSig] = {
+  def arithBaseIndex (t:Term,ctx:context) : List[ProvableSig] = {
     t match {
       case Plus(_,_) => plusArith
       case Minus(_,_) => minusArith
@@ -728,7 +733,7 @@ object SimplifierV3 {
   }
 
   //This generates theorems on the fly to simplify arithmetic
-  def arithGroundIndex (t:Term) : List[ProvableSig] = {
+  def arithGroundIndex (t:Term,ctx:context) : List[ProvableSig] = {
     val res = t match {
       case Plus(n:Number,m:Number) => Some(n.value+m.value)
       case Minus(n:Number,m:Number) => Some(n.value-m.value)
@@ -768,6 +773,22 @@ object SimplifierV3 {
     }
   }
 
+  private val impReflexive = proveBy("p_() -> p_()".asFormula,prop)
+
+  //Constrained search for equalities of the form v = Num in the context
+  def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
+    t match {
+      case v:Variable =>
+        ctx.collectFirst(
+          {case Equal(vv:Variable,n:Number) if vv.equals(v) =>
+              impReflexive(
+                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(vv:Variable,n:Number)) :: Nil))
+          }).toList
+      case _ => List()
+
+    }
+  }
+
   /** Formula simplification indices */
   private def propProof(f:String,ff:String,precond:Option[String] = None):ProvableSig =
   {
@@ -784,8 +805,8 @@ object SimplifierV3 {
   //!(F_()) -> (F_() <-> false)
   val tauto2 = propProof("F_()","false",Some("!F_()"))
 
-  //This is a critical
-  def baseIndex (f:Formula) : List[ProvableSig] = {
+  //This is a critical index
+  def baseIndex (f:Formula,ctx:context) : List[ProvableSig] = {
     f match {
       case True => List()
       case False => List()
@@ -839,7 +860,7 @@ object SimplifierV3 {
   val les = qeSearch(LessEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply))
 
   //This contains the basic heuristics for closing a comparison formula
-  def cmpIndex (f:Formula) : List[ProvableSig] = {
+  def cmpIndex (f:Formula,ctx:context) : List[ProvableSig] = {
 
     f match {
       // Reflexive cases
@@ -896,7 +917,7 @@ object SimplifierV3 {
   val existsTrue = proveBy("(\\exists x_ true)<->true".asFormula, auto )
   val existsFalse = proveBy("(\\exists x_ false)<->false".asFormula, auto )
 
-  def boolIndex (f:Formula) : List[ProvableSig] ={
+  def boolIndex (f:Formula,ctx:context) : List[ProvableSig] ={
     f match {
       //Note: more pattern matching possible here
       case And(l,r) => List(andT,Tand,andF,Fand)

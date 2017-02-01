@@ -133,7 +133,7 @@ class SimplifierV3Tests extends TacticTestBase {
     //The following rewrite works badly with the first simplifier (because of a bad unification)
     //In general, a rewrite with repeated symbols should probably be checked externally using this mechanism to be safe
     val rw = proveBy("F_() - F_() = 0".asFormula, TactixLibrary.QE)
-    val minus = ( (t:Term) =>
+    val minus = ( (t:Term,ctx:context) =>
       t match {
         case Minus(l, r) if l == r => List(rw)
         case _ => List()
@@ -150,7 +150,7 @@ class SimplifierV3Tests extends TacticTestBase {
     val minusSimp1 = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
     val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
 
-    val minus = ( (t:Term) =>
+    val minus = ( (t:Term,ctx:context) =>
       t match {
         case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
         case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
@@ -217,4 +217,13 @@ class SimplifierV3Tests extends TacticTestBase {
 
   }
 
+  it should "support equality rewriting" in withMathematica { qeTool =>
+    //Note: this is probably pretty costly, so off by default
+    val fml = "\\forall t (t = 0 -> (\\forall s (s = 1 -> \\forall r (r = 5 -> \\forall q (q = 0 -> r*s+t+a+b+t*r+q<=5+q+r+t+s+r+a+b)))))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    //todo: might benefit from AC rewriting
+    result.subgoals.head.succ should contain only "\\forall t (t=0->\\forall s (s=1->\\forall r (r=5->\\forall q (q=0->5+a+b<=16+a+b))))".asFormula
+  }
 }
