@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable.{Map, _}
+import scala.collection.immutable._
 
 /**
   * Note: this is meant to be a watered down version of SimplifierV2
@@ -34,6 +34,18 @@ object SimplifierV3 {
     val rAx = proveBy(Imply(rimp,Imply( "B_()".asFormula ,Equal(lhs, ctor("L_()".asTerm,"RR_()".asTerm)))),prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"))
     val lrAx = proveBy(Imply(And(limp,rimp),Imply( "A_() & B_()".asFormula ,Equal(lhs, ctor("LL_()".asTerm,"RR_()".asTerm)))),prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
     (lAx,rAx,lrAx)
+  }
+
+  //Walks a pair and applies the given function everywhere, remembering where it applied that function
+  //Used for predicate arguments and formula arguments
+  private def pairWalk[A](t: Term, fn: Term => (Term,A), prefix :List[Int] = List[Int]()): (Term,List[(A,List[Int])]) = t match {
+    case Pair(a,b) =>
+      val (aa,l) = pairWalk(a,fn,0::prefix)
+      val (bb,r) = pairWalk(b,fn,1::prefix)
+      (Pair(aa,bb),l++r)
+    case a =>
+      val (aa,l) = fn(a)
+      (aa,List((l,prefix.reverse)))
   }
 
   private val plusAxs = termAx(Plus.apply)
@@ -130,25 +142,20 @@ object SimplifierV3 {
 
         //todo: this currently throws the context away, but I think it can probably be done better using eqL2R
         case FuncOf(fn, c) if c != Nothing =>
-          val args = FormulaTools.argumentList(c)
-          val simp = args.map(t=>(t,termSimp(t,ctx,taxs)))
-          if (simp.forall(_._2._2.isEmpty))
-            (t,None)
-          else{
-            val nArgs = simp.map(_._2._1).reduce[Term](Pair)
-            //Completely discharge the contexts used by the subterms
-            val proofs = simp.map( (topt:(Term,(Term,Option[(Formula,ProvableSig)]))) =>
-              topt match {
-                case (t,(tt,None)) => None
-                case (t,(tt,Some((f,pr)))) => Some(completeDischarge(f,t,tt,pr))
+          val (nArgs,proofs) = pairWalk(c,
+            t=>{
+              val (tt,pr) = termSimp(t,ctx,taxs)
+              (tt,pr match {
+                case None => None
+                case Some((f,pr)) => Some(completeDischarge(f,t,tt,pr))
               })
-            val nt = FuncOf(fn, nArgs)
-
-            val pref = if (args.size <= 1) 0::Nil else 0::0::Nil
-            val tactic = proofs.zipWithIndex.map({ case (None,_) => ident case (Some(eqPr), i) => useAt(eqPr)(1, pref ++ PosInExpr.parseInt(i).pos) }).
-              reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflex)
-            (nt,Some(True,proveBy(Imply(True,Equal(t, nt)), implyR(1) & cohideR(1) & tactic)))
-          }
+            }
+          )
+          val pref = 0::0::Nil
+          val nt = FuncOf(fn, nArgs)
+          val tactic = proofs.map({ case (None,_) => ident case (Some(eqPr), i) => useAt(eqPr)(1,pref++i) }).
+            reduceRight(_&_) & byUS(DerivedAxioms.equalReflex)
+          (nt,Some(True,proveBy(Imply(True,Equal(t, nt)), implyR(1) & cohideR(1) & tactic)))
         //todo: Function arguments
         case _ => (t, None)
       }
@@ -491,7 +498,23 @@ object SimplifierV3 {
             (res,Some(True,pr))
 
         }
-      //Predicates, Differentials
+      case PredOf(fn, c) if c != Nothing =>
+        val (nArgs,proofs) = pairWalk(c,
+          t=>{
+            val (tt,pr) = termSimp(t,ctx,taxs)
+            (tt,pr match {
+              case None => None
+              case Some((f,pr)) => Some(completeDischarge(f,t,tt,pr))
+            })
+          }
+        )
+        val pref = 0::0::Nil
+        val nf = PredOf(fn, nArgs)
+        val tactic = proofs.map({ case (None,_) => ident case (Some(eqPr), i) => useAt(eqPr)(1,pref++i) }).
+        reduceRight(_&_) & byUS(DerivedAxioms.equivReflexiveAxiom)
+        (nf,Some(True,proveBy(Imply(True,Equiv(f, nf)), implyR(1) & cohideR(1) & tactic)))
+
+      //Differentials
       case _ => (f,None)
     }
 
@@ -570,7 +593,7 @@ object SimplifierV3 {
   }
 
   val defaultFaxs:Formula=>List[ProvableSig] = composeIndex(baseIndex,boolIndex,cmpIndex)
-  val defaultTaxs:Term=>List[ProvableSig] = arithBaseIndex
+  val defaultTaxs:Term=>List[ProvableSig] = composeIndex(arithGroundIndex,arithBaseIndex)
 
   //Allow the user to directly specify a list of theorems for rewriting
   private def thWrapper(ths: List[ProvableSig]) : (Formula=>List[ProvableSig],Term=>List[ProvableSig]) = {
