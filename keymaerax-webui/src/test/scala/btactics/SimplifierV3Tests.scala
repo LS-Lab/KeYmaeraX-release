@@ -219,11 +219,11 @@ class SimplifierV3Tests extends TacticTestBase {
 
   it should "support equality rewriting" in withMathematica { qeTool =>
     //Note: this is probably pretty costly, so off by default
-    val fml = "\\forall t (t = 0 -> (\\forall s (s = 1 -> \\forall r (r = 5 -> \\forall q (q = 0 -> r*s+t+a+b+t*r+q<=5+q+r+t+s+r+a+b)))))".asFormula
+    val fml = "\\forall t (t = 0 -> (\\forall s (1 = s -> \\forall r (r = 5+s -> \\forall q (t+r = q -> r*s+t+a+b+t*r+q<=5+q+r+t+s+r+a+b)))))".asFormula
     val ctxt = IndexedSeq()
     val tactic = simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
     val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
     //todo: might benefit from AC rewriting
-    result.subgoals.head.succ should contain only "\\forall t (t=0->\\forall s (s=1->\\forall r (r=5->\\forall q (q=0->5+a+b<=16+a+b))))".asFormula
+    result.subgoals.head.succ should contain only "\\forall t (t=0->\\forall s (1=s->\\forall r (r=6->\\forall q (6=q->6+a+b+6<=24+a+b))))".asFormula
   }
 }
