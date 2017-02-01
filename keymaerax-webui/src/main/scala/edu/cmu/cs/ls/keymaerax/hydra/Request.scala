@@ -690,8 +690,11 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
         } catch {
           case _: Throwable => foResult
         }
-      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
-        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
+      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput,
+        ModelPlex.modelMonitorByChase(1) &
+        SimplifierV2.simpTac(1) & //@note converts rationals to numbers, might be problematic
+        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
+      )
     }
 
     def variance(vals: Map[Term, Term]): Number = {

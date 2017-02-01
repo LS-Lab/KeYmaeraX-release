@@ -226,7 +226,9 @@ class Etcs extends TacticTestBase {
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("SB"), Variable("v"),
       Variable("z"), Variable("t"), Variable("a"))
-    val fml = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & SimplifierV2.simpTac(1)).subgoals.head.succ.head
+    val fml = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      //@note do not convert rationals into numbers
+      SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1)).subgoals.head.succ.head
 
     val ts = new TestSynthesis(tool)
     // search for sunshine test case values (initial+expected)
@@ -242,8 +244,10 @@ class Etcs extends TacticTestBase {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("SB"), Variable("v"),
       Variable("z"), Variable("t"), Variable("a"))
     val fml = proveBy(modelplexInput,
-      ModelPlex.modelMonitorByChase(1) & SimplifierV2.simpTac(1) &
-      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)).subgoals.head.succ.head
+      ModelPlex.modelMonitorByChase(1) &
+      SimplifierV2.simpTac(1) & //@note converts rationals to numbers, might be problematic; but makes Opt. 1 feasible in this example
+      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
+    ).subgoals.head.succ.head
 
     val ts = new TestSynthesis(tool)
     // search for sunshine test case values (initial+expected)
