@@ -1130,8 +1130,8 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
 
   def apply(f: Formula): Formula = { if (admissible(f))
     f match {
-      case Forall(vars, g) if vars==immutable.IndexedSeq(what) => Forall(immutable.IndexedSeq(repl), renaming(g))
-      case Exists(vars, g) if vars==immutable.IndexedSeq(what) => Exists(immutable.IndexedSeq(repl), renaming(g))
+      case Forall(vars, g) if vars.contains(what) => Forall(vars.updated(vars.indexOf(what), repl), renaming(g))
+      case Exists(vars, g) if vars.contains(what) => Exists(vars.updated(vars.indexOf(what), repl), renaming(g))
       //@note e is not in scope of x so is, unlike g, not affected by the renaming
       case Box    (Assign(x, e), g) if x==what => Box    (Assign(repl, e), renaming(g))
       case Diamond(Assign(x, e), g) if x==what => Diamond(Assign(repl, e), renaming(g))
