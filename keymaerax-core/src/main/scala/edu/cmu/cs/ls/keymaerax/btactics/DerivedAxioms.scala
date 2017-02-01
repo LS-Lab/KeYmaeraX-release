@@ -545,7 +545,7 @@ object DerivedAxioms {
           /* use */ prop,
           /* show */ hideR(1) &
           cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
-            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi() & CMon(PosInExpr(1::Nil)) & prop,
+            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & prop,
             /* show */ implyR(1) & TactixLibrary.boxAnd(1) & prop
             )
           )
