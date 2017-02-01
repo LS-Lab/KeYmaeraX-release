@@ -51,20 +51,19 @@ class SimplifierV3Tests extends TacticTestBase {
     )
     //todo: A 'not' like mechanism to simplify across multiple succedents?
     val pr = proveBy(Sequent(antes,succs),fullSimpTac())
-    //Note: Currently no automatic arithmetic so the last goal does not get closed
     pr.subgoals should contain only
-      Sequent(
-        IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y-0^2".asFormula,"dhd-(a*t_+dho)=0".asFormula),
-        IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"dhd-(a*t_+dho)=-(0)".asFormula)
-      )
-
-    //If ground arithmetic simplification is desired, it can be mixed in
-    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(taxs=composeIndex(arithGroundIndex,defaultTaxs)))
-    pr2.subgoals should contain only
       Sequent(
         IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y".asFormula,"dhd-(a*t_+dho)=0".asFormula),
         IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"true".asFormula)
       )
+
+    //If ground arithmetic simplification is desired, it can be mixed in
+//    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(taxs=composeIndex(arithGroundIndex,defaultTaxs)))
+//    pr2.subgoals should contain only
+//      Sequent(
+//        IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y".asFormula,"dhd-(a*t_+dho)=0".asFormula),
+//        IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"true".asFormula)
+//      )
   }
 
   "SimplifierV3" should "search for close heuristics" in withMathematica { qeTool =>
@@ -209,5 +208,13 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x=v_0*t -> x>=0".asFormula
   }
 
+  it should "simplify in multi-arg formula and term positions with arbitrary nesting" in withMathematica { qeTool =>
+    val fml = "P( f(x+0,y,(0*z+0,a+0),b-0,c), k,(f(x+0,y,0*z+0,(a+0,b-0,c)),f(x+0,(y,0*z+0),a+0,(b-0,c))), (a,f(x+0,(y,0*z+0,a+0,b-0),c)))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac()
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    result.subgoals.head.succ should contain only "P((f((x,(y,((0,a),(b,c))))),(k,((f((x,(y,(0,(a,(b,c)))))),f((x,((y,0),(a,(b,c)))))),(a,f((x,((y,(0,(a,b))),c))))))))".asFormula
+
+  }
 
 }

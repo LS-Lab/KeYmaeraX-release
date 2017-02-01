@@ -25,6 +25,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 object AxiomaticODESolver {
   private val ODE_DEBUGGER = false
 
+  private val simplifier = SimplifierV3.simpTac()
+
   /** The name of the explicit time variables. */
   private val TIMEVAR: Variable = "kyxtime".asVariable
 
@@ -51,11 +53,11 @@ object AxiomaticODESolver {
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
-    val simpSol = SimplifierV2.simpTac(pos ++ (if (q == True) PosInExpr(0::1::Nil) else PosInExpr(0::1::1::Nil)))
+    val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0::1::Nil) else PosInExpr(0::1::1::Nil)))
     val simpEvolDom =
       if (q == True) TactixLibrary.skip //evolution domain constraint is trivial, so simplification is not necessary.
-      else if (instEnd) SimplifierV2.simpTac(pos ++ PosInExpr(0::Nil))
-      else SimplifierV2.simpTac(pos ++ PosInExpr(0::1::0::0::1::Nil))
+      else if (instEnd) simplifier(pos ++ PosInExpr(0::Nil))
+      else simplifier(pos ++ PosInExpr(0::1::0::0::1::Nil))
 
     addTimeVar(pos) &
     DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
@@ -76,7 +78,7 @@ object AxiomaticODESolver {
     //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
     (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
     DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
-    SimplifierV2.simpTac(odePosAfterInitialVals ++ PosInExpr(0::1::Nil)) &
+    simplifier(odePosAfterInitialVals ++ PosInExpr(0::1::Nil)) &
     DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
     RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
     DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
@@ -273,7 +275,7 @@ object AxiomaticODESolver {
       TactixLibrary.assignb(pp ++ PosInExpr(1::Nil))
     }))(pos)*odeSize &
       (if (polarity > 0) TactixLibrary.useAt(TactixLibrary.proveBy("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(pos)
-       else TactixLibrary.skip) & SimplifierV2.simpTac(pos)
+       else TactixLibrary.skip) & simplifier(pos)
   })
 
   //endregion
