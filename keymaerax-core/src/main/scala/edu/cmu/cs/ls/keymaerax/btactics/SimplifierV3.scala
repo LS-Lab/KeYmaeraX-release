@@ -300,7 +300,7 @@ object SimplifierV3 {
     }
   }
 
-  //Returns the number of conjuncts that got split up
+  //todo: the number is not needed anymore
   def addCtx(ctx:context,f:Formula,ctr:Int = 0) : (Int,context) =
   {
     if(ctx.contains(f) | f.equals(True) | f.equals(Not(False))){
@@ -545,6 +545,17 @@ object SimplifierV3 {
     }
   }
 
+  //Exhaustively split ONLY the last conjunct
+  private val andSplit : DependentTactic = new SingleGoalDependentTactic("and split") {
+
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      val anteLen = sequent.ante.length
+      assert(anteLen > 0)
+      val finder = new Find(0, None, AntePosition(anteLen))
+      (andL(finder))*
+    }
+  }
+
   def fastCloser(hs:context,f:Formula): BelleExpr = {
     //todo: auto close for NNF
     if (f.equals(True)) closeT
@@ -555,7 +566,7 @@ object SimplifierV3 {
           andR(1) < (fastCloser(hs, l), fastCloser(hs, r))
         case Imply(l, r) =>
           val (ctr, newctx) = addCtx(hs, l)
-          implyR(1) & (andL('Llast) * ctr) & fastCloser(newctx, r)
+          implyR(1) & andSplit & fastCloser(newctx, r)
         case Forall(vars, f) =>
           allR(1) &
           fastCloser(hs, f)

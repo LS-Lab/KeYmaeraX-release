@@ -226,4 +226,14 @@ class SimplifierV3Tests extends TacticTestBase {
     //todo: might benefit from AC rewriting
     result.subgoals.head.succ should contain only "\\forall t (t=0->\\forall s (1=s->\\forall r (r=6->\\forall q (6=q->6+a+b+6<=24+a+b))))".asFormula
   }
+
+  it should "handle weird conjunct orders" in withMathematica { qeTool =>
+    val fml = "A() -> B() & (C() & D()) & (P() & Q()) & R() -> (R() & Q()) & P() & (C() & D()) & E() ".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    result.subgoals.head.succ should contain only "A()->B()&(C()&D())&(P()&Q())&R()->E()".asFormula
+
+
+  }
 }
