@@ -678,6 +678,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
 class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, testKinds: Map[String, Boolean],
                            amount: Int, timeout: Option[Int]) extends UserRequest(userId) {
   def resultingResponses(): List[Response]  = {
+    println("Got Test Synthesis Request")
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
@@ -692,7 +693,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
         }
       case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput,
         ModelPlex.modelMonitorByChase(1) &
-        SimplifierV2.simpTac(1) & //@note converts rationals to numbers, might be problematic
+        SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
       )
     }
@@ -725,7 +726,12 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
         val synth = new TestSynthesis(tool)
         //val testCases = synth.synthesizeTestConfig(testCondition, amount, timeout)
         val testCases = testSpecs.map(ts => ts._1 -> synth.synthesizeTestConfig(ts._2, amount, timeout))
-        val tcSmVar = testCases.map(tc => tc._1 -> tc._2.map(tcconfig => (tcconfig, synth.synthesizeSafetyMarginCheck(metric, tcconfig), variance(tcconfig))))
+        val tcSmVar = testCases.map(tc => tc._1 -> tc._2.map(tcconfig =>
+          (tcconfig,
+           //@note tcconfig (through findInstance) may contain values that later lead to problems (e.g., division by 0)
+           try { Some(synth.synthesizeSafetyMarginCheck(metric, tcconfig)) } catch { case _: ToolException => None },
+           variance(tcconfig))
+        ))
         new TestSynthesisResponse(model, metric, tcSmVar) :: Nil
       case None => new ErrorResponse("Test case synthesis failed, missing Mathematica") :: Nil
     }

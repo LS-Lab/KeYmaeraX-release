@@ -173,7 +173,7 @@ class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
 
 class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
                            //@todo class: List[(SeriesName, List[(Var->Val, SafetyMargin, Variance)])]
-                            testCases: List[(String, List[(Map[Term, Term], Number, Number)])]) extends Response {
+                            testCases: List[(String, List[(Map[Term, Term], Option[Number], Number)])]) extends Response {
   private val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(metric))
   private val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(metric))
   private val fmlPlainString = JsString(KeYmaeraXPrettyPrinter(metric))
@@ -187,10 +187,10 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
     if (maxVariance > 0) minRadius + (maxRadius-minRadius)*(n/maxVariance)
     else minRadius
 
-  private def scatterData(tc: List[(Map[Term, Term], Number, Number)]) = JsArray(tc.zipWithIndex.map(
-      { case ((_, Number(safetyMargin), Number(variance)), idx) => JsObject(
+  private def scatterData(tc: List[(Map[Term, Term], Option[Number], Number)]) = JsArray(tc.zipWithIndex.map(
+      { case ((_, safetyMargin, Number(variance)), idx) => JsObject(
     "x" -> JsNumber(idx),
-    "y" -> JsNumber(safetyMargin),
+    "y" -> (safetyMargin match { case Some(Number(sm)) => JsNumber(sm) case None => JsNumber(-1) }),
     "r" -> JsNumber(radius(variance))
   ) }):_*)
 
@@ -217,12 +217,12 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
       JsArray(JsArray(preSeries.toVector), JsArray(postSeries.toVector)))
   }
 
-  private def seriesData(data: List[(Map[Term, Term], Number, Number)]): JsArray = JsArray(data.zipWithIndex.map({
-    case ((vals: Map[Term, Term], Number(safetyMargin), Number(variance)), idx) =>
+  private def seriesData(data: List[(Map[Term, Term], Option[Number], Number)]): JsArray = JsArray(data.zipWithIndex.map({
+    case ((vals: Map[Term, Term], safetyMargin, Number(variance)), idx) =>
       val (preVals, postVals, labels, series) = prePostVals(vals)
       JsObject(
         "name" -> JsString(""+idx),
-        "safetyMargin" -> JsNumber(safetyMargin),
+        "safetyMargin" -> (safetyMargin match { case Some(Number(sm)) => JsNumber(sm) case None => JsNumber(-1) }),
         "variance" -> JsNumber(variance),
         "pre" -> preVals,
         "post" -> postVals,
