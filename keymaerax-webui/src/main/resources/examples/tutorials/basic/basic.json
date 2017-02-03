@@ -80,6 +80,24 @@
       "model": "classpath:/examples/tutorials/basic/10-diffinv-self-crossing.kyx",
       "tactic": "classpath:/examples/tutorials/basic/10-diffinv-self-crossing.kyt",
       "proves": true
+    },
+    {
+      "name": "11: Aerodynamic Acrophobic Bouncing Ball",
+      "description": "",
+      "title": "Aerodynamic acrophobic bouncing ball",
+      "link": "http://symbolaris.com/course/fcps16/11-diffcut.pdf",
+      "model": "classpath:/examples/tutorials/basic/11-diffcut-aerodynamic-ball.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/11-diffcut-aerodynamic-ball.kyt",
+      "proves": true
+    },
+    {
+      "name": "12: Bouncing Ball with ghost solutions",
+      "description": "Model 'Bouncing Ball' with ghost solutions proof",
+      "title": "Quantum the Acrophobic Bouncing Ball",
+      "link": "http://symbolaris.com/course/fcps16/12-diffghost.pdf",
+      "model": "classpath:/examples/tutorials/basic/12-diffghost-bouncing-ball-ghost-solutions.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/12-diffghost-bouncing-ball-ghost-solutions.kyt",
+      "proves": true
     }
   ]
 }

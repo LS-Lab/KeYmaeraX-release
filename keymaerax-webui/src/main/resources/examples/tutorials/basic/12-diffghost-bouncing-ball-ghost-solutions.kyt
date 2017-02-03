@@ -1,0 +1,23 @@
+implyR(1) ; loop({`2*g*x=2*g*H-v^2&x>=0`}, 1) ; <(
+  QE,
+  QE,
+  composeb(1) ; MR({`(2*g*x=2*g*H-v^2&x>=0)&g>0&1=c`}, 1) ; <(
+  boxAnd(1) ; andR(1) ; <(
+    DG({`t`}, {`0`}, {`1`}, 1) ; existsR({`0`}, 1) ; DC({`v=old(v)-g*t`}, 1) ; <(
+      DC({`x=old(x)+old(v)*t-g/2*t^2`}, 1) ; <(
+        dW(1) ; QE,
+          dI(1)
+        ),
+        dI(1)
+      ),
+      GV(1) ; andR(1) ; <(
+      closeId,
+        closeId
+      )
+    ),
+    choiceb(1) ; andR(1) ; <(
+    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE,
+      testb(1) ; implyR(1) ; prop
+    )
+  )
+)
