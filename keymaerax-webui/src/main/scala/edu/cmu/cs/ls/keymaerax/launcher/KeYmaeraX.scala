@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable
@@ -34,7 +35,7 @@ object KeYmaeraX {
   /** Usage -help information.
     *
     * @note Formatted to 80 characters width. */
-  val usage = "KeYmaera X Prover" + " " + VERSION +
+  val usage: String = "KeYmaera X Prover" + " " + VERSION +
     """
       |
       |Usage: java -Xss20M -jar keymaerax.jar
@@ -104,7 +105,9 @@ object KeYmaeraX {
         codegen(options)
       else if (!options.get('mode).contains("ui") ) {
         try {
-          initializeProver(if (options.contains('tool)) options else options ++ Map('tool -> "z3"))
+          initializeProver(
+            if (options.contains('tool)) options
+            else options ++ configFromDB(DBAbstractionObj.defaultDatabase, "z3"))
 
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
@@ -119,6 +122,27 @@ object KeYmaeraX {
           shutdownProver()
         }
       }
+    }
+  }
+
+  private def configFromDB(db: DBAbstraction, defaultTool: String): OptionMap = {
+    db.getConfiguration("tool").config.getOrElse("qe", defaultTool).toLowerCase() match {
+      case "mathematica" => Map('tool -> "mathematica") ++ mathematicaConfigFromDB(db)
+      case "z3" => Map('tool -> "z3")
+      case t => throw new Exception("Unknown tool '" + t + "'")
+    }
+  }
+
+  private def mathematicaConfigFromDB(db: DBAbstraction): OptionMap = {
+    val mathConfig = db.getConfiguration("mathematica").config
+    mathConfig.get("linkName") match {
+      case Some(l) => mathConfig.get("jlinkLibDir") match {
+        case Some(libDir) => Map('mathkernel -> l, 'jlink -> libDir)
+        case None => Map('mathkernel -> l)
+      }
+      case None =>
+        val default = DefaultConfiguration.defaultMathematicaConfig
+        Map('mathkernel -> default("linkName"), 'jlink -> default("jlinkLibDir"))
     }
   }
 
@@ -247,7 +271,7 @@ object KeYmaeraX {
     }
   }
 
-  def initializeProver(options: OptionMap) = {
+  private def initializeProver(options: OptionMap) = {
     options('tool) match {
       case "mathematica" => initMathematica(options)
       case "z3" => initZ3(options)
@@ -314,7 +338,7 @@ object KeYmaeraX {
     ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
   }
 
-  def shutdownProver() = {
+  private def shutdownProver() = {
     ToolProvider.shutdown()
     TactixLibrary.invGenerator = FixedGenerator(Nil)
   }
