@@ -399,7 +399,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("normalize")
     ProofTree.ofTrace(db.db.getExecutionTrace(proofId)).findNode("1") match {
-      case Some(node) => stepInto(node, "normalize", BelleParser("implyR(1) & closeId"))
+      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & closeId")
     }
   }}
 
@@ -462,7 +462,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """.stripMargin)
   }
 
-  private def stepInto(node: TreeNode, expectedStep: String, expectedDetails: BelleExpr, depth: Int = 1)(implicit db: InMemoryDB = new InMemoryDB): Int = {
+  private def stepInto(node: TreeNode, expectedStep: String, depth: Int = 1)(implicit db: InMemoryDB = new InMemoryDB): (Int, BelleExpr) = {
     val (localProvable, step) = node.endStep match {
       case Some(end) => (ProvableSig.startProof(end.input.subgoals(end.branch)), end.rule)
     }
@@ -472,8 +472,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       SequentialInterpreter, depth, strict=false)
     innerInterpreter(BelleParser(step), BelleProvable(localProvable))
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(localProofId))
-    tactic shouldBe expectedDetails
-    localProofId
+    (localProofId, tactic)
   }
 
   it should "work in the middle of a proof" in {
@@ -487,7 +486,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
       case Some(node) =>
-        val expected = BelleParser(
+        val (_, tactic) = stepInto(node, "prop")
+        tactic shouldBe BelleParser(
           """
             |orL(-1) & <(
             |  andR(1) & <(
@@ -501,7 +501,6 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
             |  )
             |)
           """.stripMargin)
-        stepInto(node, "prop", expected)
     }
   }
 
@@ -518,26 +517,26 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
     tree.findNode("3") match {
       case Some(node) =>
-        val expected = BelleParser(
+        val (_, tactic) = stepInto(node, "prop")
+        tactic shouldBe BelleParser(
           """
             |andR(1) & <(
             |  closeId,
             |  nil
             |)
           """.stripMargin)
-        stepInto(node, "prop", expected)
     }
 
     tree.findNode("4") match {
       case Some(node) =>
-        val expected = BelleParser(
+        val (_, tactic) = stepInto(node, "prop")
+        tactic shouldBe BelleParser(
           """
             |andR(1) & <(
             |  nil,
             |  closeId
             |)
           """.stripMargin)
-        stepInto(node, "prop", expected)
     }
   }
 
@@ -554,20 +553,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt))
     tree.findNode("1") match {
       case Some(node) =>
-        val expected = BelleParser("implyR(1) & andL(-1) & andL(-2) & andL(-3)")
-        stepInto(node, "prop", expected)
+        stepInto(node, "prop")._2 shouldBe BelleParser("implyR(1) & andL(-1) & andL(-2) & andL(-3)")
     }
 
     tree.findNode("2") match {
       case Some(node) =>
-        val expected = BelleParser("chase('R) & normalize")
-        stepInto(node, "unfold", expected)
+        val expected =
+          stepInto(node, "unfold")._2 shouldBe BelleParser("chase('R) & normalize")
     }
 
     tree.findNode("3") match {
       case Some(node) =>
-        val expected = BelleParser("toSingleFormula & universalClosure(1) & rcf")
-        stepInto(node, "QE", expected)
+        stepInto(node, "QE")._2 shouldBe BelleParser("toSingleFormula & universalClosure(1) & rcf")
     }
   }}
 
@@ -588,31 +585,96 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
       case Some(n1) =>
-        val expected = BelleParser("DC({`d>=0`},1) & <(nil, dI(1))")
-        val id1 = stepInto(n1, "diffInvariant({`d>=0`},1)", expected)
+        val (id1, tactic1) = stepInto(n1, "diffInvariant({`d>=0`},1)")
+        tactic1 shouldBe BelleParser("DC({`d>=0`},1) & <(nil, dI(1))")
         //diffCut
         ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("1") match {
           case Some(n2) =>
-            val expected = BelleParser("DCdiffcut({`d>=0`},1)")
-            val id2 = stepInto(n2, "DC({`d>=0`},1)", expected)
+            val (id2, tactic2) = stepInto(n2, "DC({`d>=0`},1)")
+            tactic2 shouldBe BelleParser("DCdiffcut({`d>=0`},1)")
             ProofTree.ofTrace(db.getExecutionTrace(id2)).findNode("1") match {
               case Some(n3) =>
-                val expected = BelleParser("DCa(1)")
-                val id3 = stepInto(n3, "DCdiffcut({`d>=0`},1)", expected)
+                val (_, tactic3) = stepInto(n3, "DCdiffcut({`d>=0`},1)")
+                tactic3 shouldBe BelleParser("DCa(1)")
             }
         }
         //diffInd
         ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("3") match {
           case Some(n2) =>
-            val expected = BelleParser(
+            val (_, tactic) = stepInto(n2, "dI(1)")
+            tactic shouldBe BelleParser(
               """
                 |DIa(1) & implyR(1) & andR(1) & <(
                 |  QE,
                 |  derive(1.1) & DE(1) & Dassignb(1.1) & Dassignb(1.1) & Dassignb(1.1) & DWa(1) & GV(1) & QE
                 |)
               """.stripMargin)
-            stepInto(n2, "dI(1)", expected)
         }
+    }
+  }
+
+  it should "work for simple dI" in withMathematica { _ =>
+    val problem = "x>0 -> [{x'=3}]x>0".asFormula
+    val p = ProvableSig.startProof(problem)
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & diffInd()(1), BelleProvable(p))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    tree.findNode("2") match {
+      case Some(n1) =>
+        val (_, tactic) = stepInto(n1, "dI(1)")
+        tactic shouldBe BelleParser(
+          """DIa(1) & implyR(1) & andR(1) & <(
+            |  close,
+            |  derive(1.1) & DE(1) & Dassignb(1.1) & GV(1) & QE
+            |)""".stripMargin)
+        proveBy(problem, implyR(1) & tactic) shouldBe 'proved
+    }
+  }
+
+  it should "work for simple dI with constants" in withMathematica { _ =>
+    val problem = "x>0 & a>=0 -> [{x'=a}]x>0".asFormula
+    val p = ProvableSig.startProof(problem)
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & diffInd()(1), BelleProvable(p))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    tree.findNode("2") match {
+      case Some(n1) =>
+        val (_, tactic) = stepInto(n1, "dI(1)")
+        tactic shouldBe BelleParser(
+          """DIa(1) & implyR(1) & andR(1) & <(
+            |  QE,
+            |  derive(1.1) & DE(1) & Dassignb(1.1) & GV(1) & QE
+            |)""".stripMargin)
+        proveBy(problem, implyR(1) & tactic) shouldBe 'proved
+    }
+  }
+
+  it should "work for simple dI with non-primed variables in postcondition" in withMathematica { _ =>
+    val problem = "x>a -> [{x'=5}]x>a".asFormula
+    val p = ProvableSig.startProof(problem)
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter)
+    interpreter(implyR(1) & diffInd()(1), BelleProvable(p))
+
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    tree.findNode("2") match {
+      case Some(n1) =>
+        val (_, tactic) = stepInto(n1, "dI(1)")
+        tactic shouldBe BelleParser(
+          """let ({`a()=a`}) in (
+            |  ((DIa(1) ; implyR(1)) ; andR(1)) ; <(
+            |    (close | QE) ; done,
+            |    (derive(1.1) ; DE(1)) ; (((Dassignb(1.1)*1 ; nil) ; GV(1)) ; (close | QE)) ; done
+            |  )
+            |)""".stripMargin)
+        proveBy(problem, implyR(1) & tactic) shouldBe 'proved
     }
   }
 }
