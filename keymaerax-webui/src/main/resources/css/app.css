@@ -304,6 +304,10 @@ del {
    width: 180px;
 }
 
+.tacticalert-popover {
+   width: 90%;
+}
+
 .k4-narrowinput {
   max-width: 40px;
 }

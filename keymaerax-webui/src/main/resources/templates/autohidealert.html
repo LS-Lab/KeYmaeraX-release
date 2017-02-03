@@ -4,9 +4,11 @@
     <span ng-if="details !== undefined && details !== ''"
           uib-popover-template="'proofmessagedetails.html'"
           popover-placement="auto bottom" popover-trigger="click"
+          popover-class="tacticalert-popover"
+          popover-append-to-body="true"
           style="border-bottom: 1px dashed;">Details</span>
 </div>
 
 <script type="text/ng-template" id="proofmessagedetails.html">
-    <pre style="width:500px;overflow:scroll;">{{details}}</pre>
+    <pre style="overflow:scroll;">{{details}}</pre>
 </script>
