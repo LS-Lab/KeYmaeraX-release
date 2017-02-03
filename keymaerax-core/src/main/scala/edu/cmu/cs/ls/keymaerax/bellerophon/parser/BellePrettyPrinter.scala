@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.TacticInfo
+import edu.cmu.cs.ls.keymaerax.core.{Equal, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 /**
@@ -17,7 +18,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   private def pp(e : BelleExpr, indent: Int): String = {
     try {
       //Prefer the code name if one exists for this tactic.
-//      println("Looking for a code name for " + e)
+      //      println("Looking for a code name for " + e)
       val info = TacticInfo.apply(e.prettyString)
       // @todo: I don't understand why asInstanceOf is used to determeine whether the codeName is usable, but in any case,
       // anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName directly
@@ -38,6 +39,12 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case e: PartialTactic => wrapLeft(e, e.child, indent) + " " + op(e).terminal.img
           case e: RepeatTactic => wrapLeft(e, e.child, indent) + op(e).terminal.img
           case OnAll(c) => op(e).terminal.img + "(" + pp(c, indent) + ")"
+          case Let(abbr, value, inner) => op(e).terminal.img + " (" + argPrinter(Left(
+            (abbr, value) match {
+              case (a: Term, v: Term) => Equal(a, v)
+              case (a: Formula, v: Formula) => edu.cmu.cs.ls.keymaerax.core.Equiv(a, v)
+            })) + ") " + IN.img + " (" +
+            newline(indent+1) + pp(inner, indent+1) + newline(indent) + ")"
           case DependentPositionTactic(name) => name // name of a DependentPositionTactic is the codeName
           case adp: AppliedDependentPositionTactic => adp.pt match {
             case e: DependentPositionWithAppliedInputTactic =>

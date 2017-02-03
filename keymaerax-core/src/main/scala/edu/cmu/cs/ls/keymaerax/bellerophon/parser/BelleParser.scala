@@ -2,8 +2,9 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
 
 /**
@@ -68,6 +69,19 @@ object BelleParser extends (String => BelleExpr) {
     }
   }
 
+  private def parseInnerExpr(tokens: List[BelleToken]): (BelleExpr, Location, List[BelleToken]) = tokens match {
+    case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
+      //@note find matching closing parenthesis, parse inner expr, then continue with remainder
+      var openParens = 1
+      val (inner, BelleToken(CLOSE_PAREN, cParenLoc) :: remainder) = tail.span({
+        case BelleToken(OPEN_PAREN, _) => openParens = openParens + 1; openParens > 0
+        case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
+        case _ => openParens > 0
+      })
+      val innerExpr = parseTokenStream(inner)
+      (innerExpr, oParenLoc.spanTo(cParenLoc), remainder)
+  }
+
   private def parseStep(st: ParserState) : ParserState = {
     val stack : Stack[BelleItem] = st.stack
 
@@ -79,7 +93,7 @@ object BelleParser extends (String => BelleExpr) {
           r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc),
           st.input
         )
-        //@todo Duplicated case for DEPRECATED_SEQ_COMBINATOR
+      //@todo Duplicated case for DEPRECATED_SEQ_COMBINATOR
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(DEPRECATED_SEQ_COMBINATOR, seqCombinatorLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc) =>
         ParserState(
           r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, branchCombinatorLoc),
@@ -237,17 +251,20 @@ object BelleParser extends (String => BelleExpr) {
       //endregion
 
       //region ? combinator
-      case r :+ BelleToken(OPTIONAL, loc) => st.input match {
-        case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
-          //@note find matching closing parenthesis, parse inner expr, then continue with remainder
-          var openParens = 1
-          val (inner, BelleToken(CLOSE_PAREN, cParenLoc) :: remainder) = tail.span({
-            case BelleToken(OPEN_PAREN, _) => openParens = openParens + 1; openParens > 0
-            case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
-            case _ => openParens > 0
-          } )
-          val innerExpr = parseTokenStream(inner)
-          ParserState(r :+ ParsedBelleExpr(Idioms.?(innerExpr), loc.spanTo(cParenLoc)), remainder)
+      case r :+ BelleToken(OPTIONAL, loc) =>
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input)
+        ParserState(r :+ ParsedBelleExpr(Idioms.?(innerExpr), loc.spanTo(innerLoc.end)), remainder)
+      //endregion
+
+      //region let
+      case r :+ BelleToken(LET, loc) => st.input match {
+        case BelleToken(OPEN_PAREN, _) :: BelleToken(expr: EXPRESSION, _) :: BelleToken(CLOSE_PAREN, _) :: BelleToken(IN, _) :: tail =>
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail)
+          val (abbrv, value) = expr.undelimitedExprString.asFormula match {
+            case Equal(a, v) => (a, v)
+            case Equiv(a, v) => (a, v)
+          }
+          ParserState(r :+ ParsedBelleExpr(Let(abbrv, value, innerExpr), loc.spanTo(innerLoc.end)), remainder)
       }
       //endregion
 
@@ -354,7 +371,7 @@ object BelleParser extends (String => BelleExpr) {
         else if(isIdent(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isOpenParen(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
         else if(isProofStateToken(st.input)) ParserState(stack :+ st.input.head, st.input.tail)
-        else throw ParseException("Bellerophon programs should start with identifiers, open parens, or partials.", st.input.head.location)
+        else throw ParseException("Bellerophon programs should start with identifiers, open parens, or optional/doall/partial.", st.input.head.location)
 
       case r :+ ParsedBelleExpr(e, loc) => st.input.headOption match {
         case Some(head) => ParserState(st.stack :+ st.input.head, st.input.tail)
@@ -390,6 +407,7 @@ object BelleParser extends (String => BelleExpr) {
   private def isStartingCombinator(tok: BelleToken) = tok.terminal match {
     case OPTIONAL => true
     case ON_ALL => true
+    case LET => true
     case _ => false
   }
 
@@ -445,7 +463,7 @@ object BelleParser extends (String => BelleExpr) {
           case (Left(consolidatedExprs), Left(nextExpr)) => newArgs.dropRight(1) :+ Left(consolidatedExprs :+ nextExpr)
         }
       })
-    }
+  }
 
   @deprecated("Replaced with a stack traversal.", "4.2b1")
   /** @todo Delete this code after testing that the common tactics did not break with new approach. */

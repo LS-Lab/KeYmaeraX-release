@@ -71,6 +71,10 @@ private object N_TIMES {
 
 private object US_MATCH extends BelleTerminal("USMatch")
 
+private object LET extends BelleTerminal("let")
+
+private object IN extends BelleTerminal("in")
+
 private object RIGHT_ARROW extends BelleTerminal("=>")
 
 // Separation/Grouping Tokens
@@ -115,7 +119,7 @@ private object DONE extends BelleTerminal("done") {
 /** A dL expression. We allow both terms and formulas as arguments; e.g. in diffGhost. */
 private case class EXPRESSION(exprString: String) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
   val undelimitedExprString = exprString.drop(2).dropRight(2)
-  
+
   val expression: Expression = {
     assert(exprString.startsWith("{`") && exprString.endsWith("`}"),
       s"EXPRESSION.regexp should ensure delimited expression begin and end with {` `}, but an EXPRESSION was constructed with argument: $exprString")

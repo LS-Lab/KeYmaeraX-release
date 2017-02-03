@@ -338,7 +338,7 @@ class SimpleBelleParserTests extends TacticTestBase {
               |    testb(1) & implyR(1) & solve(1) & nil
               |  ))
               |)""".stripMargin
-    BelleParser(t) //should not cause an exception.
+    BelleParser(t) shouldBe a [BelleExpr] //should not cause an exception.
   }
 
   //endregion
@@ -377,6 +377,27 @@ class SimpleBelleParserTests extends TacticTestBase {
   it should "parse in a branch" in {
     val tactic = BelleParser("andR(1) & <(closeId & done, done)")
     tactic shouldBe TactixLibrary.andR(1) & Idioms.<(TactixLibrary.closeId & TactixLibrary.done, TactixLibrary.done)
+  }
+
+  //endregion
+
+  //region let
+
+  "let tactic parser" should "parse a simple example" in {
+    val tactic = BelleParser("let ({`a()=a`}) in (done)")
+    tactic shouldBe Let("a()".asTerm, "a".asTerm, TactixLibrary.done)
+  }
+
+  it should "parse dI" in withMathematica { _ =>
+    val inner =
+      """
+        |DIa(1) ; implyR(1) ; andR(1) ; <(
+        |  QE,
+        |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+        |)
+      """.stripMargin
+    val tactic = BelleParser(s"let ({`a()=a`}) in ($inner)")
+    tactic shouldBe Let("a()".asTerm, "a".asTerm, BelleParser(inner))
   }
 
   //endregion
