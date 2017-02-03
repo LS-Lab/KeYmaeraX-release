@@ -185,7 +185,9 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
         case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
       }
     } else {
-      new CounterExampleResponse("cex.nonfo") :: Nil
+      val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
+      val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)
+      new CounterExampleResponse("cex.nonfo", (nonFOSucc++nonFOAnte).head) :: Nil
     }
   }
 }
