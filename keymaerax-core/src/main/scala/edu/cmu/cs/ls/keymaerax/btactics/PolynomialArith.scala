@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -293,8 +294,23 @@ object PolynomialArith {
   private val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE)
   private val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE)
 
+  //Try hard to turn a term into ground arithmetic
+  def groundNormalise(l:Term) : Option[(Number,ProvableSig)] = {
+    SimplifierV3.arithGroundIndex(l).headOption match { //Only uses RCF
+      case None => None
+      case Some(pr) => {
+        pr.conclusion.sub(SuccPosition(1,1::Nil)) match {
+          case Some(n:Number) =>
+            Some((n,pr))
+          case _ => None
+        }
+      }
+    }
+  }
+
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
+    println("Normalizing at",l)
     val prover = getProver(skip_proofs)
     val res = l match {
       case n:Number =>
@@ -335,6 +351,17 @@ object PolynomialArith {
         val(res,pr2) = normalise(rec1,skip_proofs)
         (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
           & by(pr2)))
+      //If the power is not itself a power, try hard to make it a Number
+      case Power(ln,e:Term) =>
+        println(e)
+        val pr = groundNormalise(e)
+        pr match {
+          case None => ???  // Could not normalize
+          case Some((n,pr)) => {
+            val (res,pr2) = normalise(Power(ln,n),skip_proofs)
+            (res,prover(Equal(l,res), useAt(pr)(SuccPosition(1,0::1::Nil)) & by(pr2)))
+          }
+        }
       case Neg(ln) =>
         //Negation ~= multiply by -1 monomial
         val (rec1,pr1) = normalise(ln,skip_proofs)
@@ -350,7 +377,10 @@ object PolynomialArith {
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3) ))
-      case _ => ???
+      case _ => {
+        println(l)
+        ???
+      }
     }
     res
   }
@@ -512,4 +542,121 @@ object PolynomialArith {
         cohideR(1) & by(pf)
         ))
   }
+
+  //Axiomatization
+
+  // Succedent to antecedent for inequations (rewrite right to left followed by notR)
+  //private val ltSucc: ProvableSig = proveBy("!(f_()>=g_() <-> f_() < g_()".asFormula,QE)
+  //private val leSucc: ProvableSig = proveBy("!(f_()>g_() <-> f_() <= g_()".asFormula,QE)
+  private val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
+  private val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
+  private val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
+  private val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
+
+  //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
+  //note: these folds = 0 normalisation in as well
+  private val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists z_ (f_()-g_())*z_^2 - 1 = 0".asFormula,QE)
+  private val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists z_ (f_()-g_()) - z_^2 = 0".asFormula,QE)
+
+  private val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE)
+  private val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists z_ (f_()-g_())*z_ = 1".asFormula,QE)
+
+  //todo: generalise to more complete formula fragment
+  //todo: Also "clear" equations in succedent after witness generation
+  val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
+    override def computeExpr(seq: Sequent): BelleExpr =
+    {
+      seq.succ.zipWithIndex.foldLeft(ident) {(tac: BelleExpr, fi) =>
+        val ind = fi._2 + 1;
+        val _ = println(ind);
+        (fi._1 match {
+          case Greater(f, g) =>
+            useAt(gtSucc)(ind) & notR(ind)
+          case GreaterEqual(f, g) =>
+            useAt(geSucc)(ind) & notR(ind)
+          case Equal(_, _) => useAt(eqSucc)(ind) & notR(ind)
+          case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
+          case _ => ???
+        }) & tac
+      }
+    }
+  }
+
+  //Normalizes the antecedent by A4,A5 and skolemizing exists
+  val normAnte:DependentTactic = new SingleGoalDependentTactic("norm ante") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+        val ind = -(fi._2 + 1);
+        val _ = println(ind);
+        (fi._1 match {
+          case Greater(f, g) =>
+            useAt(gtAnte)(ind) & existsL(ind)
+          case GreaterEqual(f, g) =>
+            useAt(geAnte)(ind) & existsL(ind)
+          case Equal(_, _) => useAt(eqAnte)(ind)
+          case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
+          case _ => ???
+        }) & tac
+      }
+    }
+  }
+
+  val prepareArith = clearSucc & normAnte
+
+
+//  def extractPolynomials(s: Sequent): Unit = {
+//
+//    val polys =
+//      s.ante.map(
+//        f => f match {
+//          case Equal(l, _) => l
+//          case _ => ???
+//        }
+//      )
+//    val vars = polys.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
+//    Mathematica.
+//    val input = new MExpr(GROEBNERBASIS,
+//      Array[MExpr](
+//        new MExpr(Expr.SYM_LIST, polys.map(KeYmaeraToMathematica.apply(_)).toArray),
+//        new MExpr(Expr.SYM_LIST, vars.map(KeYmaeraToMathematica.apply(_)).toArray),
+//        new MExpr(RULE, Array[MExpr](MONOMIALORDER, DEGREEREVERSELEXICOGRAPHIC
+//        ))
+//      ))
+//    val (_, result) = run(input)
+//    println(result)
+//  }
+
+//  class PolyArithTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) {
+//    def RULE = new MExpr(Expr.SYMBOL, "Rule")
+//
+//    def GROEBNERBASIS = new MExpr(Expr.SYMBOL, "GroebnerBasis")
+//
+//    def MONOMIALORDER = new MExpr(Expr.SYMBOL, "MonomialOrder")
+//
+//    def DEGREEREVERSELEXICOGRAPHIC = new MExpr(Expr.SYMBOL, "DegreeReverseLexicographic")
+//
+//    def extractPolynomials(s: Sequent): Unit = {
+//
+//      val polys =
+//        s.ante.map(
+//          f => f match {
+//            case Equal(l, _) => l
+//            case _ => ???
+//          }
+//        )
+//      val vars = polys.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
+//
+//      val input = new MExpr(GROEBNERBASIS,
+//        Array[MExpr](
+//          new MExpr(Expr.SYM_LIST, polys.map(KeYmaeraToMathematica.apply(_)).toArray),
+//          new MExpr(Expr.SYM_LIST, vars.map(KeYmaeraToMathematica.apply(_)).toArray),
+//          new MExpr(RULE, Array[MExpr](MONOMIALORDER, DEGREEREVERSELEXICOGRAPHIC
+//          ))
+//        ))
+//      val (_, result) = run(input)
+//      println(result)
+//    }
+//  }
+
+
 }
