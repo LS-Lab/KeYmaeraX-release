@@ -284,7 +284,11 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
         .replaceAll("[\\t]at java\\.util\\.concurrent\\..*", "")
         .replaceAll("[\\t]at java\\.lang\\.Thread\\.run.*", "")
         .replaceAll("[\\t]at scala\\.Predef\\$\\.require.*", "")
-        .replaceAll("[\\s]+$", "")
+        .replaceAll("[\\t]at akka\\.spray\\.UnregisteredActorRefBase.*", "")
+        .replaceAll("[\\t]at akka\\.dispatch\\..*", "")
+        .replaceAll("[\\t]at scala\\.concurrent\\.forkjoin\\..*", "")
+        .replaceAll("[\\t]at scala\\.runtime\\.AbstractPartialFunction.*", "")
+        .replaceAll("\\s+$|\\s*(\n)\\s*|(\\s)\\s*", "$1$2") //@note collapse newlines
     } else ""
   def getJson = JsObject(
     "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
