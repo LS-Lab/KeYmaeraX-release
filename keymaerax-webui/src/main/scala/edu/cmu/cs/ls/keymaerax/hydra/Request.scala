@@ -954,7 +954,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         } else {
           val stepDetails = new ExtractTacticFromTrace(db).getTacticString(trace)
           val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
-          val innerSteps = innerTree.nodes.map(n => (n, RequestHelper.stepPosition(db, n)))
+          //@note reparse may fail, for now just display tactic without position anyway
+          val innerSteps = innerTree.nodes.map(n => n -> (try { RequestHelper.stepPosition(db, n) } catch { case ex: Throwable => None }))
           val openGoals = innerTree.leaves
 
           new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, openGoals) :: Nil
