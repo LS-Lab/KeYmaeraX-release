@@ -328,4 +328,12 @@ class ODETests extends TacticTestBase {
       fail shouldBe 'empty
     }
   }
+
+  "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withMathematica(_ => {
+    val f = "x>=0->[{x'=x}]x>=0".asFormula
+    val result = proveBy(f, implyR(1) & DifferentialTactics.splitWeakInequality(1))
+    result.subgoals.length shouldBe 2
+    result.subgoals(0).succ.last shouldBe "[{x'=x&true}]x>0".asFormula
+    result.subgoals(1).succ.last shouldBe "[{x'=x&true}]x=0".asFormula
+  })
 }
