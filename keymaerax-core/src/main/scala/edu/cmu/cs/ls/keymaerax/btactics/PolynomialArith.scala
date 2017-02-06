@@ -4,7 +4,6 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -16,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
   */
 object PolynomialArith {
 
+  private val DEBUG = true
+
   /**
     * Normalised polynomial arithmetic
     *
@@ -23,7 +24,8 @@ object PolynomialArith {
     *
     * mono:= 1 | mono * (Var)^n
     *
-    * Variables in the first half of * must be lexicographically > than the variable in the second by Scala string cmp
+    * Variables in the first half of * must be lexicographically > than the variable in the second by VarOrd
+    * ("Variables" is meant a bit loosely in that nullary function symbols are allowed too)
     *
     * Similarly, a normalised polynomial has the following shape (const is non-zero):
     *
@@ -36,62 +38,89 @@ object PolynomialArith {
     * todo: Add ability to turn off proof generation everywhere
     */
 
-  //Sanity check that a term representing a monomial satisfies the monomial normalisation requirement
-  def checkMono(t:Term,maxs:String = ""): Boolean = {
-    t match {
-      case n:Number => n.value == 1
-      case Times(l,Power(s:Variable,n:Number)) =>
-        n.value.isValidInt && n.value.toInt > 0 && s.name > maxs && checkMono(l,s.name)
+  //Assumes that the terms are Variables or nullary Functions
+  // Default: x < y, x < x(), y < x()
+  // Invalid inputs lead to transitive failure: a+b = x = c+d = x()
+  object VarOrd extends Ordering[Term] {
+    def compare(x: Term, y: Term): Int =
+      (x,y) match {
+        case (vx:Variable,vy:Variable) => vx.name.compare(vy.name)
+        case (FuncOf(fx,Nothing),vy:Variable) => 1
+        case (vx:Variable,FuncOf(fy,Nothing)) => -1
+        case (FuncOf(fx,Nothing),FuncOf(fy,Nothing)) => fx.name.compare(fy.name)
+        case _ => 0
+      }
+  }
+
+  def isVar(s:Term) : Boolean = {
+    s match {
+      case _:Variable | FuncOf(_,Nothing) => true
       case _ => false
     }
   }
 
-  //Monomial order
+  //Sanity check that a term representing a monomial satisfies the monomial normalisation requirement
+  //Additional check: the terms in "variable" position are actual variables
+  //The nested variables i.e. those in l must be lexicographically smaller so (a^5)*b^3 is valid, (b^3)*a^5 is invalid
+  def checkMono(t:Term,maxs:Option[Term] = None): Boolean = {
+    if(DEBUG) println("Checking ",t,maxs)
+    t match {
+      case n:Number => n.value == 1
+      case Times(l,Power(s,n:Number)) if isVar(s) =>
+        n.value.isValidInt && n.value.toInt > 0 &&
+        maxs.forall(t=>VarOrd.compare(s,t) < 0 ) && checkMono(l,Some(s))
+      case _ => false
+    }
+  }
+
+  //Monomial order (of a normalized monomial)
   def ordMono(t:Term) : Integer = {
     //assert(checkMono(t))
     t match {
-      case Times(l,Power(s:Variable,n:Number)) => n.value.toInt + ordMono(l)
+      case Times(l,Power(_,n:Number)) => n.value.toInt + ordMono(l)
       case _ => 0
     }
   }
 
-  //Lexicographical < comparison of monomials
-  def lexMono(l:Term,r:Term) :Boolean = {
-    (l,r) match {
-      case(n:Number,m:Number) => false
-      case (Times(l,Power(sl:Variable,nl:Number)),Times(r,Power(sr:Variable,nr:Number))) =>
-        if(sl.name > sr.name) true
-        else if(sl.name == sr.name) {
-          if (nl.value < nr.value) true
-          else if(nl.value == nr.value) lexMono(l,r)
-          else false
-        }
-        else false
+  object MonOrd extends Ordering[Term] {
+    //Reverse lexicographic order for monomials of the same degree
+    private def lexMono(l:Term,r:Term) : Int = {
+      (l,r) match {
+        case (n: Number, m: Number) => 0 //Impossible for normalized monomials
+        case (Times(l, Power(vl, nl: Number)), Times(r, Power(vr, nr: Number))) =>
+          val cmp = VarOrd.compare(vl,vr)
+          if (cmp == 0) {
+            if (nl.value < nr.value) -1
+            else if (nl.value == nr.value) lexMono(l, r)
+            else 1
+          }
+          else cmp
+        case _ => ???
+      }
     }
-  }
 
-  //Strict monomial comparison l < r?
-  def cmpMono(l:Term,r:Term) : Boolean = {
-    val or = ordMono(r)
-    val ol = ordMono(l)
-    if (or > ol) {
-      true
+    def compare(l: Term, r: Term): Int = {
+      val ol = ordMono(l)
+      val or = ordMono(r)
+      if(DEBUG) println("monos:",l,r,ol,or)
+      if (ol < or) -1
+      else if(ol > or) 1
+      else lexMono(l,r)
     }
-    else if(or == ol) {
-      lexMono(l,r)
-    }
-    else false
   }
 
   //Sanity check that a term representing a polynomial satisfies the normalisation requirement
   def checkPoly(t:Term,maxm:Option[Term] = None): Boolean = {
+    if(DEBUG) println("Checking",t,maxm)
     t match {
       case n:Number => n.value == 0
       case Plus(l,Times(c:Number,m)) =>
         (c.value != 0) && checkMono(m) &&
           (maxm match {
           case None => checkPoly(l,Some(m))
-          case Some(n) => cmpMono(m,n) && checkPoly(l,Some(n))
+          case Some(n) => {
+            MonOrd.compare(m,n) < 0 && checkPoly(l,Some(m))
+          }
           })
       case _ => false
     }
@@ -120,13 +149,14 @@ object PolynomialArith {
       case (_,n:Number) => //Right unit for addition
         (l,prover(Equal(lhs,l), byUS("+0")))
       case (Plus(nl,Times(cl:Number,ml)),Plus(nr,Times(cr:Number,mr))) => {
-        if(cmpMono(ml,mr)) {
+        val cmp = MonOrd.compare(ml,mr)
+        if(cmp < 0) {
           val (rec,pr) = addPoly(l,nr,skip_proofs)
           val res = Plus(rec,Times(cr:Number,mr))
           (res,prover(Equal(lhs,res), useAt(plusAssoc1)(SuccPosition(1,0::Nil))
             & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
         }
-        else if (ml == mr) {
+        else if (cmp == 0) {
           val (rec,pr) = addPoly(nl,nr,skip_proofs)
           val cnew = cl.value + cr.value
           if(cnew == 0) //Canceling out the 0
@@ -177,15 +207,16 @@ object PolynomialArith {
     (l,r) match {
       case(n:Number,_) => (r,prover(Equal(lhs,r),byUS(onetimes)))  //Unit
       case (_,n:Number) => (l,prover(Equal(lhs,l),byUS(timesone))) //Unit
-      case (Times(nl,Power(sl:Variable,ml:Number)),Times(nr,Power(sr:Variable,mr:Number))) =>
-        if(sl.name > sr.name)
+      case (Times(nl,Power(sl,ml:Number)),Times(nr,Power(sr,mr:Number))) =>
+        val cmp = VarOrd.compare(sl,sr)
+        if(cmp < 0)
         {
           val(rec,pr) = mulMono(l,nr,skip_proofs)
-          val res = Times(rec,Power(sr:Variable,mr:Number))
+          val res = Times(rec,Power(sr,mr:Number))
           (res,prover(Equal(lhs,res), useAt(timesAssoc1)(SuccPosition(1,0::Nil))
             & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
         }
-        else if(sl.name == sr.name) {
+        else if(cmp == 0) {
           val(rec,pr) = mulMono(nl,nr,skip_proofs)
           val mnew = ml.value + mr.value
           if(mnew == 0) //Canceling out the 0
@@ -403,17 +434,19 @@ object PolynomialArith {
   //Polynomial division: no proof needed, although the polynomials need to be pre-normalised
   //todo: Might this be implemented in terms of mulMono with -ve power? (probably not because ordering gets messed up)
 
-  //Monomial division l/r : returns the normalised quotient monomial q * r = l only if it is truly divisible
+  //Monomial division l/r : returns the normalised quotient monomial q s.t. q * r = l only if it is truly divisible
   def divMono(l:Term,r:Term): Option[Term] = {
     val lhs = Times(l,r)
     (l,r) match {
       case (_,n:Number) => Some(l) //Divide by 1
       case(n:Number,_) => None //Dividing 1 by something not 1
-      case (Times(nl,Power(sl:Variable,ml:Number)),Times(nr,Power(sr:Variable,mr:Number))) =>
-        if(sl.name > sr.name) None
-        else if(sl.name == sr.name) {
+      case (Times(nl,Power(sl,ml:Number)),Times(nr,Power(sr,mr:Number))) =>
+        val cmp = VarOrd.compare(sl,sr)
+        if(cmp < 0) None
+        else if(cmp == 0) {
           val mnew = ml.value - mr.value
           if (mnew < 0) None
+          else
           divMono(nl, nr) match {
             case None => None
             case Some(q) =>
