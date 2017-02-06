@@ -336,4 +336,9 @@ class ODETests extends TacticTestBase {
     result.subgoals(0).succ.last shouldBe "[{x'=x&true}]x>0".asFormula
     result.subgoals(1).succ.last shouldBe "[{x'=x&true}]x=0".asFormula
   })
+
+  it should "prove x>=0->[{x'=x}]x>=0 via ODE" in withMathematica(_ => {
+    val f = "x>=0->[{x'=x}]x>=0".asFormula
+    proveBy(f, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+  })
 }
