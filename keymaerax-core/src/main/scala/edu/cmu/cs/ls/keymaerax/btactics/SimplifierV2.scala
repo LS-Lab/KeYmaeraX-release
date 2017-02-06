@@ -280,23 +280,23 @@ object SimplifierV2 {
   //Justifications for adding things to the context
   private val andLemma =
   proveBy(
-    "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop)
+    "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop & done)
 
   private val implyLemma =
     proveBy(
-      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop)
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop & done)
 
   private val orLemma =
     proveBy(
-      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop)
+      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop & done)
 
   private val equivLemma =
     proveBy(
-      "((P_() <-> F_()) & (Q_() <-> G_())) ->((P_() <-> Q_()) <-> (F_() <-> G_()))".asFormula,prop)
+      "((P_() <-> F_()) & (Q_() <-> G_())) ->((P_() <-> Q_()) <-> (F_() <-> G_()))".asFormula,prop & done)
 
   private val notLemma =
     proveBy(
-      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop)
+      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop & done)
 
   private val equalLemma =
     proveBy(
@@ -323,7 +323,7 @@ object SimplifierV2 {
       "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE)
 
   private val equivTrans =
-    proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop)
+    proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop & done)
 
   private val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE)
 
@@ -346,7 +346,7 @@ object SimplifierV2 {
       //Both the de-morganed and originals are added to the context
       case Not(u) =>
         //Apply deMorgan things to Not
-        val id = proveBy(Sequent(IndexedSeq(),IndexedSeq(Equiv(Not(u),Not(u)))),prop)
+        val id = proveBy(Sequent(IndexedSeq(),IndexedSeq(Equiv(Not(u),Not(u)))),prop & done)
         val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
         val nu = extract(cpr).asInstanceOf[Formula]
         //No deMorgan applies, just add to context
@@ -376,7 +376,7 @@ object SimplifierV2 {
   // (some already are)
   private def propProof(f:String,ff:String):ProvableSig =
   {
-    proveBy(Equiv(f.asFormula,ff.asFormula), prop)
+    proveBy(Equiv(f.asFormula,ff.asFormula), prop & done)
   }
 
   val andT = propProof("F_() & true","F_()")
@@ -921,7 +921,7 @@ object SimplifierV2 {
     }
   })
 
-  val swapImply = proveBy("(P_() -> Q_() -> R_()) <-> (Q_() -> P_() -> R_())".asFormula,prop)
+  val swapImply = proveBy("(P_() -> Q_() -> R_()) <-> (Q_() -> P_() -> R_())".asFormula,prop & done)
 
   //Same as fullSimpTac, except the changes to the context get thrown out
   //todo: This doesn't work with antepositions
