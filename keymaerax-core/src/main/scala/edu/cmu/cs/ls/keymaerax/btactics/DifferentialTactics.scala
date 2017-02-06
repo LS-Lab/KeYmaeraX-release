@@ -591,83 +591,9 @@ private object DifferentialTactics {
       assertT(seq=>false, "Failed to automatically prove something about this ODE.")
   })
 
-  /** @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer
-    * @deprecated("Use new ODE", "4.3.1") */
-  def ODEold: DependentPositionTactic = "ODEold" by ((pos:Position,seq:Sequent) => {
-    val noCut = {
-      "ANON" by ((pos: Position) =>
-        ((boxAnd(pos) & andR(pos))*) &
-          onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-            val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-              case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-              case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-              case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-            }
-            val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
-            val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
-            //@note diffWeaken will already include all cases where V works, without much additional effort.
-            (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-              diffWeaken(pos) & QE else fail) |
-              (if (post match {
-                case  _: Greater => true
-                case _: Less => true
-                case _ => false
-              })
-              // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
-                openDiffInd(pos) | DGauto(pos)
-              else
-              //@todo check degeneracy for split to > or =
-                diffInd()(pos)
-                  | DGauto(pos)
-                  | dgZeroMonomial(pos)
-                  | dgZeroPolynomial(pos)
-                )
-          })) (pos))
-        )
     }
 
-    //@todo in fact even ChooseAll would work, just not recursively so.
-    //@todo performance: repeat from an updated version of the same generator until saturation
-    //@todo turn this into repeat
-    ChooseSome(
-      //@todo should memoize the results of the differential invariant generator
-      () => try { InvariantGenerator.differentialInvariantGenerator(seq,pos) } catch {
-        case err: Exception =>
-          if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-          List[Formula]().iterator
-      },
-      (inv:Formula) => if (false)
-        diffInvariant(inv)(pos)
-      else
-        diffCut(inv)(pos) <(
-          // use diffCut
-          skip,
-          // show diffCut, but don't use yet another diffCut
-          noCut(pos) & done
-          )
-    ) & ODE(pos) |
-      noCut(pos) |
-      // if no differential cut succeeded, just skip and go for a direct proof.
-      //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
-      TactixLibrary.diffSolve(pos) |
-      ChooseSome(
-        //@todo should memoize the results of the differential invariant generator
-        () => try { InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos) } catch {
-          case err: Exception =>
-            if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-            List[Formula]().iterator
-        } ,
-        (inv:Formula) => if (false)
-          diffInvariant(inv)(pos)
-        else
-          diffCut(inv)(pos) <(
-            // use diffCut
-            skip,
-            // show diffCut, but don't use yet another diffCut
-            noCut(pos) & done
-            )
-      ) & ODE(pos) | assertT(seq=>false, "Failed to automatically prove something about this ODE.") //@todo maybe only catch ODE-specific errors thrown here and in InvariantGenerator.scala.
+    TactixLibrary.cut(caseDistinction) <(
   })
 
   def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {
