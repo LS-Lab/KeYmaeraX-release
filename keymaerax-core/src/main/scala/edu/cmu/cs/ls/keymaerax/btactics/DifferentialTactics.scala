@@ -580,11 +580,13 @@ private object DifferentialTactics {
     //The tactic:
     //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
     if(lateSolve)
+      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(pos))    |
       TactixLibrary.diffSolve(pos) |
       assertT(seq=>false, "Failed to automatically prove something about this ODE.")
     else
+      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
       (proveWithoutCuts(pos) & done) |
       (addInvariant & ODE(pos))      |
       TactixLibrary.diffSolve(pos)   |
