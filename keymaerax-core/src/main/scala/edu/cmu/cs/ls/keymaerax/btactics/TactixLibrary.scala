@@ -70,14 +70,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "normalize" by tacticChase(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  val unfoldProgramNormalize: BelleExpr = "unfold" by tacticChase(notL, andL, notR, implyR, orR, andR, allR, existsL, step) & onAll(?(close))
+  val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
 
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo` */
-  def tacticChase(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "anon" by ((seq: Sequent) => {
+  def tacticChase(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
-    lazy val atPos: DependentPositionTactic = "anon" by ((pos: Position, s: Sequent) => {
+    lazy val atPos: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
       s.sub(pos) match {
         case Some(fml) =>
           TacticIndex.tacticFor(fml, restrictions) match {
