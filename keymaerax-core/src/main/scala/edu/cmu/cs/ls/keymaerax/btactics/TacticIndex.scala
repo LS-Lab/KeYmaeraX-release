@@ -33,7 +33,7 @@ object TacticIndex {
   /**
    * Return tactic index with list of recursors on other sibling, i.e., for chasing after the tactic is applied.
    */
-  def tacticRecursors(tactic: PositionalTactic): TacticIndex = (tactic: @switch) match {
+  def tacticRecursors(tactic: BelleExpr): TacticIndex = (tactic: @switch) match {
     //@note expected formulas are used to fall back to search
     case TactixLibrary.notL =>
       ((s: Sequent, p: SeqPos) => one(Fixed(SuccPosition.base0(s.succ.length), child(s(p))))) :: Nil
@@ -64,27 +64,40 @@ object TacticIndex {
       ((s: Sequent, p: SeqPos) =>
         (Fixed(AntePosition.base0(s.ante.length), left(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), right(s(p)))::Nil)::
         (Fixed(AntePosition.base0(s.ante.length), right(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), left(s(p)))::Nil)::Nil) :: Nil
+    case TactixLibrary.step => ((s: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.allR => ((s: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.existsL => ((s: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
     // default position: stop searching
     case _ => Nil
   }
 
-  private def child(fml: Formula) = fml match { case f: UnaryCompositeFormula => Some(f.child) }
+  private def child(fml: Formula) = fml match {
+    case f: UnaryCompositeFormula => Some(f.child)
+    case Box(_, p) => Some(p)
+    case Diamond(_, p) => Some(p)
+    case Forall(_, p) => Some(p)
+    case Exists(_, p) => Some(p)
+  }
   private def left(fml: Formula) = fml match { case f: BinaryCompositeFormula => Some(f.left) }
   private def right(fml: Formula) = fml match { case f: BinaryCompositeFormula => Some(f.right) }
 
   // lookup canonical axioms for an expression (index)
 
   /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
-  def tacticFor(expr: Expression, restrictTo: List[PositionalTactic]): (Option[PositionalTactic], Option[PositionalTactic]) = {
+  def tacticFor(expr: Expression, restrictTo: List[AtPosition[_ <: BelleExpr]]): (Option[AtPosition[_ <: BelleExpr]], Option[AtPosition[_ <: BelleExpr]]) = {
     val tactics = tacticsFor(expr)
     (tactics._1.intersect(restrictTo).headOption, tactics._2.intersect(restrictTo).headOption)
   }
 
   /** Return ordered list of all canonical tactic names that simplifies the expression `expr` (ante, succ). */
-  def tacticsFor(expr: Expression): (List[PositionalTactic], List[PositionalTactic]) = {
+  def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = {
     if (expr.kind == TermKind) expr match {
       case _ => (Nil, Nil)
     } else expr match {
+      case Box(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
+      case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
+      case Forall(_, _) => (Nil, TactixLibrary.allR::Nil)
+      case Exists(_, _) => (TactixLibrary.existsL::Nil, Nil)
       case Not(_) => (TactixLibrary.notL::Nil, TactixLibrary.notR::Nil)
       case And(_, _) => (TactixLibrary.andL::Nil, TactixLibrary.andR::Nil)
       case Or(_, _) => (TactixLibrary.orL::Nil, TactixLibrary.orR::Nil)

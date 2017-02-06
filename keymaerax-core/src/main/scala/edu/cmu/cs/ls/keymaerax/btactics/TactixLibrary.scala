@@ -64,57 +64,16 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
      else HilbertCalculus.stepAt(pos))
     | assignb(pos))
 
-  /** Normalize to sequent form, keeping branching factor down by precedence */
-  lazy val normalize: BelleExpr = normalize(andR::orL::implyL::equivL::equivR::Nil, step, step)
-  /** Normalize to sequent form, customize branching with `beta`, customize simplification steps in antecedent/succedent with `stepL` and `stepR` */
-  def normalize(beta: PositionalTactic, stepL: BelleExpr, stepR: BelleExpr): BelleExpr = normalize(beta::Nil, _ => stepL, _ => stepR)
-  def normalize(beta: List[PositionalTactic], stepL: PositionLocator => BelleExpr, stepR: PositionLocator => BelleExpr): BelleExpr = "normalize" by ((seq: Sequent) => {
-    //@todo better way to configure step and beta rule? how to make compositional (see almost duplicate prop)?
-
-    lazy val left: DependentPositionTactic = TacticFactory.anon ((pos: Position, s: Sequent) => {
-      if (pos.isAnte) s.sub(pos) match {
-        case Some(False) => ProofRuleTactics.closeFalse(pos) & done
-        case Some(fml) if s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
-        case Some(Not(l)) => notL(pos) & (done | right(SuccPosition.base0(s.succ.length), l))
-        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left(AntePosition.base0(s.ante.length), r) | left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
-        case Some(Or(l, r)) if beta.contains(orL) => orL(pos) & (done | Idioms.<(left(pos, l), left(pos, r)))
-        case Some(Imply(l, r)) if beta.contains(implyL) => implyL(pos) & (done | Idioms.<(right(SuccPosition.base0(s.succ.length), l), left(pos, r)))
-        case Some(Equiv(l, r)) if beta.contains(equivL) => equivL(pos) & (done | Idioms.<(left(pos, And(l,r)), left(pos, And(Not(l),Not(r)))))
-        case Some(Exists(_, _)) => existsL(pos) & left(pos)
-        case Some(b@Box(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepL(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(b), "Continue only on change")(pos) & left(pos) | skip)
-        case Some(d@Diamond(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepL(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(d), "Continue only on change")(pos) & left(pos) | skip)
-        case _ => skip
-      } else skip
-    })
-
-    lazy val right: DependentPositionTactic = TacticFactory.anon ((pos: Position, s: Sequent) => {
-      if (pos.isSucc) s.sub(pos) match {
-        case Some(True) => ProofRuleTactics.closeTrue(pos) & done
-        case Some(fml) if s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
-        case Some(Not(l)) => notR(pos) & (done | left(AntePosition.base0(s.ante.length), l))
-        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
-        case Some(Or(l, r)) => orR(pos) & (done | right(SuccPosition.base0(s.succ.length-1), l) & (done | onAll(right(SuccPosition.base0(s.succ.length), r) | right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
-        case Some(And(l, r)) if beta.contains(andR) => andR(pos) & (done | Idioms.<(right(pos, l), right(pos, r)))
-        case Some(Equiv(l, r)) => equivR(pos) & (done | Idioms.<(
-          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
-          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
-        ))
-        case Some(Forall(_, _)) => allR(pos) & right(pos)
-        case Some(b@Box(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepR(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(b), "Continue only on change")(pos) & right(pos) | skip)
-        case Some(d@Diamond(prg, _)) if !prg.isInstanceOf[ODESystem] && !prg.isInstanceOf[Loop] => stepR(Fixed(pos)) & (assertT((s: Sequent, p: Position) => s.sub(p) != Some(d), "Continue only on change")(pos) & right(pos) | skip)
-        case _ => skip
-      } else skip
-    })
-
-    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(left(AntePosition.base0(i), fml) | left('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(right(SuccPosition.base0(i), fml) | right('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
-  })
+  /** Normalize to sequent form */
+  lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
+  /** Normalize to sequent form, keeping branching factor restricted to `beta` */
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "normalize" by tacticChase(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  val unfoldProgramNormalize: BelleExpr = "unfold" by chase('R) & normalize(andR, Idioms.ident, Idioms.ident)
+  val unfoldProgramNormalize: BelleExpr = "unfold" by tacticChase(notL, andL, notR, implyR, orR, andR, allR, existsL, step) & onAll(?(close))
 
-  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to position the tactics in `restrictTo` */
-  def tacticChase(restrictTo: PositionalTactic*): BelleExpr = "anon" by ((seq: Sequent) => {
+  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo` */
+  def tacticChase(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "anon" by ((seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
@@ -133,13 +92,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
     def atOrSearch(p: PositionLocator): BelleExpr = atPos(p) | (p match {
-      case Fixed(pos, fml, exact) if pos.isAnte => atPos(Find.FindL(0, fml, exact=exact))
-      case Fixed(pos, fml, exact) if pos.isSucc => atPos(Find.FindR(0, fml, exact=exact))
+      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Find.FindL(0, Some(fml), exact=exact)) | skip
+      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Find.FindR(0, Some(fml), exact=exact)) | skip
       case _ => skip
-    }) | skip
+    })
 
     /** Do all the tactics of a branch in sequence. */
-    def applyBranchRecursor(rec: TacticIndex.Branch): BelleExpr = rec.map(atOrSearch).reduce(_&_)
+    def applyBranchRecursor(rec: TacticIndex.Branch): BelleExpr =
+      //@note onAll tries on too many branches, but skip in atOrSearch compensates for this
+      rec.map(r => onAll(atOrSearch(r))).reduce(_&_)
 
     /** Turn branches (if any) into a branching tactic. */
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
@@ -149,7 +110,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     }
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
-    def applyAndRecurse(t: PositionalTactic, pos: Position, s: Sequent): BelleExpr = {
+    def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = TacticIndex.tacticRecursors(t)
       if (recursors.nonEmpty) t(new Fixed(pos)) & recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_)
       else t(new Fixed(pos))
