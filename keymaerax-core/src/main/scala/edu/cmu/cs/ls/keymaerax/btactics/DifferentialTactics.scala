@@ -574,6 +574,10 @@ private object DifferentialTactics {
       }
     )
 
+    //A user-friendly error message displayed when ODE can't find anything useful to do.
+    val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
+    "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
+
     //If lateSolve is true then diffSolve will be run last, if at all.
     val lateSolve = pos.isTopLevel //@todo come up wtih better heuristic for determining when to solving.
 
@@ -584,13 +588,13 @@ private object DifferentialTactics {
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(pos))    |
       TactixLibrary.diffSolve(pos) |
-      assertT(seq=>false, "Failed to automatically prove something about this ODE.")
+      assertT(seq=>false, failureMessage)
     else
       splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
       (proveWithoutCuts(pos) & done) |
       (addInvariant & ODE(pos))      |
       TactixLibrary.diffSolve(pos)   |
-      assertT(seq=>false, "Failed to automatically prove something about this ODE.")
+      assertT(seq=>false, failureMessage)
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
