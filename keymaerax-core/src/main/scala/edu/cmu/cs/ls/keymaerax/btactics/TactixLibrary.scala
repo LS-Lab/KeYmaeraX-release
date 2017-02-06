@@ -113,40 +113,54 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
   val unfoldProgramNormalize: BelleExpr = "unfold" by chase('R) & normalize(andR, Idioms.ident, Idioms.ident)
 
-  /** prop: exhaustively apply propositional logic reasoning and close if propositionally possible. */
-  val prop                    : BelleExpr = "prop" by ((seq: Sequent) => {
-    lazy val left: DependentPositionTactic = TacticFactory.anon ((pos: Position, s: Sequent) => {
-      if (pos.isAnte) s.sub(pos) match {
-        case Some(False) => ProofRuleTactics.closeFalse(pos) & done
-        case Some(fml) if s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
-        case Some(Not(l)) => notL(pos) & (done | right(SuccPosition.base0(s.succ.length), l))
-        case Some(And(l, r)) => andL(pos) & (done | left(AntePosition.base0(s.ante.length-1), l) & (done | onAll(left(AntePosition.base0(s.ante.length), r) | left('L, r)))) // @note 'L, since after left the right-hand side formula may have shifted
-        case Some(Or(l, r)) => orL(pos) & (done | Idioms.<(left(pos, l), left(pos, r)))
-        case Some(Imply(l, r)) => implyL(pos) & (done | Idioms.<(right(SuccPosition.base0(s.succ.length), l), left(pos, r)))
-        case Some(Equiv(l, r)) => equivL(pos) & (done | Idioms.<(left(pos, And(l,r)), left(pos, And(Not(l),Not(r)))))
+  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to position the tactics in `restrictTo` */
+  def tacticChase(restrictTo: PositionalTactic*): BelleExpr = "anon" by ((seq: Sequent) => {
+    val restrictions = restrictTo.toList
+
+    /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
+    lazy val atPos: DependentPositionTactic = "anon" by ((pos: Position, s: Sequent) => {
+      s.sub(pos) match {
+        case Some(fml) =>
+          TacticIndex.tacticFor(fml, restrictions) match {
+            case (Some(t), _) if pos.isAnte => applyAndRecurse(t, pos, s)
+            case (_, Some(t)) if pos.isSucc => applyAndRecurse(t, pos, s)
+            case (None, _) if pos.isAnte => skip
+            case (_, None) if pos.isSucc => skip
+          }
         case _ => skip
-      } else skip
+      }
     })
 
-    lazy val right: DependentPositionTactic = TacticFactory.anon ((pos: Position, s: Sequent) => {
-      if (pos.isSucc) s.sub(pos) match {
-        case Some(True) => ProofRuleTactics.closeTrue(pos) & done
-        case Some(fml) if s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
-        case Some(Not(l)) => notR(pos) & (done | left(AntePosition.base0(s.ante.length), l))
-        case Some(Imply(l, r)) => implyR(pos) & (done | left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r)))) // @note 'R, since after left the right-hand side formula may have shifted
-        case Some(Or(l, r)) => orR(pos) & (done | right(SuccPosition.base0(s.succ.length-1), l) & (done | onAll(right(SuccPosition.base0(s.succ.length), r) | right('R, r)))) // @note 'R, since after right the right-hand side formula may have shifted
-        case Some(And(l, r)) => andR(pos) & (done | Idioms.<(right(pos, l), right(pos, r)))
-        case Some(Equiv(l, r)) => equivR(pos) & (done | Idioms.<(
-          left(AntePosition.base0(s.ante.length), l) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, r))), // @note 'R, since after left the right-hand side formula may have shifted
-          left(AntePosition.base0(s.ante.length), r) & (done | onAll(right(SuccPosition.base0(s.succ.length-1), r) | right('R, l)))  // @note 'R, since after left the left-hand side formula may have shifted
-        ))
-        case _ => skip
-      } else skip
-    })
+    /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
+    def atOrSearch(p: PositionLocator): BelleExpr = atPos(p) | (p match {
+      case Fixed(pos, fml, exact) if pos.isAnte => atPos(Find.FindL(0, fml, exact=exact))
+      case Fixed(pos, fml, exact) if pos.isSucc => atPos(Find.FindR(0, fml, exact=exact))
+      case _ => skip
+    }) | skip
 
-    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(left(AntePosition.base0(i), fml) | left('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(right(SuccPosition.base0(i), fml) | right('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.ident)
+    /** Do all the tactics of a branch in sequence. */
+    def applyBranchRecursor(rec: TacticIndex.Branch): BelleExpr = rec.map(atOrSearch).reduce(_&_)
+
+    /** Turn branches (if any) into a branching tactic. */
+    def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
+      case Nil => skip
+      case r::Nil => onAll(applyBranchRecursor(r))
+      case r => BranchTactic(r.map(applyBranchRecursor))
+    }
+
+    /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
+    def applyAndRecurse(t: PositionalTactic, pos: Position, s: Sequent): BelleExpr = {
+      val recursors = TacticIndex.tacticRecursors(t)
+      if (recursors.nonEmpty) t(new Fixed(pos)) & recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_)
+      else t(new Fixed(pos))
+    }
+
+    //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
+    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(AntePosition.base0(i), fml) | atPos('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(SuccPosition.base0(i), fml) | atPos('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
+
+  val prop: BelleExpr = "prop" by (tacticChase(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR) & onAll(?(close)))
 
   /** master: master tactic that tries hard to prove whatever it could
     * @see [[auto]] */
