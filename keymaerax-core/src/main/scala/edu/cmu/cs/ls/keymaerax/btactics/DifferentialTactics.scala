@@ -591,9 +591,32 @@ private object DifferentialTactics {
       assertT(seq=>false, "Failed to automatically prove something about this ODE.")
   })
 
+  /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
+    * Given a formula of the form [ode]p<=q, produces two new subgoals of the forms [ode]p < q and  [ode]p=q.
+    * @see http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
+    * @author Nathan Fulton */
+  def splitWeakInequality : DependentPositionTactic = "splitWeakInequality" by ((pos: Position, seq: Sequent) => {
+    val postcondition = seq.at(pos)._2 match {
+      case Box(ODESystem(_,_), postcondition) => postcondition
+      case _ => throw new BelleThrowable("splitWeakInequality is only applicable for ODE's with weak inequalities as post-conditions.")
+    }
+    val (lhs, rhs, openSetConstructor) = postcondition match {
+      case GreaterEqual(l,r) => (l,r,Greater)
+      case LessEqual(l,r)    => (l,r,Less)
+      case _                 => throw new BelleThrowable(s"splitWeakInequality Expected a weak inequality in the post condition (<= or >=) but found: ${postcondition}")
     }
 
+    val caseDistinction = Or(openSetConstructor(lhs,rhs), Equal(lhs,rhs))
+
     TactixLibrary.cut(caseDistinction) <(
+      TactixLibrary.orL(-(seq.ante.length + 1)) <(
+        TactixLibrary.generalize(openSetConstructor(lhs,rhs))(1) <(TactixLibrary.nil, TactixLibrary.QE),
+        TactixLibrary.generalize(Equal(lhs,rhs))(1) <(TactixLibrary.nil, TactixLibrary.QE)
+      )
+      ,
+      (TactixLibrary.hide(pos.topLevel) & TactixLibrary.QE) | //@todo write a hideNonArithmetic tactic.
+      DebuggingTactics.assert(_=>false, s"splitWeakInequality failed because ${caseDistinction} does not hold initially.")
+    )
   })
 
   def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {
