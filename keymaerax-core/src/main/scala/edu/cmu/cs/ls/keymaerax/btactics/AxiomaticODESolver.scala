@@ -25,10 +25,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 object AxiomaticODESolver {
   private val ODE_DEBUGGER = false
 
-  private val simplifier = SimplifierV3.simpTac()
+  private lazy val simplifier = SimplifierV3.simpTac()
 
   /** The name of the explicit time variables. */
-  private val TIMEVAR: Variable = "kyxtime".asVariable
+  private lazy val TIMEVAR: Variable = "kyxtime".asVariable
 
   /** Temporary messages that aren't even necessarily useful to have in verbose ODE debugger mode. */
   private def tmpmsg(s:String) = if(ODE_DEBUGGER) println(s)

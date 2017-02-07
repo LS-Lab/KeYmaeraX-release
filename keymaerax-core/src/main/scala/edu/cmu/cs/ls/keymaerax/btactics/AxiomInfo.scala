@@ -781,6 +781,7 @@ object DerivationInfo {
     new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
 
     // Differential tactics
+    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
     new PositionTacticInfo("ODE",
       "ODE",
       {case () => TactixLibrary.ODE}, needsTool = true),
