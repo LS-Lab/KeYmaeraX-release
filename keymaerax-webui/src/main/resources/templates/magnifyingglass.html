@@ -1,5 +1,7 @@
 <div class="modal-header">
-    <h3 class="modal-title">Steps of {{tactic.parent}}</h3>
+    <h3 class="modal-title" ng-if="tactic.parent !== ''">Steps of {{tactic.parent}}</h3>
+    <!-- Assumption: will get here only when we open progress for failed tactic -->
+    <h3 class="modal-title" ng-if="tactic.parent === ''">Progress until tactic failed</h3>
 </div>
 <div class="modal-body" style="overflow: scroll; height: 300px;">
     <!-- TODO: sequent deduction view -->

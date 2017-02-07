@@ -426,6 +426,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val stepwiseTrace: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "trace") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new StepwiseTraceRequest(database, userId, proofId.toInt)
+      completeRequest(request, t)
+    }
+  }}}
+
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
   def parseFormulaId(id:String): Position = {
     val (idx :: inExprs) = id.split(',').toList.map(_.toInt)
@@ -469,11 +476,11 @@ trait RestApi extends HttpService with SLF4JLogging {
     completeRequest(request, t)
   }}}
 
-  val doAt = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
-    get {
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
+  val doAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
+    get { parameters('stepwise.as[Boolean]) { stepwise =>
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
-    }}
+    }}}
   }}
 
   val getStep = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "whatStep") { (userId, proofId, nodeId, formulaId) => { pathEnd {
@@ -483,9 +490,9 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }}
 
-  val doInputAt = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
+  val doInputAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
-      entity(as[String]) { params => {
+      parameters('stepwise.as[Boolean]) { stepwise => entity(as[String]) { params => {
         val info = DerivationInfo(tacticId)
         val expectedInputs = info.inputs
         // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
@@ -503,83 +510,84 @@ trait RestApi extends HttpService with SLF4JLogging {
               val paramInfo = expectedInputs.find(_.name == paramName)
               BelleTermInput(paramValue, paramInfo)
             })
-          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList)
+          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
+            Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
           completeRequest(request, t)
         } else {
           val missing = illFormedParams.map(_.getFields("param").head.asInstanceOf[JsString].value).mkString(", ")
           completeRequest(new FailedRequest(userId, "Ill-formed tactic arguments, missing parameters " + missing), t)
         }
       }
-    }}
+    }}}
   }}}
 
-  val doTwoPosAt = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, fml1Id, fml2Id, tacticId) => { pathEnd {
-    get {
+  val doTwoPosAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, fml1Id, fml2Id, tacticId) => { pathEnd {
+    get { parameters('stepwise.as[Boolean]) { stepwise =>
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
-        Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))))
+        Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))), Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
-    }}
+    }}}
   }}
 
-  val doTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    get {
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None)
+  val doTactic: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+    get { parameters('stepwise.as[Boolean]) { stepwise =>
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
-    }}
+    }}}
   }}
 
-  val doInputTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    post {
+  val doInputTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+    post { parameters('stepwise.as[Boolean]) { stepwise =>
       entity(as[String]) { params => {
         val info = DerivationInfo(tacticId)
         val expectedInputs = info.inputs
         // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
         val paramArray = JsonParser(params).asInstanceOf[JsArray]
         val inputs =
-          paramArray.elements.map({case elem =>
+          paramArray.elements.map({ elem =>
             val obj = elem.asJsObject()
             val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
             val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-            val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
+            val paramInfo = expectedInputs.find(_.name == paramName)
             BelleTermInput(paramValue, paramInfo)
           })
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList)
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
         completeRequest(request, t)
       }
-      }}
+      }}}
   }}}
 
-  val doCustomTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
-    post {
+  val doCustomTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
+    post { parameters('stepwise.as[Boolean]) { stepwise =>
       entity(as[String]) { tactic => {
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false)
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false, stepwise=stepwise)
         completeRequest(request, t)
       }}
-    }}
+    }}}
   }}
 
-  val doSearch = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
-    get {
+  val doSearch: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
+    get { parameters('stepwise.as[Boolean]) { stepwise =>
       val pos = where match {
         case "R" => Find.FindR(0, None)
         case "L" => Find.FindL(0, None)
         case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
       }
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
-    } ~
-    post {
+    }} ~
+    post { parameters('stepwise.as[Boolean]) { stepwise =>
       entity(as[String]) { params => {
         val info = DerivationInfo(tacticId)
         val expectedInputs = info.inputs
         // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
         val paramArray = JsonParser(params).asInstanceOf[JsArray]
         val inputs =
-          paramArray.elements.map({case elem =>
+          paramArray.elements.map({elem =>
             val obj = elem.asJsObject()
             val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
             val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-            val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
+            val paramInfo = expectedInputs.find(_.name == paramName)
             BelleTermInput(paramValue, paramInfo)
           })
         val pos = where match {
@@ -587,10 +595,10 @@ trait RestApi extends HttpService with SLF4JLogging {
           case "L" => Find.FindL(0, None)
           case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
         }
-        val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList)
+        val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
         completeRequest(request, t)
       }
-      }}
+      }}}
     }
   }}
 
@@ -959,6 +967,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     uploadArchive         ::
     userModelFromFormula  ::
     examples              ::
+    stepwiseTrace         ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

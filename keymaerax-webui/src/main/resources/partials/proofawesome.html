@@ -115,7 +115,7 @@
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxSplit', 'R')"><span>[]&and;</span><code class="pull-right">boxSplit</code></a></li>
                                 <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code>GV</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('MR', 'R)"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('MR', 'R')"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -166,6 +166,7 @@
                         <li ng-controller="ProofMessagesCtrl">
                             <k4-auto-hide-alert message="proofMessage.text"
                                                 details="proofMessage.details"
+                                                task-stepwise-request="proofMessage.taskStepwiseRequest"
                                                 is-visible="proofMessage.isVisible" timeout="-1">
                             </k4-auto-hide-alert>
                         </li>

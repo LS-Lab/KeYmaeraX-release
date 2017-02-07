@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXProblemParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
@@ -964,6 +964,20 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 }
 
+class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: Int) extends UserRequest(userId) {
+  def resultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    val trace = db.getExecutionTrace(proofId)
+    val stepDetails = new ExtractTacticFromTrace(db).getTacticString(trace)
+    val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
+    //@note reparse may fail, for now just display tactic without position anyway
+    val innerSteps = innerTree.nodes.map(n => n -> (try { RequestHelper.stepPosition(db, n) } catch { case _: Throwable => None }))
+    val openGoals = innerTree.leaves
+    //@todo fill in parent step for empty ""
+    new ExpandTacticResponse(proofId, "", stepDetails, innerSteps, openGoals) :: Nil
+  }
+}
+
 
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
@@ -1071,7 +1085,8 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[PositionLocator], pos2: Option[PositionLocator] = None, inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true) extends UserRequest(userId) {
+                          pos: Option[PositionLocator], pos2: Option[PositionLocator] = None,
+                          inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true, stepwise: Boolean = false) extends UserRequest(userId) {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(node: TreeNode) = {
     val paramStrings: List[String] = inputs.map{
@@ -1115,6 +1130,16 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
   }
 
+  private def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId)
+    val globalProvable = initGlobal match {
+      case Some(gp) if trace.steps.isEmpty => gp
+      case _ => trace.lastProvable
+    }
+    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
+  }
+
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
 
   def resultingResponses(): List[Response] = {
@@ -1153,20 +1178,37 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       val localProvable = ProvableSig.startProof(node.sequent)
       val globalProvable = trace.lastProvable
       assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
-      val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
-      val executor = BellerophonTacticExecutor.defaultExecutor
-      val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
-      new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
-
+      if (stepwise) {
+        val localProofId = db.createProof(localProvable)
+        //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
+        val interpreter = (_: List[IOListener]) => new Interpreter {
+          override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
+            SpoonFeedingInterpreter(listener(db, localProofId), SequentialInterpreter, 1, strict = false)(expr, v)
+          } catch {
+            //@note stop and display whatever progress was made
+            case _: Throwable => BelleProvable(localProvable) //@note which provable doesn't matter, just that it is a BelleProvable
+          }
+        }
+        val proofTree = ProofTree.ofTrace(trace, () => Nil/*db.agendaItemsForProof(localProofId)*/, proofFinished = closed)
+        val executor = BellerophonTacticExecutor.defaultExecutor
+        val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter, Nil)
+        new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
+      } else {
+        val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+        val executor = BellerophonTacticExecutor.defaultExecutor
+        val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), SequentialInterpreter, List(listener))
+        new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+      }
     } catch {
       case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
       case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
+      case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
     }
   }
 }
 
 class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
@@ -1209,7 +1251,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
     true
   }
 
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     executor.synchronized {
       val response = executor.wait(taskId) match {
@@ -1218,7 +1260,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           val parentNode = finalTree.findNode(nodeId).get
           val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
-          new TaskResultResponse(parentNode, parentNode.children, positionLocator, progress = true)
+          new TaskResultResponse(proofId, parentNode, parentNode.children, positionLocator, progress = true)
         case Some(Right(error: BelleThrowable)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
@@ -1230,7 +1272,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
 }
 
 class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     //@note may have completed in the meantime
     executor.tasksForUser(userId).foreach(executor.tryRemove(_, force = true))
@@ -1252,9 +1294,9 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     * @return The kept steps of trace with updated branch numbers
     */
   def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
-    val tr = trace.steps.filter{case step => step.stepId >= pruned.min}
+    val tr = trace.steps.filter(_.stepId >= pruned.min)
     val pruneRoot = tr.head
-    val prunedGoals = Array.tabulate(pruneRoot.input.subgoals.length){case i => i == pruneRoot.branch}
+    val prunedGoals = Array.tabulate(pruneRoot.input.subgoals.length)(_ == pruneRoot.branch)
     val (_ ,outputSteps) =
       tr.foldLeft((prunedGoals, Nil:List[ExecutionStep])){case ((prunedGoals, acc), step) =>
         val delta = step.output.get.subgoals.length - step.input.subgoals.length

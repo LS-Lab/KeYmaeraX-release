@@ -391,8 +391,9 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
       "type" -> JsString("taskstatus"))
 }
 
-class TaskResultResponse(parent: TreeNode, children: List[TreeNode], pos: Option[PositionLocator], progress: Boolean = true) extends Response {
+class TaskResultResponse(proofId: String, parent: TreeNode, children: List[TreeNode], pos: Option[PositionLocator], progress: Boolean = true) extends Response {
   def getJson = JsObject(
+    "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> nodeIdJson(parent.id),
       "children" -> childrenJson(children)
