@@ -232,7 +232,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
               templateUrl: 'templates/magnifyingglass.html',
               controller: 'MagnifyingGlassDialogCtrl',
               scope: $scope,
-              size: 'lg',
+              size: 'magnifyingglass',
               resolve: {
                 proofInfo: function() {
                   return {
