@@ -339,19 +339,22 @@ object PolynomialArith {
     }
   }
 
+  private val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE)
+  private val varNormalise = proveBy("P_() = 0 + 1 * (1 * P_() ^ 1)".asFormula,QE)
+
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
-    println("Normalizing at",l)
+    if(DEBUG) println("Normalizing at",l)
     val prover = getProver(skip_proofs)
     val res = l match {
       case n:Number =>
         //0 + 1 * n (unless n = 0)
         val res = if (n.value == 0) n else Plus(Number(0), Times(n,Number(1)))
         (res,prover(Equal(l,res), RCF ))
-      case v:Variable =>
+      case v if isVar(v) =>
         //0 + 1 * (1 * v^1)
         val res = Plus(Number(0),Times(Number(1), Times(Number(1),Power(v,Number(1))) ))
-        (res,prover(Equal(l,res), RCF ))
+        (res,prover(Equal(l,res), byUS(varNormalise) ))
       case Plus(ln,rn) =>
         val (rec1,pr1) = normalise(ln,skip_proofs)
         val (rec2,pr2) = normalise(rn,skip_proofs)
@@ -382,9 +385,8 @@ object PolynomialArith {
         val(res,pr2) = normalise(rec1,skip_proofs)
         (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
           & by(pr2)))
-      //If the power is not itself a power, try hard to make it a Number
+      //If the power is not itself a power, try harder to make it a Number
       case Power(ln,e:Term) =>
-        println(e)
         val pr = groundNormalise(e)
         pr match {
           case None => ???  // Could not normalize
@@ -408,6 +410,19 @@ object PolynomialArith {
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3) ))
+//      case Divide(ln,e:Term) =>
+//        //Simple hack: Try hard to convert a division to a number
+//        val pr = groundNormalise(Divide(Number(1),e))
+//        pr match {
+//          case None => ???  // Could not normalize
+//          case Some((n,pr)) => {
+//            val (res,pr2) = normalise(Times(n,ln),skip_proofs)
+//            (res,prover(Equal(l,res), useAt(divNormalise)(SuccPosition(1,0::Nil)) &
+//              useAt(pr)(SuccPosition(1,0::0::Nil)) &
+//              by(pr2)
+//            ))
+//          }
+//        }
       case _ => {
         println(l)
         ???

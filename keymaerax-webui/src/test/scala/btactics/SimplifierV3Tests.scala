@@ -230,10 +230,16 @@ class SimplifierV3Tests extends TacticTestBase {
   it should "handle weird conjunct orders" in withMathematica { qeTool =>
     val fml = "A() -> B() & (C() & D()) & (P() & Q()) & R() -> (R() & Q()) & P() & (C() & D()) & E() ".asFormula
     val ctxt = IndexedSeq()
-    val tactic = simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    val tactic = simpTac(taxs = composeIndex(groundEqualityIndex, defaultTaxs))
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
     result.subgoals.head.succ should contain only "A()->B()&(C()&D())&(P()&Q())&R()->E()".asFormula
+  }
 
-
+  it should "handle duplicate conjuncts" in withMathematica { qeTool =>
+    val fml = " (A() & B()) & C() -> (A() & B()) & C() -> (A() & B()) & C() -> B() & C() & A() & A() & D()".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(taxs = composeIndex(groundEqualityIndex, defaultTaxs))
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    println(result)
   }
 }

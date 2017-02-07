@@ -64,6 +64,8 @@ object SimplifierV3 {
   type termIndex = (Term,context) => List[ProvableSig]
   type formulaIndex = (Formula,context) => List[ProvableSig]
 
+  val emptyCtx = HashSet[Formula]()
+
   def composeIndex[A<:Expression] (is:((A,context) => List[ProvableSig])*)
                                  (f:A,ctx:context) : List[ProvableSig] = is.flatMap(axs => axs(f,ctx)).toList
 
@@ -744,7 +746,7 @@ object SimplifierV3 {
   }
 
   //This generates theorems on the fly to simplify ground arithmetic
-  def arithGroundIndex (t:Term,ctx:context) : List[ProvableSig] = {
+  def arithGroundIndex (t:Term,ctx:context = emptyCtx) : List[ProvableSig] = {
     val res = t match {
       case Plus(n:Number,m:Number) => Some(n.value+m.value)
       case Minus(n:Number,m:Number) => Some(n.value-m.value)
