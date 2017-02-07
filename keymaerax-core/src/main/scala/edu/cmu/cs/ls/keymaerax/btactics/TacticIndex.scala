@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{Branches, TacticRecursors}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.switch
@@ -15,7 +16,6 @@ import scala.annotation.switch
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
  */
 object TacticIndex {
-
   /** A list of things to do on a branch */
   type Branch = List[PositionLocator]
 
@@ -23,17 +23,26 @@ object TacticIndex {
   type Branches = List[Branch]
 
   /**
-    * TacticIndex (recursors) where the recursors list resulting siblings for subsequent chase (every recursor is itself
+    * Recursors list resulting siblings for subsequent chase (every recursor is itself
     * a list, since tactics may branch).
     */
-  type TacticIndex = List[(Sequent, SeqPos) => Branches]
+  type TacticRecursors = List[(Sequent, SeqPos) => Branches]
+}
 
-  private def one(pos: PositionLocator): Branches = (pos::Nil) :: Nil
+trait TacticIndex {
+  def tacticRecursors(tactic: BelleExpr): TacticRecursors
+  def tacticFor(expr: Expression, restrictTo: List[AtPosition[_ <: BelleExpr]]): (Option[AtPosition[_ <: BelleExpr]], Option[AtPosition[_ <: BelleExpr]])
+  def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]])
+}
+
+class DefaultTacticIndex extends TacticIndex {
+
+  private def one(pos: PositionLocator): Branches = (pos :: Nil) :: Nil
 
   /**
    * Return tactic index with list of recursors on other sibling, i.e., for chasing after the tactic is applied.
    */
-  def tacticRecursors(tactic: BelleExpr): TacticIndex = (tactic: @switch) match {
+  def tacticRecursors(tactic: BelleExpr): TacticRecursors = (tactic: @switch) match {
     //@note expected formulas are used to fall back to search
     case TactixLibrary.notL =>
       ((s: Sequent, p: SeqPos) => one(Fixed(SuccPosition.base0(s.succ.length), child(s(p))))) :: Nil
@@ -64,9 +73,11 @@ object TacticIndex {
       ((s: Sequent, p: SeqPos) =>
         (Fixed(AntePosition.base0(s.ante.length), left(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), right(s(p)))::Nil)::
         (Fixed(AntePosition.base0(s.ante.length), right(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), left(s(p)))::Nil)::Nil) :: Nil
-    case TactixLibrary.step => ((s: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.allR => ((s: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.existsL => ((s: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.step => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.allR => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.existsL => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.ODE => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.diffSolve => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
     // default position: stop searching
     case _ => Nil
   }
@@ -95,6 +106,7 @@ object TacticIndex {
       case _ => (Nil, Nil)
     } else expr match {
       case Box(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
+      case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.diffSolve::Nil, TactixLibrary.ODE::Nil)
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Forall(_, _) => (Nil, TactixLibrary.allR::Nil)
       case Exists(_, _) => (TactixLibrary.existsL::Nil, Nil)

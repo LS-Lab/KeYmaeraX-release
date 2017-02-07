@@ -5,16 +5,17 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ODESolverTool}
+import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
+import scala.List
 import scala.collection.immutable._
 import scala.language.postfixOps
-import scala.math.BigDecimal
 
 /**
   * Tactix: Main tactic library with simple interface.
@@ -67,20 +68,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Normalize to sequent form */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form, keeping branching factor restricted to `beta` */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase()(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
 
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo` */
-  def tacticChase(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
+  def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
     lazy val atPos: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
       s.sub(pos) match {
         case Some(fml) =>
-          TacticIndex.tacticFor(fml, restrictions) match {
+          tacticIndex.tacticFor(fml, restrictions) match {
             case (Some(t), _) if pos.isAnte => applyAndRecurse(t, pos, s)
             case (_, Some(t)) if pos.isSucc => applyAndRecurse(t, pos, s)
             case (None, _) if pos.isAnte => skip
@@ -111,7 +112,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
-      val recursors = TacticIndex.tacticRecursors(t)
+      val recursors = tacticIndex.tacticRecursors(t)
       if (recursors.nonEmpty) t(new Fixed(pos)) & recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_)
       else t(new Fixed(pos))
     }
@@ -121,32 +122,37 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(SuccPosition.base0(i), fml) | atPos('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
-  val prop: BelleExpr = "prop" by (tacticChase(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR) & onAll(?(close)))
+  val prop: BelleExpr = "prop" by (tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR) & onAll(?(close)))
+
+  /** Create a tactic index that hands out loop tactics */
+  private def createTacticIndex(theLoop: AtPosition[_ <: BelleExpr]) = new DefaultTacticIndex {
+    override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
+      if (tactic == theLoop) {
+        //@todo positions? what to expect there?
+        ((_: Sequent, p: SeqPos) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
+      } else super.tacticRecursors(tactic)
+    override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
+      case Box(a, _) if a.isInstanceOf[Loop] => (Nil, theLoop::Nil)
+      case _ => super.tacticsFor(expr)
+    }
+  }
 
   /** master: master tactic that tries hard to prove whatever it could
     * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
-    ((OnAll(?(
-          (close
-            | (must(normalize)
-            | (loop(gen)('R)
-            | ((ODE('R) & ?(allR('R) & implyR('R)*2 & allL(Variable("t_"))('Llast) & auto & done)) // try evolution domain proof with end time, but only if it works out
-            | (diffSolve('L)
-            | exhaustiveEqL2R('L) ) ) ) ) ) )))*) &
-      ?(OnAll(QE))
+    close |
+      tacticChase(createTacticIndex(loop(gen)))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+                                                andR, equivR, loop(gen), ODE, diffSolve) &
+        OnAll(allL(Variable("s_"), Variable("t_"))('Llast) & auto & done | (exhaustiveEqL2R('L)*) & ?(close | QE))
   }
 
   /** auto: automatically try to prove the current goal if that succeeds.
     * @see [[master]] */
   def auto: BelleExpr = "auto" by {
-    ((OnAll(?(
-      (close
-        | (must(normalize)
-        | (loopauto('R)
-        | (ODE('R)
-        | (diffSolve('L)
-        | exhaustiveEqL2R('L) ) ) ) ) ) ) ))*) &
-      ?(OnAll(QE)) & done
+    close & done |
+      tacticChase(createTacticIndex(loopauto))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+                                               andR, equivR, loopauto, ODE, diffSolve) &
+        OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)) & done
   }
 
   /*******************************************************************
