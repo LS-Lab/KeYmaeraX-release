@@ -579,21 +579,21 @@ private object DifferentialTactics {
     "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
 
     //If lateSolve is true then diffSolve will be run last, if at all.
-    val lateSolve = pos.isTopLevel //@todo come up wtih better heuristic for determining when to solving.
+    val insistOnProof = pos.isTopLevel //@todo come up wtih better heuristic for determining when to insist on a proof being completed. Solvability is a pretty decent heuristic.
 
     //The tactic:
     //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
-    if(lateSolve)
+    if(insistOnProof)
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(pos))    |
       TactixLibrary.diffSolve(pos) |
       splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
       assertT(seq=>false, failureMessage)
     else
-      (proveWithoutCuts(pos) & done) |
-      (addInvariant & ODE(pos))      |
-      TactixLibrary.diffSolve(pos)   |
-      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
+      (proveWithoutCuts(pos) & done)   |
+      (addInvariant & ODE(pos) & done) |
+      TactixLibrary.diffSolve(pos)     |
+      (splitWeakInequality(pos)<(ODE(pos), ODE(pos)) & done) |
       assertT(seq=>false, failureMessage)
   })
 
