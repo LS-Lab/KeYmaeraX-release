@@ -1,7 +1,7 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -371,12 +371,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("nil & implyR(1) & closeId")
+    tactic shouldBe BelleParser("nil & implyR(1) & nil & nil & close")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & closeId")
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & close")
   }
 
   it should "work with onAll without branches" in withDatabase { db =>
@@ -399,7 +399,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("normalize")
     ProofTree.ofTrace(db.db.getExecutionTrace(proofId)).findNode("1") match {
-      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & closeId")
+      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & close")
     }
   }}
 
@@ -411,12 +411,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(closeId, notL(-1) & nil & nil)")
+    tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(nil & nil & close, notL(-1) & nil & nil & nil)")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(closeId, notL(-1))")
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(close, notL(-1))")
   }
 
   it should "should work for prop with nested branching" in withDatabase { db =>
@@ -431,13 +431,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |nil & implyR(1) & orL(-1) & <(
         |  nil & andR(1) & <(
-        |    closeId,
-        |    nil
+        |    nil & close,
+        |    nil & nil
         |  )
         |  ,
         |  nil & andR(1) & <(
-        |    nil,
-        |    closeId
+        |    nil & nil,
+        |    nil & close
         |  )
         |)
       """.stripMargin)
@@ -450,13 +450,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |implyR(1) & orL(-1) & <(
         |  andR(1) & <(
-        |    closeId,
+        |    close,
         |    nil
         |  )
         |  ,
         |  andR(1) & <(
         |    nil,
-        |    closeId
+        |    close
         |  )
         |)
       """.stripMargin)
@@ -491,13 +491,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |orL(-1) & <(
             |  andR(1) & <(
-            |    closeId,
+            |    close,
             |    nil
             |  )
             |  ,
             |  andR(1) & <(
             |    nil,
-            |    closeId
+            |    close
             |  )
             |)
           """.stripMargin)
@@ -521,7 +521,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """
             |andR(1) & <(
-            |  closeId,
+            |  close,
             |  nil
             |)
           """.stripMargin)
@@ -534,7 +534,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |andR(1) & <(
             |  nil,
-            |  closeId
+            |  close
             |)
           """.stripMargin)
     }
@@ -558,8 +558,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     tree.findNode("2") match {
       case Some(node) =>
-        val expected =
-          stepInto(node, "unfold")._2 shouldBe BelleParser("chase('R) & normalize")
+        stepInto(node, "unfold")._2 shouldBe BelleParser("step(1)")
     }
 
     tree.findNode("3") match {
@@ -677,4 +676,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
     }
   }
+
+  it should "work for partial prop" in withMathematica { _ => withDatabase { sql =>
+    val problem = "x=1 & y=2 -> x=3".asFormula
+    val modelFile = s"Variables R x. R y. End.\n Problem. $problem End."
+    val p = ProvableSig.startProof(problem)
+    val pId = sql.createProof(modelFile, "model1")
+    val tactic = prop & done
+    intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("[Bellerophon Runtime] Expected proved provable")
+    sql.extractTactic(pId) shouldBe BelleParser("nil")
+
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter, 1, strict=false)
+    intercept[BelleThrowable] { interpreter(tactic, BelleProvable(p)) }.getMessage should startWith ("[Bellerophon Runtime] Expected proved provable")
+    new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)) shouldBe BelleParser("implyR(1) ; andL(-1)")
+  }}
 }

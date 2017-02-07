@@ -158,13 +158,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
 
       scope.stepInto = function(proofId, nodeId) {
+        spinnerService.show('magnifyingglassSpinner')
         $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand').then(function(response) {
           if (response.data.proofTree.nodes !== undefined) {
             var modalInstance = $uibModal.open({
               templateUrl: 'templates/magnifyingglass.html',
               controller: 'MagnifyingGlassDialogCtrl',
               scope: scope,
-              size: 'lg',
+              size: 'magnifyingglass',
               resolve: {
                 proofInfo: function() {
                   return {
@@ -196,6 +197,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
               }
             });
           }
+        })
+        .finally(function() {
+          spinnerService.hide('magnifyingglassSpinner');
         });
       }
 
