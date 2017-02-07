@@ -59,6 +59,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
             it.name + "(" + eargs + ")"
           case ProveAs(_, _, _) => "proveAs"
           case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
+          case NamedTactic(name, _) if name != "ANON" => name
           case dot: BelleDot => "_@" + dot.hashCode()
           case _ => throw PrinterException(s"Do not know how to pretty-print $e")
         }

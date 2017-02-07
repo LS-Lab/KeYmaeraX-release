@@ -67,7 +67,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Normalize to sequent form */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form, keeping branching factor restricted to `beta` */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "normalize" by tacticChase(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)

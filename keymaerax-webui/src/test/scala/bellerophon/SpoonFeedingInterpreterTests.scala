@@ -371,12 +371,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("nil & implyR(1) & closeId")
+    tactic shouldBe BelleParser("nil & implyR(1) & nil & nil & close")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & closeId")
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & close")
   }
 
   it should "work with onAll without branches" in withDatabase { db =>
@@ -399,7 +399,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("normalize")
     ProofTree.ofTrace(db.db.getExecutionTrace(proofId)).findNode("1") match {
-      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & closeId")
+      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & close")
     }
   }}
 
@@ -411,12 +411,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(closeId, notL(-1) & nil & nil)")
+    tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(nil & nil & close, notL(-1) & nil & nil & nil)")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(closeId, notL(-1))")
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(close, notL(-1))")
   }
 
   it should "should work for prop with nested branching" in withDatabase { db =>
@@ -431,13 +431,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |nil & implyR(1) & orL(-1) & <(
         |  nil & andR(1) & <(
-        |    closeId,
-        |    nil
+        |    nil & close,
+        |    nil & nil
         |  )
         |  ,
         |  nil & andR(1) & <(
-        |    nil,
-        |    closeId
+        |    nil & nil,
+        |    nil & close
         |  )
         |)
       """.stripMargin)
@@ -450,13 +450,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |implyR(1) & orL(-1) & <(
         |  andR(1) & <(
-        |    closeId,
+        |    close,
         |    nil
         |  )
         |  ,
         |  andR(1) & <(
         |    nil,
-        |    closeId
+        |    close
         |  )
         |)
       """.stripMargin)
@@ -491,13 +491,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |orL(-1) & <(
             |  andR(1) & <(
-            |    closeId,
+            |    close,
             |    nil
             |  )
             |  ,
             |  andR(1) & <(
             |    nil,
-            |    closeId
+            |    close
             |  )
             |)
           """.stripMargin)
@@ -521,7 +521,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """
             |andR(1) & <(
-            |  closeId,
+            |  close,
             |  nil
             |)
           """.stripMargin)
@@ -534,7 +534,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |andR(1) & <(
             |  nil,
-            |  closeId
+            |  close
             |)
           """.stripMargin)
     }
@@ -558,8 +558,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     tree.findNode("2") match {
       case Some(node) =>
-        val expected =
-          stepInto(node, "unfold")._2 shouldBe BelleParser("chase('R) & normalize")
+        stepInto(node, "unfold")._2 shouldBe BelleParser("step(1)")
     }
 
     tree.findNode("3") match {
