@@ -917,36 +917,25 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
 }
 
 class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
-  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId)
-    val globalProvable = initGlobal match {
-      case Some(gp) if trace.steps.isEmpty => gp
-      case _ => trace.lastProvable
-    }
-    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-  }
-
   def resultingResponses(): List[Response] = {
     val closed = db.getProofInfo(proofId).closed
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
     tree.findNode(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
       case Some(node) =>
-        val (localProvable, parentStep) = node.endStep match {
+        val (localProvable, parentStep, parentRule) = node.endStep match {
           case Some(end) =>
             (ProvableSig.startProof(end.input.subgoals(end.branch)),
-              db.getExecutable(end.executableId).belleExpr)
+              db.getExecutable(end.executableId).belleExpr, end.rule)
         }
         val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(listener(db, localProofId, Some(localProvable)),
+        val innerInterpreter = SpoonFeedingInterpreter(RequestHelper.listenerFactory(db, localProofId, Some(localProvable)),
           SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
 
         val trace = db.getExecutionTrace(localProofId)
-        if (trace.steps.size == 1 && trace.steps.head.rule == parentStep) {
+        if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfo.locate(parentTactic) match {
             case Some(ptInfo) => new ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
@@ -955,7 +944,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val stepDetails = new ExtractTacticFromTrace(db).getTacticString(trace)
           val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
           //@note reparse may fail, for now just display tactic without position anyway
-          val innerSteps = innerTree.nodes.map(n => n -> (try { RequestHelper.stepPosition(db, n) } catch { case ex: Throwable => None }))
+          val innerSteps = innerTree.nodes.map(n => n -> (try { RequestHelper.stepPosition(db, n) } catch { case _: Throwable => None }))
           val openGoals = innerTree.leaves
 
           new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, openGoals) :: Nil
@@ -1096,48 +1085,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(ListArg(_, "formula"))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }
-    val specificTerm = if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.codeName) else belleTerm
+    val specificTerm = if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, node.sequent, pos, pos2, _.codeName) else belleTerm
     if (inputs.isEmpty && pos.isEmpty) { assert(pos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
     else if (inputs.isEmpty && pos.isDefined && pos2.isEmpty) { specificTerm + "(" + pos.get.prettyString + ")" }
     else if (inputs.isEmpty && pos.isDefined && pos2.isDefined) { specificTerm + "(" + pos.get.prettyString + "," + pos2.get.prettyString + ")" }
     else specificTerm + "(" + paramStrings.mkString(",") + ")"
-  }
-
-  /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
-   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
-  private def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator], what: DerivationInfo => String): String = {
-    val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
-    val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
-    tacticId.toLowerCase match {
-      case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
-        sequent.sub(pos.get) match {
-          case Some(fml: Formula) =>
-            UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => what(DerivationInfo(step))
-              case None => tacticId
-            }
-          case _ => what(DerivationInfo.ofCodeName(tacticId))
-        }
-      case ("step" | "stepat") if pos.isDefined && pos2.isDefined =>
-        sequent.sub(pos.get) match {
-          case Some(fml: Formula) =>
-            UIIndex.theStepAt(pos.get, pos2.get, sequent) match {
-              case Some(step) => what(DerivationInfo(step))
-              case None => tacticId
-            }
-        }
-      case _ => what(DerivationInfo.ofCodeName(tacticId))
-    }
-  }
-
-  private def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId)
-    val globalProvable = initGlobal match {
-      case Some(gp) if trace.steps.isEmpty => gp
-      case _ => trace.lastProvable
-    }
-    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
   }
 
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
@@ -1173,7 +1125,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
       val branch = tree.goalIndex(nodeId)
       val ruleName =
-        if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
+        if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
         else "custom"
       val localProvable = ProvableSig.startProof(node.sequent)
       val globalProvable = trace.lastProvable
@@ -1183,7 +1135,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
         val interpreter = (_: List[IOListener]) => new Interpreter {
           override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
-            SpoonFeedingInterpreter(listener(db, localProofId), SequentialInterpreter, 1, strict = false)(expr, v)
+            SpoonFeedingInterpreter(RequestHelper.listenerFactory(db, localProofId), SequentialInterpreter, 1, strict = false)(expr, v)
           } catch {
             //@note stop and display whatever progress was made
             case ex: Throwable =>
@@ -1633,6 +1585,49 @@ object RequestHelper {
         }
       case None => None
     }
+  }
+
+  /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
+   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
+  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator], what: DerivationInfo => String): String = {
+    val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
+    val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
+    tacticId.toLowerCase match {
+      case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
+        sequent.sub(pos.get) match {
+          case Some(fml: Formula) =>
+            UIIndex.theStepAt(fml, pos) match {
+              case Some(step) => what(DerivationInfo(step))
+              case None => tacticId
+            }
+          case _ => what(DerivationInfo.ofCodeName(tacticId))
+        }
+      case ("step" | "stepat") if pos.isDefined && pos2.isDefined =>
+        sequent.sub(pos.get) match {
+          case Some(fml: Formula) =>
+            UIIndex.theStepAt(pos.get, pos2.get, sequent) match {
+              case Some(step) => what(DerivationInfo(step))
+              case None => tacticId
+            }
+        }
+      case _ => what(DerivationInfo.ofCodeName(tacticId))
+    }
+  }
+
+  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
+  def listenerFactory(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId)
+    val globalProvable = initGlobal match {
+      case Some(gp) if trace.steps.isEmpty => gp
+      case _ => trace.lastProvable
+    }
+    val ruleName = try {
+      RequestHelper.getSpecificName(tacticName.split("\\(").head, null, None, None, _.display.name)
+    } catch {
+      case _: Throwable => tacticName
+    }
+    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
+      globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName) :: Nil
   }
 
 }
