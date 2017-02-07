@@ -226,38 +226,52 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.stepwiseTactic = function(stepwiseRequest) {
       spinnerService.show('tacticExecutionSpinner')
       $http(stepwiseRequest).then(function(response) {
-        $scope.runningTask.start(response.data.proofId, response.data.nodeId, response.data.taskId, function(taskResult) {
-          $http.get('proofs/user/' + $scope.userId + '/' + taskResult.proofId + '/trace')
-            .then(function(response) {
-              var modalInstance = $uibModal.open({
-                templateUrl: 'templates/magnifyingglass.html',
-                controller: 'MagnifyingGlassDialogCtrl',
-                scope: $scope,
-                size: 'lg',
-                resolve: {
-                  proofInfo: function() {
-                    return {
-                      userId: $scope.userId,
-                      proofId: "", //@note irrelevant for dialog
-                      nodeId: "",  //@note irrelevant for dialog
-                      detailsProofId: response.data.detailsProofId
-                    }
-                  },
-                  tactic: function() { return response.data.tactic; },
-                  proofTree: function() { return response.data.proofTree; },
-                  openGoals: function() { return response.data.openGoals; }
-                }
-              });
-            })
-            .finally(function() {
-              spinnerService.hide('tacticExecutionSpinner');
+        var onStepwiseTaskComplete = function(taskResult) {
+          $http.get('proofs/user/' + $scope.userId + '/' + taskResult.proofId + '/trace').then(function(response) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/magnifyingglass.html',
+              controller: 'MagnifyingGlassDialogCtrl',
+              scope: $scope,
+              size: 'lg',
+              resolve: {
+                proofInfo: function() {
+                  return {
+                    userId: $scope.userId,
+                    proofId: "", //@note irrelevant for dialog
+                    nodeId: "",  //@note irrelevant for dialog
+                    detailsProofId: response.data.detailsProofId
+                  }
+                },
+                tactic: function() { return response.data.tactic; },
+                proofTree: function() { return response.data.proofTree; },
+                openGoals: function() { return response.data.openGoals; }
+              }
             });
+          })
+          .finally(function() {
+            spinnerService.hide('tacticExecutionSpinner');
           });
-        })
-        .catch(function(err) {
-          spinnerService.hide('tacticExecutionSpinner');
-          showCaughtTacticErrorMessage($uibModal, err.data.errorThrown, err.data.textStatus, err.data.tacticMsg);
-        });
+        }
+
+        var onStepwiseTaskError = function(err) {
+          $uibModal.open({
+            templateUrl: 'templates/modalMessageTemplate.html',
+            controller: 'ModalMessageCtrl',
+            size: 'sm',
+            resolve: {
+              title: function() { return "Immediate error"; },
+              message: function() { return "Tactic did not make progress at all"; }
+            }
+          });
+        }
+
+        $scope.runningTask.start(response.data.proofId, response.data.nodeId, response.data.taskId,
+          onStepwiseTaskComplete, onStepwiseTaskError);
+      })
+      .catch(function(err) {
+        spinnerService.hide('tacticExecutionSpinner');
+        showCaughtTacticErrorMessage($uibModal, err.data.errorThrown, err.data.textStatus, err.data.tacticMsg);
+      });
     }
 
     $scope.doTactic = function(formulaId, tacticId) {

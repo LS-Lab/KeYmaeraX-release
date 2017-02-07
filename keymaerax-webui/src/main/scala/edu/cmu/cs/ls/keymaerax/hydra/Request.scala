@@ -1186,10 +1186,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             SpoonFeedingInterpreter(listener(db, localProofId), SequentialInterpreter, 1, strict = false)(expr, v)
           } catch {
             //@note stop and display whatever progress was made
-            case _: Throwable => BelleProvable(localProvable) //@note which provable doesn't matter, just that it is a BelleProvable
+            case ex: Throwable =>
+              val innerTrace = db.getExecutionTrace(localProofId)
+              if (innerTrace.steps.nonEmpty) BelleProvable(localProvable) //@note which provable doesn't matter, just that it is a BelleProvable
+              else throw BelleTacticFailure("No progress", ex)
           }
         }
-        val proofTree = ProofTree.ofTrace(trace, () => Nil/*db.agendaItemsForProof(localProofId)*/, proofFinished = closed)
+        val innerTrace = db.getExecutionTrace(localProofId)
+        val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter, Nil)
         new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
