@@ -13,6 +13,19 @@
     </div>
     </div>
 </spinner>
+<spinner name="magnifyingglassSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+        <div class="tactic-spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="tactic-spinner-please-wait">
+            <p>Computing details, please wait...</p>
+            <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+        </div>
+    </div>
+</spinner>
 <spinner name="proofLoadingSpinner" ng-cloak>
     <div class="spinner-overlay"></div>
     <div class="spinner">

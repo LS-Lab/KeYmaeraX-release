@@ -224,7 +224,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.stepwiseTactic = function(stepwiseRequest) {
-      spinnerService.show('tacticExecutionSpinner')
+      spinnerService.show('magnifyingglassSpinner')
       $http(stepwiseRequest).then(function(response) {
         var onStepwiseTaskComplete = function(taskResult) {
           $http.get('proofs/user/' + $scope.userId + '/' + taskResult.proofId + '/trace').then(function(response) {
@@ -249,7 +249,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             });
           })
           .finally(function() {
-            spinnerService.hide('tacticExecutionSpinner');
+            spinnerService.hide('magnifyingglassSpinner');
           });
         }
 
@@ -269,7 +269,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           onStepwiseTaskComplete, onStepwiseTaskError);
       })
       .catch(function(err) {
-        spinnerService.hide('tacticExecutionSpinner');
+        spinnerService.hide('magnifyingglassSpinner');
         showCaughtTacticErrorMessage($uibModal, err.data.errorThrown, err.data.textStatus, err.data.tacticMsg);
       });
     }
