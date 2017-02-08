@@ -92,8 +92,8 @@ class PolynomialArithTests extends TacticTestBase {
   }
 
   "PolynomialArith" should "do poly mul" in withMathematica { qeTool =>
-    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a^2)".asTerm
-    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a^2)".asTerm
+    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a()^2)".asTerm
+    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a()^2)".asTerm
 
     val (p3,r3) = addPoly(p1,p2)
     val (p4,r4) = mulPoly(p1,p2)
@@ -202,6 +202,18 @@ class PolynomialArithTests extends TacticTestBase {
     r6 shouldBe 'proved
   }
 
+//  "PolynomialArith" should "handle representable division" in withMathematica { qeTool =>
+//    val p1 = "y /2 + x/5 + z /4".asTerm
+//    //Note: this breaks in re-parsing
+//    //val p2 = ("3*(x/3) - 0.99999999999999999*x").asTerm
+//
+//    val (t1,r1) = (normalise(p1))
+//    //val (t2,r2) = (normalise(p2))
+//    println(t1,r1)
+//    //println(t2,r2)
+//
+//  }
+
   "PolynomialArith" should "do mono div" in withMathematica { qeTool =>
     val m1 = "1 * x^5 * a()^5".asTerm
     val m2 = "1 * x^1 * z^7 * b()^8".asTerm
@@ -269,41 +281,6 @@ class PolynomialArithTests extends TacticTestBase {
     )
     val pr = proveBy(Sequent(antes,succs),prepareArith)
     println(pr)
-  }
-
-  //Example from Harrison(TPHOL 07)
-  "PolynomialArith" should "run on quadratic formula" in withMathematica { qeTool =>
-    val succ = IndexedSeq("(\\forall y x < y^2)->[{x'=1,y'=y}](\\forall y x < y^2)".asFormula)
-    //val succ = IndexedSeq("(x>0)->[{x'=1,y'=y}](x>0)".asFormula)
-
-
-    val prr = proveBy(Sequent(IndexedSeq(),succ),
-      implyR(1) & diffInd()(1)// & OnAll(prop) & cohideR(1)
-
-    )//diffInd('full)(1))// <( QE,cohideR(1) & chase(1)))
-    println(prr)
-//    val succs = IndexedSeq(
-//      "a* x^2 + b*x + c = 0 -> b^2 - 4*a*c >= 0 ".asFormula
-//    )
-//
-//    val pr = proveBy(Sequent(IndexedSeq(),succs),prop & clearSucc & DebuggingTactics.print("foo") & normAnte)
-//    println(pr)
-//
-//    val polys =
-//      pr.subgoals(0).ante.map(
-//        f => f match {
-//          case Equal(l, _) => l
-//          case _ => ???
-//        }
-//      ).toList
-//
-////    val polys = List("a^2-x+y","b^2-z","x*z*c^2-y*z*c^2+1").map(_.asTerm)
-//
-//
-//    val vars = polys.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
-//
-//    println(qeTool.witness(polys))
-
   }
 
 }

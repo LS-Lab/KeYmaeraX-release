@@ -745,23 +745,25 @@ object SimplifierV3 {
     }
   }
 
-  //This generates theorems on the fly to simplify ground arithmetic
+  //This generates theorems on the fly to simplify ground arithmetic (only for integers)
+  //Note: this skips over any arithmetic whose outputs are not integers
   def arithGroundIndex (t:Term,ctx:context = emptyCtx) : List[ProvableSig] = {
     val res = t match {
       case Plus(n:Number,m:Number) => Some(n.value+m.value)
       case Minus(n:Number,m:Number) => Some(n.value-m.value)
       case Times(n:Number,m:Number) => Some(n.value*m.value)
       case Divide(n:Number,m:Number) => Some(n.value/m.value)
-      case Power(n:Number,m:Number) if m.value.isValidInt => Some(n.value.pow(m.value.toInt))
+      case Power(n:Number,m:Number) => Some(n.value.pow(m.value.toInt))
       case Neg(n:Number) => Some(-n.value)
       case _ => None
     }
     res match {
       case None => List()
-      case Some(v) =>
-        val pr = proveBy(Equal(t,Number(v)),?(RCF))
+      case Some(v) if v.isValidInt =>
+        val pr = proveBy(Equal(t,Number(v.toIntExact)),?(RCF))
         if(pr.isProved) List(pr)
         else List()
+      case _ => List()
     }
   }
 
