@@ -34,6 +34,10 @@ class QETests extends TacticTestBase {
     proveBy("0.33333333333333 = 1/3".asFormula,ToolTactics.fullQE(qeTool)) shouldBe 'proved
   }
 
+  it should "correct behavior (Z3)" in withZ3 { qeTool =>
+    a [BelleThrowable] should be thrownBy proveBy("0.33333333333333 = 1/3".asFormula,ToolTactics.fullQE(qeTool))
+  }
+
   it should "fail on internal decimal representations" in withMathematica { qeTool =>
     proveBy(Equal(Number(0.33333333333333),Divide(Number(1),Number(3))),ToolTactics.fullQE(qeTool)) shouldBe 'proved
   }

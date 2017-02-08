@@ -240,6 +240,16 @@ class SimplifierV3Tests extends TacticTestBase {
     val ctxt = IndexedSeq()
     val tactic = simpTac(taxs = composeIndex(groundEqualityIndex, defaultTaxs))
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.head.succ should contain only "(A()&B())&C()->D()".asFormula
+  }
+
+  it should "skip over decimal arithmetic" in withMathematica { qeTool =>
+    // Note: it fails to skip things like 4 * 1.0
+    // However, it should only give integer outputs
+    val fml = "4*1.0-4.0/3 = -3.0/2 + 1/6 + (2 + 3) * 4.0".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac()
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
     println(result)
   }
 }
