@@ -115,6 +115,8 @@ class DefaultTacticIndex extends TacticIndex {
       case Or(_, _) => (TactixLibrary.orL::Nil, TactixLibrary.orR::Nil)
       case Imply(_, _) => (TactixLibrary.implyL::Nil, TactixLibrary.implyR::Nil)
       case Equiv(_, _) => (TactixLibrary.equivL::Nil, TactixLibrary.equivR::Nil)
+      case True => (Nil, ProofRuleTactics.closeTrue::Nil)
+      case False => (ProofRuleTactics.closeFalse::Nil, Nil)
       case _ => (Nil, Nil)
     }
   }

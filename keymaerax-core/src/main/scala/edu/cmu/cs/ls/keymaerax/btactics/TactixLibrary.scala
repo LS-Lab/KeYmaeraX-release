@@ -68,7 +68,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Normalize to sequent form */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form, keeping branching factor restricted to `beta` */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase()(notL::andL::notR::implyR::orR::allR::existsL::step::Nil ++ beta:_*) & onAll(?(close))
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase()(notL::andL::notR::implyR::orR::allR::existsL::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
@@ -80,6 +80,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
     lazy val atPos: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
       s.sub(pos) match {
+        case Some(fml) if pos.isAnte && s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
+        case Some(fml) if pos.isSucc && s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(fml) =>
           tacticIndex.tacticFor(fml, restrictions) match {
             case (Some(t), _) if pos.isAnte => applyAndRecurse(t, pos, s)
@@ -122,7 +124,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(SuccPosition.base0(i), fml) | atPos('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
-  val prop: BelleExpr = "prop" by (tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR) & onAll(?(close)))
+  val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
+                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
   /** Create a tactic index that hands out loop tactics */
   private def createTacticIndex(theLoop: AtPosition[_ <: BelleExpr]) = new DefaultTacticIndex {
@@ -142,6 +145,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     close |
       tacticChase(createTacticIndex(loop(gen)))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
                                                 andR, equivR, loop(gen), ODE, diffSolve) &
         OnAll(allL(Variable("s_"), Variable("t_"))('Llast) & auto & done | (exhaustiveEqL2R('L)*) & ?(close | QE))
   }
@@ -151,6 +155,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def auto: BelleExpr = "auto" by {
     close & done |
       tacticChase(createTacticIndex(loopauto))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+                                               ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
                                                andR, equivR, loopauto, ODE, diffSolve) &
         OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)) & done
   }
