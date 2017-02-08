@@ -371,12 +371,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("nil & implyR(1) & nil & nil & close")
+    tactic shouldBe BelleParser("nil & implyR(1) & closeId")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & close")
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & closeId")
   }
 
   it should "work with onAll without branches" in withDatabase { db =>
@@ -397,9 +397,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(master(), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("normalize")
+    tactic shouldBe BelleParser("implyR(1)&closeId")
     ProofTree.ofTrace(db.db.getExecutionTrace(proofId)).findNode("1") match {
-      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & close")
+      case Some(node) => stepInto(node, "implyR(1)")._2 shouldBe BelleParser("implyR(1)")
     }
   }}
 
@@ -411,12 +411,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(nil & nil & close, notL(-1) & nil & nil & nil)")
+    tactic shouldBe BelleParser("nil & implyR(1) & orL(-1) & <(closeId, notL(-1) & nil & nil)")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     SpoonFeedingInterpreter(listener(db.db, proofId2), SequentialInterpreter, 1, strict=false)(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(close, notL(-1))")
+    db.extractTactic(proofId2) shouldBe BelleParser("implyR(1) & orL(-1) & <(closeId, notL(-1))")
   }
 
   it should "should work for prop with nested branching" in withDatabase { db =>
@@ -431,13 +431,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |nil & implyR(1) & orL(-1) & <(
         |  nil & andR(1) & <(
-        |    nil & close,
-        |    nil & nil
+        |    closeId,
+        |    nil
         |  )
         |  ,
         |  nil & andR(1) & <(
-        |    nil & nil,
-        |    nil & close
+        |    nil,
+        |    closeId
         |  )
         |)
       """.stripMargin)
@@ -450,13 +450,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """
         |implyR(1) & orL(-1) & <(
         |  andR(1) & <(
-        |    close,
+        |    closeId,
         |    nil
         |  )
         |  ,
         |  andR(1) & <(
         |    nil,
-        |    close
+        |    closeId
         |  )
         |)
       """.stripMargin)
@@ -491,13 +491,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |orL(-1) & <(
             |  andR(1) & <(
-            |    close,
+            |    closeId,
             |    nil
             |  )
             |  ,
             |  andR(1) & <(
             |    nil,
-            |    close
+            |    closeId
             |  )
             |)
           """.stripMargin)
@@ -521,7 +521,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """
             |andR(1) & <(
-            |  close,
+            |  closeId,
             |  nil
             |)
           """.stripMargin)
@@ -534,7 +534,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |andR(1) & <(
             |  nil,
-            |  close
+            |  closeId
             |)
           """.stripMargin)
     }
