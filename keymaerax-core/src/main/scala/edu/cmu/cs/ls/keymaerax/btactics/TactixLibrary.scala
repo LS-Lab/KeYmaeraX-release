@@ -143,21 +143,21 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** master: master tactic that tries hard to prove whatever it could
     * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
-    close |
+    OnAll(close |
       tacticChase(createTacticIndex(loop(gen)))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
                                                 andR, equivR, loop(gen), ODE, diffSolve) &
-        OnAll(allL(Variable("s_"), Variable("t_"))('Llast) & auto & done | (exhaustiveEqL2R('L)*) & ?(close | QE))
+        OnAll(allL(Variable("s_"), Variable("t_"))('Llast) & auto & done | (exhaustiveEqL2R('L)*) & ?(close | QE)))
   }
 
   /** auto: automatically try to prove the current goal if that succeeds.
     * @see [[master]] */
   def auto: BelleExpr = "auto" by {
-    close & done |
+    OnAll(close & done |
       tacticChase(createTacticIndex(loopauto))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
                                                andR, equivR, loopauto, ODE, diffSolve) &
-        OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)) & done
+        OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)) & done)
   }
 
   /*******************************************************************
