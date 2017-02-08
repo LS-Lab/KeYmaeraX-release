@@ -770,23 +770,33 @@ object SimplifierV3 {
   private val impReflexive = proveBy("p_() -> p_()".asFormula,prop)
   private val eqSymmetricImp = proveBy("F_() = G_() -> G_() = F_()".asFormula,QE)
 
-  //Constrained search for equalities of the form v = Num (Num = v) in the context
+  //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
-    t match {
-      case v:Variable =>
-        ctx.collectFirst(
-          {
-          case Equal(vv:Variable,n:Number) if vv.equals(v) =>
-              impReflexive(
-                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(vv:Variable,n:Number)) :: Nil))
-          case Equal(n:Number,vv:Variable) if vv.equals(v) =>
-              eqSymmetricImp(
-                USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
-                       SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), v) :: Nil))
-          }).toList
-      case _ => List()
-
-    }
+      ctx.collectFirst(
+        {
+        case Equal(tt,n:Number) if tt.equals(t) =>
+            impReflexive(
+              USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t,n:Number)) :: Nil))
+        case Equal(n:Number,tt) if tt.equals(t) =>
+            eqSymmetricImp(
+              USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
+                     SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
+        }).toList
+//    t match {
+//      case v:Variable =>
+//        ctx.collectFirst(
+//          {
+//          case Equal(vv:Variable,n:Number) if vv.equals(v) =>
+//              impReflexive(
+//                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(vv:Variable,n:Number)) :: Nil))
+//          case Equal(n:Number,vv:Variable) if vv.equals(v) =>
+//              eqSymmetricImp(
+//                USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
+//                       SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), v) :: Nil))
+//          }).toList
+//      case _ => List()
+//
+//    }
   }
 
   /** Formula simplification indices */
