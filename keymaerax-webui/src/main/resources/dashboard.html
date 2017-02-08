@@ -34,6 +34,12 @@
 
 <body ng-controller="DashboardCtrl">
 
+<script type="text/ng-template" id="firstTimePopover.html">
+    <div uib-alert type="success"
+         style="margin-bottom:0px;"
+         close="intro.firstTime=false;"><strong>Quick help</strong></div>
+</script>
+
 <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
@@ -71,7 +77,7 @@
                         <!--<li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Step-by-step help</a></li>-->
                         <li><a href="dashboard.html?#/usage"><i class="fa fa-info-circle"></i> Using KeYmaera&#160;X</a></li>
                         <li class="divider"></li>
-                        <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Backend Tool Configuration</a></li>
+                        <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
@@ -84,7 +90,14 @@
                     </ul>
                 </li>
                 <li class="dropdown">
-                    <a ng-click="showOverlayHelp()" uib-tooltip="Quick usage help" tooltip-placement="auto bottom"><i class="fa fa-question-circle"></i></a>
+                    <a>
+                        <i class="fa fa-question-circle" ng-click="showOverlayHelp()"
+                           uib-popover-template="'firstTimePopover.html'" popover-trigger="none"
+                           popover-class="increase-popover-width"
+                           popover-is-open="intro.firstTime" popover-placement="bottom"
+                           uib-tooltip="Quick usage help" tooltip-placement="auto bottom">
+                        </i>
+                    </a>
                 </li>
                 <li class="dropdown">
                     <a ng-click="shutdown()" ng-show="isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
@@ -97,11 +110,11 @@
     </div>
 </div>
 
-<div class="container" ng-if="!toolIsConfigured" ng-cloak>
+<div class="container" ng-if="toolConfig.tool !== undefined && (toolConfig.tool !== 'Mathematica' || !toolConfig.configured)" ng-cloak>
     <div class="alert alert-warning" role="alert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Backend tool is not configured.
-        Most problems <b>will not be proved</b> and all the existing proofs <b>will not be reloaded</b>. <a href="dashboard.html#/tools"><b>Configure now.</b></a>
+        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Limited functionality: Mathematica is not configured.
+            <a href="dashboard.html#/tools"><b>Configure now.</b></a>
     </div>
 </div>
 

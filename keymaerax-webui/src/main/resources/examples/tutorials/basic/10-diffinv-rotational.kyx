@@ -1,0 +1,15 @@
+/**
+ * Simple rotational dynamics.
+ * @author Andre Platzer
+ * @provable by differential invariant
+ */
+ProgramVariables.
+  R d.  /* direction in x-axis */
+  R e.  /* direction in y-axis */
+  R r.  /* radius r of circle around origin */
+End.
+
+Problem.
+  d^2+e^2-r^2=0 -> 
+    [{d'=e,e'=-d}@invariant(d^2+e^2-r^2=0)] d^2+e^2-r^2=0
+End.

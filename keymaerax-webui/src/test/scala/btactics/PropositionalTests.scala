@@ -40,8 +40,7 @@ class PropositionalTests extends TacticTestBase {
   }
 
   "implyRi" should "introduce implication from antecedent and succedent" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)),
-      implyRi())
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)), implyRi)
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "x>0 -> y>0".asFormula
@@ -49,7 +48,7 @@ class PropositionalTests extends TacticTestBase {
 
   it should "work as two-position tactic" in {
     val result = proveBy(Sequent(IndexedSeq("a=2".asFormula, "x>0".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula)),
-      implyRi(AntePos(1), SuccPos(0)))
+      implyRi()(AntePos(1), SuccPos(0)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "a=2".asFormula
     result.subgoals.head.succ should contain only ("x>0 -> y>0".asFormula, "b=3".asFormula)
@@ -192,6 +191,11 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
   }
   it should "handle equivalence in succedent" in succEquivalence(prop)
+  it should "handle nested branching" in { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, prop) shouldBe 'proved }
+  it should "handle more nested branching" in {
+    val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, prop & DebuggingTactics.printIndexed("Foo"))
+    result.subgoals should have size 1
+  }
 
   "Normalize" should "handle implication in succedent" in succImplication(normalize)
   it should "handle disjunction in succedent" in succDisjunction(normalize)

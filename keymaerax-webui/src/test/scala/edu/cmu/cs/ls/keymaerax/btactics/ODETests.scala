@@ -154,6 +154,54 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "prove cheat sheet example" in withMathematica { qeTool => {
+    val f = KeYmaeraXProblemParser(
+      """
+        |/* Example from KeYmaera X Cheat Sheet */
+        |Functions.        /* function symbols cannot change their value */
+        |    R A.          /* real-valued maximum acceleration constant */
+        |    R B.          /* real-valued maximum braking constant */
+        |End.
+        |
+        |ProgramVariables. /* program variables may change their value over time */
+        |    R x.          /* real-valued position */
+        |    R v.          /* real-valued velocity */
+        |    R a.          /* current acceleration chosen by controller */
+        |End.
+        |
+        |Problem.                               /* conjecture in differential dynamic logic */
+        |    v>=0 & A>0 & B>0                   /* initial condition */
+        |  ->                                   /* implies */
+        |  [                                    /* all runs of hybrid system dynamics */
+        |    {                                  /* braces {} for grouping of programs */
+        |      {?v<=5;a:=A; ++ a:=0; ++ a:=-B;} /* nondeterministic choice of acceleration a */
+        |      {x'=v, v'=a & v>=0}              /* differential equation system with domain */
+        |    }* @invariant(v>=0)                /* loop repeats, with invariant contract */
+        |  ] v>=0                               /* safety/postcondition */
+        |End.
+      """.stripMargin
+    )
+
+    val t =
+      """
+        |implyR(1) ; andL(-1) ; andL(-2) ; loop({`v>=0`}, 1) ; <(
+        |  master,
+        |  master,
+        |  composeb(1) ; choiceb(1) ; andR(1) ; <(
+        |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1),
+        |    choiceb(1) ; assignb(1.0) ; assignb(1.1) ; andR(1) ; <(
+        |      solve(1) ; master,
+        |      solve(1) ; master
+        |      )
+        |    )
+        |  )
+      """.stripMargin.asTactic
+
+    TactixLibrary.proveBy(f, t) shouldBe 'proved
+
+
+  }}
+
   //@note: there's overlap as multiple methods are able to prove some of the following examples
   val list =
   // solvable cases
@@ -246,6 +294,7 @@ class ODETests extends TacticTestBase {
       "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0" ::
       "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2" ::
       "x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" ::
+        "x>=1->[{x'=x^2+2*x^4}]x^3>=x^2" :: // @generalize(x>=1)&dI
         Nil
 
 
@@ -279,4 +328,17 @@ class ODETests extends TacticTestBase {
       fail shouldBe 'empty
     }
   }
+
+  "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withMathematica(_ => {
+    val f = "x>=0->[{x'=x}]x>=0".asFormula
+    val result = proveBy(f, implyR(1) & DifferentialTactics.splitWeakInequality(1))
+    result.subgoals.length shouldBe 2
+    result.subgoals(0).succ.last shouldBe "[{x'=x&true}]x>0".asFormula
+    result.subgoals(1).succ.last shouldBe "[{x'=x&true}]x=0".asFormula
+  })
+
+  it should "prove x>=0->[{x'=x}]x>=0 via ODE" in withMathematica(_ => {
+    val f = "x>=0->[{x'=x}]x>=0".asFormula
+    proveBy(f, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+  })
 }

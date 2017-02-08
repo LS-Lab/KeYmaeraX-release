@@ -18,7 +18,8 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
 
 angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
   $scope.intro = {
-    introOptions: {}
+    introOptions: {},
+    firstTime: false
   }
 
   $scope.showOverlayHelp = function() {
@@ -30,9 +31,9 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     $scope.theview = args.theview;
   });
 
-  $scope.toolIsConfigured = true;
-  $http.get("/config/toolStatus").success(function(data) {
-    $scope.toolIsConfigured = data.configured;
+  $scope.toolConfig = {};
+  $http.get("/config/toolStatus").then(function(response) {
+    $scope.toolConfig = response.data;
   });
 
 

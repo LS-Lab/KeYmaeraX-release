@@ -7,32 +7,25 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.{File, FileOutputStream}
+import java.io.FileOutputStream
 import java.nio.channels.Channels
-import java.security.SecureRandom
-import java.sql.{Blob, SQLException}
-import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.PBEKeySpec
-import javax.xml.bind.DatatypeConverter
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
-import _root_.edu.cmu.cs.ls.keymaerax.core._
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma._
-import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, KeYmaeraXParser, KeYmaeraXProblemParser, ProofEvidence}
-import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.LemmaID
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.Nil
+import scala.slick.driver.SQLiteDriver
 
 //import Tables.TacticonproofRow
 import scala.slick.jdbc.StaticQuery.interpolation
 import scala.slick.driver.SQLiteDriver.simple._
-import scala.slick.lifted.{ProvenShape, ForeignKeyQuery}
 
 /**
  * Created by nfulton on 4/10/15.
@@ -51,7 +44,7 @@ object SQLite {
       db.getLemmas(ids.map(_.toInt))
     }
 
-    def writeLemma(id: LemmaID, lemma:String) = {
+    def writeLemma(id: LemmaID, lemma:String): Unit = {
       if(db.getLemma(id.toInt).nonEmpty)
         db.updateLemma(id.toInt, lemma)
       else {
@@ -77,9 +70,9 @@ object SQLite {
   def SQLiteLemmaDB (db: SQLiteDB) = new CachedLemmaDB(new UncachedSQLiteLemmaDB(db))
 
   class SQLiteDB(val dblocation: String) extends DBAbstraction {
-    val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
-    val uncachedLemmaDB = new UncachedSQLiteLemmaDB(this)
-    val lemmaDB = SQLiteLemmaDB(this)
+    val sqldb: SQLiteDriver.backend.DatabaseDef = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
+    private val uncachedLemmaDB = new UncachedSQLiteLemmaDB(this)
+    private val lemmaDB = SQLiteLemmaDB(this)
     private var currentSession:Session = null
     /* Statistics on the number of SQL operations performed in this session, useful for profiling. */
     private var nUpdates = 0
@@ -181,7 +174,7 @@ object SQLite {
     override def getAllConfigurations: Set[ConfigurationPOJO] =
       synchronizedTransaction({
         nSelects = nSelects + 1
-        Config.list.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration(_)).toSet
+        Config.list.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration).toSet
       })
 
     private def blankOk(x: Option[String]): String = x match {
@@ -192,9 +185,10 @@ object SQLite {
     override def getModelList(userId: String): List[ModelPOJO] = {
       synchronizedTransaction({
         nSelects = nSelects + 1
-        Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
-          blankOk(element.date), blankOk(element.filecontents),
-          blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic, getNumProofs(element._Id.get)))
+        Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get,
+          element.name.get, blankOk(element.date), blankOk(element.filecontents),
+          blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic,
+          getNumProofs(element._Id.get), element.istemporary.getOrElse(0) == 1))
       })
     }
 
@@ -209,23 +203,34 @@ object SQLite {
         default
       }
     }
-    override def createUser(username: String, password: String): Unit = {
+    override def createUser(username: String, password: String, mode: String): Unit = {
       /* Store passwords as a salted hash. Allow configuring number of iterations
        * since we may conceivably want to change it after deployment for performance reasons */
       val iterations = configWithDefault("security", "passwordHashIterations", 10000)
       val saltLength = configWithDefault("security", "passwordSaltLength", 512)
       val (hash, salt) = Password.generateKey(password, iterations, saltLength)
       synchronizedTransaction({
-        Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
-          .insert((username, hash, salt, iterations))
+        Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get, u.level.get))
+          .insert((username, hash, salt, iterations, Integer.parseInt(mode)))
         nInserts = nInserts + 1
       })}
+
+    override def getUser(username: String): UserPOJO = synchronizedTransaction({
+      nSelects = nSelects + 1
+      val users =
+        Users.filter(_.email === username)
+          .list
+          .map(m => new UserPOJO(m.email.get, m.level.get))
+      if (users.length < 1) throw new Exception("getUser type should be an Option")
+      else if (users.length == 1) users.head
+      else throw new Exception("Primary keys aren't unique in models table.")
+    })
 
     /**
       * Poorly named -- either update the config, or else insert an existing key.
       * But in Mongo it was just update, because of the nested documents thing.
       *
-      * @param config
+      * @param config The new configuration.
       */
     override def updateConfiguration(config: ConfigurationPOJO): Unit =
       synchronizedTransaction({
@@ -261,8 +266,8 @@ object SQLite {
         nSelects = nSelects + 1
         val list = Proofs.filter(_._Id === proofId)
           .list
-          .map(p => new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
-            blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
+          .map(p => new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description),
+            blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1, p.lemmaid, p.istemporary.getOrElse(0) == 1))
         if (list.length > 1) throw new Exception("Duplicate proof " + proofId)
         else if (list.isEmpty) throw new Exception("Proof not found: " + proofId)
         else list.head
@@ -290,7 +295,7 @@ object SQLite {
     override def checkPassword(username: String, password: String): Boolean =
       synchronizedTransaction({
         nSelects = nSelects + 1
-        Users.filter(_.email === username).list.exists({case row =>
+        Users.filter(_.email === username).list.exists({row =>
           val hash = Password.hash(password.toCharArray, row.salt.get.getBytes("UTF-8"), row.iterations.get)
           Password.hashEquals(hash, row.hash.get)
         })
@@ -304,8 +309,10 @@ object SQLite {
       })
 
     private def proofPojoToRow(p: ProofPOJO): ProofsRow =
-      new ProofsRow(_Id = Some(p.proofId), modelid = Some(p.modelId), name = Some(p.name)
-        , description = Some(p.description), date =Some(p.date), closed = Some(if (p.closed) 1 else 0))
+      ProofsRow(_Id = Some(p.proofId), modelid = p.modelId, name = Some(p.name),
+        description = Some(p.description), date =Some(p.date), closed = Some(if (p.closed) 1 else 0),
+        lemmaid = p.provableId, istemporary = Some(if (p.temporary) 1 else 0)
+      )
 
     private def sqliteBoolToBoolean(x: Int) = if (x == 0) false else if (x == 1) true else throw new Exception()
 
@@ -316,21 +323,22 @@ object SQLite {
         Proofs.filter(_.modelid === modelId).list.map(p => {
           val stepCount = nSteps(p._Id.get)
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
-          new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
+          val temporary: Boolean = sqliteBoolToBoolean(p.istemporary.getOrElse(0))
+          new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount,
+            closed, p.lemmaid, temporary)
         })
       })
 
-    def deleteExecution(executionId: Int) = synchronizedTransaction({
+    def deleteExecution(executionId: Int): Boolean = synchronizedTransaction({
       val deletedExecutionSteps = Executionsteps.filter(_.executionid === executionId).delete == 1
       val deletedExecution = Tacticexecutions.filter(_._Id === executionId).delete == 1
       deletedExecutionSteps && deletedExecution
     })
 
-    override def deleteProof(proofId: Int) =
-      synchronizedTransaction({
-        Tacticexecutions.filter(x => x.proofid === proofId).foreach(f => deleteExecution(f._Id.get))
-        Proofs.filter(x => x._Id === proofId).delete == 1
-      })
+    override def deleteProof(proofId: Int): Boolean = synchronizedTransaction({
+      Tacticexecutions.filter(x => x.proofid === proofId).foreach(f => deleteExecution(f._Id.get))
+      Proofs.filter(x => x._Id === proofId).delete == 1
+    })
 
     //Models
     override def createModel(userId: String, name: String, fileContents: String, date: String,
@@ -360,13 +368,28 @@ object SQLite {
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       synchronizedTransaction({
         nInserts = nInserts + 2
+        val model = getModel(modelId)
+        val provable = ProvableSig.startProof(KeYmaeraXProblemParser(model.keyFile))
+        val provableId = createProvable(provable)
         val proofId =
-          (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
+          (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get, p.lemmaid.get,
+                             p.istemporary.get))
             returning Proofs.map(_._Id.get))
-            .insert(modelId, name, description, date, 0)
+            .insert(modelId, name, description, date, 0, provableId, 0)
         Tacticexecutions.map(te => te.proofid.get).insert(proofId)
         proofId
       })
+
+    override def createProof(provable: ProvableSig): Int = synchronizedTransaction({
+      nInserts = nInserts + 3
+      val provableId = createProvable(provable)
+      val proofId =
+        (Proofs.map(p => ( p.closed.get, p.lemmaid.get, p.istemporary.get))
+          returning Proofs.map(_._Id.get))
+          .insert(0, provableId, 1)
+      Tacticexecutions.map(te => te.proofid.get).insert(proofId)
+      proofId
+    })
 
     override def getModel(modelId: Int): ModelPOJO =
       synchronizedTransaction({
@@ -376,7 +399,7 @@ object SQLite {
             .list
             .map(m => new ModelPOJO(
               m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description),
-              blankOk(m.publink), blankOk(m.title), m.tactic, getNumProofs(m._Id.get)
+              blankOk(m.publink), blankOk(m.title), m.tactic, getNumProofs(m._Id.get), m.istemporary.getOrElse(0) == 1
             ))
         if (models.length < 1) throw new Exception("getModel type should be an Option")
         else if (models.length == 1) models.head
@@ -389,11 +412,6 @@ object SQLite {
         Proofs.filter(_.modelid === modelId).list.map(prf => deleteProof(prf._Id.get))
         true
       })
-
-    private def optToString[T](o: Option[T]) = o match {
-      case Some(x) => Some(x.toString)
-      case None => None
-    }
 
     override def getConfiguration(configName: String): ConfigurationPOJO =
       synchronizedTransaction({
@@ -477,7 +495,7 @@ object SQLite {
           val thisPOJO = get(thisStep.stepId)
           val localProvable = getProvable(thisPOJO.localprovableid.get).provable
           val outputProvable = globalProvable(localProvable, thisStep.branch)
-          val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
+          val newStep = ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
             None, None, thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean, thisPOJO.rulename.get)
           val newId = addExecutionStep(newStep)
@@ -491,9 +509,9 @@ object SQLite {
         // Generate a no-op local provable whose conclusion matches with the current state of the proof.
         val localProvable = ProvableSig.startProof(localConclusion)
         val newLocalProvableID = createProvable(localProvable)
-        val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
+        val step = ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid,
-          oldStep.inputprovableid, Some(newLocalProvableID), false, "nil")
+          oldStep.inputprovableid, Some(newLocalProvableID), userExecuted=false, "nil")
         addExecutionStep(step)
       } else {
         addSteps(oldStep.previousstep, inputProvable, trace.steps)
@@ -504,7 +522,7 @@ object SQLite {
     override def addBelleExpr(expr: BelleExpr): Int =
       synchronizedTransaction({
         val executableId =
-          (Executables.map({case exe => (exe.belleexpr) })
+          (Executables.map(_.belleexpr)
             returning Executables.map(_._Id.get))
           .insert(Some(BellePrettyPrinter(expr)))
         nInserts = nInserts + 1
@@ -514,7 +532,7 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def createProvable(p: ProvableSig): Int = {
       synchronizedTransaction({
-        val lemma = Lemma(p, Lemma.requiredEvidence(p, List(new ToolEvidence(List("input" -> p.prettyString, "output" -> "true")))))
+        val lemma = Lemma(p, Lemma.requiredEvidence(p, List(ToolEvidence(List("input" -> p.prettyString, "output" -> "true")))))
         lemmaDB.add(lemma).toInt
       })
     }
@@ -548,7 +566,7 @@ object SQLite {
     def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = {
       lemmaDB.get(lemmaIds.map(_.toString)) match {
         case None => throw new Exception (" No lemma for one of these IDs: " + lemmaIds)
-        case Some(lemmas) => lemmas.zipWithIndex.map{case (lemma, id) => new ProvablePOJO(id, lemma.fact)}
+        case Some(lemmas) => lemmas.zipWithIndex.map{case (lemma, id) => ProvablePOJO(id, lemma.fact)}
       }
     }
 
@@ -581,27 +599,23 @@ object SQLite {
       }
     }
 
-    override def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int = {
-      synchronizedTransaction({
-        (Agendaitems.map({case item => (item.proofid.get, item.initialproofnode.get, item.displayname.get)})
-          returning Agendaitems.map(_._Id.get))
-          .insert(proofId, initialProofNode, displayName)
-      })
-    }
+    override def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int = synchronizedTransaction({
+      (Agendaitems.map(item => (item.proofid.get, item.initialproofnode.get, item.displayname.get))
+        returning Agendaitems.map(_._Id.get))
+        .insert(proofId, initialProofNode, displayName)
+    })
 
-    override def updateAgendaItem(item:AgendaItemPOJO) = {
-      synchronizedTransaction({
-        Agendaitems.filter(_._Id === item.itemId)
-          .map({case dbitem => (dbitem.proofid.get, dbitem.initialproofnode.get, dbitem.displayname.get)})
-          .update((item.proofId, item.initialProofNode, item.displayName))
-      })
-    }
+    override def updateAgendaItem(item:AgendaItemPOJO): Unit = synchronizedTransaction({
+      Agendaitems.filter(_._Id === item.itemId)
+        .map(dbitem => (dbitem.proofid.get, dbitem.initialproofnode.get, dbitem.displayname.get))
+        .update((item.proofId, item.initialProofNode, item.displayName))
+    })
 
     override def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = {
       synchronizedTransaction({
         Agendaitems.filter(_.proofid === proofId)
         .list
-        .map({case item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+        .map(item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get))
       })
     }
 
@@ -609,7 +623,7 @@ object SQLite {
       synchronizedTransaction({
         Agendaitems.filter{row => row.proofid === proofId && row.initialproofnode === initialProofNode}
           .list
-          .map({case item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+          .map(item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get))
           .headOption
       })
     }
@@ -664,11 +678,27 @@ object SQLite {
     }
 
     private def getProofConclusion(proofId: Int): Sequent = {
-      val modelId = getProofInfo(proofId).modelId
-      val model = getModel(modelId)
-      KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile) match {
-        case fml:Formula => Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
-        case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
+      val proofInfo = getProofInfo(proofId)
+      proofInfo.modelId match {
+        case Some(modelId) =>
+          val model = getModel(modelId)
+          KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile) match {
+            case fml: Formula =>
+              val sequent = Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
+              proofInfo.provableId match {
+                case Some(pid) =>
+                  val conclusion = getProvable(pid).provable.conclusion
+                  assert(conclusion == sequent,
+                    s"Model formula and associated provable's conclusion must match\nFormula:  $fml\nProvable: ${conclusion.succ.head}")
+                  sequent
+                case None => sequent
+              }
+            case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
+          }
+        case None => proofInfo.provableId match {
+          case Some(pid) => getProvable(pid).provable.conclusion
+          case None => throw new Exception("Require either model or provable, but got neither")
+        }
       }
     }
 
@@ -677,7 +707,7 @@ object SQLite {
           val executionIds =
             Tacticexecutions.filter(_.proofid === proofId)
               .list
-              .map({ case row => row._Id.get })
+              .map(_._Id.get)
           if (executionIds.length < 1) None
           else if (executionIds.length == 1) Some(executionIds.head)
           else throw new Exception("Primary keys aren't unique in executions table.")

@@ -545,7 +545,7 @@ object DerivedAxioms {
           /* use */ prop,
           /* show */ hideR(1) &
           cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
-            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi() & CMon(PosInExpr(1::Nil)) & prop,
+            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & prop,
             /* show */ implyR(1) & TactixLibrary.boxAnd(1) & prop
             )
           )
@@ -1555,7 +1555,7 @@ object DerivedAxioms {
         /* show */ G(2) & prop
         ),
       /* equiv right */
-      useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW"), close)
+      useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW base"), close)
       )
   )
 
@@ -1569,7 +1569,7 @@ object DerivedAxioms {
     Sequent(IndexedSeq(), IndexedSeq("[{c_&q_(||)}]p_(||) -> ([{c_&q_(||)}](q_(||)&p_(||)))".asFormula)),
     implyR(1) & cut("[{c_&q_(||)}](q_(||)->(p_(||)->(q_(||)&p_(||))))".asFormula) <(
       /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))('Llast) & implyL('Llast) <(
-        cohide('Rlast) & byUS("DW") & done,
+        cohide('Rlast) & byUS("DW base") & done,
         useAt("K modal modus ponens", PosInExpr(0::Nil))('Llast) & implyL('Llast) <(close, close)),
       /* show */ G('Rlast) & prop
       )
@@ -1848,7 +1848,7 @@ object DerivedAxioms {
       equivR(1) <(
         implyRi & CMon(PosInExpr(1::Nil)) & prop & done,
         cutAt("q_(||) & (q_(||)->p_(||))".asFormula)(1, 1::Nil) <(
-          implyRi & useAt(Kd2Axiom, PosInExpr(1::Nil))(1) & byUS("DW")
+          implyRi & useAt(Kd2Axiom, PosInExpr(1::Nil))(1) & byUS("DW base")
           ,
           cohideR(1) & CMon(PosInExpr(1::Nil)) & prop & done
           )

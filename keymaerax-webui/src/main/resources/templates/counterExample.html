@@ -40,23 +40,26 @@
     </p>
 </div>
 <div ng-if="result === 'cex.timeout'" class="modal-body">
-    Sorry, no counter-example found before search timeout expired.
+    No counter-example found before search timeout expired.
 </div>
 <div ng-if="result === 'cex.nonfo'" class="modal-body">
     <p>
-    Sorry, cannot search for counter-examples in modalities.
+    Cannot search for counter-examples when box modalities <code>[a]p</code> or diamond modalities
+        <code>&lt;a&gt;p</code> are present anywhere in the sequent.
     </p>
     <p>
-    Please use more proof steps to remove modalities,
-    until only first-order formulas remain and then try again.
+    Please use more proof steps on formula
+    </p>
+    <p class="text-center"><code>{{origFormula}}</code></p>
+    <p> to handle modalities, until only arithmetic formulas remain and then try again.
     </p>
 </div>
 <div ng-if="result === 'cex.notool'" class="modal-body">
     <p>
-        Sorry, the current backend tool does not support counter-example search.
+        The current backend tool does not support counter-example search.
     </p>
     <p>
-        Please go to <mark>Help &rarr; Backend Tool Configuration</mark> and configure Mathematica as backend tool.
+        Please go to <mark>Help &rarr; Tool Configuration</mark> and configure Mathematica as backend tool.
     </p>
 </div>
 <div class="modal-footer">

@@ -43,7 +43,8 @@ object DBAbstractionObj {
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
 /** A tutorial/case study example. */
-class ExamplePOJO(val id: Int, val title: String, val description: String, val infoUrl: String, val url: String, val imageUrl: String)
+class ExamplePOJO(val id: Int, val title: String, val description: String, val infoUrl: String, val url: String,
+                  val imageUrl: String, val level: Int)
 
 /**
  * Data object for models.
@@ -57,21 +58,36 @@ class ExamplePOJO(val id: Int, val title: String, val description: String, val i
  * @param pubLink Link to additional information (paper) on the model.
  */
 class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
-                val description:String, val pubLink:String, val title:String, val tactic : Option[String], val numProofs: Int) //the other guys on this linke should also be optional.
+                val description:String, val pubLink:String, val title:String, val tactic : Option[String],
+                val numProofs: Int, val temporary: Boolean) //the other guys on this linke should also be optional.
+
+/**
+  * Data object for users.
+  *
+  * @param userName Identifies the user.
+  * @param level The user's learner level.
+  */
+class UserPOJO(val userName: String, val level: Int)
+
 
 /**
  * Data object for proofs. A proof
   *
   * @param proofId Identifies the proof.
- * @param modelId Identifies the model.
- * @param name The proof name.
- * @param description A proof description.
- * @param date The creation date.
- * @param stepCount The number of proof steps in the proof.
- * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
+  * @param modelId Identifies the model; if defined, model formula must agree with provable's conclusion
+  * @param name The proof name.
+  * @param description A proof description.
+  * @param date The creation date.
+  * @param stepCount The number of proof steps in the proof.
+  * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
+  * @param provableId Refers to a provable whose conclusion to prove.
+  * @param temporary Indicates whether or not the proof is temporary.
  */
-class ProofPOJO(val proofId:Int, val modelId:Int, val name:String, val description:String,
-                val date:String, val stepCount : Int, val closed : Boolean)
+class ProofPOJO(val proofId:Int, val modelId: Option[Int], val name:String, val description:String,
+                val date:String, val stepCount : Int, val closed : Boolean, val provableId: Option[Int],
+                val temporary: Boolean = false) {
+  assert(modelId.isDefined || provableId.isDefined, "Require either model or provable")
+}
 
 case class ProvablePOJO(provableId: Int, provable:ProvableSig)
 
@@ -169,7 +185,9 @@ trait DBAbstraction {
   // Users
   def userExists(username: String): Boolean
 
-  def createUser(username: String, password: String): Unit
+  def createUser(username: String, password: String, mode: String): Unit
+
+  def getUser(username: String): UserPOJO
 
   def checkPassword(username: String, password: String): Boolean
 
@@ -201,6 +219,9 @@ trait DBAbstraction {
   def createProofForModel(modelId: String, name: String, description: String, date: String): String =
     createProofForModel(modelId.toInt, name, description, date).toString
 
+  /** Create a temporary proof without model, starting from 'provable'. */
+  def createProof(provable: ProvableSig): Int
+
   def getProofsForModel(modelId: Int): List[ProofPOJO]
 
   def getProofsForModel(modelId: String): List[ProofPOJO] = getProofsForModel(modelId.toInt)
@@ -218,7 +239,8 @@ trait DBAbstraction {
 
   def updateProofName(proofId: Int, name: String): Unit = {
     val info = getProofInfo(proofId)
-    updateProofInfo(new ProofPOJO(proofId, info.modelId, name, info.description, info.date, info.stepCount, info.closed))
+    updateProofInfo(new ProofPOJO(proofId, info.modelId, name, info.description, info.date,
+      info.stepCount, info.closed, info.provableId, info.temporary))
   }
 
   def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)

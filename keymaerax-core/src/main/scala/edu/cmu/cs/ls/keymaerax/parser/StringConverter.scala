@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -33,4 +35,6 @@ class StringConverter(val s: String) {
   def asProgram: Program = KeYmaeraXParser.programParser(s)
 
   def asDifferentialProgram: DifferentialProgram = KeYmaeraXParser.differentialProgramParser(s)
+
+  def asTactic : BelleExpr = BelleParser(s)
 }

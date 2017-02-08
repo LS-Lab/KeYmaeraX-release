@@ -326,6 +326,24 @@ del {
   width: 700px; /* @todo solve tactic popover layout problem for real */
 }
 
+.increase-popover-width {
+   width: 180px;
+}
+
+.modal-magnifyingglass {
+  width: 98%;
+  height: 95%;
+}
+
+.tacticalert-popover {
+   width: 90%;
+   left: 5% !important;
+}
+
+.k4-narrowinput {
+  max-width: 45px;
+}
+
 .k4-sequentRulePremise {
   border-style: none;
 }

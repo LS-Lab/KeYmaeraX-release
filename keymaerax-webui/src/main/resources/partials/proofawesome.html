@@ -8,9 +8,22 @@
         <div class="spinner-double-bounce2"></div>
     </div>
     <div class="tactic-spinner-please-wait">
-        <p>Tactic {{runningTask.lastStep}} is executing, please wait...</p>
+        <p>Tactic is executing, please wait...</p>
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
+    </div>
+</spinner>
+<spinner name="magnifyingglassSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+        <div class="tactic-spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="tactic-spinner-please-wait">
+            <p>Computing details, please wait...</p>
+            <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+        </div>
     </div>
 </spinner>
 <spinner name="proofLoadingSpinner" ng-cloak>
@@ -114,7 +127,8 @@
                                 <li><a ng-click="doSearch('composeb', 'R')"><span>[;]</span><code class="pull-right">composeb</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxSplit', 'R')"><span>[]&and;</span><code class="pull-right">boxSplit</code></a></li>
-                                <li><a ng-click="doSearch('abstractionb', 'R')"><span>V++</span><code>abstractionb</code></a></li>
+                                <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code>GV</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('MR', 'R')"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -125,14 +139,14 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('diffSolve', 'R')"><span>Solve</span><code class="pull-right">diffSolve</code></a></li>
-                                <li><a ng-click="doSearch('diffWeaken', 'R')"><span>Weaken</span><code class="pull-right">diffWeaken</code></a></li>
-                                <li><a ng-click="doSearch('DIRule', 'R')"><span>Diff. Induction</span><code class="pull-right">DIRule</code></a></li>
-                                <li><a ng-click="doSearch('autoDIRule', 'R')"><span>Diff. Induction (Auto)</span><code>autoDIRule</code></a></li>
-                                <li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>
-                                <li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('diffCut', 'R')"><span>Diff. Cut ...</span><code class="pull-right">diffCut</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('diffInvariant', 'R')"><span>Diff. Invariant ...</span><code class="pull-right">diffInvariant</code></a></li>
+                                <li><a ng-click="doSearch('solve', 'R')"><span>Solve</span><code class="pull-right">solve</code></a></li>
+                                <li><a ng-click="doSearch('dW', 'R')"><span>Weaken</span><code class="pull-right">dW</code></a></li>
+                                <li><a ng-click="doSearch('dI', 'R')"><span>Diff. Induction</span><code class="pull-right">dI</code></a></li>
+                                <!-- TODO list further tactics -->
+                                <!--<li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
+                                <!--<li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
+                                <li><a ng-click="openInputTacticDialog('DC', 'R')"><span>Diff. Cut ...</span><code class="pull-right">DC</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('DG', 'R')"><span>Diff. Ghost ...</span><code class="pull-right">DG</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -165,6 +179,7 @@
                         <li ng-controller="ProofMessagesCtrl">
                             <k4-auto-hide-alert message="proofMessage.text"
                                                 details="proofMessage.details"
+                                                task-stepwise-request="proofMessage.taskStepwiseRequest"
                                                 is-visible="proofMessage.isVisible" timeout="-1">
                             </k4-auto-hide-alert>
                         </li>

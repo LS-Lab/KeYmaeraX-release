@@ -12,6 +12,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.HashMap
+import scala.language.implicitConversions
+import scala.reflect.runtime.universe.TypeTag
 
 /**
   * Since axioms are always referred to by their names (which are strings), we have the following problems:
@@ -42,6 +44,19 @@ case class AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) ex
 case class InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) extends DisplayInfo {
   override def name = names.name
   override def asciiName = names.asciiName
+}
+
+/** Typed functions to circumvent type erasure of arguments and return types. */
+abstract class TypedFunc[-A: TypeTag, +R: TypeTag] extends (A => R) {
+  val retType: TypeTag[_] = scala.reflect.runtime.universe.typeTag[R]
+  val argType: TypeTag[_] = scala.reflect.runtime.universe.typeTag[A]
+}
+/** Creates TypedFunc implicitly, e.g., by ((x: String) => x.length): TypedFunc[String, Int]  */
+object TypedFunc {
+  implicit def apply[A: TypeTag, R: TypeTag](f: A => R): TypedFunc[A, R] = f match {
+    case tf: TypedFunc[A, R]  => tf
+    case _ => new TypedFunc[A, R] { final def apply(arg: A): R = f(arg) }
+  }
 }
 
 /**
@@ -97,6 +112,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
     new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
+    new InputPositionTacticInfo("assignbexistsRule",
+      RuleDisplayInfo(
+        "[:=] assign exists",
+        /* conclusion */ (List("&Gamma;"), List("∃t [x:=t;]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("[t:=e;][x:=t;]P", "&Delta;")) )
+      ),
+      List(TermArg("e")),
+      _ => ((e: Term) => DLBySubst.assignbExists(e)): TypedFunc[Term, BelleExpr]
+    ),
     new CoreAxiomInfo("[':=] differential assign"
       , AxiomDisplayInfo(("[′:=]","[':=]"), "[x′:=c]p(x′)↔p(c)")
       , "Dassignb", {case () => HilbertCalculus.Dassignb}),
@@ -141,47 +165,55 @@ object DerivationInfo {
       , "boxTrue", {case () => HilbertCalculus.boxTrue}),
 
     // differential equation axioms
-    new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
-    new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
+    new CoreAxiomInfo("DW base", "DWbase", "DWbase", {case () => HilbertCalculus.DW}),
+    new PositionTacticInfo("dW"
+      , RuleDisplayInfo("dW"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
+        , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
+      , {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-    , "DCaxiom", {case () => HilbertCalculus.useAt("DC differential cut")}),
-    new InputPositionTacticInfo("diffCut"
+    , "DCa", {case () => HilbertCalculus.useAt("DC differential cut")}),
+    new InputPositionTacticInfo("DC"
     , RuleDisplayInfo("DC"
       , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
-    , {case () => (fml: Formula) => TactixLibrary.diffCut(fml)}),
+    , _ => ((fml: Formula) => TactixLibrary.diffCut(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("DCdiffcut"
       , RuleDisplayInfo("DCaxiom"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
       , List(FormulaArg("R"))
-      , {case () => (fml: Formula) => HilbertCalculus.DC(fml)}),
+      , _ => ((fml: Formula) => HilbertCalculus.DC(fml)): TypedFunc[Formula, BelleExpr]),
 
     new InputPositionTacticInfo("diffGhost",
       RuleDisplayInfo(
         "diffGhost",
-        ( List("&Gamma;"), List("[{c&H}]P", "&Delta;") ),
+        ( List("&Gamma;"), List("[{c&Q}]P", "&Delta;") ),
         List(
-          (List("&Gamma;", "y=i"), List("[{c,y'=a()*y+b&Q}]P", "&Delta;"))
+          (List("&Gamma;", "y=i"), List("[{c,y′=a()*y+b&Q}]P", "&Delta;"))
         )
       ),
       List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
-      {case () => (y: Variable) => (t1: Term) => (t2: Term) => (i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)}
+      _ => ((y: Variable) => ((t1: Term) => ((t2: Term) => ((i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)): TypedFunc[Term, BelleExpr]): TypedFunc[Term, TypedFunc[Term, BelleExpr]]): TypedFunc[Term, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]]
     ),
-    new InputPositionTacticInfo("DGTactic",
+    new InputPositionTacticInfo("DG",
       RuleDisplayInfo(
-        "DGTactic",
-        ( List("&Gamma;"), List("∃y [{c, y'=a()*y+b&Q}]P", "&Delta;") ),
-        List(
-          (List("&Gamma;"), List("[{c&Q}]P", "&Delta;"))
-        )
+        "DG",
+        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
       ),
-      List(VariableArg("y"), TermArg("a()"), TermArg("b")),
-      {case () => (y: Variable) => (t1: Term) => (t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))}
+      List(VariableArg("y"), TermArg("a(x)"), TermArg("b(x)")),
+      _ =>
+        ((y: Variable) =>
+          ((t1: Term) =>
+            ((t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))
+              ): TypedFunc[Term, BelleExpr]
+            ): TypedFunc[Term, TypedFunc[Term, BelleExpr]]
+          ): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]
     ),
 
     new CoreAxiomInfo("DE differential effect"
@@ -195,10 +227,10 @@ object DerivationInfo {
       , "DIequiv", {case () => ???}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
-      , "DI", {case () => HilbertCalculus.DI}),
+      , "DIa", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
-      , "DG", {case () => HilbertCalculus.useAt("DG differential ghost")}),
+      , "DGa", {case () => HilbertCalculus.useAt("DG differential ghost")}),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
       , "DGC", {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
@@ -332,7 +364,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => useAt(DerivedAxioms.DGpreghost)}),
     new DerivedAxiomInfo("DW differential weakening"
       , AxiomDisplayInfo("DW","[x′=f(x)&Q]P↔[x′=f(x)&Q](Q→P)")
-      , "DWeaken", {case () => HilbertCalculus.DW}),
+      , "DWa", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DW differential weakening and"
       , AxiomDisplayInfo("DW∧","[x′=f(x)&Q]P→[x′=f(x)&Q](Q∧P)")
       , "DWeakenAnd", {case () => HilbertCalculus.DW}),
@@ -564,6 +596,7 @@ object DerivationInfo {
     new PositionTacticInfo("implyR"
       , RuleDisplayInfo(("→R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
       , {case () => SequentCalculus.implyR}),
+    new TwoPositionTacticInfo("implyRi", "implyRi", _ => SequentCalculus.implyRi()),
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo(("→L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
         List((List("&Gamma;","P"),List("&Delta;")),
@@ -584,7 +617,7 @@ object DerivationInfo {
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
         List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
       , List(TermArg("θ"))
-      , {case () => (t:Term) => SequentCalculus.allL(t)}),
+      , _ => ((t:Term) => SequentCalculus.allL(t)): TypedFunc[Term, BelleExpr]),
     new PositionTacticInfo("allR"
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(x)","&Delta;"))))
@@ -596,15 +629,15 @@ object DerivationInfo {
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
-    new PositionTacticInfo("abstractionb"
-      , RuleDisplayInfo("V++", (List("&Gamma;", "[a]P"), List("&Delta;"))
-      , List((List("&Gamma; \\ a", "P"), List("&Delta;"))))
+    new PositionTacticInfo("GV"
+      , RuleDisplayInfo("GV", (List("&Gamma;"), List("[a]P", "&Delta;"))
+      , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}),
     new InputPositionTacticInfo("existsR"
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
       , List(TermArg("θ"))
-      , {case () => (t:Term) => SequentCalculus.existsR(t)}),
+      , _ => ((t:Term) => SequentCalculus.existsR(t)): TypedFunc[Term, BelleExpr]),
 
     new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => SequentCalculus.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", ("↔CR", "<->CR"), {case () => SequentCalculus.commuteEquivR}),
@@ -633,6 +666,7 @@ object DerivationInfo {
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
     new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
+    new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     // proof management tactics
     new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
@@ -664,47 +698,47 @@ object DerivationInfo {
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
-        ,List(FormulaArg("P")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
+        ,List(FormulaArg("P")), _ => ((fml:Formula) => ProofRuleTactics.cut(fml)): TypedFunc[Formula, BelleExpr]),
     new InputTacticInfo("abbrv"
       , RuleDisplayInfo(("abbrv","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
           (List("&Gamma;", "v=t"),List("&Delta;"))))
-      ,List(TermArg("t"),VariableArg("v")), {case () => (t:Term) => (v:Variable) => EqualityTactics.abbrv(t,Some(v))}),
+      ,List(TermArg("t"),VariableArg("v")), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
     new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")),
-      {case () => (fml:Formula) => TactixLibrary.cutL(fml)}),
+      _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula")),
-      {case () => (fml:Formula) => TactixLibrary.cutR(fml)}),
+      _ => ((fml:Formula) => TactixLibrary.cutR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
-      {case () => (fml:Formula) => TactixLibrary.cutLR(fml)}),
+      _ => ((fml:Formula) => TactixLibrary.cutLR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("loop",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
           (List("j(x)"),List("[a]j(x)")),
           (List("j(x)"),List("P"))))
-      , List(FormulaArg("j(x)")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+      , List(FormulaArg("j(x)")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]),
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),
 
-    new InputPositionTacticInfo("generalizeb",
-    RuleDisplayInfo("G[]",(List("&Gamma;"), List("[a]P", "&Delta;")),
+    new InputPositionTacticInfo("MR",
+    RuleDisplayInfo("MR",(List("&Gamma;"), List("[a]P", "&Delta;")),
       List(
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
-    , List(FormulaArg("Q")), {case () => (fml:Formula) => TactixLibrary.generalize(fml)}),
+    , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("transform", "trafo", List(FormulaArg("toFormula")),
-      {case () => (fml:Formula) => TactixLibrary.transform(fml)}),
+      _ => ((fml:Formula) => TactixLibrary.transform(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("boundRename"
       , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
       , List(TermArg("x"),TermArg("y"))
-      , {case () => (x:Term) => (y:Term) => TactixLibrary.boundRename(x.asInstanceOf[Variable],y.asInstanceOf[Variable])}),
+      , _ => ((x:Term) => ((y:Term) => TactixLibrary.boundRename(x.asInstanceOf[Variable],y.asInstanceOf[Variable])): TypedFunc[Term, BelleExpr]): TypedFunc[Term, TypedFunc[Term, BelleExpr]]),
     new InputPositionTacticInfo("stutter"
       , RuleDisplayInfo(("[:=]", "[:=]"), (List("&Gamma;"), List("P","&Delta;"))
-      , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(TermArg("x"))
-      , {case () => (x:Term) => DLBySubst.stutter(x.asInstanceOf[Variable])}),
+      , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))
+      , _ => ((x:Variable) => DLBySubst.stutter(x)): TypedFunc[Variable, BelleExpr]),
 
   //
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
@@ -713,13 +747,13 @@ object DerivationInfo {
       "transformEquality",
       "transformEquality",
       FormulaArg("equality") :: Nil,
-      {case () => (f:Formula) => ArithmeticSimplification.transformEquality(f)}),
+      _ => ((f:Formula) => ArithmeticSimplification.transformEquality(f)): TypedFunc[Formula, BelleExpr]),
 
     new InputPositionTacticInfo(
       "discreteGhost",
       "discreteGhost",
       TermArg("ghostTerm") :: VariableArg("ghostName") :: Nil,
-      {case () => (t:Term) => (v:Variable) => DLBySubst.discreteGhost(t, Some(v))}),
+      _ => ((t:Term) => ((v: Option[Variable]) => DLBySubst.discreteGhost(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
 
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
     new TacticInfo("monb2", "Box Monotonicity 2", {case () => DLBySubst.monb2}),
@@ -738,12 +772,16 @@ object DerivationInfo {
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
+    new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
+    //@todo universal closure may come with list of named symbols
+    new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
 
     // Differential tactics
+    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
     new PositionTacticInfo("ODE",
       "ODE",
       {case () => TactixLibrary.ODE}, needsTool = true),
@@ -759,23 +797,11 @@ object DerivationInfo {
         /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
           (List("&Gamma;", "Q"), List("[{x′ = f(x) & Q}](P)′","&Delta;")))),
       {case () => DifferentialTactics.DIRule}),
-    new PositionTacticInfo("autoDIRule",
-    RuleDisplayInfo("DI",
+    new PositionTacticInfo("dI",
+    RuleDisplayInfo("dI",
       (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
-        (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & Q}](P)′","&Delta;"), true))),
-    {case () => DifferentialTactics.diffInd()}, needsTool = true),
-    new PositionTacticInfo("diffInd",
-    RuleDisplayInfo("diffInd",
-      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
-        (List("Q"), List("[x′:=f(x)](P)′")))),
-    {case () => DifferentialTactics.diffIndRule}),
-    new PositionTacticInfo("autoDiffInd",
-    RuleDisplayInfo("diffInd",
-      (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true),
-        (List("Q"), List("[x′:=f(x)](P)′"), true))),
+      /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/),
+        (List("Q"), List("[x′:=f(x)](P)′"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/))),
     {case () => DifferentialTactics.diffInd()}),
     new InputPositionTacticInfo("diffInvariant"
     , RuleDisplayInfo("DC+DI"
@@ -783,21 +809,21 @@ object DerivationInfo {
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & Q}]R", "&Delta;"), true),
         (List("&Gamma;"), List("[{x′ = f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
-    , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
+    , _ => ((fml:Formula) => TactixLibrary.diffInvariant(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("DA4"
       , RuleDisplayInfo("DA"
         , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("P", "&Delta;"), false),
           (List("&Gamma;"), List("R → [{x′ = f(x), y′ = a()*y+b & Q}]R","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
       , List(FormulaArg("R"), VariableArg("y"), TermArg("a()"), TermArg("b"))
-      , {case () => (r:Formula) => (y:Variable) => (a:Term) => (b:Term) =>
-        DifferentialTactics.DA(y,a,b,r)}), //@note: for now, has to be in the order provided by web UI
+      , _ => ((r:Formula) => ((y:Variable) => ((a:Term) => ((b:Term) =>
+        DifferentialTactics.DA(y,a,b,r)): TypedFunc[Term, BelleExpr]): TypedFunc[Term, _]): TypedFunc[Variable, _]): TypedFunc[Formula, _]), //@note: for now, has to be in the order provided by web UI
     new PositionTacticInfo("AxiomaticODESolver",
       RuleDisplayInfo("AxiomaticODESolver",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
       {case () => AxiomaticODESolver.apply}, needsTool = true),
-    new PositionTacticInfo("diffSolve",
+    new PositionTacticInfo("solve",
       RuleDisplayInfo("solve",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
@@ -879,6 +905,15 @@ object DerivationInfo {
     byCodeName.getOrElse(codeName.toLowerCase,
       throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
     )
+  }
+
+  /** Locate the derivation info for said tactic */
+  def locate(t: BelleExpr): Option[DerivationInfo] = t match {
+    case n: NamedBelleExpr => try { Some(ofCodeName(n.name)) } catch { case _: Exception => None }
+    case AppliedPositionTactic(n, _) => locate(n)
+    case AppliedBuiltinTwoPositionTactic(n, _, _) => locate(n)
+    //@todo probably more cases
+    case _ => None
   }
 
   def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
@@ -1054,15 +1089,15 @@ case class TwoPositionTacticInfo(override val codeName: String, override val dis
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator)
 
-case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_,_], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 2
 }

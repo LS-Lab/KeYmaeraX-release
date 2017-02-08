@@ -1,0 +1,28 @@
+/**
+ * 09: Time-triggered ping pong ball
+ * @author Andre Platzer
+ * @see Andre Platzer. Foundations of Cyber-Physical Systems. chapter 9 Reactions & delays. chapter Notes, Computer Science Department, Carnegie Mellon University. 2016.
+ */
+ProgramVariables.
+  R x.            /* height */
+  R v.            /* velocity */
+  R t.            /* time */
+  
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+  R f.            /* paddle factor */
+End.
+                
+Problem.
+  2*x=2*H-v^2 & 0<=x&x<=5 & v<=0
+  & g=1&g>0 & 1=c&c>=0 & 1=f&f>=0
+  ->
+  [
+    {
+      {{?x=0; v:=-c*v; ++ ?x!=0;}
+      {?((x>5+1/2-v | 2*x>2*5-v^2&v<1) & v>=0); v:=-f*v; ++ ? !((x>5+1/2-v | 2*x>2*5-v^2&v<1) & v>=0);}}
+      t:=0; {x'=v,v'=-g,t'=1 & x>=0&t<=1}
+    }*@invariant(2*x=2*H-v^2 & (x>=0&x<=5))
+  ] (0<=x&x<=5)
+End.

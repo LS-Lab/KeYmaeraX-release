@@ -1,1 +1,1 @@
-implyR('R) & autoDiffInd('R) & done
+implyR('R) & dI('R) & done

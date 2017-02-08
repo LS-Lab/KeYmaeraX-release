@@ -12,15 +12,13 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   def apply(trace: ExecutionTrace): BelleExpr  = {
     val tree = ProofTree.ofTrace(trace)
     assert(tree.root.startStep.isEmpty, "Root should not have a startStep")
-    val modelId = db.getProofInfo(trace.proofId).modelId
-    apply(modelId)(tree.root)
+    apply(db.getProofInfo(trace.proofId).modelId)(tree.root)
   }
 
   def getTacticString(trace: ExecutionTrace): String = {
     val tree = ProofTree.ofTrace(trace)
     assert(tree.root.startStep.isEmpty, "Root should not have a startStep")
-    val modelId = db.getProofInfo(trace.proofId).modelId
-    getTacticString(modelId, "  ")(tree.root)
+    getTacticString("  ")(tree.root)
   }
 
   //@todo deprecate this approach and prefer [[apply(tree)(node).prettyString]]
@@ -47,10 +45,14 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     * @note this could be tailrec.
     * @return A structured Bellerophon tactic that constructs the proof tree.
     */
-  def apply(modelId: Int)(node: TreeNode): BelleExpr = {
+  def apply(modelId: Option[Int])(node: TreeNode): BelleExpr = {
     val children = node.children
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
-    val gen = new ConfigurableGenerator(db.getInvariants(modelId))
+    val gen = new ConfigurableGenerator(
+      modelId match {
+        case Some(mid) => db.getInvariants(mid)
+        case None => Map()
+      })
     val thisTactic = tacticAt(gen, node)
 
     if (children.isEmpty || children.forall(_.endStep.isEmpty)) thisTactic
@@ -58,15 +60,15 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     else thisTactic & BranchTactic(children.map(child => apply(modelId)(child))) //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
-  def getTacticString(modelId: Int, indent: String)(node: TreeNode): String = {
+  def getTacticString(indent: String)(node: TreeNode): String = {
     val children = node.children
     assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
     val thisTactic = tacticStringAt(node)
 
     //@todo does pretty-printing
     if (children.isEmpty) thisTactic
-    else if (children.length == 1) thisTactic + " " + SEQ_COMBINATOR.img + " " + getTacticString(modelId, indent)(children.head)
-    else thisTactic + " " + SEQ_COMBINATOR.img +  " " + BRANCH_COMBINATOR.img + "(\n" + children.map(child => indent + getTacticString(modelId, indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
+    else if (children.length == 1) thisTactic + " " + SEQ_COMBINATOR.img + " " + getTacticString(indent)(children.head)
+    else thisTactic + " " + SEQ_COMBINATOR.img +  " " + BRANCH_COMBINATOR.img + "(\n" + children.map(child => indent + getTacticString(indent + "  ")(child)).mkString(",\n") + "\n" + indent + ")" //@note This doesn't work properly -- it generates the subgoals in the wrong order.
   }
 
   private def tacticAt(gen:Generator.Generator[Formula], node: TreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), Some(gen))

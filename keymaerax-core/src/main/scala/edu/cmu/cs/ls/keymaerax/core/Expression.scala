@@ -509,10 +509,9 @@ case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { 
 
 /** Quantified formulas */
 sealed trait Quantified extends CompositeFormula {
-  insist(vars.length==1, "quantifiers bind exactly one variable at the moment")
-//  require(vars.nonEmpty, "quantifiers bind at least one variable")
-//  insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-//  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  insist(vars.nonEmpty, "quantifiers bind at least one variable")
+  insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
+  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
   /** Create a formula of this constructor but with the given variable list and child as argument instead. (copy)
     * @example {{{
     *         Forall(immutable.Seq(Variable("x")), PredOf(Function("p",None,Real,Bool),Variable("x"))).reapply(

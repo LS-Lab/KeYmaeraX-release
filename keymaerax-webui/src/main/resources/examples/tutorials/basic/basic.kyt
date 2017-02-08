@@ -1,0 +1,9 @@
+implyR(1) ; andL('L) ; loop({`v>=0`}, 1) ; <(    /* splits separate branches */
+  closeId,                                       /* initial case: shown with close by identity */
+  QE,                                            /* postcondition: prove by real arithmetic QE */
+  /* induction step: decomposes hybrid program semi-explicitly */
+  composeb(1) ; solve(1.1) ; choiceb(1) ; andR(1) ; <( /* more branching*/
+    composeb(1) ; testb(1) ; master,                   /* decompose some steps then ask master */
+    choiceb(1) ; andR(1) ; doall(assignb(1) & QE)      /*doall same on all branches */
+  )
+)

@@ -7,23 +7,26 @@
       "title": "1-dimensional car with false acceleration guard",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=23",
       "model": "classpath:/examples/tutorials/fm/00_stopsignsbfalse.kyx",
-      "tactic": "classpath:/examples/tutorials/fm/00_stopsignsbfalse.kyt"
+      "tactic": "classpath:/examples/tutorials/fm/00_stopsignsbfalse.kyt",
+      "proves": true
     },
     {
       "name": "Formal Methods Tutorial Example 2",
-      "description": "Simple model of straight-line driving that avoids collision. Car can accelerate or break, with the start breaking distance left abstract.",
+      "description": "Simple model of straight-line driving that avoids collision. Car can accelerate or break, with the start braking distance left abstract.",
       "title": "1-dimensional car with abstract start braking distance",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=50",
       "model": "classpath:/examples/tutorials/fm/01_stopsignabstractsb.kyx",
-      "tactic": "classpath:/examples/tutorials/fm/01_stopsignabstractsb.kyt"
+      "tactic": "classpath:/examples/tutorials/fm/01_stopsignabstractsb.kyt",
+      "proves": false
     },
     {
       "name": "Formal Methods Tutorial Example 3",
-      "description": "Simple model of straight-line driving that avoids collision. Car can accelerate or break, with the start breaking distance left abstract.",
+      "description": "Simple model of straight-line driving that avoids collision. Car can accelerate or break, with the start braking distance left abstract.",
       "title": "1-dimensional car with safe start braking distance",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=97",
       "model": "classpath:/examples/tutorials/fm/02_stopsign.kyx",
-      "tactic": "classpath:/examples/tutorials/fm/02_stopsign.kyt"
+      "tactic": "classpath:/examples/tutorials/fm/02_stopsign.kyt",
+      "proves": true
     },
     {
       "name": "Formal Methods Tutorial Example 4",
@@ -31,7 +34,8 @@
       "title": "Increasingly Damped oscillator",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=114",
       "model": "classpath:/examples/tutorials/fm/03_increasinglydampedoscillator.kyx",
-      "tactic": "classpath:/examples/tutorials/fm/03_increasinglydampedoscillator.kyt"
+      "tactic": "classpath:/examples/tutorials/fm/03_increasinglydampedoscillator.kyt",
+      "proves": true
     },
     {
       "name": "Formal Methods Tutorial Example 5",
@@ -39,7 +43,8 @@
       "title": "2-dimensional car",
       "link": "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=130",
       "model": "classpath:/examples/tutorials/fm/04_car.kyx",
-      "tactic": "classpath:/examples/tutorials/fm/04_car.kyt"
+      "tactic": "classpath:/examples/tutorials/fm/04_car.kyt",
+      "proves": true
     }
   ]
 }

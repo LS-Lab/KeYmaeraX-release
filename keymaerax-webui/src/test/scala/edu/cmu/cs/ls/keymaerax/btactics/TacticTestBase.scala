@@ -5,7 +5,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExtractTacticFromTrace}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExtractTacticFromTrace, ProofTree}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -32,29 +32,43 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
 
     /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
-    def createProof(modelContent: String): Int = {
-      val modelName = ""
+    def createProof(modelContent: String, modelName: String = ""): Int = {
       db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
-        case Some(modelId) => db.createProofForModel(modelId, "", "", "")
+        case Some(modelId) => db.createProofForModel(modelId, modelName + "Proof", "", "")
         case None => fail("Unable to create temporary model in DB")
       }
     }
 
     /** Prove sequent `s` using tactic  `t`. Record the proof in the database and check that the recorded tactic is
       * the provided tactic. */
-    def proveBy(modelContent: String, t: BelleExpr): ProvableSig = {
+    def proveBy(modelContent: String, t: BelleExpr, modelName: String = ""): ProvableSig = {
       val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
         case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
         case _ => fail("Model content " + modelContent + " cannot be parsed")
       }
-      val proofId = createProof(modelContent)
+      val proofId = createProof(modelContent, modelName)
       val trace = db.getExecutionTrace(proofId)
       val globalProvable = trace.lastProvable
       val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
         globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
       SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
+          provable.conclusion shouldBe s
           extractTactic(proofId) shouldBe t
+          if (provable.isProved) {
+            // check that database thinks so too
+            val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
+            finalTree.theLeaves shouldBe empty
+            finalTree.nodes.foreach(n => {
+              n.endStep shouldBe 'defined
+              val end = n.endStep.get
+              end.output.get.subgoals should have length end.input.subgoals.length - 1
+              for (i <- end.input.subgoals.indices) {
+                if (i < end.branch) end.output.get.subgoals(i) shouldBe end.input.subgoals(i)
+                if (i > end.branch) end.output.get.subgoals(i-1) shouldBe end.input.subgoals(i)
+              }
+            })
+          }
           provable
         case r => fail("Unexpected tactic result " + r)
       }
@@ -136,7 +150,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def proveBy(fml: Formula, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(fml))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _) =>
+        provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+        provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
@@ -161,9 +177,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
+  def listener(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
     val trace = db.getExecutionTrace(proofId)
-    val globalProvable = trace.lastProvable
+    val globalProvable = initGlobal match {
+      case Some(gp) if trace.steps.isEmpty => gp
+      case _ => trace.lastProvable
+    }
     new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
       globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
   }

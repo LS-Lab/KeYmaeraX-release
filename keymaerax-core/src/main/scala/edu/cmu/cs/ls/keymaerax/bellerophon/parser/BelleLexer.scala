@@ -7,7 +7,7 @@ import scala.collection.immutable.List
 
 /**
   * A lexer for the Bellerophon tactics language.
- *
+  *
   * @author Nathan Fulton
   */
 object BelleLexer extends ((String) => List[BelleToken]) {
@@ -47,7 +47,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
   private def findNextToken(input: String, loc: Location): Option[(String, BelleToken, Location)] = {
     /**
       * Helper method for findNextToken
- *
+      *
       * @param cols Number of columns to move cursor.
       * @param terminal terminal to generate a token for.
       * @return Return value of findNextToken
@@ -64,7 +64,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       consumeColumns(terminal.img.length, terminal, location)
 
     input match {
-        //Comments, newlines, and white-space. These are all copied from the KeYmaera X lexer.
+      //Comments, newlines, and white-space. These are all copied from the KeYmaera X lexer.
       case comment(theComment) =>
         val comment = input.substring(0, theComment.length)
         val lastLineCol = comment.lines.toList.last.length //column of last line.
@@ -90,9 +90,12 @@ object BelleLexer extends ((String) => List[BelleToken]) {
         })
 
       //Stuff that could be confused as an identifier.
+      case ON_ALL.startPattern(_*) => consumeTerminalLength(ON_ALL, loc)
       case US_MATCH.startPattern(_*) => consumeTerminalLength(US_MATCH, loc)
       case PARTIAL.startPattern(_*) => consumeTerminalLength(PARTIAL, loc)
       case DONE.startPattern(_*) => consumeTerminalLength(DONE, loc)
+      case LET.startPattern(_*) => consumeTerminalLength(LET, loc)
+      case IN.startPattern(_*) => consumeTerminalLength(IN, loc)
 
       //build-in tactics.
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
@@ -148,7 +151,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
     * Returns the region containing everything between the starting position of the current location
     * location and the indicated offset of from the starting positiong of the current location,
     * inclusive.
- *
+    *
     * @param location Current location
     * @param endColOffset Column offset of the region
     * @return The region spanning from the start of ``location" to the offset from the start of ``location".

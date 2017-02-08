@@ -3,10 +3,20 @@ implyR(1) & (andL('L)*) & loop({`v >= 0 & xm <= x & xr = (xm + S)/2 & 5/4*(x-xr)
   QE & done,
   (andL('L)*) & composeb(1) & choiceb(1) & andR(1) & <(
     composeb(1) & assignb(1) & composeb(1) & assignb(1) & testb(1) & implyR(1) &
-      diffInvariant({`xm <= x`}, 1) &
-      diffInvariant({`5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2`}, 1) & diffWeaken(1) & QE & done,
+      dC({`xm <= x`}, 1) & <(
+        dC({`5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2`}, 1) & <(
+          dW(1) & QE & done,
+          dI(1) & done
+        ),
+        dI(1) & done
+      ),
     testb(1) & implyR(1) &
-      diffInvariant({`xm <= x`}, 1) &
-      diffInvariant({`5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2`}, 1) & diffWeaken(1) & QE & done
+      dC({`xm <= x`}, 1) & <(
+        dC({`5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2`}, 1) & <(
+          dW(1) & QE & done,
+          dI(1) & done
+        ),
+        dI(1) & done
+      )
   )
 )

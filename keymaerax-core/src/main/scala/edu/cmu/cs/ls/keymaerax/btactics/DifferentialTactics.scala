@@ -114,7 +114,7 @@ private object DifferentialTactics {
   }
 
   /** @see [[TactixLibrary.diffInd]] */
-  def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+  def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("dI") {
     require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -124,15 +124,15 @@ private object DifferentialTactics {
         }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
         if (pos.isTopLevel) {
           val t = DI(pos) &
-            (implyR(pos) & andR(pos)) <(
-              if (auto == 'full) close | QE else skip,
+            implyR(pos) & andR(pos) & Idioms.<(
+              if (auto == 'full) (close | QE) & done else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
                 (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE) & done
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
@@ -267,7 +267,7 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
-    "diffCut" byWithInputs (formulas.toList, (pos, sequent) => {
+    "DC" byWithInputs (formulas.toList, (pos, sequent) => {
       formulas.map(ghostDC(_, pos, sequent)).foldRight[BelleExpr](skip)((cut, all) => cut <(all, skip))
     })
 
@@ -347,7 +347,7 @@ private object DifferentialTactics {
   })
 
   /** @see [[TactixLibrary.DG]] */
-  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DGTactic" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
+  def DG(ghost: DifferentialProgram): DependentPositionTactic = "DG" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
@@ -426,7 +426,7 @@ private object DifferentialTactics {
             DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
             existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
             useAt("TODODAbaseaux", auxEquiv, PosInExpr(0::Nil))(pos ++ PosInExpr(1::Nil)) &
-            existsR(pos ++ PosInExpr(1::Nil)) & implyRi(AntePos(sequent.ante.length), pos.checkSucc.top)
+            existsR(pos ++ PosInExpr(1::Nil)) & implyRi()(AntePosition.base0(sequent.ante.length), pos)
           )
     })
 
@@ -486,7 +486,7 @@ private object DifferentialTactics {
   })
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
-  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val diffWeaken: DependentPositionTactic = "dW" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
@@ -497,7 +497,7 @@ private object DifferentialTactics {
         val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
 
         if (consts.nonEmpty) {
-          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi(AntePos(0), SuccPos(0))
+          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi
           val constFml = consts.map(_._1).reduceRight(And)
           diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(consts.size-1) & closeIdWith('Rlast) & done)
         } else {
@@ -509,87 +509,120 @@ private object DifferentialTactics {
   })
 
   /** diffWeaken by DW & G */
-  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val diffWeakenG: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
       cohide(pos.top) & DW(1) & G(1)
   })
 
+  /**
+    * @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @author Nathan Fulton
+    */
+  def ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    val invariantCandidates = try {
+      InvariantGenerator.differentialInvariantGenerator(seq,pos)
+    } catch {
+      case err: Exception =>
+        if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+        List[Formula]().iterator
+    }
 
-  /** @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer */
-  def ODE: DependentPositionTactic = "ODE" by ((pos:Position,seq:Sequent) => {
-    val noCut = "ANON" by ((pos: Position) =>
+    //Tries to prove without any invariant generation or solving.
+    val proveWithoutCuts = "ANON" by ((pos: Position) => {
       ((boxAnd(pos) & andR(pos))*) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-        val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-          case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-          case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-          case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-        }
-        val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
-        val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
-        //@note diffWeaken will already include all cases where V works, without much additional effort.
-        (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-          diffWeaken(pos) & QE else fail) |
-          (if (post match {
+          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
+            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+          }
+
+          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
+
+          val isOpen = post match {
             case  _: Greater => true
             case _: Less => true
             case _ => false
-          })
-          // if openDiffInd does not work for this class of systems, only diffSolve or diffGhost or diffCut
+          }
+
+          //@note diffWeaken will already include all cases where V works, without much additional effort.
+          (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+            diffWeaken(pos) & QE else fail
+          ) |
+          (if (isOpen) {
             openDiffInd(pos) | DGauto(pos)
-          else
-          //@todo check degeneracy for split to > or =
-            diffInd()(pos)
-              | DGauto(pos)
-              | dgZeroMonomial(pos)
-              | dgZeroPolynomial(pos)
-            )
-      })) (pos))
+          }
+          else {
+            diffInd()(pos)       |
+            DGauto(pos)          |
+            dgZeroMonomial(pos)  |
+            dgZeroPolynomial(pos)
+          })
+        })) (pos))
+    })
+
+    //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
+    //Fails if the invariant cannot be established by proveWithoutCuts.
+    val addInvariant = ChooseSome(
+      () => invariantCandidates,
+      (inv: Formula) => {
+        debug(s"[ODE] Trying to cut in invaariant candidate: ${inv}", true) &
+          diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
+      }
     )
 
-    //@todo in fact even ChooseAll would work, just not recursively so.
-    //@todo performance: repeat from an updated version of the same generator until saturation
-    //@todo turn this into repeat
-    ChooseSome(
-      //@todo should memoize the results of the differential invariant generator
-      () => try { InvariantGenerator.differentialInvariantGenerator(seq,pos) } catch {
-        case err: Exception =>
-          if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-          List[Formula]().iterator
-      },
-      (inv:Formula) => if (false)
-        diffInvariant(inv)(pos)
-      else
-        diffCut(inv)(pos) <(
-          // use diffCut
-          skip,
-          // show diffCut, but don't use yet another diffCut
-          noCut(pos) & done
-          )
-    ) & ODE(pos) |
-      noCut(pos) |
-      // if no differential cut succeeded, just skip and go for a direct proof.
-      //@todo could swap diffSolve before above line with noCut once diffSolve quickly detects by dependencies whether it solves
+    //A user-friendly error message displayed when ODE can't find anything useful to do.
+    val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
+    "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
+
+    //If lateSolve is true then diffSolve will be run last, if at all.
+    val lateSolve = pos.isTopLevel //@todo come up wtih better heuristic for determining when to solving.
+
+    //The tactic:
+    //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
+    if(lateSolve)
+      proveWithoutCuts(pos)        |
+      (addInvariant & ODE(pos))    |
       TactixLibrary.diffSolve(pos) |
-      ChooseSome(
-        //@todo should memoize the results of the differential invariant generator
-        () => try { InvariantGenerator.extendedDifferentialInvariantGenerator(seq,pos) } catch {
-          case err: Exception =>
-            if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-            List[Formula]().iterator
-        } ,
-        (inv:Formula) => if (false)
-          diffInvariant(inv)(pos)
-        else
-          diffCut(inv)(pos) <(
-            // use diffCut
-            skip,
-            // show diffCut, but don't use yet another diffCut
-            noCut(pos) & done
-            )
-      ) & ODE(pos) | assertT(seq=>false, "Failed to automatically prove something about this ODE.") //@todo maybe only catch ODE-specific errors thrown here and in InvariantGenerator.scala.
+      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
+      assertT(seq=>false, failureMessage)
+    else
+      (proveWithoutCuts(pos) & done) |
+      (addInvariant & ODE(pos))      |
+      TactixLibrary.diffSolve(pos)   |
+      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
+      assertT(seq=>false, failureMessage)
+  })
+
+  /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
+    * Given a formula of the form [ode]p<=q, produces two new subgoals of the forms [ode]p < q and  [ode]p=q.
+    * @see http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
+    * @author Nathan Fulton */
+  def splitWeakInequality : DependentPositionTactic = "splitWeakInequality" by ((pos: Position, seq: Sequent) => {
+    val postcondition = seq.at(pos)._2 match {
+      case Box(ODESystem(_,_), postcondition) => postcondition
+      case _ => throw new BelleThrowable("splitWeakInequality is only applicable for ODE's with weak inequalities as post-conditions.")
+    }
+    val (lhs, rhs, openSetConstructor) = postcondition match {
+      case GreaterEqual(l,r) => (l,r,Greater)
+      case LessEqual(l,r)    => (l,r,Less)
+      case _                 => throw new BelleThrowable(s"splitWeakInequality Expected a weak inequality in the post condition (<= or >=) but found: ${postcondition}")
+    }
+
+    val caseDistinction = Or(openSetConstructor(lhs,rhs), Equal(lhs,rhs))
+
+    TactixLibrary.cut(caseDistinction) <(
+      TactixLibrary.orL(-(seq.ante.length + 1)) <(
+        TactixLibrary.generalize(openSetConstructor(lhs,rhs))(1) <(TactixLibrary.nil, TactixLibrary.QE),
+        TactixLibrary.generalize(Equal(lhs,rhs))(1) <(TactixLibrary.nil, TactixLibrary.QE)
+      )
+      ,
+      (TactixLibrary.hide(pos.topLevel) & TactixLibrary.QE) | //@todo write a hideNonArithmetic tactic.
+      DebuggingTactics.assert(_=>false, s"splitWeakInequality failed because ${caseDistinction} does not hold initially.")
+    )
   })
 
   def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {

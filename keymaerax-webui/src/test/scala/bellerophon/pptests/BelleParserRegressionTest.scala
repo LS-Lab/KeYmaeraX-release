@@ -26,7 +26,7 @@ class BelleParserRegressionTest extends TacticTestBase {
   }
 
   "DG" should "parse" in {
-    val parseResult = BelleParser("DGTactic({`t`}, {`0`}, {`1`}, 1)")
+    val parseResult = BelleParser("DG({`t`}, {`0`}, {`1`}, 1)")
     val expected = DifferentialTactics.DG("{t'=0*t+1}".asDifferentialProgram)(1)
 
     parseResult shouldBe expected

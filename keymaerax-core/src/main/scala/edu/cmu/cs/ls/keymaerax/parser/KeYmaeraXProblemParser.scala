@@ -4,8 +4,10 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
@@ -151,6 +153,25 @@ object KeYmaeraXDeclarationsParser {
     }
   }
 
+  /** Returns all the quantified variables in an expression. Used in [[typeAnalysis()]] */
+  private def quantifiedVars(expr : Expression) = {
+    val quantifiedVariables : scala.collection.mutable.Set[NamedSymbol] = scala.collection.mutable.Set()
+
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
+        //Add all quantified variables to the quantifiedVariables set.
+        e match {
+          case Forall(xs, _) => xs.foreach(v => quantifiedVariables += v)
+          case Exists(xs, _) => xs.foreach(v => quantifiedVariables += v)
+          case _ =>
+        }
+        Left(None)
+      }
+    }, expr.asInstanceOf[Formula])
+
+    quantifiedVariables
+  }
+
   /**
    * Type analysis of expression according to the given type declarations decls
    * @param decls the type declarations known from the context
@@ -173,6 +194,7 @@ object KeYmaeraXDeclarationsParser {
           }
         }
         else true
+      case x : Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
         val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
           case Some((None,sort,token)) => (sort, token)

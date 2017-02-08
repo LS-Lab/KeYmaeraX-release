@@ -104,7 +104,7 @@ object UIIndex {
           }, post)
           foundPrime
         }
-        val rules = "abstractionb" :: "generalizeb" :: maybeSplit
+        val rules = maybeSplit ++ ("GV" :: "MR" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -114,17 +114,12 @@ object UIIndex {
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual" :: Nil
           case _: Loop => "loop" :: "[*] iterate" :: rules
-          case ODESystem(ode, constraint) if containsPrime => ode match {
-            case _: AtomicODE => "DE differential effect" :: "diffWeaken" :: "diffCut" :: rules
-            case _: DifferentialProduct => "DE differential effect (system)" :: "diffWeaken" :: "diffCut" :: rules
+          case ODESystem(ode, _) if containsPrime => ode match {
+            case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
+            case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
             case _ => rules
           }
-          case ODESystem(ode, constraint) =>
-            val tactics: List[String] = "ODE" :: /*@todo diffSolve once done*/ "autoDiffSolve" :: "diffCut" :: "diffInd" :: "DIRule" ::  Nil
-            if (constraint == True)
-              (tactics :+ "diffGhost" :+ "DA4") ++ rules
-            else
-              (tactics :+ "diffWeaken" :+ "diffGhost" :+ "DA4") ++ rules
+          case ODESystem(_, _) => ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
           case _ => rules
         }
 
@@ -225,10 +220,9 @@ object UIIndex {
   }
 
   def comfortOf(stepName: String): Option[String] = stepName match {
-    case "diffCut" => Some("diffInvariant")
-    case "DIRule" => Some("autoDIRule")
-    case "diffInd" => Some("autoDiffInd")
-    case "diffSolve" => Some("autoDiffSolve")
+    //case "diffCut" => Some("diffInvariant")
+    //case "diffInd" => Some("autoDiffInd")
+    //case "diffSolve" => Some("autoDiffSolve")
     case _ => None
   }
 

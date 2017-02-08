@@ -66,6 +66,20 @@ class SimpleBelleParserTests extends TacticTestBase {
     BellePrettyPrinter(TactixLibrary.loop("1=1".asFormula)(1)) shouldBe "loop({`1=1`}, 1)"
   }
 
+  it should "parse a tactic with optional argument specified" in {
+    val t = TactixLibrary.discreteGhost("5".asTerm, Some("x".asVariable))(1)
+    val s = "discreteGhost({`5`}, {`x`}, 1)"
+    BelleParser(s) shouldBe t
+    BellePrettyPrinter(t) shouldBe s
+  }
+
+  it should "parse a tactic without optional argument specified" in {
+    val t = TactixLibrary.discreteGhost("5".asTerm, None)(1)
+    val s = "discreteGhost({`5`}, 1)"
+    BelleParser(s) shouldBe t
+    BellePrettyPrinter(t) shouldBe s
+  }
+
   //endregion
 
   //region Sequential combinator
@@ -320,11 +334,11 @@ class SimpleBelleParserTests extends TacticTestBase {
               |  QE,
               |  QE,
               |  partial(composeb(1) & choiceb(1) & andR(1) <(
-              |    assignb(1) & diffSolve(1) & nil,
-              |    testb(1) & implyR(1) & diffSolve(1) & nil
+              |    assignb(1) & solve(1) & nil,
+              |    testb(1) & implyR(1) & solve(1) & nil
               |  ))
               |)""".stripMargin
-    BelleParser(t) //should not cause an exception.
+    BelleParser(t) shouldBe a [BelleExpr] //should not cause an exception.
   }
 
   //endregion
@@ -363,6 +377,27 @@ class SimpleBelleParserTests extends TacticTestBase {
   it should "parse in a branch" in {
     val tactic = BelleParser("andR(1) & <(closeId & done, done)")
     tactic shouldBe TactixLibrary.andR(1) & Idioms.<(TactixLibrary.closeId & TactixLibrary.done, TactixLibrary.done)
+  }
+
+  //endregion
+
+  //region let
+
+  "let tactic parser" should "parse a simple example" in {
+    val tactic = BelleParser("let ({`a()=a`}) in (done)")
+    tactic shouldBe Let("a()".asTerm, "a".asTerm, TactixLibrary.done)
+  }
+
+  it should "parse dI" in withMathematica { _ =>
+    val inner =
+      """
+        |DIa(1) ; implyR(1) ; andR(1) ; <(
+        |  QE,
+        |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+        |)
+      """.stripMargin
+    val tactic = BelleParser(s"let ({`a()=a`}) in ($inner)")
+    tactic shouldBe Let("a()".asTerm, "a".asTerm, BelleParser(inner))
   }
 
   //endregion

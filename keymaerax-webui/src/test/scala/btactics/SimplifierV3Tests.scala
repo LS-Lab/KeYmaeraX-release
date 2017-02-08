@@ -51,20 +51,19 @@ class SimplifierV3Tests extends TacticTestBase {
     )
     //todo: A 'not' like mechanism to simplify across multiple succedents?
     val pr = proveBy(Sequent(antes,succs),fullSimpTac())
-    //Note: Currently no automatic arithmetic so the last goal does not get closed
     pr.subgoals should contain only
-      Sequent(
-        IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y-0^2".asFormula,"dhd-(a*t_+dho)=0".asFormula),
-        IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"dhd-(a*t_+dho)=-(0)".asFormula)
-      )
-
-    //If ground arithmetic simplification is desired, it can be mixed in
-    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(taxs=composeIndex(arithGroundIndex,defaultTaxs)))
-    pr2.subgoals should contain only
       Sequent(
         IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y".asFormula,"dhd-(a*t_+dho)=0".asFormula),
         IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"true".asFormula)
       )
+
+    //If ground arithmetic simplification is desired, it can be mixed in
+//    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(taxs=composeIndex(arithGroundIndex,defaultTaxs)))
+//    pr2.subgoals should contain only
+//      Sequent(
+//        IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y".asFormula,"dhd-(a*t_+dho)=0".asFormula),
+//        IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"true".asFormula)
+//      )
   }
 
   "SimplifierV3" should "search for close heuristics" in withMathematica { qeTool =>
@@ -134,7 +133,7 @@ class SimplifierV3Tests extends TacticTestBase {
     //The following rewrite works badly with the first simplifier (because of a bad unification)
     //In general, a rewrite with repeated symbols should probably be checked externally using this mechanism to be safe
     val rw = proveBy("F_() - F_() = 0".asFormula, TactixLibrary.QE)
-    val minus = ( (t:Term) =>
+    val minus = ( (t:Term,ctx:context) =>
       t match {
         case Minus(l, r) if l == r => List(rw)
         case _ => List()
@@ -151,7 +150,7 @@ class SimplifierV3Tests extends TacticTestBase {
     val minusSimp1 = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
     val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
 
-    val minus = ( (t:Term) =>
+    val minus = ( (t:Term,ctx:context) =>
       t match {
         case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
         case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
@@ -209,5 +208,48 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x=v_0*t -> x>=0".asFormula
   }
 
+  it should "simplify in multi-arg formula and term positions with arbitrary nesting" in withMathematica { qeTool =>
+    val fml = "P( f(x+0,y,(0*z+0,a+0),b-0,c), k,(f(x+0,y,0*z+0,(a+0,b-0,c)),f(x+0,(y,0*z+0),a+0,(b-0,c))), (a,f(x+0,(y,0*z+0,a+0,b-0),c)))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac()
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    result.subgoals.head.succ should contain only "P((f((x,(y,((0,a),(b,c))))),(k,((f((x,(y,(0,(a,(b,c)))))),f((x,((y,0),(a,(b,c)))))),(a,f((x,((y,(0,(a,b))),c))))))))".asFormula
 
+  }
+
+  it should "support equality rewriting" in withMathematica { qeTool =>
+    //Note: this is probably pretty costly, so off by default
+    val fml = "\\forall t (t = 0 -> (\\forall s (1 = s -> \\forall r (r = 5+s -> \\forall q (t+r = q -> r*s+t+a+b+t*r+q<=5+q+r+t+s+r+a+b)))))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val result = proveBy(Sequent(ctxt,IndexedSeq(fml)), tactic(1))
+    //todo: might benefit from AC rewriting
+    result.subgoals.head.succ should contain only "\\forall t (t=0->\\forall s (1=s->\\forall r (r=6->\\forall q (6=q->6+a+b+6<=24+a+b))))".asFormula
+  }
+
+  it should "handle weird conjunct orders" in withMathematica { qeTool =>
+    val fml = "A() -> B() & (C() & D()) & (P() & Q()) & R() -> (R() & Q()) & P() & (C() & D()) & E() ".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(taxs = composeIndex(groundEqualityIndex, defaultTaxs))
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.head.succ should contain only "A()->B()&(C()&D())&(P()&Q())&R()->E()".asFormula
+  }
+
+  it should "handle duplicate conjuncts" in withMathematica { qeTool =>
+    val fml = " (A() & B()) & C() -> (A() & B()) & C() -> (A() & B()) & C() -> B() & C() & A() & A() & D()".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(taxs = composeIndex(groundEqualityIndex, defaultTaxs))
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.head.succ should contain only "(A()&B())&C()->D()".asFormula
+  }
+
+  it should "skip over decimal arithmetic" in withMathematica { qeTool =>
+    // Note: it fails to skip things like 4 * 1.0
+    // However, it should only give integer outputs
+    val fml = "4*1.0-4.0/3 = -3.0/2 + 1/6 + (2 + 3) * 4.0".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac()
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    println(result)
+  }
 }

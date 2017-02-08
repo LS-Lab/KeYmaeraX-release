@@ -454,8 +454,7 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic(name: String, inputs: List[Expression]) extends BelleExpr {
-  //@todo extends NamedBelleExpr
+abstract case class InputTactic(name: String, inputs: List[Expression]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String =
     s"$name(${inputs.map(input => s"{`${input.prettyString}`}").mkString(",")})"
@@ -529,7 +528,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
           }
         } else if (cause == null) {
-          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}")
+          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString} in ${provable.subgoals(goal).prettyString}")
         } else throw cause
       case _ => pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
     }
@@ -557,7 +556,8 @@ case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override d
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
 /**
-  * OnAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
+  * OnAll(e)(BelleProvable(p)) == <(e, ..., e) does the same tactic on all branches
+  * where e occurs the appropriate number of times, which is `p.subgoals.length` times.
   *
   * @todo eisegesis
   */

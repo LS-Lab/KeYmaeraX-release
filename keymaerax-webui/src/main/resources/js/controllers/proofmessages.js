@@ -4,6 +4,7 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
   $scope.proofMessage = {
     text: "",
     details: "",
+    taskStepwiseRequest: undefined,
     isVisible: false
   }
 
@@ -15,6 +16,7 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
   $rootScope.$on('proof.message', function(event, message) {
     $scope.proofMessage.text = message.textStatus;
     $scope.proofMessage.details = message.errorThrown;
+    $scope.proofMessage.taskStepwiseRequest = message.taskStepwiseRequest;
     $scope.proofMessage.isVisible = (message.textStatus !== "");
   });
 

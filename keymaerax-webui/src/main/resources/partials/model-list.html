@@ -29,14 +29,14 @@
             <div class="col-md-2"><b>Models</b></div>
             <div class="col-md-10">
                 <span class="pull-right" id="modelarchiving"
-                      data-intro="Export all models with/without proofs to .kya files."
+                      data-intro="<strong>Export</strong> all models with/without proofs into a single archive (.kya, includes all models, optionally with all their partial or finished proofs)."
                       data-position="left">
                     <a class="btn btn-default"
                        ng-click="downloadAllModels()"
-                       uib-tooltip="Export all models"><i class="fa fa-download"></i> Export all</a>
+                       uib-tooltip="Export all models into a single archive (.kya)"><i class="fa fa-archive"></i> Export all</a>
                     <a class="btn btn-default"
                        ng-click="downloadAllProofs()"
-                       uib-tooltip="Export all models with their proofs"><i class="fa fa-archive"></i> Export all (with proofs)</a>
+                       uib-tooltip="Export all models with their proofs into a single archive (.kya)"><i class="fa fa-archive"></i> Export all (with proofs)</a>
                 </span>
             </div>
         </div>
@@ -44,11 +44,11 @@
     <div class="panel-body">
         <div class="row">
             <div class="col-md-6" id="modelupload"
-                 data-intro="Upload .kyx model files or .kya archive files here."
+                 data-intro="Load new .kyx model files or .kya archive files here."
                  data-position="bottom">
                 <!-- TODO https://github.com/blueimp/jQuery-File-Upload/wiki/Basic-plugin -->
                 <form ng-controller="ModelUploadCtrl">
-                    <label for="keyFile">Upload</label>
+                    <label for="keyFile">Load</label>
                     <div class="fileinput fileinput-new" data-provides="fileinput">
                         <div class="input-group">
                         <div class="form-control" data-trigger="fileinput">
@@ -62,7 +62,7 @@
                         </span>
                         <a class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
                         <a class="input-group-addon btn btn-default fileinput-exists"
-                           ng-if="!isKyxFile()" ng-click="addModel()" ng-cloak>Upload</a>
+                           ng-if="isKyaFile()" ng-click="addModel()" ng-cloak>Upload</a>
                         </div>
                         <div class="fileinput-exists" ng-if="isKyxFile()" ng-cloak>
                             <label for="modelName">Model name</label>
@@ -77,6 +77,7 @@
             </div>
             <div class="col-md-2"></div>
             <div class="col-md-4" id="modeltutorialimport"
+                 ng-if="examples.length > 0" ng-cloak
                  data-intro="Click 'Import' to add tutorials to your models overview."
                  data-position="bottom">
                 <div style="margin-bottom: 10px"> <!-- So that carousel doesn't overlap overlay help -->
@@ -128,23 +129,23 @@
             </td>
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td ng-model="model" id="modelactions"
-                data-intro="Start new proofs, generate monitor conditions, and synthesize test cases here."
-                data-position="left" ng-if="$first">
+                data-intro="Start new proofs, generate monitor conditions, synthesize test cases, and download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
+                data-position="bottom" ng-if="$first">
                 <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
                 <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+                <a class="btn btn-default" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
+                <a class="btn btn-default" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
+                <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a>
+                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
             <td ng-model="model" ng-if="!$first">
                 <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
                 <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
-                <a class="btn btn-default" ng-controller="ModelListCtrl" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+                <a class="btn btn-default" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
+                <a class="btn btn-default" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
+                <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
+                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>

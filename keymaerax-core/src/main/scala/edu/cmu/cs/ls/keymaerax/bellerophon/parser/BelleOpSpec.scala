@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.core.Expression
+
 import scala.collection.immutable._
 
 /**
@@ -22,6 +24,7 @@ case class BelleBranchingOpSpec(terminal: BelleTerminal, precedence: Int, leftAs
 case class BelleSaturatingOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, BelleType) => BelleExpr) extends BelleOpSpec
 case class BelleRepeatOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, Int, BelleType) => BelleExpr) extends BelleOpSpec
 case class BelleUSubstOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Seq[(BelleType, RenUSubst => BelleExpr)]) => BelleExpr) extends BelleOpSpec
+case class BelleLetOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Expression, Expression, BelleExpr) => BelleExpr) extends BelleOpSpec
 
 case class BelleUnitOpSpec[T,S](terminal: BelleTerminal, precedence:Int, leftAssoc: Boolean, constructor: T => S) extends BelleOpSpec
 
@@ -40,6 +43,7 @@ object BelleOpSpec {
   val partial  = BelleUnaryOpSpec(PARTIAL, 300, false)
   val onall    = BelleUnaryOpSpec(ON_ALL, 100, false)
   val usubst   = BelleUSubstOpSpec(US_MATCH, 100, false, USubstPatternTactic.apply)
+  val let      = BelleLetOpSpec(LET, 100, false, Let.apply)
 
   def op(e : BelleExpr): BelleOpSpec = e match {
     case e:SeqTactic      => seq
@@ -53,6 +57,7 @@ object BelleOpSpec {
     case e:BuiltInTactic       => base
     case e:AppliedPositionTactic => base
     case e:AppliedDependentPositionTactic => base
+    case _: Let => let
     case _ => base
   }
 }

@@ -1,0 +1,26 @@
+/**
+ * 12: Quantum the Acrophobic Bouncing Ball
+ * As in chapter 7 with the proof from chapter 12
+ */
+Functions.        /* function symbols cannot change their value */
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+End.
+
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* height */
+  R v.            /* velocity */
+End.
+
+Problem.
+  x>=0 & x=H
+  & v=0 & g>0 & 1=c&c>=0
+ ->
+  [
+    {
+      {x'=v,v'=-g&x>=0}
+      {?x=0; v:=-c*v;  ++  ?x!=0;}
+    }*@invariant(2*g*x=2*g*H-v^2 & x>=0)
+  ] (x>=0 & x<=H)
+End.

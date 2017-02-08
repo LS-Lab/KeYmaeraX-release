@@ -1,0 +1,13 @@
+{
+  "minVersion": "4.3.2",
+  "autoUpgrades": [
+    {
+      "upgradeFrom": "4.2.2",
+      "scripts": [
+        {
+          "url": "/sql/upgrade422to432.sql"
+        }
+      ]
+    }
+  ]
+}

@@ -6,13 +6,13 @@ implyR(1) & (andL('L)*) & loop({`r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 
       diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`t>=0`}, 1) & diffInvariant({`v=old(v)-b*t`}, 1) &
       diffInvariant({`-t*(v+b/2*t)<=x-old(x) & x-old(x)<=t*(v+b/2*t)`}, 1) &
       diffInvariant({`-t*(v+b/2*t)<=y-old(y) & y-old(y)<=t*(v+b/2*t)`}, 1) &
-      (andL('L)*) & diffWeaken(1) & smartQE & done,
+      (andL('L)*) & dW(1) & smartQE & done,
     composeb(1) & assignb(1) & composeb(1) & randomb(1) & allR(1) & composeb(1) & randomb(1) & allR(1) &
       composeb(1) & testb(1) & implyR(1) & composeb(1) & randomb(1) & allR(1) & composeb(1) & randomb(1) & allR(1) &
       testb(1) & implyR(1) & composeb(1) & assignb(1) &
       diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`t>=0`}, 1) & diffInvariant({`v=old(v)+A*t`}, 1) &
       diffInvariant({`-t*(v-A/2*t)<=x-old(x) & x-old(x)<=t*(v-A/2*t)`}, 1) &
       diffInvariant({`-t*(v-A/2*t)<=y-old(y) & y-old(y)<=t*(v-A/2*t)`}, 1) &
-      (andL('L)*) & diffWeaken(1)
+      (andL('L)*) & dW(1) /* goal remains open */
   )
 )

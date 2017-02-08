@@ -7,7 +7,8 @@
       "title": "Uncontrolled continuous car",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=7",
       "model": "classpath:/examples/tutorials/sttt/example1.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example1.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example1.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 2",
@@ -15,7 +16,8 @@
       "title": "Simple Hybrid Car",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=8",
       "model": "classpath:/examples/tutorials/sttt/example2.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example2.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example2.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 3a",
@@ -23,7 +25,8 @@
       "title": "Event-triggered car control",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=10",
       "model": "classpath:/examples/tutorials/sttt/example3a.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example3a.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example3a.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 3b",
@@ -31,7 +34,8 @@
       "title": "Incomplete event-triggered car control",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=11",
       "model": "classpath:/examples/tutorials/sttt/example3a.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example3a.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example3a.kyt",
+      "proves": false
     },
     {
       "name": "STTT Tutorial Example 4a",
@@ -39,7 +43,8 @@
       "title": "Pitfalls in event-triggered car control: safety proof for correct controller",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12",
       "model": "classpath:/examples/tutorials/sttt/example4a.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example4a.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example4a.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 4b",
@@ -47,7 +52,8 @@
       "title": "Pitfalls in event-triggered car control: vacuous proof for faulty controller",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12",
       "model": "classpath:/examples/tutorials/sttt/example4b.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example4b.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example4b.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 4c",
@@ -55,7 +61,8 @@
       "title": "Pitfalls in event-triggered car control: correct modeling idiom",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12",
       "model": "classpath:/examples/tutorials/sttt/example4c.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example4c.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example4c.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 5",
@@ -63,7 +70,8 @@
       "title": "Time-triggered car control",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=13",
       "model": "classpath:/examples/tutorials/sttt/example5.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example5.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example5.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 6",
@@ -71,7 +79,8 @@
       "title": "Non-deterministic acceleration",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=14",
       "model": "classpath:/examples/tutorials/sttt/example6.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example6.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example6.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 7",
@@ -79,7 +88,8 @@
       "title": "Non-deterministic approximation of braking",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=15",
       "model": "classpath:/examples/tutorials/sttt/example7.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example7.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example7.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 9a",
@@ -87,7 +97,8 @@
       "title": "PD controller Lyapunov function",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=17",
       "model": "classpath:/examples/tutorials/sttt/example9a.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example9a.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example9a.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 9b",
@@ -95,7 +106,8 @@
       "title": "PD controlled car",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=18",
       "model": "classpath:/examples/tutorials/sttt/example9b.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example9b.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example9b.kyt",
+      "proves": true
     },
     {
       "name": "STTT Tutorial Example 10",
@@ -103,7 +115,8 @@
       "title": "Steering car",
       "link": "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=20",
       "model": "classpath:/examples/tutorials/sttt/example10.kyx",
-      "tactic": "classpath:/examples/tutorials/sttt/example10.kyt"
+      "tactic": "classpath:/examples/tutorials/sttt/example10.kyt",
+      "proves": true
     }
 
   ]

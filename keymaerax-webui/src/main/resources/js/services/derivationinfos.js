@@ -37,9 +37,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
         return info.reduceBranching ? info.comfortDerivation : info.standardDerivation;
       }
       info.reduceBranching = reduceBranchingByDefault && info.comfortDerivation !== undefined;
-      info.isOpen = (info.selectedDerivation().derivation.input !== undefined &&
-        info.selectedDerivation().derivation.input !== null &&
-        info.selectedDerivation().derivation.input.length > 0);
+      info.isOpen = false;
       return info;
     },
 

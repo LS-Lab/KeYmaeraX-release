@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.tools.TestSynthesis
+import edu.cmu.cs.ls.keymaerax.tools.{TestSynthesis, ToolException}
 import testHelper.ParserFactory._
 
 import scala.language.postfixOps
@@ -136,7 +136,7 @@ class Etcs extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & SimplifierV2.simpTac(1))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&(((SBpost()=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v)&zpost()=z)&tpost()=0)&apost()=-b|m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&(((SBpost()=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v)&zpost()=z)&tpost()=0)&apost()=A".asFormula
+    foResult.subgoals.head.succ should contain only "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&SBpost()=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v&zpost()=z&tpost()=0&apost()=-b|m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&SBpost()=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v&zpost()=z&tpost()=0&apost()=A".asFormula
   }
 
   it should "synthesize simplified ctrl monitor from essentials" in withMathematica { tool =>
@@ -148,8 +148,7 @@ class Etcs extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & SimplifierV2.simpTac(1))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only ("m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=-b|" +
-      "m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=A").asFormula
+    foResult.subgoals.head.succ should contain only "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&vpost()=v&zpost()=z&tpost()=0&apost()=-b|m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&vpost()=v&zpost()=z&tpost()=0&apost()=A".asFormula
   }
 
   it should "synthesize a ctrl monitor from safety lemma" in withMathematica { tool =>
@@ -163,7 +162,7 @@ class Etcs extends TacticTestBase {
       ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & SimplifierV2.simpTac(1))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&((((((SBpost()=SB&vpost()=v)&empost()=em)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)&apost()=a|(((((((((vdespost()=vdes&SBpost()=SB)&vpost()=v)&empost()=1)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&(((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)".asFormula
+    foResult.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&SBpost()=SB&vpost()=v&empost()=em&dopost()=d&zpost()=z&tpost()=t&mopost()=m&apost()=a|vdespost()=vdes&SBpost()=SB&vpost()=v&empost()=1&dopost()=do&zpost()=z&tpost()=t&mopost()=mo&mpost()=m&dpost()=d&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d)".asFormula
   }
 
   it should "synthesize a simplified ctrl monitor from safety lemma" in withMathematica { tool =>
@@ -179,7 +178,7 @@ class Etcs extends TacticTestBase {
 
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&(((((vpost()=v&empost()=em)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)&apost()=a|((((((((vdespost()=vdes&vpost()=v)&empost()=1)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&(((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&(((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)".asFormula
+    foResult.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&vpost()=v&empost()=em&dopost()=d&zpost()=z&tpost()=t&mopost()=m&apost()=a|vdespost()=vdes&vpost()=v&empost()=1&dopost()=do&zpost()=z&tpost()=t&mopost()=mo&mpost()=m&dpost()=d&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&vdespost()=vdes&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&vdespost()=vdes&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&vdespost()=vdes&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d&apost()=-b|(m-z>(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&em!=1)&(v>=0&0<=ep)&vdespost()=vdes&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d)".asFormula
   }
 
   it should "synthesize a model monitor from essentials" in withMathematica { tool =>
@@ -221,6 +220,52 @@ class Etcs extends TacticTestBase {
     metric shouldBe "min((max((m+-z-(v^2/(2*b)+(A/b+1)*(A/2*(ep*ep)+ep*v)),min((max((max((max((max((ep,0-ep)),max((0-tpost(),tpost())))),max((apost()+b,0-(apost()+b))))),min((max((max((max((v,0-v)),max((vpost(),0-vpost())))),max((zpost()-z,z-zpost())))),max((max((max((vpost()-v,v-vpost())),max((zpost()-z,z-zpost())))),0-v)))))),max((max((0-ep,max((apost()+b,0-(apost()+b))))),min((max((max((max((max((v-(b*tpost()+vpost()),b*tpost()+vpost()-v)),max((b*(-1*tpost()*(-1*tpost()))+2*(-1*tpost()*v+-1*z+zpost()),0-(b*(-1*tpost()*(-1*tpost()))+2*(-1*tpost()*v+-1*z+zpost())))))),0-v)),min((min((max((max((ep-tpost(),tpost()-ep)),b-ep^-1*v)),max((0-tpost(),tpost())))),max((max((tpost()-ep,0-tpost())),b*tpost()-v)))))),max((max((max((max((0-tpost(),tpost())),max((v,0-v)))),max((vpost(),0-vpost())))),max((2*zpost()-2*z,2*z-2*zpost())))))))))))),max((v^2/(2*b)+(A/b+1)*(A/2*(ep*ep)+ep*v)-(m+-z),min((max((max((max((ep,0-ep)),max((0-tpost(),tpost())))),min((max((max((max((A,0-A)),max((apost(),0-apost())))),min((max((max((max((v,0-v)),max((vpost(),0-vpost())))),max((z-zpost(),zpost()-z)))),max((max((max((v-vpost(),vpost()-v)),max((z-zpost(),zpost()-z)))),0-v)))))),max((max((max((A-apost(),apost()-A)),0-A)),min((max((max((max((v,0-v)),max((vpost(),0-vpost())))),max((zpost()-z,z-zpost())))),max((max((max((v-vpost(),vpost()-v)),max((zpost()-z,z-zpost())))),0-v)))))))))),max((0-ep,min((max((max((max((max((A,0-A)),max((apost(),0-apost())))),min((max((max((max((v,0-v)),max((vpost(),0-vpost())))),max((z-zpost(),zpost()-z)))),max((max((max((v-vpost(),vpost()-v)),max((zpost()-(tpost()*v+z),tpost()*v+z-zpost())))),0-v)))))),min((min((max((ep-tpost(),tpost()-ep)),max((0-tpost(),tpost())))),max((0-tpost(),tpost()-ep)))))),max((max((max((A-apost(),apost()-A)),0-A)),min((max((min((max((max((max((v,0-v)),max((vpost()-A*tpost(),A*tpost()-vpost())))),max((zpost()-(1/2*A*(-1*tpost()*(-1*tpost()))+z),1/2*A*(-1*tpost()*(-1*tpost()))+z-zpost())))),max((max((max((vpost()-(A*tpost()+v),A*tpost()+v-vpost())),max((zpost()-(1/2*A*(-1*tpost()*(-1*tpost()))+tpost()*v+z),1/2*A*(-1*tpost()*(-1*tpost()))+tpost()*v+z-zpost())))),0-v)))),min((max((ep-tpost(),tpost()-ep)),max((0-tpost(),tpost()-ep)))))),max((max((0-tpost(),tpost())),min((max((max((max((v,0-v)),max((vpost(),0-vpost())))),max((zpost()-z,z-zpost())))),max((max((max((vpost()-v,v-vpost())),max((zpost()-z,z-zpost())))),0-v)))))))))))))))))))) < 0".asFormula
   }
 
+  "ETCS test case synthesis" should "derive controller tests from essentials" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, _) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("SB"), Variable("v"),
+      Variable("z"), Variable("t"), Variable("a"))
+    val fml = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      //@note do not convert rationals into numbers
+      SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1)).subgoals.head.succ.head
+
+    val ts = new TestSynthesis(tool)
+    // search for sunshine test case values (initial+expected)
+    val testConfig = ts.synthesizeTestConfig(fml, 2, Some(20))
+    testConfig should have size 2
+    testConfig.foreach(_.keys.map({case v: Variable => v case FuncOf(fn, _) => fn})
+      should contain theSameElementsAs StaticSemantics.symbols(fml))
+  }
+
+  it should "derive model tests from essentials" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-explicitode.kyx")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val vars = StaticSemantics.boundVars(model).symbols.filter(_.isInstanceOf[BaseVariable]).toList
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, vars:_*)
+    val fml = proveBy(modelplexInput,
+      ModelPlex.modelMonitorByChase(1) &
+      SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
+      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
+    ).subgoals.head.succ.head
+
+    val ts = new TestSynthesis(tool)
+    // search for sunshine test case values (initial+expected)
+    val testConfig = ts.synthesizeTestConfig(fml, 1, Some(20))
+    testConfig should have size 1
+    testConfig.foreach(_.keys.map({case v: Variable => v case FuncOf(fn, _) => fn})
+      should contain theSameElementsAs StaticSemantics.symbols(fml))
+
+    val assumptionsCond = assumptions.reduceOption(And).getOrElse(True)
+    val metric = ModelPlex.toMetric(And(assumptionsCond, fml))
+    val synth = new TestSynthesis(tool)
+    // fml divides by tpost() and by ep
+    if (testConfig.head("tpost()".asTerm) == "0".asTerm || testConfig.head("ep".asTerm) == "0".asTerm) {
+      a[ToolException] should be thrownBy synth.synthesizeSafetyMarginCheck(metric, testConfig.head)
+    } else {
+      synth.synthesizeSafetyMarginCheck(metric, testConfig.head) shouldBe a [Number]
+    }
+  }
+
   "ETCS code generation" should "synthesize C code from essentials ctrl monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -254,7 +299,7 @@ class Etcs extends TacticTestBase {
       |
       |/* monitor */
       |bool monitor () {
-      |  return ((((m()) - (z()))<=(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&((((v())>=((0)))&&(((0))<=(ep())))&&((((((SBpost())==(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&((vpost())==(v())))&&((zpost())==(z())))&&((tpost())==((0))))&&((apost())==(-(b()))))))||((((m()) - (z()))>=(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&((((v())>=((0)))&&(((0))<=(ep())))&&((((((SBpost())==(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&((vpost())==(v())))&&((zpost())==(z())))&&((tpost())==((0))))&&((apost())==(A())))));
+      |  return ((((m()) - (z()))<=(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&((((v())>=((0)))&&(((0))<=(ep())))&&(((SBpost())==(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&(((vpost())==(v()))&&(((zpost())==(z()))&&(((tpost())==((0)))&&((apost())==(-(b())))))))))||((((m()) - (z()))>=(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&((((v())>=((0)))&&(((0))<=(ep())))&&(((SBpost())==(((((v())*(v())))/(((2))*(b()))) + ((((A())/(b())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*(v()))))))&&(((vpost())==(v()))&&(((zpost())==(z()))&&(((tpost())==((0)))&&((apost())==(A()))))))));
       |}
       |
       |""".stripMargin) (after being whiteSpaceRemoved)

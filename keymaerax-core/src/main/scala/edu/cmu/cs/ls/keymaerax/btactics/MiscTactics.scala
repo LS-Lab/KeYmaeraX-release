@@ -247,7 +247,7 @@ object Idioms {
   }
 
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
-  def must(t: BelleExpr): BelleExpr = new DependentTactic("must") {
+  def must(t: BelleExpr): BelleExpr = new DependentTactic("ANON") {
     override def computeExpr(before: ProvableSig): BelleExpr = t & new BuiltInTactic(name) {
       override def result(after: ProvableSig): ProvableSig = {
         if (before == after) throw new BelleThrowable("Tactic " + t + " did not result in mandatory change")

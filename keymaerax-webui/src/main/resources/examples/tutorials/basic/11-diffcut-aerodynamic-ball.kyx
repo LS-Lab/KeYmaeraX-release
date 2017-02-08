@@ -1,0 +1,25 @@
+/**
+ * 11: Aerodynamic Acrophobic Bouncing Ball
+ */
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* height of ball */
+  R v.            /* velocity of ball */
+End.
+
+Functions.        /* function symbols cannot change their value */
+  R H.            /* initial height of ball */
+  R g.            /* gravitational constant */
+  R c.            /* elastic damping factor for bounce on the floor (x=0) */
+  R r.            /* aerodynamic damping factor in the air / air resistance */
+End.
+
+Problem.
+  x<=H & v=0 & x>=0 & (g>0 & 1>=c&c>=0 & r>=0)
+ ->
+  [
+    {
+      {?x=0; v:=-c*v;  ++  ?x!=0;}
+      {{x'=v,v'=-g-r*v^2&x>=0&v>=0} ++ {x'=v,v'=-g+r*v^2&x>=0&v<=0}}
+    }*@invariant(2*g*x<=2*g*H-v^2&x>=0)
+  ] (0<=x&x<=H)
+End.

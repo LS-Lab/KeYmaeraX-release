@@ -53,7 +53,7 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.abstractionb]] */
-  def abstractionb: DependentPositionTactic = new DependentPositionTactic("abstractionb") {
+  def abstractionb: DependentPositionTactic = new DependentPositionTactic("GV") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(!pos.isAnte, "Abstraction only in succedent")
@@ -193,7 +193,7 @@ private object DLBySubst {
    * @todo same for diamonds by the dual of K
    */
   def generalize(c: Formula): DependentPositionTactic =
-    "generalizeb" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    "MR" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
       case (ctx, Box(a, _)) =>
         cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
           /* use */ /*label(BranchLabels.genUse)*/ ident,
@@ -285,7 +285,6 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.discreteGhost()]] */
   def discreteGhost(t: Term, ghost: Option[Variable]): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
-      //@todo figure out how to serialize None when adding to AxiomInfo
       ghost match { case Some(g) => List(t, g) case _ => List(t) }, (pos: Position, seq: Sequent) => {
     require(ghost match { case Some(g) => g != t case None => true }, "Expected ghost different from t, use stutter instead")
     seq.sub(pos) match {
@@ -322,7 +321,7 @@ private object DLBySubst {
    * @param f The right-hand side term of the assignment chosen as a witness for the existential quantifier.
    * @return The tactic.
    */
-  def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def assignbExists(f: Term): DependentPositionTactic = "assignbExistsRule" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>

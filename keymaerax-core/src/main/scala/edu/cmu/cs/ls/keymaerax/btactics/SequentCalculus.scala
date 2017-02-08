@@ -98,8 +98,8 @@ trait SequentCalculus {
     *   G, a, G' |- D, b, D'
     * }}}
     */
-  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0),keep: Boolean = false): DependentTactic = PropositionalTactics.implyRi(antePos, succPos, keep)
-  val implyRi: DependentTactic = implyRi()
+  def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = PropositionalTactics.implyRi(keep)
+  val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   val equivL  : BuiltInLeftTactic = "equivL" by { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
@@ -108,17 +108,11 @@ trait SequentCalculus {
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
   def cut(cut : Formula)      : InputTactic         = ProofRuleTactics.cut(cut)
   /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
-  def cutR(cut : Formula): DependentPositionWithAppliedInputTactic =  "cutR" byWithInput(cut, (pos: Position, seq: Sequent) => {
-    ProofRuleTactics.cutR(cut)(pos.checkSucc.top)
-  })
+  def cutR(cut : Formula): DependentPositionWithAppliedInputTactic =  ProofRuleTactics.cutR(cut)
   /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]) */
-  def cutL(cut : Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(cut, (pos: Position, seq: Sequent) => {
-    ProofRuleTactics.cutL(cut)(pos.checkAnte.top)
-  })
+  def cutL(cut : Formula): DependentPositionWithAppliedInputTactic = ProofRuleTactics.cutL(cut)
   /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]] or [[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
-  def cutLR(cut : Formula): DependentPositionWithAppliedInputTactic = "cutLR" byWithInput(cut, (pos: Position, seq: Sequent) => {
-    ProofRuleTactics.cutLR(cut)(pos)
-  })
+  def cutLR(cut : Formula): DependentPositionWithAppliedInputTactic = ProofRuleTactics.cutLR(cut)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // First-order tactics

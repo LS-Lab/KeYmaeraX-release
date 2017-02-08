@@ -166,7 +166,7 @@ class URenameTests extends TacticTestBase {
     a [CoreException] shouldBe thrownBy{URename(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z")))("(x+y)'=x'+y'".asFormula)}
   }
 
-  it should "avoid unsound renaming proofs" taggedAs(AdvocatusTest) in {
+  it should "avoid unsound renaming proofs" taggedAs(AdvocatusTest) in withMathematica { _ =>
 //    val proof1 = Provable.axioms("*' derive product")(USubst(
 //      SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asVariable) ::
 //        SubstitutionPair(UnitFunctional("g",AnyArg,Real), "y".asVariable) :: Nil))

@@ -11,7 +11,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{USubst, _}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
@@ -38,7 +39,7 @@ import scala.language.postfixOps
 @SlowTest
 class AcaxXSafeDelayed extends AcasXBase {
 
-  it should "parse Theorem 2: correctness of implicit safe regions" in {
+  it should "parse Theorem 2: correctness of implicit safe regions" ignore {
     val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_implicit.kyx")).mkString)
   }
@@ -69,7 +70,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     }
   }
 
-  it should "prove delay use case lemma" in withMathematica { tool =>
+  it should "prove delay use case lemma" ignore withMathematica { tool =>
     if (lemmaDB.contains("delay_ucLoLemma"))
       lemmaDB.remove("delay_ucLoLemma")
 
@@ -94,7 +95,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     storeLemma(ucLoLemma, Some("delay_ucLoLemma"))
   }
 
-  it should "prove implicit delay case arithmetic" in withMathematica { tool =>
+  it should "prove implicit delay case arithmetic" ignore withMathematica { tool =>
     if (lemmaDB.contains("delay_implicitArith"))
       lemmaDB.remove("delay_implicitArith")
 
@@ -122,7 +123,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
     val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,implyR(1) & close)
 
-    val minus = ( (t:Term) =>
+    val minus = ( (t:Term,ctx:context) =>
       t match {
         case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
         case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
@@ -465,7 +466,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     storeLemma(pr, Some("delay_implicitArith"))
   }
 
-  it should "prove delay lower bound safe lemma" in withMathematica { tool =>
+  it should "prove delay lower bound safe lemma" ignore withMathematica { tool =>
     if (lemmaDB.contains("delay_safeLoLemma")) lemmaDB.remove("delay_safeLoLemma")
 
     // Formula from print in Theorem 2
@@ -482,7 +483,7 @@ class AcaxXSafeDelayed extends AcasXBase {
     storeLemma(safeLemma, Some("delay_safeLoLemma"))
   }
 
-  it should "prove Theorem 2: correctness of delayed implicit safe regions" in {
+  it should "prove Theorem 2: correctness of delayed implicit safe regions" ignore {
     if (lemmaDB.contains("safe_delay_implicit")) lemmaDB.remove("safe_delay_implicit")
     runLemmaTest("delay_ucLoLemma", "ACAS X safe should prove delay use case lemma")
     runLemmaTest("delay_implicitArith", "ACAS X safe should prove implicit delay case arithmetic")
@@ -530,6 +531,127 @@ class AcaxXSafeDelayed extends AcasXBase {
       storeLemma(safeTheorem, Some("safe_delay_implicit"))
     }
   }
+
+  it should "parse Lemma 2: equivalence of delayed explicit safe regions" in {
+    val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_equivalence.kyx")).mkString)
+    println(safeSeq)
+  }
+
+//Note: incomplete
+//  it should "prove Lemma 2: equivalence of delayed explicit safe regions" in withMathematica { tool =>
+//    //if (lemmaDB.contains("safe_delay_equivalence")) lemmaDB.remove("safe_delay_equivalence")
+//    //val foo = new AcasXSafe().runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
+//
+//    val rewriteEq = proveBy("F_() - G_() = H_() <-> F_() = H_() + G_()".asFormula, QE)
+//    val minusSimp1 = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
+//    val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
+//    val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,implyR(1) & close)
+//
+//    val minus = ( (t:Term,ctx:context) =>
+//      t match {
+//        case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
+//        case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
+//        case _ => List()
+//      }
+//      )
+//
+//    //Common useful rewrites in this tactic (rewriteEq should be applied more judiciously)
+//    val fullSimp = SimplifierV3.fullSimpTac(List(custom1),taxs = composeIndex(minus,defaultTaxs,arithGroundIndex))
+//    val simp = SimplifierV3.simpTac(List(custom1),taxs = composeIndex(minus,defaultTaxs,arithGroundIndex))
+//
+//    val nodelay_cases = lemmaDB.get("safe_equivalence")
+//    val concl = nodelay_cases.get.fact
+//
+//    println("original concl",concl)
+//
+//    val generalized = proveBy(
+//      Forall(List(Variable("r0")),Forall(List(Variable("h0")),
+//        concl.conclusion.succ(0).replaceFree("a".asTerm,"ar".asTerm).
+//          replaceFree("r".asTerm,"r0".asTerm).
+//          replaceFree("h".asTerm,"h0".asTerm))),
+//      (allR('R)*) & byUS(concl) )
+//
+//    val repR = "r-rv*max(0,d)".asTerm
+//    //There is a sign error here somewhere I think..
+//    val repH = "h-(-w*ad/2*max(0,d)^2+dho*max(0,d))".asTerm
+//
+//    //This instantiates the implicit-explicit equivalence from no-delay case with delay
+//    //todo: Surely there's an easier way to replace free variables with terms in a proved sequent??
+//    val insts = proveBy(
+//      concl.conclusion.succ(0).replaceFree("a".asTerm,"ar".asTerm).
+//        replaceFree("r".asTerm,repR).
+//        replaceFree("h".asTerm,repH),
+//      implyR(1) &
+//      cutEZ(generalized.conclusion.succ(0), cohideR(2) & by(generalized)) &
+//      allL(Variable("r0"), repR)('L) &
+//      allL(Variable("h0"), repH)('L) &
+//      implyL(-2)<(close,close))
+//
+//    println(insts)
+//
+//    val s = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_equivalence.kyx")).mkString)
+//
+////    val tactic =
+////      implyR('R) & eAndL & EqualityTactics.abbrv("max(0, w*(dhf - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
+////      cutEZ("maxAbbrv>=0".asFormula,QE) &
+////      Idioms.cases(
+////        (Case("rv=0".asFormula), dT("rv=0 case") & atomicQE(onAll(equivR('R) | andR('R))*, dT("rv=0 QE case")) & done),
+////        (Case("rv>0".asFormula), dT("rv>0 case") & nil & done)
+////      )
+//
+//    val tactic =
+//      implyR('R) & equivR('R) <(
+//        dT("->") &
+//        nil
+////        normalize(Nil, _ => skip, _ => skip) &
+////        EqualityTactics.abbrv("rv*max(0,d)".asTerm, Some(Variable("rdd"))) &
+////        EqualityTactics.abbrv("-w*ad/2*max(0,d)^2+dho*max(0,d)".asTerm, Some(Variable("hdd"))) &
+////        EqualityTactics.abbrv("dho-w*ad*max(0,d)".asTerm, Some(Variable("dhdd"))) &
+////        allL(Variable("rd"), Variable("rdd"))('L) & allL(Variable("hd"), Variable("hdd"))('L) & allL(Variable("dhd"), Variable("dhdd"))('L) &
+////        implyL('L) <(SimplifierV3.simpTac()(3)  & closeT, nil) &
+////        andL(-1)
+//      ,
+//        dT("<-") &
+//        normalize(Nil, _ => skip, _ => skip) &
+//        dT("foo") &
+//        andR(1) <(
+//          dT("new cases"),
+//          dT("old delay cases") &
+//          cutEZ(insts.conclusion.succ(0),cohideR(2) & by(insts)) &
+//          dT("cut") &
+//          exhEq &
+//          fullSimp &
+//          dT("cut") &
+//          PropositionalTactics.instantiatedEquivRewriting(-10,1) &
+//          hideL(-10) &
+//          normalize(Nil, _ => skip, _ => skip) &
+//          dT("after simplification") &
+//          allL(Variable("t"), "t+max(0,d)".asTerm)('L) &
+//          allL(Variable("rt"), "rv*(t+max(0,d))".asTerm)('L) &
+//          orL(-10)
+//          <(
+//              dT("split case1") &
+//              allL("w*ar/2*t^2+dhdd*t".asTerm)(-1) &
+//              allL("-w*ad/2*max((0,d))^2+dho*max((0,d))".asTerm) ('L) & //hd clashes, so use hdd, a random instance
+//              allL("(dho-w*ad*max((0,d))".asTerm) ('L) & //dhd clashes, so use dhdd, a random instance
+//              fullSimp &
+//              dT("after insts") &
+//              nil
+//            ,
+//            dT("split case2")
+//          )&
+//          nil
+//        )
+//      )
+//
+//    val equivalence = proveBy(s, tactic)
+//    //println(equivalence)
+////    equivalence shouldBe 'proved
+////    storeLemma(equivalence, Some("safe_equivalence"))
+//  }
+
 
 
 }

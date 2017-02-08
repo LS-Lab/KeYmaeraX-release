@@ -280,23 +280,23 @@ object SimplifierV2 {
   //Justifications for adding things to the context
   private val andLemma =
   proveBy(
-    "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop)
+    "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop & done)
 
   private val implyLemma =
     proveBy(
-      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop)
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop & done)
 
   private val orLemma =
     proveBy(
-      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop)
+      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop & done)
 
   private val equivLemma =
     proveBy(
-      "((P_() <-> F_()) & (Q_() <-> G_())) ->((P_() <-> Q_()) <-> (F_() <-> G_()))".asFormula,prop)
+      "((P_() <-> F_()) & (Q_() <-> G_())) ->((P_() <-> Q_()) <-> (F_() <-> G_()))".asFormula,prop & done)
 
   private val notLemma =
     proveBy(
-      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop)
+      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop & done)
 
   private val equalLemma =
     proveBy(
@@ -323,7 +323,7 @@ object SimplifierV2 {
       "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE)
 
   private val equivTrans =
-    proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop)
+    proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop & done)
 
   private val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE)
 
@@ -342,11 +342,11 @@ object SimplifierV2 {
       case And(l,r) =>
         val (ctxL,tacL) = addContext(l,ctx)
         val (ctxR,tacR) = addContext(r,ctxL)
-        (ctxR, andL('Llast) & implyRi(AntePos(ctx.length+1)) & tacL & implyR(SuccPos(0)) & tacR)
+        (ctxR, andL('Llast) & implyRi()(AntePos(ctx.length+1), SuccPos(0)) & tacL & implyR(SuccPos(0)) & tacR)
       //Both the de-morganed and originals are added to the context
       case Not(u) =>
         //Apply deMorgan things to Not
-        val id = proveBy(Sequent(IndexedSeq(),IndexedSeq(Equiv(Not(u),Not(u)))),prop)
+        val id = proveBy(Sequent(IndexedSeq(),IndexedSeq(Equiv(Not(u),Not(u)))),prop & done)
         val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
         val nu = extract(cpr).asInstanceOf[Formula]
         //No deMorgan applies, just add to context
@@ -360,11 +360,11 @@ object SimplifierV2 {
           val(ctxU,tacU) = addContext(nu,ctx:+f)
           (ctxU,
             useAt(DerivedAxioms.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('Llast) &
-              implyRi(AntePos(ctx.length)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
+              implyRi()(AntePos(ctx.length), SuccPos(0)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
         }
       case Equal(n:Number,r) =>
         //Add the flipped version of an equality so we always rewrite left-to-right
-        (ctx:+Equal(r,n),implyRi(AntePos(ctx.length)) & useAt(eqSym,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) &
+        (ctx:+Equal(r,n),implyRi()(AntePos(ctx.length), SuccPos(0)) & useAt(eqSym,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) &
           implyR('_))
       case _ => (ctx:+f,ident)
     }
@@ -376,7 +376,7 @@ object SimplifierV2 {
   // (some already are)
   private def propProof(f:String,ff:String):ProvableSig =
   {
-    proveBy(Equiv(f.asFormula,ff.asFormula), prop)
+    proveBy(Equiv(f.asFormula,ff.asFormula), prop & done)
   }
 
   val andT = propProof("F_() & true","F_()")
@@ -770,7 +770,7 @@ object SimplifierV2 {
 
         (nf, proveBy(Sequent(ctx, IndexedSeq(Equiv(q, nf))),
           droppedCtx.map(f => hideL('L, f)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
-            equivR(1) & onAll(instantiate & implyRi(AntePos(remainingCtx.length)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
+            equivR(1) & onAll(instantiate & implyRi()(AntePos(remainingCtx.length), SuccPos(0)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
         val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
@@ -792,8 +792,8 @@ object SimplifierV2 {
         (ff,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,ff))),
           cut(Equiv(f,recf)) <(
             cut(Equiv(recf,ff)) <(
-              implyRi(AntePos(ctx.length+1)) &
-                implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
+              implyRi()(AntePos(ctx.length+1), SuccPos(0)) &
+                implyRi()(AntePos(ctx.length), SuccPos(0)) & cohideR(SuccPos(0)) & byUS(equivTrans),
               hideL('Llast) & hideR(SuccPos(0)) & by(pf)),
             hideR(SuccPos(0))& by(recpr))))
     }
@@ -819,8 +819,8 @@ object SimplifierV2 {
         (closef,proveBy(Sequent(ctx,IndexedSeq(Equiv(f,closef))),
           cut(Equiv(f,normf)) <(
             cut(Equiv(normf,closef)) <(
-              implyRi(AntePos(ctx.length+1)) &
-                implyRi(AntePos(ctx.length)) & cohideR(SuccPos(0)) & byUS(equivTrans),
+              implyRi()(AntePos(ctx.length+1), SuccPos(0)) &
+                implyRi()(AntePos(ctx.length), SuccPos(0)) & cohideR(SuccPos(0)) & byUS(equivTrans),
               hideL('Llast) & hideR(SuccPos(0)) & by(pr)),
             hideR(SuccPos(0))& by(normpr))))
 
@@ -893,7 +893,7 @@ object SimplifierV2 {
           cohideOnlyR(pos) & equivifyR(1) & commuteEquivR(1) &
           positions.foldLeft(ident)(
               (tac: BelleExpr,i:Integer) =>
-                implyRi(AntePos(i),SuccPos(0),true) & tac) & cohideR(1) & implyR(1)*positions.length & by(pr)
+                implyRi(keep=true)(AntePos(i),SuccPos(0)) & tac) & cohideR(1) & implyR(1)*positions.length & by(pr)
           )
       }
     }
@@ -921,7 +921,7 @@ object SimplifierV2 {
     }
   })
 
-  val swapImply = proveBy("(P_() -> Q_() -> R_()) <-> (Q_() -> P_() -> R_())".asFormula,prop)
+  val swapImply = proveBy("(P_() -> Q_() -> R_()) <-> (Q_() -> P_() -> R_())".asFormula,prop & done)
 
   //Same as fullSimpTac, except the changes to the context get thrown out
   //todo: This doesn't work with antepositions
@@ -940,7 +940,7 @@ object SimplifierV2 {
           ident,
           cohideOnlyR(cutPos) &
           cut(ctxAnd) <(
-            implyRi(AntePos(sequent.ante.size),SuccPos(0)) & useAt(swapImply)(1) & cohideR(1) & equivifyR(1) & commute & by(pr)
+            implyRi()(AntePos(sequent.ante.size),SuccPos(0)) & useAt(swapImply)(1) & cohideR(1) & equivifyR(1) & commute & by(pr)
             ,
             hideR(1) & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close))
           )

@@ -239,7 +239,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   // random schematic instantiations
 
   private val schematicAxioms = "<> diamond" :: "[++] choice" :: "[;] compose" :: "[*] iterate" ::
-    "DW" :: "DC differential cut" :: "DE differential effect (system)" :: "DI differential invariance" ::
+    "DW base" :: "DC differential cut" :: "DE differential effect (system)" :: "DI differential invariance" ::
     "DX differential skip" ::
     //", commute" :: //@todo would need to avoid repeated ODEs
     "-' derive neg" :: "+' derive sum" :: "-' derive minus" :: "*' derive product" :: "/' derive quotient" ::

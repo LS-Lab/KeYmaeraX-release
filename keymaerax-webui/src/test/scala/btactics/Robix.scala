@@ -50,7 +50,7 @@ class Robix extends TacticTestBase {
     val tactic = implyR('_) & (andL('_)*) & loop(invariant)('R) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
-      /* induction step */ print("Induction step") & chase(1) & normalize(andR, skip, skip) & printIndexed("After normalize") <(
+      /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch") & di("-B")(1) & dw & prop & onAll(speculativeQE) & print("Braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & onAll(speculativeQE) & print("Stopped branch done"),
       print("Acceleration branch") & hideL('L, "abs(x-xo_0)>v^2/(2*B)|abs(y-yo_0)>v^2/(2*B)".asFormula) &
