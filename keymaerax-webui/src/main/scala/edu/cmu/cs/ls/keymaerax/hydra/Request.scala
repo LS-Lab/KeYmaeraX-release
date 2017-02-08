@@ -33,6 +33,8 @@ import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import scala.io.Source
 import scala.collection.immutable._
 import scala.collection.mutable
+import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
+import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode, SearchNode}
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -171,23 +173,35 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
 
     //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
     val fml = node.sequent.toFormula
-    if (fml.isFOL) {
-      try {
-        ToolProvider.cexTool() match {
-          case Some(cexTool) => findCounterExample(fml, cexTool) match {
-            //@todo return actual sequent, use collapsiblesequentview to display counterexample
-            case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-            case None => new CounterExampleResponse("cex.none") :: Nil
+    try {
+      ToolProvider.cexTool() match {
+        case Some(cexTool) =>
+          if (fml.isFOL) {
+            findCounterExample(fml, cexTool) match {
+              //@todo return actual sequent, use collapsiblesequentview to display counterexample
+              case Some(cex) =>
+                new CounterExampleResponse("cex.found", fml, cex) :: Nil
+              case None => new CounterExampleResponse("cex.none") :: Nil
+            }
+          } else {
+            /* TODO: Case on this instead */
+            val qeTool:QETool = ToolProvider.qeTool().get
+            val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
+            val depth = 10
+            val dfs = new BoundedDFS(depth)
+            dfs(snode) match {
+              case None =>
+                val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
+                val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)
+                new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
+              case Some(cex) =>
+                new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+            }
           }
-          case None => new CounterExampleResponse("cex.notool") :: Nil
-        }
-      } catch {
-        case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+        case None => new CounterExampleResponse("cex.notool") :: Nil
       }
-    } else {
-      val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
-      val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)
-      new CounterExampleResponse("cex.nonfo", (nonFOSucc++nonFOAnte).head) :: Nil
+    } catch {
+      case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
     }
   }
 }

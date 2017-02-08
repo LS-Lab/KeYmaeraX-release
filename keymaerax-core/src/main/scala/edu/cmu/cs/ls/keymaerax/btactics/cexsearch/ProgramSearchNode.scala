@@ -72,20 +72,6 @@ case class ProgramSearchNode (pre: Formula, prog: Program, post: Formula)(implic
           val newPost = post.replaceAll(x, e)
           List(ProgramSearchNode(pre, Test(True), newPost))
         }
-      /* Differential Symbols are no longer a separate case.
-        case Assign(DifferentialSymbol(x), e) =>
-
-        val vars = StaticSemantics.boundVars(post)
-        /* P -> [x := e] Q goes to P & x' = e -> [?true] {x|->x'}Q for fresh x' */
-        if (vars.contains(DifferentialSymbol(x))) {
-          val xPrime = UniqueVariable.make
-          val newPost = URename(x, xPrime)(post)
-          List(ProgramSearchNode(And(pre, Equal(xPrime, e)), Test(True), newPost))
-        } else {
-          /* P -> [x := e] Q goes to P -> [?true] {x |-> e} Q */
-          val newPost = post.replaceAll(DifferentialSymbol(x), e)
-          List(ProgramSearchNode(pre, Test(True), newPost))
-        }*/
       case AssignAny(x) => List(ProgramSearchNode(pre, Test(True), Forall(immutable.Seq(x), post)))
       case Compose(a, b) => List(ProgramSearchNode(pre, a, Box(b, post)))
       case Choice(a, b) => List(ProgramSearchNode(pre, a, post), ProgramSearchNode(pre, b, post))
