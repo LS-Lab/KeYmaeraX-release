@@ -127,38 +127,43 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
-  /** Create a tactic index that hands out loop tactics */
-  private def createTacticIndex(theLoop: AtPosition[_ <: BelleExpr]) = new DefaultTacticIndex {
-    override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
-      if (tactic == theLoop) {
-        //@todo positions? what to expect there?
-        ((_: Sequent, p: SeqPos) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
-      } else super.tacticRecursors(tactic)
-    override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-      case Box(a, _) if a.isInstanceOf[Loop] => (Nil, theLoop::Nil)
-      case _ => super.tacticsFor(expr)
+  /** Master/auto implementation */
+  private def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr]): BelleExpr = "ANON" by {
+    /** Create a tactic index that hands out loop tactics and configurable ODE tactics. */
+    val createAutoTacticIndex = new DefaultTacticIndex {
+      override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
+        if (tactic == loop) {
+          //@todo positions? what to expect there?
+          ((_: Sequent, p: SeqPos) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
+        } else if (tactic == odeR) {
+          ((_: Sequent, p: SeqPos) => (new Fixed(p)::Nil)::Nil) :: Nil
+        } else super.tacticRecursors(tactic)
+      override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
+        case Box(a, _) if a.isInstanceOf[Loop] => (Nil, loop::Nil)
+        case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.diffSolve::Nil, odeR::Nil)
+        case _ => super.tacticsFor(expr)
+      }
     }
+
+    OnAll(close |
+      (OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+        ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
+        andR, equivR, loop, odeR, diffSolve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)))
   }
 
   /** master: master tactic that tries hard to prove whatever it could
     * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
-    OnAll(close |
-      (OnAll(tacticChase(createTacticIndex(loop(gen)))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
-                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-                                                andR, equivR, loop(gen), ODE, diffSolve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        OnAll(allL(Variable("s_"), Variable("t_"))('Llast) & auto & done | (exhaustiveEqL2R('L)*) & ?(close | QE)))
+    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) =>{
+      ODE(pos) & ?(allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
+    })
+    master(loop(gen), endODE)
   }
 
   /** auto: automatically try to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto: BelleExpr = "auto" by {
-    OnAll(close & done |
-      (OnAll(tacticChase(createTacticIndex(loopauto))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
-                                               ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-                                               andR, equivR, loopauto, ODE, diffSolve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)) & done)
-  }
+  def auto: BelleExpr = "auto" by master(loopauto, ODE) & done
 
   /*******************************************************************
     * unification and matching based auto-tactics
