@@ -144,9 +144,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
     OnAll(close |
-      tacticChase(createTacticIndex(loop(gen)))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+      (OnAll(tacticChase(createTacticIndex(loop(gen)))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-                                                andR, equivR, loop(gen), ODE, diffSolve) &
+                                                andR, equivR, loop(gen), ODE, diffSolve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         OnAll(allL(Variable("s_"), Variable("t_"))('Llast) & auto & done | (exhaustiveEqL2R('L)*) & ?(close | QE)))
   }
 
@@ -154,9 +154,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[master]] */
   def auto: BelleExpr = "auto" by {
     OnAll(close & done |
-      tacticChase(createTacticIndex(loopauto))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+      (OnAll(tacticChase(createTacticIndex(loopauto))(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-                                               andR, equivR, loopauto, ODE, diffSolve) &
+                                               andR, equivR, loopauto, ODE, diffSolve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         OnAll((exhaustiveEqL2R('L)*) & ?(close | QE)) & done)
   }
 
