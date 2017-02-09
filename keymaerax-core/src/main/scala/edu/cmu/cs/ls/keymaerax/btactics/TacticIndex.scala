@@ -27,6 +27,8 @@ object TacticIndex {
     * a list, since tactics may branch).
     */
   type TacticRecursors = List[(Sequent, SeqPos) => Branches]
+
+  lazy val default: TacticIndex = new DefaultTacticIndex
 }
 
 trait TacticIndex {
@@ -74,8 +76,8 @@ class DefaultTacticIndex extends TacticIndex {
         (Fixed(AntePosition.base0(s.ante.length), left(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), right(s(p)))::Nil)::
         (Fixed(AntePosition.base0(s.ante.length), right(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), left(s(p)))::Nil)::Nil) :: Nil
     case TactixLibrary.step => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.allR => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.existsL => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.allR => ((s: Sequent, p: SeqPos) => one(new Fixed(p, child(s(p))))) :: Nil
+    case TactixLibrary.existsL => ((s: Sequent, p: SeqPos) => one(new Fixed(p, child(s(p))))) :: Nil
     case TactixLibrary.ODE => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
     case TactixLibrary.diffSolve => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
     // default position: stop searching
