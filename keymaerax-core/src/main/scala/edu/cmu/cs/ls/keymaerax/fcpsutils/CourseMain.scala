@@ -17,8 +17,8 @@ object CourseMain {
   def basicInitializer() = {
     try {
       val config = Map(
-        "linkName" -> "/usr/local/Wolfram/Mathematica/11.0/Executables/MathKernel",
-        "libDir" -> "/usr/local/Wolfram/Mathematica/11.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
+        "linkName" -> "/usr/local/depot/mathematica-10.1/Executables/MathKernel",
+        "libDir" -> "/usr/local/depot/mathematica-10.1/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
       val provider = new MathematicaToolProvider(config)
       ToolProvider.setProvider(provider)
       if(provider.tools().forall(_.isInitialized)) println("Initialized!")
@@ -123,6 +123,7 @@ object CourseMain {
   /** Returns string contained within value */
   private def fileExistsOrFail(v : ArgValue) : String = {
     val fileName = v.asInstanceOf[StringValue].s
+    print("Looking for " + fileName + "\n")
     assert({
       val file = new File(fileName)
       file.exists() && file.canRead()
@@ -144,8 +145,9 @@ object CourseMain {
 
   private def parseArchiveFileOrfail(v: ArgValue) : List[KeYmaeraXArchiveParser.ArchiveEntry] = {
     val fileName = fileExistsOrFail(v)
+    val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
-      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parse(scala.io.Source.fromFile(fileName).mkString)
+      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parse(bigString)
     }
     catch {
       case e : ParseException => {
@@ -154,8 +156,8 @@ object CourseMain {
         System.exit(-1)
         ???
       }
-      case e : Error => {
-        println(s"Unkown error encountered while parsing ${fileName}: ${e}")
+      case e : Throwable => {
+        println(s"Unkown error encountered while parsing ${fileName}: ${e}\nContents${bigString}")
         e.printStackTrace()
         System.exit(-1)
         ???
