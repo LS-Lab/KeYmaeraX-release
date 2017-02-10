@@ -2,16 +2,19 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.language.postfixOps
 import scala.math.Ordering.Implicits._
+
+import scala.collection.immutable._
 
 /**
  * Implementation: Tactics that execute and use the output of tools.
@@ -154,42 +157,80 @@ private object ToolTactics {
   })
 
   /** @see [[TactixLibrary.transform()]] */
-  def transform(to: Formula)(tool: QETool with CounterExampleTool): DependentPositionWithAppliedInputTactic = "transform" byWithInput (to, (pos: Position, sequent: Sequent) => {
-    require(pos.isTopLevel, "transform only at top level")
-    require(sequent(pos.checkTop).isFOL, "transform only on first-order formulas")
+  def transform(to: Expression): DependentPositionWithAppliedInputTactic = "transform" byWithInput (to, (pos: Position, sequent: Sequent) => {
+    require(sequent.sub(pos) match {
+      case Some(fml: Formula) => fml.isFOL && to.kind == fml.kind
+      case _ => false
+    }, "transform only on arithmetic formulas")
 
-    val modalHide = (alphaRule*) & ("modalHide" by ((mhsequent: Sequent) => {
-      mhsequent.ante.indices.map(i => if (mhsequent(AntePos(i)).isFOL) skip else hide(AntePos(i))).reduceLeftOption(_&_).getOrElse(skip) &
-      mhsequent.succ.indices.map(i => if (mhsequent(SuccPos(i)).isFOL) skip else hide(SuccPos(i))).reduceLeftOption(_&_).getOrElse(skip)
-    }))
+    val polarity = FormulaTools.polarityAt(sequent(pos.top), pos.inExpr)*(if (pos.isSucc) 1 else -1)
 
-    //@note if we have a counterexample we can try some smart hiding to make QE easier
-    def cex = {
-      val orig = sequent.sub(pos).getOrElse(throw new IllegalArgumentException(s"Sequent $sequent at position $pos is not a formula")).asInstanceOf[Formula]
-      if (pos.isSucc) tool.findCounterExample(Imply(to, orig))
-      else tool.findCounterExample(Imply(orig, to))
+    val (src, tgt) = (sequent.sub(pos), to) match {
+      case (Some(src: Formula), tgt: Formula) => if (polarity > 0) (tgt, src) else (src, tgt)
     }
 
-    val keepPos = if (pos.isSucc) pos.topLevel else SuccPosition.base0(sequent.succ.size)
+    val posVars = StaticSemantics.freeVars(to) //@note simple one-step dependency
+    val ga = sequent.ante.zipWithIndex.
+      filter(pos.isSucc || _._2 != pos.top.getIndex).map(_._1).
+      filter(fml =>
+        posVars.isEmpty || !StaticSemantics.freeVars(fml).intersect(posVars).isEmpty)
 
-    //@note assumes that modalHide is called first
-    val smartAnteHide = "smartAnteHide" by ((shsequent: Sequent) => {
-      val theCex = cex
-      val theCexVars = theCex.get.keySet.filter(x => x.isInstanceOf[Variable]).map(x => x.asInstanceOf[Variable])
-      shsequent.ante.indices.reverse.map(i =>
-        if (StaticSemantics(shsequent(AntePos(i))).fv.intersect(theCexVars).isEmpty) hide(AntePos(i))
-        else skip).reduceLeftOption(_&_).getOrElse(skip)
-    })
+    val gaFml = ga.reduceOption(And).getOrElse(True)
 
-    val succCohide = "succCohide" by ((pp: Position, ss: Sequent) => {
-      ss.succ.indices.filter(i => i != pp.index0).reverse.map(i => hide(SuccPos(i))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
-    })
+    val fact: ProvableSig =
+      if (ga.isEmpty) proveBy(Imply(src, tgt), master())
+      else if (polarity > 0) proveBy(Imply(And(gaFml, src), tgt), master())
+      else proveBy(Imply(gaFml, Imply(src, tgt)), master())
 
-    cutLR(to)(pos) <(
-      /* c */ skip,
-      //@note first try to prove only the transformation, then with smart hiding, if all that fails, full QE on all FOL formulas
-      /* c->d */ (cohide(keepPos) & QE & done) | (succCohide(keepPos) & modalHide & ((smartAnteHide & QE & done) | (QE & done)))
+    def propPushIn(op: (Formula, Formula) => Formula) = {
+      val p = "p_()".asFormula
+      val q = "q_()".asFormula
+      val r = "r_()".asFormula
+      proveBy(Imply(op(p, r), Imply(op(p, q), op(p, And(q, r)))), prop & done)
+    }
+
+    val implyFact = proveBy("q_() -> (p_() -> p_()&q_())".asFormula, prop & done)
+
+    def pushIn(remainder: PosInExpr): DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) => (ss.sub(pp) match {
+      case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.left==right.left =>
+        useAt(propPushIn(left.reapply), PosInExpr(1::Nil))(pp)
+      case Some(Imply(Box(a, _), Box(b, _))) if a==b => useAt("K modal modus ponens", PosInExpr(1::Nil))(pp)
+      case Some(Imply(Forall(lv, p), Forall(rv, q))) if lv==rv => useAt(DerivedAxioms.allDistributeAxiom, PosInExpr(1::Nil))(pp)
+      case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1::Nil))(pos)
+      case Some(_) => skip
+    }) & (if (remainder.pos.isEmpty) skip else pushIn(remainder.child)(pp ++ PosInExpr(remainder.head::Nil))))
+
+    val key = if (polarity > 0) PosInExpr(1::Nil) else if (ga.isEmpty) PosInExpr(0::Nil) else PosInExpr(1::0::Nil)
+
+    if (fact.isProved && ga.isEmpty) useAt(fact, key)(pos)
+    else if (fact.isProved && ga.nonEmpty) useAt(fact, key)(pos) & (
+      if (polarity < 0) Idioms.<(skip, master())
+      else cutAt(gaFml)(pos) & Idioms.<(
+        //@todo ensureAt only closes branch when original conjecture is true
+        ensureAt(pos) & OnAll(prop & done | QE & done),
+        pushIn(pos.inExpr)(pos.top)
       )
+    )
+    else throw BelleTacticFailure(s"Invalid transformation: $to")
+  })
+
+  private def ensureAt: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    lazy val ensuredFormula = seq.sub(pos) match { case Some(fml: Formula) => fml }
+    lazy val skipAt = "ANON" by ((pos: Position, seq: Sequent) => skip)
+
+    val step = seq(pos.top) match {
+      case Box(ODESystem(_, _), _) => diffInvariant(ensuredFormula)(pos.top) & diffWeaken(pos.top) & implyR(pos.top)
+      case Box(Loop(_), _) => loop(ensuredFormula)(pos.top) & Idioms.<(master(), skip, master())
+      case Box(Test(_), _) => testb(pos.top) & implyR(pos.top)
+      case Box(_, _) => TactixLibrary.step(pos.top)
+      case Forall(v, _) => if (pos.isSucc) allR(pos.top) else allL(v.head)(pos.top)
+      case Exists(v, _) => if (pos.isSucc) existsR(v.head)(pos.top) else existsL(pos.top)
+      //@todo resulting branches may not be provable when starting from wrong question, e.g., a>0&b>0 -> x=2 & a/b>0, even if locally a>0&b>0 -> (a/b>0 <-> a>0*b)
+      case e if pos.isAnte => TacticIndex.default.tacticsFor(e)._1.headOption.getOrElse(skipAt)(pos.top)
+      case e if pos.isSucc => TacticIndex.default.tacticsFor(e)._2.headOption.getOrElse(skipAt)(pos.top)
+    }
+    val recurse = if (pos.isTopLevel) skip else ensureAt(pos.top.getPos, pos.inExpr.child)
+    step & onAll(recurse)
   })
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is a variable */

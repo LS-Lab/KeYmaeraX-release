@@ -132,13 +132,13 @@ class CpsWeekTutorial extends TacticTestBase {
     initCond.subgoals.head.succ should contain only "v<=0|v>0&(t_<=0|t_>0&((b<=0|(0 < b&b<=t_^-1*v)&(m < x|m>=1/2*(-1*b*t_^2+2*t_*v+2*x)))|b>t_^-1*v))".asFormula
     // explain in tutorial: mostly crap that violates our assumptions, but m>=... and b=t_^-1*v_0 look interesting -> transform
 
-    val simpler = proveBy(initCond.subgoals.head, ToolTactics.transform("b=v/t_ & t_>0 & m >= -b/2*t_^2+v*t_+x".asFormula)(tool)(1))
+    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b=v/t_ & t_>0 & m >= -b/2*t_^2+v*t_+x".asFormula)(1))
     simpler.subgoals should have size 1
     simpler.subgoals.head.ante shouldBe empty
     simpler.subgoals.head.succ should contain only "b=v/t_ & t_>0 & m >= -b/2*t_^2+v*t_+x".asFormula
 
     // now let's transform once again and put in t_ = v/b
-    val cond = proveBy(simpler.subgoals.head, ToolTactics.transform("b>0 & t_=v/b & v>0 & m-x >= v^2/(2*b)".asFormula)(tool)(1))
+    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b>0 & t_=v/b & v>0 & m-x >= v^2/(2*b)".asFormula)(1))
     cond.subgoals should have size 1
     cond.subgoals.head.ante shouldBe empty
     cond.subgoals.head.succ should contain only "b>0 & t_=v/b & v>0 & m-x >= v^2/(2*b)".asFormula
@@ -163,12 +163,12 @@ class CpsWeekTutorial extends TacticTestBase {
     initCond.subgoals.head.succ should contain only "(A < 0|A=0&(b<=0|b>0&(v<=0|v>0&(t_<=0|t_>0&(ep < t_|ep>=t_&((t < 0|t=0&(m < 1/2*b^-1*(v^2+2*b*x)|m>=1/2*b^-1*(2*b*t_*v+v^2+2*b*x)))|t>0))))))|A>0&(b<=0|b>0&((v < 0|v=0&(t_<=0|t_>0&(ep < t_|ep>=t_&((t < 0|t=0&(m < x|m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*b*x)))|t>0))))|v>0&(t_<=0|t_>0&(ep < t_|ep>=t_&((t < 0|t=0&(m < 1/2*b^-1*(v^2+2*b*x)|m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)))|t>0)))))".asFormula
 
     // now get rid of stuff that violates our assumptions and transform into nicer shape
-    val simpler = proveBy(initCond.subgoals.head, ToolTactics.transform("b>0 & A>=0 & t_>=0 & m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)".asFormula)(tool)(1))
+    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b>0 & A>=0 & t_>=0 & m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)".asFormula)(1))
     simpler.subgoals should have size 1
     simpler.subgoals.head.ante shouldBe empty
     simpler.subgoals.head.succ should contain only "b>0 & A>=0 & t_>=0 & m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)".asFormula
 
-    val cond = proveBy(simpler.subgoals.head, ToolTactics.transform("b>0 & A>=0 & t_>=0 & m-x >= v^2/(2*b)+(A/b+1)*(A/2*t_^2 + v*t_)".asFormula)(tool)(1))
+    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b>0 & A>=0 & t_>=0 & m-x >= v^2/(2*b)+(A/b+1)*(A/2*t_^2 + v*t_)".asFormula)(1))
     cond.subgoals should have size 1
     cond.subgoals.head.ante shouldBe empty
     cond.subgoals.head.succ should contain only "b>0 & A>=0 & t_>=0 & m-x >= v^2/(2*b)+(A/b+1)*(A/2*t_^2 + v*t_)".asFormula

@@ -142,31 +142,31 @@ class ArithmeticTests extends TacticTestBase {
   "transform" should "prove a simple example" in withMathematica { tool =>
     proveBy(
       Sequent(IndexedSeq("a<b".asFormula), IndexedSeq("b>a".asFormula)),
-      ToolTactics.transform("a<b".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "prove a simple example with modalities in other formulas" in withMathematica { tool =>
     proveBy(
       Sequent(IndexedSeq("a<b".asFormula), IndexedSeq("b>a".asFormula, "[x:=2;]x>0".asFormula)),
-      ToolTactics.transform("a<b".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "keep enough context around to prove the transformation" in withMathematica { tool =>
     proveBy(
       Sequent(IndexedSeq("a+b<c".asFormula, "b>=0&[y:=3;]y=3".asFormula, "y>4".asFormula), IndexedSeq("a<c".asFormula, "[x:=2;]x>0".asFormula)),
-      ToolTactics.transform("a+b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "work with division by zero" in withMathematica { tool =>
     proveBy(
       Sequent(IndexedSeq("a/b<c".asFormula, "b>0".asFormula), IndexedSeq("c>a/b".asFormula)),
-      ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   it should "work with division by zero even with modalities somewhere" in withMathematica { tool =>
     proveBy(
       Sequent(IndexedSeq("a/b<c".asFormula, "b>0&[y:=3;]y=3".asFormula), IndexedSeq("c>a/b".asFormula, "[x:=2;]x>0".asFormula)),
-      ToolTactics.transform("a/b<c".asFormula)(tool)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
   "simulate" should "simulate a simple example" in withMathematica { tool =>
