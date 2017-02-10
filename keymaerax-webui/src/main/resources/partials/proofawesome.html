@@ -85,6 +85,7 @@
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doTactic(undefined, 'prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('notR', 'R')"><span>&not;R</span><code class="pull-right">notR</code></a></li>
                                 <li><a ng-click="doSearch('notL', 'L')"><span>&not;L</span><code class="pull-right">notL</code></a></li>
@@ -100,8 +101,6 @@
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
                                 <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
-                                <li role="separator" class="divider"></li>
-                                <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
