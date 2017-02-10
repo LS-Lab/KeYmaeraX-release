@@ -1,0 +1,10 @@
+/**
+ * Exponential decay.
+ */
+ProgramVariables.
+  R x.
+End.
+
+Problem.
+  x>1 -> [{x'=-x}]x>0
+End.
