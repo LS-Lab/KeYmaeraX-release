@@ -106,7 +106,7 @@ class Robix extends TacticTestBase {
 
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "(v>=0)&(((((xpost()=x&ypost()=y)&vpost()=v)&apost()=-B)&dxpost()=dx)&dypost()=dy)&wpost()=w".asFormula
+    foResult.subgoals.head.succ should contain only "v>=0&xpost()=x&ypost()=y&vpost()=v&apost()=-B&dxpost()=dx&dypost()=dy&wpost()=w".asFormula
   }
 
   "Passive Safety" should "be provable" in withMathematica { qeTool =>
@@ -228,11 +228,11 @@ class Robix extends TacticTestBase {
       speculativeQE & done
       ) & print("Proved acc arithmetic: " + fml)
 
-    val accArithX = "A>=0&B>0&V>=0&ep>0&abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V))&v_0>=0&-B<=a&a<=A&v=v_0+a*t&t>=0&t<=ep&v>=0&-t*(v-a/2*t)<=x-x_0&x-x_0<=t*(v-a/2*t)&-t*V<=xo-xo_0&xo-xo_0<=t*V->abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
+    val accArithX = "A>=0&B>0&V>=0&ep>0&abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V))&v_0>=0&-B<=a&a<=A&-t*V<=xo-xo_0&xo-xo_0<=t*V&-t*(v-a/2*t)<=x-x_0&x-x_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep&v>=0->abs(x-xo)>v^2/(2*B)+V*(v/B)".asFormula
     val accArithXLemma = proveBy(accArithX, accArithTactic("abs(x_0-xo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
     accArithXLemma shouldBe 'proved
 
-    val accArithY = "A>=0&B>0&V>=0&ep>0&abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V))&v_0>=0&-B<=a&a<=A&v=v_0+a*t&t>=0&t<=ep&v>=0&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)&-t*V<=yo-yo_0&yo-yo_0<=t*V->abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula
+    val accArithY = "A>=0&B>0&V>=0&ep>0&abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V))&v_0>=0&-B<=a&a<=A&-t*V<=yo-yo_0&yo-yo_0<=t*V&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep&v>=0->abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula
     val accArithYLemma = proveBy(accArithY, accArithTactic("abs(y_0-yo_0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))".asFormula))
     accArithYLemma shouldBe 'proved
 
