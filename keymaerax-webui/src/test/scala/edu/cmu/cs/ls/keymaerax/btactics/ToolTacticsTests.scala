@@ -43,6 +43,14 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x/c>=1".asFormula
   }
 
+  it should "retain all global facts for transformation" in withMathematica { _ =>
+    val result = proveBy(Sequent(IndexedSeq("a=0".asFormula, "c+a>0".asFormula), IndexedSeq("x/c>=0".asFormula)),
+      transform("x/c>=1".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("a=0".asFormula, "c+a>0".asFormula)
+    result.subgoals.head.succ should contain only "x/c>=1".asFormula
+  }
+
   it should "retain global facts for transformation in ante" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("c>0".asFormula, "x/c>=1".asFormula), IndexedSeq()),
       transform("x/c>=0".asFormula)(-2))

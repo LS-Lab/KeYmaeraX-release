@@ -169,12 +169,7 @@ private object ToolTactics {
       case (Some(src: Formula), tgt: Formula) => if (polarity > 0) (tgt, src) else (src, tgt)
     }
 
-    val posVars = StaticSemantics.freeVars(to) //@note simple one-step dependency
-    val ga = sequent.ante.zipWithIndex.
-      filter(pos.isSucc || _._2 != pos.top.getIndex).map(_._1).
-      filter(fml =>
-        posVars.isEmpty || !StaticSemantics.freeVars(fml).intersect(posVars).isEmpty)
-
+    val ga = if (pos.isSucc) sequent.ante else sequent.ante.patch(pos.top.getIndex, Nil, 1)
     val gaFml = ga.reduceOption(And).getOrElse(True)
 
     val fact: ProvableSig =
@@ -207,7 +202,7 @@ private object ToolTactics {
       if (polarity < 0) Idioms.<(skip, master())
       else cutAt(gaFml)(pos) & Idioms.<(
         //@todo ensureAt only closes branch when original conjecture is true
-        ensureAt(pos) & OnAll(prop & done | QE & done),
+        ensureAt(pos) & OnAll(master() & done),
         pushIn(pos.inExpr)(pos.top)
       )
     )
