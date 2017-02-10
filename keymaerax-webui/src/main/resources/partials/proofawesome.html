@@ -59,13 +59,17 @@
                     </span>
                 </span>
                 <div class="nav">
-                    <ul class="nav navbar-nav" id="provingautomation"
-                        data-intro="Automatic proof search. Unfold all operators. Undo proof steps." data-position="right">
-                        <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'unfold')"><span class="fa fa-magic"> Unfold</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'fullSimplify')"><span class="fa fa-compress"> Simplify</span></a></li>
-                        <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
-                        <li><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove'"><i class="fa fa-pencil"></i> Edit</a></li>
+                    <ul class="nav navbar-nav" id="provingautomation">
+                        <li><a ng-click="doTactic(undefined, 'master')"
+                               data-intro="Automatic search" data-position="top"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'unfold')"
+                               data-intro="Unfold all operators" data-position="top"><span class="fa fa-magic"> Unfold</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'fullSimplify')"
+                               data-intro="Simplify formulas" data-position="top"><span class="fa fa-compress"> Simplify</span></a></li>
+                        <li><a ng-click="undoLastStep()"
+                               data-intro="Undo" data-position="top"><span class="fa fa-undo"> Step back</span></a></li>
+                        <li><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove'"
+                               data-intro="Switch edit/prove" data-position="top"><i class="fa fa-pencil"></i> Edit</a></li>
                         <li class="active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
                             <i ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
                                uib-tooltip="Toggle to stay in edit mode"
@@ -295,7 +299,7 @@
                                     </span>
                                 </div>
                             </div>
-                            <div class="panel-body" data-intro="Clicks are recorded here. Append to automate proof steps instead of clicking." data-position="bottom">
+                            <div class="panel-body" data-intro="Clicks are recorded here. Append to automate proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
                             <k4-tactic-editor user-id="userId" proof-id="proofId" node-id="task.id"
                                               on-tactic="doTactic(formulaId, tacticId)"
                                               on-tactic-script="onTacticScript(tacticText)">
