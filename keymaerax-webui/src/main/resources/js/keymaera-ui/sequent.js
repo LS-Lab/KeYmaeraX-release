@@ -71,7 +71,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                 controller: 'DerivationInfoDialogCtrl',
                 size: 'lg',
                 resolve: {
-                  tactics: function() { return tactics; }
+                  tactics: function() { return tactics; },
+                  readOnly: function() { return false; }
                 }
               });
 
