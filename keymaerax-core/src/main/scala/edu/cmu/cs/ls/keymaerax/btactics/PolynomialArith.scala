@@ -127,11 +127,11 @@ object PolynomialArith {
   }
 
   //List of reassociations needed -- avoids QE inside the actual proof (QE should get everything right)
-  private val plusAssoc1 = proveBy("(F_() + G_()) + (A_() + B_()) = ((F_()+G_())+A_())+B_()".asFormula,QE)
-  private val plusAssoc2 = proveBy("(F_() + K_()*M_()) + (A_() + L_()*M_()) = (F_()+A_())+(K_()+L_())*M_()".asFormula,QE)
+  private lazy val plusAssoc1 = proveBy("(F_() + G_()) + (A_() + B_()) = ((F_()+G_())+A_())+B_()".asFormula,QE)
+  private lazy val plusAssoc2 = proveBy("(F_() + K_()*M_()) + (A_() + L_()*M_()) = (F_()+A_())+(K_()+L_())*M_()".asFormula,QE)
 
-  private val plusCoeff1 = proveBy("K_() = 0 -> (F_() + K_()*M_() = F_())".asFormula,QE)
-  private val plusCoeff2 = proveBy("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula,
+  private lazy val plusCoeff1 = proveBy("K_() = 0 -> (F_() + K_()*M_() = F_())".asFormula,QE)
+  private lazy val plusCoeff2 = proveBy("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula,
     byUS("const congruence"))
 
   //This seems like it might be a bad idea ...
@@ -186,18 +186,18 @@ object PolynomialArith {
   }
 
   //One of these is missing in DerivedAxioms
-  private val onetimes = proveBy("1*F_() = F_()".asFormula,QE)
-  private val timesone = proveBy("F_()*1 = F_()".asFormula,QE)
+  private lazy val onetimes = proveBy("1*F_() = F_()".asFormula,QE)
+  private lazy val timesone = proveBy("F_()*1 = F_()".asFormula,QE)
 
-  private val timesAssoc1 = proveBy("(F_() * G_()) * (A_() * B_()) = ((F_()*G_())*A_())*B_()".asFormula,QE)
-  private val timesAssoc2 = proveBy("(F_() * M_()^K_()) * (A_() * M_()^L_()) = (F_()*A_())*M_()^(K_()+L_())".asFormula,QE)
+  private lazy val timesAssoc1 = proveBy("(F_() * G_()) * (A_() * B_()) = ((F_()*G_())*A_())*B_()".asFormula,QE)
+  private lazy val timesAssoc2 = proveBy("(F_() * M_()^K_()) * (A_() * M_()^L_()) = (F_()*A_())*M_()^(K_()+L_())".asFormula,QE)
 
   //QE has interesting ideas about X^0
-  private val timesCoeff1Lem = proveBy("F_() = F_() * M_() ^ 0".asFormula,QE)
-  private val timesCoeff1 = proveBy("K_() = 0 -> (F_() * M_()^K_() = F_() )".asFormula,
+  private lazy val timesCoeff1Lem = proveBy("F_() = F_() * M_() ^ 0".asFormula,QE)
+  private lazy val timesCoeff1 = proveBy("K_() = 0 -> (F_() * M_()^K_() = F_() )".asFormula,
     useAt(timesCoeff1Lem)(SuccPosition(1,1::1::Nil)) & byUS("const congruence"))
 
-  private val timesCoeff2 = proveBy("K_() = L_() -> (F_() * M_()^K_() = F_() * M_()^L_())".asFormula,
+  private lazy val timesCoeff2 = proveBy("K_() = L_() -> (F_() * M_()^K_() = F_() * M_()^L_())".asFormula,
     byUS("const congruence"))
 
   //Multiplies and returns normalised monomials (this is basically the same as the implementation for adding polynomials)
@@ -243,7 +243,7 @@ object PolynomialArith {
     }
   }
 
-  private val timesAssoc3 = proveBy(("(P_() + C_() * M_()) * (D_() * N_()) = " +
+  private lazy val timesAssoc3 = proveBy(("(P_() + C_() * M_()) * (D_() * N_()) = " +
     "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE)
 
   //Multiplies a normalized polynomial by a constant and a normalized monomial
@@ -288,11 +288,11 @@ object PolynomialArith {
     }
   }
 
-  private val powLem1 = proveBy("F_()^0 = 1".asFormula,QE)
-  private val powLem2 = proveBy("F_()^1 = F_()".asFormula,QE)
-  private val powLem3 = proveBy("(F_()^K_())^2 = F_()^(2*K_())".asFormula,QE)
-  private val powLem4 = proveBy("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula,QE)
-  private val powLem5 = proveBy("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
+  private lazy val powLem1 = proveBy("F_()^0 = 1".asFormula,QE)
+  private lazy val powLem2 = proveBy("F_()^1 = F_()".asFormula,QE)
+  private lazy val powLem3 = proveBy("(F_()^K_())^2 = F_()^(2*K_())".asFormula,QE)
+  private lazy val powLem4 = proveBy("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula,QE)
+  private lazy val powLem5 = proveBy("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
     byUS("const congruence"))
 
   //Reduces t^n to iterated squares
@@ -321,9 +321,9 @@ object PolynomialArith {
     }
   }
 
-  private val negNormalise = proveBy("-P_() = P_() * (-1 * 1)".asFormula,QE)
-  private val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE)
-  private val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE)
+  private lazy val negNormalise = proveBy("-P_() = P_() * (-1 * 1)".asFormula,QE)
+  private lazy val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE)
+  private lazy val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE)
 
   //Try hard to turn a term into ground arithmetic
   def groundNormalise(l:Term) : Option[(Number,ProvableSig)] = {
@@ -339,8 +339,8 @@ object PolynomialArith {
     }
   }
 
-  private val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE)
-  private val varNormalise = proveBy("P_() = 0 + 1 * (1 * P_() ^ 1)".asFormula,QE)
+  private lazy val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE)
+  private lazy val varNormalise = proveBy("P_() = 0 + 1 * (1 * P_() ^ 1)".asFormula,QE)
 
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
@@ -533,10 +533,10 @@ object PolynomialArith {
   }
 
   //This lemma should be in DerivedAxioms together with 1>0 and f_()^2 >= 0
-  private val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE)
+  private lazy val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE)
 
   //Doesn't use QE, but the DerivedAxioms used do
-  val notZeroGt: ProvableSig = proveBy("!(0>0)".asFormula,
+  lazy val notZeroGt: ProvableSig = proveBy("!(0>0)".asFormula,
     notR(1) & useAt(">2!=")(-1) & useAt("! =",PosInExpr(1::Nil))(-1) & notL(-1) & byUS("= reflexive"))
 
   //Generate a proof for |- !(1 + s_1^2 + ... + s_n^2 = 0) (without QE)
@@ -553,14 +553,14 @@ object PolynomialArith {
   }
 
   //todo: more convenient to cut in, can be derived without QE from something else
-  private val gtNotZero: ProvableSig = proveBy("f_() > 0 -> !(f_() = 0)".asFormula,QE)
+  private lazy val gtNotZero: ProvableSig = proveBy("f_() > 0 -> !(f_() = 0)".asFormula,QE)
 
   // Given a list representing a (hopefully Groebner) basis g_1, ... g_k, a witness, and
   // an optional list of instructions (detailing the coefficients) and a list of witnesses s_i ^2
   // Proves the contradiction g_1 = 0 ; ... g_k = 0 |-
   // Nothing needs to be normalized?
 
-  private val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
+  private lazy val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE)
 
   def proveWithWitness(ctx:List[Term], witness:List[Term], instopt:Option[List[(Int,Term)]] = None) : ProvableSig = {
     val antes = ctx.map( t => Equal(t,Number(0)))
@@ -596,18 +596,18 @@ object PolynomialArith {
   // Succedent to antecedent for inequations (rewrite right to left followed by notR)
   //private val ltSucc: ProvableSig = proveBy("!(f_()>=g_() <-> f_() < g_()".asFormula,QE)
   //private val leSucc: ProvableSig = proveBy("!(f_()>g_() <-> f_() <= g_()".asFormula,QE)
-  private val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
-  private val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
-  private val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
-  private val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
+  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
+  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
+  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
+  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
 
   //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
   //note: these folds = 0 normalisation in as well
-  private val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists z_ (f_()-g_())*z_^2 - 1 = 0".asFormula,QE)
-  private val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists z_ (f_()-g_()) - z_^2 = 0".asFormula,QE)
+  private lazy val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists z_ (f_()-g_())*z_^2 - 1 = 0".asFormula,QE)
+  private lazy val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists z_ (f_()-g_()) - z_^2 = 0".asFormula,QE)
 
-  private val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE)
-  private val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists z_ (f_()-g_())*z_ = 1".asFormula,QE)
+  private lazy val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE)
+  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists z_ (f_()-g_())*z_ = 1".asFormula,QE)
 
   //todo: generalise to more complete formula fragment
   //todo: Also "clear" equations in succedent after witness generation
