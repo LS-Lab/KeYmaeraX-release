@@ -169,13 +169,25 @@ private object ToolTactics {
       case (Some(src: Formula), tgt: Formula) => if (polarity > 0) (tgt, src) else (src, tgt)
     }
 
-    val ga = if (pos.isSucc) sequent.ante else sequent.ante.patch(pos.top.getIndex, Nil, 1)
-    val gaFml = ga.reduceOption(And).getOrElse(True)
+    val boundVars = StaticSemantics.boundVars(sequent(pos.top))
+    val gaFull = if (pos.isSucc) sequent.ante else sequent.ante.patch(pos.top.getIndex, Nil, 1)
 
-    val fact: ProvableSig =
-      if (ga.isEmpty) proveBy(Imply(src, tgt), master())
-      else if (polarity > 0) proveBy(Imply(And(gaFml, src), tgt), master())
-      else proveBy(Imply(gaFml, Imply(src, tgt)), master())
+    def proveFact(assumptions: IndexedSeq[Formula], filters: List[IndexedSeq[Formula]=>IndexedSeq[Formula]]): (ProvableSig, IndexedSeq[Formula]) = {
+      val filteredAssumptions = filters.head(assumptions)
+      lazy val filteredAssumptionsFml = filteredAssumptions.reduceOption(And).getOrElse(True)
+      val pr =
+        if (filteredAssumptions.isEmpty) proveBy(Imply(src, tgt), master())
+        else if (polarity > 0) proveBy(Imply(And(filteredAssumptionsFml, src), tgt), master())
+        else proveBy(Imply(filteredAssumptionsFml, Imply(src, tgt)), master())
+
+      if (pr.isProved || filters.isEmpty) (pr, filteredAssumptions)
+      else proveFact(assumptions, filters.tail)
+    }
+    //@note first try to prove without assumptions, than with non-bound stuff, if all that fails with whole ante
+    val (fact, ga) = proveFact(gaFull,
+      ((al: IndexedSeq[Formula]) => al.filter(_ => false))::
+      ((al: IndexedSeq[Formula]) => al.filter(fml => StaticSemantics.freeVars(fml).intersect(boundVars).isEmpty))::
+      ((al: IndexedSeq[Formula]) => al.filter(_ => true))::Nil)
 
     def propPushIn(op: (Formula, Formula) => Formula) = {
       val p = "p_()".asFormula
@@ -200,7 +212,7 @@ private object ToolTactics {
     if (fact.isProved && ga.isEmpty) useAt(fact, key)(pos)
     else if (fact.isProved && ga.nonEmpty) useAt(fact, key)(pos) & (
       if (polarity < 0) Idioms.<(skip, master())
-      else cutAt(gaFml)(pos) & Idioms.<(
+      else cutAt(ga.reduce(And))(pos) & Idioms.<(
         //@todo ensureAt only closes branch when original conjecture is true
         ensureAt(pos) & OnAll(master() & done),
         pushIn(pos.inExpr)(pos.top)

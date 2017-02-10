@@ -141,10 +141,10 @@ class ToolTacticsTests extends TacticTestBase {
   }
 
   it should "introduce new variables in results of DG" in withMathematica { _ =>
-    val result = proveBy("\\exists y [{x'=2,y'=1}]x>=0".asFormula, transform("y>0 & x*y>=0".asFormula)(1, 0::1::Nil))
+    val result = proveBy("x>0 -> \\exists y [{x'=-x,y'=1/2}]x>0".asFormula, implyR(1) & transform("x*y^2=1".asFormula)(1, 0::1::Nil))
     result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "\\exists y [{x'=2,y'=1}](y>0 & x*y>=0)".asFormula
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "\\exists y [{x'=-x,y'=1/2}]x*y^2=1".asFormula
   }
 
   it should "retain context when introducing new variables in results of DG" ignore withMathematica { _ =>
