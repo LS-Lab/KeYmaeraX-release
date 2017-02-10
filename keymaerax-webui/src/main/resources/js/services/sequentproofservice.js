@@ -178,7 +178,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
     formulas: {
       highlighted: undefined,
-      mode: 'prove'
+      mode: 'prove',
+      stickyEdit: false
     },
 
     /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */

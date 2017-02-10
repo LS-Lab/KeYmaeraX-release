@@ -66,7 +66,11 @@
                         <li><a ng-click="doTactic(undefined, 'fullSimplify')"><span class="fa fa-compress"> Simplify</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                         <li><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove'"><i class="fa fa-pencil"></i> Edit</a></li>
-                        <li class="active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'"><i class="fa fa-pencil fa-lg"></i> Edit</a></li>
+                        <li class="active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
+                            <i ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
+                               uib-tooltip="Toggle to stay in edit mode"
+                               ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></i> Edit</a>
+                        </li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
                         <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>

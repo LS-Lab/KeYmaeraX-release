@@ -113,6 +113,7 @@ angular.module('formula')
                   }]
                 });
                 scope.editFormulaPopover.openFormulaId = undefined;
+                if (!sequentProofData.formulas.stickyEdit) sequentProofData.formulas.mode = 'prove';
               }
             }
 

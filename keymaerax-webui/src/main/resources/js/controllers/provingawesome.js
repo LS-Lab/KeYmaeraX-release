@@ -215,6 +215,14 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       return sequentProofData.formulas.mode;
     }
 
+    $scope.stickyEdit = function() {
+      return sequentProofData.formulas.mode == 'edit' && sequentProofData.formulas.stickyEdit;
+    }
+
+    $scope.setStickyEdit = function(stickyEdit) {
+      sequentProofData.formulas.stickyEdit = stickyEdit;
+    }
+
     $scope.exportSubgoal = function() {
         var nodeId = sequentProofData.agenda.selectedId();
 
