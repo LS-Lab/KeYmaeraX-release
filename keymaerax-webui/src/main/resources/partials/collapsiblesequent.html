@@ -59,10 +59,6 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(f.id,'step')"
-                           uib-tooltip="Step" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-step-forward"></span></a>
-                    </li>
                     <li><a ng-click="onTactic(f.id,'hideL')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
@@ -103,35 +99,14 @@
         <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(undefined, 'master')"
-                           uib-tooltip="Auto" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-magic"></span></a>
-                    </li>
-                    <li><a ng-click="onTactic(undefined, 'prop')"
-                           uib-tooltip="Exhaustive propositional reasoning" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-forward"></span></a>
-                    </li>
                     <li><a ng-click="onTactic(undefined, 'QE')"
                            uib-tooltip="Quantifier elimination" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-calculator"></span></a>
-                    </li>
-                    <li><a ng-click="onTactic(undefined, 'normalize')"
-                           uib-tooltip="Auto without QE" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-ban"></span></a>
-                    </li>
-                    <li><a ng-click="onTactic(undefined, 'fullSimplify')"
-                           uib-tooltip="Simplify all formulas" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-compress"></span></a>
-                    </li>
-                    <li><a ng-click="getCounterExample()"
-                           uib-tooltip="Find counterexample" tooltip-placement="top" tooltip-popup-delay="500">
-                        <span class="fa fa-search"></span></a>
                     </li>
                     <li><a ng-click="openInputTacticDialog('cut')"
                            uib-tooltip="Cut" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-scissors"></span></a>
                     </li>
-                    <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
                 <div class="k4-formula-content"
                      k4-droppable on-drop="turnstileDrop(dragData)" on-drag-enter="turnstileDragEnter(dragData)"
@@ -151,10 +126,6 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(f.id,'step')"
-                           uib-tooltip="Step" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-step-forward"></span></a>
-                    </li>
                     <li><a ng-click="onTactic(f.id,'hideR')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
