@@ -66,6 +66,10 @@ class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends 
   }
 }
 
+class PlainResponse(data: (String, JsValue)*) extends Response {
+  override def getJson = JsObject(data:_*)
+}
+
 class ModelListResponse(models : List[ModelPOJO]) extends Response {
   val objects = models.map(modelpojo => JsObject(
     "id" -> JsString(modelpojo.modelId.toString),

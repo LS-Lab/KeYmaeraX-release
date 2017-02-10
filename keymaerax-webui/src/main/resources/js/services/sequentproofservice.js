@@ -177,7 +177,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     formulas: {
-      highlighted: undefined
+      highlighted: undefined,
+      mode: 'prove'
     },
 
     /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */

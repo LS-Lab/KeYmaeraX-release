@@ -207,6 +207,14 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       sequentProofData.prune($scope.userId, $scope.proofId, topParent);
     };
 
+    $scope.setFormulaMode = function(mode) {
+      sequentProofData.formulas.mode = mode;
+    }
+
+    $scope.getFormulaMode = function() {
+      return sequentProofData.formulas.mode;
+    }
+
     $scope.exportSubgoal = function() {
         var nodeId = sequentProofData.agenda.selectedId();
 
