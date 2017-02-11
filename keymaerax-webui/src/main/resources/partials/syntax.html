@@ -34,7 +34,7 @@
                 </tr>
                 <tr>
                     <td>&alpha; &cup; &beta;</td>
-                    <td><code>x&#160;:=&#160;5; ++ y&#160;:=&#160;x;</code></td>
+                    <td><code>x&#160;:=&#160;5;&#160;++&#160;y&#160;:=&#160;x;</code></td>
                     <td>nondeterministic choice, following either alternative <code>&alpha;</code> or <code>&beta;</code></td>
                 </tr>
                 <tr>
@@ -64,7 +64,7 @@ which is a program notation for hybrid systems.
             The evolution is allowed to stop at any point in <var>Q</var>
             but it must not leave <var>Q</var>. Systems of differential equations
             and higher-order derivatives are defined accordingly:
-            <code>p' = v, v' = -B &amp; v &ge; 0</code>, for instance, characterizes
+            <code>{p' = v, v' = -B &amp; v &ge; 0}</code>, for instance, characterizes
             the braking mode of a car with braking force <code>B</code> that
             holds within <code>v &ge; 0</code> and stops any time before <code>v < 0</code>.
             It indicates that the rate of change of the position <var>P</var> is given by the velocity <code>v</code>, which in turn changes at the rate <code>-B</code>.
@@ -107,7 +107,7 @@ which is a program notation for hybrid systems.
             </thead>
 <tbody>
   <tr>
-    <tr><td><code>e &ge; t</code></td> <td><code>x^2&gt;=5</code></td> <td>Greater equals comparison: true iff <code>x^2</code> is at least 5</td></tr>
+    <tr><td><code>e &ge; t</code></td> <td><code>x^2&gt;=y+1</code></td> <td>Greater equals comparison: true iff value of <code>t</code> is at least <code>t</code></td></tr>
     <tr><td><code>&not; P</code></td> <td><code>!(x&gt;=5)</code></td> <td>Negation (not), true iff <var>P</var> is not true</td></tr>
   	<tr><td><code>P &and; Q</code></td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both <var>P</var> and <var>Q</var> are true</td></tr>
   	<tr><td><code>P &or; Q</code></td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff <var>P</var> is true or <var>Q</var> is true</td></tr>
@@ -119,7 +119,7 @@ which is a program notation for hybrid systems.
     <tr><td><code>&forall;x P</code></td> <td><code>\forall&#160;x x^2&gt;=0</code></td> <td>Universal quantifier, true if <var>P</var> is true for all real values of variable <var>x</var></td></tr>
     <tr><td><code>&exist;x P</code></td> <td><code>\exists&#160;x x^2&gt;x^4</code></td> <td>Existential quantifier, true if <var>P</var> is true for some real value of variable <var>x</var></td></tr>
     <tr><td><code>[&alpha;]P</code></td> <td><code>[x:=x^2;] x>=0</code></td> <td>Box modality: <var>P</var> is true after all runs of hybrid program <code>&alpha;</code></td></tr>
-    <tr><td><code>&lt;&alpha;&gt;P</code></td> <td><code>&lt;{x:=x+1;}*&gt; x&gt;=10</code></td> <td>Diamond modality: <var>P</var> is true after at least one run of hybrid program <code>&alpha;</code></td></tr>
+    <tr><td><code>&lt;&alpha;&gt;P</code></td> <td><code>&lt;{x'=5}&gt; x&gt;=10</code></td> <td>Diamond modality: <var>P</var> is true after at least one run of hybrid program <code>&alpha;</code></td></tr>
 </tbody>
 </table>
 
@@ -143,12 +143,11 @@ the property <var>x&#x02264;m</var> always holds true when starting in a state
 where <var>v&gt;=0</var> and <var>A&#8805;0</var> and <var>B&gt;0</var> are true:
   <center><code>v&gt;=0 &amp; A&gt;0 &amp; B&gt;0 -&gt; [<var>car</var>]v&gt;=0</code></center>
 In this model <var>x</var> is the position of the car, <var>v</var> the velocity of the car, <var>B</var> its braking power, and <var>A</var> its maximum acceleration.
-A detailed model including a model for <var>car</var> are shown in the following KeYmaera X input file.
 </p>
 
         <h3 id="Example">Example</h3>
         <p>
-
+        This is an example of a <code>.kyx</code> model file that can be loaded into KeYmaera&#160;X.
         </p>
 
         <code><pre>
@@ -158,20 +157,20 @@ Functions.        /* function symbols cannot change their value */
 End.
 
 ProgramVariables. /* program variables may change their value over time */
-    R x.          /* position */
+    R x.          /* position of a point moving along a straight line */
     R v.          /* velocity */
     R a.          /* current acceleration chosen by controller */
 End.
 
-Problem.
-    v >= 0 & A > 0 & B > 0             /* initial condition */
-  ->
-    [                                  /* system dynamics */
-    { 
-      {a := A; ++ a := 0; ++ a := -B;} /* non-deterministic choice of accelerations */
-      {x' = v, v' = a & v >= 0}        /* differential equation system */
+Problem.          /* The differential dynamic logic formula to prove */
+  v >= 0 & A > 0 & B > 0               /* initial condition */
+ ->                                    /* implies that */
+  [                                    /* all behavior of: */
+    {                                  /* system dynamics */
+      {a := A; ++ a := 0; ++ a := -B;} /* non-deterministic acceleration choice */
+      {x' = v, v' = a & v >= 0}        /* differential equation system in v>=0 */
     }* @invariant(v >= 0)              /* loop repeats transitions */
-    ] v >= 0                           /* safety/postcondition */
+  ] v >= 0                             /* satisfies safety/postcondition */
 End.
         </pre></code>
     </div>
@@ -192,7 +191,7 @@ Journal of Automated Reasoning, <b>41</b>(2), pages 143-189, 2008.</li>
 
 <h3 id="Books">Compendia</h3>
 <ul>
-  <li>Andr&#233; Platzer. <a href="http://www.cs.cmu.edu/~aplatzer/course/fcps17.html">Foundations of Cyber-Physical Systems</a>. 
+  <li>Andr&#233; Platzer. <a href="http://lfcps.org/course/fcps17.html">Foundations of Cyber-Physical Systems</a>. 
 Lecture Notes, Computer Science Department, Carnegie Mellon University. 2017.</li>
   <li>Andr&#233; Platzer. <a href="http://dx.doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>. 
 Springer, 2010.</a></li>
