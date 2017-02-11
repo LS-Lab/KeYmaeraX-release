@@ -34,9 +34,9 @@ angular.module('formula')
             }
 
             scope.editClick = function(formulaId, event) {
-              // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
-              event.stopPropagation();
               if (sequentProofData.formulas.mode == 'edit') {
+                // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
+                event.stopPropagation();
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/prettyString').
                   then(function(response) {
                     scope.editFormulaPopover.open(formulaId, response.data.prettyString);
@@ -45,9 +45,9 @@ angular.module('formula')
             }
 
             scope.formulaClick = function(formulaId, event) {
-              // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
-              event.stopPropagation();
               if (sequentProofData.formulas.mode == 'prove') {
+                // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
+                event.stopPropagation();
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
                   then(function(response) {
                     if (response.data.length > 0) {
