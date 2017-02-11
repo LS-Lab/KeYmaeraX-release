@@ -123,9 +123,17 @@ class Etcs extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "prove safety lemma with master" in withMathematica { tool =>
+  it should "prove safety lemma with master" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma.kyx"))
     proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "prove safety with piecewise constant actuation disturbance" in withMathematica { _ =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyx"))
+    proveBy(s, master()) shouldBe 'proved
+    //@note tactic solves early to avoid repeated effort (need delayed tactic execution) - ca. 3x faster
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
   }
 
   "ETCS ModelPlex" should "synthesize a ctrl monitor from essentials" in withMathematica { tool =>

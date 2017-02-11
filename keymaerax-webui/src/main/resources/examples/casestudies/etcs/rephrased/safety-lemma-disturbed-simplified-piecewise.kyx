@@ -1,0 +1,73 @@
+/**
+ * Safety lemma for European Train Control System
+ * @provable
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ */
+Functions.
+  R b.
+  R amax.
+  R ep.
+  R l.
+  R u.
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R aa.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R drive.
+  R brake.
+  R state.
+End.
+
+Problem.
+
+    drive = 0
+  & brake = 1
+  & state = drive
+  & v^2 - d^2 <= 2*(b-u)*(m-z)
+  & v >=0
+  & ep > 0
+  & b > 0
+  & amax > 0
+  & d >= 0 &
+  b > u
+  & u >= 0
+  & l >= 0
+->
+  [
+  {
+    SB := (v^2 - d^2)/(2*(b-u)) + ((amax+u)/(b-u)+1)*((amax+u)*ep^2/2+ep*v);
+    {
+      /* RBC */
+      {
+         {do:= d; mo:=m; m := *; d := *; vdes:=*; ?d >= 0 & do^2 - d^2 <= 2*(b-u)*(m-mo) & vdes >= 0;}
+      ++ {state := brake;}
+      }
+
+      /* Train */
+   ++ {
+      t:=0;
+      /* Velocity control */
+      {  {?v <= vdes; a:=*; ?a >=0 & a <= amax;}
+      ++ {?v >= vdes; a:=*; ?a <=0 & a >= -b;}
+      };
+      /* Automated train protection */
+      {  {?m - z <= SB | state = brake; a:= -b;}
+      ++ {?m - z >= SB & state != brake;}
+      };
+      aa := *; ?-l <= aa-a & aa-a <= u;
+      {z'=v, v'=aa, t'=1 & v >= 0 & t <= ep}
+      }
+    }
+  }*@invariant(v^2 - d^2 <= 2*(b-u)*(m-z) & v >= 0 & d >= 0)
+  ] (z >= m -> v <= d)
+End.

@@ -1,0 +1,8 @@
+prop ; loop({`v^2-d^2<=2*(b-u)*(m-z)&v>=0&d>=0`}, 1) ; <(
+  master
+  ,
+  master
+  ,
+  composeb(1) ; choiceb(1.1) ; composeb(1.1.1) ; composeb(1.1.1.1) ; composeb(1.1.1.1.1) ; composeb(1.1.1.1.1.1) ;
+  composeb(1.1.1.1.1.1.1) ; solve(1.1.1.1.1.1.1.1) ; master
+)
