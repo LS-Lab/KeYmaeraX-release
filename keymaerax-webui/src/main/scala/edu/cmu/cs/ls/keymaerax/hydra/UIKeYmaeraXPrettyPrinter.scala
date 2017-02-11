@@ -79,8 +79,8 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   private def wrap(id: String, content: String, plain: Boolean, editable: Boolean): String =
     if (plain && editable)
       s"""${HTML_OPEN}span id="fml_$id" ng-class="{'hl':modeIsEdit(), 'edithover':isEditFormulaHighlighted('$id')}"
-         |  ng-mouseover="$$event.stopPropagation();highlightFormula('$id')"
-         |  ng-mouseleave="$$event.stopPropagation();highlightFormula(undefined)"
+         |  ng-mouseover="highlightFormula($$event, '$id', 'edit')"
+         |  ng-mouseleave="highlightFormula($$event, undefined, 'edit')"
          |  ng-click="editClick('$id', $$event)"
          |  uib-popover-template="'templates/editFormulaPopoverTemplate.html'"
          |  popover-is-open="editFormulaPopover.isOpen('$id')"
@@ -91,8 +91,8 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     else if (plain && !editable)
       s"""${HTML_OPEN}span id="fml_$id"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE""".stripMargin
     else s"""${HTML_OPEN}span ng-class="{'hl':modeIsProve(), 'hlhover':isProveFormulaHighlighted('$id')}" id="$id"
-        |  ng-mouseover="$$event.stopPropagation();highlightFormula('$id')"
-        |  ng-mouseleave="$$event.stopPropagation();highlightFormula(undefined)"
+        |  ng-mouseover="highlightFormula($$event, '$id', 'prove')"
+        |  ng-mouseleave="highlightFormula($$event, undefined, 'prove')"
         |  ng-click="formulaClick('$id', $$event)"
         |  ng-right-click="formulaRightClick('$id', $$event)"
         |  uib-popover-template="'templates/axiomPopoverTemplate.html'"

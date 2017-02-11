@@ -164,8 +164,11 @@ angular.module('formula')
               return dndSinks[sinkFormulaId];
             }
 
-            scope.highlightFormula = function(formulaId) {
-              sequentProofData.formulas.highlighted = formulaId;
+            scope.highlightFormula = function(event, formulaId, onMode) {
+              if (sequentProofData.formulas.mode == onMode) {
+                event.stopPropagation();
+                sequentProofData.formulas.highlighted = formulaId;
+              }
             }
 
             scope.modeIsProve = function() {
