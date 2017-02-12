@@ -391,6 +391,50 @@ class SequentialInterpreterTests extends TacticTestBase {
     result.subgoals.last.succ should contain only "x+1>0".asFormula
   }
 
+  "Def expression" should "define a function and expand it later" in {
+    val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
+    val invDef = DefExpression("inv(x)=x".asFormula)
+    val tactic = invDef & implyR(1) & loop("inv(x)>0".asFormula)(1)
+    val result = proveBy(fml, tactic)
+    result.subgoals should have size 3
+    result.subgoals(0).ante should contain only "x>0".asFormula
+    result.subgoals(0).succ should contain only "inv(x)>0".asFormula
+    result.subgoals(1).ante should contain only "inv(x)>0".asFormula
+    result.subgoals(1).succ should contain only "x>0".asFormula
+    result.subgoals(2).ante should contain only "inv(x)>0".asFormula
+    result.subgoals(2).succ should contain only "[x:=x+1;]inv(x)>0".asFormula
+    val expanded = proveBy(result, ExpandDef(invDef))
+    expanded.subgoals should have size 3
+    expanded.subgoals(0).ante should contain only "x>0".asFormula
+    expanded.subgoals(0).succ should contain only "x>0".asFormula
+    expanded.subgoals(1).ante should contain only "x>0".asFormula
+    expanded.subgoals(1).succ should contain only "x>0".asFormula
+    expanded.subgoals(2).ante should contain only "x>0".asFormula
+    expanded.subgoals(2).succ should contain only "[x:=x+1;]x>0".asFormula
+  }
+
+  it should "define a predicate and expand it later" in {
+    val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
+    val invDef = DefExpression("inv(x) <-> x>0".asFormula)
+    val tactic = invDef & implyR(1) & loop("inv(x)".asFormula)(1)
+    val result = proveBy(fml, tactic)
+    result.subgoals should have size 3
+    result.subgoals(0).ante should contain only "x>0".asFormula
+    result.subgoals(0).succ should contain only "inv(x)".asFormula
+    result.subgoals(1).ante should contain only "inv(x)".asFormula
+    result.subgoals(1).succ should contain only "x>0".asFormula
+    result.subgoals(2).ante should contain only "inv(x)".asFormula
+    result.subgoals(2).succ should contain only "[x:=x+1;]inv(x)".asFormula
+    val expanded = proveBy(result, ExpandDef(invDef))
+    expanded.subgoals should have size 3
+    expanded.subgoals(0).ante should contain only "x>0".asFormula
+    expanded.subgoals(0).succ should contain only "x>0".asFormula
+    expanded.subgoals(1).ante should contain only "x>0".asFormula
+    expanded.subgoals(1).succ should contain only "x>0".asFormula
+    expanded.subgoals(2).ante should contain only "x>0".asFormula
+    expanded.subgoals(2).succ should contain only "[x:=x+1;]x>0".asFormula
+  }
+
 //  "Scheduled tactics" should "work" in {
 //    val legacyTactic = tactics.TacticLibrary.arithmeticT
 //    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)

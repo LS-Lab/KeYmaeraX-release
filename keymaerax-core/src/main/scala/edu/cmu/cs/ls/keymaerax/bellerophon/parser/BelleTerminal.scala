@@ -79,6 +79,10 @@ private object TACTIC extends BelleTerminal("tactic", "[\\s][\\s\\S]*")
 
 private object AS extends BelleTerminal("as", "[\\s][\\s\\S]*")
 
+private object DEF extends BelleTerminal("def", "[\\s][\\s\\S]*")
+
+private object EXPAND extends BelleTerminal("expand", "[\\s][\\s\\S]*")
+
 private object RIGHT_ARROW extends BelleTerminal("=>")
 
 // Separation/Grouping Tokens

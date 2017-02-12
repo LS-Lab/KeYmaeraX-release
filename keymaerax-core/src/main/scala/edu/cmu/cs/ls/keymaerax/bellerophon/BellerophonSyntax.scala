@@ -615,6 +615,24 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   override def prettyString: String = t.name
 }
 
+/** Defines an expression (function or predicate) for later expansion. */
+case class DefExpression(exprDef: Formula) extends BelleExpr {
+  assert(exprDef match {
+    case Equal(FuncOf(_, _), _) => true
+    case Equiv(PredOf(_, _), _) => true
+    case _ => false
+  }, s"Expected either function definition of shape f(x)=t or predicate definition of shape p(x) <-> q, but got ${exprDef.prettyString}")
+  override def prettyString: String = s"def {`${exprDef.prettyString}`}"
+}
+
+/** Expands a function or predicate. */
+case class ExpandDef(expr: DefExpression) extends BelleExpr {
+  override def prettyString: String = s"expand {`${expr.exprDef match {
+    case Equal(fn@FuncOf(_, _), _) => fn.prettyString
+    case Equiv(p@PredOf(_, _), _) => p.prettyString
+  }}`}"
+}
+
 @deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
 case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
   override def prettyString: String = s"proveAs(${lemmaName})"

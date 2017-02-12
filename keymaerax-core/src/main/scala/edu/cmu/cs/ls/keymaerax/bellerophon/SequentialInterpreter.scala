@@ -4,11 +4,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -32,7 +31,21 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       val result: BelleValue =
       expr match {
         case DefTactic(_, _) => v //@note noop, but included for serialization purposes
+        case DefExpression(_) => v
         case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
+        case ExpandDef(DefExpression(Equal(fn@FuncOf(name, arg), t))) =>
+          val subst = arg match {
+            case Nothing => SubstitutionPair(fn, t)::Nil
+            case term => SubstitutionPair(FuncOf(name, DotTerm()), t.replaceFree(term, DotTerm()))::Nil
+          }
+          apply(TactixLibrary.US(USubst(subst)), v)
+        case ExpandDef(DefExpression(Equiv(p@PredOf(name, arg), q))) =>
+          val subst = arg match {
+            case Nothing => SubstitutionPair(p, q)::Nil
+            case term => SubstitutionPair(PredOf(name, DotTerm()), q.replaceFree(term, DotTerm()))::Nil
+          }
+          apply(TactixLibrary.US(USubst(subst)), v)
+
         case named: NamedTactic => apply(named.tactic, v)
         case builtIn: BuiltInTactic => v match {
           case BelleProvable(pr, _) => try {
@@ -242,7 +255,6 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           if (provable.subgoals.length != 1)
             throw new BelleThrowable("Let of multiple goals is not currently supported.").inContext(expr, "")
 
-          import Augmentors.SequentAugmentor
           //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
           val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
           val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
