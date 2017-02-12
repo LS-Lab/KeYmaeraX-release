@@ -379,6 +379,18 @@ class SequentialInterpreterTests extends TacticTestBase {
     db.proveBy(modelContent, tactic(1)) shouldBe 'proved
   }}
 
+  "Def tactic" should "define a tactic and apply it later" in {
+    val fml = "x>0 -> [x:=2;++x:=x+1;]x>0".asFormula
+    val tDef = DefTactic("myAssign", assignb('R))
+    val tactic = tDef & implyR(1) & choiceb(1) & andR(1) & OnAll(ApplyDefTactic(tDef))
+    val result = proveBy(fml, tactic)
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "2>0".asFormula
+    result.subgoals.last.ante should contain only "x>0".asFormula
+    result.subgoals.last.succ should contain only "x+1>0".asFormula
+  }
+
 //  "Scheduled tactics" should "work" in {
 //    val legacyTactic = tactics.TacticLibrary.arithmeticT
 //    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)

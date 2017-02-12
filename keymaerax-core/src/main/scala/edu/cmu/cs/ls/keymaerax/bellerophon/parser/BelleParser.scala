@@ -16,6 +16,16 @@ object BelleParser extends (String => BelleExpr) {
   private var invariantGenerator : Option[Generator.Generator[Formula]] = None
   private var DEBUG = false
 
+  private case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V], parent: Option[DefScope[K, V]]) {
+    def get(key: K): Option[V] = defs.get(key) match {
+      case Some(e) => Some(e)
+      case None => parent match {
+        case Some(parentScope) => parentScope.get(key)
+        case None => None
+      }
+    }
+  }
+
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
   def parseWithInvGen(s: String, g:Option[Generator.Generator[Formula]] = None): BelleExpr =
@@ -24,7 +34,7 @@ object BelleParser extends (String => BelleExpr) {
       case None =>
         invariantGenerator = g
         try {
-          parseTokenStream(BelleLexer(s))
+          parseTokenStream(BelleLexer(s), DefScope(scala.collection.mutable.Map.empty, None))
         } catch {
           case e: Throwable =>
             System.err.println("Error parsing\n" + s)
@@ -50,8 +60,8 @@ object BelleParser extends (String => BelleExpr) {
     }
   }
 
-  def parseTokenStream(toks: TokenStream): BelleExpr = {
-    val result = parseLoop(ParserState(Bottom, toks))
+  def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic]): BelleExpr = {
+    val result = parseLoop(ParserState(Bottom, toks), tacticDefs)
     result.stack match {
       case Bottom :+ BelleAccept(e) => e
       case context :+ (BelleErrorItem(msg,loc,st)) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st) //@todo not sure why I need the extra () around ErrorList.
@@ -60,16 +70,17 @@ object BelleParser extends (String => BelleExpr) {
   }
 
   //@tailrec
-  private def parseLoop(st: ParserState) : ParserState = {
+  private def parseLoop(st: ParserState, tacticDefs: DefScope[String, DefTactic]) : ParserState = {
     if(DEBUG) println(s"Current state: ${st}")
 
     st.stack match {
       case _ :+ (result : FinalBelleItem) => st
-      case _ => parseLoop(parseStep(st))
+      case _ => parseLoop(parseStep(st, tacticDefs), tacticDefs)
     }
   }
 
-  private def parseInnerExpr(tokens: List[BelleToken]): (BelleExpr, Location, List[BelleToken]) = tokens match {
+  private def parseInnerExpr(tokens: List[BelleToken],
+                             tacticDefs: DefScope[String, DefTactic]): (BelleExpr, Location, List[BelleToken]) = tokens match {
     case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
       //@note find matching closing parenthesis, parse inner expr, then continue with remainder
       var openParens = 1
@@ -78,11 +89,11 @@ object BelleParser extends (String => BelleExpr) {
         case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
         case _ => openParens > 0
       })
-      val innerExpr = parseTokenStream(inner)
+      val innerExpr = parseTokenStream(inner, DefScope(scala.collection.mutable.Map.empty, Some(tacticDefs)))
       (innerExpr, oParenLoc.spanTo(cParenLoc), remainder)
   }
 
-  private def parseStep(st: ParserState) : ParserState = {
+  private def parseStep(st: ParserState, tacticDefs: DefScope[String, DefTactic]) : ParserState = {
     val stack : Stack[BelleItem] = st.stack
 
     stack match {
@@ -236,35 +247,36 @@ object BelleParser extends (String => BelleExpr) {
       //endregion
 
       //region OnAll combinator
-      case r :+ BelleToken(ON_ALL, loc) => st.input match {
-        case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
-          //@note find matching closing parenthesis, parse inner expr, then continue with remainder
-          var openParens = 1
-          val (inner, BelleToken(CLOSE_PAREN, cParenLoc) :: remainder) = tail.span({
-            case BelleToken(OPEN_PAREN, _) => openParens = openParens + 1; openParens > 0
-            case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
-            case _ => openParens > 0
-          } )
-          val innerExpr = parseTokenStream(inner)
-          ParserState(r :+ ParsedBelleExpr(OnAll(innerExpr), loc.spanTo(cParenLoc)), remainder)
-      }
+      case r :+ BelleToken(ON_ALL, loc) =>
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs)
+        ParserState(r :+ ParsedBelleExpr(OnAll(innerExpr), loc.spanTo(innerLoc)), remainder)
       //endregion
 
       //region ? combinator
       case r :+ BelleToken(OPTIONAL, loc) =>
-        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input)
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs)
         ParserState(r :+ ParsedBelleExpr(Idioms.?(innerExpr), loc.spanTo(innerLoc.end)), remainder)
       //endregion
 
       //region let
       case r :+ BelleToken(LET, loc) => st.input match {
         case BelleToken(OPEN_PAREN, _) :: BelleToken(expr: EXPRESSION, _) :: BelleToken(CLOSE_PAREN, _) :: BelleToken(IN, _) :: tail =>
-          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail)
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs)
           val (abbrv, value) = expr.undelimitedExprString.asFormula match {
             case Equal(a, v) => (a, v)
             case Equiv(a, v) => (a, v)
           }
           ParserState(r :+ ParsedBelleExpr(Let(abbrv, value, innerExpr), loc.spanTo(innerLoc.end)), remainder)
+      }
+      //endregion
+
+      //region tactic
+      case r :+ BelleToken(TACTIC, loc) => st.input match {
+        case BelleToken(IDENT(name), _) :: BelleToken(AS, _) :: tail =>
+          if (tacticDefs.defs.contains(name)) throw ParseException(s"Tactic definition: unique name '$name' expected in scope", st)
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs)
+          tacticDefs.defs(name) = DefTactic(name, innerExpr)
+          ParserState(r :+ ParsedBelleExpr(DefTactic(name, innerExpr), loc.spanTo(innerLoc)), remainder)
       }
       //endregion
 
@@ -326,7 +338,7 @@ object BelleParser extends (String => BelleExpr) {
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
           if(!isOpenParen(st.input)) {
-            val parsedExpr = constructTactic(name, None, identLoc)
+            val parsedExpr = constructTactic(name, None, identLoc, tacticDefs)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc), st.input)
           }
           else {
@@ -334,18 +346,18 @@ object BelleParser extends (String => BelleExpr) {
 
             //Do our best at computing the entire range of positions that is encompassed by the tactic application.
             val endLoc = remainder match {
-              case hd :: tl => hd.location
+              case hd :: _ => hd.location
               case _ => st.input.last.location
             }
             val spanLoc = if(endLoc.end.column != -1) identLoc.spanTo(endLoc) else identLoc
 
-            val parsedExpr = constructTactic(name, Some(args), identLoc)
+            val parsedExpr = constructTactic(name, Some(args), identLoc, tacticDefs)
             parsedExpr.setLocation(identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, spanLoc), remainder)
           }
         }
         catch {
-          case e : ClassCastException => throw ParseException(s"Could not convert tactic ${name} because the arguments passed to it were of incorrect type", e)
+          case e : ClassCastException => throw ParseException(s"Could not convert tactic $name because the arguments passed to it were of incorrect type", e)
         }
       //endregion
 
@@ -408,6 +420,7 @@ object BelleParser extends (String => BelleExpr) {
     case OPTIONAL => true
     case ON_ALL => true
     case LET => true
+    case TACTIC => true
     case _ => false
   }
 
@@ -423,20 +436,26 @@ object BelleParser extends (String => BelleExpr) {
   //region Constructors (i.e., functions that construct [[BelleExpr]] and other accepted values from partially parsed inputs.
 
   /** Constructs a tactic using the reflective expression builder. */
-  private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location) : BelleExpr = {
+  private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location, tacticDefs: DefScope[String, DefTactic]) : BelleExpr = {
     // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by makikng a bunch of one-tuples.
     val newArgs = args match {
       case None => Nil
-      case Some(argList) => argList.map(_ match {
+      case Some(argList) => argList.map({
         case Left(expression) => Left(Seq(expression))
         case Right(pl) => Right(pl)
       })
     }
 
-    try {
-      ReflectiveExpressionBuilder(name, newArgs, invariantGenerator)
-    } catch {
-      case e: ReflectiveExpressionBuilderExn => throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
+    val tacticDef = tacticDefs.get(name)
+    if (tacticDef.isDefined) {
+      if (newArgs.nonEmpty) throw ParseException("Arguments for def tactics not yet supported", location)
+      ApplyDefTactic(tacticDef.get)
+    } else {
+      try {
+        ReflectiveExpressionBuilder(name, newArgs, invariantGenerator)
+      } catch {
+        case e: ReflectiveExpressionBuilderExn => throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
+      }
     }
   }
 

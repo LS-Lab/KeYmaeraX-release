@@ -3,7 +3,7 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.parser.UnknownLocation
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -398,6 +398,45 @@ class SimpleBelleParserTests extends TacticTestBase {
       """.stripMargin
     val tactic = BelleParser(s"let ({`a()=a`}) in ($inner)")
     tactic shouldBe Let("a()".asTerm, "a".asTerm, BelleParser(inner))
+  }
+
+  "def tactic parser" should "parse a simple example" in {
+    val tactic = BelleParser("tactic t as (assignb('R))")
+    tactic shouldBe DefTactic("t", TactixLibrary.assignb('R))
+  }
+
+  it should "parse a simple example with application" in {
+    val tactic = BelleParser("tactic t as (assignb('R)) ; implyR(1) ; t")
+    val tDef = DefTactic("t", TactixLibrary.assignb('R))
+    tactic shouldBe tDef & (TactixLibrary.implyR(1) & ApplyDefTactic(tDef))
+  }
+
+  it should "parse with multiple application" in {
+    val tactic = BelleParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(t))")
+    val tDef = DefTactic("t", TactixLibrary.assignb('R))
+    tactic shouldBe tDef & (TactixLibrary.andR(1) <(
+      ApplyDefTactic(tDef) & (TactixLibrary.prop & TactixLibrary.done),
+      TactixLibrary.prop & OnAll(ApplyDefTactic(tDef))))
+  }
+
+  it should "reject duplicate definitions" in {
+    a [ParseException] should be thrownBy BelleParser("tactic t as (assignb('R)) ; tactic t as (implyR(1))")
+  }
+
+  it should "allow scoped definitions" in {
+    val tactic = BelleParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(tactic t as (unfold) ; t); t)")
+    val tDef1 = DefTactic("t", TactixLibrary.assignb('R))
+    val tDef2 = DefTactic("t", TactixLibrary.unfoldProgramNormalize)
+    tactic shouldBe tDef1 & (TactixLibrary.andR(1) <(
+      ApplyDefTactic(tDef1) & (TactixLibrary.prop & TactixLibrary.done),
+      TactixLibrary.prop & (OnAll(tDef2 & ApplyDefTactic(tDef2)) & ApplyDefTactic(tDef1))))
+  }
+
+  it should "allow nested defs" in {
+    val tactic = BelleParser("tactic t as (tactic s as (assignb('R)) ; andR(1) ; <(s, s)) ; t")
+    val sDef = DefTactic("s", TactixLibrary.assignb('R))
+    val tDef = DefTactic("t", sDef & TactixLibrary.andR(1) <(ApplyDefTactic(sDef), ApplyDefTactic(sDef)))
+    tactic shouldBe tDef & ApplyDefTactic(tDef)
   }
 
   //endregion

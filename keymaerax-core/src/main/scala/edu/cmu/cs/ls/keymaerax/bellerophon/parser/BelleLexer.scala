@@ -96,6 +96,8 @@ object BelleLexer extends ((String) => List[BelleToken]) {
       case DONE.startPattern(_*) => consumeTerminalLength(DONE, loc)
       case LET.startPattern(_*) => consumeTerminalLength(LET, loc)
       case IN.startPattern(_*) => consumeTerminalLength(IN, loc)
+      case TACTIC.startPattern(_*) => consumeTerminalLength(TACTIC, loc)
+      case AS.startPattern(_*) => consumeTerminalLength(AS, loc)
 
       //build-in tactics.
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)

@@ -75,6 +75,10 @@ private object LET extends BelleTerminal("let", "[\\s][\\s\\S]*")
 
 private object IN extends BelleTerminal("in", "[\\s][\\s\\S]*")
 
+private object TACTIC extends BelleTerminal("tactic", "[\\s][\\s\\S]*")
+
+private object AS extends BelleTerminal("as", "[\\s][\\s\\S]*")
+
 private object RIGHT_ARROW extends BelleTerminal("=>")
 
 // Separation/Grouping Tokens

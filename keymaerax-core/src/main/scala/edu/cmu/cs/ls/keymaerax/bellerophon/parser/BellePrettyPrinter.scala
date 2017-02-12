@@ -29,6 +29,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     catch {
       case exn:Throwable =>
         e match {
+          case DefTactic(name, t) => op(e).terminal.img + " " + name + " " + AS.img + "(" + pp(t, indent) + ")"
+          case ApplyDefTactic(DefTactic(name, _)) => name
           case SeqTactic(l,r)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
           case EitherTactic(l,r) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
           case BranchTactic(ts) => op(e).terminal.img +

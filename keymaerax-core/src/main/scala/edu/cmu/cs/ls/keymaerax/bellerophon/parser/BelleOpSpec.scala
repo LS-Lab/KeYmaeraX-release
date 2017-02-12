@@ -25,6 +25,7 @@ case class BelleSaturatingOpSpec(terminal: BelleTerminal, precedence: Int, leftA
 case class BelleRepeatOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (BelleExpr, Int, BelleType) => BelleExpr) extends BelleOpSpec
 case class BelleUSubstOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Seq[(BelleType, RenUSubst => BelleExpr)]) => BelleExpr) extends BelleOpSpec
 case class BelleLetOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (Expression, Expression, BelleExpr) => BelleExpr) extends BelleOpSpec
+case class BelleDefTacticOpSpec(terminal: BelleTerminal, precedence: Int, leftAssoc: Boolean, constructor : (String, BelleExpr) => BelleExpr) extends BelleOpSpec
 
 case class BelleUnitOpSpec[T,S](terminal: BelleTerminal, precedence:Int, leftAssoc: Boolean, constructor: T => S) extends BelleOpSpec
 
@@ -44,6 +45,7 @@ object BelleOpSpec {
   val onall    = BelleUnaryOpSpec(ON_ALL, 100, false)
   val usubst   = BelleUSubstOpSpec(US_MATCH, 100, false, USubstPatternTactic.apply)
   val let      = BelleLetOpSpec(LET, 100, false, Let.apply)
+  val defTactic      = BelleDefTacticOpSpec(TACTIC, 100, false, DefTactic.apply)
 
   def op(e : BelleExpr): BelleOpSpec = e match {
     case e:SeqTactic      => seq
@@ -57,6 +59,7 @@ object BelleOpSpec {
     case e:BuiltInTactic       => base
     case e:AppliedPositionTactic => base
     case e:AppliedDependentPositionTactic => base
+    case _: DefTactic => defTactic
     case _: Let => let
     case _ => base
   }

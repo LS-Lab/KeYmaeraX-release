@@ -31,6 +31,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     try {
       val result: BelleValue =
       expr match {
+        case DefTactic(_, _) => v //@note noop, but included for serialization purposes
+        case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
         case named: NamedTactic => apply(named.tactic, v)
         case builtIn: BuiltInTactic => v match {
           case BelleProvable(pr, _) => try {

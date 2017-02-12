@@ -605,6 +605,16 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
 
+/** Defines a tactic for later execution. */
+case class DefTactic(name: String, t: BelleExpr) extends BelleExpr {
+  override def prettyString: String = s"tactic $name as (${t.prettyString})"
+}
+
+/** Applies the tactic definition `t`. */
+case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
+  override def prettyString: String = t.name
+}
+
 @deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
 case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
   override def prettyString: String = s"proveAs(${lemmaName})"
