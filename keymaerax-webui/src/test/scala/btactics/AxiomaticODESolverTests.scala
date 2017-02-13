@@ -10,10 +10,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{byUS, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
 
@@ -26,6 +26,28 @@ import scala.collection.immutable._
   */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   private val dgc = PrivateMethod[DependentPositionTactic]('DGC)
+
+  "Selection sort" should "achieve intended permutation" in withMathematica { qeTool =>
+    val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
+    val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
+    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS("<-> reflexive")
+    val fml = "[{w' = 2,  x' = 0, y' = 3, z' = 1}]true <-> [{x' = 0, z' = 1, w' = 2, y' = 3}]true".asFormula
+    proveBy(fml, e) shouldBe 'proved
+  }
+
+
+  "dfs" should "order dependencies nicely" in withMathematica { qeTool =>
+    val ode  = "{x' = y + z, y' = 2, z' = y + w, w' = y}".asDifferentialProgram
+    val res = dfs(ode)
+    //res shouldBe Some(List(Variable("y"), Variable("w"), Variable("z"), Variable("x")))
+    res shouldBe Some(List(Variable("x"), Variable("z"), Variable("w"), Variable("y")))
+  }
+
+  it should "detect cycles" in withMathematica { qeTool =>
+    val ode = "{x' = -y, y' = x}".asDifferentialProgram
+    val res = dfs(ode)
+    res shouldBe None
+  }
 
   //region integration tests
   "Axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
@@ -117,7 +139,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->a/2*t_^2+v*t_+x>=0)".asFormula
   }
 
-  it should "solve double integrator out of order" taggedAs TodoTest ignore withMathematica { qeTool =>
+  it should "solve double integrator out of order" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2&a=3&t=0 -> [{v'=a, t'=1, x'=v}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
@@ -492,13 +514,6 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val t = implyR(1) & AxiomaticODESolver()(1)
     the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Expected ODE to be linear and in correct order."
   }
-
-  it should "fail early when the ODE is in wrong order" in withMathematica { qeTool =>
-    val f = "x=1&v=2&a=0&t=0 -> [{v'=a,x'=v,t'=1}]x^3>=1".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1)
-    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Expected ODE to be linear and in correct order."
-  }
-
   //endregion
 
 }
