@@ -522,8 +522,10 @@ object AxiomaticODESolver {
           (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) & TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
             TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
         ) & checkResult(ode, y_DE)
-      case Some(f@Diamond(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) =>
-        val axiomName = "DGd diamond differential ghost"
+      case Some(f@Diamond(ODESystem(ode@DifferentialProduct(y_DE@AtomicODE(DifferentialSymbol(y), t), c), q), p)) =>
+        val axiomName =
+          if (StaticSemantics.freeVars(t).contains(y)) "DGd diamond differential ghost" //@todo ensure a*x+b shape
+          else "DGd diamond differential ghost constant"
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         FOQuantifierTactics.universalGen(Some(y_DE.xp.x), y_DE.xp.x)(pos) &
         TactixLibrary.cutAt(Diamond(ODESystem(c, q), p))(pos) <(
@@ -533,7 +535,7 @@ object AxiomaticODESolver {
           TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) &
             TactixLibrary.CE(pos.inExpr) &
             TactixLibrary.useAt(",d commute")(1, PosInExpr(1::0::Nil)) &
-            TactixLibrary.byUS("DGd diamond differential ghost") & TactixLibrary.done
+            TactixLibrary.byUS(axiomName) & TactixLibrary.done
         ) & checkResult(ode, y_DE)
     }
   })

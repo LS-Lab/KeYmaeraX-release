@@ -1406,6 +1406,27 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asFormula)
   }
 
+  it should "solve explicit-form ODE" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=0*x+1}]x>0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> t_+x>0)".asFormula)
+  }
+
+  it should "solve diamond explicit-form ODE" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=0*x+1}>x>0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
+  }
+
+  it should "solve diamond ODE" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=1}>x>0".asFormula)), diffSolve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
+  }
+
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
     val result = proveBy("[{x'=3&x>=0}]x>=0".asFormula, DifferentialTactics.diffUnpackEvolutionDomainInitially(1))
     result.subgoals should have size 1
