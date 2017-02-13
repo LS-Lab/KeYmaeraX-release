@@ -110,11 +110,21 @@ object AxiomaticODESolver {
 
    class Cycle extends Exception {}
 
+  def myFreeVars(term:Term) = {
+    term match {
+      /* Hack: ODE solving actually works ok sometimes if semantically free variables are treated as free.
+       * If we have something in the linear form expected by DG, then leave it around and see if it solves.
+       * some of the case studies use this. */
+      case Plus(Times(Number(n),_), e) if n == 0 => StaticSemantics.freeVars(e)
+      case e => StaticSemantics.freeVars(e)
+    }
+  }
+
   def dfsLoop(map: Map[Variable, Term], visited: Set[Variable], active: Set[Variable], curr: Variable, acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
     if (visited.contains(curr)) {
       None
     } else {
-      val incoming = map.keys.filter(p => StaticSemantics.freeVars(map(curr)).contains(p) && map.contains(p))
+      val incoming = map.keys.filter(p => myFreeVars(map(curr)).contains(p) && map.contains(p))
       val _ = incoming.foreach(v =>
         if(active.contains(v)) {
           throw new Cycle

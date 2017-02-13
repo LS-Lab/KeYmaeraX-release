@@ -83,7 +83,7 @@ object DerivationInfo {
 
   private def convert(rules: Map[String,ProvableSig]): List[DerivationInfo] =
   //@todo display info is rather impoverished
-    rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name,name), canonicalize(name))).toList
+    rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name, name), canonicalize(name))).toList
   private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
   /**
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
@@ -236,6 +236,7 @@ object DerivationInfo {
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
+    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(f(x)>g(x)→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
@@ -1100,7 +1101,8 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
 
 /** Information for an axiomatic rule */
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends ProvableInfo {
-  val expr = TactixLibrary.by(provable, codeName)
+  // lazy to avoid circular initializer call
+  lazy val expr = TactixLibrary.by(provable, codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr
   lazy val provable: ProvableSig = ProvableSig.rules(canonicalName)
