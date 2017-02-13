@@ -1,7 +1,9 @@
 <div class="modal-header">
-    <h3 class="modal-title">Steps of {{tactic.parent}}</h3>
+    <h3 class="modal-title" ng-if="tactic.parent !== ''">Steps of {{tactic.parent}}</h3>
+    <!-- Assumption: will get here only when we open progress for failed tactic -->
+    <h3 class="modal-title" ng-if="tactic.parent === ''">Progress until tactic failed</h3>
 </div>
-<div class="modal-body" style="overflow: scroll; height: 300px;">
+<div class="modal-body">
     <!-- TODO: sequent deduction view -->
     <uib-tabset justified="true">
         <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" id="provingtab">
@@ -40,5 +42,5 @@
     </div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-click="close()">Close</button>
+    <button class="btn btn-primary pull-right" ng-click="close()">Close</button>
 </div>

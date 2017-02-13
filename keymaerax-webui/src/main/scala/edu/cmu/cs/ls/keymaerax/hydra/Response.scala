@@ -66,6 +66,10 @@ class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends 
   }
 }
 
+class PlainResponse(data: (String, JsValue)*) extends Response {
+  override def getJson = JsObject(data:_*)
+}
+
 class ModelListResponse(models : List[ModelPOJO]) extends Response {
   val objects = models.map(modelpojo => JsObject(
     "id" -> JsString(modelpojo.modelId.toString),
@@ -391,8 +395,9 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
       "type" -> JsString("taskstatus"))
 }
 
-class TaskResultResponse(parent: TreeNode, children: List[TreeNode], pos: Option[PositionLocator], progress: Boolean = true) extends Response {
+class TaskResultResponse(proofId: String, parent: TreeNode, children: List[TreeNode], pos: Option[PositionLocator], progress: Boolean = true) extends Response {
   def getJson = JsObject(
+    "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> nodeIdJson(parent.id),
       "children" -> childrenJson(children)

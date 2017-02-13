@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, RenUSubst, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink
 
 import scala.collection.immutable._
 
@@ -16,48 +17,68 @@ import scala.collection.immutable._
   */
 class PolynomialArithTests extends TacticTestBase {
 
+  "PolynomialArith" should "order variables" in withMathematica { qeTool =>
+    val vars = List("x","z","x()","z()","a+b","c+d").map(_.asTerm)
+
+    vars.combinations(2).toList.map{ case List(x,y) => {VarOrd.compare(x,y)}} shouldBe List(-2,-1,-1,0,0,-1,-1,0,0,-2,0,0,0,0,0)
+    vars.combinations(2).toList.map{ case List(x,y) => {VarOrd.compare(y,x)}} shouldBe List(2,1,1,0,0,1,1,0,0,2,0,0,0,0,0)
+  }
+
   "PolynomialArith" should "check monomial normalization" in withMathematica { qeTool =>
-    val m1 = "1 * x^5 * a^5".asTerm //Valid
-    val m2 = "1 * x^5 * x^5".asTerm //Invalid
-    val m3 = "1 * x^5 * y^5".asTerm //Invalid
-    val m4 = "1 * (x^5 * a^5)".asTerm //Invalid
-    val m5 = "1 * z^1 * x^7 * b^8".asTerm //Valid
-    val m6 = "1 * z^8 * x^7 * a^1".asTerm //Valid
-
+    //Note: recently changed to reverse lexicographic
+    val m1 = "1 * a^5 * x^5".asTerm //Valid
+    val m2 = "1 * x^5 * x()^5".asTerm //Valid
+    val m3 = "1 * y^5 * x^5".asTerm //Invalid
+    val m4 = "1 * (a^5 * x^5)".asTerm //Invalid
+    val m5 = "1 * b^1 * x^7 * z()^8".asTerm //Valid
+    val m6 = "1 * a^8 * x^7 * z()^1".asTerm //Valid
     (checkMono(m1),checkMono(m2),checkMono(m3),checkMono(m4),checkMono(m5),checkMono(m6)) shouldBe
-       (true,false,false,false,true,true)
+       (true,true,false,false,true,true)
+  }
 
-    (cmpMono(m5,m6)) shouldBe (true)
+
+  "PolynomialArith" should "check monomial ordering" in withMathematica { qeTool =>
+    val m1 = "1 * a^5 * x^5".asTerm //Valid
+    val m2 = "1 * x^5 * x()^5".asTerm //Valid
+    val m5 = "1 * b^1 * x^7 * z()^8".asTerm //Valid
+    val m6 = "1 * a^8 * x^7 * z()^1".asTerm //Valid
+    val m7 = "1 * a^8 * x^7 * z()^1".asTerm //Valid
+
+    val vars = List(m1,m2,m5,m6,m7)
+
+    (vars.combinations(2).toList.map{ case List(x,y) => {MonOrd.compare(x,y)}}) shouldBe List(-1,-1,-1,-1,-1,1,0)
+    (vars.combinations(2).toList.map{ case List(x,y) => {MonOrd.compare(y,x)}}) shouldBe List(1,1,1,1,1,-1,0)
+
   }
 
   "PolynomialArith" should "check polynomial normalization" in withMathematica { qeTool =>
-    val p1 = "0 + 5 * (1 * x^5 * b^5) + 5 * (1 * x^5 * a^5)".asTerm //Valid
-    val p2 = "0 + 5 * (1 * c^5 * a^5) + 5 * (1 * x^5 * a^5)".asTerm //Invalid
-    val p3 = "0 + 5 * (1 * x^5 * a^6) + 5 * (1 * x^5 * a^5)".asTerm //Invalid
-    val p4 = "0 + 5 * (1 * x^6 * a^5) + 5 * (1 * x^5 * a^6)".asTerm //Valid
-    val p5 = "0 + -5.5 * (1 * x^6 * a^5) + 5 * (1 * x^5 * a^6)".asTerm //Valid
+    val p1 = "0 + 5 * (1 * a^5 * x^5) + 5 * (1 * b^5 * x^5)".asTerm //Valid
+    val p2 = "0 + 5 * (1 * a^5 * c^5) + 5 * (1 * a^5 * x^5)".asTerm //Valid
+    val p3 = "0 + 5 * (1 * a^5 * x^6) + 5 * (1 * a^5 * x^5)".asTerm //Invalid
+    val p4 = "0 + 5 * (1 * a^6 * x^5) + 5 * (1 * a^5 * x^6)".asTerm //Valid
+    val p5 = "0 + -5.5 * (1 * a^6 * x^5) + 5 * (1 * a^5 * x^6)".asTerm //Valid
 
-    (checkPoly(p1), checkPoly(p2), checkPoly(p3), checkPoly(p4), checkPoly(p5)) shouldBe(true,false,false,true,true)
+    (checkPoly(p1), checkPoly(p2), checkPoly(p3), checkPoly(p4), checkPoly(p5)) shouldBe(true,true,false,true,true)
   }
 
   "PolynomialArith" should "do poly add" in withMathematica { qeTool =>
-    val p1 = "0 + 5 * (1 * x^5 * b^5) + 5 * (1 * x^5 * a^5)".asTerm //Valid
-    val p2 = "0 + 5 * (1 * x^6 * a^5) + 5 * (1 * x^5 * a^6)".asTerm //Valid
-    val p3 = "0 + -5.5 * (1 * x^6 * a^5) + 5 * (1 * x^5 * a^6)".asTerm //Valid
+    val p1 = "0 + 5 * (1 * a^5 * x^5) + 5 * (1 * b^5 * x^5)".asTerm //Valid
+    val p2 = "0 + 5 * (1 * a^6 * x^5) + 5 * (1 * a^5 * x^6)".asTerm //Valid
+    val p3 = "0 + -5.5 * (1 * a^6 * x^5) + 5 * (1 * a^5 * x^6)".asTerm //Valid
 
     val (p4,r4) = addPoly(p1,p2)
     val (p5,r5) = addPoly(p4,p3)
     val (p6,r6) = addPoly(p5,p5)
-    //println(p4,p5,p6)
     (checkPoly(p4),checkPoly(p5),checkPoly(p6)) shouldBe (true,true,true)
+    (r4.isProved,r5.isProved,r6.isProved) shouldBe (true,true,true)
   }
 
   "PolynomialArith" should "do mono mul" in withMathematica { qeTool =>
-    val m1 = "1 * x^5 * a^5".asTerm
-    val m2 = "1 * z^1 * x^7 * b^8".asTerm
-    val m3 = "1 * z^8 * x^7 * a^1".asTerm
+    val m1 = "1 * a^5 * x^5".asTerm
+    val m2 = "1 * b^1 * x^7 * z^8".asTerm
+    val m3 = "1 * x^8 * z^7 * a()^1".asTerm
 
-    val p1 = "0 + 5 * (1 * x^5 * b^5) + 5 * (1 * x^5 * a^5)".asTerm
+    val p1 = "0 + 5 * (1 * x^5 * a()^5) + 5 * (1 * x^5 * b()^5)".asTerm
 
     val (m4,r4) = mulMono(m1,m2)
     val (m5,r5) = mulMono(m4,m3)
@@ -71,8 +92,8 @@ class PolynomialArithTests extends TacticTestBase {
   }
 
   "PolynomialArith" should "do poly mul" in withMathematica { qeTool =>
-    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a^2)".asTerm
-    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a^2)".asTerm
+    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a()^2)".asTerm
+    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a()^2)".asTerm
 
     val (p3,r3) = addPoly(p1,p2)
     val (p4,r4) = mulPoly(p1,p2)
@@ -84,16 +105,16 @@ class PolynomialArithTests extends TacticTestBase {
   }
 
   "PolynomialArith" should "do poly add with proof" in withMathematica { qeTool =>
-    val p1 = "0 + 2 * (1 * x^ 1) + 2 * (1 * b^2)".asTerm
-    val p2 = "0 + -2 * (1 * x^1) + 2 * (1 * a^2)".asTerm
+    val p1 = "0 + 2 * (1 * x^ 1) + 2 * (1 * b()^2)".asTerm
+    val p2 = "0 + -2 * (1 * x^1) + 2 * (1 * a()^2)".asTerm
 
     val (p3,r3) = addPoly(p1,p2) //Cancelling coefficients
     val (p4,r4) = addPoly(p1,p1) //Adding coefficients
     val (p5,r5) = addPoly(p2,p1) //Inverse
 
-    p3 shouldBe "0+2*(1*b^2)+2*(1*a^2)".asTerm
-    p4 shouldBe "0+4*(1*x^1)+4*(1*b^2)".asTerm
-    p5 shouldBe "0+2*(1*b^2)+2*(1*a^2)".asTerm
+    p3 shouldBe "0+2*(1*a()^2)+2*(1*b()^2)".asTerm
+    p4 shouldBe "0+4*(1*x^1)+4*(1*b()^2)".asTerm
+    p5 shouldBe "0+2*(1*a()^2)+2*(1*b()^2)".asTerm
 
     r3 shouldBe 'proved
     r4 shouldBe 'proved
@@ -102,16 +123,16 @@ class PolynomialArithTests extends TacticTestBase {
 
   "PolynomialArith" should "do mono mul with proof" in withMathematica { qeTool =>
     //Note: ^0.5 isn't actually allowed
-    val m1 = "(1 * y^ 0.5 * x^2)".asTerm
-    val m2 = "1* y^-0.5 * a^2 ".asTerm
+    val m1 = "(1 * y^ 0.5 * x()^2)".asTerm
+    val m2 = "1* y^-0.5 * a()^2 ".asTerm
 
     val (m3,r3) = mulMono(m1,m2) //Cancelling coefficients
     val (m4,r4) = mulMono(m1,m1) //Adding coefficients
     val (m5,r5) = mulMono(m2,m1) //Inverse
 
-    m3 shouldBe "1*x^2*a^2".asTerm
-    m4 shouldBe "1*y^1.0*x^4".asTerm
-    m5 shouldBe "1*x^2*a^2".asTerm
+    m3 shouldBe "1*a()^2*x()^2".asTerm
+    m4 shouldBe "1*y^1.0*x()^4".asTerm
+    m5 shouldBe "1*a()^2*x()^2".asTerm
 
     r3 shouldBe 'proved
     r4 shouldBe 'proved
@@ -119,24 +140,24 @@ class PolynomialArithTests extends TacticTestBase {
   }
 
   "PolynomialArith" should "do poly mono mul with proof" in withMathematica { qeTool =>
-    val m1 = "1 * x^5 * a^5".asTerm
-    val p1 = "0 + 5 * (1 * x^2) + 5 * (1 * y^2)".asTerm
+    val m1 = "1 * x^5 * a()^5".asTerm
+    val p1 = "0 + 5 * (1 * x^2) + 5 * (1 * y()^2)".asTerm
     val (p2,r2) = mulPolyMono(p1,Number(5),m1)
 
-    p2 shouldBe "0+25*(1*x^7*a^5)+25*(1*y^2*x^5*a^5)".asTerm
+    p2 shouldBe "0+25*(1*x^7*a()^5)+25*(1*x^5*a()^5*y()^2)".asTerm
     r2 shouldBe 'proved
   }
 
   "PolynomialArith" should "do poly mul with proof" in withMathematica { qeTool =>
-    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a^2)".asTerm
-    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a^2)".asTerm
+    val p1 = "0 + 1 * (1 * x^2) + 1 * (1 * a()^2)".asTerm
+    val p2 = "0 + 2 * (1 * y^1) + 1 * (1 * a()^2)".asTerm
 
     val (p3,r3) = addPoly(p1,p2)
     val (p4,r4) = mulPoly(p1,p2)
     val (p5,r5) = mulPoly(p3,p4)
 
-    p4 shouldBe "0+2*(1*y^1*x^2)+2*(1*y^1*a^2)+1*(1*x^2*a^2)+1*(1*a^4)".asTerm
-    p5 shouldBe "0+4*(1*y^2*x^2)+4*(1*y^2*a^2)+2*(1*y^1*x^4)+8*(1*y^1*x^2*a^2)+6*(1*y^1*a^4)+1*(1*x^4*a^2)+3*(1*x^2*a^4)+2*(1*a^6)".asTerm
+    p4 shouldBe "0+2*(1*x^2*y^1)+2*(1*y^1*a()^2)+1*(1*x^2*a()^2)+1*(1*a()^4)".asTerm
+    p5 shouldBe "0+4*(1*x^2*y^2)+4*(1*y^2*a()^2)+2*(1*x^4*y^1)+8*(1*x^2*y^1*a()^2)+6*(1*y^1*a()^4)+1*(1*x^4*a()^2)+3*(1*x^2*a()^4)+2*(1*a()^6)".asTerm
 
     r4 shouldBe 'proved
     r5 shouldBe 'proved
@@ -181,11 +202,23 @@ class PolynomialArithTests extends TacticTestBase {
     r6 shouldBe 'proved
   }
 
+//  "PolynomialArith" should "handle representable division" in withMathematica { qeTool =>
+//    val p1 = "y /2 + x/5 + z /4".asTerm
+//    //Note: this breaks in re-parsing
+//    //val p2 = ("3*(x/3) - 0.99999999999999999*x").asTerm
+//
+//    val (t1,r1) = (normalise(p1))
+//    //val (t2,r2) = (normalise(p2))
+//    println(t1,r1)
+//    //println(t2,r2)
+//
+//  }
+
   "PolynomialArith" should "do mono div" in withMathematica { qeTool =>
-    val m1 = "1 * x^5 * a^5".asTerm
-    val m2 = "1 * z^1 * x^7 * b^8".asTerm
-    val m3 = "1 * z^8 * x^7 * a^1".asTerm
-    val m4 = "1 * z^5 * x^2".asTerm
+    val m1 = "1 * x^5 * a()^5".asTerm
+    val m2 = "1 * x^1 * z^7 * b()^8".asTerm
+    val m3 = "1 * z^8 * a()^7 * x()^1".asTerm
+    val m4 = "1 * z^5 * x()^1".asTerm
 
     println(divMono(m2,m1)) //Not Divisible
     println(divMono(m2,m2)) //Divisible
@@ -229,4 +262,25 @@ class PolynomialArithTests extends TacticTestBase {
     val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm)
     println(assertWitness(witness))
   }
+
+  "PolynomialArith" should "normalize pure arithmetic sequent" in withMathematica { qeTool =>
+    // A sequent of pure arithmetic only has (in)equational formulas (operators >,>=,=  TODO: !=)
+    // i.e. no dL, no &, |, <, <= negations, etc.
+    val antes = IndexedSeq(
+      "x + y + z >= F() + G()".asFormula,
+      "k * z > a + b".asFormula,
+      "c - d > z".asFormula,
+      "d * f = 12".asFormula
+    )
+    val succs = IndexedSeq(
+      "k >= z".asFormula,
+      "k+b = z+y+a".asFormula,
+      "c > d".asFormula,
+      "g() >= f()".asFormula,
+      "K() = A+B+C".asFormula
+    )
+    val pr = proveBy(Sequent(antes,succs),prepareArith)
+    println(pr)
+  }
+
 }

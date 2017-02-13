@@ -7,7 +7,7 @@ import scala.util.matching.Regex
 
 private object PSEUDO  extends BelleTerminal("<pseudo>")
 
-sealed abstract class BelleTerminal(val img: String) {
+sealed abstract class BelleTerminal(val img: String, val postfix: String = "[\\s\\S]*") {
   assert(img != null)
 
   override def toString = getClass.getSimpleName// + "\"" + img + "\""
@@ -15,7 +15,7 @@ sealed abstract class BelleTerminal(val img: String) {
     * @return The regex that identifies this token.
     */
   def regexp : scala.util.matching.Regex = img.r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + postfix).r
 }
 
 private case class IDENT(name: String) extends BelleTerminal(name) {
@@ -71,9 +71,9 @@ private object N_TIMES {
 
 private object US_MATCH extends BelleTerminal("USMatch")
 
-private object LET extends BelleTerminal("let")
+private object LET extends BelleTerminal("let", "[\\s][\\s\\S]*")
 
-private object IN extends BelleTerminal("in")
+private object IN extends BelleTerminal("in", "[\\s][\\s\\S]*")
 
 private object RIGHT_ARROW extends BelleTerminal("=>")
 

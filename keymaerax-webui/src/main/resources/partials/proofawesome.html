@@ -13,6 +13,19 @@
     </div>
     </div>
 </spinner>
+<spinner name="magnifyingglassSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+        <div class="tactic-spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="tactic-spinner-please-wait">
+            <p>Computing details, please wait...</p>
+            <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+        </div>
+    </div>
+</spinner>
 <spinner name="proofLoadingSpinner" ng-cloak>
     <div class="spinner-overlay"></div>
     <div class="spinner">
@@ -46,12 +59,22 @@
                     </span>
                 </span>
                 <div class="nav">
-                    <ul class="nav navbar-nav" id="provingautomation"
-                        data-intro="Automatic proof search. Unfold all operators. Undo proof steps." data-position="right">
-                        <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'unfold')"><span class="fa fa-magic"> Unfold</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'fullSimplify')"><span class="fa fa-compress"> Simplify</span></a></li>
-                        <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
+                    <ul class="nav navbar-nav" id="provingautomation">
+                        <li><a ng-click="doTactic(undefined, 'master')"
+                               data-intro="Automatic search" data-position="top"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'unfold')"
+                               data-intro="Unfold all operators" data-position="top"><span class="fa fa-magic"> Unfold</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'fullSimplify')"
+                               data-intro="Simplify formulas" data-position="top"><span class="fa fa-compress"> Simplify</span></a></li>
+                        <li><a ng-click="undoLastStep()"
+                               data-intro="Undo" data-position="top"><span class="fa fa-undo"> Step back</span></a></li>
+                        <li><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove'"
+                               data-intro="Switch edit/prove" data-position="top"><i class="fa fa-pencil"></i> Edit</a></li>
+                        <li class="active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
+                            <i ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
+                               uib-tooltip="Toggle to stay in edit mode"
+                               ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></i> Edit</a>
+                        </li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
                         <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
@@ -66,6 +89,7 @@
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doTactic(undefined, 'prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('notR', 'R')"><span>&not;R</span><code class="pull-right">notR</code></a></li>
                                 <li><a ng-click="doSearch('notL', 'L')"><span>&not;L</span><code class="pull-right">notL</code></a></li>
@@ -81,8 +105,6 @@
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
                                 <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
-                                <li role="separator" class="divider"></li>
-                                <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -115,7 +137,7 @@
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxSplit', 'R')"><span>[]&and;</span><code class="pull-right">boxSplit</code></a></li>
                                 <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code>GV</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('MR', 'R)"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('MR', 'R')"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -166,6 +188,7 @@
                         <li ng-controller="ProofMessagesCtrl">
                             <k4-auto-hide-alert message="proofMessage.text"
                                                 details="proofMessage.details"
+                                                task-stepwise-request="proofMessage.taskStepwiseRequest"
                                                 is-visible="proofMessage.isVisible" timeout="-1">
                             </k4-auto-hide-alert>
                         </li>
@@ -276,7 +299,7 @@
                                     </span>
                                 </div>
                             </div>
-                            <div class="panel-body" data-intro="Clicks are recorded here. Append to automate proof steps instead of clicking." data-position="bottom">
+                            <div class="panel-body" data-intro="Clicks are recorded here. Append to automate proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
                             <k4-tactic-editor user-id="userId" proof-id="proofId" node-id="task.id"
                                               on-tactic="doTactic(formulaId, tacticId)"
                                               on-tactic-script="onTacticScript(tacticText)">

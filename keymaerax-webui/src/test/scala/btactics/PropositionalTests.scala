@@ -191,6 +191,11 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
   }
   it should "handle equivalence in succedent" in succEquivalence(prop)
+  it should "handle nested branching" in { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, prop) shouldBe 'proved }
+  it should "handle more nested branching" in {
+    val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, prop & DebuggingTactics.printIndexed("Foo"))
+    result.subgoals should have size 1
+  }
 
   "Normalize" should "handle implication in succedent" in succImplication(normalize)
   it should "handle disjunction in succedent" in succDisjunction(normalize)

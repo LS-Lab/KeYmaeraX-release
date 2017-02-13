@@ -1,0 +1,103 @@
+Functions.
+  R abs(R).
+  R max(R, R).
+  R min(R, R).
+End.
+
+ProgramVariables.
+  /** Variables **/
+   /* time */
+  R tl.   /* time for the loop. only used to say we have to get out after 1s */
+  R d.    /* delay state
+   /* horizontal */
+  R r.    /* relative distance */
+  R rv.   /* relative speed -(vi - vo) */
+  R a.    /* relative vertical acceleration of ownship */
+   /* vertical */
+  R h.    /* relative altitude in ft */
+          /* if negative: the intruder is lower than the ownship */
+          /* h := hi - ho and z = h */
+  R dho.  /* vertical velocity of ownship */
+  R dhi.  /* vertical velocity of intruder */
+  R dhf.  /* target minimum velocity */
+  R w.    /* velocity bound 1 = lower, -1 = upper (direction flag) */
+  /** Constants **/
+  R hp.   /* puck half-height, typically 200ft */
+  R rp.   /* puck radius, typically 1,000ft */
+  R dp.   /* max allowable pilot delay, typically 5 seconds */
+  R dl.   /* max system (loop) delay, typically 1 second */
+  R ad.   /* maximum pilot acceleration during delay */
+  R ar.   /* minimum acceleration during resolution, typically g/4 or g/3 */
+
+  R t.
+  R rt.
+  R ht.
+  R hd.
+  R dhd.
+  R rd.
+End.
+
+Problem.
+  rp >= 0 & hp > 0 & rv >= 0 & ar > 0 & ad >= 0 & dp>=0 & dl>=0 & (w=-1|w=1)
+  ->
+  (
+  (\forall rd \forall hd \forall dhd
+    (rd=rv*max(0,d) & hd=-(w*ad)/2*max(0,d)^2+dho*max(0,d) &
+     dhd=dho-w*ad*max(0,d) ->
+
+  ((
+    ((-rp <= r & r <= rp) -> w * h < -hp)
+    &
+    ((rp < r & r <= rd+rp) ->
+          (w * rv^2 * h < -ad/2 * (r-rp)^2 + w*rv*dho*(r-rp)-rv^2*hp))
+    &
+    ((-rp <= r & r < rd-rp) ->
+          (w * rv^2 * h < -ad/2 * (r+rp)^2 + w*rv*dho*(r+rp)-rv^2*hp))
+  ) &
+  (
+    ((w * dhf >= 0) ->
+      ((-rp <= r-rd) & (r-rd  <  -rp - rv * min(0, w * dhd) / ar) ->
+          (w * rv^2 * (h-hd) < ar / 2 * (r-rd + rp)^2 +
+                             w * rv * dhd * (r-rd + rp) - rv^2 * hp))
+      &
+      ((-rp - rv * min(0, w * dhd) / ar <= r-rd) &
+       (r-rd <= rp - rv * min(0, w * dhd) / ar) ->
+          (w * (h-hd)  <  (- min(0, w * dhd)^2) / (2 * ar) - hp))
+      &
+      ((rp - rv * min(0, w * dhd) / ar  <  r-rd) &
+       (r-rd <= rp + rv * max(0, w * (dhf - dhd)) / ar) ->
+          (w * rv^2 * (h-hd)  <  ar / 2 * (r-rd - rp)^2 +
+                             w * rv * dhd * (r-rd - rp) - rv^2 * hp))
+      &
+      ((rp + rv * max(0, w * (dhf - dhd)) / ar  <  r-rd) ->
+          (rv = 0) |
+          (w * rv * (h-hd)  <  w * dhf * (r-rd - rp)
+                 - rv * max(0, w * (dhf - dhd))^2 / (2 * ar) - rv * hp))
+    )
+    &
+    ((w * dhf < 0) ->
+      ((-rp <= r-rd) &
+       (r-rd < -rp + rv * max(0, w * (dhf - dhd)) / ar) ->
+          (w * rv^2 * (h-hd)  <  ar / 2 * (r-rd + rp)^2
+                           + w * rv * dhd * (r-rd + rp) - rv^2 * hp))
+      &
+      ((-rp + rv * max(0, w * (dhf - dhd)) / ar  <=  r-rd) ->
+          (rv = 0 & r-rd > rp) |
+          (w * rv * (h-hd)  <  w * dhf * (r-rd + rp)
+                 - rv * max(0, w * (dhf - dhd))^2 / (2 * ar) - rv * hp))
+    )
+  )))) <->
+  (
+           \forall t \forall rt \forall ht \forall hd \forall dhd
+            (rt  =rv* t  &
+           (  0 <= t   &  t  < max(0,d)  &  ht  =-(w*ad)/(2)* t^2+dho* t
+            |  (  hd  =-(w*ad)/(2)* max(0,d)^2+dho* max(0,d)  &
+                dhd-dho  = -w*ad* max(0,d)  &
+            (  0<= t-max(0,d)   &  t-max(0,d)  < (max(0,w*(dhf-dhd)))/(ar)  &
+                           ht-hd  =(w*ar)/(2)*(t-max(0,d))^2+dhd* (t-max(0,d))
+            |  t-max(0,d) >=(max(0,w*(dhf-dhd)))/(ar)  &
+                     ht-hd =dhf*(t-max(0,d))-(w*max(0,w*(dhf-dhd))^2)/(2*ar) )))
+           ->(abs(r -rt)  > rp |  w*(h-ht)  < -hp))
+  )
+  )
+End.

@@ -98,6 +98,15 @@
       "model": "classpath:/examples/tutorials/basic/12-diffghost-bouncing-ball-ghost-solutions.kyx",
       "tactic": "classpath:/examples/tutorials/basic/12-diffghost-bouncing-ball-ghost-solutions.kyt",
       "proves": true
+    },
+    {
+      "name": "12: Exponential Decay",
+      "description": "Exponentially decaying x'=-x",
+      "title": "Exponential decay",
+      "link": "http://symbolaris.com/course/fcps16/12-diffghost.pdf",
+      "model": "classpath:/examples/tutorials/basic/12-exponential-decay.kyx",
+      "tactic": "classpath:/examples/tutorials/basic/12-exponential-decay.kyt",
+      "proves": true
     }
   ]
 }

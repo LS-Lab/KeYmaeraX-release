@@ -45,6 +45,7 @@ private object Eval {
     apply[BelleExpr](tac)
   }
 }
+
 /**
   * Created by bbohrer on 12/19/16.
   *
@@ -208,7 +209,6 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
         scalaState = scalaState  + code + "\n"
         Eval(scalaState)
         false
-
     }
   }
 

@@ -10,8 +10,8 @@ diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({
     )
   ),
   diffInvariant({`0<=t`}, 1) & diffInvariant({`v=old(v)`}, 1) & allR2L(-19) & diffInvariant({`dx^2+dy^2=1`}, 1) & dW(1) & unfold & hideR(2) & hideR(2) & smartQE,
-  diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)+a*t`}, 1) & diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) & diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) & hideL(-13) & hideL(-13) & hideL(-21) & hideL(-20) & hideL(-19) & hideL(-18) & allR2L(-17) & allR2L(-16) & hideL(-17) & hideL(-16) & dW(1) & unfold & hideL(-8) & hideL(-8) & hideL(-8) & hideL(-8) & hideL(-7) & hideL(-6) & hideL(-9) &
-  transform({`abs(x_0-xo0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))|abs(y_0-yo0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))`}, -7) & hideL(-10) & hideL(-4) & orL(-6) & <(
+  diffInvariant({`0<=t`}, 1) & diffInvariant({`dx^2+dy^2=1`}, 1) & diffInvariant({`v=old(v)+a*t`}, 1) & diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) & diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) & hideL(-13) & hideL(-13) & hideL(-21) & hideL(-20) & hideL(-19) & hideL(-18) & allR2L(-17) & allR2L(-16) & hideL(-17) & hideL(-16) & dW(1) & unfold & hideL(-8) & hideL(-8) & hideL(-8) & hideL(-8) & hideL(-7) & hideL(-6) & hideL('L=={`dx^2+dy^2=1`}) &
+  transform({`abs(x_0-xo0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))|abs(y_0-yo0)>v_0^2/(2*B)+V*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V))`}, -7) & hideL('L=={`t<=ep`}) & hideL('L=={`ep>0`}) & orL(-6) & <(
     hideR(3) & hideR(1) & smartQE,
     hideR(2) & hideR(1) & smartQE
   )

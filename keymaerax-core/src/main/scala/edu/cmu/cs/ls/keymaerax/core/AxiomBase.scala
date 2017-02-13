@@ -501,20 +501,6 @@ Axiom "const formula congruence".
 End.
 
 /**
- * DRI and Lie-based invariance checking rules.
- */
- Axiom "DRIStep". /* @TODO check soundness */
-  ( h(x) = 0 -> [{x' = f(x) & q(x)}]h(x) = 0 )
-  <->
-   (
-     (h(x) = 0 & q(x) -> [x' := f(x);](h(x))'=0) &
-     ([x' := f(x);](h(x))'=0 -> [{x'=f(x) & q(x) & h(x)=0}][x' := f(x);](h(x))'=0)
-     /* (f(x) = 0 -> (f(x))' = 0) &
-      ((f(x))' = 0 -> [{x' = t(||) & f(x)=0 & q(||)}](f(x))'=0) */
-   )
- End.
-
-/**
  * Z3 compatibility axioms (derivable with Mathematica).
  */
 

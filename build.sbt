@@ -36,3 +36,6 @@ lazy val root = (project in file("."))
 scalacOptions in Compile ++= Seq("-doc-root-content", "rootdoc.txt")
 
 target in Compile in doc := baseDirectory.value / "api"
+
+// never execute tests in parallel across all sub-projects
+concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)

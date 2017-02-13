@@ -321,7 +321,7 @@ class AcasXSafeTwoSided extends AcasXBase {
       atomicQE(ArithmeticLibrary.exhaustiveBeta, dT(s"$caseName QE")) & done
 
     val rvp = max('L, "max(0, w*(dhfM - dhd))".asTerm) & equivR('R) & Idioms.<(
-      dT("rv>0 ->") & normalize(Nil, _ => skip, _ => skip) & Idioms.cases(
+      dT("rv>0 ->") & normalize() & Idioms.cases(
         //@note paper case-distinguishes >0 and <=0
         (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("Case >=0") & Idioms.cases(
             //@note cases are not exhaustive by themselves, only because succedent alternatives and when knowing almost everything else (except case knowledge)
@@ -345,13 +345,13 @@ class AcasXSafeTwoSided extends AcasXBase {
         ) & dT("Case <0 done") & done)
       ) & dT("rv>0 -> done") & done,
       dT("rv<0 <-") & Idioms.cases(
-        (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("<- <0 Case >=0") & normalize(andR, skip, skip) & Idioms.<(
+        (Case("w*(dhd+w*maxAbbrv)>=0".asFormula), dT("<- <0 Case >=0") & normalize(andR) & Idioms.<(
           /*-rp<=r&r<=rp*/ caseInst("<- >=0 Case 11", "0", "0", "0"),
           /*rp < r&r<=rp+rv*maxAbbrv/aM*/ caseInst("<- >=0 Case 11", "(r-rp)/rv", "r-rp", "(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv"),
           /*-rp<=r&r < -rp+rv*maxAbbrv/aM*/ caseInst("<- >=0 Case 12", "(r+rp)/rv", "r+rp", "(w * aM) / 2 * (r+rp)^2/rv^2 + dhd * (r+rp)/rv"),
           /*-rp+rv*maxAbbrv/aM<=r*/ caseInst("<- >=0 Case 13", "(r+rp)/rv", "r+rp", "(dhd+w*maxAbbrv)*(r+rp)/rv-w*maxAbbrv^2/(2*aM)")
         ) & dT("Case >=0 done") & done),
-        (Case("w*(dhd+w*maxAbbrv)<0".asFormula), dT("<- <0 Case <0") & normalize(andR, skip, skip) & Idioms.<(
+        (Case("w*(dhd+w*maxAbbrv)<0".asFormula), dT("<- <0 Case <0") & normalize(andR) & Idioms.<(
           /*"-rp<=r&r<=rp*/ dT("<- <0 Case 10") & caseInst("<- <0 Case 10", "0", "0", "0"),
           /*rp < r&r<=rp+rv*maxAbbrv/aM*/ dT("<- <0 Case 11") & caseInst("<- <0 Case 11", "(r-rp)/rv", "r-rp", "(w * aM) / 2 * (r-rp)^2/rv^2 + dhd * (r-rp)/rv"),
           /*rp+rv*maxAbbrv/aM<r*/ dT("<- <0 Case 14") & caseInst("<- <0 Case 14", "(r-rp)/rv", "r-rp", "(dhd+w*maxAbbrv)*(r-rp)/rv-w*maxAbbrv^2/(2*aM)")

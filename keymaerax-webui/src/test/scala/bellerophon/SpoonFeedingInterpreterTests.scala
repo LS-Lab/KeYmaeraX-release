@@ -1,7 +1,7 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -397,9 +397,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(master(), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("normalize")
+    tactic shouldBe BelleParser("implyR(1)&closeId")
     ProofTree.ofTrace(db.db.getExecutionTrace(proofId)).findNode("1") match {
-      case Some(node) => stepInto(node, "normalize")._2 shouldBe BelleParser("implyR(1) & closeId")
+      case Some(node) => stepInto(node, "implyR(1)")._2 shouldBe BelleParser("implyR(1)")
     }
   }}
 
@@ -558,8 +558,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     tree.findNode("2") match {
       case Some(node) =>
-        val expected =
-          stepInto(node, "unfold")._2 shouldBe BelleParser("chase('R) & normalize")
+        stepInto(node, "unfold")._2 shouldBe BelleParser("step(1)")
     }
 
     tree.findNode("3") match {
@@ -677,4 +676,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
     }
   }
+
+  it should "work for partial prop" in withMathematica { _ => withDatabase { sql =>
+    val problem = "x=1 & y=2 -> x=3".asFormula
+    val modelFile = s"Variables R x. R y. End.\n Problem. $problem End."
+    val p = ProvableSig.startProof(problem)
+    val pId = sql.createProof(modelFile, "model1")
+    val tactic = prop & done
+    intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("[Bellerophon Runtime] Expected proved provable")
+    sql.extractTactic(pId) shouldBe BelleParser("nil")
+
+    implicit val db = new InMemoryDB()
+    val proofId = db.createProof(p)
+    val interpreter = SpoonFeedingInterpreter(listener(db, proofId), SequentialInterpreter, 1, strict=false)
+    intercept[BelleThrowable] { interpreter(tactic, BelleProvable(p)) }.getMessage should startWith ("[Bellerophon Runtime] Expected proved provable")
+    new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId)) shouldBe BelleParser("implyR(1) ; andL(-1)")
+  }}
 }

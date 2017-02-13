@@ -55,9 +55,9 @@ class Compbased extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*) & loop(invariant("t-tOld"))('R) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done") & done,
       /* use case */ print("Use case...") & speculativeQE & print("Use case done") & done,
-      /* induction step */ print("Induction step") & chase(1) & print("After chase") & normalize(andR, skip, skip) & printIndexed("After normalize") <(
-      print("Braking branch") & di("-B", "t-tOld")(1) & print("After DI") & dw & print("After DW") & normalize(andR, skip, skip) & print("After braking normalize") & OnAll(speculativeQE) & print("Braking branch done") & done,
-      print("Stopped branch") & di("0", "t-tOld")(1) & print("After DI") & dw & print("After DW") & normalize(andR, skip, skip) & OnAll(speculativeQE) & print("Stopped branch done") & done,
+      /* induction step */ print("Induction step") & chase(1) & print("After chase") & normalize(andR) & printIndexed("After normalize") <(
+      print("Braking branch") & di("-B", "t-tOld")(1) & print("After DI") & dw & print("After DW") & normalize(andR) & print("After braking normalize") & OnAll(speculativeQE) & print("Braking branch done") & done,
+      print("Stopped branch") & di("0", "t-tOld")(1) & print("After DI") & dw & print("After DW") & normalize(andR) & OnAll(speculativeQE) & print("Stopped branch done") & done,
       print("Acceleration branch") & hideL('L, "v=0|abs(x-xoIn)>v^2/(2*B)+V*(v/B)|abs(y-yoIn)>v^2/(2*B)+V*(v/B)".asFormula) &
         di("a", "t-tOld")(1) & print("After DI") & dw & print("After DW") & normalize & print("After acc normalize") & OnAll(hideFactsAbout("dx", "dy", "k", "k_0") partial) <(
         hideFactsAbout("y", "yoIn", "yoIn0") & accArithTactic & done,
@@ -108,7 +108,7 @@ class Compbased extends TacticTestBase {
     val tactic = implyR('_) & (andL('_)*) & loop(invariant)('R) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
-      /* induction step */ print("Induction step") & chase(1) & normalize(andR, skip, skip) & printIndexed("After normalize") <(
+      /* induction step */ print("Induction step") & chase(1) & normalize(andR) & printIndexed("After normalize") <(
       print("Braking branch 1") & di("-B")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Braking branch 1 done"),
       print("Braking branch 2") & di("-B")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Braking branch 2 done"),
       print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Stopped branch 1 done"),

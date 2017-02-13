@@ -1271,6 +1271,16 @@ class DifferentialTests extends TacticTestBase {
     proveBy(s, t) shouldBe 'proved
   }
 
+  "DA by DG+transform" should "add y'=1 to [x'=2]x>0" in withMathematica { tool =>
+    val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = DG("{y'=0*y+1}".asDifferentialProgram)(1) & transform("y>0 & x*y>0".asFormula)(1, 0::1::Nil)
+    val result = proveBy(s, tactic)
+
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula)
+  }
+
   "diffSolve" should "find a solution" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
       diffSolve(1))

@@ -64,6 +64,8 @@ object SimplifierV3 {
   type termIndex = (Term,context) => List[ProvableSig]
   type formulaIndex = (Formula,context) => List[ProvableSig]
 
+  val emptyCtx = HashSet[Formula]()
+
   def composeIndex[A<:Expression] (is:((A,context) => List[ProvableSig])*)
                                  (f:A,ctx:context) : List[ProvableSig] = is.flatMap(axs => axs(f,ctx)).toList
 
@@ -743,46 +745,58 @@ object SimplifierV3 {
     }
   }
 
-  //This generates theorems on the fly to simplify ground arithmetic
-  def arithGroundIndex (t:Term,ctx:context) : List[ProvableSig] = {
+  //This generates theorems on the fly to simplify ground arithmetic (only for integers)
+  //Note: this skips over any arithmetic whose outputs are not integers
+  def arithGroundIndex (t:Term,ctx:context = emptyCtx) : List[ProvableSig] = {
     val res = t match {
       case Plus(n:Number,m:Number) => Some(n.value+m.value)
       case Minus(n:Number,m:Number) => Some(n.value-m.value)
       case Times(n:Number,m:Number) => Some(n.value*m.value)
       case Divide(n:Number,m:Number) => Some(n.value/m.value)
-      case Power(n:Number,m:Number) if m.value.isValidInt => Some(n.value.pow(m.value.toInt))
+      case Power(n:Number,m:Number) => Some(n.value.pow(m.value.toInt))
       case Neg(n:Number) => Some(-n.value)
       case _ => None
     }
     res match {
       case None => List()
-      case Some(v) =>
-        val pr = proveBy(Equal(t,Number(v)),?(RCF))
+      case Some(v) if v.isValidInt =>
+        val pr = proveBy(Equal(t,Number(v.toIntExact)),?(RCF))
         if(pr.isProved) List(pr)
         else List()
+      case _ => List()
     }
   }
 
   private val impReflexive = proveBy("p_() -> p_()".asFormula,prop)
   private val eqSymmetricImp = proveBy("F_() = G_() -> G_() = F_()".asFormula,QE)
 
-  //Constrained search for equalities of the form v = Num (Num = v) in the context
+  //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
-    t match {
-      case v:Variable =>
-        ctx.collectFirst(
-          {
-          case Equal(vv:Variable,n:Number) if vv.equals(v) =>
-              impReflexive(
-                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(vv:Variable,n:Number)) :: Nil))
-          case Equal(n:Number,vv:Variable) if vv.equals(v) =>
-              eqSymmetricImp(
-                USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
-                       SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), v) :: Nil))
-          }).toList
-      case _ => List()
-
-    }
+      ctx.collectFirst(
+        {
+        case Equal(tt,n:Number) if tt.equals(t) =>
+            impReflexive(
+              USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t,n:Number)) :: Nil))
+        case Equal(n:Number,tt) if tt.equals(t) =>
+            eqSymmetricImp(
+              USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
+                     SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
+        }).toList
+//    t match {
+//      case v:Variable =>
+//        ctx.collectFirst(
+//          {
+//          case Equal(vv:Variable,n:Number) if vv.equals(v) =>
+//              impReflexive(
+//                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(vv:Variable,n:Number)) :: Nil))
+//          case Equal(n:Number,vv:Variable) if vv.equals(v) =>
+//              eqSymmetricImp(
+//                USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
+//                       SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), v) :: Nil))
+//          }).toList
+//      case _ => List()
+//
+//    }
   }
 
   /** Formula simplification indices */

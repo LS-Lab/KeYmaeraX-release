@@ -6,10 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.Position
-
-/**
- * Created by smitsch on 12/23/14.
- */
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 /** Invariant generator
   * @author Stefan Mitsch
@@ -26,17 +23,17 @@ object Generator {
 
 /** Generator always providing a fixed list as output. */
 case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position) = list.iterator
+  def apply(s: Sequent, p: Position): Iterator[A] = list.iterator
 }
 
 /** Map-based generator providing output according to the fixed map `product` according to its program or whole formula.
   * @author Stefan Mitsch
   * */
 class ConfigurableGenerator[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator.Generator[A] {
-  //@todo why p.top instead of p?
-  def apply(s: Sequent, p: Position): Iterator[A] = s(p.top) match {
-    case Box(prg, _) => products.get(prg).iterator
-    case Diamond(prg, _) => products.get(prg).iterator
-    case _ => products.get(s(p.top)).iterator
+  def apply(s: Sequent, p: Position): Iterator[A] = s.sub(p) match {
+    case Some(Box(prg, _)) => products.get(prg).iterator
+    case Some(Diamond(prg, _)) => products.get(prg).iterator
+    case Some(f) => products.get(f).iterator
+    case None => Nil.iterator
   }
 }
