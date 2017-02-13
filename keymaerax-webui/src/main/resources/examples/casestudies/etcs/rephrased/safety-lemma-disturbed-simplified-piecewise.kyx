@@ -17,7 +17,7 @@ ProgramVariables.
   R mo.
   R t.
   R a.
-  R aa.
+  R ad.
   R v.
   R z.
   R m.
@@ -64,8 +64,8 @@ Problem.
       {  {?m - z <= SB | state = brake; a:= -b;}
       ++ {?m - z >= SB & state != brake;}
       };
-      aa := *; ?-l <= aa-a & aa-a <= u;
-      {z'=v, v'=aa, t'=1 & v >= 0 & t <= ep}
+      ad := *; ?-l <= ad & ad <= u;
+      {z'=v, v'=a+ad, t'=1 & v >= 0 & t <= ep}
       }
     }
   }*@invariant(v^2 - d^2 <= 2*(b-u)*(m-z) & v >= 0 & d >= 0)
