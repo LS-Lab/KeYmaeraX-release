@@ -1382,7 +1382,7 @@ class DifferentialTests extends TacticTestBase {
       diffSolve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("v_1=0 & x_1<s & 0<T".asFormula, "t_1=0".asFormula, "a_0=(s-x_1)/T^2".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall v (v=a_0*t_+v_1->\\forall t (t=t_+t_1->\\forall x (x=a_0/2*t_^2+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall t (t=t_+t_1->\\forall v (v=a_0*t_+v_1->\\forall x (x=a_0/2*t_^2+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asFormula)
   }
 
   it should "not touch index of existing other occurrences of initial values" in withMathematica { tool =>
