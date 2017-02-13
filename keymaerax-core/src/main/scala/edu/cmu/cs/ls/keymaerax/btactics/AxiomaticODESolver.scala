@@ -11,7 +11,7 @@ import TacticFactory._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
 /**
   * An Axiomatic ODE solver.
@@ -31,76 +31,76 @@ object AxiomaticODESolver {
   private lazy val TIMEVAR: Variable = "kyxtime".asVariable
 
   /** Temporary messages that aren't even necessarily useful to have in verbose ODE debugger mode. */
-  private def tmpmsg(s:String) = if(ODE_DEBUGGER) println(s)
+  private def tmpmsg(s: String) = if (ODE_DEBUGGER) println(s)
 
   //region The main tactic
 
   def apply() = axiomaticSolve()
 
-  def axiomaticSolve(instEnd: Boolean = false) = "solve" by ((pos:Position, s:Sequent) => {
+  def axiomaticSolve(instEnd: Boolean = false) = "solve" by ((pos: Position, s: Sequent) => {
     val (ode, q) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)
-      case Some(Diamond(ODESystem(o, qq), _)) if  instEnd => throw new BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
+      case Some(Diamond(ODESystem(o, qq), _)) if instEnd => throw new BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
     }
 
     val osize = odeSize(ode)
 
     //The position of the ODE after introducing all [x_0:=x;] assignments
-    val odePosAfterInitialVals = pos ++ PosInExpr(List.fill(osize+2)(1))
+    val odePosAfterInitialVals = pos ++ PosInExpr(List.fill(osize + 2)(1))
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
-    val timeAssignmentPos = odePosAfterInitialVals ++ PosInExpr(0::1::1::Nil)
+    val timeAssignmentPos = odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: 1 :: Nil)
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
-    val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0::1::Nil) else PosInExpr(0::1::1::Nil)))
+    val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
     val simpEvolDom =
       if (q == True) TactixLibrary.skip //evolution domain constraint is trivial, so simplification is not necessary.
-      else if (instEnd) simplifier(pos ++ PosInExpr(0::Nil))
-      else simplifier(pos ++ PosInExpr(0::1::0::0::1::Nil))
+      else if (instEnd) simplifier(pos ++ PosInExpr(0 :: Nil))
+      else simplifier(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 1 :: Nil))
 
     addTimeVar(pos) &
-    DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
-    odeSolverPreconds(pos ++ PosInExpr(1::Nil)) &
-    DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
-    (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER))*osize &
-    DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
-    simplifyEvolutionDomain(osize)(odePosAfterInitialVals ++ PosInExpr(0::1::Nil)) &
-    DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER) &
-    (s.sub(pos) match {
-      case Some(Box(_,_)) if polarity > 0 => HilbertCalculus.DW(odePosAfterInitialVals)
-      case Some(Box(_,_)) if polarity < 0 => HilbertCalculus.useAt(DerivedAxioms.DWeakeningAnd, PosInExpr(0::Nil))(odePosAfterInitialVals)
-      case Some(Diamond(_,_)) => TactixLibrary.useAt("DWd2 diamond differential weakening")(odePosAfterInitialVals)
-    }) &
-    DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
-    simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1::Nil)) &
-    DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
-    //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
-    (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
-    DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
-    simplifier(odePosAfterInitialVals ++ PosInExpr(0::1::Nil)) &
-    DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
-    RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
-    DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
-    DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
-    (s.sub(pos) match {
-      case Some(Box(_,_)) => HilbertCalculus.useAt("DS& differential equation solution")(odePosAfterInitialVals)
-      case Some(Diamond(_,_)) => HilbertCalculus.useAt("Dsol& differential equation solution")(odePosAfterInitialVals)
-    }) &
-    DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
-    (HilbertCalculus.assignb(timeAssignmentPos) | HilbertCalculus.assignd(timeAssignmentPos) | Idioms.nil) &
-    DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
-    HilbertCalculus.assignb(pos)*(osize+2) & // all initial vals + time_0=time + time=0
-    DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
-    (if (q == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0::1::0::0::Nil)) &
-                    TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0::1::0::Nil)) &
-                    ( TactixLibrary.useAt("true->")(pos ++ PosInExpr(0::1::Nil))
-                    | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0::1::Nil)))
-     else if (instEnd) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0::1::0::Nil)) &
-                       TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0::1::0::0::0::Nil))
-     else TactixLibrary.skip) &
-    DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
-    simpSol & simpEvolDom &
+      DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
+      odeSolverPreconds(pos ++ PosInExpr(1 :: Nil)) &
+      DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
+      (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)) * osize &
+      DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
+      simplifyEvolutionDomain(osize)(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
+      DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER) &
+      (s.sub(pos) match {
+        case Some(Box(_, _)) if polarity > 0 => HilbertCalculus.DW(odePosAfterInitialVals)
+        case Some(Box(_, _)) if polarity < 0 => HilbertCalculus.useAt(DerivedAxioms.DWeakeningAnd, PosInExpr(0 :: Nil))(odePosAfterInitialVals)
+        case Some(Diamond(_, _)) => TactixLibrary.useAt("DWd2 diamond differential weakening")(odePosAfterInitialVals)
+      }) &
+      DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
+      simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1 :: Nil)) &
+      DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
+      //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
+      (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
+      DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
+      simplifier(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
+      DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
+      RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
+      DebuggingTactics.assert((s, p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
+      DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
+      (s.sub(pos) match {
+        case Some(Box(_, _)) => HilbertCalculus.useAt("DS& differential equation solution")(odePosAfterInitialVals)
+        case Some(Diamond(_, _)) => HilbertCalculus.useAt("Dsol& differential equation solution")(odePosAfterInitialVals)
+      }) &
+      DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER) &
+      (HilbertCalculus.assignb(timeAssignmentPos) | HilbertCalculus.assignd(timeAssignmentPos) | Idioms.nil) &
+      DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
+      HilbertCalculus.assignb(pos) * (osize + 2) & // all initial vals + time_0=time + time=0
+      DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
+      (if (q == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)) &
+        TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+        (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
+          | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0 :: 1 :: Nil)))
+      else if (instEnd) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+        TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
+      else TactixLibrary.skip) &
+      DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
+      simpSol & simpEvolDom &
       DebuggingTactics.debug("AFTER final simplification", ODE_DEBUGGER)
   })
 
@@ -108,17 +108,173 @@ object AxiomaticODESolver {
 
   //region Preconditions
 
+   class Cycle extends Exception {}
+
+  def dfsLoop(map: Map[Variable, Term], visited: Set[Variable], active: Set[Variable], curr: Variable, acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
+    if (visited.contains(curr)) {
+      None
+    } else {
+      val incoming = map.keys.filter(p => StaticSemantics.freeVars(map(curr)).contains(p) && map.contains(p))
+      val _ = incoming.foreach(v =>
+        if(active.contains(v)) {
+          throw new Cycle
+        })
+      val (vis, sorted) = incoming.foldLeft[(Set[Variable], List[Variable])]((visited.+(curr), acc))({case ((vis, acc2), x) => {
+          dfsLoop(map, vis, active.+(curr), x, acc2) match {
+            case Some(x)  => x
+            case _  => (vis, acc2)
+          }
+        }})
+      Some(vis, curr :: sorted)
+    }
+  }
+
+  def alist(ode: DifferentialProgram): Option[List[AtomicODE] ]= {
+    ode match {
+      case _: DifferentialProgramConst => None
+      case DifferentialProduct(ode1, ode2) =>
+        (alist(ode1), alist(ode2)) match {
+          case ((_, None)) => None
+          case ((None, _)) => None
+          case (Some(x), Some(y)) => Some(x ++ y)
+        }
+      case ode: AtomicODE => Some(List(ode))
+    }
+  }
+  def ofAtoms(atoms:List[AtomicODE]):DifferentialProgram = {
+    atoms match {
+      case Nil => ???
+      case ode::Nil => ode
+      case ode::rest => DifferentialProduct(ode, ofAtoms(rest))
+    }
+  }
+
+  def dfsOuterLoop(map: Map[Variable, Term], visited: Set[Variable], acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
+    if (visited.size == map.size) {
+      Some(visited, acc)
+    } else {
+      val curr = map.keys.filter(v => !visited.contains(v)).head
+      dfsLoop(map, Set(), Set(curr), curr, acc) match {
+        case None => None
+        case Some((vis, acc)) => dfsOuterLoop(map, vis ++ visited, acc)
+      }
+    }
+  }
+
+  def dfs(ode: DifferentialProgram): Option[List[Variable]] = {
+    try {
+      alist(ode).flatMap({ case (atom :: alist) =>
+        val m = (atom :: alist).foldLeft(Map[Variable, Term]())({ case (acc, ode:AtomicODE) => acc.+((ode.xp.x, ode.e))})
+        val vars = dfsOuterLoop(m, Set(),  Nil).map(_._2)
+        vars match {
+          case None => None
+          case Some(vs) =>
+            // ODE solving tactic expects kyxtime variable to stay at the end. Let's keep it that way since it never depends on other variables
+            if(vs.contains(Variable("kyxtime"))) {
+              Some(vs.filter(_ != Variable("kyxtime")) ++ List(Variable("kyxtime")))
+            } else Some(vs)
+        }
+      })
+    } catch  {
+      case _:Cycle => None
+    }
+  }
+
+  def sortSubst(dom:Formula, post:Formula, context:DifferentialProgram, ode1:DifferentialProgram, ode2:DifferentialProgram):USubst = USubst(List(
+    SubstitutionPair(DifferentialProgramConst("c"), context),
+    SubstitutionPair(DifferentialProgramConst("d"), ode1),
+    SubstitutionPair(DifferentialProgramConst("e"), ode2),
+    SubstitutionPair(UnitPredicational("q", AnyArg), dom),
+    SubstitutionPair(UnitPredicational("p", AnyArg), post)))
+
+  def sortAxiomInst(dom:Formula, post:Formula, context:DifferentialProgram, ode1:DifferentialProgram, ode2:DifferentialProgram):Provable = {
+    Provable.axioms(", sort")(sortSubst(dom, post, context, ode1,ode2))
+  }
+
+  def commSubst(dom:Formula, post:Formula, ode1:DifferentialProgram, ode2:DifferentialProgram):USubst = USubst(List(
+    SubstitutionPair(DifferentialProgramConst("c"), ode1),
+    SubstitutionPair(DifferentialProgramConst("d"), ode2),
+    SubstitutionPair(UnitPredicational("q", AnyArg), dom),
+    SubstitutionPair(UnitPredicational("p", AnyArg), post)))
+
+  def commAxiomInst(dom:Formula, post:Formula, ode1:DifferentialProgram, ode2:DifferentialProgram):Provable = {
+    Provable.axioms(", commute")(commSubst(dom, post, ode1, ode2))
+  }
+
+  def splitODEAt(ode:DifferentialProgram, v:Variable):(List[AtomicODE], List[AtomicODE], List[AtomicODE]) = {
+    ode match {
+      case DifferentialProduct(AtomicODE(DifferentialSymbol(v2),e), tail) => {
+        if (v == v2) {
+          (Nil, List(AtomicODE(DifferentialSymbol(v2),e)), alist(tail).get)
+        } else {
+          splitODEAt(tail, v) match {
+            /* If variable already found, add ourselves to the context */
+            case (l1, o::l2, l3) => (AtomicODE(DifferentialSymbol(v2),e)::l1, o::l2, l3)
+            /* If variable not yet found, add ourselves to the tail */
+            case (Nil, Nil, l3) => (Nil, Nil, AtomicODE(DifferentialSymbol(v2),e)::l3)
+            /* Should never happen */
+            case _ => ???
+          }
+        }
+      }
+    }
+  }
+
+  /* Produces a tactic that transforms  [ODE & Q]P (at pos) into [sorted_ode & Q]P
+  * This works in selection-sort style: At step i, pull the variable whose final position should be i to the end of ODE*/
+  def selectionSort(dom:Formula, post:Formula, ode: DifferentialProgram, goal: List[Variable], pos:Position):BelleExpr = {
+    val insts =
+      goal.foldLeft((ode, TactixLibrary.nil, Nil:List[Provable]))({ case ((ode, e,insts), v) =>
+        val (l1, l2, l3) = splitODEAt(ode, v)
+        // Already at end - no commuting necessary
+        if(l3.isEmpty) {
+          (ode, e, insts)
+        // Currently at beginning: use regular ODE commute axiom, not contextual ODE commute
+        } else if(l1.isEmpty) {
+          val (ode2, ode3) = (ofAtoms(l2), ofAtoms(l3))
+          val pr = commAxiomInst(dom, post, ode2,ode3)
+          val newOde = DifferentialProduct(ode3, ode2)
+          (newOde, e, pr::insts)
+        // Neither at beginning nor end: use contextual ODE commute axiom.
+        } else {
+          val (ode1, ode2, ode3) = (ofAtoms(l1), ofAtoms(l2), ofAtoms(l3))
+          val pr = sortAxiomInst(dom, post, ode1,ode2,ode3)
+          val newOde = DifferentialProduct(ode1, DifferentialProduct(ode3, ode2))
+          (newOde, e, pr::insts)
+        }
+      })._3
+    // The above gives us a chain of equivalences on ODES: piece the chain together.
+    insts.map(pr => HilbertCalculus.useAt(NoProofTermProvable(pr), PosInExpr(0::Nil))(pos)).foldLeft(TactixLibrary.nil)((acc,e) => e & acc)// & HilbertCalculus.byUS("<-> reflexive")
+  }
+
+  /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */
+  def makeCanonical(ode: DifferentialProgram, dom: Formula, post: Formula, pos: Position): BelleExpr = {
+    dfs(ode) match {
+      case None => DebuggingTactics.error("Expected ODE to be linear and in correct order.")
+      case Some(ord) => selectionSort(dom, post, ode, ord, pos)
+    }
+  }
+
   val odeSolverPreconds =  TacticFactory.anon ((pos: Position, s: Sequent) => {
-    val ode: DifferentialProgram = s.sub(pos) match {
-      case Some(Box(ODESystem(o, _), _)) => o
-      case Some(Diamond(ODESystem(o, _), _)) => o
+    val (ode: DifferentialProgram, dom:Formula, post:Formula, isDiamond) = s.sub(pos) match {
+      case Some(Box(ODESystem(o, q), p)) => (o, q, p, false)
+      case Some(Diamond(ODESystem(o, q), p)) => (o, q, p, true)
       case sub => throw new BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
     }
-
-    if (!isCanonicallyLinear(ode)) DebuggingTactics.error("Expected ODE to be linear and in correct order.")
-    else
+    val afterCanonicalization =
       StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
         foldLeft[BelleExpr](Idioms.nil)((a, b) => a & TactixLibrary.discreteGhost(b)(pos))
+    /* @TODO: Support variable reordering for diamonds. This should just be a matter of adding commutativity axioms for diamond and plugging them in.*/
+    if(isDiamond) {
+      if (!isCanonicallyLinear(ode)) DebuggingTactics.error("Expected ODE to be linear and in correct order.")
+      else afterCanonicalization
+    } else {
+      DebuggingTactics.debug("Before Canonicalization") &
+      makeCanonical(ode, dom, post, pos) &
+      DebuggingTactics.debug("After Canonicalization") &
+      StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
+        foldLeft[BelleExpr](Idioms.nil)((a, b) => a & TactixLibrary.discreteGhost(b)(pos))
+    }
   })
 
   //endregion

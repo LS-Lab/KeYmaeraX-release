@@ -579,21 +579,21 @@ private object DifferentialTactics {
     "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
 
     //If lateSolve is true then diffSolve will be run last, if at all.
-    val lateSolve = pos.isTopLevel //@todo come up wtih better heuristic for determining when to solving.
+    val insistOnProof = pos.isTopLevel //@todo come up wtih better heuristic for determining when to insist on a proof being completed. Solvability is a pretty decent heuristic.
 
     //The tactic:
     //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
-    if(lateSolve)
+    if(insistOnProof)
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(pos))    |
       TactixLibrary.diffSolve(pos) |
       splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
       assertT(seq=>false, failureMessage)
     else
-      (proveWithoutCuts(pos) & done) |
-      (addInvariant & ODE(pos))      |
-      TactixLibrary.diffSolve(pos)   |
-      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
+      (proveWithoutCuts(pos) & done)   |
+      (addInvariant & ODE(pos) & done) |
+      TactixLibrary.diffSolve(pos)     |
+      (splitWeakInequality(pos)<(ODE(pos), ODE(pos)) & done) |
       assertT(seq=>false, failureMessage)
   })
 
@@ -953,21 +953,4 @@ private object DifferentialTactics {
     }
   }
 
-  //region DRI proof rule
-
-  private[btactics] val DRIStep = useAt("DRIStep")
-
-  /** Implements the DRI proof rule by successive DRIStep applications followed by a diffWeaken. */
-  val DRI: DependentPositionTactic = "DRI" by ((pos: Position) => {
-    SaturateTactic(
-      DebuggingTactics.debug("Doing a DRIStep", true) &
-      DRIStep(pos) & TactixLibrary.andR(pos) & DebuggingTactics.debug("here", true)  <(
-        DebuggingTactics.debug("First branch", true) & TactixLibrary.master() & DebuggingTactics.done("f=0 -> f'=0 should close automatically.") //Proves f=0 -> f'=0
-        ,
-        DebuggingTactics.debug("Second branch", true) & (diffWeaken(pos) & master() & DebuggingTactics.done) | DRI(pos)
-      )
-    )
-  })
-
-  //endregion
 }

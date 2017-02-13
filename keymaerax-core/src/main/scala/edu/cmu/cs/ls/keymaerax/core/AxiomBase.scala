@@ -330,6 +330,11 @@ Axiom "DG inverse differential ghost implicational".
   [{c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=a(||),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
+/* @todo: , commute should be derivable from this + ghost */
+Axiom ", sort".
+  [{c,d,e&q(||)}]p(||) <-> [{c,e,d&q(||)}]p(||)
+End.
+
 Axiom ", commute".
   [{c,d&q(||)}]p(||) <-> [{d,c&q(||)}]p(||)
 End.
@@ -499,20 +504,6 @@ End.
 Axiom "const formula congruence".
   s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
 End.
-
-/**
- * DRI and Lie-based invariance checking rules.
- */
- Axiom "DRIStep". /* @TODO check soundness */
-  ( h(x) = 0 -> [{x' = f(x) & q(x)}]h(x) = 0 )
-  <->
-   (
-     (h(x) = 0 & q(x) -> [x' := f(x);](h(x))'=0) &
-     ([x' := f(x);](h(x))'=0 -> [{x'=f(x) & q(x) & h(x)=0}][x' := f(x);](h(x))'=0)
-     /* (f(x) = 0 -> (f(x))' = 0) &
-      ((f(x))' = 0 -> [{x' = t(||) & f(x)=0 & q(||)}](f(x))'=0) */
-   )
- End.
 
 /**
  * Z3 compatibility axioms (derivable with Mathematica).
