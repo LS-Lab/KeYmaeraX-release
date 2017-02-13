@@ -5,69 +5,47 @@
  */
 Functions.
   R b.
-  R amax.
+  R A.
   R ep.
   R l.
   R u.
 End.
 
 ProgramVariables.
-  R vdes.
-  R SB.
-  R mo.
-  R t.
-  R a.
-  R ad.
-  R v.
-  R z.
-  R m.
-  R d.
-  R do.
-  R drive.
-  R brake.
-  R state.
+	R vdes.
+	R SB.
+	R mo.
+	R t.
+	R a.
+	R ad. /* bounded acceleration disturbance -l <= ad <= u < b */
+	R v.
+	R z.
+	R m.
+	R d.
+	R do.
+	R em. /* emergency braking: 0=off, 1=on */
 End.
 
 Problem.
-
-    drive = 0
-  & brake = 1
-  & state = drive
-  & v^2 - d^2 <= 2*(b-u)*(m-z)
-  & v >=0
-  & ep > 0
-  & b > 0
-  & amax > 0
-  & d >= 0 &
-  b > u
-  & u >= 0
-  & l >= 0
-->
-  [
-  {
-    SB := (v^2 - d^2)/(2*(b-u)) + ((amax+u)/(b-u)+1)*((amax+u)*ep^2/2+ep*v);
-    {
-      /* RBC */
-      {
-         {do:= d; mo:=m; m := *; d := *; vdes:=*; ?d >= 0 & do^2 - d^2 <= 2*(b-u)*(m-mo) & vdes >= 0;}
-      ++ {state := brake;}
-      }
-
-      /* Train */
-   ++ {
-      t:=0;
-      /* Velocity control */
-      {  {?v <= vdes; a:=*; ?a >=0 & a <= amax;}
-      ++ {?v >= vdes; a:=*; ?a <=0 & a >= -b;}
-      };
-      /* Automated train protection */
-      {  {?m - z <= SB | state = brake; a:= -b;}
-      ++ {?m - z >= SB & state != brake;}
-      };
-      ad := *; ?-l <= ad & ad <= u;
-      {z'=v, v'=a+ad, t'=1 & v >= 0 & t <= ep}
-      }
-    }
-  }*@invariant(v^2 - d^2 <= 2*(b-u)*(m-z) & v >= 0 & d >= 0)
-  ] (z >= m -> v <= d)
+em = 0 & v^2 - d^2 <= 2*(b-u)*(m-z) & d >=0 & b > 0 & A >= 0 & ep >= 0 & b > u & u >= 0 & l >= 0
+  ->
+  [{
+       {
+           do := d; mo := m; m :=*; d :=*; vdes :=*; ?d >= 0 & do^2 - d^2 <= 2*(b-u)*(m-mo) & vdes >= 0;
+        ++ em := 1;
+       }
+    ++ {
+         {    ?v <= vdes; a:=*; ?a >=-b & a <= A;
+           ++ ?v >= vdes; a:=*; ?a <0 & a >= -b;
+         };
+         SB := (v^2 - d^2)/(2*(b-u)) + ((A+u)/(b-u)+1)*((A+u)*ep^2/2+ep*v);
+         {   ?  m - z <= SB | em = 1; a:= -b;
+          ++ ?!(m - z <= SB | em = 1);
+         }
+         t:=0;
+         ad := *; ?-l <= ad & ad <= u;
+         {z'=v, v'=a+ad, t'=1 & v >= 0 & t <= ep}
+       }
+   }*@invariant(v^2 - d^2 <= 2*(b-u)*(m-z) & d >= 0)
+  ](z >= m -> v <= d)
 End.
