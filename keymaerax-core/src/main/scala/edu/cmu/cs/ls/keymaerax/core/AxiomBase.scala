@@ -330,6 +330,11 @@ Axiom "DG inverse differential ghost implicational".
   [{c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=a(||),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
+/* @todo: , commute should be derivable from this + ghost */
+Axiom ", sort".
+  [{c,d,e&q(||)}]p(||) <-> [{c,e,d&q(||)}]p(||)
+End.
+
 Axiom ", commute".
   [{c,d&q(||)}]p(||) <-> [{d,c&q(||)}]p(||)
 End.
