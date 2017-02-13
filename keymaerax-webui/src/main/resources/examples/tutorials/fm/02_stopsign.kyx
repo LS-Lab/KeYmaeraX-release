@@ -22,7 +22,7 @@ Problem.
       ++ a := -b;
      }
      t := 0;
-     { x'=0*x+v, v'=0*v+a, t'=0*t+1 & v >= 0 & t <= ep }
+     { x'=v, v'=a, t'=1 & v >= 0 & t <= ep }
    }*@invariant(v >= 0 & x + v^2/(2*b) <= m)
   ]x <= m
 End.
