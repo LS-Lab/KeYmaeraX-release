@@ -27,6 +27,11 @@ import scala.collection.immutable._
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   private val dgc = PrivateMethod[DependentPositionTactic]('DGC)
 
+  "Selection sort" should "not have a match error" in withMathematica { qeTool =>
+    val ode = "[{posLead'=velLead,velLead'=A,posCtrl'=velCtrl,velCtrl'=a,t'=1}] true".asFormula
+    proveBy(ode,TactixLibrary.diffSolve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe 'proved
+  }
+
   "Selection sort" should "achieve intended permutation" in withMathematica { qeTool =>
     val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
@@ -416,6 +421,21 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val t = simplifyPostCondition(1)(1, 1::Nil)
     loneSucc(proveBy(f,t)) shouldBe "[{x'=1&true}]22>0".asFormula
   }
+
+  //@todo unsound bananas in post condition
+  "DS& differential equation solution" should "be careful in postcondition" in withMathematica { qeTool =>
+    val fml = "[{x'=1}] t_>=0".asFormula
+    val result = proveBy(fml, useAt("DS& differential equation solution")(1) & normalize)
+    result shouldBe 'proved
+  }
+
+  //@todo this proof is broken by the second DS quantifying over the same t_
+  "ODE solver" should "not shadow time" ignore withMathematica { qeTool =>
+    val fml = "[t := 0; {pos' = vel, t' = 1 & t <= T};  {pos' = vel}] (t <= T)".asFormula
+    val result = proveBy(fml, normalize & diffSolve(1) & normalize & diffSolve(1) & normalize)
+    result shouldBe 'proved
+  }
+
 
   //endregion
 
