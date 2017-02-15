@@ -182,6 +182,16 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}}}
 
+  val updateUserModel: SessionToken=>Route = (t: SessionToken) => userPrefix { userId => pathPrefix("model" / Segment / "update") { modelId => pathEnd {
+    post {
+      entity(as[String]) { modelJson =>
+        val modelData = modelJson.parseJson.asJsObject.fields.map({case (k,v) => k -> v.asInstanceOf[JsString].value})
+        completeRequest(new UpdateModelRequest(database, userId, modelId, modelData("name"),
+          modelData("title"), modelData("description")), t)
+      }
+    }
+  }}}
+
   val userModelFromFormula = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelFromFormula" / Segment) {modelName => {pathEnd {
     post {
       entity(as[String]) {formula => {
@@ -976,6 +986,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     userModelFromFormula  ::
     examples              ::
     stepwiseTrace         ::
+    updateUserModel       ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

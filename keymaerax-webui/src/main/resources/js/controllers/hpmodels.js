@@ -295,12 +295,33 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.$emit('routeLoaded', {theview: 'models'});
 })
 
-angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $uibModalInstance, userid, modelid) {
+angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $uibModalInstance, Models, userid, modelid) {
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
       $scope.model = response.data;
   });
 
-  $scope.ok = function () { $uibModalInstance.close(); };
+  $scope.saveModelData = function() {
+    var data = {
+      name: $scope.model.name,
+      title: $scope.model.title,
+      description: $scope.model.description
+    };
+    $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
+      var model = $.grep(Models.getModels(), function(m) { return m.id === modelid; })[0];
+      model.name = $scope.model.name;
+      model.title = $scope.model.title;
+      model.description = $scope.model.description;
+    })
+  }
+
+  $scope.checkName = function(name) {
+    var nameIsUnique = $.grep(Models.getModels(), function(m) { return m.name === name && m.id !== modelid; }).length == 0;
+    if (name === undefined || name === "") return "Name is mandatory. Please enter a name.";
+    else if (!nameIsUnique) return "Model with name " + name + " already exists. Please choose a different name."
+    else return true;
+  }
+
+  $scope.ok = function() { $uibModalInstance.close(); };
 });
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $uibModalInstance, userid, modelid) {

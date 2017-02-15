@@ -245,6 +245,8 @@ trait DBAbstraction {
 
   def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)
 
+  def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit
+
   def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int
 
   def getAgendaItem(proofId: Int, initialProofNode: Int): Option[AgendaItemPOJO]

@@ -1,11 +1,26 @@
-<div class="modal-header">
-    <h3 class="modal-title">{{model.name}}</h3>
+<form editable-form name="modelDataForm" onaftersave="saveModelData()">
+<div class="modal-header row">
+    <div class="col-md-10">
+        <h3 class="modal-title"><span editable-text="model.name" e-name="modelName"
+                                      e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>
+    </div>
+    <div class="col-md-2">
+        <a class="btn btn-link pull-right" ng-click="modelDataForm.$show()" ng-hide="modelDataForm.$visible"><i class="fa fa-pencil"></i></a>
+        <span ng-show="modelDataForm.$visible" class="pull-right">
+          <button type="submit" class="btn btn-primary" ng-disabled="modelDataForm.$waiting">
+              <i class="fa fa-check"></i>
+          </button>
+          <button type="button" class="btn btn-default" ng-disabled="modelDataForm.$waiting" ng-click="modelDataForm.$cancel()">
+              <i class="fa fa-remove"></i>
+          </button>
+        </span>
+    </div>
 </div>
-<div class="modal-body" style="overflow: scroll; height: 500px">
-    <h1>{{model.title}}</h1>
-    <p>{{model.description}}</p>
+<div class="modal-body">
+    <p><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>
+    <p><span editable-textarea="model.description" e-name="modelDescription" e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span></p>
     <!--<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>-->
-    <pre><code>{{model.keyFile}}</code></pre>
+    <pre style="overflow: scroll; height: 500px"><code>{{model.keyFile}}</code></pre>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-if="model.hasTactic"
@@ -13,3 +28,4 @@
             ng-controller="ModelProofCreateCtrl">Prove with associated tactic</button>
     <button class="btn btn-primary" ng-click="ok()">Close</button>
 </div>
+</form>

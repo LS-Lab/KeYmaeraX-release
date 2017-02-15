@@ -98,6 +98,8 @@ class InMemoryDB extends DBAbstraction {
     } else None
   }
 
+  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit = ???
+
   override def addModelTactic(modelId: String, fileContents: String): Option[Int] = ???
 
   override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int = synchronized {

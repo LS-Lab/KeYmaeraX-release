@@ -355,6 +355,12 @@ object SQLite {
         else None
       })
 
+    override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit = synchronizedTransaction({
+      Models.filter(_._Id === modelId).map(m => (m.name, m.title, m.description)).update(Some(name), title, description)
+      nUpdates = nUpdates + 1
+
+    })
+
     override def addModelTactic(modelId: String, fileContents: String): Option[Int] =
       synchronizedTransaction({
         nSelects = nSelects + 1

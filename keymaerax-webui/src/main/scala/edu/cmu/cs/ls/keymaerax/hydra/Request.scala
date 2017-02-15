@@ -582,6 +582,16 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   }
 }
 
+class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, name: String, title: String,
+                         description: String) extends UserRequest(userId) {
+  private def emptyToOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
+
+  def resultingResponses(): List[Response] = {
+    db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description))
+    new BooleanResponse(true) :: Nil
+  }
+}
+
 class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
     try {
