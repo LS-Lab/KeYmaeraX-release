@@ -144,20 +144,16 @@ private object DifferentialTactics {
         } else {
           val t = DI(pos) &
             (if (auto != 'none) {
-              shift(PosInExpr(1 :: 1 :: Nil), new DependentPositionTactic("Shift") {
-                override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-                  override def computeExpr(sequent: Sequent): BelleExpr = {
-                    //@note derive before DE to keep positions easier
-                    shift(PosInExpr(1 :: Nil), derive)(pos) &
-                      DE(pos) &
-                      (if (auto == 'full) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
-                        //@note DW after DE to keep positions easier
-                        (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                        abstractionb(pos)
-                      else abstractionb(pos))
-                  }
-                }
-              }
+              shift(PosInExpr(1 :: 1 :: Nil), "ANON" by ((pos: Position, sequent: Sequent) =>
+                //@note derive before DE to keep positions easier
+                shift(PosInExpr(1 :: Nil), derive)(pos) &
+                  DE(pos) &
+                  (if (auto == 'full) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
+                    //@note DW after DE to keep positions easier
+                    (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                    abstractionb(pos)
+                  else abstractionb(pos))
+                )
               )(pos)
             } else ident)
           if (auto == 'full) Dconstify(t)(pos)
