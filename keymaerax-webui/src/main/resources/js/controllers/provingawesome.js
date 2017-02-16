@@ -270,6 +270,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         }
 
         var onStepwiseTaskError = function(err) {
+          spinnerService.hide('magnifyingglassSpinner');
           $uibModal.open({
             templateUrl: 'templates/modalMessageTemplate.html',
             controller: 'ModalMessageCtrl',
