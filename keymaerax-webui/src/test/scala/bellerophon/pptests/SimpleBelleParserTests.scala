@@ -442,7 +442,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   "def function" should "parse a simple definition" in {
     val tactic = BelleParser("def {`f(x)=x^2+1`} ; implyR(1) ; expand {`f(x)`}")
     val fDef = DefExpression("f(x)=x^2+1".asFormula)
-    tactic shouldBe fDef & TactixLibrary.implyR(1) & ExpandDef(fDef)
+    tactic shouldBe fDef & (TactixLibrary.implyR(1) & ExpandDef(fDef))
   }
 
   //endregion
