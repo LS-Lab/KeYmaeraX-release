@@ -160,9 +160,18 @@ private object ToolTactics {
   def transform(to: Expression): DependentPositionWithAppliedInputTactic = "transform" byWithInput (to, (pos: Position, sequent: Sequent) => {
     require(sequent.sub(pos) match {
       case Some(fml: Formula) => fml.isFOL && to.kind == fml.kind
+      case Some(t: Term) => to.kind == t.kind
       case _ => false
-    }, "transform only on arithmetic formulas")
+    }, "transform only on arithmetic formulas and terms")
 
+    to match {
+      case f: Formula => transformFormula(f, sequent, pos)
+      case t: Term => transformTerm(t, sequent, pos)
+    }
+  })
+
+  /** Transforms the formula at position `pos` into the formula `to`. */
+  private def transformFormula(to: Formula, sequent: Sequent, pos: Position) = {
     val polarity = FormulaTools.polarityAt(sequent(pos.top), pos.inExpr)*(if (pos.isSucc) 1 else -1)
 
     val (src, tgt) = (sequent.sub(pos), to) match {
@@ -186,8 +195,8 @@ private object ToolTactics {
     //@note first try to prove without assumptions, than with non-bound stuff, if all that fails with whole ante
     val (fact, ga) = proveFact(gaFull,
       ((al: IndexedSeq[Formula]) => al.filter(_ => false))::
-      ((al: IndexedSeq[Formula]) => al.filter(fml => StaticSemantics.freeVars(fml).intersect(boundVars).isEmpty))::
-      ((al: IndexedSeq[Formula]) => al.filter(_ => true))::Nil)
+        ((al: IndexedSeq[Formula]) => al.filter(fml => StaticSemantics.freeVars(fml).intersect(boundVars).isEmpty))::
+        ((al: IndexedSeq[Formula]) => al.filter(_ => true))::Nil)
 
     def propPushIn(op: (Formula, Formula) => Formula) = {
       val p = "p_()".asFormula
@@ -217,10 +226,17 @@ private object ToolTactics {
         ensureAt(pos) & OnAll(master() & done),
         pushIn(pos.inExpr)(pos.top)
       )
-    )
+      )
     else throw BelleTacticFailure(s"Invalid transformation: $to")
-  })
+  }
 
+  /** Transforms the term at position `pos` into the term `to`. */
+  private def transformTerm(to: Term, sequent: Sequent, pos: Position) = {
+    val src = sequent.sub(pos) match { case Some(src: Term) => src }
+    useAt(proveBy(Equal(src, to), QE), PosInExpr(0::Nil))(pos)
+  }
+
+  /** Ensures that the formula at position `pos` is available at that position from the assumptions. */
   private def ensureAt: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     lazy val ensuredFormula = seq.sub(pos) match { case Some(fml: Formula) => fml }
     lazy val skipAt = "ANON" by ((pos: Position, seq: Sequent) => skip)

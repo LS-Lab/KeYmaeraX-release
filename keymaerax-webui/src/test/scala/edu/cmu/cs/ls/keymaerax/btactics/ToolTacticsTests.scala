@@ -153,4 +153,12 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "b>0".asFormula
     result.subgoals.head.succ should contain only "\\exists y [{x'=2,y'=1}](y/b>0 & x*y>=0)".asFormula
   }
+
+  it should "transform terms" in withMathematica { _ =>
+    val result = proveBy("[x:=x/b+1+1+0;]x>0".asFormula, transform("x/b+2".asTerm)(1, 0::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=x/b+2;]x>0".asFormula
+  }
+
 }

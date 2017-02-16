@@ -645,9 +645,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
     else EqualityTactics.exhaustiveEqR2L
 
-  /** Transform an FOL formula into the formula 'to'.
+  /** Transform an FOL formula or term into the formula/term 'to'.
     * A proof why that tranformation is acceptable will be shown on demand.
-    * Transforms the FOL formula at position 'pos' into the formula 'to'. Uses QE to prove the transformation correct.
+    * Transforms the FOL formula or term at position 'pos' into the formula/term 'to'. Uses QE to prove the transformation correct.
     * @example {{{
     *                           *
     *                           --------------
@@ -662,9 +662,16 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *           ---------------------------------------------- transform("a+b<c".asFormula)(1)
     *           a+b<c, b>=0 |- a<c
     * }}}
-    * @param to The transformed formula that is desired as the result of this transformation.
+    * @example {{{
+    *                           *
+    *                           ---------------
+    *           a<c |- a<c      |- c+0=c
+    *           -------------------------------transform("c".asFormula)(1, 1::Nil)
+    *           a<c |- a<c+0
+    * }}}
+    * @param to The transformed formula or term that is desired as the result of this transformation.
     */
-  def transform(to: Formula): DependentPositionTactic = ToolTactics.transform(to)
+  def transform(to: Expression): DependentPositionTactic = ToolTactics.transform(to)
 
   //
   /** OnAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */
