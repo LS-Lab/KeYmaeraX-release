@@ -77,7 +77,7 @@ If, at any time, you run into problems during the compilation process, use `sbt 
 The Wiki contains extended build instructions and solutions to other
 common sbt problems:
 
-https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
+https://github.com/LS-Lab/KeYmaeraX-Release/wiki/Building-Instructions
 
 ##### FAQ: Run Problems
 =================
@@ -226,7 +226,7 @@ To inline scala console output alongside the test suite information, first do:
 IntelliJ IDEA can also run the test suite (see #IntelliJ IDEA).
 
 The Wiki contains an introduction to the testing framework:
-https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
+https://github.com/LS-Lab/KeYmaeraX-Release/wiki/How-to-Add-Tests
 http://www.scalatest.org/user_guide
 
 

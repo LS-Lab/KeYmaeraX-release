@@ -34,7 +34,7 @@ import scala.io.Source
 import scala.collection.immutable._
 import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
-import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -187,9 +187,8 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
             /* TODO: Case on this instead */
             val qeTool:QETool = ToolProvider.qeTool().get
             val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
-            val depth = 10
-            val dfs = new BoundedDFS(depth)
-            dfs(snode) match {
+            val search = new BoundedDFS(10)
+            search(snode) match {
               case None =>
                 val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
                 val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)

@@ -227,6 +227,13 @@ object AxiomaticODESolver {
           }
         }
       }
+      case AtomicODE(DifferentialSymbol(v2), e) => {
+        if (v == v2) {
+          (Nil, List(AtomicODE(DifferentialSymbol(v2), e)), Nil)
+        } else {
+          (Nil, Nil, List(AtomicODE(DifferentialSymbol(v2), e)))
+        }
+      }
     }
   }
 
