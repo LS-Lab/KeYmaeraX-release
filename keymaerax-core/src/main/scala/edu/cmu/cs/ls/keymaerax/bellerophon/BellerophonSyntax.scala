@@ -650,6 +650,10 @@ case class BelleProvable(p : ProvableSig, label: Option[List[BelleLabel]] = None
   override def prettyString: String = p.prettyString
 }
 
+/** To communicate proof IDs of subproofs opened in the spoon-feeding interpreter in Let between requests.
+  * NOT TO BE USED FOR ANYTHING ELSE */
+case class BelleSubProof(id: Int) extends BelleValue
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Labels
 ////////////////////////////////////////////////////////////////////////////////////////////////////

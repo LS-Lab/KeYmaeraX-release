@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -11,7 +12,9 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 /**
   * Sequential interpreter for Bellerophon tactic expressions: breaks apart combinators and spoon-feeds "atomic" tactics
   * to another interpreter.
-  * @param listeners Creates listeners from tactic names.
+  * @param rootProofId The ID of the proof this interpreter is working on.
+  * @param idProvider Provides IDs for child provables created in this interpreter.
+  * @param listeners Creates listeners tactic names.
   * @param inner Processes atomic tactics.
   * @param descend How far to descend into depending tactics (default: do not descend)
   * @param strict If true, follow tactic strictly; otherwise perform some optimizations (e.g., do not execute nil).
@@ -19,7 +22,9 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @author Andre Platzer
   * @author Stefan Mitsch
   */
-case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], inner: Seq[IOListener] => Interpreter, descend: Int = 0, strict: Boolean = true) extends Interpreter {
+case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => Int, listeners: Int => ((String, Int) => Seq[IOListener]), inner: Seq[IOListener] => Interpreter, descend: Int = 0, strict: Boolean = true) extends Interpreter {
+  var innerProofId: Option[Int] = None
+
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic((expr, v)::Nil, 0, descend)
 
   private def runTactic(branches: Seq[(BelleExpr, BelleValue)], branch: Int, level: Int): BelleValue = {
@@ -109,6 +114,37 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
           case e: BelleThrowable => throw e.inContext(OnAll(e.context), "")
         }
 
+      case Let(abbr, value, innerTactic) =>
+        val (provable,lbl) = branches(branch)._2 match {
+          case BelleProvable(p, l) => (p,l)
+          case _ => throw new BelleThrowable("Cannot attempt Let with a non-Provable value.").inContext(branches(branch)._1, "")
+        }
+        if (provable.subgoals.length != 1)
+          throw new BelleThrowable("Let of multiple goals is not currently supported.").inContext(branches(branch)._1, "")
+
+        // flatten nested Lets into a single inner proof
+        def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
+                        repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
+          case Let(a, v, c) => flattenLets(c, substs :+ SubstitutionPair(a, v), repls :+ v->a)
+          case t => (
+            ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
+            USubst(substs),
+            t
+          )
+        }
+
+        val (in: ProvableSig, us: USubst, innerMost) = flattenLets(innerTactic, SubstitutionPair(abbr, value)::Nil, value->abbr::Nil)
+        println("INFO: " + branches(branch)._1 + " considers\n" + in + "\nfor outer\n" + provable)
+        val innerId = idProvider(in)
+        innerProofId = Some(innerId)
+        val innerFeeder = SpoonFeedingInterpreter(innerId, idProvider, listeners, inner, descend, strict = strict)
+        innerFeeder.runTactic((innerMost, BelleProvable(in)) :: Nil, 0, level) match {
+          case BelleProvable(derivation, _) =>
+            val backsubst: ProvableSig = derivation(us)
+            BelleProvable(provable(backsubst, 0), lbl)
+          case _ => throw new BelleThrowable("Let expected sub-derivation")
+        }
+
       case ChooseSome(options, e) =>
         val opts = options()
         var errors = ""
@@ -154,7 +190,7 @@ case class SpoonFeedingInterpreter(listeners: (String, Int) => Seq[IOListener], 
         else branches(branch)._2 match {
           case BelleProvable(provable, _) if provable.subgoals.isEmpty => inner(Seq())(branches(branch)._1, branches(branch)._2)
           case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
-            inner(listeners(branches(branch)._1.prettyString, branch))(branches(branch)._1, BelleProvable(provable.sub(0), labels)) match {
+            inner(listeners(rootProofId)(branches(branch)._1.prettyString, branch))(branches(branch)._1, BelleProvable(provable.sub(0), labels)) match {
               case BelleProvable(innerProvable, _) => BelleProvable(provable(innerProvable, 0), labels)
             }
         }

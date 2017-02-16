@@ -86,13 +86,13 @@ object DatabasePopulator {
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
-    def listener(tacticName: String, branch: Int) = {
+    def listener(proofId: Int)(tacticName: String, branch: Int) = {
       val trace = db.getExecutionTrace(proofId)
       val globalProvable = trace.lastProvable
       new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
         globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
     }
-    val interpreter = SpoonFeedingInterpreter(listener, SequentialInterpreter)
+    val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener, SequentialInterpreter)
     val parsedTactic = BelleParser(tactic)
     interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(model))))
   }

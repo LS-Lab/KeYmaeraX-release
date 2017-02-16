@@ -5,13 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListener
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Lemma}
-import edu.cmu.cs.ls.keymaerax.hydra.DBAbstraction
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.scalatest.events.Event
@@ -38,14 +35,6 @@ class AcasXBase extends TacticTestBase {
   implicit val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
   /* Whether or not to lookup lemmas in `rememberAs` tactic. */
   implicit val lookupRememberedLemmas: Boolean = true
-
-  /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def createListener(db: DBAbstraction, proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId)
-    val globalProvable = trace.lastProvable
-    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
-  }
 
   /** Wraps fml into a ACAS X problem spec. */
   def createAcasXProblemFile(fml: Formula): String =

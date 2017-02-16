@@ -952,7 +952,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
               db.getExecutable(end.executableId).belleExpr, end.rule)
         }
         val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(RequestHelper.listenerFactory(db, localProofId, Some(localProvable)),
+        val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db, Some(localProvable)),
           SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
@@ -1172,13 +1172,15 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val localProofId = db.createProof(localProvable)
         //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
         val interpreter = (_: List[IOListener]) => new Interpreter {
+          val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
           override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
-            SpoonFeedingInterpreter(RequestHelper.listenerFactory(db, localProofId), SequentialInterpreter, 1, strict = false)(expr, v)
+            inner(expr, v)
           } catch {
             //@note stop and display whatever progress was made
             case ex: Throwable =>
-              val innerTrace = db.getExecutionTrace(localProofId)
-              if (innerTrace.steps.nonEmpty) BelleProvable(localProvable) //@note which provable doesn't matter, just that it is a BelleProvable
+              val innerId = inner.innerProofId.getOrElse(localProofId)
+              val innerTrace = db.getExecutionTrace(innerId)
+              if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
               else throw BelleTacticFailure("No progress", ex)
           }
         }
@@ -1255,6 +1257,13 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
           new TaskResultResponse(proofId, parentNode, parentNode.children, positionLocator, progress = true)
+        case Some(Left(BelleSubProof(subId))) =>
+          //@HACK for stepping into Let steps
+          val finalTree = ProofTree.ofTrace(db.getExecutionTrace(subId))
+          val parentNode = finalTree.root//findNode(nodeId).get
+          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
+          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
+          new TaskResultResponse(subId.toString, parentNode, parentNode.children, positionLocator, progress = true)
         case Some(Right(error: BelleThrowable)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
@@ -1653,7 +1662,7 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction, proofId: Int, initGlobal: Option[ProvableSig] = None)(tacticName: String, branch: Int): Seq[IOListener] = {
+  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
     val trace = db.getExecutionTrace(proofId)
     val globalProvable = initGlobal match {
       case Some(gp) if trace.steps.isEmpty => gp
