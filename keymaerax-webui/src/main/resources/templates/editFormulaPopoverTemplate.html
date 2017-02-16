@@ -1,7 +1,11 @@
 <div>
     <form class="form-inline">
-        <input type="text" class="form-control" name="toFormula" ng-model="editFormulaPopover.formula" required>
-        <a class="btn btn-default" ng-click="editFormulaPopover.edit()">Ok</a>
-        <a class="btn btn-default" ng-click="editFormulaPopover.close()">Cancel</a>
+        <input type="text" class="form-control" name="abbreviation" ng-model="editFormulaPopover.formulaOrAbbrv"
+               placeholder="Abbreviation">
+        <a ng-click="editFormulaPopover.abbrvMode(!editFormulaPopover.abbrv)" uib-tooltip="{{editFormulaPopover.tooltip}}"
+           style="position:absolute;right:37%;top:34%;">
+            <i ng-class="{'fa': true, 'fa-times-circle': editFormulaPopover.abbrv, 'fa-tag': !editFormulaPopover.abbrv}"></i></a>
+        <a class="btn btn-default" ng-click="editFormulaPopover.edit()"><i class="fa fa-check"></i></a>
+        <a class="btn btn-default" ng-click="editFormulaPopover.close()"><i class="fa fa-remove"></i></a>
     </form>
 </div>

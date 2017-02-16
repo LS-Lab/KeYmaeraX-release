@@ -62,6 +62,8 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
       case _: Term => false
       case f: Formula => f.sub(q).get match {
         case fml: Formula => fml.isFOL
+        case _: Variable => false
+        case _: Term => true
         case _ => false
       }
     })

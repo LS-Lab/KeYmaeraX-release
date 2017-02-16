@@ -99,21 +99,43 @@ angular.module('formula')
             scope.editFormulaPopover = {
               openFormulaId: undefined,
               formula: undefined,
+              formulaOrAbbrv: undefined,
+              abbrv: false,
+              tooltip: 'Abbreviate',
               isOpen: function(formulaId) { return sequentProofData.formulas.mode=='edit' && scope.editFormulaPopover.openFormulaId !== undefined && scope.editFormulaPopover.openFormulaId === formulaId; },
-              open: function(formulaId, formulaText) { scope.editFormulaPopover.openFormulaId = formulaId; scope.editFormulaPopover.formula = formulaText; },
+              open: function(formulaId, formulaText) {
+                scope.editFormulaPopover.openFormulaId = formulaId;
+                scope.editFormulaPopover.formula = formulaText;
+                scope.editFormulaPopover.abbrvMode(false);
+              },
               formulaId: function() { return scope.editFormulaPopover.openFormulaId; },
               close: function() { scope.editFormulaPopover.openFormulaId = undefined; },
               edit: function() {
                 scope.onInputTactic({
                   formulaId: scope.editFormulaPopover.openFormulaId,
-                  tacticId: 'transform',
-                  input: [{
-                    'param': 'toFormula',
-                    'value': scope.editFormulaPopover.formula
-                  }]
+                  tacticId: (scope.editFormulaPopover.abbrv ? 'abbrv': 'transform'),
+                  input: (scope.editFormulaPopover.abbrv ? [
+                    {'param': 't',
+                     'value': scope.editFormulaPopover.formula},
+                    {'param': 'v',
+                     'value': scope.editFormulaPopover.formulaOrAbbrv},
+                  ] : [
+                    {'param': 'toFormula',
+                     'value': scope.editFormulaPopover.formulaOrAbbrv}
+                  ])
                 });
                 scope.editFormulaPopover.openFormulaId = undefined;
                 if (!sequentProofData.formulas.stickyEdit) sequentProofData.formulas.mode = 'prove';
+              },
+              abbrvMode: function(abbrv) {
+                scope.editFormulaPopover.abbrv = abbrv;
+                if (abbrv) {
+                  scope.editFormulaPopover.formulaOrAbbrv = undefined,
+                  scope.editFormulaPopover.tooltip = 'Cancel abbreviation';
+                } else {
+                  scope.editFormulaPopover.formulaOrAbbrv = scope.editFormulaPopover.formula;
+                  scope.editFormulaPopover.tooltip = 'Abbreviate';
+                }
               }
             }
 
