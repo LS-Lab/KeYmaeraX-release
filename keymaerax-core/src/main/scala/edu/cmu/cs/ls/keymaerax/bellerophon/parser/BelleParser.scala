@@ -614,13 +614,19 @@ object BelleParser extends (String => BelleExpr) {
           case ty:TermArg => try {
             Left(tok.undelimitedExprString.asTerm)
           } catch {
-            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a term was expected. Error: $exn", loc, exn)
+            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Term, but a term was expected. Error: $exn", loc, exn)
           }
           case ty:VariableArg if tok.expression.isInstanceOf[Variable] => Left(tok.expression)
           case ty:VariableArg => try {
             Left(tok.undelimitedExprString.asVariable)
           } catch {
-            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a Variable was expected. Error: $exn", loc, exn)
+            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a variable was expected. Error: $exn", loc, exn)
+          }
+          case ty:ExpressionArg if tok.expression.isInstanceOf[Expression] => Left(tok.expression)
+          case ty:ExpressionArg => try {
+            Left(tok.undelimitedExprString.asExpr)
+          } catch {
+            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as an Expression, but an expression was expected. Error: $exn", loc, exn)
           }
         }
       }

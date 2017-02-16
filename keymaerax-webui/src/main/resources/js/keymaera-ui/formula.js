@@ -120,7 +120,7 @@ angular.module('formula')
                     {'param': 'v',
                      'value': scope.editFormulaPopover.formulaOrAbbrv},
                   ] : [
-                    {'param': 'toFormula',
+                    {'param': 'to',
                      'value': scope.editFormulaPopover.formulaOrAbbrv}
                   ])
                 });

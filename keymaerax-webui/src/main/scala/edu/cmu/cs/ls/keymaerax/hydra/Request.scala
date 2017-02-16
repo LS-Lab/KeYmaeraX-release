@@ -1120,6 +1120,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula"))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }

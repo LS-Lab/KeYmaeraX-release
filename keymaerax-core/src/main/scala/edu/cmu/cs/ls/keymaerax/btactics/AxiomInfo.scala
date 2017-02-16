@@ -725,8 +725,8 @@ object DerivationInfo {
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
     , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("transform", "trafo", List(FormulaArg("toFormula")),
-      _ => ((fml:Formula) => TactixLibrary.transform(fml)): TypedFunc[Formula, BelleExpr]),
+    new InputPositionTacticInfo("transform", "trafo", List(ExpressionArg("to")),
+      _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("boundRename"
       , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
@@ -949,6 +949,9 @@ case class FormulaArg (override val name: String) extends ArgInfo {
 }
 case class VariableArg (override val name: String) extends ArgInfo {
   val sort = "variable"
+}
+case class ExpressionArg (override val name: String) extends ArgInfo {
+  val sort = "expression"
 }
 case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
