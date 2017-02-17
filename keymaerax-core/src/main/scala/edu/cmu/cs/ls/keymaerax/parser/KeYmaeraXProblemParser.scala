@@ -28,6 +28,7 @@ object KeYmaeraXProblemParser {
           val lexResult = KeYmaeraXLexer.inMode(input, ProblemFileMode)
           if(KeYmaeraXParser.PARSER_DEBUGGING) println(lexResult) //@note Useful to change this to true if you're modifying the parser or chasing down a bug.
           parseProblem(lexResult)._2
+        }
       }
     }
     catch {
