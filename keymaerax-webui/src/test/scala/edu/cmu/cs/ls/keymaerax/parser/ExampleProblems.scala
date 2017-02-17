@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
- * Created by nfulton on 6/18/15.
+ * @author Nathan Fulton
  */
 class ExampleProblems extends FlatSpec with Matchers {
   "parser line messages" should "be properly offset" in {
@@ -29,8 +29,8 @@ class ExampleProblems extends FlatSpec with Matchers {
       assert(false, "Should've thrown an error.")
     } catch {
       case e : ParseException => {
-        e.loc.begin.line shouldBe 7
-        e.loc.begin.column shouldBe 4
+        e.loc.begin.line shouldBe 8
+        e.loc.begin.column shouldBe 11
       }
     }
 
@@ -65,8 +65,8 @@ class ExampleProblems extends FlatSpec with Matchers {
     } catch {
       case e : ParseException => {
         println(e)
-        e.loc.begin.line shouldBe 13
-        e.loc.begin.column shouldBe 4
+        e.loc.begin.line shouldBe 15
+        e.loc.begin.column shouldBe 11
       }
     }
 
@@ -81,8 +81,8 @@ class ExampleProblems extends FlatSpec with Matchers {
     } catch {
       case e : ParseException => {
         println(e)
-        e.loc.begin.line shouldBe 13
-        e.loc.begin.column shouldBe 4
+        e.loc.begin.line shouldBe 15
+        e.loc.begin.column shouldBe 11
       }
     }
 
