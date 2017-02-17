@@ -56,12 +56,31 @@ object KeYmaeraXProblemParser {
       case None => {
         val parts = input.split("Solution.")
         assert(parts.length == 2, "Expected a problem file followed by a single ``Solution`` section.")
+
+
+        //almost always the line number where the Solution section begins. (see todo)
+        val solutionLineOffset =
+        input.split("\n")
+          .zipWithIndex
+          .find(s => s._1.contains("Solution."))
+          .getOrElse(throw new Exception("All problem files should contain a Solution. declaration."))
+          ._2 + 2 //+1 because lines start at 1, and +1 again because the problem starts on the line after the Problem. declaration. @todo that second +1 is not always true.
+
         val (problem, tactic) = (parts(0), parts(1))
 
         assert(tactic.trim.endsWith("End."), "``Solution.`` does not have a closing ``End.``")
 
-        val belleExpr = BelleParser(tactic.trim.dropRight("End.".length))
-        val formula = apply(problem)
+        val belleExpr = try {
+          BelleParser(tactic.trim.dropRight("End.".length))
+        } catch {
+          case e: ParseException => throw ParseException(e.msg, e.loc.addLines(solutionLineOffset), e.found, e.expect, e.after, e.state, e.cause)
+        }
+
+        val formula = try {
+          apply(problem)
+        } catch {
+          case e: ParseException => throw ParseException(e.msg, e.loc.addLines(problemLineOffset(input)), e.found, e.expect, e.after, e.state, e.cause)
+        }
 
         (formula, belleExpr)
       }
