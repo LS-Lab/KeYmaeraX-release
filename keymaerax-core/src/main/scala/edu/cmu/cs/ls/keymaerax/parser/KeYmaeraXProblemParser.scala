@@ -24,7 +24,11 @@ object KeYmaeraXProblemParser {
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
+        case None => {
+          val lexResult = KeYmaeraXLexer.inMode(input, ProblemFileMode)
+          if(KeYmaeraXParser.PARSER_DEBUGGING) println(lexResult) //@note Useful to change this to true if you're modifying the parser or chasing down a bug.
+          parseProblem(lexResult)._2
+        }
       }
     }
     catch {
@@ -40,6 +44,14 @@ object KeYmaeraXProblemParser {
       case None => KeYmaeraXProblemParser(input)
     }
   }
+
+  /** //almost always the line number where the Problem section begins. (see todo) */
+  private def problemLineOffset(input: String) =
+    input.split("\n")
+      .zipWithIndex
+      .find(s => s._1.contains("Problem."))
+      .getOrElse(throw new Exception("All problem files should contain a Problem. declaration."))
+      ._2 + 2 //+1 because lines start at 1, and +1 again because the problem starts on the line after the Problem. declaration. @todo that second +1 is not always true.
 
   /** Parses a file of the form Problem. ... End. Solution. ... End. */
   def parseProblemAndTactic(input: String): (Formula, BelleExpr) = try {
