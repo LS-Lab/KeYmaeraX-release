@@ -60,10 +60,27 @@ class ExampleProblems extends FlatSpec with Matchers {
         |
         |End.""".stripMargin
     val result = try {
-      KeYmaeraXProblemParser(f)
+      KeYmaeraXProblemParser.parseAsProblemOrFormula(f)
       assert(false, "Should've thrown an error.")
     } catch {
       case e : ParseException => {
+        println(e)
+        e.loc.begin.line shouldBe 13
+        e.loc.begin.column shouldBe 4
+      }
+    }
+
+  }
+
+  it should "work from file input" in {
+    val f = " ProgramVariables.\n\n   R x. R y. R z. \n\n   End.  \n\n   Problem.\n\n   (x*x*y >= 0 & x >= 0 & z >= x) \n\n   -> \n\n   [\n\n   {x := 2x; y := 2y;}\n\n  ]\n\n (x*y >= 0)\n\nEnd."
+
+    val result = try {
+      KeYmaeraXProblemParser.parseAsProblemOrFormula(f)
+      assert(false, "Should've thrown an error.")
+    } catch {
+      case e : ParseException => {
+        println(e)
         e.loc.begin.line shouldBe 13
         e.loc.begin.column shouldBe 4
       }

@@ -276,7 +276,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
 
   /** Normalize all new lines in input to a s*/
-  def normalizeNewlines(input: String): String = input.replace("\r\n", "\n").replace("\r", "\n")
+  def normalizeNewlines(input: String): String = input.replace("\r\n", "\n").replace("\r", "\n").replaceAll(" *\n", "\n")
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
