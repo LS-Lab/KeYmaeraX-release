@@ -9,8 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**
- * Created by nfulton on 6/18/15.
- * @todo Nathan
+  * @author Nathan Fulton
  */
 @CheckinTest
 class AxiomFileParser extends FlatSpec with Matchers with PrivateMethodTester {
