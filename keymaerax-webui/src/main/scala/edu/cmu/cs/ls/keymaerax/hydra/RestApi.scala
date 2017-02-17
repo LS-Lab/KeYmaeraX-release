@@ -159,6 +159,18 @@ trait RestApi extends HttpService with SLF4JLogging {
     complete(cookieName + ": " + cookieValue.content)
   }}}
 
+  val userTheme: SessionToken=>Route = (t: SessionToken) => path("users" / Segment / "theme") { userId => pathEnd {
+    get {
+      val request = new GetUserThemeRequest(database, userId)
+      completeRequest(request, t)
+    } ~
+      post {
+        entity(as[String]) { theme => {
+          val request = new SetUserThemeRequest(database, userId, theme)
+          completeRequest(request, t)
+        }}}
+  }}
+
   // GET /models/user returns a list of all models belonging to this user. The cookie must be set.
   val modelList = (t : SessionToken) => pathPrefix("models" / "users" / Segment) {userId => { pathEnd { get {
     val request = new GetModelListRequest(database, userId)
@@ -987,6 +999,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     examples              ::
     stepwiseTrace         ::
     updateUserModel       ::
+    userTheme             ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

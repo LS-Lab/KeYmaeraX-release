@@ -485,6 +485,22 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
   }
 }
 
+class GetUserThemeRequest(db: DBAbstraction, userName: String) extends UserRequest(userName) {
+  override def resultingResponses(): List[Response] = {
+    val config = db.getConfiguration(userName).config
+    new PlainResponse("theme" -> JsString(config.getOrElse("theme", "app"))) :: Nil
+  }
+}
+
+class SetUserThemeRequest(db: DBAbstraction, userName: String, theme: String) extends UserRequest(userName) {
+  override def resultingResponses(): List[Response] = {
+    val config = db.getConfiguration(userName)
+    db.updateConfiguration(new ConfigurationPOJO(userName, config.config.updated("theme", theme)))
+    new BooleanResponse(true) :: Nil
+  }
+}
+
+
 class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config

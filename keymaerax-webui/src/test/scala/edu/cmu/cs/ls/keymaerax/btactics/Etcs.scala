@@ -133,6 +133,12 @@ class Etcs extends TacticTestBase {
     proveBy(s, master()) shouldBe 'proved
   }
 
+  it should "prove safety with detailed brake model" in withMathematica { _ =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx"))
+    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyt")).mkString)
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   "ETCS ModelPlex" should "synthesize a ctrl monitor from essentials" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)

@@ -400,9 +400,19 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe Let("a()".asTerm, "a".asTerm, BelleParser(inner))
   }
 
+  it should "parse let as part of a larger tactic" in {
+    val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; closeId")
+    tactic shouldBe TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.skip) & TactixLibrary.closeId)
+  }
+
   "def tactic parser" should "parse a simple example" in {
     val tactic = BelleParser("tactic t as (assignb('R))")
     tactic shouldBe DefTactic("t", TactixLibrary.assignb('R))
+  }
+
+  it should "parse multipe tactic defs" in {
+    val tactic = BelleParser("tactic t as (assignb('R)) ; tactic s as (implyR(1))")
+    tactic shouldBe DefTactic("t", TactixLibrary.assignb('R)) & DefTactic("s", TactixLibrary.implyR(1))
   }
 
   it should "parse a simple example with application" in {
@@ -443,6 +453,13 @@ class SimpleBelleParserTests extends TacticTestBase {
     val tactic = BelleParser("def {`f(x)=x^2+1`} ; implyR(1) ; expand {`f(x)`}")
     val fDef = DefExpression("f(x)=x^2+1".asFormula)
     tactic shouldBe fDef & (TactixLibrary.implyR(1) & ExpandDef(fDef))
+  }
+
+  it should "parse multiple defs" in {
+    val tactic = BelleParser("def {`f(x)=x^2+1`} ; def {`g(x)=x+1`} ; implyR(1) ; expand {`f(x)`}")
+    val fDef = DefExpression("f(x)=x^2+1".asFormula)
+    val gDef = DefExpression("g(x)=x+1".asFormula)
+    tactic shouldBe fDef & (gDef & (TactixLibrary.implyR(1) & ExpandDef(fDef)))
   }
 
   //endregion

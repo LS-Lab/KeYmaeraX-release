@@ -1,0 +1,74 @@
+/**
+ * Safety lemma for European Train Control System with extended braking model
+ * @provable
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification. In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods, ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ * @see "Werner Damm, Alfred Mikschl, Jens Oehlerking, Ernst-Ruediger Olderog, Jun Pang, Andre Platzer, Marc Segelken and Boris Wirtz. Automating verification of cooperation, control, and design in traffic applications. In Cliff Jones, Zhiming Liu and Jim Woodcock, editors, Formal Methods and Hybrid Real-Time Systems, volume 4700 of LNCS, pp. 115-169. Springer, 2007."
+ */
+Functions.
+  R A.
+  R ep.
+  R Rw().     /* wheel radius */
+  R mu().     /* adhesion between wheel and track */
+  R ms().     /* train mass */
+  R cr().     /* roll resistance */
+  R ca1().    /* air quadratic factor */
+  R ca2().    /* air linear factor */
+  R g().      /* gravity */
+  R sp().     /* sin(phi) of track slope phi */
+  R sbsc().   /* brake force scaling factor */
+  R voff().   /* offset to ensure brake force close to v=zero */
+  R ebc().    /* emergency brake */
+  R Ft(R).    /* traction force  Ft(Tw) = mu*Tw/Rw */
+  R Fe(R).    /* external force Fe(v)   = Fa(v)+Fr+ms*g*sp */
+  R Fa(R).    /* air resistance Fa(v)   = v^2*ca1+v*ca2 */
+  R Fr().     /* roll resistance Fr()   = ms*cr */
+  R Fb(R).    /* brake force    Fb(vIb) = (vIb+voff)*sbc+ebc, where vIb = v*(Ib-1) because we can't substitute Fb(R,R) yet */
+End.
+
+ProgramVariables.
+	R vdes.
+	R SB.
+	R mo.
+	R t.
+	R Tw.     /* engine angular momentum, used as acceleration for now, actually f(v_eng) angular velocity of engine */
+	R Ib.     /* brake current (controlled), 1/s */
+	R v.
+	R z.
+	R m.
+	R d.
+	R do.
+	R em. /* emergency braking: 0=off, 1=on */
+End.
+
+Problem.
+em = 0 & v^2 - d^2 <= 2*(voff()*sbsc()/ms())*(m-z) & d >=0 & A >= 0 & ep >= 0 & v>=0
+  /* actual constant properties */
+  & mu() >= 0 & Tw >= 0 & Rw() > 0 & sbsc() > 0 & ebc() >= 0 & ms() > 0 & g() > 0 & cr() >= 0 & -1<=sp()&sp()<=1
+  /* simplifications for a first proof */
+  & mu()=1 & Rw()=1               /* traction Tr(Tw) = Tw */
+  & voff()=1                      /* brake improvement close to 0 = sbsc */
+  & ebc()=0                       /* no extra emergency brake */
+  & ca1() = 0 & ca2() = 0         /* disables air resistance */
+  & cr()=0                        /* disables roll resistance */
+  & sp()=0                        /* flat track */
+  /* Fe(v) = 0 by previous 3 lines */
+  ->
+  [{
+       {
+           do := d; mo := m; m :=*; d :=*; vdes :=*; ?d >= 0 & do^2 - d^2 <= 2*(voff()*sbsc()/ms())*(m-mo) & vdes >= 0;
+        ++ em := 1;
+       }
+    ++ {
+         {    ?v <= vdes; Ib:=1; Tw:=*; ?0<=Tw & Tw<=A;
+           ++ ?v >= vdes; Tw:=0; Ib:=*; ?1 <= Ib;
+         };
+         SB := (v^2 - d^2)/(2*voff()*sbsc()/ms()) + ((A/ms())/(voff()*sbsc()/ms())+1)*((A/ms())/2*ep^2+ep*v);
+         {   ?  m - z <= SB | em = 1; Tw:=0; Ib:=*; ?1 <= Ib; /* we have at least voff*sbsc/ms() braking */
+          ++ ?!(m - z <= SB | em = 1);
+         }
+         t:=0;
+         {z'=v, v' = (Ft(Tw)-Fe(v)-Fb(v*(Ib-1)))/ms(), t'=1 & v >= 0 & t <= ep}
+       }
+   }*@invariant(v^2 - d^2 <= 2*(voff()*sbsc()/ms())*(m-z) & d >= 0)
+  ](z >= m -> v <= d)
+End.

@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -31,21 +31,22 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       val result: BelleValue =
       expr match {
         case DefTactic(_, _) => v //@note noop, but included for serialization purposes
-        case DefExpression(_) => v
-        case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
-        case ExpandDef(DefExpression(Equal(fn@FuncOf(name, arg), t))) =>
+        case DefExpression(Equal(fn@FuncOf(name, arg), t)) =>
           val subst = arg match {
             case Nothing => SubstitutionPair(fn, t)::Nil
             case term => SubstitutionPair(FuncOf(name, DotTerm()), t.replaceFree(term, DotTerm()))::Nil
           }
+          //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
           apply(TactixLibrary.US(USubst(subst)), v)
-        case ExpandDef(DefExpression(Equiv(p@PredOf(name, arg), q))) =>
+        case DefExpression(Equiv(p@PredOf(name, arg), q)) =>
           val subst = arg match {
             case Nothing => SubstitutionPair(p, q)::Nil
-            case term => SubstitutionPair(PredOf(name, DotTerm()), q.replaceFree(term, DotTerm()))::Nil
+            case term => SubstitutionPair(FuncOf(name, DotTerm()), q.replaceFree(term, DotTerm()))::Nil
           }
+          //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
           apply(TactixLibrary.US(USubst(subst)), v)
-
+        case ExpandDef(_) => v
+        case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
         case named: NamedTactic => apply(named.tactic, v)
         case builtIn: BuiltInTactic => v match {
           case BelleProvable(pr, _) => try {
@@ -76,18 +77,26 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case e: BelleThrowable => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
           }
         }
-        case SeqTactic(left, right) => {
-          val leftResult = try {
-            apply(left, v)
-          } catch {
-            case e: BelleThrowable => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
-          }
+        case SeqTactic(left, right) => left match {
+            //@todo on ExpandDef: postpone right until after let
+//          case ExpandDef(DefExpression(Equal(FuncOf(name, arg), t))) =>
+//            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
+//            apply(Let(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()), right), v)
+//          case ExpandDef(DefExpression(Equiv(p@PredOf(name, arg), q))) =>
+//            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
+//            apply(Let(PredOf(name, dotArg), q.replaceFree(arg, DotTerm()), right), v)
+          case _ =>
+            val leftResult = try {
+              apply(left, v)
+            } catch {
+              case e: BelleThrowable => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
+            }
 
-          try {
-            apply(right, leftResult)
-          } catch {
-            case e: BelleThrowable => throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
-          }
+            try {
+              apply(right, leftResult)
+            } catch {
+              case e: BelleThrowable => throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
+            }
         }
         case d: DependentTactic => try {
           val valueDependentTactic = d.computeExpr(v)
@@ -255,12 +264,21 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           if (provable.subgoals.length != 1)
             throw new BelleThrowable("Let of multiple goals is not currently supported.").inContext(expr, "")
 
+          val subst = (abbr, value) match {
+            case (FuncOf(name, arg), t: Term) =>
+              val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
+              SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()))
+            case (PredOf(name, arg), f: Formula) =>
+              val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
+              SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, DotTerm()))
+          }
+
           //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
-          val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+          val us: USubst = USubst(subst :: Nil)
           val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
-          apply(inner, new BelleProvable(in)) match {
+          apply(inner, BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
               val backsubst: ProvableSig = derivation(us)
               BelleProvable(provable(backsubst,0), lbl)
@@ -276,7 +294,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             throw new BelleThrowable("LetInspect of multiple goals is not currently supported.").inContext(expr, "")
 
           val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
-          apply(inner, new BelleProvable(in)) match {
+          apply(inner, BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
               try {
                 val value: Expression = instantiator(derivation)

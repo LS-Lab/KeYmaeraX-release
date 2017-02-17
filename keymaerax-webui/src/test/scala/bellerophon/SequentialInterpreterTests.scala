@@ -391,7 +391,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     result.subgoals.last.succ should contain only "x+1>0".asFormula
   }
 
-  "Def expression" should "define a function and expand it later" in {
+  "Def expression" should "define a function and expand it later" ignore {
     val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
     val invDef = DefExpression("inv(x)=x".asFormula)
     val tactic = invDef & implyR(1) & loop("inv(x)>0".asFormula)(1)
@@ -413,7 +413,31 @@ class SequentialInterpreterTests extends TacticTestBase {
     expanded.subgoals(2).succ should contain only "[x:=x+1;]x>0".asFormula
   }
 
-  it should "define a predicate and expand it later" in {
+  it should "expand right-away" in {
+    val fml = "x>0 -> f(x)>0".asFormula
+    val invDef = DefExpression("f(x)=x".asFormula)
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq(fml)), invDef)
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
+  }
+
+  it should "combine with let to postpone expanding" in {
+    import TacticFactory._
+    val fml = "x>0 -> f(x)>0".asFormula
+    val invDef = DefExpression("f(x)=x+1".asFormula)
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq(fml)), invDef & Let("f(x)".asTerm, "x+1".asTerm,
+      "ANON" by ((s: Sequent) => {
+        s.ante shouldBe empty
+        s.succ should contain only "x>0 -> f(x)>0".asFormula
+        nil
+      })))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0 -> x+1>0".asFormula
+  }
+
+  it should "define a predicate and expand it later" ignore {
     val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
     val invDef = DefExpression("inv(x) <-> x>0".asFormula)
     val tactic = invDef & implyR(1) & loop("inv(x)".asFormula)(1)
