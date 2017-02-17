@@ -309,11 +309,6 @@ object KeYmaeraXParser extends Parser {
     if(PARSER_DEBUGGING) println(la)
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
-      //custom error messages for multiplication that doesn't properly use *
-      case r :+ Token(x:IDENT, loc1) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${x.name}*term")
-      case r :+ Token(n:NUMBER, loc2) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${n.value}*term")
-
-
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
       case r :+ Token(ASSIGN,loc1) if la==STAR =>
         reduce(shift(st), 2, Bottom :+ Token(ASSIGNANY, loc1--laloc), r)
@@ -354,6 +349,10 @@ object KeYmaeraXParser extends Parser {
       case r :+ (tok1@Token(FORALL|EXISTS,_)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st, List(IDENT("IDENT")))
 
+      //custom error messages for multiplication that doesn't properly use *
+      //@note These must come after quantifiers because otherwise \forall x x=1 doesn't parse.
+      case r :+ Token(x:IDENT, loc1) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${x.name}*term")
+      case r :+ Token(n:NUMBER, loc2) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${n.value}*term")
 
       // special cases for early prime conversion
       case r :+ Token(IDENT(name,idx),_) :+ Token(PRIME,_) =>
