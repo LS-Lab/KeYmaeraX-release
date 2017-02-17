@@ -11,6 +11,31 @@ import org.scalatest.{Matchers, FlatSpec}
  * Created by nfulton on 6/18/15.
  */
 class ExampleProblems extends FlatSpec with Matchers {
+  "parser line messages" should "be properly offset" in {
+    val f =
+      """|   ProgramVariables.
+        |   R x. R y. R z.
+        |   End.
+        |   Problem.
+        |   (x*x*y >= 0 & x >= 0 & z >= x)
+        |   ->
+        |   [
+        |   {x := 2x; y := 2y;}
+        |  ]
+        | (x*y >= 0)
+        |End.""".stripMargin
+    val result = try {
+      KeYmaeraXProblemParser(f)
+      assert(false, "Should've thrown an error.")
+    } catch {
+      case e : ParseException => {
+        e.loc.begin.line shouldBe 7
+        e.loc.begin.column shouldBe 4
+      }
+    }
+
+  }
+
   "The Parser" should "parse a simple file" in {
     val theProblem =
       """
