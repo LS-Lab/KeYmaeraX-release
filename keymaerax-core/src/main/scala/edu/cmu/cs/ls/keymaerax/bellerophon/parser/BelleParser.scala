@@ -122,6 +122,7 @@ object BelleParser extends (String => BelleExpr) {
           case Some(BelleToken(ON_ALL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(DONE, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(TACTIC, _)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(LET, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(DEF, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(EXPAND, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)

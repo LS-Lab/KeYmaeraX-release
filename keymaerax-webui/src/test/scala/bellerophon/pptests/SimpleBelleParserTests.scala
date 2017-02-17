@@ -400,6 +400,11 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe Let("a()".asTerm, "a".asTerm, BelleParser(inner))
   }
 
+  it should "parse let as part of a larger tactic" in {
+    val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; closeId")
+    tactic shouldBe TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.skip) & TactixLibrary.closeId)
+  }
+
   "def tactic parser" should "parse a simple example" in {
     val tactic = BelleParser("tactic t as (assignb('R))")
     tactic shouldBe DefTactic("t", TactixLibrary.assignb('R))
