@@ -24,7 +24,10 @@ object KeYmaeraXProblemParser {
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
+        case None => {
+          val lexResult = KeYmaeraXLexer.inMode(input, ProblemFileMode)
+          if(KeYmaeraXParser.PARSER_DEBUGGING) println(lexResult) //@note Useful to change this to true if you're modifying the parser or chasing down a bug.
+          parseProblem(lexResult)._2
       }
     }
     catch {
