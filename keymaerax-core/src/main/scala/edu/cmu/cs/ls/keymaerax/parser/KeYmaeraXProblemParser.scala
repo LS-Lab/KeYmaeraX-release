@@ -24,7 +24,7 @@ object KeYmaeraXProblemParser {
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode), input)._2
+        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode))._2
       }
     }
     catch {
@@ -91,7 +91,7 @@ object KeYmaeraXProblemParser {
     }
   }
 
-  protected def parseProblem(tokens: List[Token], input: String) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
+  protected def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val parser = KeYmaeraXParser
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
     checkInput(remainingTokens.nonEmpty, "Problem. block expected", UnknownLocation, "kyx problem input problem block")
@@ -108,13 +108,7 @@ object KeYmaeraXProblemParser {
       "Expected Problem block to be last in file, but found " + eof,
       if (eof.nonEmpty) eof.last.loc else theProblem.last.loc, "kyx problem end block parser")
 
-    val parseResult : Expression = try {
-      parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation))
-    } catch{
-      case e : ParseException => throw ParseException(e.msg, e.loc.addLines(problemLineOffset(input)), e.found, e.expect, e.after, e.state, e.cause)
-    }
-
-    val problem = parseResult match {
+    val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
       case expr : Expression => throw ParseException("problem block" + ":" + "Expected problem to parse to a Formula", expr)
     }
