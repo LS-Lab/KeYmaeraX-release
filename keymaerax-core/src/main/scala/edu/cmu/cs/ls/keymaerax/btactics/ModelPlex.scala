@@ -162,21 +162,69 @@ object ModelPlex extends ModelPlexTrait {
     * @see [[createMonitorSpecificationConjecture]]
     * @return The tactic.
     */
-  def modelMonitorByChase: DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
+  lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase()
+  def modelMonitorByChase(ode: DependentPositionTactic = solveAllIn): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
     // remove loops
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     // keep ODEs, solve later
     case Diamond(ODESystem(_, _), _) => Nil
     case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) & solveAllIn(pos))
+  })(pos) & ode(pos))
 
   /** Solve all ODEs somewhere underneath pos */
-  private def solveAllIn: DependentPositionTactic = TacticFactory.anon((pos: Position, sequent: Sequent) => {
+  def solveAllIn: DependentPositionTactic = TacticFactory.anon((pos: Position, sequent: Sequent) => {
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
       case (Diamond(_: ODESystem, _), pp) => Some(AxiomaticODESolver.axiomaticSolve()(pp))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  })
+
+  /** Euler-approximates all ODEs somewhere underneat pos */
+  def eulerAllIn: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+    //@todo evolution domain
+    val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 -> \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
+    //@todo systems as follows?
+    //val eulerAxiom = "<{x_'=f(x_),c&q(||)}>p(x_) <-> <{c,x_'=f(x_)&q(||)}>(\\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x);}*>(t_>=0 -> \\exists y_ (abs(x_-y_) < e_ & p(y_)) )))))".asFormula
+
+    val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
+      case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startProof(eulerAxiom), PosInExpr(0::Nil))(pp))
+      case _ => None
+    })
+    positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  })
+
+  /** Unsound approximation step */
+  def flipUniversalEulerQuantifiers(fml: Formula): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+        case Forall(e, Imply(pe, Forall(h0, Imply(ph0, ph)))) => Right(Exists(e, And(pe, Exists(h0, And(ph0,ph)))))
+        case _ => Left(None)
+      }
+    }, fml).getOrElse(fml)
+  }
+
+  /** Unrolls diamond loops */
+  def unrollLoop(n: Int): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+    if (n <= 0) skip
+    else {
+      val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
+        case (Diamond(_: Loop, _), pp) =>
+          if (n == 1) Some(useAt("<*> approx")(pp))
+          else Some(useAt("<*> iterate", PosInExpr(0 :: Nil))(pp))
+        case _ => None
+      })
+      positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & unrollLoop(n-1)(pos)
+    }
+  })
+
+  /** Chases remaining assignments. */
+  lazy val chaseEulerAssignments: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+    val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
+      case (Diamond(_: Assign, _), pp) => Some(chase(pp))
+      case _ => None
+    })
+    positions.lastOption.getOrElse(skip)
   })
 
   /**
