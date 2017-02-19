@@ -28,12 +28,13 @@ private object ToolTactics {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
 //      DebuggingTactics.recordQECall() &
+      close | (
       (alphaRule*) &
         (varExhaustiveEqL2R('L)*) &
         (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
         // Idioms.?(close) & //@note performance bottleneck, rethink how optional stuff is composed here
         (done | toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
-      DebuggingTactics.done("QE was unable to prove: invalid formula")
+      DebuggingTactics.done("QE was unable to prove: invalid formula"))
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 

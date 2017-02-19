@@ -53,7 +53,7 @@ object SharedTactics {
       (cutUse, dT("use Lemma " + formula) &
         implyL('L, formula) & Idioms.<(
           ((andR('R) & Idioms.<(close & done, close | skip))*) & done, // checking hyps
-          (close | QE) & done // apply concl
+          QE & done // apply concl
       ))
     )
   }

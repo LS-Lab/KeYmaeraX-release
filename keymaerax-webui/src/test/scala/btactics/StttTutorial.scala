@@ -109,7 +109,7 @@ class StttTutorial extends TacticTestBase {
       chase('R) & prop & OnAll(diffSolve('R) partial) partial
       ) &
       US(UnificationMatch("J(v)".asFormula, "v>=0".asFormula).usubst) &
-      OnAll(close | QE)
+      OnAll(QE)
 
     //@todo Rewrite the US tactic in terms of the Bellerophon language, not arbitrary scala code.
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -298,7 +298,7 @@ class StttTutorial extends TacticTestBase {
         chase('R) & normalize & OnAll(diffSolve('R) partial) partial
         ) &
       US(UnificationMatch("J(v,x,B,S)".asFormula, "v >= 0 & x+v^2/(2*B) <= S".asFormula).usubst) &
-      OnAll(close | QE)
+      OnAll(QE)
 
     proveBy(s, tactic) shouldBe 'proved
   }

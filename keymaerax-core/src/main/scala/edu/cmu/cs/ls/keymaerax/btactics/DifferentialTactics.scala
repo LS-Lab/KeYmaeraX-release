@@ -125,14 +125,14 @@ private object DifferentialTactics {
         if (pos.isTopLevel) {
           val t = DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
-              if (auto == 'full) (close | QE) & done else skip,
+              if (auto == 'full) QE & done else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
                 (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE) & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE & done
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
@@ -197,13 +197,13 @@ private object DifferentialTactics {
               useAt("DIo open differential invariance >")
             else
               useAt("DIo open differential invariance <"))(pos) <(
-              testb(pos) & (close | QE),
+              testb(pos) & QE,
               //@note derive before DE to keep positions easier
               implyR(pos) & derive(pos ++ PosInExpr(1::1::Nil)) &
                 DE(pos) &
                 (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE
                   ) partial
               )
           Dconstify(t)(pos)
@@ -787,7 +787,7 @@ private object DifferentialTactics {
       val p = Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
       DebuggingTactics.debug(s"DGauto: trying $de with $p") &
       DA(de,p)(pos) < (
-        (close | QE) & done,
+        QE & done,
         diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
         )
     }
@@ -851,13 +851,13 @@ private object DifferentialTactics {
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
         Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
       )(pos) <(
-        (close | QE) & done,
+        QE & done,
         diffInd()(pos ++ PosInExpr(1::Nil))
           & implyR(pos) // initial assumption
           & implyR(pos) // domain
           & andR(pos) <(
           // initial condition
-          (close | QE) & done,
+          QE & done,
           // universal closure of induction step
           skip
           )
@@ -870,7 +870,7 @@ private object DifferentialTactics {
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleThrowable("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
         Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
       )(pos) <(
-        (close | QE) & done,
+        QE & done,
         //@todo could optimize for RCF cache when doing the same decomposition as during SandR
         //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
         implyR(pos) & diffInd()(pos) & QE & done
