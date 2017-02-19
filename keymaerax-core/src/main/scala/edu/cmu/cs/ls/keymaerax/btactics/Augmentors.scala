@@ -53,7 +53,7 @@ object Augmentors {
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(term, pos, repl)
     /** Replace all free occurrences of `what` in `term` by `repl`. */
-    def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(term)(what,repl)
+    def replaceFree(what: Term, repl:Term): Term = SubstitutionHelper.replaceFree(term)(what,repl)
 
     /**
       * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
@@ -94,7 +94,7 @@ object Augmentors {
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
     /** Replace all free occurrences of `what` in `fml` by `repl`. */
-    def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(fml)(what,repl)
+    def replaceFree(what: Term, repl:Term): Formula = SubstitutionHelper.replaceFree(fml)(what,repl)
     /** Replace all occurrences of `what` in `fml` by `repl`. `what` and `repl` must be of the same kind, either Term or Formula */
     def replaceAll(what: Expression, repl: Expression): Formula = {
       require(what.kind == repl.kind, "Replacee and replacement must be of same kind, but got what.kind=" + what.kind + " and repl.kind=" + repl.kind)
@@ -214,6 +214,8 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
+    /** Replace all free occurrences of what by repl */
+    def replaceFree(what: Term, repl: Term): Program = SubstitutionHelper.replaceFree(prog)(what, repl)
 
     /** The substitution pair `this~>other`. */
     def ~>(repl: Program): SubstitutionPair = SubstitutionPair(prog,repl)
@@ -233,7 +235,7 @@ object Augmentors {
     /** Replace at position pos by repl */
     def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
     /** Replace all free occurrences of `what` in `seq` by `repl`. */
-    def replaceFree(what: Term, repl: Term) = SubstitutionHelper.replaceFree(seq)(what,repl)
+    def replaceFree(what: Term, repl: Term): Sequent = SubstitutionHelper.replaceFree(seq)(what,repl)
     /** Replace all occurrences of `what` in `seq` by `repl`. */
     def replaceAll(what: Expression, repl: Expression) = Sequent(seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
     //@todo implement returning both Ante+Succ

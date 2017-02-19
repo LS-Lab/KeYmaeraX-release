@@ -23,6 +23,15 @@ object SubstitutionHelper {
   /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl`. */
   def replaceFree(seq: Sequent)(what: Term, repl:Term): Sequent =
     new Sequent(seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
+  /** Return the result of replacing all free occurrences of `what` in program `prg` by `repl`. */
+  def replaceFree(prg: Program)(what: Term, repl:Term): Program =
+    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], prg).p
+  /** Return the result of replacing all free occurrences of `what` in expression `expr` by `repl`. */
+  def replaceFree[T <: Expression](expr: T)(what: Term, repl:Term): T = expr match {
+    case f: Formula => replaceFree(f)(what, repl).asInstanceOf[T]
+    case t: Term => replaceFree(t)(what, repl).asInstanceOf[T]
+    case p: Program => replaceFree(p)(what, repl).asInstanceOf[T]
+  }
 }
 
 class SubstitutionHelper(what: Term, repl: Term) {
