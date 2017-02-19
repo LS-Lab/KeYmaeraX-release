@@ -125,8 +125,7 @@ class ParserParenTests extends FlatSpec with Matchers {
     }
   }
 
-  // TODO adapt example files to new parser
-  ignore should "parse all positive examples" in {
+  it should "parse all positive examples" in {
     val files =
       "abs.key" ::
       "dia.key" ::
@@ -145,13 +144,13 @@ class ParserParenTests extends FlatSpec with Matchers {
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + testFile)).mkString
       withSafeClue(testFile) {
-        KeYmaeraXParser(src) //test fails on exception.
+        KeYmaeraXProblemParser(src) //test fails on exception.
       }
     }
   }
 
   // TODO adapt input file to new parser
-  ignore should "parse predicates using functions" in {
+  it should "parse predicates using functions" ignore {
     val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key")).mkString
     KeYmaeraXParser(src)
   }
