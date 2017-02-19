@@ -149,28 +149,31 @@ class ParserParenTests extends FlatSpec with Matchers {
     }
   }
 
-  // TODO adapt input file to new parser
-  it should "parse predicates using functions" ignore {
+  it should "parse predicates using functions" in {
     val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key")).mkString
-    KeYmaeraXParser(src)
+    KeYmaeraXProblemParser(src)
   }
 
   it should "not parse any negative examples" in {
     val files =
-      "finishparse.key" ::
-      "scolon1.key" ::
-      "scolon2.key" ::
-      "scolon3.key" ::
-      "UndeclaredVariables.key" :: Nil
+      ("finishparse.key", """<somewhere> Semantic analysis error
+                            |semantics: Expect unique names_index that identify a unique type.
+                            |ambiguous: x:Trafo and x:Real
+                            |symbols:   x, x""".stripMargin) ::
+      ("scolon1.key", "6:10 Unexpected token cannot be parsed\nFound:    > (RDIA$) at 6:10") ::
+      ("scolon2.key", "6:12 Unexpected token cannot be parsed\nFound:    = (EQ$) at 6:12") ::
+      ("scolon3.key", "6:12 Unexpected token cannot be parsed\nFound:    > (RDIA$) at 6:12") :: Nil
+      //("UndeclaredVariables.key", "TODO") :: Nil //@note not yet caught (LAX?)
 
-    for(testFile <- files) {
+    for((testFile, message) <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + testFile)).mkString
       try {
-        KeYmaeraXParser(src)
+        KeYmaeraXProblemParser(src)
         fail("A negative file parsed correctly: " + testFile)
       }
       catch {
-        case _ : Throwable => { } // ok
+        case e: Throwable =>
+          withSafeClue(testFile) { e.getMessage should startWith (message) }
       }
     }
   }
