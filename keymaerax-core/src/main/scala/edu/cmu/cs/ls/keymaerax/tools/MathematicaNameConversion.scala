@@ -44,7 +44,7 @@ private object MathematicaNameConversion {
 
   /**
     * Converts a Mathematica name into its corresponding KeYmaera X named symbol (Variable or Function). Distinguishes
-    * between variables and functions by the number of arguments (0 args -> Variable, at least 1 arg -> Function). In
+    * between variables and functions (Symbol -> Variable, Expr with arguments -> Function). In
     * each case, decomposes the Mathematica name based upon the possible forms of the name:
     * {{{
     * PREFIX + base + SEP + index ---> name + index
@@ -55,7 +55,7 @@ private object MathematicaNameConversion {
     * @note Refuses to convert interpreted function symbols (i.e., any name not prefixed with kyx`)
     */
   def toKeYmaera(e: MExpr): NamedSymbol = {
-    if (e.args.isEmpty) {
+    if (e.symbolQ()) {
       val (name, index) = unmaskName(e.asString())
       Variable(name, index, Real)
     } else {

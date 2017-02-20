@@ -47,6 +47,13 @@ class QETests extends TacticTestBase {
     proveBy(Equal(Number(1.0),Minus(Number(4),Number(3))),ToolTactics.fullQE(qeTool)) shouldBe 'proved
   }
 
+  it should "fail x()=x" in withMathematica { qeTool =>
+    the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
+      """[Bellerophon Runtime] QE was unable to prove: invalid formula
+        |Expected proved provable, but got NoProofTermProvable(Provable(  ==>  x()=x
+        |  from     ==>  false))""".stripMargin
+  }
+
   it should "have soundness bug with decimal representations " in withMathematica { qeTool =>
 
     val pr = proveBy("false".asFormula,

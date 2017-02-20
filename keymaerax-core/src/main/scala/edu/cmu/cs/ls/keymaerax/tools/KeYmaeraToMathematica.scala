@@ -37,7 +37,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     e match {
       case t: Term => convertTerm(t)
       case f: Formula => convertFormula(f)
-      case fn: Function =>
+      case _: Function =>
         // can override in non-soundness critical converters (e.g., CEX and Simulation)
         throw new ConversionException("Uninterpreted function symbols are disallowed")
     }
@@ -132,6 +132,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     case _: Pair =>
       assert(convertTerm(child).listQ(), "Converted pair expected to be a list, but was " + convertTerm(child))
       new MExpr(head, convertTerm(child).args())
+    case Nothing => new MExpr(head, Array[MExpr]())
     case _ => new MExpr(head, Array[MExpr](convertTerm(child)))
   }
 }

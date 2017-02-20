@@ -169,10 +169,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("kyx`x^2 + 2kyx`x + 4")._2 shouldBe "4 + 2*x + x^2".asTerm
   }
 
-  it should "refuse to convert parameterless Apply()" in {
-    a [MatchError] should be thrownBy KeYmaeraToMathematica(FuncOf(Function("x", None, Unit, Real), Nothing))
-  }
-
   it should "convert inequalities" in {
     ml.runUnchecked("kyx`x < kyx`y == kyx`z < 0")._2 shouldBe "x<y & y=z & z<0".asFormula
   }
@@ -237,9 +233,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     KeYmaeraToMathematica(in) should be (expected)
   }
 
-  it should "refuse to convert parameterless Apply()" in {
+  it should "convert parameterless Apply()" in {
     val in = FuncOf(Function("y", None, Unit, Real), Nothing)
-    a [MatchError] should be thrownBy KeYmaeraToMathematica(in)
+    KeYmaeraToMathematica(in) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`y"), Array[MExpr]())
+  }
+
+  it should "convert variables to symbols" in {
+    val in = Variable("x")
+    KeYmaeraToMathematica(in) shouldBe new MExpr(Expr.SYMBOL, "kyx`x")
   }
 
   it should "convert multi-argument Apply to nested lists" in {
