@@ -15,16 +15,15 @@
         </div>
     </div>
     <div class="panel panel-default" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
-        <form name="tacticForm" class="form-inline" novalidate>
         <div class="panel-heading">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
                ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a>
             <!-- Rule link: execute if form is valid, otherwise open details -->
-            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tacticForm.$valid"
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().allInputsFilled()"
                class="btn btn-link"
                ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b>{{tactic.selectedDerivation().name}}</b></a>
-            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tacticForm.$invalid"
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && !tactic.selectedDerivation().allInputsFilled()"
                class="btn btn-link"
                ng-click="tactic.isOpen = !tactic.isOpen"><b>{{tactic.selectedDerivation().name}} ...</b></a>
 
@@ -36,7 +35,6 @@
         <div class="panel-body" uib-collapse="!tactic.isOpen">
             <div class="col-md-12" ng-repeat="tactic in [tactic.selectedDerivation()]" ng-include="'templates/sequentRuleTemplate.html'"></div>
         </div>
-        </form>
     </div>
     </div>
 </script>

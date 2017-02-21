@@ -1,4 +1,4 @@
-angular.module('keymaerax.services').factory('derivationInfos', ['$http', function($http) {
+angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$rootScope', function($http, $rootScope) {
   var serviceDef = {
     formulaDerivationInfos: function(userId, proofId, nodeId, formulaId) {
       var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + formulaId + '/list')
@@ -62,6 +62,9 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
           isClosed: premise.isClosed
         };
       });
+      tactic.allInputsFilled = function() {
+        return $.grep(tactic.derivation.input, function(input, idx) { return input.value == undefined; }).length <= 0;
+      };
       return tactic;
     },
 
@@ -100,17 +103,30 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', functi
 
     createInput: function(formula, tactic, inputBoundary) {
       var inputId = formula.slice(inputBoundary.start, inputBoundary.end);
-      return {
+      var inputObject = {
         text: inputId,
         isInput: true,
         placeholder: inputId,
-        value: function(newValue) {
-          //@note check arguments.length to determine if we're called as getter or as setter
-          return arguments.length ?
-            ($.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue) :
-             $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value;
+        value: $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value,
+        saveValue: function(newValue) {
+          //@todo validate input (formula, term etc.)
+          $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue;
         }
       };
+      // auto-update all input elements that are scattered around different parts of the premise
+      $rootScope.$watch(
+        // what to watch
+        function(scope) { return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value; },
+        // what to do on change
+        function(newVal, oldVal) { inputObject.value = newVal; }
+      );
+      $rootScope.$watch(
+        function(scope) { return inputObject.value; },
+        function(newVal, oldVal) {
+          $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newVal;
+        }
+      );
+      return inputObject;
     }
   }
   return serviceDef;

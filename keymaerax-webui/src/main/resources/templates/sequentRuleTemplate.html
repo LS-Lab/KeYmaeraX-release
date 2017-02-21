@@ -7,15 +7,11 @@
                     <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
                     <span ng-if="readOnly || (premise.isClosed && antePart.isInput && antePart.value() === undefined)">{{antePart.placeholder}}</span>
-                    <div ng-class="{'form-group': true, 'has-error': tacticForm.{{antePart.text}}.$error.required}"
-                         ng-if="!readOnly && !premise.isClosed && antePart.isInput" >
-                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2, 'form-control': true}"
-                           type="text" name="{{antePart.text}}" id="{{antePart.text}}"
-                           placeholder="{{antePart.placeholder}}"
-                           ng-model="antePart.value" ng-model-options="{getterSetter: true}"
-                           ng-enter="applyInputTactic(tacticPopover.formulaId(), tactic)"
-                           required/>
-                    </div>
+                    <span id="{{antePart.text}}" e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
+                          buttons="no"
+                          ng-if="!readOnly && !premise.isClosed && antePart.isInput"
+                          editable-text="antePart.value" onbeforesave="saveValue($data)"
+                          e-required>{{antePart.value || antePart.placeholder}}</span>
                 </span>
                 {{$last ? '' : ','}}
             </span>
@@ -27,15 +23,11 @@
                     <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
                     <span ng-if="readOnly || (premise.isClosed && succPart.isInput && succPart.value() === undefined)">{{succPart.placeholder}}</span>
-                    <div ng-class="{'form-group': true, 'has-error': tacticForm.{{succPart.text}}.$error.required}"
-                         ng-if="!readOnly && !premise.isClosed && succPart.isInput">
-                    <input ng-class="{'k4-narrowinput': premise.numInputs > 2, 'form-control': true}"
-                           type="text" name="{{succPart.text}}" id="{{succPart.text}}"
-                           placeholder="{{succPart.placeholder}}"
-                           ng-model="succPart.value" ng-model-options="{getterSetter: true}"
-                           ng-enter="applyInputTactic(tacticPopover.formulaId(), tactic)"
-                           required/>
-                    </div>
+                    <span id="{{succPart.text}}" e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
+                          buttons="no"
+                          ng-if="!readOnly && !premise.isClosed && succPart.isInput"
+                          editable-text="succPart.value" onbeforesave="saveValue($data)"
+                          e-required>{{succPart.value || succPart.placeholder}}</span>
                 </span>
                 {{$last ? '' : ','}}
             </span>
