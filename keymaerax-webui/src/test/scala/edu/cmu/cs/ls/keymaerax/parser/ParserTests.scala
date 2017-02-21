@@ -6,14 +6,15 @@ package edu.cmu.cs.ls.keymaerax.parser
 */
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser._
 import testHelper.CustomAssertions.withSafeClue
 
 import org.scalatest._
 
 import scala.collection.immutable._
 
-class ParserParenTests extends FlatSpec with Matchers {
+class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+  override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
+
   // type declaration header for tests
   def makeInput(program : String) : String = {
     "Functions. B a. B b. B c. End." +
@@ -33,7 +34,7 @@ class ParserParenTests extends FlatSpec with Matchers {
         |  R x.
         |End.
         |Problem.
-        |  [x := ${s};]x > 3
+        |  [x := $s;]x > 3
         |End.
       """.stripMargin
     KeYmaeraXProblemParser(input("1")) //the problem should be exactly the fact that we pass in some unicode.
@@ -177,7 +178,37 @@ class ParserParenTests extends FlatSpec with Matchers {
       }
     }
   }
-  
+
+  it should "elaborate variables to function in type analysis" in {
+    val input =
+      """
+        |Functions. R A. End.
+        |ProgramVariables. R x. End.
+        |Problem. A>=0 -> [x:=A;]x>=0 End.
+      """.stripMargin
+
+    val fml = KeYmaeraXProblemParser(input)
+    val x = Variable("x")
+    val a = FuncOf(Function("A", None, Unit, Real), Nothing)
+    fml shouldBe Imply(
+      GreaterEqual(a, Number(0)),
+      Box(Assign(x, a), GreaterEqual(x, Number(0))))
+  }
+
+  it should "not elaborate bound variables to functions in type analysis" in {
+    val input =
+      """
+        |Functions. R A. End.
+        |ProgramVariables. R x. End.
+        |Problem. A>=0 -> [x:=A;A:=2;]x>=0 End.
+      """.stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """2:14 Type analysis: A was declared as a function but used as a non-function.
+        |Found:    <unknown> at 2:14
+        |Expected: <unknown>""".stripMargin
+  }
+
   /*
    *@TODO setup pretty-printer so that it can be parsed again.
   it should "parse pretty-prints of random formulas" in {

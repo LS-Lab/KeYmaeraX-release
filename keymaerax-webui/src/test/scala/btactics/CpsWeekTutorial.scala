@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Real, SubstitutionPair, USubst, Function, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
@@ -46,28 +46,28 @@ class CpsWeekTutorial extends TacticTestBase {
       )
     val result = proveBy(s, tactic)
     result.subgoals should have size 4
-    result.subgoals.head.ante should contain only ("x!=m".asFormula, "b>0".asFormula)
+    result.subgoals.head.ante should contain only ("x!=m()".asFormula, "b()>0".asFormula)
     result.subgoals.head.succ should contain only "J(x,v)".asFormula
-    result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
-    result.subgoals(1).succ should contain only "x!=m".asFormula
-    result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
-    result.subgoals(2).succ should contain only ("\\forall t_ (t_>=0 -> J(a/2*t_^2+v*t_+x,a*t_+v))".asFormula, "SB(x,m)".asFormula)
-    result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
-    result.subgoals(3).succ should contain only " \\forall t_ (t_>=0 -> J((-b)/2*t_^2+v*t_+x,(-b)*t_+v))".asFormula
+    result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b()>0".asFormula)
+    result.subgoals(1).succ should contain only "x!=m()".asFormula
+    result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b()>0".asFormula)
+    result.subgoals(2).succ should contain only ("\\forall t_ (t_>=0 -> J(a/2*t_^2+v*t_+x,a*t_+v))".asFormula, "SB(x,m())".asFormula)
+    result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b()>0".asFormula)
+    result.subgoals(3).succ should contain only " \\forall t_ (t_>=0 -> J((-b())/2*t_^2+v*t_+x,(-b())*t_+v))".asFormula
   }
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
     val result = proveBy(s, master())
     result.subgoals should have size 4
-    result.subgoals.head.ante should contain only ("x!=m".asFormula, "b>0".asFormula)
+    result.subgoals.head.ante should contain only ("x!=m()".asFormula, "b()>0".asFormula)
     result.subgoals.head.succ should contain only "J(x,v)".asFormula
-    result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula)
-    result.subgoals(1).succ should contain only "x!=m".asFormula
-    result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula, "t_>=0".asFormula)
-    result.subgoals(2).succ should contain only ("J(a/2*t_^2+v*t_+x,a*t_+v)".asFormula, "SB(x,m)".asFormula)
-    result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b>0".asFormula, "t_>=0".asFormula)
-    result.subgoals(3).succ should contain only "J((-b)/2*t_^2+v*t_+x,(-b)*t_+v)".asFormula
+    result.subgoals(1).ante should contain only ("J(x,v)".asFormula, "b()>0".asFormula)
+    result.subgoals(1).succ should contain only "x!=m()".asFormula
+    result.subgoals(2).ante should contain only ("J(x,v)".asFormula, "b()>0".asFormula, "t_>=0".asFormula)
+    result.subgoals(2).succ should contain only ("J(a/2*t_^2+v*t_+x,a*t_+v)".asFormula, "SB(x,m())".asFormula)
+    result.subgoals(3).ante should contain only ("J(x,v)".asFormula, "b()>0".asFormula, "t_>=0".asFormula)
+    result.subgoals(3).succ should contain only "J((-b())/2*t_^2+v*t_+x,(-b())*t_+v)".asFormula
   }
 
   it should "prove automatically with the correct conditions" in withMathematica { _ =>
@@ -77,7 +77,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "prove with a manually written searchy tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    val tactic = implyR('R) & (andL('L)*) & loop("v^2<=2*b*(m-x)".asFormula)('R) <(
+    val tactic = implyR('R) & (andL('L)*) & loop("v^2<=2*b()*(m()-x)".asFormula)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
       print("Step") & normalize & diffSolve('R) & QE
@@ -97,51 +97,52 @@ class CpsWeekTutorial extends TacticTestBase {
     val result = proveBy(s, master())
     result.isProved shouldBe false //@note This assertion is a soundness check!
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x<=m".asFormula, "b>0".asFormula, "t_>=0".asFormula,
-      "\\forall s_ (0<=s_&s_<=t_ -> (-b)*s_+v>=0)".asFormula)
-    result.subgoals.head.succ should contain only "(-b)/2*t_^2+v*t_+x <= m".asFormula
+    result.subgoals.head.ante should contain only ("x<=m()".asFormula, "b()>0".asFormula, "t_>=0".asFormula,
+      "\\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0)".asFormula)
+    result.subgoals.head.succ should contain only "(-b())/2*t_^2+v*t_+x <= m()".asFormula
 
     // counter example
-    tool.findCounterExample(result.subgoals.head.toFormula).get.keySet should contain only ("b".asVariable,
-      "x".asVariable, "v".asVariable, "m".asVariable, "t_".asVariable, "s_".asVariable)
+    tool.findCounterExample(result.subgoals.head.toFormula).get.keySet should contain only (Function("b", None, Unit, Real),
+      "x".asVariable, "v".asVariable, Function("m", None, Unit, Real), "t_".asVariable, "s_".asVariable)
     // can't actually check cex values, may differ from run to run
 
     // cut in concrete values to get nicer CEX
-    val cutFml = "x=1 & v=2 & m=x+3".asFormula
+    val cutFml = "x=1 & v=2 & m()=x+3".asFormula
     val afterCut = proveBy(result.subgoals.head, cut(cutFml))
     afterCut.subgoals should have size 2
     afterCut.subgoals.head.ante should contain (cutFml)
     val cex = tool.findCounterExample(afterCut.subgoals.head.toFormula).get
-    cex.keySet should contain only ("b".asVariable, "x".asVariable, "v".asVariable, "m".asVariable, "t_".asVariable, "s_".asVariable)
+    cex.keySet should contain only (Function("b", None, Unit, Real), "x".asVariable, "v".asVariable,
+      Function("m", None, Unit, Real), "t_".asVariable, "s_".asVariable)
     cex.get("x".asVariable) should contain ("1".asTerm)
     cex.get("v".asVariable) should contain ("2".asTerm)
-    cex.get("m".asVariable) should contain ("4".asTerm)
+    cex.get(Function("m", None, Unit, Real)) should contain ("4".asTerm)
   }
 
   it should "find the braking condition" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/02_robo2-justbrakenaive.kyx"))
     val result = proveBy(s, master())
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x<=m".asFormula, "b>0".asFormula, "t_>=0".asFormula,
-      "\\forall s_ (0<=s_&s_<=t_ -> (-b)*s_+v>=0)".asFormula)
-    result.subgoals.head.succ should contain only "(-b)/2*t_^2+v*t_+x <= m".asFormula
+    result.subgoals.head.ante should contain only ("x<=m()".asFormula, "b()>0".asFormula, "t_>=0".asFormula,
+      "\\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0)".asFormula)
+    result.subgoals.head.succ should contain only "(-b())/2*t_^2+v*t_+x <= m()".asFormula
 
     val initCond = proveBy(result.subgoals.head, TactixLibrary.partialQE)
     initCond.subgoals should have size 1
     initCond.subgoals.head.ante shouldBe empty
-    initCond.subgoals.head.succ should contain only "v<=0|v>0&(t_<=0|t_>0&((b<=0|(0 < b&b<=t_^-1*v)&(m < x|m>=1/2*(-1*b*t_^2+2*t_*v+2*x)))|b>t_^-1*v))".asFormula
+    initCond.subgoals.head.succ should contain only "b()<=0|b()>0&(v<=0|v>0&((t_<=0|(0 < t_&t_<=v*b()^-1)&(x<=1/2*(-2*t_*v+t_^2*b()+2*m())|x>m()))|t_>v*b()^-1))".asFormula
     // explain in tutorial: mostly crap that violates our assumptions, but m>=... and b=t_^-1*v_0 look interesting -> transform
 
-    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b=v/t_ & t_>0 & m >= -b/2*t_^2+v*t_+x".asFormula)(1))
+    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b()=v/t_ & t_>0 & m() >= -b()/2*t_^2+v*t_+x".asFormula)(1))
     simpler.subgoals should have size 1
     simpler.subgoals.head.ante shouldBe empty
-    simpler.subgoals.head.succ should contain only "b=v/t_ & t_>0 & m >= -b/2*t_^2+v*t_+x".asFormula
+    simpler.subgoals.head.succ should contain only "b()=v/t_ & t_>0 & m() >= -b()/2*t_^2+v*t_+x".asFormula
 
     // now let's transform once again and put in t_ = v/b
-    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b>0 & t_=v/b & v>0 & m-x >= v^2/(2*b)".asFormula)(1))
+    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b()>0 & t_=v/b() & v>0 & m()-x >= v^2/(2*b())".asFormula)(1))
     cond.subgoals should have size 1
     cond.subgoals.head.ante shouldBe empty
-    cond.subgoals.head.succ should contain only "b>0 & t_=v/b & v>0 & m-x >= v^2/(2*b)".asFormula
+    cond.subgoals.head.succ should contain only "b()>0 & t_=v/b() & v>0 & m()-x >= v^2/(2*b())".asFormula
   }
 
   it should "prove braking automatically with the correct condition" in withMathematica { _ =>
@@ -153,25 +154,25 @@ class CpsWeekTutorial extends TacticTestBase {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/04_robo2-justaccnaive.kyx"))
     val result = proveBy(s, master())
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("A>=0".asFormula, "b>0".asFormula, "v^2<=2*b*(m-x)".asFormula,
-      "ep>0".asFormula, "Q(x,v)".asFormula, "t=0".asFormula, "t_>=0".asFormula, "\\forall s_ (0<=s_&s_<=t_ -> A*s_+v>=0 & s_+0<=ep)".asFormula)
-    result.subgoals.head.succ should contain only "(A*t_+v)^2 <= 2*b*(m-(A/2*t_^2+v*t_+x))".asFormula
+    result.subgoals.head.ante should contain only ("A()>=0".asFormula, "b()>0".asFormula, "v^2<=2*b()*(m()-x)".asFormula,
+      "ep()>0".asFormula, "Q(x,v)".asFormula, "t=0".asFormula, "t_>=0".asFormula, "\\forall s_ (0<=s_&s_<=t_ -> A()*s_+v>=0 & s_+0<=ep())".asFormula)
+    result.subgoals.head.succ should contain only "(A()*t_+v)^2 <= 2*b()*(m()-(A()/2*t_^2+v*t_+x))".asFormula
 
     val initCond = proveBy(result.subgoals.head, hideL(-5, "Q(x,v)".asFormula) & TactixLibrary.partialQE)
     initCond.subgoals should have size 1
     initCond.subgoals.head.ante shouldBe empty
-    initCond.subgoals.head.succ should contain only "(A < 0|A=0&(b<=0|b>0&(v<=0|v>0&(t_<=0|t_>0&(ep < t_|ep>=t_&((t < 0|t=0&(m < 1/2*b^-1*(v^2+2*b*x)|m>=1/2*b^-1*(2*b*t_*v+v^2+2*b*x)))|t>0))))))|A>0&(b<=0|b>0&((v < 0|v=0&(t_<=0|t_>0&(ep < t_|ep>=t_&((t < 0|t=0&(m < x|m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*b*x)))|t>0))))|v>0&(t_<=0|t_>0&(ep < t_|ep>=t_&((t < 0|t=0&(m < 1/2*b^-1*(v^2+2*b*x)|m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)))|t>0)))))".asFormula
+    initCond.subgoals.head.succ should contain only "t_<=0|t_>0&((v < 0|v=0&(A()<=0|A()>0&(b()<=0|b()>0&(ep() < t_|ep()>=t_&((t < 0|t=0&(x<=1/2*b()^-1*(-1*t_^2*A()^2+-1*t_^2*A()*b()+2*b()*m())|x>m()))|t>0)))))|v>0&(A() < 0|A()>=0&(b()<=0|b()>0&(ep() < t_|ep()>=t_&((t < 0|t=0&(x<=1/2*b()^-1*(-1*v^2+-2*t_*v*A()+-1*t_^2*A()^2+-2*t_*v*b()+-1*t_^2*A()*b()+2*b()*m())|x>1/2*b()^-1*(-1*v^2+2*b()*m())))|t>0)))))".asFormula
 
     // now get rid of stuff that violates our assumptions and transform into nicer shape
-    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b>0 & A>=0 & t_>=0 & m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)".asFormula)(1))
+    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b()>0 & A()>=0 & t_>=0 & m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula)(1))
     simpler.subgoals should have size 1
     simpler.subgoals.head.ante shouldBe empty
-    simpler.subgoals.head.succ should contain only "b>0 & A>=0 & t_>=0 & m>=1/2*b^-1*(A^2*t_^2+A*b*t_^2+2*A*t_*v+2*b*t_*v+v^2+2*b*x)".asFormula
+    simpler.subgoals.head.succ should contain only "b()>0 & A()>=0 & t_>=0 & m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula
 
-    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b>0 & A>=0 & t_>=0 & m-x >= v^2/(2*b)+(A/b+1)*(A/2*t_^2 + v*t_)".asFormula)(1))
+    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b()>0 & A()>=0 & t_>=0 & m()-x >= v^2/(2*b())+(A()/b()+1)*(A()/2*t_^2 + v*t_)".asFormula)(1))
     cond.subgoals should have size 1
     cond.subgoals.head.ante shouldBe empty
-    cond.subgoals.head.succ should contain only "b>0 & A>=0 & t_>=0 & m-x >= v^2/(2*b)+(A/b+1)*(A/2*t_^2 + v*t_)".asFormula
+    cond.subgoals.head.succ should contain only "b()>0 & A()>=0 & t_>=0 & m()-x >= v^2/(2*b())+(A()/b()+1)*(A()/2*t_^2 + v*t_)".asFormula
   }
 
   it should "prove acceleration automatically with the correct condition" in withMathematica { _ =>
@@ -202,7 +203,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
     result.subgoals should have size 2
     //unsimplified
-    result.subgoals.last.succ should contain only "(x < 0&((t < 0&(ep<=0|ep>0&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*x)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v+2*x))))))|t=0&(ep<=0|ep>0&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+2*x)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+2*ep*v+2*x)))))))|t>0&(ep<=t|ep>t&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*x)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v+2*x)))))))|x=0&(t<=0&(ep<=0|ep>0&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < 0|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < 0|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v))))))|t>0&(ep<=t|ep>t&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < 0|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < 0|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v))))))))|x>0&(t<=0&(ep<=0|ep>0&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*x)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v+2*x))))))|t>0&((ep < t|ep=t&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&((m < x|m=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*x))|m>x))))|v>0&(A < 0|A>=0&(b<=0|b>0&((m < x|m=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v+2*x))|m>x)))))|ep>t&((v < 0|v=0&(A<=0|A>0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*x)))))|v>0&(A < 0|A>=0&(b<=0|b>0&(m < x|m>=1/2*(A*ep^2+-2*A*ep*t+A*t^2+2*ep*v+-2*t*v+2*x)))))))".asFormula
+    result.subgoals.last.succ should contain only "(m() < 0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t>0&((v < 0|v=0&((ep() < t|ep()=t&(A()<=0|A()>0&(b()<=0|b()>0&((x < m()|x=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&((ep() < t|ep()=t&(A() < 0|A()>=0&(b()<=0|b()>0&((x < m()|x=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|m()=0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))))|m()>0&((t < 0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(-2*v*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))".asFormula
     //@todo simplify with transform
   }
 
@@ -214,10 +215,10 @@ class CpsWeekTutorial extends TacticTestBase {
       )
 
     val simple = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    proveBy(simple, tactic("v^2<=2*b*(m-x)".asFormula)) shouldBe 'proved
+    proveBy(simple, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
 
     val harder = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx"))
-    proveBy(harder, tactic("v^2<=2*b*(m-x)".asFormula)) shouldBe 'proved
+    proveBy(harder, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
   }
 
   "2D Car" should "be provable" in withMathematica { _ =>
@@ -230,14 +231,14 @@ class CpsWeekTutorial extends TacticTestBase {
     val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & (andL('L)*) &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
 
-    val tactic = implyR('R) & (andL('L)*) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 | 2*b*abs(my-y)>v^2)".asFormula)('R) <(
+    val tactic = implyR('R) & (andL('L)*) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)('R) <(
       print("Base case") & QE,
       print("Use case") & QE,
       print("Step") & chase('R) & andR('R) <(
-        allR('R) & implyR('R) & di("-b") & dw & QE,
+        allR('R) & implyR('R) & di("-b()") & dw & QE,
         // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
-        allR('R)*2 & implyR('R) & allR('R)*2 & implyR('R) & allR('R) & implyR('R) & di("A") & dw & printIndexed("Bar") partial
-        ) partial
+        allR('R)*2 & implyR('R) & allR('R)*2 & implyR('R) & allR('R) & implyR('R) & di("A()") & dw
+        )
       )
     val result = proveBy(s, tactic)
     result.subgoals should have size 1

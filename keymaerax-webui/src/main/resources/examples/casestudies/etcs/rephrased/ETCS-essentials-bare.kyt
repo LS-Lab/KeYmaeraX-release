@@ -28,19 +28,19 @@
  *   dW                          prove safety from just the differential invariants
  */
 
-implyR('R) & (andL('L)*) & loop({`v^2<=2*b*(m-z)`}, 'R) & <(  /* prove loop by induction with invariant; intuition: always have sufficient space to stop */
+implyR('R) & (andL('L)*) & loop({`v^2<=2*b()*(m()-z)`}, 'R) & <(  /* prove loop by induction with invariant; intuition: always have sufficient space to stop */
   prop,                                                       /* induction initial case */
   QE,                                                         /* induction use case */
   unfold & <(                                                 /* induction step, symbolically execute program until ODE */
     /* prove ODE in train protection branch (a=-b) */
     diffInvariant({`t>=old(t)`}, 'R) &                        /* intuition: time progresses */
-    diffInvariant({`v=old(v)-b*t`}, 'R) &                     /* intuition: new speed is old speed - decrease by braking */
-    diffInvariant({`z=old(z)+old(v)*t-b/2*t^2`}, 'R)          /* intuition: new position is old position + distance travelled with mean speed */
+    diffInvariant({`v=old(v)-b()*t`}, 'R) &                   /* intuition: new speed is old speed - decrease by braking */
+    diffInvariant({`z=old(z)+old(v)*t-b()/2*t^2`}, 'R)        /* intuition: new position is old position + distance travelled with mean speed */
     ,
     /* prove ODE in free driving branch (a=A) */
     diffInvariant({`t>=old(t)`}, 'R) &
-    diffInvariant({`v=old(v)+A*t`}, 'R) &
-    diffInvariant({`z=old(z)+old(v)*t+A/2*t^2`}, 'R)
+    diffInvariant({`v=old(v)+A()*t`}, 'R) &
+    diffInvariant({`z=old(z)+old(v)*t+A()/2*t^2`}, 'R)
   ) & doall(dW('R)) & <(
       QE                                                      /* braking is still safe even if we don't know anything about SB */
       ,

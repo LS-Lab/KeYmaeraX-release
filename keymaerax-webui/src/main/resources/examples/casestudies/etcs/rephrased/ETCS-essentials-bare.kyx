@@ -7,6 +7,7 @@ Functions.
   R ep. /* Control cycle duration upper bound */
   R b.  /* Braking force */
   R A.  /* Maximum acceleration */
+  R m.  /* End of movement authority (train must not drive past m) */
 End.
 
 ProgramVariables.
@@ -15,7 +16,6 @@ ProgramVariables.
   R v.  /* Current velocity */
   R z.  /* Train position */
   R t.  /* Actual control cycle duration t <= ep */
-  R m.  /* End of movement authority (train must not drive past m) */
 End.
 
 /* Safety specification of the form: initial -> [{ctrl;plant}*]safe

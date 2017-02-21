@@ -1,4 +1,4 @@
-implyR(1) & (andL('L)*) & loop({`x<=m`}, 1) & <(
+implyR(1) & (andL('L)*) & loop({`x<=m()`}, 1) & <(
   QE & done,
   QE & done,
   chase('R) & prop & doall(ODE(1))

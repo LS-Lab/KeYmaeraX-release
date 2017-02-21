@@ -5,7 +5,6 @@
  */
 Functions.
   R b.
-  R d.
   R v.
   R z.
 End.
@@ -14,6 +13,7 @@ ProgramVariables.
   R vdes.
   R m.
   R mo.
+  R d.
   R do.
   R drive.
   R brake.

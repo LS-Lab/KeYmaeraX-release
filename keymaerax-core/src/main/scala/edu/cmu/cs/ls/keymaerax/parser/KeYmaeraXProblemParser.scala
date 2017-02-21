@@ -6,9 +6,10 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 
 import scala.annotation.tailrec
 
@@ -19,6 +20,8 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
+  type Declaration = Map[(String, Option[Int]), (Option[Sort], Sort)]
+
   def apply(inputWithPossibleBOM : String): Formula = {
     val input = ParserHelper.removeBOM(inputWithPossibleBOM)
     try {
@@ -95,7 +98,7 @@ object KeYmaeraXProblemParser {
     }
   }
 
-  protected def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
+  protected def parseProblem(tokens: List[Token]):  (Declaration, Formula) = {
     val parser = KeYmaeraXParser
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
     checkInput(remainingTokens.nonEmpty, "Problem. block expected", UnknownLocation, "kyx problem input problem block")
@@ -112,6 +115,14 @@ object KeYmaeraXProblemParser {
       "Expected Problem block to be last in file, but found " + eof,
       if (eof.nonEmpty) eof.last.loc else theProblem.last.loc, "kyx problem end block parser")
 
+    val declsWithoutStartToks = decls.mapValues(v => (v._1, v._2))
+
+    //@note redirect annotation listener to elaborate products
+    val annotationListener = parser.annotationListener
+    parser.setAnnotationListener((prg, fml) => {
+      annotationListener(elaborateToFunctions(prg, declsWithoutStartToks), elaborateToFunctions(fml, declsWithoutStartToks))
+    })
+
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
       case expr : Expression => throw ParseException("problem block" + ":" + "Expected problem to parse to a Formula", expr)
@@ -122,10 +133,21 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem) //throws ParseExceptions.
+    val elaborated = elaborateToFunctions(problem, declsWithoutStartToks)
 
-    val declsWithoutStartToks = decls.mapValues(v => (v._1, v._2))
-    (declsWithoutStartToks, problem)
+    KeYmaeraXDeclarationsParser.typeAnalysis(decls, elaborated) //throws ParseExceptions.
+
+    (declsWithoutStartToks, elaborated)
+  }
+
+  /** Elaborate ()-less functions, which get parsed as variables, to functions with domain Unit. */
+  private def elaborateToFunctions[T <: Expression](expr: T, decls: Declaration): T = {
+    val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
+      case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1 == Some(Unit)
+      case _ => false
+    })
+    elaboratables.foldLeft(expr)((e, v) =>
+      SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
   }
 }
 
@@ -245,7 +267,10 @@ object KeYmaeraXDeclarationsParser {
     if(tokens.head.tok.equals(FUNCTIONS_BLOCK)) {
       val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
       val funSymbolsSection = funSymbolsTokens.tail
-      (processDeclarations(funSymbolsSection, Map()), remainder.tail)
+      (processDeclarations(funSymbolsSection, Map()).map({case d@(i, (domain, sort, token)) => domain match {
+        case None => (i, (Some(Unit), sort, token)) //@note allow A() declared without parentheses
+        case Some(_) => d
+      }}), remainder.tail)
     }
     else (Map[(String, Option[Int]), (Option[Sort], Sort, Token)](), tokens)
   }

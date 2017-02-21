@@ -152,21 +152,21 @@ class StttTutorial extends TacticTestBase {
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "true".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A*s_+v>=0) -> A/2*t_^2+v*t_+x<=S)".asFormula))
+      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "true".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()/2*t_^2+v*t_+x<=S())".asFormula))
     intermediate.subgoals(1) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "v=0".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S)".asFormula))
+      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "v=0".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S())".asFormula))
     intermediate.subgoals(2) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B)*s_+v>=0) -> (-B)/2*t_^2+v*t_+x<=S)".asFormula))
+      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())/2*t_^2+v*t_+x<=S())".asFormula))
 
     val brake = proveBy(intermediate.subgoals(2), TactixLibrary.partialQE)
     brake.subgoals should have size 1
     brake.subgoals.head shouldBe Sequent(
       IndexedSeq(),
-      // here is our evolution domain constraint -------------------------------------------------------------------v
-      IndexedSeq("(S < x|S=x&(v<=0|v>0&(B<=0|B>0&A<=0)))|S>x&(v<=0|v>0&((B<=0|(0 < B&B < v^2*(2*S+-2*x)^-1)&A<=0)|B>=v^2*(2*S+-2*x)^-1))".asFormula))
+      // here is our evolution domain constraint ------------------------------------------------v
+      IndexedSeq("(x < S()&(v<=0|v>0&((B()<=0|(0 < B()&B() < -1*v^2*(2*x+-2*S())^-1)&A()<=0)|B()>=-1*v^2*(2*x+-2*S())^-1))|x=S()&(v<=0|v>0&(B()<=0|B()>0&A()<=0)))|x>S()".asFormula))
   }}
 
   it should "stop at correct spot when tactic is parsed from file" in withMathematica { tool => withDatabase { db =>
@@ -175,14 +175,14 @@ class StttTutorial extends TacticTestBase {
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "true".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A*s_+v>=0) -> A/2*t_^2+v*t_+x<=S)".asFormula))
+      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "true".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()/2*t_^2+v*t_+x<=S())".asFormula))
     intermediate.subgoals(1) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula, "v=0".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S)".asFormula))
+      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "v=0".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S())".asFormula))
     intermediate.subgoals(2) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A>0".asFormula, "B>0".asFormula, "true".asFormula, "x<=S".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B)*s_+v>=0) -> (-B)/2*t_^2+v*t_+x<=S)".asFormula))
+      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula),
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())/2*t_^2+v*t_+x<=S())".asFormula))
   }}
 
   "Example 4a" should "be provable with master and loop invariant from file" in withMathematica { tool => withDatabase { db =>
@@ -243,7 +243,7 @@ class StttTutorial extends TacticTestBase {
     val plant = print("plant") & composeb('R) & assignb('R) & diffSolve('R)
 
     val tactic = implyR('R) & (andL('L)*) &
-      loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
+      loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
       print("Base Case") & andR('R) & OnAll(closeId),
       print("Use Case") & QE,
       print("Step") & andL('L) & composeb('R) & assignb('R) & plant & QE
@@ -278,7 +278,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
 
     val tactic = implyR('R) & (andL('L)*) &
-      loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
+      loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
         printIndexed("Base case") & andR('R) & OnAll(closeId),
         printIndexed("Use case") & QE,
         printIndexed("Step") & chase('R) & printIndexed("After chase") & normalize & printIndexed("Normalized") & OnAll(diffSolve('R) partial) &
@@ -369,11 +369,11 @@ class StttTutorial extends TacticTestBase {
     val ode =
       // xr = (xm+S)/2
       diffInvariant("xm<=x".asFormula)('R) &
-      diffInvariant("5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2".asFormula)('R) &
+      diffInvariant("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2".asFormula)('R) &
       diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
-      loop("v >= 0 & xm <= x & xr = (xm + S)/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2".asFormula)('R) <(
+      loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2".asFormula)('R) <(
         print("Base case") & ((andR('R) <(closeId, skip))*) & closeId,
         print("Use case") & QE,
         print("Step") & (andL('L)*) & chase('R) & andR('R) <(
@@ -414,14 +414,14 @@ class StttTutorial extends TacticTestBase {
         ) & (andL('L)*) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
-      loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
+      loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
         print("Base case") & speculativeQE,
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           //@todo position assertions not yet stored and extracted
           printIndexed("Acc") & hideL(-9/*, "abs(y-ly)+v^2/(2*b) < lw".asFormula*/) & ode("a") &
             (alphaRule*) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep".asTerm, "c".asTerm)(-8) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-8) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
@@ -438,13 +438,13 @@ class StttTutorial extends TacticTestBase {
       s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & diffWeaken('R)
 
     val tactic = implyR('R) & (andL('L)*) &
-      loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)('R) <(
+      loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
         print("Base case") & speculativeQE,
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
-          printIndexed("Acc") & hideL(-9, "abs(y-ly)+v^2/(2*b) < lw".asFormula) & ode("a") &
+          printIndexed("Acc") & hideL(-9, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
             (alphaRule*) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep".asTerm, "c".asTerm)(-8) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-8) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)

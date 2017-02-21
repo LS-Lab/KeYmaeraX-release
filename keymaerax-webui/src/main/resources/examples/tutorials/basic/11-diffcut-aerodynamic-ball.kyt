@@ -1,17 +1,17 @@
-implyR(1) ; loop({`2*g*x<=2*g*H-v^2&x>=0`}, 1) ; <(
+implyR(1) ; loop({`2*g()*x<=2*g()*H()-v^2&x>=0`}, 1) ; <(
   QE,
   QE,
-  composeb(1) ; MR({`2*g*x<=2*g*H-v^2&x>=0&g>0&r>=0`}, 1) ; <(
+  composeb(1) ; MR({`2*g()*x<=2*g()*H()-v^2&x>=0&g()>0&r()>=0`}, 1) ; <(
   choiceb(1) ; andR(1) ; <(
     composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE,
       testb(1) ; implyR(1) ; QE
     ),
     choiceb(1) ; andR(1) ; <(
-    DC({`2*g*x<=2*g*H-v^2`}, 1) ; <(
+    DC({`2*g()*x<=2*g()*H()-v^2`}, 1) ; <(
       dW(1) ; QE,
         dI(1)
       ),
-      DC({`2*g*x<=2*g*H-v^2`}, 1) ; <(
+      DC({`2*g()*x<=2*g()*H()-v^2`}, 1) ; <(
       dW(1) ; QE,
         dI(1)
       )

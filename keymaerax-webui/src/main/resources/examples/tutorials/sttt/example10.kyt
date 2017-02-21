@@ -1,4 +1,4 @@
-implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw`}, 1) <(
+implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()`}, 1) <(
   QE & done,
   QE & done,
   chase('R) & normalize & <(
@@ -8,7 +8,7 @@ implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v
           DC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) & <(
             (andL('L)*) & dW(1) &
             (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) &
-            transformEquality({`ep=c`}, -8) & prop & doall(smartQE & done),
+            transformEquality({`ep()=c`}, -8) & prop & doall(smartQE & done),
             dI(1) & done
           ),
           dI(1) & done
