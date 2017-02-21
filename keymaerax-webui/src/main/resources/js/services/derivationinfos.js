@@ -81,8 +81,13 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       var inputs = $.grep(tactic.derivation.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
       var inputBoundaries = $.map(inputs, function(input, i) {
         var inputStart = formula.indexOf(input.param);
-        return {start: inputStart, end: inputStart + input.param.length };
-      }).sort(function(a, b) { a.start <= b.start ? -1 : 1; });
+        var occurrences = [];
+        while (inputStart >= 0) {
+          occurrences.push({start: inputStart, end: inputStart + input.param.length });
+          inputStart = formula.indexOf(input.param, inputStart + input.param.length);
+        }
+        return occurrences;
+      }).sort(function(a, b) { return a.start - b.start; });
 
       if (inputBoundaries.length > 0) {
         result[0] = {text: formula.slice(0, inputBoundaries[0].start), isInput: false};
