@@ -54,6 +54,18 @@ class QETests extends TacticTestBase {
         |  from     ==>  false))""".stripMargin
   }
 
+  it should "not choke on predicates" in withMathematica { tool =>
+    proveBy("p_() & q_() -> 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
+  it should "close predicates if possible" in withMathematica { tool =>
+    proveBy("p_() & q_() -> p_() | 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
+  it should "not fail when already proved" in withMathematica { tool =>
+    proveBy("x>0 -> x>0".asFormula, prop & ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
   it should "have soundness bug with decimal representations " in withMathematica { qeTool =>
 
     val pr = proveBy("false".asFormula,

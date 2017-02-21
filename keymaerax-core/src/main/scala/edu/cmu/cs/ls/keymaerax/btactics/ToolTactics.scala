@@ -2,14 +2,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.language.postfixOps
 import scala.math.Ordering.Implicits._
@@ -28,13 +26,13 @@ private object ToolTactics {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
 //      DebuggingTactics.recordQECall() &
-      close | (
-      (alphaRule*) &
-        (varExhaustiveEqL2R('L)*) &
-        (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
-        // Idioms.?(close) & //@note performance bottleneck, rethink how optional stuff is composed here
-        (done | toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool)) &
-      DebuggingTactics.done("QE was unable to prove: invalid formula"))
+      done | //@note don't fail QE if already proved
+        ((alphaRule*) &
+        (close |
+          ((varExhaustiveEqL2R('L)*) &
+          hidePredicates &
+          toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
+        DebuggingTactics.done("QE was unable to prove: invalid formula"))))
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 
@@ -61,10 +59,10 @@ private object ToolTactics {
 
     t match {
       case v:Variable => Map((v,(1,1,1)))
-      case Neg(t) => termDegs(t)
+      case Neg(tt) => termDegs(tt)
       case Plus(l,r) => merge( termDegs(l),termDegs(r),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
       case Minus(l,r) => termDegs(Plus(l,r))
-      case Times(l,r) => {
+      case Times(l,r) =>
         val lm = termDegs(l)
         val lmax = lm.values.map(p=>p._2).foldLeft(0)((l,r)=>math.max(l,r))
         val rm = termDegs(r)
@@ -72,14 +70,12 @@ private object ToolTactics {
         val lmap = lm.mapValues(p=>(p._1,p._2+rmax,p._3) )
         val rmap = rm.mapValues(p=>(p._1,p._2+lmax,p._3) ) //Updated max term degrees
         merge(lmap,rmap,(x,y)=>x+y,(x,y)=>math.max(x,y),(x,y)=>x+y) /* The 3rd one probably isn't correct for something like x*x*x */
-      }
       case Divide(l,r) => termDegs(Times(l,r))
-      case Power(p,n:Number) => {
+      case Power(p,n:Number) =>
         val pm = termDegs(p)
         //Assume integer powers
         pm.mapValues( (p:(Int,Int,Int)) => (p._1*n.value.toInt,p._2*n.value.toInt,p._3) )
-      }
-      case FuncOf(f,t) => termDegs(t)
+      case FuncOf(_,tt) => termDegs(tt)
       case Pair(l,r) => merge(termDegs(l),termDegs(r),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
       case _ => Map[Variable,(Int,Int,Int)]()
     }
@@ -122,12 +118,13 @@ private object ToolTactics {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("ordered QE",
       //      DebuggingTactics.recordQECall() &
-      (alphaRule*) &
-        (varExhaustiveEqL2R('L)*) &
-        (tryClosePredicate('L)*) & (tryClosePredicate('R)*) &
-        // Idioms.?(close) & //@note performance bottleneck, rethink how optional stuff is composed here
-        (done | toSingleFormula & orderedClosure & rcf(qeTool)) &
-        DebuggingTactics.done("QE was unable to prove: invalid formula")
+      done | //@note don't fail QE if already proved
+        ((alphaRule*) &
+        (close |
+          ((varExhaustiveEqL2R('L)*) &
+          hidePredicates &
+          toSingleFormula & orderedClosure & rcf(qeTool) &
+          DebuggingTactics.done("QE was unable to prove: invalid formula"))))
     )}
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
@@ -212,7 +209,7 @@ private object ToolTactics {
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.left==right.left =>
         useAt(propPushIn(left.reapply), PosInExpr(1::Nil))(pp)
       case Some(Imply(Box(a, _), Box(b, _))) if a==b => useAt("K modal modus ponens", PosInExpr(1::Nil))(pp)
-      case Some(Imply(Forall(lv, p), Forall(rv, q))) if lv==rv => useAt(DerivedAxioms.allDistributeAxiom, PosInExpr(1::Nil))(pp)
+      case Some(Imply(Forall(lv, _), Forall(rv, q))) if lv==rv => useAt(DerivedAxioms.allDistributeAxiom, PosInExpr(1::Nil))(pp)
       case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1::Nil))(pos)
       case Some(_) => skip
     }) & (if (remainder.pos.isEmpty) skip else pushIn(remainder.child)(pp ++ PosInExpr(remainder.head::Nil))))
@@ -240,7 +237,7 @@ private object ToolTactics {
   /** Ensures that the formula at position `pos` is available at that position from the assumptions. */
   private def ensureAt: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     lazy val ensuredFormula = seq.sub(pos) match { case Some(fml: Formula) => fml }
-    lazy val skipAt = "ANON" by ((pos: Position, seq: Sequent) => skip)
+    lazy val skipAt = "ANON" by ((_: Position, _: Sequent) => skip)
 
     val step = seq(pos.top) match {
       case Box(ODESystem(_, _), _) => diffInvariant(ensuredFormula)(pos.top) & diffWeaken(pos.top) & implyR(pos.top)
@@ -258,13 +255,14 @@ private object ToolTactics {
   })
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is a variable */
-  private def varExhaustiveEqL2R: DependentPositionTactic =
-    "Find Left and Replace Left with Right" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
-    })
-
-  /* Tries to close predicates by identity, hide if unsuccessful (QE cannot handle predicate symbols) */
-  private def tryClosePredicate: DependentPositionTactic = "Try close predicate" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(p@PredOf(_, _)) => closeId | (hide(pos) partial)
+  private def varExhaustiveEqL2R: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
   })
+
+  /* Hides all predicates (QE cannot handle predicate symbols) */
+  private def hidePredicates: DependentTactic = "ANON" by ((sequent: Sequent) =>
+    (  sequent.ante.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+      ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+  )
 }
