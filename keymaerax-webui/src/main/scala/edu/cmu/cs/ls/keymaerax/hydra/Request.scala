@@ -1012,7 +1012,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import Augmentors._
     val closed = db.getProofInfo(proofId).closed
     if (closed)
-      return new ApplicableAxiomsResponse(Nil, None) :: Nil
+      return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     val proof = db.getProofInfo(proofId)
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     sequent.sub(pos) match {
@@ -1022,9 +1022,17 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
             DerivationInfo(axiom),
             UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
         val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId.get))
-        val suggestedInput = generator(sequent, pos)
-        new ApplicableAxiomsResponse(axioms, if (suggestedInput.hasNext) Some(suggestedInput.next) else None) :: Nil
-      case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
+        //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
+        //@HACK for loop and dG
+        val suggestedInput: Map[ArgInfo,Expression] = subFormula match {
+          case Box(Loop(_), _) =>
+            val invariant = generator(sequent, pos)
+            if (invariant.hasNext) Map(FormulaArg("j(x)") -> invariant.next)
+            else Map.empty
+          case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
+        }
+        new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
 }
@@ -1032,18 +1040,18 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
 class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos1: Position, pos2: Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
     val closed = db.getProofInfo(proofId).closed
-    if (closed) return new ApplicableAxiomsResponse(Nil, None) :: Nil
+    if (closed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map(step =>
       (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
-    new ApplicableAxiomsResponse(tactics, None) :: Nil
+    new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
   }
 }
 
 class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, axiomId: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
     val info = (DerivationInfo.ofCodeName(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo.ofCodeName)) :: Nil
-    new ApplicableAxiomsResponse(info, None) :: Nil
+    new ApplicableAxiomsResponse(info, Map.empty) :: Nil
   }
 }
 
@@ -1102,10 +1110,10 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
     node.sequent.sub(pos) match {
       case Some(fml: Formula) =>
         UIIndex.theStepAt(fml, Some(pos)) match {
-          case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, None) :: Nil
-          case None => new ApplicableAxiomsResponse(Nil, None) :: Nil
+          case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty) :: Nil
+          case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
         }
-      case _ => new ApplicableAxiomsResponse(Nil, None) :: Nil
+      case _ => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
 }

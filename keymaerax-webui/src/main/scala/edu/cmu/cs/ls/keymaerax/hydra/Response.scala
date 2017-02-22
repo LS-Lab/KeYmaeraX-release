@@ -594,14 +594,14 @@ class GetBranchRootResponse(node: TreeNode, pos: Option[PositionLocator]) extend
 }
 
 class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
-                               suggestedInput: Option[Expression]) extends Response {
+                               suggestedInput: Map[ArgInfo, Expression]) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
-    (suggestedInput, input) match {
-      case (Some(fml), FormulaArg(name)) =>
+    (suggestedInput.get(input), input) match {
+      case (Some(e), FormulaArg(name)) =>
         JsObject (
           "type" -> JsString(input.sort),
           "param" -> JsString(name),
-          "value" -> JsString(fml.prettyString)
+          "value" -> JsString(e.prettyString)
         )
       case (_, ListArg(name, elementSort)) => //@todo suggested input for Formula*
         JsObject(

@@ -377,54 +377,10 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.DA]] */
   def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic =
-    "DA2" by ((pos: Position) => {
-      val (y,a,b) = DifferentialHelper.parseGhost(ghost)
-      DA(y, a, b, r)(pos)
-    })
-
-  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
-    * {{{
-    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
-    * G |- [x'=f(x)&q(x)]p(x), D
-    * }}}
-    *
-    * @see[[DA(Variable, Term, Term, Provable)]]
-    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
-    */
-  @deprecated("Use DA(\"{y'=a*y+b}\".asDifferentialProgram, r) instead.")
-  def DA(y: Variable, a: Term, b: Term, r: Formula): DependentPositionTactic =
-    "DA4" byWithInputs(List(r,y,a,b),(pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(Box(_: ODESystem, p)) => DA(y, a, b, proveBy(Equiv(p, Exists(y::Nil, r)), TactixLibrary.QE))(pos)
-    })
-
-
-
-  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
-    * {{{
-    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by auxEquiv
-    * G |- [x'=f(x)&q(x)]p(x), D
-    * }}}
-    */
-  //@todo replace this by an interface DifferentialProgram, Provable, because DG(DifferentialProgram) is called from here anyhow.
-  @deprecated("Use DA(DifferentialProgram, Provable) instead")
-  def DA(y: Variable, a: Term, b: Term, auxEquiv: ProvableSig): DependentPositionTactic =
-    "DAbase" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
-        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) => null
-
-        val Equiv(p, _) = auxEquiv.conclusion.succ.head
-
-        cutR(p)(pos.checkSucc.top) <(
-          skip,
-          implyR(pos) & useAt("TODODAbaseaux", auxEquiv, PosInExpr(0::Nil))('Llast) & existsL('Llast) &
-            DG(AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b)))(pos) &
-            existsR(pos) & ?(exhaustiveEqR2L(hide=true)('Llast)) &
-            useAt("TODODAbaseaux", auxEquiv, PosInExpr(0::Nil))(pos ++ PosInExpr(1::Nil)) &
-            existsR(pos ++ PosInExpr(1::Nil)) & implyRi()(AntePosition.base0(sequent.ante.length), pos)
-          )
-    })
+      "dG" byWithInputs (listifiedGhost(ghost) :+ r, (pos: Position, sequent: Sequent) => sequent.sub(pos ++ PosInExpr(1::Nil)) match {
+    case Some(p: Formula) if p==r => DG(ghost)(pos)
+    case _ => DG(ghost)(pos) & transform(r)(pos ++ PosInExpr(0::1::Nil))
+  })
 
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
@@ -664,20 +620,15 @@ private object DifferentialTactics {
       )
     )
 
-    DA(ghostODE, ghostEqn)(pos) <(
-      TactixLibrary.QE,
-      implyR(pos) & boxAnd(pos) & andR(pos) <(
-        DifferentialTactics.diffInd()(pos) & QE,
-        DGauto(pos) //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
-      )
-    )
+    DA(ghostODE, ghostEqn)(pos) & boxAnd(pos ++ PosInExpr(0::Nil)) &
+      DifferentialTactics.diffInd()(pos ++ PosInExpr(0::0::Nil)) &
+      //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
+      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE
   })
 
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
     * @todo make this happen by usubst. */
   def dgZeroMonomial : DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq:Sequent) => {
-    val ONE = Number(1)
-
     if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
 
     val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
@@ -724,14 +675,10 @@ private object DifferentialTactics {
       )
     }
 
-    val backupTactic =
-      DA(newOde, equivFormula)(pos) <(
-        TactixLibrary.QE,
-        implyR(pos) & boxAnd(pos) & andR(pos) <(
-          DifferentialTactics.diffInd()(pos) & QE,
-          DGauto(pos) //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
-          )
-        )
+    val backupTactic = DA(newOde, equivFormula)(pos) & boxAnd(pos ++ PosInExpr(0::Nil)) &
+      DifferentialTactics.diffInd()(pos ++ PosInExpr(0::0::Nil)) &
+      //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
+      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE
 
     //@todo massage the other cases into a useAt.
     //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
@@ -786,10 +733,7 @@ private object DifferentialTactics {
       val de = AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0)))
       val p = Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
       DebuggingTactics.debug(s"DGauto: trying $de with $p") &
-      DA(de,p)(pos) < (
-        QE & done,
-        diffInd()(pos ++ PosInExpr(1 :: Nil)) & QE
-        )
+      DA(de,p)(pos) & diffInd()(pos ++ PosInExpr(0::Nil)) & QE
     }
 
     // try guessing first, groebner basis if guessing fails
@@ -850,19 +794,8 @@ private object DifferentialTactics {
       ,
       DA(AtomicODE(DifferentialSymbol(ghost), Plus(Times(spooky, ghost), Number(0))),
         Greater(Times(quantity, Power(ghost,Number(2))), Number(0))
-      )(pos) <(
-        QE & done,
-        diffInd()(pos ++ PosInExpr(1::Nil))
-          & implyR(pos) // initial assumption
-          & implyR(pos) // domain
-          & andR(pos) <(
-          // initial condition
-          QE & done,
-          // universal closure of induction step
-          skip
-          )
-        )
-    ) & QE & done;
+      )(pos) & diffInd()(pos ++ PosInExpr(0::Nil))
+    ) & QE & done
     // fallback rescue tactic if proper misbehaves
     val fallback: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
       if (BelleExpr.DEBUG) println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
@@ -875,7 +808,7 @@ private object DifferentialTactics {
         //diffInd()(pos ++ PosInExpr(1::Nil)) & QE
         implyR(pos) & diffInd()(pos) & QE & done
         )
-    });
+    })
     SandR | fallback(pos)
   })
 

@@ -1127,70 +1127,6 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2,t'=0*t+1}]x>0".asFormula)
   }
 
-  it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
-      QE
-      ,
-      diffInd()(1, 1::Nil) & QE
-      ))
-    result shouldBe 'proved
-  }
-
-  it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
-      QE
-      ,
-      implyR(1) & diffInd()(1) & QE
-      ))
-    result shouldBe 'proved
-  }
-
-  it should "do fancy unification for proving x>0->[{x'=-x}]x>0 twist" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
-      QE
-      ,
-      implyR(1) & diffInd()(1) & QE
-      ))
-    result shouldBe 'proved
-  }
-
-  it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) & DA("{y'=(-1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1)
-      <(
-      QE
-      ,
-      implyR(1) & diffInd()(1) & QE
-      ))
-    result shouldBe 'proved
-  }
-
-  it should "prove x>0->[{x'=-x+1}]x>0 by ghosts" in withMathematica { qeTool =>
-    val result = proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
-      QE
-      ,
-      diffInd()(1, 1::Nil) & QE
-      ))
-    result shouldBe 'proved
-  }
-
-  it should "prove x>0&a<0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { qeTool =>
-    val result = proveBy("x>0&a<0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) & DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
-      QE
-      ,
-      diffInd()(1, 1::Nil) & QE
-      ))
-    result shouldBe 'proved
-  }
-
-  it should "prove x>0&a>0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { qeTool =>
-    val result = proveBy("x>0&a>0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) & DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) <(
-      QE
-      ,
-      diffInd()(1, 1::Nil) & QE
-      ))
-    result shouldBe 'proved
-  }
-
   it should "not allow non-linear ghosts (1)" in {
     a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=y*y+1}".asDifferentialProgram)(1))
   }
@@ -1203,72 +1139,87 @@ class DifferentialTests extends TacticTestBase {
     a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{x'=0*x+1}".asDifferentialProgram)(1))
   }
 
-  "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { tool =>
+  "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { _ =>
     val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1)
     val result = proveBy(s, tactic)
 
-    result.subgoals should have size 2
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs List("x>0".asFormula)
+    result.subgoals should have size 1
     result.subgoals.last.ante shouldBe empty
-    result.subgoals.last.succ should contain theSameElementsAs List("y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula)
+    result.subgoals.last.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula)
   }
 
-  it should "also cut in x>0 if already present in antecedent when adding y'=1 to [x'=2]x>0" in withMathematica { tool =>
-    val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1)
-    val result = proveBy(s, tactic)
-
-    result.subgoals should have size 2
-    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.last.ante should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.last.succ should contain theSameElementsAs List("y>0 & x*y>0 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula)
-  }
-
-  it should "work in a simple context" ignore withMathematica { tool =>
+  it should "work in a simple context" in withMathematica { _ =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::Nil)
     val result = proveBy(s, tactic)
 
-    result.subgoals should have size 2
+    result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.last.ante shouldBe empty
-    result.subgoals.last.succ should contain theSameElementsAs List("y>0 & x*y>0 -> (a=2 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("a=2 -> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula)
   }
 
-  it should "work in a complicated context" ignore {
+  it should "work in a complicated context" in withMathematica { _ =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
     val result = proveBy(s, tactic)
 
-    result.subgoals should have size 2
+    result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.last.ante shouldBe empty
-    result.subgoals.last.succ should contain theSameElementsAs List("y>0 & x*y>0 -> (a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2,y'=0*y+1}](y>0 & x*y>0))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("a=2 -> [b:=3;]<?c=5;{c'=2}>\\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula)
   }
 
-  it should "add y'=-a() to [x'=2]x>0" in withMathematica { tool =>
+  it should "add y'=-a() to [x'=2]x>0" in withMathematica { _ =>
     val s = Sequent(IndexedSeq("a()>0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
     val tactic = DA("{y'=0*y+(-a())}".asDifferentialProgram, "x>0 & y<0".asFormula)(1)
     val result = proveBy(s, tactic)
 
-    result.subgoals should have size 2
+    result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("a()>0".asFormula, "x>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.head.ante should contain theSameElementsAs List("a()>0".asFormula, "x>0".asFormula)
-    result.subgoals.last.succ should contain theSameElementsAs List("x>0 & y<0 -> [{x'=2,y'=0*y+-a()}](x>0 & y<0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=0*y+-a()}](x>0 & y<0)".asFormula)
   }
 
-  it should "solve x'=x" in withMathematica { tool =>
-    //val s = Sequent(IndexedSeq(), IndexedSeq("t=0 & x=1 -> [{x'=x, t'=1 & t<1}] x>0".asFormula))
+  it should "solve x'=x" in withMathematica { _ =>
     val s = Sequent(IndexedSeq(), IndexedSeq("x>0 -> [{x'=x}]x>0".asFormula))
-    val t = implyR(1) & (andL('_)*) & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) <(
-      closeId, implyR(1) & diffInd('full)(1))
+    val t = prop & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) &
+      existsR("1/x^(1/2)".asTerm)(1) & diffInd()(1) & QE
     proveBy(s, t) shouldBe 'proved
+  }
+
+  it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { _ =>
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
+      DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+    result shouldBe 'proved
+  }
+
+  it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { _ =>
+    val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
+      DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & existsR("1/x^(1/2)".asTerm)(1) & diffInd()(1) & QE)
+    result shouldBe 'proved
+  }
+
+  it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { _ =>
+    val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) &
+      DA("{y'=(-1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & diffInd()(1, 0::Nil) & existsR("1/x^(1/2)".asTerm)(1) & QE)
+    result shouldBe 'proved
+  }
+
+  it should "prove x>0->[{x'=-x+1}]x>0 by ghosts" in withMathematica { _ =>
+    val result = proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) &
+      DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+    result shouldBe 'proved
+  }
+
+  it should "prove x>0&a<0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { _ =>
+    val result = proveBy("x>0&a<0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) &
+      DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+    result shouldBe 'proved
+  }
+
+  it should "prove x>0&a>0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { _ =>
+    val result = proveBy("x>0&a>0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) &
+      DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+    result shouldBe 'proved
   }
 
   "DA by DG+transform" should "add y'=1 to [x'=2]x>0" in withMathematica { tool =>

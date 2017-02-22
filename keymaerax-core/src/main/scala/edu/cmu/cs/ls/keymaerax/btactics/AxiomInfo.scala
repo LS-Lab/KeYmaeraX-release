@@ -196,20 +196,22 @@ object DerivationInfo {
       List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
       _ => ((y: Variable) => ((t1: Term) => ((t2: Term) => ((i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)): TypedFunc[Term, BelleExpr]): TypedFunc[Term, TypedFunc[Term, BelleExpr]]): TypedFunc[Term, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]]
     ),
-    new InputPositionTacticInfo("DG",
+    new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
-        "DG",
+        "dG",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
         /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
       ),
-      List(VariableArg("y"), TermArg("a(x)"), TermArg("b(x)")),
+      List(VariableArg("y"), TermArg("a(x)"), TermArg("b(x)"), FormulaArg("P")),
       _ =>
         ((y: Variable) =>
           ((t1: Term) =>
-            ((t2: Term) => TactixLibrary.DG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)))
-              ): TypedFunc[Term, BelleExpr]
-            ): TypedFunc[Term, TypedFunc[Term, BelleExpr]]
-          ): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]
+            ((t2: Term) =>
+              ((p: Formula) => TactixLibrary.DA(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
+                ): TypedFunc[Formula, BelleExpr]
+              ): TypedFunc[Term, TypedFunc[Formula, BelleExpr]]
+            ): TypedFunc[Term, TypedFunc[Term, TypedFunc[Formula, BelleExpr]]]
+          ): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Formula, BelleExpr]]]]
     ),
 
     new CoreAxiomInfo("DE differential effect"
@@ -807,14 +809,6 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′ = f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
     , _ => ((fml:Formula) => TactixLibrary.diffInvariant(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("DA4"
-      , RuleDisplayInfo("DA"
-        , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
-        , /* premises */ List((List("&Gamma;"), List("P", "&Delta;"), false),
-          (List("&Gamma;"), List("R → [{x′ = f(x), y′ = a()*y+b & Q}]R","&Delta;")))) //@todo r(x,y) not rendered correctly -> fix derivationinfos.js
-      , List(FormulaArg("R"), VariableArg("y"), TermArg("a()"), TermArg("b"))
-      , _ => ((r:Formula) => ((y:Variable) => ((a:Term) => ((b:Term) =>
-        DifferentialTactics.DA(y,a,b,r)): TypedFunc[Term, BelleExpr]): TypedFunc[Term, _]): TypedFunc[Variable, _]): TypedFunc[Formula, _]), //@note: for now, has to be in the order provided by web UI
     new PositionTacticInfo("AxiomaticODESolver",
       RuleDisplayInfo("AxiomaticODESolver",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
