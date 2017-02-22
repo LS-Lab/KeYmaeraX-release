@@ -123,6 +123,19 @@ del {
   top: 0;
 }
 
+.well-compact {
+  padding: 0px;
+  margin-bottom: 10px;
+}
+
+.panel-heading-compact {
+  padding: 0px 15px 0px 0px;
+}
+
+.panel-sm {
+  margin-bottom: 10px;
+}
+
 .list-group-item.active,
 .list-group-item.active:hover,
 .list-group-item.active:focus {

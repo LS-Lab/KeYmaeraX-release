@@ -1,21 +1,21 @@
 <!-- Despite the name: axioms and tactics -->
 <script type="text/ng-template" id="templates/tacticPopoverEntry.html">
     <div>
-    <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
+    <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <!-- TODO transmit key from server and underline, make changeable -->
         <div class="row">
             <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
-    <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
+    <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
             <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
-    <div class="panel panel-default" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
-        <div class="panel-heading">
+    <div class="panel panel-default panel-sm" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
+        <div class="panel-heading panel-heading-compact">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
                ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a>
