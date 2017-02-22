@@ -16,8 +16,8 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
 
   $scope.selectTheme = function(theme) {
     $http.post('/users/' + $cookies.get('userId') + '/theme', theme.css).then(function(response) {
-      $scope.theme.css = theme.css;
-      $scope.theme.name = theme.name;
+      var savedTheme = $.grep($scope.themes, function(t) { return t.css === theme.css; });
+      $scope.theme = savedTheme[0];
     });
   }
 
