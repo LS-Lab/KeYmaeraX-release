@@ -22,11 +22,9 @@ import scala.language.postfixOps
 @SlowTest
 class ChilledWater extends TacticTestBase {
 
-  def DAcleanup(msg: String): BelleExpr = skip <(
-    /* base case */ printIndexed(msg + "b4 QE") & QE & done,
+  def DAcleanup(msg: String): BelleExpr =
     /* induction: diff*y^2>0 -> [{ode}]diff*y^2>0 */ printIndexed(msg + "b4 diffInd") &
-    diffInd()(1, 1::Nil) & QE & done // formula of the form lhs -> rhs, 1::Nil traverses to rhs
-    )
+    diffInd()(1, 0::Nil) & QE & done // formula of the form \exists rhs, 0::Nil traverses to rhs
 
   /* DA depending on the states of valve and load, diff is what we're trying to prove is
      positive (e.g., Tl-Tw) */
