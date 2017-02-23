@@ -1030,6 +1030,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
             if (invariant.hasNext) Map(FormulaArg("j(x)") -> invariant.next)
             else Map.empty
           case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
+          case _ => Map.empty
         }
         new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
       case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
