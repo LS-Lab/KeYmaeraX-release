@@ -159,12 +159,12 @@ class ModelplexTacticTests extends TacticTestBase {
 
     result.subgoals should have size 2
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "\\forall x (x=2->\\exists t_ (t_>=0&\\forall e_ (e_>0->\\forall h0_ (h0_>0->\\exists h_ (0 < h_&h_ < h0_&((t_>=0->\\exists y_ (abs(x-y_) < e_&xpost()=y_))|(t_>=0->\\exists y_ (abs(x+h_*(-3*x)+h_*(-3*(x+h_*(-3*x)))-y_) < e_&xpost()=y_))))))))".asFormula
-    // don't care about second branch, that's only because euler formula is not an axiom
+    result.subgoals.head.succ should contain only "\\forall x (x=2->\\exists t_ (t_>=0&\\forall e_ (e_>0->\\forall h0_ (h0_>0->\\exists h_ (0 < h_&h_ < h0_&((t_>=0&\\exists y_ (abs(x-y_) < e_&xpost()=y_))|(t_>=0&\\exists y_ (abs(x+h_*(-3*x)+h_*(-3*(x+h_*(-3*x)))-y_) < e_&xpost()=y_))))))))".asFormula
+    // don't care about second branch, that's only because euler formula is not an axiom yet
 
     //@note unsound approximation step
     val flipped = ModelPlex.flipUniversalEulerQuantifiers(result.subgoals.head.succ.head)
-    flipped shouldBe "\\forall x (x=2->\\exists t_ (t_>=0&\\exists e_ (e_>0&\\exists h0_ (h0_>0&\\exists h_ (0 < h_&h_ < h0_&((t_>=0->\\exists y_ (abs(x-y_) < e_&xpost()=y_))|(t_>=0->\\exists y_ (abs(x+h_*(-3*x)+h_*(-3*(x+h_*(-3*x)))-y_) < e_&xpost()=y_))))))))".asFormula
+    flipped shouldBe "\\forall x (x=2->\\exists t_ (t_>=0&\\exists e_ (e_>0&\\exists h0_ (h0_>0&\\exists h_ (0 < h_&h_ < h0_&((t_>=0&\\exists y_ (abs(x-y_) < e_&xpost()=y_))|(t_>=0&\\exists y_ (abs(x+h_*(-3*x)+h_*(-3*(x+h_*(-3*x)))-y_) < e_&xpost()=y_))))))))".asFormula
 
     val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & simplifier(1))
     simplified.subgoals should have size 1

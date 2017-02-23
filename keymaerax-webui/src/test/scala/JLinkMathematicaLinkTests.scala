@@ -5,7 +5,7 @@
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraToMathematica, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Map
@@ -15,7 +15,7 @@ import scala.collection.immutable.Map
   *
   * @author Stefan Mitsch
  */
-class  JLinkMathematicaLinkTests extends TacticTestBase {
+class JLinkMathematicaLinkTests extends TacticTestBase {
 
   private val x = Variable("x")
   private val y = Variable("y")
@@ -74,8 +74,8 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
     mathematica shouldBe 'initialized
   }
 
-  "Function conversion" should "refuse to prove no-argument functions" in withMathematica { link =>
-    a [MatchError] should be thrownBy link.qeEvidence("f()>0 -> f()>=0".asFormula)
+  "Function conversion" should "prove no-argument functions correctly" in withMathematica { link =>
+    link.qeEvidence("f()>0 -> f()>=0".asFormula)._1 shouldBe True
   }
 
   it should "prove one-argument functions correctly" in withMathematica { link =>
@@ -90,6 +90,10 @@ class  JLinkMathematicaLinkTests extends TacticTestBase {
     link.qeEvidence("f(x,y,z)>0 -> f(x,y,z)>=0".asFormula)._1 shouldBe True
     link.qeEvidence("f(x,(y,z))>0 -> f(x,(y,z))>=0".asFormula)._1 shouldBe True
     link.qeEvidence("f((x,y),z)>0 -> f((x,y),z)>=0".asFormula)._1 shouldBe True
+  }
+
+  it should "not confuse no-arg functions with variables" in withMathematica { link =>
+    link.qeEvidence("f()>0 -> f>=0".asFormula)._1 shouldBe "f>=0|f()<=0".asFormula
   }
 
   "Arithmetic" should "translate x--2 as subtraction of -2 (i.e. +2)" in withMathematica { link =>

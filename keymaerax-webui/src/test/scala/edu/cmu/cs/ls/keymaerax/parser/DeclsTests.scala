@@ -1,13 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.core._
-
-import org.scalatest.{Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
- * Created by nfulton on 9/1/15.
- */
+  * Tests the declarations parser.
+  * Created by nfulton on 9/1/15.
+  */
 class DeclsTests extends FlatSpec with Matchers {
   "Declarations parser" should "parse declarations block correctly." in {
     val input =
@@ -70,7 +70,9 @@ class DeclsTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    val problem = KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input) shouldBe Equiv(
+      PredOf(Function("Cimpl", None, Tuple(Real, Tuple(Real, Real)), Bool), Pair(Number(0), Pair(Number(1), Number(2)))),
+      True)
   }
 
   it should "fail to parse when the function application has the wrong assoc" in {
@@ -126,7 +128,7 @@ class DeclsTests extends FlatSpec with Matchers {
     KeYmaeraXProblemParser(input2)
   }
 
-  "Declarations type analysis" should "not allow use of functions as variables" in {
+  "Declarations type analysis" should "elaborate variables to no-arg functions per declaration" in {
     val model = """Functions.
                   |  R b().
                   |  R m().
@@ -142,7 +144,33 @@ class DeclsTests extends FlatSpec with Matchers {
                   |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
                   |End.
                   |""".stripMargin
-    a[ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(model))
+    val m = FuncOf(Function("m", None, Unit, Real), Nothing)
+    val b = FuncOf(Function("b", None, Unit, Real), Nothing)
+    val x = Variable("x")
+    val a = Variable("a")
+    val v = Variable("v")
+    KeYmaeraXProblemParser(model) shouldBe Imply(
+      And(LessEqual(x, m), Greater(b, Number(0))),
+      Box(Compose(Assign(a, Neg(b)), ODESystem("{x'=v,v'=a}".asDifferentialProgram, GreaterEqual(v, Number(0)))), LessEqual(x, m)))
+  }
+
+  it should "not allow variables refer to functions with parameters" in {
+    val model = """Functions.
+                  |  R b(R).
+                  |  R m(R,R).
+                  |End.
+                  |
+                  |ProgramVariables.
+                  |  R x.
+                  |  R v.
+                  |  R a.
+                  |End.
+                  |
+                  |Problem.
+                  |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+                  |End.
+                  |""".stripMargin
+    a[ParseException] should be thrownBy KeYmaeraXProblemParser(model)
   }
 
   it should "succeed when ()'s are used." in {
