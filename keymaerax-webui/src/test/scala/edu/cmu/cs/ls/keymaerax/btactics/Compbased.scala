@@ -86,8 +86,8 @@ class Compbased extends TacticTestBase {
       """v >= 0
         | & dx^2+dy^2 = 1
         | & xo = xor & yo = yor
-        | & (v = 0 | abs(x-xo) > v^2 / (2*B) + V*(v/B)
-        |          | abs(y-yo) > v^2 / (2*B) + V*(v/B))""".stripMargin.asFormula
+        | & (v = 0 | abs(x-xo) > v^2 / (2*B()) + V()*(v/B())
+        |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
       "0<=t".asFormula,
@@ -95,8 +95,8 @@ class Compbased extends TacticTestBase {
       s"v = old(v) + $a*t".asFormula,
       s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V <= xo - old(xo) & xo - old(xo) <= t * V".asFormula,
-      "-t * V <= yo - old(yo) & yo - old(yo) <= t * V".asFormula)
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
       print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
@@ -109,17 +109,17 @@ class Compbased extends TacticTestBase {
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR) & printIndexed("After normalize") <(
-      print("Braking branch 1") & di("-B")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Braking branch 1 done"),
-      print("Braking branch 2") & di("-B")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Braking branch 2 done"),
+      print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(speculativeQE) & print("Braking branch 1 done"),
+      print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(speculativeQE) & print("Braking branch 2 done"),
       print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Stopped branch 1 done"),
-      print("Acceleration branch 1") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) &
-        di("a")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+      print("Acceleration branch 1") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
+        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 1 done"),
       print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(speculativeQE) & print("Stopped branch 2 done"),
-      print("Acceleration branch 2") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B)+V*(v/B)|abs(y-yo)>v^2/(2*B)+V*(v/B)".asFormula) &
-        di("a")(1) & dw & prop & OnAll(((cohide(1) & byUS("= reflexive")) | skip) partial) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0") partial) <(
+      print("Acceleration branch 2") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
+        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 2 done")

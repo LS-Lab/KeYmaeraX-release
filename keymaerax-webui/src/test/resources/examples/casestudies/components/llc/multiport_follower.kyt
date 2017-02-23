@@ -1,4 +1,4 @@
-unfold & loop({`0<=vf&xf < xl&xf+vf^2/(2*B) < xl+vl^2/(2*B)&0<=t&t<=ep&0<=vl&-B*t<=vl-vl0&vl-vl0<=A*t&xl-xl0>=(vl+vl0)/2*t`}, 1) & <(
+unfold & loop({`0<=vf&xf < xl&xf+vf^2/(2*B()) < xl+vl^2/(2*B())&0<=t&t<=ep()&0<=vl&-B()*t<=vl-vl0&vl-vl0<=A()*t&xl-xl0>=(vl+vl0)/2*t`}, 1) & <(
   QE,
   QE,
   composeb(1) & composeb(1.1) & composeb(1.1.1) & composeb(1.1.1.1) & composeb(1.1.1.1.1) & composeb(1.1.1.1.1.1) & composeb(1.1.1.1.1.1.1) & choiceb(1) & andR(1) & <(
@@ -21,10 +21,10 @@ unfold & loop({`0<=vf&xf < xl&xf+vf^2/(2*B) < xl+vl^2/(2*B)&0<=t&t<=ep&0<=vl&-B*
         QE,
         allL({`t_`}, -10) & implyL(-10) & <(
           hideR(1) & QE,
-          andL('L)* & transform({`xf+vf^2/(2*B)+(A/B+1)*(A/2*t_^2+t_*vf) < xl_0+vl_0^2/(2*B)`}, -4) & andR(1) & <(
+          andL('L)* & transform({`xf+vf^2/(2*B())+(A()/B()+1)*(A()/2*t_^2+t_*vf) < xl_0+vl_0^2/(2*B())`}, -4) & andR(1) & <(
             hideL(-1) & hideL(-11) & hideL(-18) & hideL(-8) & hideL(-19) & hideL(-13) & QE,
             andR(1) & <(
-              hideL(-1) & hideL(-11) & hideL(-18) & hideL(-14) & hideL(-8) & hideL(-13) & hideL(-17) & transform({`-B*t_<=vl-vl0`}, -12) & transform({`xl-xl0>=(vl+vl0)/2*t_`}, -13) & hideL(-1) & QE,
+              hideL(-1) & hideL(-11) & hideL(-18) & hideL(-14) & hideL(-8) & hideL(-13) & hideL(-17) & transform({`-B()*t_<=vl-vl0`}, -12) & transform({`xl-xl0>=(vl+vl0)/2*t_`}, -13) & hideL(-1) & QE,
               hideL(-4) & QE
               )
             )
