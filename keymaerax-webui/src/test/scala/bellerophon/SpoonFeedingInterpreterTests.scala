@@ -320,7 +320,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tactic shouldBe BelleParser("implyR('R) & DC({`x>=old(x)`},1) & <(nil, dI(1))")
   }}
 
-  it should "should work for multiple levels of diffInvariant without let" in withMathematica { tool => withDatabase { db =>
+  it should "should work for multiple levels of diffInvariant without let" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
     val modelContent = s"Variables. R x. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -333,7 +333,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |implyR('R) & (DCdiffcut({`x>=0`},1) & <(
         |  (nil&nil),
         |  (nil & (DIa(1) & (implyR(1) & (andR(1) & <(
-        |    close,
+        |    QE,
         |    (derive(1.1)&(DE(1)&(Dassignb(1.1)&(nil&(GV(1)&QE))))) ))))) ))
       """.stripMargin)
 
@@ -627,7 +627,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         val (_, tactic) = stepInto(n1, "dI(1)")
         tactic shouldBe BelleParser(
           """DIa(1) & implyR(1) & andR(1) & <(
-            |  close,
+            |  QE,
             |  derive(1.1) & DE(1) & Dassignb(1.1) & GV(1) & QE
             |)""".stripMargin)
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
@@ -669,7 +669,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         val (_, tactic) = stepInto(n1, "dI(1)")
         tactic shouldBe BelleParser(
           """DIa(1) ; (implyR(1) ; (andR(1) ; <(
-            |  close,
+            |  QE,
             |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
             |)))
             """.stripMargin)
