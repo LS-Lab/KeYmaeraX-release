@@ -60,13 +60,9 @@ class RoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.diffCut("x>0".asFormula)(1), "DC({`x>0`}, 1)")
   }
 
-  it should "input tactic diffGhost" in {
-    //@todo test with BelleExpr data structure, but DifferentialTactics is private
-    roundTrip("diffGhost({`x`}, {`1`}, {`2`}, {`0`}, 1)")
-  }
-
   it should "input tactic dG" in {
-    roundTrip(TactixLibrary.DA(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), "x>0".asFormula)(1), "dG({`x`}, {`5`}, {`2`}, {`x>0`}, 1)")
+    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), None)(1), "dG({`x`}, {`5`}, {`2`}, 1)")
+    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), Some("x>0".asFormula))(1), "dG({`x`}, {`5`}, {`2`}, {`x>0`}, 1)")
   }
 
   it should "input tactic cut, cutL, cutR" in {

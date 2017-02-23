@@ -6,10 +6,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.Find._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.printIndexed
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Imply}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -28,18 +26,18 @@ class ChilledWater extends TacticTestBase {
 
   /* DA depending on the states of valve and load, diff is what we're trying to prove is
      positive (e.g., Tl-Tw) */
-  def DAchilled(valve: Boolean, load: Option[Boolean], diff: String) = ((valve, load) match {
+  def DAchilled(valve: Boolean, load: Option[Boolean], diff: String): BelleExpr = ((valve, load) match {
     case (true, _) =>
-      DA("{y'=(r()/2)*y+0}".asDifferentialProgram, s"($diff)*y^2>0".asFormula)(1)
+      dG("{y'=(r()/2)*y+0}".asDifferentialProgram, Some(s"($diff)*y^2>0".asFormula))(1)
     case (false, Some(false)) =>
-      DA("{y'=r()*y+0}".asDifferentialProgram, s"($diff)*y^2>0".asFormula)(1)
+      dG("{y'=r()*y+0}".asDifferentialProgram, Some(s"($diff)*y^2>0".asFormula))(1)
     case (false, Some(true)) =>
-      DA("{y'=r()*y+0}".asDifferentialProgram, s"($diff)*y^2>0".asFormula)(1)
+      dG("{y'=r()*y+0}".asDifferentialProgram, Some(s"($diff)*y^2>0".asFormula))(1)
     // no other case expected to occur
   }) & DAcleanup(s"After DA (load=$load, valve=$valve, diff=$diff)")
 
   /* Case [ctrl;ode]Tw<Tl */
-  def twLessTl = printIndexed("case split on model non-det. choices") <(
+  def twLessTl: BelleExpr = printIndexed("case split on model non-det. choices") <(
     /*v:=1;Tw:=a()*/ DAchilled(valve=true, load=None, "Tl-Tw") & done,
     /* ?l=0;v:=0; */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done,
     /* ?v=1;l:=1; */ DAchilled(valve=true, load=Some(true), "Tl-Tw") & done,
@@ -51,7 +49,7 @@ class ChilledWater extends TacticTestBase {
     )
 
   /* Case [ctrl;ode]Tl<Tlu(), reduces to Tw<Tl whenever possible */
-  def tlLessTlu = printIndexed("case split on model non-det. choices") <(
+  def tlLessTlu: BelleExpr = printIndexed("case split on model non-det. choices") <(
     /* v:=1;Tw:=a(), here we need to actually exploit h()/r()+a()<Tlu() */
     diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=None, "Tlu()-Tl") & done,
     /* ?l=0;v:=0; */
@@ -74,7 +72,7 @@ class ChilledWater extends TacticTestBase {
     )
 
   /* Case [ctrl;ode]a()<=Tw */
-  def aLessEqualTw = skip <(
+  def aLessEqualTw: BelleExpr = skip <(
     /* v:=1;Tw:=a; */ diffInvariant("Tw=a()".asFormula)(1) & diffWeaken(1) & QE & done,
     /* ?l=0;v:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
     diffWeaken(1) & QE & done,
@@ -92,7 +90,7 @@ class ChilledWater extends TacticTestBase {
     )
     )
 
-  def propRest = skip <(
+  def propRest: BelleExpr = skip <(
     diffInvariant("Tw=a()".asFormula)(1),
     skip, //@note evolution domain already strong enough without additional diff. cut
     diffInvariant("Tw=a()".asFormula)(1),
@@ -102,7 +100,7 @@ class ChilledWater extends TacticTestBase {
       )
     ) & OnAll(diffWeaken(1) & QE) & done
 
-  "Model 0" should "be provable" in withMathematica { qeTool =>
+  "Model 0" should "be provable" in withMathematica { _ =>
     //val s = KeYmaeraXProblemParser(scala.io.Source.fromFile("/path/to/file").getLines().mkString)
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
     val inv = """(Tw < Tl) &
@@ -136,7 +134,7 @@ class ChilledWater extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "be provable with ODE" in withMathematica { qeTool =>
+  it should "be provable with ODE" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
     val inv = """(Tw < Tl) &
                 |    (Tl < Tlu() &
@@ -207,7 +205,7 @@ class ChilledWater extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  "Model 1" should "be provable" in withMathematica { qeTool =>
+  "Model 1" should "be provable" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m1.kyx"))
     val inv = """(Tw < Tl) &
                 |    (Tl < Tlu() &

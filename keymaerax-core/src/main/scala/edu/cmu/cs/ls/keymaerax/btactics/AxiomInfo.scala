@@ -184,18 +184,6 @@ object DerivationInfo {
           (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
       , List(FormulaArg("R"))
       , _ => ((fml: Formula) => HilbertCalculus.DC(fml)): TypedFunc[Formula, BelleExpr]),
-
-    new InputPositionTacticInfo("diffGhost",
-      RuleDisplayInfo(
-        "diffGhost",
-        ( List("&Gamma;"), List("[{c&Q}]P", "&Delta;") ),
-        List(
-          (List("&Gamma;", "y=i"), List("[{c,y′=a()*y+b&Q}]P", "&Delta;"))
-        )
-      ),
-      List(VariableArg("y"), TermArg("a()"), TermArg("b"), TermArg("i")),
-      _ => ((y: Variable) => ((t1: Term) => ((t2: Term) => ((i: Term) => DifferentialTactics.diffGhost(AtomicODE(DifferentialSymbol(y), Plus(Times(t1,y), t2)), i)): TypedFunc[Term, BelleExpr]): TypedFunc[Term, TypedFunc[Term, BelleExpr]]): TypedFunc[Term, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Term, BelleExpr]]]]
-    ),
     new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
         "dG",
@@ -207,11 +195,11 @@ object DerivationInfo {
         ((y: Variable) =>
           ((t1: Term) =>
             ((t2: Term) =>
-              ((p: Formula) => TactixLibrary.DA(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
-                ): TypedFunc[Formula, BelleExpr]
-              ): TypedFunc[Term, TypedFunc[Formula, BelleExpr]]
-            ): TypedFunc[Term, TypedFunc[Term, TypedFunc[Formula, BelleExpr]]]
-          ): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Formula, BelleExpr]]]]
+              ((p: Option[Formula]) => TactixLibrary.dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
+                ): TypedFunc[Option[Formula], BelleExpr]
+              ): TypedFunc[Term, TypedFunc[Option[Formula], BelleExpr]]
+            ): TypedFunc[Term, TypedFunc[Term, TypedFunc[Option[Formula], BelleExpr]]]
+          ): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Option[Formula], BelleExpr]]]]
     ),
 
     new CoreAxiomInfo("DE differential effect"

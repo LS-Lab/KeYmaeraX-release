@@ -1071,42 +1071,42 @@ class DifferentialTests extends TacticTestBase {
   }
 
   "DG" should "add y'=1 to [x'=2]x>0" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DG("{y'=0*y+1}".asDifferentialProgram)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=0*y+1}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=0*y+1}]x>0".asFormula)
   }
 
   it should "add z'=1 to [y'=2]y>0" in {
-    val result = proveBy("[{y'=2}]y>0".asFormula, DG("{z'=0*z+1}".asDifferentialProgram)(1))
+    val result = proveBy("[{y'=2}]y>0".asFormula, dG("{z'=0*z+1}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists z [{y'=2,z'=0*z+1}]y>0".asFormula)
   }
 
   it should "add x'=1 to [y'=2]y>0" in {
-    val result = proveBy("[{y'=2}]y>0".asFormula, DG("{x'=0*x+1}".asDifferentialProgram)(1))
+    val result = proveBy("[{y'=2}]y>0".asFormula, dG("{x'=0*x+1}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists x [{y'=2,x'=0*x+1}]y>0".asFormula)
   }
 
   it should "add y'=3*y+10 to [x'=2]x>0" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DG("{y'=3*y+10}".asDifferentialProgram)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=3*y+10}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=3*y+10}]x>0".asFormula)
   }
 
   it should "add y'=3*y+z() to [x'=2]x>0" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DG("{y'=3*y+z()}".asDifferentialProgram)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=3*y+z()}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=3*y+z()}]x>0".asFormula)
   }
 
   it should "preserve evolution domain" in {
-    val result = proveBy("[{x'=2 & x>=0}]x>0".asFormula, DG("{y'=3*y+10}".asDifferentialProgram)(1))
+    val result = proveBy("[{x'=2 & x>=0}]x>0".asFormula, dG("{y'=3*y+10}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=3*y+10 & x>=0}]x>0".asFormula)
@@ -1114,34 +1114,34 @@ class DifferentialTests extends TacticTestBase {
 
   it should "work with other formulas around" in {
     val result = proveBy(Sequent(IndexedSeq("a>1".asFormula), IndexedSeq("[{x'=2 & x>=0}]x>0".asFormula, "b=2".asFormula)),
-      DG("{y'=3*y+10}".asDifferentialProgram)(1))
+      dG("{y'=3*y+10}".asDifferentialProgram, None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("a>1".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists y [{x'=2,y'=3*y+10 & x>=0}]x>0".asFormula, "b=2".asFormula)
   }
 
   it should "do basic unification" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, DifferentialTactics.diffGhost("{t'=0*t+1}".asDifferentialProgram, "0".asTerm)(1))
+    val result = proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("t=0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2,t'=0*t+1}]x>0".asFormula)
   }
 
   it should "not allow non-linear ghosts (1)" in {
-    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=y*y+1}".asDifferentialProgram)(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{y'=y*y+1}".asDifferentialProgram, None)(1))
   }
 
   it should "not allow non-linear ghosts (2)" in {
-    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{y'=1*y+y}".asDifferentialProgram)(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{y'=1*y+y}".asDifferentialProgram, None)(1))
   }
 
   it should "not allow ghosts that are already present in the ODE" in {
-    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("{x'=0*x+1}".asDifferentialProgram)(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{x'=0*x+1}".asDifferentialProgram, None)(1))
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withMathematica { _ =>
     val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1)
+    val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 1
@@ -1151,7 +1151,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "work in a simple context" in withMathematica { _ =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
-    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1, 1::Nil)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 1
@@ -1161,7 +1161,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "work in a complicated context" in withMathematica { _ =>
     val s = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
-    val tactic = DA("{y'=0*y+1}".asDifferentialProgram, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
+    val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1, 1::1::1::Nil)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 1
@@ -1171,7 +1171,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "add y'=-a() to [x'=2]x>0" in withMathematica { _ =>
     val s = Sequent(IndexedSeq("a()>0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DA("{y'=0*y+(-a())}".asDifferentialProgram, "x>0 & y<0".asFormula)(1)
+    val tactic = dG("{y'=0*y+(-a())}".asDifferentialProgram, Some("x>0 & y<0".asFormula))(1)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 1
@@ -1181,50 +1181,50 @@ class DifferentialTests extends TacticTestBase {
 
   it should "solve x'=x" in withMathematica { _ =>
     val s = Sequent(IndexedSeq(), IndexedSeq("x>0 -> [{x'=x}]x>0".asFormula))
-    val t = prop & DA("{z'=(-1/2)*z+0}".asDifferentialProgram, "x*z^2=1".asFormula)(1) &
+    val t = prop & dG("{z'=(-1/2)*z+0}".asDifferentialProgram, Some("x*z^2=1".asFormula))(1) &
       existsR("1/x^(1/2)".asTerm)(1) & diffInd()(1) & QE
     proveBy(s, t) shouldBe 'proved
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-      DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+      dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & diffInd()(1, 0::Nil) & QE)
     result shouldBe 'proved
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-      DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & existsR("1/x^(1/2)".asTerm)(1) & diffInd()(1) & QE)
+      dG("{y'=(1/2)*y+0}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & existsR("1/x^(1/2)".asTerm)(1) & diffInd()(1) & QE)
     result shouldBe 'proved
   }
 
   it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) &
-      DA("{y'=(-1/2)*y+0}".asDifferentialProgram, "x*y^2=1".asFormula)(1) & diffInd()(1, 0::Nil) & existsR("1/x^(1/2)".asTerm)(1) & QE)
+      dG("{y'=(-1/2)*y+0}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & diffInd()(1, 0::Nil) & existsR("1/x^(1/2)".asTerm)(1) & QE)
     result shouldBe 'proved
   }
 
   it should "prove x>0->[{x'=-x+1}]x>0 by ghosts" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) &
-      DA("{y'=(1/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+      dG("{y'=(1/2)*y+0}".asDifferentialProgram, Some("x*y^2>0".asFormula))(1) & diffInd()(1, 0::Nil) & QE)
     result shouldBe 'proved
   }
 
   it should "prove x>0&a<0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { _ =>
     val result = proveBy("x>0&a<0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) &
-      DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+      dG("{y'=(-a/2)*y+0}".asDifferentialProgram, Some("x*y^2>0".asFormula))(1) & diffInd()(1, 0::Nil) & QE)
     result shouldBe 'proved
   }
 
   it should "prove x>0&a>0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { _ =>
     val result = proveBy("x>0&a>0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) &
-      DA("{y'=(-a/2)*y+0}".asDifferentialProgram, "x*y^2>0".asFormula)(1) & diffInd()(1, 0::Nil) & QE)
+      dG("{y'=(-a/2)*y+0}".asDifferentialProgram, Some("x*y^2>0".asFormula))(1) & diffInd()(1, 0::Nil) & QE)
     result shouldBe 'proved
   }
 
   "DA by DG+transform" should "add y'=1 to [x'=2]x>0" in withMathematica { tool =>
     val s = Sequent(IndexedSeq(), IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = DG("{y'=0*y+1}".asDifferentialProgram)(1) & transform("y>0 & x*y>0".asFormula)(1, 0::1::Nil)
+    val tactic = dG("{y'=0*y+1}".asDifferentialProgram, None)(1) & transform("y>0 & x*y>0".asFormula)(1, 0::1::Nil)
     val result = proveBy(s, tactic)
 
     result.subgoals should have size 1

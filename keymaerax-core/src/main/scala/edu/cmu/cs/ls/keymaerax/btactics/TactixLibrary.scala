@@ -303,17 +303,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   // differential equations
 
   /** ODE: try to prove a property of a differential equation automatically.
+    *
     * @see [[diffSolve]]
     * @todo @see [[diffCut]]
     * @see [[diffInd]]
     * @see [[diffInvariant]]
     * @see [[diffWeaken]]
     * @see [[openDiffInd]]
-    * @see [[DA]]
+    * @see [[dG]]
     */
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
-    * @see [[DA]] */
+    *
+    * @see [[dG]] */
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
@@ -466,47 +468,34 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def diffVar: DependentPositionTactic = DifferentialTactics.diffVar
 
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
-    *
-    * @example{{{
-    *         |- \exists y [{x'=2,y'=0*y+1}]x>0
-    *         ---------------------------------- DG("{y'=0*y+1}".asDifferentialProgram)(1)
-    *         |- [{x'=2}]x>0
-    * }}}
-    * @example{{{
-    *         |- \exists y [{x'=2,y'=f()*y+g() & x>=0}]x>0
-    *         --------------------------------------------- DG("{y'=f()*y+g()}".asDifferentialProgram)(1)
-    *         |- [{x'=2 & x>=0}]x>0
-    * }}}
-    * @param ghost A differential program of the form y'=a*y+b or y'=a*y or y'=b.
-    * @see [[DA()]]
-    */
-  def DG(ghost: DifferentialProgram): DependentPositionTactic = DifferentialTactics.DG(ghost)
-
-  /** DA(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
-    * ghost of the form y'=a*y+b and the postcondition replaced by r.
+  /** dG(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
+    * ghost of the form y'=a*y+b and the postcondition replaced by r, if provided.
     * {{{
-    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y) by QE
+    * G |- \exists y [x'=f(x),y'=g(x,y)&q(x)]r(x,y), D
+    * ----------------------------------------------------------  dG using p(x) <-> \exists y. r(x,y) by QE
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
     *
     * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
     * @param ghost the extra differential equation for an extra variable y to ghost in of the form
     *              y'=a*y+b or y'=a*y or y'=b or y'=a*y-b
-    * @param r the equivalent new postcondition to prove that can mention y.
+    * @param r the optional equivalent new postcondition to prove that can mention y; keeps p(x) if omitted.
     * @example
     * {{{
     * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-    *   DA("{y'=(1/2)*y}".asDifferentialProgram, "x*y^2=1".asFormula)(1) <(
-    *     QE,
-    *     diffInd()(1, 1::Nil) & QE
-    *   ))
+    *   dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) &
+    *     diffInd()(1, 0::Nil) & QE
+    *   )
     * }}}
-    * @see [[DG()]]
+    * with optional instantiation of initial y
+    * {{{
+    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
+    *   dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) &
+    *     existsR("1/x^(1/2)".asFormula)(1) & diffInd()(1) & QE
+    *   )
+    * }}}
     */
-  def DA(ghost: DifferentialProgram, r: Formula): DependentPositionTactic = DifferentialTactics.DA(ghost, r)
+  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = DifferentialTactics.dG(ghost, r)
 
 
   // more

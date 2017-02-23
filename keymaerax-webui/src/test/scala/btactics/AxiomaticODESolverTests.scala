@@ -497,7 +497,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   /** @note there's a more robust version of this test in [[DifferentialTests]] */
   it should "DG" taggedAs IgnoreInBuildTest in {
     val f = "[{x'=v}]1=1".asFormula
-    val t = DifferentialTactics.DG("zz' = 22*zz + 99".asDifferentialProgram)(1)
+    val t = DifferentialTactics.dG("zz' = 22*zz + 99".asDifferentialProgram, None)(1)
     loneSucc(proveBy(f,t)) shouldBe "\\exists zz [{x'=v,zz'=22*zz+99&true}]1=1".asFormula
   }
 
