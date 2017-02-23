@@ -183,7 +183,7 @@ object ModelPlex extends ModelPlexTrait {
   /** Euler-approximates all ODEs somewhere underneat pos */
   def eulerAllIn: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
     //@todo evolution domain
-    val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 -> \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
+    val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 & \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
     //@todo systems as follows?
     //val eulerAxiom = "<{x_'=f(x_),c&q(||)}>p(x_) <-> <{c,x_'=f(x_)&q(||)}>(\\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x);}*>(t_>=0 -> \\exists y_ (abs(x_-y_) < e_ & p(y_)) )))))".asFormula
 
