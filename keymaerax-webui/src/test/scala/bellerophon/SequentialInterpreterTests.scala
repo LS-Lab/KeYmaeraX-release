@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -306,6 +307,16 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "not screw up empty labels" in {
     proveBy(
       "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula, prop) shouldBe 'proved
+  }
+
+  "Let" should "fail (but not horribly) when inner proof cannot be started" in {
+    val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
+    the [BelleThrowable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
+      "[Bellerophon Runtime] Unable to start inner proof in let"
+    val result = proveBy(fml, BelleParser("let ({`f()=f`}) in (nil) | nil"))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only fml
   }
 
   "Unification" should "work on 1=1->1=1" in {

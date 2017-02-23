@@ -275,15 +275,20 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
           //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
           val us: USubst = USubst(subst :: Nil)
-          val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
+          val in: ProvableSig = try {
+            ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
+          } catch {
+            case e: Throwable => throw new BelleThrowable("Unable to start inner proof in let", e)
+          }
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           apply(inner, BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
               val backsubst: ProvableSig = derivation(us)
-              BelleProvable(provable(backsubst,0), lbl)
+              BelleProvable(provable(backsubst, 0), lbl)
             case e => throw new BelleThrowable("Let expected sub-derivation")
           }
+
 
         case LetInspect(abbr, instantiator, inner) =>
           val (provable,lbl) = v match {
