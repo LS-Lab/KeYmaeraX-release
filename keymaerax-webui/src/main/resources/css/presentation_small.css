@@ -21,18 +21,6 @@ a {
     color: var(--lsmain);
 }
 
-.editable-click:hover, a.editable-click:hover {
-    text-decoration: none;
-    color: var(--lsmain);
-    border-bottom-color: var(--lsmain);
-}
-
-.editable-click, a.editable-click {
-    text-decoration: none;
-    color: var(--lsmain);
-    border-bottom: dashed 1px var(--lsmain);
-}
-
 body {
   font-size: 16px;
   color: var(--lsmain);
