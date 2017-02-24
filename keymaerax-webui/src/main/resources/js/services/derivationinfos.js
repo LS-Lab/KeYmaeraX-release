@@ -62,8 +62,9 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
           isClosed: premise.isClosed
         };
       });
-      tactic.allInputsFilled = function() {
-        return $.grep(tactic.derivation.input, function(input, idx) { return input.value == undefined; }).length <= 0;
+      tactic.missingInputNames = function() {
+        var missingInputs = $.grep(tactic.derivation.input, function(input, idx) { return input.value == undefined; });
+        return $.map(missingInputs, function(val, i) { return val.param; });
       };
       return tactic;
     },

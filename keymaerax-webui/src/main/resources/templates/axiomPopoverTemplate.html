@@ -20,12 +20,16 @@
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
                ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a>
             <!-- Rule link: execute if form is valid, otherwise open details -->
-            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().allInputsFilled()"
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length <= 0"
                class="btn btn-link"
                ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b>{{tactic.selectedDerivation().name}}</b></a>
-            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && !tactic.selectedDerivation().allInputsFilled()"
+            <a ng-if="tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
+               class="btn btn-link"
+               ng-click="tactic.selectedDerivation().showMissingInputError = true"><b>{{tactic.selectedDerivation().name}}</b></a>
+            <a ng-if="!tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
                class="btn btn-link"
                ng-click="tactic.isOpen = !tactic.isOpen"><b>{{tactic.selectedDerivation().name}} ...</b></a>
+            <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}}</span>
 
             <div class="pull-right">
                 <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
