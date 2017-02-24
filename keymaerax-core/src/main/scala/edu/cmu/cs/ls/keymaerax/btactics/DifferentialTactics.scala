@@ -263,7 +263,7 @@ private object DifferentialTactics {
 
   /** @see [[TactixLibrary.diffCut()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
-    "DC" byWithInputs (formulas.toList, (pos, sequent) => {
+    "dC" byWithInputs (formulas.toList, (pos, sequent) => {
       formulas.map(ghostDC(_, pos, sequent)).foldRight[BelleExpr](skip)((cut, all) => cut <(all, skip))
     })
 

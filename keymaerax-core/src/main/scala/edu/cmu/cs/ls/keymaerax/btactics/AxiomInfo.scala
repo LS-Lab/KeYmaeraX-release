@@ -170,8 +170,8 @@ object DerivationInfo {
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
     , "DCa", {case () => HilbertCalculus.useAt("DC differential cut")}),
-    new InputPositionTacticInfo("DC"
-    , RuleDisplayInfo("DC"
+    new InputPositionTacticInfo("dC"
+    , RuleDisplayInfo("dC"
       , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
