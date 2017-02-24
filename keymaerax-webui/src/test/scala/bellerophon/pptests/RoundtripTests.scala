@@ -57,7 +57,7 @@ class RoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic diffCut" in {
-    roundTrip(TactixLibrary.diffCut("x>0".asFormula)(1), "DC({`x>0`}, 1)")
+    roundTrip(TactixLibrary.dC("x>0".asFormula)(1), "dC({`x>0`}, 1)")
   }
 
   it should "input tactic dG" in {

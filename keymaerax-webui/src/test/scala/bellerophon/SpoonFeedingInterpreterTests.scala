@@ -107,7 +107,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = SpoonFeedingInterpreter(proofId, db.db.createProof, listener(db.db), SequentialInterpreter)
-    interpreter(implyR(1) & andR(1) & Idioms.<(closeId & done, diffWeaken(1) & prop & done),
+    interpreter(implyR(1) & andR(1) & Idioms.<(closeId & done, dW(1) & prop & done),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree: ProofTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt), proofFinished = true)
@@ -619,7 +619,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     implicit val db = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener(db), SequentialInterpreter)
-    interpreter(implyR(1) & diffInd()(1), BelleProvable(p))
+    interpreter(implyR(1) & dI()(1), BelleProvable(p))
 
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
@@ -640,7 +640,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     implicit val db = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener(db), SequentialInterpreter)
-    interpreter(implyR(1) & diffInd()(1), BelleProvable(p))
+    interpreter(implyR(1) & dI()(1), BelleProvable(p))
 
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
@@ -661,7 +661,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     implicit val db = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener(db), SequentialInterpreter)
-    interpreter(implyR(1) & diffInd()(1), BelleProvable(p))
+    interpreter(implyR(1) & dI()(1), BelleProvable(p))
 
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.findNode("2") match {
@@ -684,7 +684,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener(db), SequentialInterpreter, 1, strict = false)
     val input = BelleProvable(p)
-    a [BelleThrowable] should be thrownBy interpreter(diffInd()(1), input)
+    a [BelleThrowable] should be thrownBy interpreter(dI()(1), input)
 
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(innerId))
@@ -704,7 +704,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener(db), SequentialInterpreter, 1, strict = false)
     val input = BelleProvable(p)
-    a [BelleThrowable] should be thrownBy interpreter(diffInd()(1), input)
+    a [BelleThrowable] should be thrownBy interpreter(dI()(1), input)
 
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(innerId))

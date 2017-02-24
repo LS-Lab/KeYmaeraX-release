@@ -38,7 +38,7 @@ class InvariantArithTests extends TacticTestBase {
 
     val problems = List(i1,i2,i3,i4,i5,i6,i7,i8).map(_.asFormula)
 
-    val tactic = implyR(1) & diffInd('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         normaliseAt(1, 0 :: Nil) &
         normaliseAt(1, 1 :: Nil) & cohideR(1) & byUS("= reflexive")
@@ -65,7 +65,7 @@ class InvariantArithTests extends TacticTestBase {
 
     val problems = List(i1,i2,i3,i4,i5).map(_.asFormula)
 
-    val tactic = implyR(1) & diffInd('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
       chase(1) & prop &
         DebuggingTactics.print("Before normalizing") &
         OnAll(normaliseAt(1, 0 :: Nil) &

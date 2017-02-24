@@ -41,12 +41,12 @@ class CheatSheetScriptTactic extends (() => BelleExpr) {
       /* work on braking */
       & assignb(1, 1::1::Nil)   /* point to second conjunct in second conjunct, a.k.a. c in a & b & c */
       & andR(1) <(              /* now split the conjunction, because diffSolve only works top-level */
-        implyR(1) & diffSolve()(1) & QE
+        implyR(1) & solve()(1) & QE
         ,
         andR(1) <(
-          diffSolve()(1) & QE
+          solve()(1) & QE
           ,
-          diffSolve()(1) & QE
+          solve()(1) & QE
           )
         )
       )

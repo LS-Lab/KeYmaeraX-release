@@ -48,7 +48,7 @@ class Compbased extends TacticTestBase {
       s"-($t) * (v - $a/2*($t)) <= y - old(y) & y - old(y) <= ($t) * (v - $a/2*($t))".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & (andL('_)*) &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+      print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & speculativeQE & print("Proved acc arithmetic")
 
@@ -99,7 +99,7 @@ class Compbased extends TacticTestBase {
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & (andL('_)*) &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+      print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       //@todo auto-transform

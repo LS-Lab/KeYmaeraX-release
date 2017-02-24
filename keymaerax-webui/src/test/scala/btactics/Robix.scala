@@ -42,7 +42,7 @@ class Robix extends TacticTestBase {
       s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula)
 
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       replaceTransform("ep()".asTerm, "t".asTerm)(-8) & speculativeQE & print("Proved acc arithmetic")
@@ -83,7 +83,7 @@ class Robix extends TacticTestBase {
       s"-(t-t_0) * (v - $a/2*(t-t_0)) <= x - old(x) & x - old(x) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula,
       s"-(t-t_0) * (v - $a/2*(t-t_0)) <= y - old(y) & y - old(y) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula)
 
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val tactic = implyR('_) & (andL('_)*) & loop(invariant)('R) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
@@ -127,7 +127,7 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       //@todo auto-transform
@@ -205,7 +205,7 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
-    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('_)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val hideIrrelevantAssumptions: BelleExpr =
       onAll(
@@ -334,7 +334,7 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
     
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) &
       //@todo auto-transform
@@ -374,7 +374,7 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) &
       //@todo auto-transform
@@ -422,7 +422,7 @@ class Robix extends TacticTestBase {
       "w*r = v".asFormula,
       s"beta = old(beta) + t/r*(v - $a/2*t)".asFormula)
 
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val allImplyTactic = ((allR('R)*) & implyR('R))*
 
@@ -583,7 +583,7 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
-    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+    val dw: BelleExpr = (andL('L)*) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = (alphaRule*) & printIndexed("Before replaceTransform") &
       //@todo auto-transform

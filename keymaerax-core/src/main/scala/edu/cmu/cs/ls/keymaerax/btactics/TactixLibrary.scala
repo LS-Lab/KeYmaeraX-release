@@ -140,7 +140,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(a, _) if a.isInstanceOf[Loop] => (Nil, loop::Nil)
-        case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.diffSolve::Nil, odeR::Nil)
+        case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, odeR::Nil)
         case _ => super.tacticsFor(expr)
       }
     }
@@ -148,7 +148,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     OnAll(close |
       (OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
         ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, loop, odeR, diffSolve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, loop, odeR, solve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         OnAll((exhaustiveEqL2R('L)*) & ?(QE)))
   }
 
@@ -269,9 +269,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *   x>2, y>0 |- [{x:=x+y;}*]x>0
     * }}}
     * @param invariant The loop invariant `I`.
-    * @see [[loopRule()]]
     * @note Currently uses I induction axiom, which is unsound for hybrid games.
-
     */
   def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
@@ -304,11 +302,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** ODE: try to prove a property of a differential equation automatically.
     *
-    * @see [[diffSolve]]
-    * @todo @see [[diffCut]]
-    * @see [[diffInd]]
+    * @see [[solve]]
+    * @todo @see [[dC]]
+    * @see [[dI]]
     * @see [[diffInvariant]]
-    * @see [[diffWeaken]]
+    * @see [[dW]]
     * @see [[openDiffInd]]
     * @see [[dG]]
     */
@@ -320,15 +318,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  lazy val diffSolve: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = false)
+  lazy val solve: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = false)
 
   /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
-  lazy val diffSolveEnd: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = true)
+  lazy val solveEnd: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = true)
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
     * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
-  lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
+  lazy val dW         : DependentPositionTactic = DifferentialTactics.diffWeaken
   /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
     * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
     * used in the evolution domain constraint.
@@ -358,7 +356,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[diffInvariant()]]
     */
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
-  def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
+  def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
     *
@@ -409,8 +407,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * }}}
     * @incontext
     */
-  def diffInd(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
-  /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]]
+  def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
+  /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[dC]] followed by [[dI]]
     * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
     * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
     * formulas are differential invariants. Fails if diffInd cannot prove invariants.
@@ -431,8 +429,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
     * }}}
     * @param invariants The differential invariants to cut in as evolution domain constraint.
-    * @see [[diffCut]]
-    * @see [[diffInd]]
+    * @see [[dC]]
+    * @see [[dI]]
     */
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)

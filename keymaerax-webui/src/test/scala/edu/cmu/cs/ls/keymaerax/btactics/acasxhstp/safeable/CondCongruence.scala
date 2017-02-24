@@ -560,7 +560,7 @@ object CondCongruence {
             )
           )
           ),
-        /*show*/ (andL('L)*) & printIndexed("W gen DW") & diffWeaken(1) & prop & done
+        /*show*/ (andL('L)*) & printIndexed("W gen DW") & dW(1) & prop & done
       )
 
     // W is invariant proof for both implicit and explicit models. Same tactic above.

@@ -22,7 +22,7 @@ class ChilledWater extends TacticTestBase {
 
   def DAcleanup(msg: String): BelleExpr =
     /* induction: diff*y^2>0 -> [{ode}]diff*y^2>0 */ printIndexed(msg + "b4 diffInd") &
-    diffInd()(1, 0::Nil) & QE & done // formula of the form \exists rhs, 0::Nil traverses to rhs
+    dI()(1, 0::Nil) & QE & done // formula of the form \exists rhs, 0::Nil traverses to rhs
 
   /* DA depending on the states of valve and load, diff is what we're trying to prove is
      positive (e.g., Tl-Tw) */
@@ -53,8 +53,8 @@ class ChilledWater extends TacticTestBase {
     /* v:=1;Tw:=a(), here we need to actually exploit h()/r()+a()<Tlu() */
     diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=None, "Tlu()-Tl") & done,
     /* ?l=0;v:=0; */
-    diffCut("Tw<Tl".asFormula)(1) <(
-      /* use cut */ diffInd()(1) & done,
+    dC("Tw<Tl".asFormula)(1) <(
+      /* use cut */ dI()(1) & done,
       /* show cut */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done //@note now we know sign of Tl' plus Tl<Tlu initially
       ),
     /* ?v=1;l:=0; */
@@ -64,8 +64,8 @@ class ChilledWater extends TacticTestBase {
       /* v=1 */
       diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=Some(false), "Tlu()-Tl") & done,
       /* v=0 */
-      diffCut("Tw<Tl".asFormula)(1) <(
-        /* use cut */ diffInd()(1) & done,
+      dC("Tw<Tl".asFormula)(1) <(
+        /* use cut */ dI()(1) & done,
         /* show cut */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done
         )
       )
@@ -73,20 +73,20 @@ class ChilledWater extends TacticTestBase {
 
   /* Case [ctrl;ode]a()<=Tw */
   def aLessEqualTw: BelleExpr = skip <(
-    /* v:=1;Tw:=a; */ diffInvariant("Tw=a()".asFormula)(1) & diffWeaken(1) & QE & done,
-    /* ?l=0;v:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
-    diffWeaken(1) & QE & done,
+    /* v:=1;Tw:=a; */ diffInvariant("Tw=a()".asFormula)(1) & dW(1) & QE & done,
+    /* ?l=0;v:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+    dW(1) & QE & done,
     DAchilled(valve=false, load=Some(false), "Tl-Tw") & done,
-    diffInd()(1) & done
+    dI()(1) & done
     ),
-    /* ?v=1;l:=1; */ diffInvariant("Tw=a()".asFormula)(1) & diffWeaken(1) & QE & done,
-    /* l:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
-    diffWeaken(1) & QE & done,
+    /* ?v=1;l:=1; */ diffInvariant("Tw=a()".asFormula)(1) & dW(1) & QE & done,
+    /* l:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+    dW(1) & QE & done,
     orL(FindL(0, Some("v=1|v=0".asFormula))) <(
       DAchilled(valve=true, load=Some(false), "Tl-Tw") & done,
       DAchilled(valve=false, load=Some(false), "Tl-Tw") & done
       ),
-    diffInd()(1) & done
+    dI()(1) & done
     )
     )
 
@@ -98,7 +98,7 @@ class ChilledWater extends TacticTestBase {
       diffInvariant("Tw=a()".asFormula)(1),
       skip //@note evolution domain already strong enough without additional diff. cut
       )
-    ) & OnAll(diffWeaken(1) & QE) & done
+    ) & OnAll(dW(1) & QE) & done
 
   "Model 0" should "be provable" in withMathematica { _ =>
     //val s = KeYmaeraXProblemParser(scala.io.Source.fromFile("/path/to/file").getLines().mkString)
@@ -149,23 +149,23 @@ class ChilledWater extends TacticTestBase {
       /* v:=1;Tw:=a(), here we need to actually exploit h()/r()+a()<Tlu() */
       skip,
       /* ?l=0;v:=0; */
-      diffCut("Tw<Tl".asFormula)(1), //@note now we know sign of Tl' plus Tl<Tlu initially
+      dC("Tw<Tl".asFormula)(1), //@note now we know sign of Tl' plus Tl<Tlu initially
       /* ?v=1;l:=0; */
-      diffCut("Tw=a()".asFormula)(1),
+      dC("Tw=a()".asFormula)(1),
       /* l:=0; */
       orL(FindL(0, Some("v=1|v=0".asFormula))) <(
         /* v=1 */
-        diffCut("Tw=a()".asFormula)(1),
+        dC("Tw=a()".asFormula)(1),
         /* v=0 */
-        diffCut("Tw<Tl".asFormula)(1)
+        dC("Tw<Tl".asFormula)(1)
         )
       ) & OnAll(ODE('R)) & done
 
     val odeALessEqualTw = skip <(
-      /* v:=1;Tw:=a; */ diffCut("Tw=a()".asFormula)(1),
-      /* ?l=0;v:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1),
-      /* ?v=1;l:=1; */ diffCut("Tw=a()".asFormula)(1),
-      /* l:=0; */ diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+      /* v:=1;Tw:=a; */ dC("Tw=a()".asFormula)(1),
+      /* ?l=0;v:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1),
+      /* ?v=1;l:=1; */ dC("Tw=a()".asFormula)(1),
+      /* l:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
         skip,
         orL(FindL(0, Some("v=1|v=0".asFormula))),
         skip
@@ -174,11 +174,11 @@ class ChilledWater extends TacticTestBase {
 
     //@note and once again
     val odePropRest = skip <(
-      diffCut("Tw=a()".asFormula)(1),
+      dC("Tw=a()".asFormula)(1),
       skip, //@note evolution domain already strong enough without additional diff. cut
-      diffCut("Tw=a()".asFormula)(1),
+      dC("Tw=a()".asFormula)(1),
       orL(FindL(0, Some("v=1|v=0".asFormula))) <(
-        diffCut("Tw=a()".asFormula)(1),
+        dC("Tw=a()".asFormula)(1),
         skip //@note evolution domain already strong enough without additional diff. cut
         )
       ) & OnAll(ODE('R)) & done
@@ -224,8 +224,8 @@ class ChilledWater extends TacticTestBase {
           skip,
           skip,
           /* new branch */
-          diffCut("Tw<Tl".asFormula)(1) <(
-            /* use cut */ diffWeaken(1) & QE & done,
+          dC("Tw<Tl".asFormula)(1) <(
+            /* use cut */ dW(1) & QE & done,
             /* show cut */ DAchilled(valve=false, load=Some(true), "Tl-Tw") & done
             ) & done,
           skip,
@@ -237,8 +237,8 @@ class ChilledWater extends TacticTestBase {
             skip,
             skip,
             /* new branch */
-            diffCut("Tw<Tl".asFormula)(1) <(
-              /* use cut */ diffInvariant("Tl<Tlu()-h()*(e()-t)".asFormula)(1) & diffWeaken(1) & QE & done,
+            dC("Tw<Tl".asFormula)(1) <(
+              /* use cut */ diffInvariant("Tl<Tlu()-h()*(e()-t)".asFormula)(1) & dW(1) & QE & done,
               /* show cut */ DAchilled(valve=false, load=Some(true), "Tl-Tw") & done
               ) & done,
             skip,
@@ -250,10 +250,10 @@ class ChilledWater extends TacticTestBase {
               skip,
               skip,
               /* new branch */
-              diffCut("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
-                diffWeaken(1) & QE & done,
+              dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+                dW(1) & QE & done,
                 DAchilled(valve=false, load=Some(true), "Tl-Tw") & done,
-                diffInd()(1) & done
+                dI()(1) & done
                 ),
               skip,
               skip
@@ -263,7 +263,7 @@ class ChilledWater extends TacticTestBase {
               skip,
               skip,
               /* new branch */
-              diffWeaken(1) & QE & done,
+              dW(1) & QE & done,
               skip,
               skip
               ) & propRest & done

@@ -26,7 +26,7 @@ class CheatSheetSearchyTactic extends (() => BelleExpr) {
         ,
         print("Use case") & QE
         ,
-        print("Induction step") & normalize & OnAll(prop & diffSolve()('R) & QE)
+        print("Induction step") & normalize & OnAll(prop & solve()('R) & QE)
       )
     )
   }

@@ -26,7 +26,7 @@ class PassiveSafetyAbsTacticGenerator extends (() => BelleExpr) {
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & andL('_).*() &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+      print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val hideIrrelevantAssumptions: BelleExpr =
       OnAll(

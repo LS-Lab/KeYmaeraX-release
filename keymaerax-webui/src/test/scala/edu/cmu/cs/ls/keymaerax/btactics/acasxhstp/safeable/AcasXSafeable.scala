@@ -495,7 +495,7 @@ class AcasXSafeable extends AcasXBase {
             dT("Before diff. solution") &
               EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
               EqualityTactics.abbrv("max((0,w*(dhfUp-dhd)))".asTerm, Some(Variable("maxUpI"))) &
-              diffSolveEnd('R) &
+              solveEnd('R) &
               dT("Diff. Solution") & allR('R) & implyR('R)*2 &
               andR('R) & Idioms.<(
                 (andL('L)*) & andR('R) & Idioms.<(

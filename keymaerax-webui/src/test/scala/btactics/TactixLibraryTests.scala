@@ -38,7 +38,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{x'=x^2}]x>=5 by invariant" in withMathematica { qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-        diffInvariant("x>=5".asFormula)(1) & diffWeaken(1) & QE
+        diffInvariant("x>=5".asFormula)(1) & dW(1) & QE
     ) shouldBe 'proved
   }
 
@@ -50,7 +50,7 @@ class TactixLibraryTests extends TacticTestBase {
           ,
           QE
           ,
-            diffSolve(1) & OnAll(QE)
+            solve(1) & OnAll(QE)
       )
     ) shouldBe 'proved
   }
@@ -65,14 +65,14 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from one invariant" in withMathematica { qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-        ChooseSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
+        ChooseSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & QE)
     ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-      ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
+      ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & QE)
     ) shouldBe 'proved
   }
 
@@ -80,7 +80,7 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
         //@note master() together with ChooseSome leaves goals open, if first alternative doesn't QE --> demand QE after master
-        ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & (master() & QE))
+        ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & (master() & QE))
     ) shouldBe 'proved
   }
 
@@ -93,7 +93,7 @@ class TactixLibraryTests extends TacticTestBase {
           ,
           QE
           ,
-          diffSolve(1) & OnAll(QE)
+          solve(1) & OnAll(QE)
           ))
     ) shouldBe 'proved
   }
@@ -106,7 +106,7 @@ class TactixLibraryTests extends TacticTestBase {
             ,
             QE
             ,
-            diffSolve(1) & OnAll(QE)
+            solve(1) & OnAll(QE)
             ))
     ) shouldBe 'proved
   }

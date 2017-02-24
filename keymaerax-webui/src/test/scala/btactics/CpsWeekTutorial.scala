@@ -30,7 +30,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*) & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
-      print("Step") & normalize & OnAll(diffSolve('R) partial) partial
+      print("Step") & normalize & OnAll(solve('R) partial) partial
       ) & US(USubst(SubstitutionPair(
             "J(v)".asFormula.replaceFree("v".asTerm, DotTerm()), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm()))::Nil)) & OnAll(QE)
 
@@ -42,7 +42,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*) & loop("J(x,v)".asFormula)('R) <(
       print("Base case"),
       print("Use case"),
-      print("Step") & normalize & print("Foo") & OnAll(diffSolve('R))
+      print("Step") & normalize & print("Foo") & OnAll(solve('R))
       )
     val result = proveBy(s, tactic)
     result.subgoals should have size 4
@@ -80,7 +80,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val tactic = implyR('R) & (andL('L)*) & loop("v^2<=2*b()*(m()-x)".asFormula)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
-      print("Step") & normalize & diffSolve('R) & QE
+      print("Step") & normalize & solve('R) & QE
       )
     proveBy(s, tactic) shouldBe 'proved
   }
@@ -211,7 +211,7 @@ class CpsWeekTutorial extends TacticTestBase {
     def tactic(j: Formula) = implyR('R) & (andL('L)*) & loop(j)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
-      print("Step") & normalize & OnAll(diffSolve('R) & QE)
+      print("Step") & normalize & OnAll(solve('R) & QE)
       )
 
     val simple = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
@@ -229,7 +229,7 @@ class CpsWeekTutorial extends TacticTestBase {
       s"-t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R)
 
     val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & (andL('L)*) &
-      print("Before diffWeaken") & diffWeaken(1) & print("After diffWeaken")
+      print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val tactic = implyR('R) & (andL('L)*) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)('R) <(
       print("Base case") & QE,
@@ -260,7 +260,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Motzkin" should "be provable with DI+DW" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx"))
-    val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & diffWeaken('R) & prop
+    val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & dW('R) & prop
     proveBy(s, tactic) shouldBe 'proved
   }
 
@@ -278,7 +278,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Damped oscillator" should "be provable with DI+DW" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx"))
-    val tactic = implyR('R) & diffInd()('R)
+    val tactic = implyR('R) & dI()('R)
     proveBy(s, tactic) shouldBe 'proved
   }
 
@@ -296,7 +296,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Self crossing" should "be provable with DI+DW" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/10-diffinv-self-crossing.kyx"))
-    val tactic = implyR('R) & diffInvariant("x^2+x^3-y^2-c=0".asFormula)('R) & diffWeaken('R) & prop
+    val tactic = implyR('R) & diffInvariant("x^2+x^3-y^2-c=0".asFormula)('R) & dW('R) & prop
     proveBy(s, tactic) shouldBe 'proved
   }
 

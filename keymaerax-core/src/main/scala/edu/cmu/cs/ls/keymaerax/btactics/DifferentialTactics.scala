@@ -113,7 +113,7 @@ private object DifferentialTactics {
     }
   }
 
-  /** @see [[TactixLibrary.diffInd]] */
+  /** @see [[TactixLibrary.dI]] */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("dI") {
     require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -261,7 +261,7 @@ private object DifferentialTactics {
     }
   }
 
-  /** @see [[TactixLibrary.diffCut()]] */
+  /** @see [[TactixLibrary.dC()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "dC" byWithInputs (formulas.toList, (pos, sequent) => {
       formulas.map(ghostDC(_, pos, sequent)).foldRight[BelleExpr](skip)((cut, all) => cut <(all, skip))
@@ -548,13 +548,13 @@ private object DifferentialTactics {
     if(insistOnProof)
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(pos))    |
-      TactixLibrary.diffSolve(pos) |
+      TactixLibrary.solve(pos) |
       splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
       assertT(seq=>false, failureMessage)
     else
       (proveWithoutCuts(pos) & done)   |
       (addInvariant & ODE(pos) & done) |
-      TactixLibrary.diffSolve(pos)     |
+      TactixLibrary.solve(pos)     |
       (splitWeakInequality(pos)<(ODE(pos), ODE(pos)) & done) |
       assertT(seq=>false, failureMessage)
   })

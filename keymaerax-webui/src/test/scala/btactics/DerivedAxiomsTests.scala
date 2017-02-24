@@ -281,7 +281,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
       TactixLibrary.boxAnd(1, 0::Nil) &
       DifferentialTactics.diffInd()(1, 0::0::Nil) &
       dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0::1::Nil) &
-      diffInd()(1, 0::1::0::Nil) & QE
+      dI()(1, 0::1::0::Nil) & QE
     ) shouldBe 'proved
   }
 

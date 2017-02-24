@@ -367,7 +367,7 @@ object AxiomaticODESolver {
           if (polarity > 0) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, solnToCut))), fml)
           else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, solnToCut))))
         TactixLibrary.proveBy(factFml,
-          TactixLibrary.implyR(1) & TactixLibrary.diffCut(solnToCut)(if (polarity > 0) 1 else -1, odePos) <(
+          TactixLibrary.implyR(1) & TactixLibrary.dC(solnToCut)(if (polarity > 0) 1 else -1, odePos) <(
             TactixLibrary.close
             ,
             TactixLibrary.cohideR('Rlast) &
@@ -467,7 +467,7 @@ object AxiomaticODESolver {
           if (polarity > 0) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)), fml)
           else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)))
         TactixLibrary.proveBy(factFml,
-          TactixLibrary.implyR(1) & TactixLibrary.diffCut(soln)(if (polarity > 0) -1 else 1, odePos) <(
+          TactixLibrary.implyR(1) & TactixLibrary.dC(soln)(if (polarity > 0) -1 else 1, odePos) <(
             TactixLibrary.close
             ,
             TactixLibrary.cohideR('Rlast) &

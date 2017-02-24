@@ -55,7 +55,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals(0).ante.length shouldBe 3 //forget about a>0
     result.subgoals(0).ante shouldNot contain ("a>0".asFormula)
-    proveBy(result.subgoals(0), diffInvariant("x>0".asFormula)(1) & diffWeaken(1) & QE) shouldBe 'proved
+    proveBy(result.subgoals(0), diffInvariant("x>0".asFormula)(1) & dW(1) & QE) shouldBe 'proved
   }
 
   "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {

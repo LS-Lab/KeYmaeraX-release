@@ -106,7 +106,7 @@ class AcasXSafe extends AcasXBase {
     // Formula from print in Theorem 1
     val safeLemmaFormula = """(w*dhd>=w*dhf|w*ao>=a)&(((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)&maxI=max((0,w*(dhf-dhd)))->[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)""".stripMargin.asFormula
 
-    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & diffSolveEnd('R) &
+    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & solveEnd('R) &
       dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
       SimplifierV2.simpTac(1) & dT("Simplified using known facts") & (allR('R)*) &
       //here we'd want to access previously introduced skolem symbol and

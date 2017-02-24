@@ -238,7 +238,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
             dT("Before diff. solution") &
               EqualityTactics.abbrv("max(0,w*(dhf-dhd))".asTerm, Some(Variable("maxI"))) &
               EqualityTactics.abbrv("max(0,w*(dhfM-dhd))".asTerm, Some(Variable("maxIM"))) &
-              diffSolveEnd('R) &
+              solveEnd('R) &
               dT("Diff. Solution") & allR('R) & implyR('R)*2 & (andL('L)*) & dT("Now what?") & SimplifierV2.simpTac('R) & dT("Simplified 2") &
               orR('R) &
               (hideL('L, "to<=tl|tl < 0".asFormula)*) &

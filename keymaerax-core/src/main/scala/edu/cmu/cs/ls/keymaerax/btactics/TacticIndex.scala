@@ -79,7 +79,7 @@ class DefaultTacticIndex extends TacticIndex {
     case TactixLibrary.allR => ((s: Sequent, p: SeqPos) => one(new Fixed(p, child(s(p))))) :: Nil
     case TactixLibrary.existsL => ((s: Sequent, p: SeqPos) => one(new Fixed(p, child(s(p))))) :: Nil
     case TactixLibrary.ODE => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.diffSolve => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.`solve` => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
     // default position: stop searching
     case _ => Nil
   }
@@ -108,7 +108,7 @@ class DefaultTacticIndex extends TacticIndex {
       case _ => (Nil, Nil)
     } else expr match {
       case Box(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
-      case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.diffSolve::Nil, TactixLibrary.ODE::Nil)
+      case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.ODE::Nil)
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Forall(_, _) => (Nil, TactixLibrary.allR::Nil)
       case Exists(_, _) => (TactixLibrary.existsL::Nil, Nil)

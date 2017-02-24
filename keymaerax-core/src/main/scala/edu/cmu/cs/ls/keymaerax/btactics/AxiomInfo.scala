@@ -176,7 +176,7 @@ object DerivationInfo {
       , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
-    , _ => ((fml: Formula) => TactixLibrary.diffCut(fml)): TypedFunc[Formula, BelleExpr]),
+    , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("DCdiffcut"
       , RuleDisplayInfo("DCaxiom"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
@@ -806,12 +806,12 @@ object DerivationInfo {
       RuleDisplayInfo("solve",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.diffSolve}, needsTool = true),
+      {case () => TactixLibrary.solve}, needsTool = true),
     new PositionTacticInfo("autoDiffSolve",
     RuleDisplayInfo("solve",
       (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
       List((List("&Gamma;", "t≥0"), List("[x:=sol(t)](q(x) → p(x))")))),
-    {case () => TactixLibrary.diffSolve}, needsTool = true),
+    {case () => TactixLibrary.solve}, needsTool = true),
     new PositionTacticInfo("DGauto",
       "DGauto",
       {case () => TactixLibrary.DGauto}, needsTool = true),

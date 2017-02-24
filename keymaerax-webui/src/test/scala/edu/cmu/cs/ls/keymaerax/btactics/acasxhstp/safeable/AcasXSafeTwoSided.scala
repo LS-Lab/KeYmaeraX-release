@@ -253,10 +253,10 @@ class AcasXSafeTwoSided extends AcasXBase {
             hideL('L, invariant) &
               dT("Before DI") &
               cutEZ(Box(ODESystem(ode, evolutionDomain), "0=1".asFormula),
-                hideR('R, Box(ODESystem(ode, evolutionDomain), invariant)) & diffInd()('Rlast)) &
+                hideR('R, Box(ODESystem(ode, evolutionDomain), invariant)) & dI()('Rlast)) &
               hideL('L, Not(evolutionDomain)) &
-              dT("After DI") & diffCut("0=1".asFormula)('R) & Idioms.<(
-              /*use*/ dT("After DC 2") & diffWeaken('R) & dT("after DW") &
+              dT("After DI") & dC("0=1".asFormula)('R) & Idioms.<(
+              /*use*/ dT("After DC 2") & dW('R) & dT("after DW") &
                 implyR('R) & andL('L) & cohideL('L, "0=1".asFormula) & dT("before QE") & QE,
               /*show*/ dT("After DC 1") & closeId & done
             )
@@ -264,7 +264,7 @@ class AcasXSafeTwoSided extends AcasXBase {
             dT("Before diff. solution") &
               EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
               EqualityTactics.abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) &
-              diffSolveEnd('R) &
+              solveEnd('R) &
               dT("Diff. Solution") & allR('R) & implyR('R) * 2 & (andL('L) *) &
               andR('R) & Idioms.<(
               andR('R) & Idioms.<(

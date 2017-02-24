@@ -187,7 +187,7 @@ object DifferentialHelper {
   }
   //@todo performance: could consider replacing this by a direct recursive computation without proof.
   def lieDerivative(ode: DifferentialProgram, fml: Formula): Formula = {
-    TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.diffInd('diffInd)(1) <(
+    TactixLibrary.proveBy(Box(ODESystem(ode, True), fml), TactixLibrary.dI('diffInd)(1) <(
       TactixLibrary.skip,
       TactixLibrary.Dassignb(1)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])))
     ).

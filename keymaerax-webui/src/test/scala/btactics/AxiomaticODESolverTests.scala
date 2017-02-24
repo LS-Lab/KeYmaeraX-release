@@ -29,7 +29,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   "Selection sort" should "not have a match error" in withMathematica { qeTool =>
     val ode = "[{posLead'=velLead,velLead'=A,posCtrl'=velCtrl,velCtrl'=a,t'=1}] true".asFormula
-    proveBy(ode,TactixLibrary.diffSolve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe 'proved
+    proveBy(ode,TactixLibrary.solve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe 'proved
   }
 
   "Selection sort" should "achieve intended permutation" in withMathematica { qeTool =>
@@ -65,7 +65,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "retain initial evolution domain" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), diffSolve(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asFormula)
@@ -208,35 +208,35 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "solve simple nested ODEs" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
   it should "solve in universal context in ante" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("\\forall z [{x'=2}]x>0".asFormula), IndexedSeq()), diffSolve(-1, PosInExpr(0::Nil)))
+    val result = proveBy(Sequent(IndexedSeq("\\forall z [{x'=2}]x>0".asFormula), IndexedSeq()), solve(-1, PosInExpr(0::Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "\\forall z \\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "solve in nasty assignment context in ante" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("[x:=*;][{x'=2}]x>0".asFormula), IndexedSeq()), diffSolve(-1, PosInExpr(1::Nil)))
+    val result = proveBy(Sequent(IndexedSeq("[x:=*;][{x'=2}]x>0".asFormula), IndexedSeq()), solve(-1, PosInExpr(1::Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[x:=*;]\\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "solve in nasty universal context in ante" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("\\forall x [{x'=2}]x>0".asFormula), IndexedSeq()), diffSolve(-1, PosInExpr(0::Nil)))
+    val result = proveBy(Sequent(IndexedSeq("\\forall x [{x'=2}]x>0".asFormula), IndexedSeq()), solve(-1, PosInExpr(0::Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "\\forall x \\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "solve in unprovable context" in withMathematica { tool =>
-    val result = proveBy("false & [{x'=2}]x>0".asFormula, diffSolve(1, PosInExpr(1::Nil)))
+    val result = proveBy("false & [{x'=2}]x>0".asFormula, solve(1, PosInExpr(1::Nil)))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "false & \\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
@@ -338,7 +338,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "solve simple nested ODEs" ignore withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>[{x'=3}]x>0".asFormula)), diffSolve(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>[{x'=3}]x>0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
@@ -346,7 +346,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   it should "solve a ModelPlex question" in withMathematica { tool =>
     val result = proveBy("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&<{l'=0*l+fpost_0(),c'=0*c+1&0<=l&c<=ep}>((fpost()=fpost_0()&lpost()=l)&cpost()=c))".asFormula,
-      diffSolve(1, 1::0::1::1::Nil))
+      solve(1, 1::0::1::1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> 0<=fpost_0()*s_+l&s_+c<=ep) & (fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asFormula)
@@ -432,7 +432,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo this proof is broken by the second DS quantifying over the same t_
   "ODE solver" should "not shadow time" ignore withMathematica { qeTool =>
     val fml = "[t := 0; {pos' = vel, t' = 1 & t <= T};  {pos' = vel}] (t <= T)".asFormula
-    val result = proveBy(fml, normalize & diffSolve(1) & normalize & diffSolve(1) & normalize)
+    val result = proveBy(fml, normalize & solve(1) & normalize & solve(1) & normalize)
     result shouldBe 'proved
   }
 
