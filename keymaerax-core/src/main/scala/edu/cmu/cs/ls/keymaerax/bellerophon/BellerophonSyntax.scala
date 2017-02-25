@@ -63,7 +63,7 @@ trait NamedBelleExpr extends BelleExpr {
   /** The code name of this Belle Expression */
   val name: String
 
-  override def prettyString = name
+  override def prettyString: String = name
 }
 
 /** Give a code name to the given tactic `tactic` for serialization purposes. */
@@ -276,9 +276,9 @@ abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
 
 /** Built-in position tactics that are to be applied on the left */
 abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
-  final override def computeResult(provable: ProvableSig, position:Position) = position match {
+  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
     case p: AntePosition => computeAnteResult(provable, p)
-    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
+    case _ => throw BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
   }
 
   def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig
@@ -286,9 +286,9 @@ abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic wit
 
 /** Built-in position tactics that are to be applied on the right */
 abstract case class BuiltInRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
-  final override def computeResult(provable: ProvableSig, position:Position) = position match {
+  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
     case p: SuccPosition => computeSuccResult(provable, p)
-    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
+    case _ => throw BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
   }
 
   def computeSuccResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
