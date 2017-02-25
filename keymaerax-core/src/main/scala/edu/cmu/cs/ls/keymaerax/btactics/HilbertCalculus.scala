@@ -196,7 +196,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DWd: Diamond Differential Weakening to use evolution domain constraint `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)}>(q(x)&p(x))` */
   lazy val DWd                 : DependentPositionTactic = useAt("DWd diamond differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DC(invariant: Formula)  : DependentPositionTactic = "DCdiffcut" byWithInput (invariant, (pos: Position, _: Sequent) => {
+  def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
     useAt("DC differential cut",
       (us:Option[Subst])=>us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)

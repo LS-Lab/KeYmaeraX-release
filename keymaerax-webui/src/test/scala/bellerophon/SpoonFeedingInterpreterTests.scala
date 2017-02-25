@@ -328,19 +328,15 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(implyR('R) & diffInvariant("x>=0".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
+    //@note not reprovable, because we record steps at level 2 and lose inputs (DC axiom without input)
     tactic shouldBe BelleParser(
       """
-        |implyR('R) & (DCdiffcut({`x>=0`},1) & <(
+        |implyR('R) & (DC(1) & <(
         |  (nil&nil),
-        |  (nil & (DIa(1) & (implyR(1) & (andR(1) & <(
+        |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
         |    QE,
         |    (derive(1.1)&(DE(1)&(Dassignb(1.1)&(nil&(GV(1)&QE))))) ))))) ))
       """.stripMargin)
-
-    val reprove = proveBy(problem.asFormula, tactic)
-    reprove.subgoals should have size 1
-    reprove.subgoals.head.ante should contain only "x>=0".asFormula
-    reprove.subgoals.head.succ should contain only "[{x'=1&true&x>=0}]x>=0".asFormula
   }}
 
   it should "should work for multiple levels of diffInvariant" ignore withMathematica { tool => withDatabase { db =>
@@ -591,12 +587,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("1") match {
           case Some(n2) =>
             val (id2, tactic2) = stepInto(n2, "dC({`d>=0`},1)")
-            tactic2 shouldBe BelleParser("DCdiffcut({`d>=0`},1)")
-            ProofTree.ofTrace(db.getExecutionTrace(id2)).findNode("1") match {
-              case Some(n3) =>
-                val (_, tactic3) = stepInto(n3, "DCdiffcut({`d>=0`},1)")
-                tactic3 shouldBe BelleParser("DCa(1)")
-            }
+            tactic2 shouldBe BelleParser("DC(1)")
         }
         //diffInd
         ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("3") match {
@@ -604,9 +595,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
             val (_, tactic) = stepInto(n2, "dI(1)")
             tactic shouldBe BelleParser(
               """
-                |DIa(1) & implyR(1) & andR(1) & <(
+                |DI(1) & implyR(1) & andR(1) & <(
                 |  QE,
-                |  derive(1.1) & DE(1) & Dassignb(1.1) & Dassignb(1.1) & Dassignb(1.1) & DWa(1) & GV(1) & QE
+                |  derive(1.1) & DE(1) & Dassignb(1.1) & Dassignb(1.1) & Dassignb(1.1) & DW(1) & GV(1) & QE
                 |)
               """.stripMargin)
         }
@@ -626,7 +617,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")
         tactic shouldBe BelleParser(
-          """DIa(1) & implyR(1) & andR(1) & <(
+          """DI(1) & implyR(1) & andR(1) & <(
             |  QE,
             |  derive(1.1) & DE(1) & Dassignb(1.1) & GV(1) & QE
             |)""".stripMargin)
@@ -647,7 +638,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")
         tactic shouldBe BelleParser(
-          """DIa(1) & implyR(1) & andR(1) & <(
+          """DI(1) & implyR(1) & andR(1) & <(
             |  QE,
             |  derive(1.1) & DE(1) & Dassignb(1.1) & GV(1) & QE
             |)""".stripMargin)
@@ -668,7 +659,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")
         tactic shouldBe BelleParser(
-          """DIa(1) ; (implyR(1) ; (andR(1) ; <(
+          """DI(1) ; (implyR(1) ; (andR(1) ; <(
             |  QE,
             |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
             |)))
@@ -689,7 +680,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(innerId))
     tactic shouldBe BelleParser(
-      """DIa(1) ; (implyR(1) ; (andR(1) ; <(
+      """DI(1) ; (implyR(1) ; (andR(1) ; <(
         |  nil,
         |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
         |)))
@@ -709,7 +700,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(innerId))
     tactic shouldBe BelleParser(
-      """DIa(1) ; (implyR(1) ; (andR(1) ; <(
+      """DI(1) ; (implyR(1) ; (andR(1) ; <(
         |  nil,
         |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
         |)))

@@ -169,7 +169,7 @@ object DerivationInfo {
       , {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-    , "DCa", {case () => HilbertCalculus.useAt("DC differential cut")}),
+    , "DC", {case () => HilbertCalculus.useAt("DC differential cut")}),
     new InputPositionTacticInfo("dC"
     , RuleDisplayInfo("dC"
       , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
@@ -177,13 +177,6 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("DCdiffcut"
-      , RuleDisplayInfo("DCaxiom"
-        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
-        , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
-          (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
-      , List(FormulaArg("R"))
-      , _ => ((fml: Formula) => HilbertCalculus.DC(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
         "dG",
@@ -213,7 +206,7 @@ object DerivationInfo {
       , "DIequiv", {case () => ???}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
-      , "DIa", {case () => HilbertCalculus.DI}),
+      , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
       , "DGa", {case () => HilbertCalculus.useAt("DG differential ghost")}),
@@ -349,7 +342,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => useAt(DerivedAxioms.DGpreghost)}),
     new DerivedAxiomInfo("DW differential weakening"
       , AxiomDisplayInfo("DW","[x′=f(x)&Q]P↔[x′=f(x)&Q](Q→P)")
-      , "DWa", {case () => HilbertCalculus.DW}),
+      , "DW", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DW differential weakening and"
       , AxiomDisplayInfo("DW∧","[x′=f(x)&Q]P→[x′=f(x)&Q](Q∧P)")
       , "DWeakenAnd", {case () => HilbertCalculus.DW}),

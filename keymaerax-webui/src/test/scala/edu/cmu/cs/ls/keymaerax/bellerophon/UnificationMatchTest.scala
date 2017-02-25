@@ -482,6 +482,32 @@ class UnificationMatchTest extends SystemTestBase {
     )
   }
 
+  it should "unify DC axiom" in {
+    shouldMatch(
+      "([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula,
+      "([{x'=v&v>=0&v>0}]x>=0 <-> [{x'=v&(v>=0&v>0)&x>0}]x>=0) <- [{x'=v&v>=0&v>0}]x>0".asFormula,
+      RenUSubst(
+        (DifferentialProgramConst("c"), "{x'=v}".asDifferentialProgram) ::
+        (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
+        (UnitPredicational("q", AnyArg), "v>=0&v>0".asFormula) ::
+        (UnitPredicational("r", AnyArg), "x>0".asFormula) :: Nil
+      )
+    )
+  }
+
+  it should "unify DC axiom without evolution domain" in {
+    shouldMatch(
+      "([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula,
+      "([{x'=v}]x>=0 <-> [{x'=v&true&x>0}]x>=0) <- [{x'=v}]x>0".asFormula,
+      RenUSubst(
+        (DifferentialProgramConst("c"), "{x'=v}".asDifferentialProgram) ::
+          (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
+          (UnitPredicational("q", AnyArg), "true".asFormula) ::
+          (UnitPredicational("r", AnyArg), "x>0".asFormula) :: Nil
+      )
+    )
+  }
+
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
   "Reunifier ideally" should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs OptimisticTest ignore {
     shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, RenUSubst(
