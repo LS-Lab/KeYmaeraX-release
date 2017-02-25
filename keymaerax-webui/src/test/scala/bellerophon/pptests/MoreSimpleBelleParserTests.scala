@@ -80,7 +80,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse formula tactics" in {
-    val tactic = parser("Loop({`v >= 0`})")
+    val tactic = parser("loop({`v >= 0`})")
     tactic.isInstanceOf[DependentPositionTactic] shouldBe true
     val dpt = tactic.asInstanceOf[DependentPositionTactic]
   }

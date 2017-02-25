@@ -391,7 +391,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   it should "parse dI" in withMathematica { _ =>
     val inner =
       """
-        |DIa(1) ; implyR(1) ; andR(1) ; <(
+        |DI(1) ; implyR(1) ; andR(1) ; <(
         |  QE,
         |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
         |)
