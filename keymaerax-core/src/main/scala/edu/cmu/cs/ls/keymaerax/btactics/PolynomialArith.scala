@@ -431,7 +431,7 @@ object PolynomialArith {
     res
   }
 
-  val normaliseAt:DependentPositionTactic = new DependentPositionTactic("normalise at"){
+  lazy val normaliseAt:DependentPositionTactic = new DependentPositionTactic("normalise at"){
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         sequent.sub(pos) match
@@ -611,7 +611,7 @@ object PolynomialArith {
 
   //todo: generalise to more complete formula fragment
   //todo: Also "clear" equations in succedent after witness generation
-  val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
+  lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
     override def computeExpr(seq: Sequent): BelleExpr =
     {
       seq.succ.zipWithIndex.foldLeft(ident) {(tac: BelleExpr, fi) =>
@@ -631,7 +631,7 @@ object PolynomialArith {
   }
 
   //Normalizes the antecedent by A4,A5 and skolemizing exists
-  val normAnte:DependentTactic = new SingleGoalDependentTactic("norm ante") {
+  lazy val normAnte:DependentTactic = new SingleGoalDependentTactic("norm ante") {
     override def computeExpr(seq: Sequent): BelleExpr = {
       seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
@@ -649,7 +649,7 @@ object PolynomialArith {
     }
   }
 
-  val prepareArith = clearSucc & normAnte
+  lazy val prepareArith: BelleExpr = clearSucc & normAnte
 
 
 //  def extractPolynomials(s: Sequent): Unit = {

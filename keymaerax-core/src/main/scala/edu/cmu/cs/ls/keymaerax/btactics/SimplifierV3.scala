@@ -48,23 +48,23 @@ object SimplifierV3 {
       (aa,List((l,prefix.reverse)))
   }
 
-  private val plusAxs = termAx(Plus.apply)
-  private val minusAxs = termAx(Minus.apply)
-  private val timesAxs = termAx(Times.apply)
-  private val divAxs = termAx(Divide.apply)
-  private val powAxs = termAx(Power.apply)
+  private lazy val plusAxs = termAx(Plus.apply)
+  private lazy val minusAxs = termAx(Minus.apply)
+  private lazy val timesAxs = termAx(Times.apply)
+  private lazy val divAxs = termAx(Divide.apply)
+  private lazy val powAxs = termAx(Power.apply)
 
-  private val negAx = proveBy( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"))
+  private lazy val negAx = proveBy( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"))
 
 
-  private val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE)
+  private lazy val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE)
 
   //TODO: think more about the type used to represent the current context
   type context = HashSet[Formula]
   type termIndex = (Term,context) => List[ProvableSig]
   type formulaIndex = (Formula,context) => List[ProvableSig]
 
-  val emptyCtx = HashSet[Formula]()
+  lazy val emptyCtx = HashSet[Formula]()
 
   def composeIndex[A<:Expression] (is:((A,context) => List[ProvableSig])*)
                                  (f:A,ctx:context) : List[ProvableSig] = is.flatMap(axs => axs(f,ctx)).toList
@@ -209,67 +209,67 @@ object SimplifierV3 {
     (lAx,rAx,lrAx)
   }
 
-  private val eqAxs = fmlAx(Equal.apply)
-  private val geqAxs = fmlAx(GreaterEqual.apply)
-  private val gtAxs = fmlAx(Greater.apply)
-  private val leqAxs = fmlAx(LessEqual.apply)
-  private val ltAxs = fmlAx(Less.apply)
-  private val neAxs = fmlAx(NotEqual.apply)
+  private lazy val eqAxs = fmlAx(Equal.apply)
+  private lazy val geqAxs = fmlAx(GreaterEqual.apply)
+  private lazy val gtAxs = fmlAx(Greater.apply)
+  private lazy val leqAxs = fmlAx(LessEqual.apply)
+  private lazy val ltAxs = fmlAx(Less.apply)
+  private lazy val neAxs = fmlAx(NotEqual.apply)
 
   //Other customized internal lemmas
   //And
   //only L changes
-  private val andAxL =
+  private lazy val andAxL =
     proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> (L_() & R_() <-> LL_() & R_()))".asFormula,prop)
   //only R changes
-  private val andAxR =
+  private lazy val andAxR =
     proveBy("(B_() -> (R_() <-> RR_())) -> ((L_() -> B_()) -> (L_() & R_() <-> L_() & RR_()))".asFormula,prop)
   //both changed
-  private val andAxLR =
+  private lazy val andAxLR =
     proveBy(("(A_() -> (L_() <-> LL_())) & (B_() -> (R_() <-> RR_())) ->" +
       " ( (A_() & (LL_() -> B_())) -> (L_() & R_() <-> LL_() & RR_()) )").asFormula,prop)
 
   //Imply
   //only L changes
-  private val impAxL =
+  private lazy val impAxL =
   proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> (L_() -> R_() <-> LL_() -> R_()))".asFormula,prop)
   //only R changes
-  private val impAxR =
+  private lazy val impAxR =
   proveBy("(B_() -> (R_() <-> RR_())) -> ((L_() -> B_()) -> (L_() -> R_() <-> L_() -> RR_()))".asFormula,prop)
   //both changed
-  private val impAxLR =
+  private lazy val impAxLR =
   proveBy(("(A_() -> (L_() <-> LL_())) & (B_() -> (R_() <-> RR_())) ->" +
     " ( (A_() & (LL_() -> B_())) -> (L_() -> R_() <-> LL_() -> RR_()) )").asFormula,prop)
 
   //Or
   //only L changes
-  private val orAxL =
+  private lazy val orAxL =
   proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> (L_() | R_() <-> LL_() | R_()))".asFormula,prop)
   //only R changes
-  private val orAxR =
+  private lazy val orAxR =
   proveBy("(B_() -> (R_() <-> RR_())) -> ((!(L_()) -> B_()) -> (L_() | R_() <-> L_() | RR_()))".asFormula,prop)
   //both changed
-  private val orAxLR =
+  private lazy val orAxLR =
   proveBy(("(A_() -> (L_() <-> LL_())) & (B_() -> (R_() <-> RR_())) ->" +
     " ( (A_() & (!LL_() -> B_())) -> (L_() | R_() <-> LL_() | RR_()) )").asFormula,prop)
 
   //Negate
-  private val notAx =
+  private lazy val notAx =
   proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> (!L_() <-> !LL_()))".asFormula,prop)
 
   //Equiv
   //only L changes
-  private val equivAxL =
+  private lazy val equivAxL =
   proveBy("(A_() -> (L_() <-> LL_())) -> (A_() -> ( (L_() <-> R_()) <-> (LL_() <-> R_())))".asFormula,prop)
   //only R changes
-  private val equivAxR =
+  private lazy val equivAxR =
   proveBy("(B_() -> (R_() <-> RR_())) -> (B_() -> ( (L_() <-> R_()) <-> (L_() <-> RR_())))".asFormula,prop)
   //both changed
-  private val equivAxLR =
+  private lazy val equivAxLR =
   proveBy(("(A_() -> (L_() <-> LL_())) & (B_() -> (R_() <-> RR_())) ->" +
     " ( (A_() & B_()) -> ((L_() <-> R_()) <-> (LL_() <-> RR_())) )").asFormula,prop)
 
-  private val equivTrans = proveBy("(P_() -> (F_() <-> FF_())) & (Q_() -> (FF_() <-> FFF_())) -> (P_() & Q_() -> (F_() <-> FFF_())) ".asFormula,prop)
+  private lazy val equivTrans = proveBy("(P_() -> (F_() <-> FF_())) & (Q_() -> (FF_() <-> FFF_())) -> (P_() & Q_() -> (F_() <-> FFF_())) ".asFormula,prop)
 
   //Dependent formula simplification workhorse
   //Given provable A -> (P <-> P') or (P<->P'), a context, and a formula f,
@@ -548,7 +548,7 @@ object SimplifierV3 {
   }
 
   //Exhaustively split ONLY the last conjunct
-  private val andSplit : DependentTactic = new SingleGoalDependentTactic("and split") {
+  private lazy val andSplit : DependentTactic = new SingleGoalDependentTactic("and split") {
 
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val anteLen = sequent.ante.length
@@ -610,8 +610,8 @@ object SimplifierV3 {
     )
   }
 
-  val defaultFaxs:formulaIndex = composeIndex(baseIndex,boolIndex,cmpIndex)
-  val defaultTaxs:termIndex = composeIndex(arithGroundIndex,arithBaseIndex)
+  lazy val defaultFaxs:formulaIndex = composeIndex(baseIndex,boolIndex,cmpIndex)
+  lazy val defaultTaxs:termIndex = composeIndex(arithGroundIndex,arithBaseIndex)
 
   //Allow the user to directly specify a list of theorems for rewriting
   private def thWrapper(ths: List[ProvableSig]) : (formulaIndex,termIndex) = {
@@ -718,13 +718,13 @@ object SimplifierV3 {
   }
 
   //These are mostly just the basic unit and identity rules
-  private val mulArith = List(qeTermProof("0*F_()","0"), qeTermProof("F_()*0","0"), qeTermProof("1*F_()","F_()"),
+  private lazy val mulArith = List(qeTermProof("0*F_()","0"), qeTermProof("F_()*0","0"), qeTermProof("1*F_()","F_()"),
     qeTermProof("F_()*1","F_()"), qeTermProof("-1*F_()","-F_()"), qeTermProof("F_()*-1","-F_()"))
-  private val plusArith = List(qeTermProof("0+F_()","F_()"), qeTermProof("F_()+0","F_()"))
-  private val minusArith = List( qeTermProof("F_()-0","F_()"),qeTermProof("0-F_()","-F_()"))
+  private lazy val plusArith = List(qeTermProof("0+F_()","F_()"), qeTermProof("F_()+0","F_()"))
+  private lazy val minusArith = List( qeTermProof("F_()-0","F_()"),qeTermProof("0-F_()","-F_()"))
   //This is enabled by dependent rewriting
-  private val divArith = List(qeTermProof("0/F_()","0",Some("F_()>0")), qeTermProof("0/F_()","0",Some("F_()<0")))
-  private val powArith = List(qeTermProof("F_()^0","1",Some("F_()>0")), qeTermProof("F_()^0","1",Some("F_()<0")),
+  private lazy val divArith = List(qeTermProof("0/F_()","0",Some("F_()>0")), qeTermProof("0/F_()","0",Some("F_()<0")))
+  private lazy val powArith = List(qeTermProof("F_()^0","1",Some("F_()>0")), qeTermProof("F_()^0","1",Some("F_()<0")),
     qeTermProof("F_()^1","F_()"))
 
   //These may also be useful:
@@ -767,8 +767,8 @@ object SimplifierV3 {
     }
   }
 
-  private val impReflexive = proveBy("p_() -> p_()".asFormula,prop)
-  private val eqSymmetricImp = proveBy("F_() = G_() -> G_() = F_()".asFormula,QE)
+  private lazy val impReflexive = proveBy("p_() -> p_()".asFormula,prop)
+  private lazy val eqSymmetricImp = proveBy("F_() = G_() -> G_() = F_()".asFormula,QE)
 
   //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
@@ -811,9 +811,9 @@ object SimplifierV3 {
   }
 
   //F_() -> (F_() <-> true)
-  val tauto = propProof("F_()","true",Some("F_()"))
+  lazy val tauto = propProof("F_()","true",Some("F_()"))
   //!(F_()) -> (F_() <-> false)
-  val tauto2 = propProof("F_()","false",Some("!F_()"))
+  lazy val tauto2 = propProof("F_()","false",Some("!F_()"))
 
   //This is a critical index
   def baseIndex (f:Formula,ctx:context) : List[ProvableSig] = {
@@ -833,17 +833,17 @@ object SimplifierV3 {
     }
   }
 
-  val ltNotReflex = qeFormulaProof(None,"F_()<F_()","false")
-  val gtNotReflex = qeFormulaProof(None,"F_()>F_()","false")
-  val neqNotReflex = qeFormulaProof(None,"F_()!=F_()","false")
-  val equalReflex = qeFormulaProof(None,"F_() = F_()","true")
-  val lessequalReflex = qeFormulaProof(None,"F_() <= F_()","true")
-  val greaterequalReflex = qeFormulaProof(None,"F_() >= F_()","true")
+  lazy val ltNotReflex = qeFormulaProof(None,"F_()<F_()","false")
+  lazy val gtNotReflex = qeFormulaProof(None,"F_()>F_()","false")
+  lazy val neqNotReflex = qeFormulaProof(None,"F_()!=F_()","false")
+  lazy val equalReflex = qeFormulaProof(None,"F_() = F_()","true")
+  lazy val lessequalReflex = qeFormulaProof(None,"F_() <= F_()","true")
+  lazy val greaterequalReflex = qeFormulaProof(None,"F_() >= F_()","true")
 
-  val eqSym = qeFormulaProof(Some("F_() = G_()"),"G_() = F_()","true")
-  val neqSym = qeFormulaProof(Some("F_() != G_()"),"G_() != F_()","true")
-  val gtNotSym = qeFormulaProof(Some("F_() > G_()"),"G_() > F_()","false")
-  val ltNotSym = qeFormulaProof(Some("F_() < G_()"),"G_() < F_()","false")
+  lazy val eqSym = qeFormulaProof(Some("F_() = G_()"),"G_() = F_()","true")
+  lazy val neqSym = qeFormulaProof(Some("F_() != G_()"),"G_() != F_()","true")
+  lazy val gtNotSym = qeFormulaProof(Some("F_() > G_()"),"G_() > F_()","false")
+  lazy val ltNotSym = qeFormulaProof(Some("F_() < G_()"),"G_() < F_()","false")
 
   private def qeSearch(cmp1:(Term,Term)=>Formula,cmps:List[(Term,Term)=>Formula]) : List[ProvableSig] = {
     //Use partial QE because I don't want to do everything by hand..
@@ -862,12 +862,12 @@ object SimplifierV3 {
     ).filter(_.isProved)
   }
 
-  val eqs = eqSym::qeSearch(Equal.apply,List(NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  val neqs = neqSym::qeSearch(NotEqual.apply,List(Equal.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  val gts = gtNotSym::qeSearch(Greater.apply,List(Equal.apply,NotEqual.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  val ges = qeSearch(GreaterEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,Less.apply,LessEqual.apply))
-  val lts = ltNotSym::qeSearch(Less.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,LessEqual.apply))
-  val les = qeSearch(LessEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply))
+  lazy val eqs = eqSym::qeSearch(Equal.apply,List(NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  lazy val neqs = neqSym::qeSearch(NotEqual.apply,List(Equal.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  lazy val gts = gtNotSym::qeSearch(Greater.apply,List(Equal.apply,NotEqual.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  lazy val ges = qeSearch(GreaterEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,Less.apply,LessEqual.apply))
+  lazy val lts = ltNotSym::qeSearch(Less.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,LessEqual.apply))
+  lazy val les = qeSearch(LessEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply))
 
   //This contains the basic heuristics for closing a comparison formula
   def cmpIndex (f:Formula,ctx:context) : List[ProvableSig] = {
@@ -899,33 +899,33 @@ object SimplifierV3 {
 
   }
 
-  val andT = propProof("F_() & true","F_()")
-  val Tand = propProof("true & F_()","F_()")
-  val andF = propProof("F_() & false","false")
-  val Fand = propProof("false & F_()","false")
+  lazy val andT = propProof("F_() & true","F_()")
+  lazy val Tand = propProof("true & F_()","F_()")
+  lazy val andF = propProof("F_() & false","false")
+  lazy val Fand = propProof("false & F_()","false")
 
-  val implyT = propProof("F_() -> true","true")
-  val Timply = propProof("true -> F_()","F_()")
-  val implyF = propProof("F_() -> false","!F_()")
-  val Fimply = propProof("false -> F_()","true")
+  lazy val implyT = propProof("F_() -> true","true")
+  lazy val Timply = propProof("true -> F_()","F_()")
+  lazy val implyF = propProof("F_() -> false","!F_()")
+  lazy val Fimply = propProof("false -> F_()","true")
 
-  val orT = propProof("F_() | true","true")
-  val Tor = propProof("true | F_()","true")
-  val orF = propProof("F_() | false","F_()")
-  val For = propProof("false | F_()","F_()")
+  lazy val orT = propProof("F_() | true","true")
+  lazy val Tor = propProof("true | F_()","true")
+  lazy val orF = propProof("F_() | false","F_()")
+  lazy val For = propProof("false | F_()","F_()")
 
-  val equivT = propProof("F_() <-> true","F_()")
-  val Tequiv = propProof("true <-> F_()","F_()")
-  val equivF = propProof("F_() <-> false","!F_()")
-  val Fequiv = propProof("false <-> F_()","!F_()")
+  lazy val equivT = propProof("F_() <-> true","F_()")
+  lazy val Tequiv = propProof("true <-> F_()","F_()")
+  lazy val equivF = propProof("F_() <-> false","!F_()")
+  lazy val Fequiv = propProof("false <-> F_()","!F_()")
 
-  val notT = propProof("!true","false")
-  val notF = propProof("!false","true")
+  lazy val notT = propProof("!true","false")
+  lazy val notF = propProof("!false","true")
 
-  val forallTrue = proveBy("(\\forall x_ true)<->true".asFormula, auto )
-  val forallFalse = proveBy("(\\forall x_ false)<->false".asFormula, auto)
-  val existsTrue = proveBy("(\\exists x_ true)<->true".asFormula, auto )
-  val existsFalse = proveBy("(\\exists x_ false)<->false".asFormula, auto )
+  lazy val forallTrue = proveBy("(\\forall x_ true)<->true".asFormula, auto )
+  lazy val forallFalse = proveBy("(\\forall x_ false)<->false".asFormula, auto)
+  lazy val existsTrue = proveBy("(\\exists x_ true)<->true".asFormula, auto )
+  lazy val existsFalse = proveBy("(\\exists x_ false)<->false".asFormula, auto )
 
   def boolIndex (f:Formula,ctx:context) : List[ProvableSig] ={
     f match {
