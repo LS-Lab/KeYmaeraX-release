@@ -7,12 +7,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.NamedBelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SummaryTest}
-import org.scalatest.{FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
+import org.scalatest.Matchers
 
-import scala.collection.immutable.{Range, Set}
+import scala.collection.immutable.Range
 import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe.typeTag
 
 /**
  * Tests code names of tactics and AxiomInfo for compatibility for TacticExtraction.
@@ -22,14 +22,14 @@ import scala.reflect.runtime.{universe => ru}
 @IgnoreInBuildTest
 class CodeNameChecker extends TacticTestBase with Matchers {
   //@todo also reflect through all DerivedAxioms to check they've been added to AxiomInfo
-  "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { qeTool =>
+  "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { _ =>
     val all = DerivationInfo.allInfo
     for (info <- all) {
       //println("Checking " + info.codeName)
       instantiateSomeBelle(info) match {
           // made compile by reflection or generalizing type hierarchy for some BelleExpr
         case Some(b: NamedBelleExpr) =>
-          if (info.codeName.toLowerCase != b.name.toLowerCase())
+          if (info.codeName != b.name)
             println("TEST(WARNING): codeName should be changed to a consistent name: " + info.codeName + " alias " + info.canonicalName + " gives " + b.name)
         case Some(b: BelleExpr) => println("TEST: belleExpr does not have a codeName: " + info.codeName + " alias " + info.canonicalName + " gives " + b)
         case None => println("TEST(INFO): cannot instantiate belleExpr " + info.codeName + " alias " + info.canonicalName)
@@ -37,7 +37,7 @@ class CodeNameChecker extends TacticTestBase with Matchers {
     }
   }
 
-  "Derived axioms" should "all be specified in AxiomInfo" in withMathematica { tool =>
+  "Derived axioms" should "all be specified in AxiomInfo" in withMathematica { _ =>
     val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
@@ -50,19 +50,18 @@ class CodeNameChecker extends TacticTestBase with Matchers {
     val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
-    var failures = 0
     Range(0, fieldMirrors.length-1).foreach(idx => {
       try {
         val axiom = fieldMirrors(idx)().asInstanceOf[Lemma]
         //println("Checking " + axiom.name)
         try {
-          DerivationInfo.ofCodeName(axiom.name.getOrElse(fail("Derived axiom without name defined in " + fieldMirrors(idx).symbol.name)))
+          ProvableInfo.ofStoredName(axiom.name.getOrElse(fail("Derived axiom without name defined in " + fieldMirrors(idx).symbol.name)))
         } catch {
-          case e: Throwable => println("TEST(WARNING): codeName of axiom " + axiom.name + " not found in DerivationInfo, should be added/changed to a consistent name")
+          case _: Throwable => println("TEST(WARNING): codeName of axiom " + axiom.name + " not found in DerivationInfo, should be added/changed to a consistent name")
         }
 
       } catch {
-        case e: Throwable => println("TEST(INFO): cannot instantiate derived axiom " + fieldMirrors(idx).symbol.name)
+        case _: Throwable => println("TEST(INFO): cannot instantiate derived axiom " + fieldMirrors(idx).symbol.name)
       }
     })
   }
@@ -70,10 +69,15 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   /** get some silly BelleExpr from info by feeding it its input in a type-compliant way. */
   private def instantiateSomeBelle(info: DerivationInfo): Option[BelleExpr] =
   try {
-    val e = info.inputs.foldLeft(info.belleExpr) ((t,arg) => arg match {
-      case _: FormulaArg => t.asInstanceOf[Formula=>Any](True)
-      case _: VariableArg => t.asInstanceOf[Variable=>Any](Variable("dummy"))
-      case _: TermArg => t.asInstanceOf[Term=>Any](Number(42))
+    val e = info.inputs.foldLeft(info.belleExpr) ((t,_) => t match {
+      case expr: TypedFunc[Formula, _] if expr.argType.tpe <:< typeTag[Formula].tpe => expr(True)
+      case expr: TypedFunc[Variable, _] if expr.argType.tpe <:< typeTag[Variable].tpe => expr(Variable("dummy"))
+      case expr: TypedFunc[Term, _] if expr.argType.tpe <:< typeTag[Term].tpe => expr(Number(42))
+      case expr: TypedFunc[Expression, _] if expr.argType.tpe <:< typeTag[Expression].tpe => expr(Variable("dummy"))
+      case expr: TypedFunc[Option[Formula], _] if expr.argType.tpe <:< typeTag[Option[Formula]].tpe  => expr(Some(True))
+      case expr: TypedFunc[Option[Variable], _] if expr.argType.tpe <:< typeTag[Option[Variable]].tpe => expr(Some(Variable("dummy")))
+      case expr: TypedFunc[Option[Term], _] if expr.argType.tpe <:< typeTag[Option[Term]].tpe => expr(Some(Number(42)))
+      case expr: TypedFunc[Option[Expression], _] if expr.argType.tpe <:< typeTag[Option[Expression]].tpe => expr(Some(Variable("dummy")))
     })
     e match {
       case t: BelleExpr => Some(t)

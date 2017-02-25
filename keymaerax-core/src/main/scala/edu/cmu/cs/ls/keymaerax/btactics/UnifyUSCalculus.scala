@@ -192,7 +192,7 @@ trait UnifyUSCalculus {
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   def useAt(lem: Lemma, key:PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = {
     if (lem.name.isDefined) {
-      val info = ProvableInfo.ofCodeName(lem.name.get)
+      val info = ProvableInfo.ofStoredName(lem.name.get)
       if (info.provable == lem.fact)
         useAt(info, key, inst)
       else {

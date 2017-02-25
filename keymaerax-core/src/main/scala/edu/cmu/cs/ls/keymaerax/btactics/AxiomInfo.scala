@@ -720,8 +720,8 @@ object DerivationInfo {
     new InputPositionTacticInfo("boundRename"
       , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
-      , List(TermArg("x"),TermArg("y"))
-      , _ => ((x:Term) => ((y:Term) => TactixLibrary.boundRename(x.asInstanceOf[Variable],y.asInstanceOf[Variable])): TypedFunc[Term, BelleExpr]): TypedFunc[Term, TypedFunc[Term, BelleExpr]]),
+      , List(VariableArg("x"),VariableArg("y"))
+      , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.boundRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
     new InputPositionTacticInfo("stutter"
       , RuleDisplayInfo(("[:=]", "[:=]"), (List("&Gamma;"), List("P","&Delta;"))
       , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))
@@ -841,47 +841,48 @@ object DerivationInfo {
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
-    //@note to avoid file storage issues on some OSes, lowercase versions of names are expected to be unique.
-    val canonicals = list.map(i => i.canonicalName.toLowerCase())
-    val codeNames = list.map(i => i.codeName.toLowerCase()).filter(n => n!=needsCodeName)
-    list.forall(i => i match {
+    val canonicals = list.map(_.canonicalName)
+    val codeNames = list.map(_.codeName).filter(_ != needsCodeName)
+    val storedNames = list.filter(_.isInstanceOf[StorableInfo]).map(_.asInstanceOf[StorableInfo].storedName)
+    list.forall({
         case ax: CoreAxiomInfo => ProvableSig.axiom.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
-        case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
+        case _: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
         case _ => true
       }
-    ) &
-      (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
-      (codeNames.length==codeNames.distinct.length ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
+    ) &&
+      (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &&
+      (codeNames.length==codeNames.distinct.length ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct))) &&
+      //@note to avoid file storage issues on some OSes, lowercase versions of code names used in files are expected to be unique.
+      (storedNames.length==storedNames.distinct.length ensuring(r=>r, "unique stored names / identifiers across all derived axioms: " + (storedNames diff storedNames.distinct)))
   }
 
   /** code name mapped to derivation information */
   private val byCodeName: Map[String, DerivationInfo] =
   /* @todo Decide on a naming convention. Until then, making everything case insensitive */
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-        acc.+((info.codeName.toLowerCase(), info))
+        acc + ((info.codeName, info))
     }
 
   /** canonical name mapped to derivation information */
   private val byCanonicalName: Map[String, DerivationInfo] =
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-      acc.+((info.canonicalName.toLowerCase, info))
+      acc + ((info.canonicalName, info))
     }
 
   /** Retrieve meta-information on an inference by the given canonical name `axiomName` */
   def apply(axiomName: String): DerivationInfo = {
-    byCanonicalName.getOrElse(axiomName.toLowerCase,
-        throw new AxiomNotFoundException(axiomName))
+    byCanonicalName.getOrElse(axiomName, throw AxiomNotFoundException(axiomName))
   }
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
-  def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit}, "valid code name: " + id)}
+  def assertValidIdentifier(id: String): Unit = { assert(id.forall(_.isLetterOrDigit), "valid code name: " + id)}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
   def ofCodeName(codeName:String): DerivationInfo = {
     assert(byCodeName != null, "byCodeName should not be null.")
     assert(codeName != null, "codeName should not be null.")
 
-    byCodeName.getOrElse(codeName.toLowerCase,
+    byCodeName.getOrElse(codeName,
       throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
     )
   }
@@ -895,7 +896,7 @@ object DerivationInfo {
     case _ => None
   }
 
-  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
+  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName)
 }
 
 object AxiomInfo {
@@ -971,6 +972,11 @@ trait ProvableInfo extends DerivationInfo {
   val provable: ProvableSig
 }
 
+/** Storable items (e.g., as lemmas) */
+trait StorableInfo extends DerivationInfo {
+  val storedName: String = codeName.toLowerCase
+}
+
 object ProvableInfo {
   /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
   def locate(name: String): Option[ProvableInfo] =
@@ -985,11 +991,12 @@ object ProvableInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
     }
 
-  /** Retrieve meta-information on an inference by the given code name `codeName` */
-  def ofCodeName(codeName:String): ProvableInfo = {
-    DerivationInfo.ofCodeName(codeName) match {
-      case info: ProvableInfo => info
-      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+  /** Retrieve meta-information on an inference by the given stored name `storedName` */
+  def ofStoredName(storedName: String): ProvableInfo = {
+    DerivationInfo.allInfo.find({case si: StorableInfo => si.storedName == storedName case _ => false}) match {
+      case Some(info: ProvableInfo) => info
+      case Some(info) => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
+      case _ => throw new Exception("Derivation \"" + storedName + "\" is not a derived axiom or rule.")
     }
   }
 
@@ -1019,10 +1026,10 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
 }
 
 /** Information for a derived axiom proved from the core */
-case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => DependentPositionTactic) extends AxiomInfo {
+case class DerivedAxiomInfo(override val canonicalName: String, override val display: DisplayInfo, override val codeName: String, expr: Unit => DependentPositionTactic) extends AxiomInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
-  def belleExpr = codeName by ((pos:Position, seq:Sequent) => expr()(pos))
+  def belleExpr: BelleExpr = codeName by ((pos: Position, _: Sequent) => expr()(pos))
   override lazy val formula: Formula =
     DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
 //  {
@@ -1096,7 +1103,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 
 
 /** Information for a derived rule proved from the core */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo {
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   lazy val provable: ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
