@@ -610,13 +610,13 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
 class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
     try {
-      val archiveEntries = KeYmaeraXArchiveParser.parse(kyaFileContents)
+      val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
       //@todo checks: fresh names, model created etc.
-      archiveEntries.foreach({ case (name, modelFileContent, _, tactic) =>
+      archiveEntries.foreach({ case (name, modelFileContent, tactic) =>
         val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(x => x.toString)
-        tactic.foreach({ case (tname, texpr) =>
+        tactic.foreach({ case (tname, ttext) =>
           val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive", currentDate())
-          DatabasePopulator.executeTactic(db, modelFileContent, proofId, BellePrettyPrinter(texpr))
+          DatabasePopulator.executeTactic(db, modelFileContent, proofId, ttext)
         })
       })
       new BooleanResponse(true) :: Nil

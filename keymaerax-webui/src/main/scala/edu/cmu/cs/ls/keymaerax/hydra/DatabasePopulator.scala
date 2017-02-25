@@ -2,12 +2,11 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.Calendar
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
@@ -28,6 +27,14 @@ object DatabasePopulator {
   /** Imports tutorial entries from the JSON file at URL. Optionally proves the models when tactics are present. */
   def importJson(db: DBAbstraction, user: String, url: String, prove: Boolean = false): Unit = {
     readTutorialEntries(url).foreach(importModel(db, user, prove))
+  }
+
+  /** Reads a .kya archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
+  def readKya(url: String): List[TutorialEntry] = {
+    val kya = loadResource(url)
+    val archiveEntries = KeYmaeraXArchiveParser.read(kya)
+    archiveEntries.flatMap({case (modelName, modelContent, tactics) =>
+      tactics.map({case (_, tactic) => TutorialEntry(modelName, modelContent, None, None, None, Some((tactic, true)))})})
   }
 
   /** Reads tutorial entries from the specified URL. */

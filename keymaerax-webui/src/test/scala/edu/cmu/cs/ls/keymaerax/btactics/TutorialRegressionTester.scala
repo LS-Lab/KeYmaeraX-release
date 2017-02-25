@@ -20,7 +20,10 @@ import scala.language.postfixOps
 @SlowTest
 class TutorialRegressionTester(val tutorialName: String, val url: String) extends TacticTestBase with AppendedClues {
 
-  private val tutorialEntries = DatabasePopulator.readTutorialEntries(url)
+  private val tutorialEntries =
+    if (url.endsWith(".json")) DatabasePopulator.readTutorialEntries(url)
+    else if (url.endsWith(".kya")) DatabasePopulator.readKya(url)
+    else throw new IllegalArgumentException(s"URL must end in either .json or .kya, but got $url")
 
   //@todo do not fail on first failing model/tactic/proof, accumulate errors and print
 

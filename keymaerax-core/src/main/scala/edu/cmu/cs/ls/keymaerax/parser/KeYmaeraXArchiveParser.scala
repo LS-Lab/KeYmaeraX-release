@@ -35,27 +35,35 @@ object KeYmaeraXArchiveParser {
   private val NAME_REGEX = "^\"([^\"]*)\"\\.(?s)(.*)".r
 
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
-  type ArchiveEntry = (String, String, Expression, List[(String, BelleExpr)])
+  type ParsedArchiveEntry = (String, String, Expression, List[(String, BelleExpr)])
+  /** The entry name, kyx file content, and list of name+tactic text. */
+  type ArchiveEntry = (String, String, List[(String, String)])
 
-  /** Parses the archive content into archive entries  */
-  def parse(archiveContentBOM: String): List[ArchiveEntry] = {
-    val archiveContent : String = ParserHelper.removeBOM(archiveContentBOM)
-    val entries = archiveContent.trim().split("ArchiveEntry").flatMap({s =>
+  /** Parses the archive content into archive entries with parsed model and tactics. */
+  def parse(archiveContentBOM: String): List[ParsedArchiveEntry] = {
+    val archiveContents: List[ArchiveEntry] = read(archiveContentBOM)
+    archiveContents.map({case (name, modelText, tactics) =>
+      (name, modelText, KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText),
+        tactics.map({case (tacticName, tacticText) => (tacticName, BelleParser(tacticText))}))
+    })
+  }
+
+  /** Reads the archive content into string-only archive entries. */
+  def read(archiveContentBOM: String): List[ArchiveEntry] = {
+    val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
+    archiveContent.trim().split("ArchiveEntry").flatMap({s =>
       NAME_REGEX.findAllMatchIn(s.trim().stripSuffix("End.")).map(
         { m =>
           val modelName = m.group(1)
-          val (model: String, tactics: List[(String, BelleExpr)]) = m.group(2).split("Tactic").toList match {
+          val (model: String, tactics: List[(String, String)]) = m.group(2).split("Tactic").toList match {
             case modelText :: ts => (modelText.trim(), ts.flatMap(tacticText => {
               NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix("End.")).map({
-                tm => (tm.group(1), BelleParser(tm.group(2)))
+                tm => (tm.group(1), tm.group(2))
               })
             }))
           }
           (modelName, model, tactics)
         })
-      })
-    entries.map({case (name, modelText, tactic) =>
-      (name, modelText, KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText), tactic)
     }).toList
   }
 }

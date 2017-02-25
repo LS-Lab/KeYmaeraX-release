@@ -80,7 +80,7 @@ object CourseMain {
   }
 
   private def check(archiveFile : ArgValue) = {
-    val archiveEntries : List[KeYmaeraXArchiveParser.ArchiveEntry] = try {
+    val archiveEntries : List[KeYmaeraXArchiveParser.ParsedArchiveEntry] = try {
       parseArchiveFileOrfail(archiveFile)
     } catch {
       case e : Throwable => {
@@ -143,7 +143,7 @@ object CourseMain {
     }
   }
 
-  private def parseArchiveFileOrfail(v: ArgValue) : List[KeYmaeraXArchiveParser.ArchiveEntry] = {
+  private def parseArchiveFileOrfail(v: ArgValue) : List[KeYmaeraXArchiveParser.ParsedArchiveEntry] = {
     val fileName = fileExistsOrFail(v)
     val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
