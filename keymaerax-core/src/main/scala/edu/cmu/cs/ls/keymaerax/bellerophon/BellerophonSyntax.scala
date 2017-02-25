@@ -69,7 +69,7 @@ trait NamedBelleExpr extends BelleExpr {
 /** Give a code name to the given tactic `tactic` for serialization purposes. */
 case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   //@todo make this an assert.
-  if(!DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
+  if(name != "ANON" && !DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
 }
 
 /* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
