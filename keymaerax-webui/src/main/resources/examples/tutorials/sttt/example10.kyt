@@ -2,10 +2,10 @@ implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
   QE & done,
   QE & done,
   chase('R) & normalize & <(
-    hideL(-9) & DC({`c>=0`}, 1) & <(
-      DC({`dx^2+dy^2=1`}, 1) & <(
-        DC({`v=old(v)+a*c`}, 1) & <(
-          DC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) & <(
+    hideL(-9) & dC({`c>=0`}, 1) & <(
+      dC({`dx^2+dy^2=1`}, 1) & <(
+        dC({`v=old(v)+a*c`}, 1) & <(
+          dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) & <(
             (andL('L)*) & dW(1) &
             (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) &
             transformEquality({`ep()=c`}, -8) & prop & doall(smartQE & done),
@@ -17,10 +17,10 @@ implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
         ),
       dI(1) & done
       ),
-    DC({`c>=0`}, 1) & <(
-      DC({`dx^2+dy^2=1`}, 1) & <(
-        DC({`v=old(v)`}, 1) & <(
-          DC({`-c*v <= y - old(y) & y - old(y) <= c*v`}, 1) & <(
+    dC({`c>=0`}, 1) & <(
+      dC({`dx^2+dy^2=1`}, 1) & <(
+        dC({`v=old(v)`}, 1) & <(
+          dC({`-c*v <= y - old(y) & y - old(y) <= c*v`}, 1) & <(
             (andL('L)*) & dW(1) & prop & doall(smartQE & done),
             dI(1) & done
             ),
@@ -30,10 +30,10 @@ implyR(1) & (andL('L)*) & loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
         ),
       dI(1) & done
       ),
-    DC({`c>=0`}, 1) & <(
-      DC({`dx^2+dy^2=1`}, 1) & <(
-        DC({`v=old(v)+a*c`}, 1) & <(
-          DC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) & <(
+    dC({`c>=0`}, 1) & <(
+      dC({`dx^2+dy^2=1`}, 1) & <(
+        dC({`v=old(v)+a*c`}, 1) & <(
+          dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) & <(
             (andL('L)*) & dW(1) & prop & doall(smartQE & done),
             dI(1) & done
             ),

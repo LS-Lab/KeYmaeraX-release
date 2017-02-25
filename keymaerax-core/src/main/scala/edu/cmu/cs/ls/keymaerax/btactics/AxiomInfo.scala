@@ -108,7 +108,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
     new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
-    new InputPositionTacticInfo("assignbexistsRule",
+    new InputPositionTacticInfo("assignbExistsRule",
       RuleDisplayInfo(
         "[:=] assign exists",
         /* conclusion */ (List("&Gamma;"), List("∃t [x:=t;]P", "&Delta;")),
@@ -241,8 +241,6 @@ object DerivationInfo {
       , AxiomDisplayInfo("DVleq", "todo DVleq")
       , "DVleq", {case () => ???}),
 
-    new PositionTacticInfo("axiomaticSolve", "axiomaticSolve", {case () => AxiomaticODESolver.apply()}, needsTool = true),
-    
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn"
       , AxiomDisplayInfo(("c()'", "c()′"), "<span class=\"k4-axiom-key\">(c)′</span>=0")
@@ -256,7 +254,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("x' derive var commuted"
       ,  AxiomDisplayInfo(("x′,C","x',C"), "x′=<span class=\"k4-axiom-key\">(x)′</span>")
       , "DvariableCommutedAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
-    new PositionTacticInfo("DvariableTactic"
+    new PositionTacticInfo("Dvariable"
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
       , {case () => DifferentialTactics.Dvariable}),
     new CoreAxiomInfo("+' derive sum"
@@ -638,8 +636,8 @@ object DerivationInfo {
         , List((List("&Gamma;"),List("&Delta;")))),
       {case () => SequentCalculus.hideR}),
     new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}),
-    new PositionTacticInfo("coHideL", "W", {case () => SequentCalculus.cohideL}),
-    new PositionTacticInfo("coHideR", "W", {case () => SequentCalculus.cohideR}),
+    new PositionTacticInfo("cohideL", "W", {case () => SequentCalculus.cohideL}),
+    new PositionTacticInfo("cohideR", "W", {case () => SequentCalculus.cohideR}),
     new PositionTacticInfo("closeFalse"
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
       , {case () => TactixLibrary.closeF}),
@@ -647,7 +645,7 @@ object DerivationInfo {
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
         ,{case () => TactixLibrary.closeT}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
-    new PositionTacticInfo("coHide", "W", {case () => SequentCalculus.cohide}),
+    new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
@@ -778,12 +776,6 @@ object DerivationInfo {
     new PositionTacticInfo("dgZeroPolynomial",
       "dgZeroPolynomial",
       {case () => DifferentialTactics.dgZeroPolynomial}, needsTool = true),
-    new PositionTacticInfo("DIRule",
-      RuleDisplayInfo("DI",
-        (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
-        /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;")),
-          (List("&Gamma;", "Q"), List("[{x′ = f(x) & Q}](P)′","&Delta;")))),
-      {case () => DifferentialTactics.DIRule}),
     new PositionTacticInfo("dI",
     RuleDisplayInfo("dI",
       (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
@@ -797,25 +789,14 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′ = f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
     , _ => ((fml:Formula) => TactixLibrary.diffInvariant(fml)): TypedFunc[Formula, BelleExpr]),
-    new PositionTacticInfo("AxiomaticODESolver",
-      RuleDisplayInfo("AxiomaticODESolver",
-        (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
-        List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => AxiomaticODESolver.apply}, needsTool = true),
     new PositionTacticInfo("solve",
       RuleDisplayInfo("solve",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
       {case () => TactixLibrary.solve}, needsTool = true),
-    new PositionTacticInfo("autoDiffSolve",
-    RuleDisplayInfo("solve",
-      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
-      List((List("&Gamma;", "t≥0"), List("[x:=sol(t)](q(x) → p(x))")))),
-    {case () => TactixLibrary.solve}, needsTool = true),
     new PositionTacticInfo("DGauto",
       "DGauto",
       {case () => TactixLibrary.DGauto}, needsTool = true),
-    new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
     // DLBySubst
     //new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),

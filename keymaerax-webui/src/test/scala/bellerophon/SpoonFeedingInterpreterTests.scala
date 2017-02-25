@@ -216,7 +216,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = SpoonFeedingInterpreter(proofId, db.db.createProof, listener(db.db), SequentialInterpreter)
 
-    val tacticText = "implyR('R) & andL('L) & DC({`v>=0`}, 1) & <(dW(1) & prop, dI(1))"
+    val tacticText = "implyR('R) & andL('L) & dC({`v>=0`}, 1) & <(dW(1) & prop, dI(1))"
     val tactic = BelleParser(tacticText)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
@@ -294,7 +294,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     // db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.
-    db.extractTactic(proofId) shouldBe BelleParser("(implyR(1)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(loop({`v>=0&xm<=x&xr=(xm+S)/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( QE, QE, (andL('L)&(andL('L)&(andL('L)&(composeb(1)&(choiceb(1)&(andR(1)&<( (composeb(1)&(assignb(1)&(composeb(1)&(assignb(1)&(testb(1)&(implyR(1)&(DC({`xm<=x`},1)&<( (DC({`5/4*(x-(xm+S)/2)^2+(x-(xm+S)/2)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( (dW(1)&QE), dI(1) )), dI(1) )))))))), (testb(1)&(implyR(1)&(DC({`xm<=x`},1)&<( (DC({`5/4*(x-(xm+S)/2)^2+(x-(xm+S)/2)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( (dW(1)&QE), dI(1) )), dI(1) )))) ))))))) )))))))))")
+    db.extractTactic(proofId) shouldBe BelleParser("(implyR(1)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(loop({`v>=0&xm<=x&xr=(xm+S)/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( QE, QE, (andL('L)&(andL('L)&(andL('L)&(composeb(1)&(choiceb(1)&(andR(1)&<( (composeb(1)&(assignb(1)&(composeb(1)&(assignb(1)&(testb(1)&(implyR(1)&(dC({`xm<=x`},1)&<( (dC({`5/4*(x-(xm+S)/2)^2+(x-(xm+S)/2)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( (dW(1)&QE), dI(1) )), dI(1) )))))))), (testb(1)&(implyR(1)&(dC({`xm<=x`},1)&<( (dC({`5/4*(x-(xm+S)/2)^2+(x-(xm+S)/2)*v/2+v^2/4 < ((S-xm)/2)^2`},1)&<( (dW(1)&QE), dI(1) )), dI(1) )))) ))))))) )))))))))")
   }}
 
   it should "record STTT tutorial example 10 steps" taggedAs SlowTest in withMathematica { tool => withDatabase { db =>
@@ -306,7 +306,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     //db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.
-    db.extractTactic(proofId) shouldBe BelleParser("(implyR(1)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(loop({`v>=0&dx^2+dy^2=1&r!=0&abs(y-ly)+v^2/(2*b) < lw`},1)&<( QE, QE, (chase('R)&(normalize&<( (HideL(-9)&(DC({`c>=0`},1)&<( (DC({`dx^2+dy^2=1`},1)&<( (DC({`v=old(v)+a*c`},1)&<( (DC({`-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)`},1)&<( (dW(1)&(implyR('R)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(transformEquality({`ep=c`},-8)&(prop&smartQE)))))))))), dI(1) )), dI(1) )), dI(1) )), dI(1) ))), (DC({`c>=0`},1)&<( (DC({`dx^2+dy^2=1`},1)&<( (DC({`v=old(v)`},1)&<( (DC({`-c*v<=y-old(y)&y-old(y)<=c*v`},1)&<( (dW(1)&(prop&smartQE)), dI(1) )), dI(1) )), dI(1) )), dI(1) )), (DC({`c>=0`},1)&<( (DC({`dx^2+dy^2=1`},1)&<( (DC({`v=old(v)+a*c`},1)&<( (DC({`-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)`},1)&<( (dW(1)&(prop&smartQE)), dI(1) )), dI(1) )), dI(1) )), dI(1) )) ))) ))))))))))))")
+    db.extractTactic(proofId) shouldBe BelleParser("(implyR(1)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(loop({`v>=0&dx^2+dy^2=1&r!=0&abs(y-ly)+v^2/(2*b) < lw`},1)&<( QE, QE, (chase('R)&(normalize&<( (hideL(-9)&(dC({`c>=0`},1)&<( (dC({`dx^2+dy^2=1`},1)&<( (dC({`v=old(v)+a*c`},1)&<( (dC({`-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)`},1)&<( (dW(1)&(implyR('R)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(andL('L)&(transformEquality({`ep=c`},-8)&(prop&smartQE)))))))))), dI(1) )), dI(1) )), dI(1) )), dI(1) ))), (dC({`c>=0`},1)&<( (dC({`dx^2+dy^2=1`},1)&<( (dC({`v=old(v)`},1)&<( (dC({`-c*v<=y-old(y)&y-old(y)<=c*v`},1)&<( (dW(1)&(prop&smartQE)), dI(1) )), dI(1) )), dI(1) )), dI(1) )), (dC({`c>=0`},1)&<( (dC({`dx^2+dy^2=1`},1)&<( (dC({`v=old(v)+a*c`},1)&<( (dC({`-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)`},1)&<( (dW(1)&(prop&smartQE)), dI(1) )), dI(1) )), dI(1) )), dI(1) )) ))) ))))))))))))")
   }}
 
   "Revealing internal steps" should "should work for diffInvariant" in withMathematica { tool => withDatabase { db =>
@@ -317,7 +317,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
-    tactic shouldBe BelleParser("implyR('R) & DC({`x>=old(x)`},1) & <(nil, dI(1))")
+    tactic shouldBe BelleParser("implyR('R) & dC({`x>=old(x)`},1) & <(nil, dI(1))")
   }}
 
   it should "should work for multiple levels of diffInvariant without let" in withMathematica { _ => withDatabase { db =>
@@ -353,7 +353,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser(
       """
-        |implyR('R) & (DCaxiom(1) & <(
+        |implyR('R) & (dCaxiom(1) & <(
         |  (nil&nil),
         |  (nil & (DI(1) & (implyR(1) & (andR(1) & <(
         |    close,
@@ -568,7 +568,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
-  it should "work for DC+DI" in withMathematica { tool =>
+  it should "work for dC+DI" in withMathematica { tool =>
     val problem =
       """
         |w()^2*x^2 + y^2 <= c()^2
@@ -586,11 +586,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.findNode("2") match {
       case Some(n1) =>
         val (id1, tactic1) = stepInto(n1, "diffInvariant({`d>=0`},1)")
-        tactic1 shouldBe BelleParser("DC({`d>=0`},1) & <(nil, dI(1))")
+        tactic1 shouldBe BelleParser("dC({`d>=0`},1) & <(nil, dI(1))")
         //diffCut
         ProofTree.ofTrace(db.getExecutionTrace(id1)).findNode("1") match {
           case Some(n2) =>
-            val (id2, tactic2) = stepInto(n2, "DC({`d>=0`},1)")
+            val (id2, tactic2) = stepInto(n2, "dC({`d>=0`},1)")
             tactic2 shouldBe BelleParser("DCdiffcut({`d>=0`},1)")
             ProofTree.ofTrace(db.getExecutionTrace(id2)).findNode("1") match {
               case Some(n3) =>

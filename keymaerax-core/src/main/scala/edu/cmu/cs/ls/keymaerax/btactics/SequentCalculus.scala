@@ -37,9 +37,9 @@ trait SequentCalculus {
   /** Hide/weaken whether left or right */
   val hide    : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
-  val hideL   : BuiltInLeftTactic = "HideL" by { (pr:ProvableSig, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
+  val hideL   : BuiltInLeftTactic = "hideL" by { (pr:ProvableSig, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
-  val hideR   : BuiltInRightTactic = "HideR" by { (pr:ProvableSig, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
+  val hideR   : BuiltInRightTactic = "hideR" by { (pr:ProvableSig, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
   /** CoHide/weaken left: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   val cohideL : BuiltInLeftTactic = "cohideL" by { (pr:ProvableSig, pos:AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
   /** CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight CoHideRight]]) */
@@ -209,7 +209,7 @@ trait SequentCalculus {
   // derived propositional
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
-  val equivifyR: BuiltInRightTactic = "EquivifyR" by { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
+  val equivifyR: BuiltInRightTactic = "equivifyR" by { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
   /** Modus Ponens: p&(p->q) -> q.
     * @example{{{
     *      p, q, G |- D
@@ -221,9 +221,9 @@ trait SequentCalculus {
     */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics.modusPonens(assumption, implication)
   /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivLeft CommuteEquivLeft]] */
-  val commuteEquivL: BuiltInLeftTactic = "CommuteEquivL" by { (pr:ProvableSig, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
+  val commuteEquivL: BuiltInLeftTactic = "commuteEquivL" by { (pr:ProvableSig, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]] */
-  val commuteEquivR: BuiltInRightTactic = "CommuteEquivR" by { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
+  val commuteEquivR: BuiltInRightTactic = "commuteEquivR" by { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
   lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 

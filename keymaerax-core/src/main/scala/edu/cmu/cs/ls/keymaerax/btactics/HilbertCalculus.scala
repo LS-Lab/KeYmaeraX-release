@@ -345,7 +345,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       * }}}
       * @incontext
       */
-    lazy val Dvar                = "Dvar" by {(pos:Position) => (if (INTERNAL) useAt("x' derive var") else DifferentialTactics.Dvariable)(pos)}
+    lazy val Dvar: DependentPositionTactic = "Dvar" by {(pos:Position) => (if (INTERNAL) useAt("x' derive var") else DifferentialTactics.Dvariable)(pos)}
 
     /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
     lazy val Dand               : DependentPositionTactic = useAt("&' derive and")
