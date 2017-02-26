@@ -7,10 +7,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 
 import scala.collection.immutable.IndexedSeq
-import org.scalatest.{FlatSpec, Matchers}
 
 import scala.language.postfixOps
 
@@ -183,7 +181,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      (andL('Llast) & (andL('Llast)*)))
+      andL('Llast) & (andL('Llast)*))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
@@ -191,7 +189,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "fail when not at least 1 repetition is possible" in {
     a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
-      (andL('Llast) & (andL('Llast)*)))
+      andL('Llast) & (andL('Llast)*))
   }
 
   it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in {
@@ -307,6 +305,50 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "not screw up empty labels" in {
     proveBy(
       "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula, prop) shouldBe 'proved
+  }
+
+  it should "finish working branches before failing" in {
+    var finishedBranches = Seq.empty[Int]
+    def logDone(branch: Int) = new DependentTactic("ANON") {
+      override def computeExpr(provable: ProvableSig): BelleExpr = {
+        finishedBranches = finishedBranches :+ branch
+        skip
+      }
+    }
+
+    a [BelleThrowable] should be thrownBy proveBy("x>0 -> x>5 & x>0 & [?x>1;]x>1".asFormula, implyR(1) & andR(1) <(
+      DebuggingTactics.printIndexed("Branch 1") & closeId & /* not reached */ logDone(1),
+      andR(1) <(
+        DebuggingTactics.printIndexed("Branch 2") & closeId & logDone(2)
+        ,
+        DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
+      )
+    ))
+
+    finishedBranches should contain theSameElementsAs Seq(2, 3)
+  }
+
+  it should "finish working branches before failing with combined error message" in {
+    var finishedBranches = Seq.empty[Int]
+    def logDone(branch: Int) = new DependentTactic("ANON") {
+      override def computeExpr(provable: ProvableSig): BelleExpr = {
+        finishedBranches = finishedBranches :+ branch
+        skip
+      }
+    }
+
+    the [BelleThrowable] thrownBy proveBy("x>0 -> x>5 & x>2 & [?x>1;]x>1".asFormula, implyR(1) & andR(1) <(
+      DebuggingTactics.printIndexed("Branch 1") & closeId & /* not reached */ logDone(1),
+      andR(1) <(
+        DebuggingTactics.printIndexed("Branch 2") & closeId & /* not reached */ logDone(2)
+        ,
+        DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
+      )
+    )) should have message
+      """[Bellerophon Runtime] Left Message: [Bellerophon Runtime] Unable to create dependent tactic
+        |Right Message: [Bellerophon Runtime] Unable to create dependent tactic)""".stripMargin
+
+    finishedBranches should contain theSameElementsAs Seq(3)
   }
 
   "Let" should "fail (but not horribly) when inner proof cannot be started" in {

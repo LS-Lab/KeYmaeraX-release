@@ -154,20 +154,19 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             if (children.length != p.subgoals.length)
               throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
             //Compute the results of piecewise applications of children to provable subgoals.
-            val results: Seq[BelleProvable] =
+            val results: Seq[Either[BelleValue,BelleThrowable]] =
               (children zip p.subgoals) map (pair => {
                 val e_i = pair._1
                 val s_i = pair._2
-                val ithResult = try {
-                  apply(e_i, bval(s_i))
+                try {
+                  Left(apply(e_i, bval(s_i)))
                 } catch {
-                  case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
-                }
-                ithResult match {
-                  case b@BelleProvable(_, _) => b
-                  case _ => throw new BelleThrowable("Each piecewise application in a Branching tactic should result in a provable.").inContext(expr, "")
+                  case e: BelleThrowable => Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
                 }
               })
+
+            val errors = results.collect({case Right(r) => r})
+            if (errors.nonEmpty) throw errors.reduce[BelleThrowable](new CompoundException(_, _))
 
             // Compute a single provable that contains the combined effect of all the piecewise computations.
             // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
@@ -176,7 +175,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
             //@todo preserve labels from parent p (turn new labels into sublabels)
             val combinedEffect =
-              results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({ case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) => {
+              results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({ case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) => {
                 val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p)
                 val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                   case (Some(origLabels), Some(newLabels)) =>
