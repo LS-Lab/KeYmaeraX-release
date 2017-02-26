@@ -349,25 +349,23 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
         }
 
-        case AppliedDependentTwoPositionTactic(t, p1, p2) => {
+        case AppliedDependentTwoPositionTactic(t, p1, p2) =>
           val provable = v match {
             case BelleProvable(p,_) => p
             case _ => throw new BelleThrowable("two position tactics can only be run on Provables.")
           }
           apply(t.computeExpr(p1, p2).computeExpr(provable), v)
-        }
       }
       listeners.foreach(l => l.end(v, expr, Left(result)))
       result
     } catch {
-      case err:BelleThrowable =>
+      case err: BelleThrowable =>
         listeners.foreach(l => l.end(v, expr, Right(err)))
         throw err
-      case e:Throwable =>
-        //@todo Either alert the listeners like we do in the BelleThrowable case above, or else augment the error message that's thrown here to explain the database inconsisitency problem.
-        println(s"Unknown exception running $expr: $e\nDatabase recording is incomplete!")
-        e.printStackTrace()
-        throw e
+      case e: Throwable =>
+        val be = new BelleThrowable("Error in sequential interpreter: " + e.getMessage, e)
+        listeners.foreach(l => l.end(v, expr, Right(be)))
+        throw be
     }
   }
 
