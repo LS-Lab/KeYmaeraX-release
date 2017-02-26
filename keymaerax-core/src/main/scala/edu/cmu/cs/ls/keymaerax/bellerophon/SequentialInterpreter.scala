@@ -104,13 +104,13 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         } catch {
           case e: BelleThrowable => throw e.inContext(d, v.prettyString)
             //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
-          case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic", e).inContext(d, "")
+          case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic: " + e.getMessage, e).inContext(d, "")
         }
         case it: InputTactic => try {
           apply(it.computeExpr(), v)
         } catch {
           case e: BelleThrowable => throw e.inContext(it, v.prettyString)
-          case e: Throwable => throw new BelleThrowable("Unable to create input tactic", e).inContext(it, "")
+          case e: Throwable => throw new BelleThrowable("Unable to create input tactic: " + e.getMessage, e).inContext(it, "")
         }
         case PartialTactic(child, _) => try {
           apply(child, v)
@@ -277,7 +277,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val in: ProvableSig = try {
             ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
           } catch {
-            case e: Throwable => throw new BelleThrowable("Unable to start inner proof in let", e)
+            case e: Throwable => throw new BelleThrowable("Unable to start inner proof in let: " + e.getMessage, e)
           }
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)

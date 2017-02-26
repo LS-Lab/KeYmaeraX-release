@@ -345,8 +345,12 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
       )
     )) should have message
-      """[Bellerophon Runtime] Left Message: [Bellerophon Runtime] Unable to create dependent tactic
-        |Right Message: [Bellerophon Runtime] Unable to create dependent tactic)""".stripMargin
+      """[Bellerophon Runtime] Left Message: [Bellerophon Runtime] Unable to create dependent tactic: requirement failed: Expects same formula in antecedent and succedent. Found:
+        |   -1:  x>0	Greater
+        |==> 1:  x>5	Greater
+        |Right Message: [Bellerophon Runtime] Unable to create dependent tactic: requirement failed: Expects same formula in antecedent and succedent. Found:
+        |   -1:  x>0	Greater
+        |==> 1:  x>2	Greater)""".stripMargin
 
     finishedBranches should contain theSameElementsAs Seq(3)
   }
@@ -354,7 +358,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   "Let" should "fail (but not horribly) when inner proof cannot be started" in {
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
     the [BelleThrowable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
-      "[Bellerophon Runtime] Unable to start inner proof in let"
+      "[Bellerophon Runtime] Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
     val result = proveBy(fml, BelleParser("let ({`f()=f`}) in (nil) | nil"))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
