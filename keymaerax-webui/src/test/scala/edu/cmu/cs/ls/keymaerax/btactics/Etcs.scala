@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{composeIndex, defaultTaxs, groundEqualityIndex}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 import edu.cmu.cs.ls.keymaerax.core._
@@ -206,6 +207,29 @@ class Etcs extends TacticTestBase {
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
     foResult.subgoals.head.succ should contain only "m-z<=v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&((ep()=0&0=tpost())&((apost()=0&b()=0)&((v=0&vpost()=0)&z=zpost()|(v=vpost()&z=zpost())&v>0)|(apost()+b()=0&b()!=0)&((v=0&vpost()=0)&zpost()=z|(vpost()=v&zpost()=z)&v>0))|ep()>0&((0=tpost()&((apost()=0&b()=0)&((v=0&vpost()=0)&z=zpost()|(v=vpost()&zpost()=z)&v>0)|(apost()+b()=0&b()!=0)&((v=0&vpost()=0)&zpost()=z|(v=vpost()&zpost()=z)&v>0))|(0 < tpost()&tpost() < ep())&(v=0&(((b() < 0&0=b()*tpost()+vpost())&0.5*b()*(-tpost())^2+zpost()=z)&apost()+b()=0|((b()=0&vpost()=0)&z=zpost())&apost()=0)|v>0&(((apost()=0&b()=0)&v=vpost())&zpost()=tpost()*v+z|((apost()+b()=0&v=b()*tpost()+vpost())&0.5*b()*(-tpost())^2+zpost()=tpost()*v+z)&(b()>0&b()+(-tpost())^-1*v<=0|b() < 0))))|ep()=tpost()&(v=0&(((b() < 0&0=b()*tpost()+vpost())&0.5*b()*(-tpost())^2+zpost()=z)&apost()+b()=0|((b()=0&vpost()=0)&z=zpost())&apost()=0)|v>0&(((apost()=0&b()=0)&v=vpost())&zpost()=tpost()*v+z|((apost()+b()=0&v=b()*tpost()+vpost())&0.5*b()*(-tpost())^2+zpost()=tpost()*v+z)&(b()>0&b()<=ep()^-1*v|b() < 0)))))|m-z>=v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&((ep()=0&0=tpost())&((A()=0&apost()=0)&((v=0&vpost()=0)&z=zpost()|(v=vpost()&z=zpost())&v>0)|(A()=apost()&A()!=0)&((v=0&vpost()=0)&zpost()=z|(v=vpost()&zpost()=z)&v>0))|ep()>0&((0=tpost()&((A()=0&apost()=0)&((v=0&vpost()=0)&z=zpost()|(v=vpost()&zpost()=z)&v>0)|(A()=apost()&A()!=0)&((v=0&vpost()=0)&zpost()=z|(vpost()=v&zpost()=z)&v>0))|(0 < tpost()&tpost() < ep())&(v=0&(((A()=0&vpost()=0)&z=zpost())&apost()=0|((A()>0&vpost()=A()*tpost())&zpost()=0.5*A()*(-tpost())^2+z)&A()=apost())|v>0&(((A()=0&apost()=0)&v=vpost())&zpost()=tpost()*v+z|((A()=apost()&vpost()=A()*tpost()+v)&zpost()=0.5*A()*(-tpost())^2+tpost()*v+z)&(A() < 0&(-tpost())^-1*v<=A()|A()>0))))|ep()=tpost()&(v=0&(((A()=0&vpost()=0)&z=zpost())&apost()=0|((A()>0&vpost()=A()*tpost())&zpost()=0.5*A()*(-tpost())^2+z)&A()=apost())|v>0&(((A()=0&apost()=0)&v=vpost())&zpost()=tpost()*v+z|((A()=apost()&vpost()=A()*tpost()+v)&zpost()=0.5*A()*(-tpost())^2+tpost()*v+z)&(A() < 0&A()+ep()^-1*v>=0|A()>0)))))".asFormula
+  }
+
+  "ETCS Euler ModelPlex" should "extract model monitor from detailed braking" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")
+    val src = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (model,proof) = SimplifierV2.rewriteLoopAux(src, List(Variable("SB")))
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("do"),
+      Variable("mo"), Variable("d"), Variable("m"), Variable("vdes"), Variable("em"), Variable("Ib"), Variable("Tw"),
+      Variable("SB"), Variable("t"), Variable("z"), Variable("v"))
+
+    val tactic = ModelPlex.modelMonitorByChase(ModelPlex.eulerSystemAllIn)(1) &
+      DebuggingTactics.print("Euler-approximate system result") & Idioms.<(
+      ModelPlex.unrollLoop(1)(1) & (ModelPlex.chaseEulerAssignments(1)*),
+      skip, skip, skip, skip)
+
+    val result = proveBy(modelplexInput, tactic)
+    result.subgoals should have size 5 // ignore all but first branch (open because Euler "axiom" is not an axiom)
+    val flipped = ModelPlex.flipUniversalEulerQuantifiers(result.subgoals.head.succ.head)
+    val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & simplifier(1))
+    simplified.subgoals should have size 1
+    simplified.subgoals.head.ante shouldBe empty
+    simplified.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*(voff()*sbsc()/ms())*(mpost()-m)&vdespost()>=0)&dopost()=d&mopost()=m&empost()=em&Ibpost()=Ib&Twpost()=Tw&SBpost()=SB&tpost()=t&zpost()=z&vpost()=v|dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=1&Ibpost()=Ib&Twpost()=Tw&SBpost()=SB&tpost()=t&zpost()=z&vpost()=v)|v<=vdes&(0<=Twpost()&Twpost()<=A())&((m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&1<=Ibpost()&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(0)-Fe(v)-Fb(v*(Ibpost()-1)))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Twpost()=0&SBpost()=SB|!(m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(Twpost())-Fe(v)-Fb(0))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Ibpost()=1&SBpost()=SB)|v>=vdes&1<=Ibpost()&((m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(0)-Fe(v)-Fb(v*(Ibpost()-1)))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Twpost()=0&SBpost()=SB|!(m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(0)-Fe(v)-Fb(v*(Ibpost()-1)))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Twpost()=0&SBpost()=SB)".asFormula
   }
 
   "ETCS formula metric" should "convert controller monitor" in withMathematica { tool =>
