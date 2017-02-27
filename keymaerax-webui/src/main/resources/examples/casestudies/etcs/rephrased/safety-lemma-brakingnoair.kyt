@@ -1,0 +1,35 @@
+/* tactic definitions */
+tactic odeBrakeT as (diffInvariant({`t>=0`},'R) ; diffInvariant({`v<=old(v)-(voff()*sbsc()/ms())*t`},'R) ; diffInvariant({`z<=old(z)+old(v)*t-(voff()*sbsc()/ms())/2*t^2`},'R) ; dW('R)) ;
+tactic odeAccT   as (diffInvariant({`t>=0`},'R) ; diffInvariant({`v=old(v)+(Tw/ms()-voff()*sbsc()/ms())*t`},'R) ; diffInvariant({`z=old(z)+v*t-(Tw/ms()-voff()*sbsc()/ms())/2*t^2`},'R) ; dW('R))
+;
+/* function definitions */
+def {`Ft(Tw)   = mu()*Tw/Rw()`} ;
+def {`Fe(v)    = Fr()+ms()*g()*sp()`} ;
+def {`Fr()     = ms()*cr()`} ;
+def {`Fb(vIb)  = (vIb+voff())*sbsc()+ebc()`}
+;
+/* these lets should be implicit, but need postponable tactics so that expand can end let and then continue afterwards */
+let ({`Fb(vIb) = (vIb+voff())*sbc()+ebc()`}) in (
+let ({`Fr()    = ms()*cr()`}) in (
+let ({`Fe(v)   = Fr()+ms()*g()*sp()`}) in (
+let ({`Ft(Tw)  = mu()*Tw/Rw()`}) in (
+  prop ; loop({`v^2 - d^2 <= 2*(voff()*sbsc()/ms())*(m-z) & d >= 0`}, 1) ; <(
+    QE,
+    QE,
+    unfold /*; expand {`Ft(Tw)`} etc. */
+  )
+))))
+;
+/* after everything is expanded */
+<(
+  /* RBC: drive */ QE,
+  /* RBC: emergency brake closes propositionally in unfold */
+  /* Train: protect, override acc.  */ odeBrakeT,
+  /* Train: protect, override brake */ odeBrakeT,
+  /* Train: vel. control: acc. */      odeAccT,
+  /* Train: vel. control: brake */     odeBrakeT
+)
+;
+doall(QE)
+;
+done
