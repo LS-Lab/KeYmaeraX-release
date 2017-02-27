@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalF
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.StopTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -180,15 +181,50 @@ object ModelPlex extends ModelPlexTrait {
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
-  /** Euler-approximates all ODEs somewhere underneat pos */
+  /** Euler-approximates all atomic ODEs somewhere underneath pos */
   def eulerAllIn: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
-    //@todo evolution domain
     val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 & \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
-    //@todo systems as follows?
-    //val eulerAxiom = "<{x_'=f(x_),c&q(||)}>p(x_) <-> <{c,x_'=f(x_)&q(||)}>(\\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x);}*>(t_>=0 -> \\exists y_ (abs(x_-y_) < e_ & p(y_)) )))))".asFormula
-
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
       case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startProof(eulerAxiom), PosInExpr(0::Nil))(pp))
+      case _ => None
+    })
+    positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  })
+
+  /** Euler-approximates all ODEs somewhere underneath pos. Systematic tactic, but not a proof. */
+  def eulerSystemAllIn: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+    /** Simultaneous updates of all variables with step size h */
+    def createSystemApprox(atoms: List[AtomicODE], h: Term): Program = {
+      val initial: Map[Variable, Variable] = atoms.map({ case AtomicODE(DifferentialSymbol(x), _) =>
+        x -> TacticHelper.freshNamedSymbol(x, sequent)}).toMap
+      val initials = initial.map({case (v, v0) => Assign(v0, v)}).reduce(Compose)
+      val eulerSteps: Program = atoms.map({case AtomicODE(DifferentialSymbol(x), f) =>
+        Assign(x, Plus(x, Times(h, initial.foldLeft(f)({case (ff, (y, y0)) => ff.replaceFree(y, y0)}))))}).reduce(Compose)
+      Compose(initials, eulerSteps)
+    }
+
+    /** Error norm */
+    def createErrorMargin(primed: List[Variable], e: Term, p: Formula): Formula = {
+      // \exists y_ (norm(x_-y_) < e_ & p(y_))
+      val ys: Map[Variable, Variable] = primed.map(x => x -> TacticHelper.freshNamedSymbol(Variable("y" + x.name, x.index, x.sort), sequent)).toMap
+      val py = ys.foldLeft(p)({case (pp, (x, y)) => pp.replaceFree(x, y)})
+      val norm = ys.map({case (x, y) => Power(Minus(x, y), Number(2))}).reduce(Plus)
+      val marginP = And(Less(norm, Power(e, Number(2))), py)
+      //Exists(ys.values.toList, margin)
+      ys.foldLeft[Formula](marginP)({case (m, (_, y)) => Exists(y::Nil, m)})
+    }
+
+    def createEulerAxiom(ode: ODESystem, p: Formula): Formula = {
+      val h = "h_".asVariable
+      val e = "e_".asVariable
+      val systemApprox = createSystemApprox(DifferentialHelper.atomicOdes(ode), h)
+      val errorMargin = createErrorMargin(DifferentialHelper.getPrimedVariables(ode), e, p)
+      s"<{c_&q_(||)}>p_(||) <-> \\exists t_ (t_>=0 & \\forall $e ($e>0 -> \\forall h0_ (h0_>0 -> \\exists $h (0<$h&$h<h0_&<{$systemApprox}*>(t_>=0 & $errorMargin) ))))".asFormula
+    }
+
+    val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
+      //@note OnAll necessary since the "show axiom" branches are left open by useAt (because we cut in the desired result, not use an actual axiom)
+      case (Diamond(ode: ODESystem, p), dpos) => Some(OnAll(useAt(ProvableSig.startProof(createEulerAxiom(ode, p)), PosInExpr(0::Nil))(dpos) | skip))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -221,7 +257,7 @@ object ModelPlex extends ModelPlexTrait {
   /** Chases remaining assignments. */
   lazy val chaseEulerAssignments: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-      case (Diamond(_: Assign, _), pp) => Some(chase(pp))
+      case (Diamond(_, _), pp) => Some(chase(pp))
       case _ => None
     })
     positions.lastOption.getOrElse(skip)

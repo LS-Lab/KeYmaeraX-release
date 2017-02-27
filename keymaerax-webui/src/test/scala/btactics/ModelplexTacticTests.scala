@@ -173,6 +173,33 @@ class ModelplexTacticTests extends TacticTestBase {
     simplified.subgoals.head.succ should contain only "tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(abs(2-xpost()) < epost_0()|abs(2+hpost_0()*-6+hpost_0()*(-3*(2+hpost_0()*-6))-xpost()) < epost_0())".asFormula
   }
 
+  it should "find euler model monitor condition for systems" in withMathematica { tool =>
+    val model = "true -> [x:=2;{x'=-3*x,y'=x-y}]x>0".asFormula
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("x"), Variable("y"))
+
+    val eulerApproxed = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(ModelPlex.eulerSystemAllIn)(1))
+    eulerApproxed.subgoals should have size 2
+    eulerApproxed.subgoals.head.ante shouldBe empty
+    eulerApproxed.subgoals.head.succ should contain only "\\forall x (x=2->\\exists t_ (t_>=0&\\forall e_ (e_>0->\\forall h0_ (h0_>0->\\exists h_ (0 < h_&h_ < h0_&<{{x_0:=x;y_0:=y;}x:=x+h_*(-3*x_0);y:=y+h_*(x_0-y_0);}*>(t_>=0&\\exists yy \\exists yx ((x-yx)^2+(y-yy)^2 < e_^2&xpost()=yx&ypost()=yy)))))))".asFormula
+
+    val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val tactic = ModelPlex.modelMonitorByChase(ModelPlex.eulerSystemAllIn)(1) & Idioms.<(
+      ModelPlex.unrollLoop(1)(1) & (ModelPlex.chaseEulerAssignments(1)*),
+      skip)
+    val result = proveBy(modelplexInput, tactic)
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\forall x (x=2->\\exists t_ (t_>=0&\\forall e_ (e_>0->\\forall h0_ (h0_>0->\\exists h_ (0 < h_&h_ < h0_&t_>=0&\\exists yy \\exists yx ((x+h_*(-3*x)-yx)^2+(y+h_*(x-y)-yy)^2 < e_^2&xpost()=yx&ypost()=yy))))))".asFormula
+
+    //@note unsound approximation step
+    val flipped = ModelPlex.flipUniversalEulerQuantifiers(result.subgoals.head.succ.head)
+    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & simplifier(1))
+    simplified.subgoals should have size 1
+    simplified.subgoals.head.ante shouldBe empty
+    //@todo auto-generated post names are somewhat weird here for parameters t, e, h0, h
+    simplified.subgoals.head.succ should contain only "tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(2+hpost_0()*-6-xpost())^2+(y+hpost_0()*(2-y)-ypost())^2 < epost_0()^2".asFormula
+  }
+
   it should "find correct model monitor condition by chase" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
