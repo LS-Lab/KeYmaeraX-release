@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.language.postfixOps
 import scala.math.Ordering.Implicits._
-
 import scala.collection.immutable._
 
 /**
@@ -31,8 +30,15 @@ private object ToolTactics {
         (close |
           ((varExhaustiveEqL2R('L)*) &
           hidePredicates &
-          toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
-        DebuggingTactics.done("QE was unable to prove: invalid formula"))))
+          toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
+            FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
+            (done | ("ANON" by ((s: Sequent) =>
+              if (s.succ.head == False) label("QE CEX")
+              else DebuggingTactics.done("QE was unable to prove: invalid formula")))
+              )
+            )
+          )
+        )
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 
@@ -124,7 +130,10 @@ private object ToolTactics {
           ((varExhaustiveEqL2R('L)*) &
           hidePredicates &
           toSingleFormula & orderedClosure & rcf(qeTool) &
-          DebuggingTactics.done("QE was unable to prove: invalid formula"))))
+            (done | ("ANON" by ((s: Sequent) =>
+              if (s.succ.head == False) label("QE CEX")
+              else DebuggingTactics.done("QE was unable to prove: invalid formula")))
+              ))))
     )}
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
@@ -151,7 +160,7 @@ private object ToolTactics {
     cutLR(result)(1) & Idioms.<(
       /*use*/ closeT | skip,
       /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
-      )
+    )
   })
 
   /** @see [[TactixLibrary.transform()]] */
@@ -231,7 +240,7 @@ private object ToolTactics {
   /** Transforms the term at position `pos` into the term `to`. */
   private def transformTerm(to: Term, sequent: Sequent, pos: Position) = {
     val src = sequent.sub(pos) match { case Some(src: Term) => src }
-    useAt(proveBy(Equal(src, to), QE), PosInExpr(0::Nil))(pos)
+    useAt(proveBy(Equal(src, to), QE & done), PosInExpr(0::Nil))(pos)
   }
 
   /** Ensures that the formula at position `pos` is available at that position from the assumptions. */

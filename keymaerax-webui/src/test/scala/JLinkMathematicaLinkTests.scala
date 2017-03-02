@@ -2,7 +2,8 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
@@ -98,5 +99,16 @@ class JLinkMathematicaLinkTests extends TacticTestBase {
 
   "Arithmetic" should "translate x--2 as subtraction of -2 (i.e. +2)" in withMathematica { link =>
     link.qeEvidence("5 < 5--2".asFormula)._1 shouldBe True
+  }
+
+  "QE" should "label branch on invalid formula" in withMathematica { link =>
+    link.qeEvidence("5<3".asFormula)._1 shouldBe False
+    val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
+      case Some(labels) => labels should contain theSameElementsAs BelleTopLevelLabel("QE CEX")::Nil
+      case None => fail("Expected QE CEX label")
+    })
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs False::Nil
   }
 }

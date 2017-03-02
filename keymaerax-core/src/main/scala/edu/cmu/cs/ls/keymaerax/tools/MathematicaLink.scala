@@ -59,13 +59,26 @@ trait KeYmaeraMathematicaBridge[T] {
   */
 abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k2m: K2MConverter[T],
                                              val m2k: M2KConverter[T]) extends KeYmaeraMathematicaBridge[T] {
-  protected val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  /** Default timeout for Mathematica requests: no timeout. */
+  val TIMEOUT_OFF: Int = -1
+  /** Timeout for Mathematica requests in seconds, set to TIMEOUT_OFF to disable. */
+  var timeout: Int = TIMEOUT_OFF
+
+  protected val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
   protected val mathematicaExecutor: ToolExecutor[(String, T)] = ToolExecutor.defaultExecutor()
 
-  override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(cmd, m2k) }
-  override def run(cmd: MExpr): (String, T) = link.synchronized { link.run(cmd, m2k, mathematicaExecutor) }
+  override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(timeConstrained(cmd), m2k) }
+  override def run(cmd: MExpr): (String, T) = link.synchronized { link.run(timeConstrained(cmd), m2k, mathematicaExecutor) }
 
   def shutdown(): Unit = mathematicaExecutor.shutdown()
+
+  protected def timeConstrained(cmd: MExpr): MExpr =
+    if (timeout < 0) cmd
+    else new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(cmd, new MExpr(timeout)))
+
+  protected def timeConstrained(cmd: String): String =
+    if (timeout < 0) cmd
+    else "TimeConstrained[" + cmd + "," + timeout + "]"
 }
 
 /**
@@ -139,7 +152,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   /**
    * Closes the connection to Mathematica.
    */
-  def shutdown() = {
+  def shutdown(): Unit = {
     if (ml == null) println("No need to shut down MathKernel if no link has been initialized")
     //if (ml == null) throw new IllegalStateException("Cannot shut down if no MathKernel has been initialized")
     else {
@@ -153,7 +166,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   /** Restarts the Mathematica connection */
-  def restart() = {
+  def restart(): Unit = {
     val l: KernelLink = ml
     ml = null
     l.terminateKernel()

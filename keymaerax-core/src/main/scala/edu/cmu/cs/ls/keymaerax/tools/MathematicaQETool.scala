@@ -20,7 +20,7 @@ import scala.collection.immutable
 class MathematicaQETool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool {
 
-  def qeEvidence(f : Formula) : (Formula, Evidence) = {
+  def qeEvidence(f: Formula): (Formula, Evidence) = {
     val input = new MExpr(MathematicaSymbols.REDUCE,
       Array(k2m(f), new MExpr(MathematicaSymbols.LIST, new Array[MExpr](0)), MathematicaSymbols.REALS))
     try {
@@ -28,8 +28,8 @@ class MathematicaQETool(override val link: MathematicaLink)
       result match {
         case f: Formula =>
           if (DEBUG) println("Mathematica QE result: " + f.prettyString)
-          (f, new ToolEvidence(immutable.List("input" -> input.toString, "output" -> output)))
-        case _ => throw new ToolException("Expected a formula from Reduce call but got a non-formula expression.")
+          (f, ToolEvidence(immutable.List("input" -> input.toString, "output" -> output)))
+        case _ => throw ToolException("Expected a formula from Reduce call but got a non-formula expression.")
       }
     } finally { input.dispose() }
   }

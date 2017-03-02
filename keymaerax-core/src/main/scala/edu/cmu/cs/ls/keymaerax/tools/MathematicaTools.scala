@@ -144,8 +144,6 @@ object CEXM2KConverter extends UncheckedM2KConverter {
  */
 class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool {
 
-  private val TIMEOUT = 10
-
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(k2m.convert(Not(fml)),
@@ -153,9 +151,8 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
           MathematicaSymbols.LIST,
           StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).toList.sorted.map(s => k2m.convert(s)).toArray),
         new MExpr(Expr.SYMBOL, "Reals")))
-    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, k2m(Number(TIMEOUT))))
 
-    run(inputWithTO) match {
+    run(input) match {
       case (_, cex: Formula) => cex match {
         case False =>
           if (DEBUG) println("No counterexample, Mathematica returned: " + cex.prettyString)

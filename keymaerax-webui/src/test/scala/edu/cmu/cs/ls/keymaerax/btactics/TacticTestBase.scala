@@ -147,11 +147,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(fml: Formula, tactic: BelleExpr): ProvableSig = {
+  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]]=>Unit = _ => {}): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(fml))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) =>
+      case BelleProvable(provable, labels) =>
         provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+        labelCheck(labels)
         provable
       case r => fail("Unexpected tactic result " + r)
     }

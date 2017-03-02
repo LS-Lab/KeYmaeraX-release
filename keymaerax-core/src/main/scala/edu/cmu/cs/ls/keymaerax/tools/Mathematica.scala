@@ -32,7 +32,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   private val mAlgebra = new MathematicaAlgebraTool(link)
   private val mSimplify = new MathematicaSimplificationTool(link)
 
-  override def init(config: Map[String,String]) = {
+  override def init(config: Map[String,String]): Unit = {
     val linkName = config.get("linkName") match {
       case Some(l) => l
       case None => throw new IllegalArgumentException("Mathematica not configured. Configure Mathematica and restart KeYmaera X.\nMissing configuration parameter 'linkName'\n")
@@ -46,7 +46,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   }
 
   /** Closes the connection to Mathematica */
-  override def shutdown() = {
+  override def shutdown(): Unit = {
     mQE.shutdown()
     mCEX.shutdown()
     mODE.shutdown()
@@ -61,7 +61,27 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   }
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = mQE.qeEvidence(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+    mQE.timeout = 5
+    try {
+      mQE.qeEvidence(formula)
+    } catch {
+      case _: MathematicaComputationAbortedException =>
+        mCEX.timeout = 2
+        try {
+          mCEX.findCounterExample(formula) match {
+            case None =>
+              mQE.timeout = mQE.TIMEOUT_OFF
+              mQE.qeEvidence(formula)
+            case Some(cex) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cex.mkString(","))))
+          }
+        } catch {
+          case _: MathematicaComputationAbortedException =>
+            mQE.timeout = mQE.TIMEOUT_OFF
+            mQE.qeEvidence(formula)
+        }
+    }
+  }
 
   /** Returns a formula describing the symbolic solution of the specified differential equation system.
    * @param diffSys The differential equation system
@@ -79,7 +99,10 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
    * @param formula The formula.
    * @return A counterexample, if found. None otherwise.
    */
-  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = mCEX.findCounterExample(formula)
+  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
+    mCEX.timeout = 10
+    mCEX.findCounterExample(formula)
+  }
 
   /**
     * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
@@ -115,5 +138,5 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
 
   /** Restarts the MathKernel with the current configuration */
-  override def restart() = link.restart()
+  override def restart(): Unit = link.restart()
 }
