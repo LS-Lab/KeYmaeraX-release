@@ -10,12 +10,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, ProofRuleTactics, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.SignAnalysis
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
@@ -34,9 +33,9 @@ object ArithmeticSpeculativeSimplification {
 
   /** QE without handling abs */
   private val speculativeQENoAbs: BelleExpr = "QE" by ((sequent: Sequent) => {
-    (print("Trying orIntro and smart hiding...") & (orIntro((print("Bound") & hideNonmatchingBounds & smartHide & QE()) | (print("Non-Bound") & smartHide & QE())) & print("... orIntro and smart hiding successful"))) |
-    (print("orIntro failed, trying smart hiding...") & ((hideNonmatchingBounds & smartHide & QE()) | (smartHide & QE())) & print("...smart hiding successful")) |
-    (print("All simplifications failed, falling back to ordinary QE") & QE())
+    (print("Trying orIntro and smart hiding...") & (orIntro((print("Bound") & hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (print("Non-Bound") & smartHide & QE() & TactixLibrary.done)) & print("... orIntro and smart hiding successful"))) |
+    (print("orIntro failed, trying smart hiding...") & ((hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (smartHide & QE()) & TactixLibrary.done) & print("...smart hiding successful")) |
+    (print("All simplifications failed, falling back to ordinary QE") & QE() & TactixLibrary.done)
   })
 
   /** Uses the disjunction introduction proof rule to prove a disjunctions by proving any 1 of the disjuncts. */
@@ -62,7 +61,7 @@ object ArithmeticSpeculativeSimplification {
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll(((hideR('R)*) & assertNoCex & QE) | speculativeQENoAbs)
+    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll(((hideR('R)*) & assertNoCex & QE & TactixLibrary.done) | speculativeQENoAbs)
     else error("Sequent does not contain abs")
   })
 
@@ -80,16 +79,16 @@ object ArithmeticSpeculativeSimplification {
     }
 
     val anteAbs = sequent.ante.zipWithIndex.
-      filter{ case (f,i) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, true))}.
+      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, interpreted=true))}.
       map{ case (f, i) => (f, AntePosition.base0(i)) }
     val succAbs = sequent.succ.zipWithIndex.
-      filter{ case (f,i) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, true))}.
+      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, interpreted=true))}.
       map{ case (f,i) => (f, SuccPosition.base0(i)) }
 
     val absTactic = (anteAbs++succAbs).
       //@note p+inExpr navigates to sub-expression since p are top
       map{ case (f,p) => (f, absPos(f).map(inExpr => p ++ inExpr)) }.
-      map{ case (f,p) => p.map(pos => OnAll(abs(pos) & orL('Llast) partial)).reduceLeft[BelleExpr](_&_) }.
+      map{ case (_,p) => p.map(pos => OnAll(abs(pos) & orL('Llast) partial)).reduceLeft[BelleExpr](_&_) }.
       reduceLeft[BelleExpr](_&_)
 
     absTactic & OnAll((andL('_)*) partial) & OnAll((exhaustiveEqL2R(hide=true)('L)*) partial)

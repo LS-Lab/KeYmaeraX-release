@@ -1653,7 +1653,7 @@ object DerivedAxioms {
       useAt(flipGreaterEqual.fact)(1, 0::0::1::1:: 0::Nil) &
       useAt(flipLessEqual.fact)(1, 0::0::1::1:: 1::Nil) &
       // transform g(||)'+e_<=f(||)' to g(||)'<=f(||)'-e_
-      useAt(TactixLibrary.proveBy("s()-r()>=t() <-> s()>=t()+r()".asFormula, QE), PosInExpr(0::Nil))(1, 0::0::1::1:: 1::Nil) &
+      useAt(TactixLibrary.proveBy("s()-r()>=t() <-> s()>=t()+r()".asFormula, QE & done), PosInExpr(0::Nil))(1, 0::0::1::1:: 1::Nil) &
       byUS("DV differential variant >=")
   )
 
@@ -2043,7 +2043,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val greaterEqualReflex = derivedAxiom(">= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() >= s_()".asFormula)), QE)
+  lazy val greaterEqualReflex = derivedAxiom(">= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() >= s_()".asFormula)), QE & done)
 
   /**
     * {{{Axiom "* commute".
@@ -2053,7 +2053,7 @@ object DerivedAxioms {
     */
   lazy val timesCommute = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq("(f_()*g_()) = (g_()*f_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
-    byUS(proveBy("\\forall y \\forall x (x*y = y*x)".asFormula, TactixLibrary.RCF))
+    byUS(proveBy("\\forall y \\forall x (x*y = y*x)".asFormula, TactixLibrary.RCF & done))
   )
 
   /**
@@ -2773,7 +2773,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val equalExpand: Lemma = derivedAxiom("= expand", Sequent(IndexedSeq(), IndexedSeq("f_()=g_() <-> f_()<=g_()&g_()<=f_()".asFormula)), QE)
+  lazy val equalExpand: Lemma = derivedAxiom("= expand", Sequent(IndexedSeq(), IndexedSeq("f_()=g_() <-> f_()<=g_()&g_()<=f_()".asFormula)), QE & done)
 
   /**
     * {{{Axiom "<= to <".
@@ -2781,7 +2781,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val le2l: Lemma = derivedAxiom("<= to <", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 <- f_()<0".asFormula)), QE)
+  lazy val le2l: Lemma = derivedAxiom("<= to <", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 <- f_()<0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <".
@@ -2789,7 +2789,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val metricLess: Lemma = derivedAxiom("metric <", Sequent(IndexedSeq(), IndexedSeq("f_()<g_() <-> f_()-g_()<0".asFormula)), QE)
+  lazy val metricLess: Lemma = derivedAxiom("metric <", Sequent(IndexedSeq(), IndexedSeq("f_()<g_() <-> f_()-g_()<0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <=".
@@ -2797,7 +2797,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val metricLessEqual: Lemma = derivedAxiom("metric <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=g_() <-> f_()-g_()<=0".asFormula)), QE)
+  lazy val metricLessEqual: Lemma = derivedAxiom("metric <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=g_() <-> f_()-g_()<=0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <= & <=".
@@ -2805,7 +2805,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val metricAndLe: Lemma = derivedAxiom("metric <= & <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0".asFormula)), QE)
+  lazy val metricAndLe: Lemma = derivedAxiom("metric <= & <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric < & <".
@@ -2813,7 +2813,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val metricAndLt: Lemma = derivedAxiom("metric < & <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 & g_()<0 <-> max(f_(), g_())<0".asFormula)), QE)
+  lazy val metricAndLt: Lemma = derivedAxiom("metric < & <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 & g_()<0 <-> max(f_(), g_())<0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <= | <=".
@@ -2821,7 +2821,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val metricOrLe: Lemma = derivedAxiom("metric <= | <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0".asFormula)), QE)
+  lazy val metricOrLe: Lemma = derivedAxiom("metric <= | <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric < | <".
@@ -2829,5 +2829,5 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val metricOrLt: Lemma = derivedAxiom("metric < | <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 | g_()<0 <-> min(f_(), g_())<0".asFormula)), QE)
+  lazy val metricOrLt: Lemma = derivedAxiom("metric < | <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 | g_()<0 <-> min(f_(), g_())<0".asFormula)), QE & done)
 }

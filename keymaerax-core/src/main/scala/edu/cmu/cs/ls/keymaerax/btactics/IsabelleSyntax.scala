@@ -250,11 +250,11 @@ object IsabelleSyntax {
     }
   }
 
-  private val equivExpand = proveBy("(p_() <-> q_()) <-> ((p_() -> q_()) & (q_() -> p_()))".asFormula,prop)
-  private val notEqualExpand = proveBy("f_() != g_() <-> f_() > g_() | f_() < g_()".asFormula,QE)
+  private val equivExpand = proveBy("(p_() <-> q_()) <-> ((p_() -> q_()) & (q_() -> p_()))".asFormula,prop & done)
+  private val notEqualExpand = proveBy("f_() != g_() <-> f_() > g_() | f_() < g_()".asFormula,QE & done)
 
-  private val minusExpand = proveBy("f_()-g_() = f_() +(-g_())".asFormula,QE)
-  private val powExpand = proveBy("f_()^2 = f_() * f_()".asFormula,QE)
+  private val minusExpand = proveBy("f_()-g_() = f_() +(-g_())".asFormula,QE & done)
+  private val powExpand = proveBy("f_()^2 = f_() * f_()".asFormula,QE & done)
 
   private val plusRec = proveBy("f_() + g_() = f_() + g_()".asFormula,byUS("= reflexive"))
   private val timesRec = proveBy("f_() * g_() = f_() * g_()".asFormula,byUS("= reflexive"))

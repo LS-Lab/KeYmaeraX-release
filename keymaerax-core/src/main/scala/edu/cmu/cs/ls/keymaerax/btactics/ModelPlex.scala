@@ -399,7 +399,7 @@ object ModelPlex extends ModelPlexTrait {
     def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula]) = "ANON" by ((pp: Position, seq: Sequent) => {
       val simplified = tool.simplify(qeFml, assumptions)
       val backSubst = signature.foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing)))
-      val pqe = proveBy(Imply(backSubst, existsFml), QE)
+      val pqe = proveBy(Imply(backSubst, existsFml), QE & done)
       cutAt(backSubst)(pp) < (skip, (if (pp.isSucc) cohideR(pp.topLevel) else cohideR('Rlast)) & CMon(pp.inExpr) & by(pqe))
     })
 

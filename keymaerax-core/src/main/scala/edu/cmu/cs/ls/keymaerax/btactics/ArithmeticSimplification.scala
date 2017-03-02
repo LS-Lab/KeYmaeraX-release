@@ -94,8 +94,8 @@ object ArithmeticSimplification {
       val to   = equality.asInstanceOf[Equal].right
       cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
         skip,
-        if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
-        else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE
+        if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE & done
+        else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE & done
       )})
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {

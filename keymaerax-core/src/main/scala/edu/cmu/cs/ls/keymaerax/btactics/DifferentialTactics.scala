@@ -197,14 +197,14 @@ private object DifferentialTactics {
               useAt("DIo open differential invariance >")
             else
               useAt("DIo open differential invariance <"))(pos) <(
-              testb(pos) & QE,
+              testb(pos) & QE & done,
               //@note derive before DE to keep positions easier
               implyR(pos) & derive(pos ++ PosInExpr(1::1::Nil)) &
                 DE(pos) &
                 (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE
-                  ) partial
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE & done
+                  )
               )
           Dconstify(t)(pos)
         } else {
@@ -253,7 +253,7 @@ private object DifferentialTactics {
             derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
             DE(pos ++ PosInExpr(0::1::Nil)) &
             (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
-              abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE
+              abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE & done
               )
           )
         t
@@ -512,7 +512,7 @@ private object DifferentialTactics {
 
           //@note diffWeaken will already include all cases where V works, without much additional effort.
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-            diffWeaken(pos) & QE else fail
+            diffWeaken(pos) & QE & done else fail
           ) |
           (if (isOpen) {
             openDiffInd(pos) | DGauto(pos)
@@ -565,7 +565,7 @@ private object DifferentialTactics {
     * @author Nathan Fulton */
   def splitWeakInequality : DependentPositionTactic = "splitWeakInequality" by ((pos: Position, seq: Sequent) => {
     val postcondition = seq.at(pos)._2 match {
-      case Box(ODESystem(_,_), postcondition) => postcondition
+      case Box(ODESystem(_,_), p) => p
       case _ => throw new BelleThrowable("splitWeakInequality is only applicable for ODE's with weak inequalities as post-conditions.")
     }
     val (lhs, rhs, openSetConstructor) = postcondition match {
@@ -576,14 +576,14 @@ private object DifferentialTactics {
 
     val caseDistinction = Or(openSetConstructor(lhs,rhs), Equal(lhs,rhs))
 
-    TactixLibrary.cut(caseDistinction) <(
-      TactixLibrary.orL(-(seq.ante.length + 1)) <(
-        TactixLibrary.generalize(openSetConstructor(lhs,rhs))(1) <(TactixLibrary.nil, TactixLibrary.QE),
-        TactixLibrary.generalize(Equal(lhs,rhs))(1) <(TactixLibrary.nil, TactixLibrary.QE)
+    cut(caseDistinction) <(
+      orL('Llast) <(
+        generalize(openSetConstructor(lhs,rhs))(1) <(skip, QE & done),
+        generalize(Equal(lhs,rhs))(1) <(skip, QE & done)
       )
       ,
-      (TactixLibrary.hide(pos.topLevel) & TactixLibrary.QE) | //@todo write a hideNonArithmetic tactic.
-      DebuggingTactics.assert(_=>false, s"splitWeakInequality failed because ${caseDistinction} does not hold initially.")
+      (hide(pos.topLevel) & QE & done) | //@todo write a hideNonArithmetic tactic.
+      DebuggingTactics.assert(_=>false, s"splitWeakInequality failed because $caseDistinction does not hold initially.")
     )
   })
 
@@ -633,7 +633,7 @@ private object DifferentialTactics {
     dG(ghostODE, Some(ghostEqn))(pos) & boxAnd(pos ++ PosInExpr(0::Nil)) &
       DifferentialTactics.diffInd()(pos ++ PosInExpr(0::0::Nil)) &
       //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
-      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE
+      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE & done
   })
 
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
@@ -688,7 +688,7 @@ private object DifferentialTactics {
     val backupTactic = dG(newOde, Some(equivFormula))(pos) & boxAnd(pos ++ PosInExpr(0::Nil)) &
       DifferentialTactics.diffInd()(pos ++ PosInExpr(0::0::Nil)) &
       //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
-      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE
+      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE & done
 
     //@todo massage the other cases into a useAt.
     //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
@@ -743,7 +743,7 @@ private object DifferentialTactics {
       val de = AtomicODE(DifferentialSymbol(ghost), Plus(Times(g, ghost), Number(0)))
       val p = Greater(Times(quantity, Power(ghost, Number(2))), Number(0))
       DebuggingTactics.debug(s"DGauto: trying $de with $p") &
-      dG(de,Some(p))(pos) & diffInd()(pos ++ PosInExpr(0::Nil)) & QE
+      dG(de,Some(p))(pos) & diffInd()(pos ++ PosInExpr(0::Nil)) & QE & done
     }
 
     // try guessing first, groebner basis if guessing fails

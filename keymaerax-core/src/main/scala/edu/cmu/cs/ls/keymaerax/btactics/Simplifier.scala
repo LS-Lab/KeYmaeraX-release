@@ -67,96 +67,96 @@ object Simplifier {
 
   val powZero:Simplification = {
     case Power(t:Term, n:Number) =>
-      if (n.value == 0) {Some (Number(1), QE)} else None
+      if (n.value == 0) {Some (Number(1), QE & done)} else None
     case _ => None
   }
 
   val powOne:Simplification = {
     case Power(t:Term, n:Number) =>
-      if (n.value == 1) {Some (t, QE)} else None
+      if (n.value == 1) {Some (t, QE & done)} else None
     case _ => None
   }
 
   val divOne:Simplification = {
     case Divide(t:Term, n:Number) =>
-      if (n.value == 1) {Some (t, QE)} else None
+      if (n.value == 1) {Some (t, QE & done)} else None
     case _ => None
   }
 
   val divCancel:Simplification = {
     case Divide(t1:Term, t2:Term) =>
-      if (t1 == t2) {Some (Number(1), QE)} else None
+      if (t1 == t2) {Some (Number(1), QE & done)} else None
     case _ => None
   }
 
   val minusCancel:Simplification = {
     case Minus(t1:Term, t2:Term) =>
-      if(t1 == t2) {Some ((Number(0), QE))} else None
+      if(t1 == t2) {Some ((Number(0), QE & done))} else None
     case _ => None
   }
 
   val plusConst:Simplification = {
-    case Plus(n: Number, m:Number) => Some ((Number(n.value + m.value), QE))
+    case Plus(n: Number, m:Number) => Some ((Number(n.value + m.value), QE & done))
     case _ => None
   }
 
   val minusConst:Simplification = {
-    case Minus(n: Number, m:Number) => Some ((Number(n.value - m.value), QE))
+    case Minus(n: Number, m:Number) => Some ((Number(n.value - m.value), QE & done))
     case _ => None
   }
 
   val negConst:Simplification = {
-    case Neg(n: Number) => Some ((Number(-n.value), QE))
+    case Neg(n: Number) => Some ((Number(-n.value), QE & done))
     case _ => None
   }
 
   val timesConst:Simplification = {
-    case Times(n: Number, m:Number) => Some ((Number(n.value * m.value), QE))
+    case Times(n: Number, m:Number) => Some ((Number(n.value * m.value), QE & done))
     case _ => None
   }
 
   val divConst:Simplification = {
     case Divide(n: Number, m:Number) if m.value == 0 => None
-    case Divide(n: Number, m:Number) => Some ((Number(n.value / m.value), QE))
+    case Divide(n: Number, m:Number) => Some ((Number(n.value / m.value), QE & done))
     case _ => None
   }
 
   val powConst:Simplification = {
-    case Power(n: Number, m:Number) => Some ((Number(n.value.pow(m.value.toIntExact)), QE))
+    case Power(n: Number, m:Number) => Some ((Number(n.value.pow(m.value.toIntExact)), QE & done))
     case _ => None
   }
 
   val assocPlus:Simplification = {
-    case Plus(a:Term, Plus(b:Term, c:Term)) => Some(Plus(Plus(a,b), c), QE)
+    case Plus(a:Term, Plus(b:Term, c:Term)) => Some(Plus(Plus(a,b), c), QE & done)
     case _ => None
   }
 
   val assocTimes:Simplification = {
-    case Times(a:Term, Times(b:Term, c:Term)) => Some(Times(Times(a,b), c), QE)
+    case Times(a:Term, Times(b:Term, c:Term)) => Some(Times(Times(a,b), c), QE & done)
     case _ => None
   }
 
   val pushConstPlus:Simplification = {
     case Plus(Plus(t1:Term, t2:Term), n: Number) =>
-      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) {print("\n\npushin down " + n + " vs " + t2+"\n\n"); Some(Plus(Plus(t1, n), t2), QE)} else None
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) {print("\n\npushin down " + n + " vs " + t2+"\n\n"); Some(Plus(Plus(t1, n), t2), QE & done)} else None
     case _ => None
   }
 
   val flipConstPlus:Simplification = {
     case Plus(t1:Term, n: Number) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) {print("\n\nflippin "+ t1 + " wit " + n+"\n\n"); Some(Plus(n, t1), QE)} else None
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) {print("\n\nflippin "+ t1 + " wit " + n+"\n\n"); Some(Plus(n, t1), QE & done)} else None
     case _ => None
   }
 
   val flipConstTimes:Simplification = {
     case Times(t1:Term, n: Number) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) {Some(Times(n, t1), QE)} else None
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) {Some(Times(n, t1), QE & done)} else None
     case _ => None
   }
 
   val pushConstTimes:Simplification = {
     case Times(Times(t1:Term, t2:Term), n: Number) =>
-      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Times]) {Some(Times(Times(t1, n), t2), QE)} else None
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Times]) {Some(Times(Times(t1, n), t2), QE & done)} else None
     case _ => None
   }
 

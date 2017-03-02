@@ -33,8 +33,8 @@ object SimplifierV2 {
     val ttt  = tt.asTerm
     (ttt,
       f match{
-        case None => proveBy(Equal(t.asTerm,ttt),QE)
-        case Some(f) => proveBy(Imply(f.asFormula,Equal(t.asTerm,ttt)),QE)
+        case None => proveBy(Equal(t.asTerm,ttt),QE & done)
+        case Some(f) => proveBy(Imply(f.asFormula,Equal(t.asTerm,ttt)),QE & done)
       })
   }
 
@@ -127,11 +127,11 @@ object SimplifierV2 {
       case Plus(_,_) =>
         val (tt,c) = flattenPlus(t)
         if(c==0) init
-        else proveBy(Equal(t,Plus(tt,Number(c))),QE)
+        else proveBy(Equal(t,Plus(tt,Number(c))),QE & done)
       case Times(_,_) =>
         val (tt,c) = flattenTimes(t)
         if(c==1) init
-        else proveBy(Equal(t,Times(tt,Number(c))),QE)
+        else proveBy(Equal(t,Times(tt,Number(c))),QE & done)
       case _ => init
     }
   }
@@ -213,13 +213,13 @@ object SimplifierV2 {
 
   //Technically, we don't need QE for these (just use the proof for divideLemma)
   private lazy val plusLemma = proveBy(
-    "(A_() = B_()) & (X_() = Y_()) -> (A_()+X_() = B_()+Y_())".asFormula,QE)
+    "(A_() = B_()) & (X_() = Y_()) -> (A_()+X_() = B_()+Y_())".asFormula,QE & done)
   private lazy val minusLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_()-X_() = B_()-Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()-X_() = B_()-Y_())".asFormula,QE & done)
   private lazy val timesLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_()*X_() = B_()*Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()*X_() = B_()*Y_())".asFormula,QE & done)
   private lazy val divideLemma =
     proveBy(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()/X_() = B_()/Y_())".asFormula,
@@ -300,32 +300,32 @@ object SimplifierV2 {
 
   private lazy val equalLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() = X_() <-> B_() = Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() = X_() <-> B_() = Y_())".asFormula,QE & done)
 
   private lazy val notequalLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() != X_() <-> B_() != Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() != X_() <-> B_() != Y_())".asFormula,QE & done)
 
   private lazy val greaterequalLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() >= X_() <-> B_() >= Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() >= X_() <-> B_() >= Y_())".asFormula,QE & done)
 
   private lazy val greaterLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() > X_() <-> B_() > Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() > X_() <-> B_() > Y_())".asFormula,QE & done)
 
   private lazy val lessequalLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() <= X_() <-> B_() <= Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() <= X_() <-> B_() <= Y_())".asFormula,QE & done)
 
   private lazy val lessLemma =
     proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE)
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE & done)
 
   private lazy val equivTrans =
     proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop & done)
 
-  private lazy val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE)
+  private lazy val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE & done)
 
   // Context management tactic generator for simplifier
   // Returns a new context ctx', and a tactic that turns
@@ -413,8 +413,8 @@ object SimplifierV2 {
   {
     val ttt  = tt.asFormula
     f match{
-      case None => proveBy(Equiv(t.asFormula,ttt),prop & QE)
-      case Some(f) => proveBy(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE)
+      case None => proveBy(Equiv(t.asFormula,ttt),prop & QE & done)
+      case Some(f) => proveBy(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE & done)
     }
   }
 
@@ -497,7 +497,7 @@ object SimplifierV2 {
   lazy val eqGtFalse = qeFormulaProof(Some("G_()>F_()"),"G_()=F_()","false")
   lazy val eqNeqFalse = qeFormulaProof(Some("G_()!=F_()"),"G_()=F_()","false")
 
-  lazy val neqSym = proveBy("F_() != G_() <-> G_() != F_()".asFormula,QE)
+  lazy val neqSym = proveBy("F_() != G_() <-> G_() != F_()".asFormula,QE & done)
 
   lazy val trueReflex = qeFormulaProof(Some("F_()"),"F_()","true")
   lazy val falseReflex = qeFormulaProof(Some("!F_()"),"F_()","false")

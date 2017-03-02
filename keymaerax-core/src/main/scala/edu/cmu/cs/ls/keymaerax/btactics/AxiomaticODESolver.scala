@@ -418,7 +418,7 @@ object AxiomaticODESolver {
     (0 until odeSize).map(List.fill(_)(0)).map(i => step(pos ++ PosInExpr(i))).reduceRight[BelleExpr](_ & _)
   })
 
-  def simplifyPostCondition(odeSize: Int) = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
+  def simplifyPostCondition(odeSize: Int): DependentPositionTactic = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(seq(pos.top), pos.inExpr)
     val rewrite: ProvableSig =
       if (polarity > 0) TactixLibrary.proveBy("(q_(f(x_)) -> p_(f(x_))) -> (q_(x_) & x_=f(x_) -> p_(x_))".asFormula,

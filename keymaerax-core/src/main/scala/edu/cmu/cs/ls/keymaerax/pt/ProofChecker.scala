@@ -40,7 +40,7 @@ object ProofChecker {
 
       case FOLRConstant(f) => {
         val node = proofNode(phi)
-        Some(proveBy(node, QE))
+        Some(proveBy(node, QE & done))
       }
 
       case AndTerm(e, d) => phi match {

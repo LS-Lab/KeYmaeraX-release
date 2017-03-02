@@ -57,7 +57,7 @@ object SimplifierV3 {
   private lazy val negAx = proveBy( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"))
 
 
-  private lazy val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE)
+  private lazy val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE & done)
 
   //TODO: think more about the type used to represent the current context
   type context = HashSet[Formula]
@@ -712,8 +712,8 @@ object SimplifierV3 {
   private def qeTermProof(t:String,tt:String,pre:Option[String] = None): ProvableSig =
   {
     pre match{
-      case None => proveBy(Equal(t.asTerm,tt.asTerm),QE)
-      case Some(f) => proveBy(Imply(f.asFormula,Equal(t.asTerm,tt.asTerm)),QE)
+      case None => proveBy(Equal(t.asTerm,tt.asTerm),QE & done)
+      case Some(f) => proveBy(Imply(f.asFormula,Equal(t.asTerm,tt.asTerm)),QE & done)
     }
   }
 
@@ -768,7 +768,7 @@ object SimplifierV3 {
   }
 
   private lazy val impReflexive = proveBy("p_() -> p_()".asFormula,prop)
-  private lazy val eqSymmetricImp = proveBy("F_() = G_() -> G_() = F_()".asFormula,QE)
+  private lazy val eqSymmetricImp = proveBy("F_() = G_() -> G_() = F_()".asFormula,QE & done)
 
   //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
@@ -828,8 +828,8 @@ object SimplifierV3 {
   {
     val ttt  = tt.asFormula
     f match{
-      case None => proveBy(Equiv(t.asFormula,ttt),prop & QE)
-      case Some(f) => proveBy(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE)
+      case None => proveBy(Equiv(t.asFormula,ttt),prop & QE & done)
+      case Some(f) => proveBy(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE & done)
     }
   }
 
@@ -853,10 +853,10 @@ object SimplifierV3 {
     cmps.flatMap(
       (cmp:(Term,Term) => Formula) => {
           List(
-            proveBy(Imply(cmp(f, g), Equiv(key, True)), prop & (QE*)),
-            proveBy(Imply(cmp(f, g), Equiv(key, False)), prop & (QE*)),
-            proveBy(Imply(cmp(g, f), Equiv(key, True)), prop & (QE*)),
-            proveBy(Imply(cmp(g, f), Equiv(key, False)), prop & (QE*))
+            proveBy(Imply(cmp(f, g), Equiv(key, True)), prop & onAll(QE)),
+            proveBy(Imply(cmp(f, g), Equiv(key, False)), prop & onAll(QE)),
+            proveBy(Imply(cmp(g, f), Equiv(key, True)), prop & onAll(QE)),
+            proveBy(Imply(cmp(g, f), Equiv(key, False)), prop & onAll(QE))
           )
       }
     ).filter(_.isProved)
