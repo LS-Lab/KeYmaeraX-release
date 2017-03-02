@@ -681,7 +681,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(innerId))
     tactic shouldBe BelleParser(
       """DI(1) ; (implyR(1) ; (andR(1) ; <(
-        |  nil,
+        |  QE,
         |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
         |)))
         """.stripMargin)
@@ -701,7 +701,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(innerId))
     tactic shouldBe BelleParser(
       """DI(1) ; (implyR(1) ; (andR(1) ; <(
-        |  nil,
+        |  QE,
         |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
         |)))
       """.stripMargin)

@@ -27,7 +27,9 @@ class QETests extends TacticTestBase {
   }
 
   it should "fail on |-" in withMathematica { qeTool =>
-    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.fullQE(qeTool))
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.fullQE(qeTool))
+    result.subgoals should have size 1
+    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
   }
 
   it should "fail on parsed decimal representations" in withMathematica { qeTool =>
@@ -49,8 +51,7 @@ class QETests extends TacticTestBase {
 
   it should "fail x()=x" in withMathematica { qeTool =>
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
-      """[Bellerophon Runtime] QE was unable to prove: invalid formula
-        |Expected proved provable, but got NoProofTermProvable(Provable(  ==>  x()=x
+      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(  ==>  x()=x
         |  from     ==>  false))""".stripMargin
   }
 

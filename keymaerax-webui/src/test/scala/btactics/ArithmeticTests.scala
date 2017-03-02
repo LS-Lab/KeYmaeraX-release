@@ -3,9 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
-import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
 import scala.collection.immutable._
 
@@ -43,12 +41,11 @@ class ArithmeticTests extends TacticTestBase {
       "\\forall x_1 \\forall v_1 \\forall t_0 \\forall s_0 (v_1>0&x_1 < s_0&-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1>=0&t_0>=0->1/2*(-1*(v_1^2/(2*(s_0-x_1)))*t_0^2+2*t_0*v_1+2*x_1)+(-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1)^2/(2*(v_1^2/(2*(s_0-x_1))))<=s_0)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     //@note actual assertions are made by MockTool, expect a BelleThrowable since MockTool returns false as QE answer
-    the [BelleThrowable] thrownBy proveBy(
+    val result = proveBy(
       Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
-                                         |Expected proved provable, but got NoProofTermProvable(Provable(v_0>0&x_0 < s, a=v_0^2/(2*(s-x_0)), t_0=0
-                                                                            |  ==>  v>=0&t>=0&v=-1*a*t+v_0&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s
-                                                                            |  from     ==>  false))""".stripMargin
+      TactixLibrary.QE)
+    result.subgoals should have size 1
+    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
   }
 
   it should "prove after apply equalities, transform to implication, and universal closure" in withMathematica { tool =>
@@ -61,12 +58,11 @@ class ArithmeticTests extends TacticTestBase {
     val tool = new MockTool(
       "\\forall y_0 \\forall x_0 \\forall r_0 (x_0^2+y_0^2=r_0^2&r_0>0->y_0<=r_0)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
-    the [BelleThrowable] thrownBy proveBy(
+    val result = proveBy(
       Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
-                                         |Expected proved provable, but got NoProofTermProvable(Provable(x^2+y^2=r^2, r>0
-                                                                            |  ==>  y<=r
-                                                                            |  from     ==>  false))""".stripMargin
+      TactixLibrary.QE)
+    result.subgoals should have size 1
+    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
   }
 
   it should "prove after only apply equalities for variables" in withMathematica { tool =>
@@ -86,12 +82,11 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   it should "avoid name clashes" in withMathematica { tool =>
-    the [BelleThrowable] thrownBy proveBy(
+    val result = proveBy(
       Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a=a()".asFormula)),
-      TactixLibrary.QE) should have message """[Bellerophon Runtime] QE was unable to prove: invalid formula
-                                                                            |Expected proved provable, but got NoProofTermProvable(Provable(a=1, a()=2
-                                                                            |  ==>  a=a()
-                                                                            |  from     ==>  false))""".stripMargin
+      TactixLibrary.QE)
+    result.subgoals should have size 1
+    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
 
     proveBy(
       Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a<a()".asFormula)),
