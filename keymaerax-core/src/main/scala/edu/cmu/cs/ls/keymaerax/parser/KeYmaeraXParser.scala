@@ -236,8 +236,8 @@ object KeYmaeraXParser extends Parser {
     }
     // lift misclassified defaulted differential equation
     case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind && !StaticSemantics.isDifferential(e) => Some(AtomicODE(xp, e))
-    // lift misclassified defaulted differential equation
-    case Equal(xp:DifferentialSymbol, e) if kind==ProgramKind && !StaticSemantics.isDifferential(e) => Some(ODESystem(AtomicODE(xp, e)))
+    // refuse to lift misclassified defaulted differential equation to program directly
+    case Equal(xp:DifferentialSymbol, e) if kind==ProgramKind && !StaticSemantics.isDifferential(e) => None
     //@todo And(And(x'=5,x>0),x<12)) is not lifted yet
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h)
@@ -260,14 +260,12 @@ object KeYmaeraXParser extends Parser {
   private def elaborate(st: ParseState, optok: Token, op: OpSpec, kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
     case Some(e) => e
       //@todo locations are a little off in error reporting here. Would need original operator token.
-    case None => throw ParseException("Impossible elaboration: Operator " + op.op + " expects a " + kind + " as argument but got the " + e.kind + " "  + e.prettyString,
-      st, optok, kind.toString)
-  }
-
-  /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or leave as is. */
-  private def possibleElaborate(kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
-    case Some(e) => e
-    case None => e
+    case None => e match {
+      case Equal(xp: DifferentialSymbol, t) if kind==ProgramKind && !StaticSemantics.isDifferential(t)  => throw ParseException("Unexpected " + optok.tok.img + " in system of ODEs", st, optok, COMMA.img)
+      case _ =>
+        throw ParseException("Impossible elaboration: Operator " + op.op + " expects a " + kind + " as argument but got the " + e.kind + " "  + e.prettyString,
+          st, optok, kind.toString)
+    }
   }
 
   /** Elaborate the composition op(e) that is coming from token tok by lifting defaulted types as needed. */
@@ -683,9 +681,23 @@ object KeYmaeraXParser extends Parser {
 //        if (firstExpression(la) ||
 //          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
 
+      // better error message for missing {} around ODEs
+      case _ :+ Expr(t1) :+ (optok@Token(op, _)) if StaticSemantics.isDifferential(t1) && op != COMMA && op != AMP && op != RBRACE=>
+        if (firstExpression(la) && la!=EOF) shift(st)
+        else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
+
+      case _ :+ Expr(DifferentialProduct(_,_)) :+ (optok@Token(op, _)) if op != COMMA && op != AMP && op != RBRACE=>
+        if (firstExpression(la) && la!=EOF) shift(st)
+        else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
+
+      case _ :+ Expr(DifferentialProduct(_,_)) :+ (Token(AMP,_)) :+ Expr(_) :+ (optok@Token(op, _)) if op != COMMA && op != AMP && op != RBRACE=>
+        if (firstExpression(la) && la!=EOF) shift(st)
+        else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
+      // end error message
+
+
       case _ :+ Expr(t1) :+ (tok@Token(op:OPERATOR,_)) if op != PRIME =>
         if (firstExpression(la) && la!=EOF) shift(st) else error(st, List(FIRSTEXPRESSION))
-
 
       case _ :+ (tok@Token(LPAREN,_)) :+ Expr(t1) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (followsExpression(t1, la) && la!=EOF) shift(st)
