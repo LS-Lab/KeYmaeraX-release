@@ -664,6 +664,10 @@ class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[De
       "input" -> inputsJson(info.inputs))
   }
 
+  private def name(i: DerivationInfo) =
+    if (i.codeName.isEmpty || i.codeName == i.display.name) i.display.name
+    else s"${i.display.name} <code>${i.codeName}</code>"
+
   def derivationJson(derivationInfo: DerivationInfo): JsObject = {
     val derivation =
       derivationInfo match {
@@ -677,7 +681,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[De
       }
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
-      "name" -> new JsString(derivationInfo.display.name),
+      "name" -> new JsString(name(derivationInfo)),
       "derivation" -> derivation
     )
   }
