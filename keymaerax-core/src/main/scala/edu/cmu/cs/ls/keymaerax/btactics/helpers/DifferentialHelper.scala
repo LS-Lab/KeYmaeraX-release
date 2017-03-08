@@ -51,12 +51,13 @@ object DifferentialHelper {
   }
 
   /** Returns true iff v occurs primed in the ode. */
-  def isPrimedVariable(v : Variable, ode : Option[Program]): Boolean = ode match {
-    case Some(x) => StaticSemantics.boundVars(x).contains(v)
-    case None => true //over-approximate set of initial conditions if no ODE is provided.
+  def isPrimedVariable(v : Variable, ode : Option[Program]): Boolean = (v,ode) match {
+    case (_ : DifferentialSymbol, Some(x)) => StaticSemantics.boundVars(x).contains(v)
+    case (_ : DifferentialSymbol, _) => true
+    case _ => false //over-approximate set of initial conditions if no ODE is provided.
   }
   def containsPrimedVariables(vs: Set[Variable], system: ODESystem) =
-    vs.find(v => isPrimedVariable(v, Some(system.ode))).nonEmpty
+    vs.exists(v => isPrimedVariable(v, Some(system.ode)))
 
 
   /**
