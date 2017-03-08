@@ -81,29 +81,30 @@ object CourseMain {
   }
 
   private def check(archiveFile : ArgValue) = {
-    val archiveEntries : List[KeYmaeraXArchiveParser.ParsedArchiveEntry] = try {
-      parseArchiveFileOrfail(archiveFile)
-    } catch {
-      case e : Throwable => {
-        println(s"Expected a valid .kya file but could not parse file contents: ${archiveFile}")
-        System.exit(-1)
-        Nil
+    try {
+      val archiveEntries : List[KeYmaeraXArchiveParser.ParsedArchiveEntry] = try {
+        parseArchiveFileOrfail(archiveFile)
+      } catch {
+        case e : Throwable => {
+          println(s"Expected a valid .kya file but could not parse file contents: ${archiveFile}")
+          System.exit(-1)
+          Nil
+        }
       }
-    }
 
-    if(archiveEntries.length != 1) {
-      println("Expected an archive file with exactly one model. Did you export a single proof from the Proofs page?")
-      System.exit(-1)
-    }
-    else if(archiveEntries.head._4.length != 1) {
-      println("Expected an archive file with exactly one model and exactly one proof. Did you export a single proof from the Proofs page?")
-      System.exit(-1)
-    }
-    else {
-      val f = archiveEntries.head._3.asInstanceOf[Formula]
-      val expr = archiveEntries.head._4.head._2
-      /*val f = parseProblemFileOrFail(problem)*/
-      /*val expr = parseTacticFileOrFail(solution)*/
+      if(archiveEntries.length != 1) {
+        println("Expected an archive file with exactly one model. Did you export a single proof from the Proofs page?")
+        System.exit(-1)
+      }
+      else if(archiveEntries.head._4.length != 1) {
+        println("Expected an archive file with exactly one model and exactly one proof. Did you export a single proof from the Proofs page?")
+        System.exit(-1)
+      }
+      else {
+        val f = archiveEntries.head._3.asInstanceOf[Formula]
+        val expr = archiveEntries.head._4.head._2
+        /*val f = parseProblemFileOrFail(problem)*/
+        /*val expr = parseTacticFileOrFail(solution)*/
 
         val result = SequentialInterpreter(Seq())(expr, BelleProvable(ProvableSig.startProof(f)))
         result match {
