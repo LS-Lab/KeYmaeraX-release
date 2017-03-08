@@ -682,7 +682,7 @@ object KeYmaeraXParser extends Parser {
 //          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
 
       // better error message for missing {} around ODEs
-      case _ :+ Expr(t1) :+ (optok@Token(op, _)) if StaticSemantics.isDifferential(t1) && op != COMMA && op != AMP && op != RBRACE=>
+      case _ :+ Expr(t1) :+ (optok@Token(op, _)) if isOrContainsDifferentialSymbol(t1) && op != COMMA && op != AMP && op != RBRACE =>
         if (firstExpression(la) && la!=EOF) shift(st)
         else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
 
@@ -785,6 +785,18 @@ object KeYmaeraXParser extends Parser {
 
         //throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s)
       }
+    }
+  }
+
+  /** Tests an expression for being or containing a differential or differential symbol. */
+  private def isOrContainsDifferentialSymbol(t: Expression): Boolean = t match {
+    //@note isDifferential introduces double-primes when applied to differential terms (extends all variables to differential symbols)
+    case _: DifferentialSymbol => true
+    case _: Differential => true
+    case _ => try {
+      StaticSemantics.isDifferential(t)
+    } catch {
+      case _: AssertionError => true //@note StaticSemantics.freeVars may extend to differential symbols, which fails on infinite sets
     }
   }
 

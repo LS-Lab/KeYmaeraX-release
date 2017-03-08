@@ -182,6 +182,27 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
         |Expected: } (RBRACE$)""".stripMargin
   }
 
+  it should "parse standalone differential symbols" in {
+    parser("x'") shouldBe DifferentialSymbol(Variable("x"))
+  }
+
+  it should "parse standalone differentials" in {
+    parser("(x')'") shouldBe Differential(DifferentialSymbol(Variable("x")))
+  }
+
+  it should "parse terms with differential symbols" in {
+    parser("x'=0") shouldBe Equal(DifferentialSymbol(Variable("x")), Number(0))
+  }
+
+  it should "parse terms with differentials" in {
+    parser("(x')'=0") shouldBe Equal(Differential(DifferentialSymbol(Variable("x"))), Number(0))
+  }
+
+  it should "parse postconditions with differential symbols" in {
+    parser("<{x'=3}>x'>0") shouldBe Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(3)), True),
+      Greater(DifferentialSymbol(Variable("x")), Number(0)))
+  }
+
   it should "parse +- in x+-y+1>=5" in {
     parser("x+-y+1>=5") shouldBe GreaterEqual(Plus(Plus(x,Neg(y)),Number(1)), Number(5))
   }
