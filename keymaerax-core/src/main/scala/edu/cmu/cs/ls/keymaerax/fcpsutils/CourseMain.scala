@@ -17,8 +17,8 @@ object CourseMain {
   def basicInitializer() = {
     try {
       val config = Map(
-        "linkName" -> "/usr/local/depot/mathematica-10.1/Executables/MathKernel",
-        "libDir" -> "/usr/local/depot/mathematica-10.1/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
+        "linkName" -> "/usr0/local/Wolfram/Mathematica/10.0/Executables/MathKernel",
+        "libDir" -> "/usr0/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
       val provider = new MathematicaToolProvider(config)
       ToolProvider.setProvider(provider)
       if(provider.tools().forall(_.isInitialized)) println("Initialized!")
@@ -73,6 +73,7 @@ object CourseMain {
     }
     catch {
       case e : Error => {
+        println("Error propagated to top level")
         e.printStackTrace()
         System.exit(-1)
       }
@@ -99,7 +100,26 @@ object CourseMain {
       System.exit(-1)
     }
     else {
-      //ok!
+      val f = archiveEntries.head._3.asInstanceOf[Formula]
+      val expr = archiveEntries.head._4.head._2
+      /*val f = parseProblemFileOrFail(problem)*/
+      /*val expr = parseTacticFileOrFail(solution)*/
+
+        val result = SequentialInterpreter(Seq())(expr, BelleProvable(ProvableSig.startProof(f)))
+        result match {
+          case BelleProvable(p, _) => {
+            if(!p.isProved) {
+              println(s"ERROR: " + archiveFile + " Proof did not close on grading machine:")
+              println(p.prettyString)
+              System.exit(-1)
+            }
+          }
+          case _ => throw new Exception("expected tactic execution to result in provable but found something else.")
+        }
+      }
+    } catch {case e : Any =>
+      println(s"ERROR:Exception during " + archiveFile + " proof on grading machine")
+      System.exit(-1)
     }
   }
 
