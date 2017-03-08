@@ -1,7 +1,6 @@
-<form name="tacticForm" class="form-inline" novalidate>
 <div class="modal-header">
-    <h3 class="modal-title">Proof Step {{tactic.selectedDerivation().name}}</h3>
-    <span class="text-danger" ng-show="!readOnly && tacticForm.$invalid">Tactic requires input</span>
+    <h3 class="modal-title">Proof Step <span ng-bind-html="tactic.selectedDerivation().name"></span></h3>
+    <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}}</span>
 </div>
 <div class="modal-body">
     <!-- padding around content -->
@@ -23,8 +22,8 @@
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
-    <button ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-primary': true}"
+    <button ng-class="{'disabled' : tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0, 'btn': true, 'btn-primary': true}"
             ng-if="!readOnly"
-            ng-click="applyInputTactic(tactic.selectedDerivation().derivation.input)">{{tactic.selectedDerivation().name}}</button>
+            ng-click="applyInputTactic(tactic.selectedDerivation().derivation.input)"
+            ng-bind-html="tactic.selectedDerivation().name"></button>
 </div>
-</form>
