@@ -729,8 +729,9 @@ object DerivationInfo {
 
     new InputPositionTacticInfo(
       "discreteGhost",
-      "discreteGhost",
-      TermArg("ghostTerm") :: VariableArg("ghostName") :: Nil,
+      RuleDisplayInfo(("[:=] ghost", "[:=] ghost"), (List("&Gamma;"),List("P","&Delta;")),
+        List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),
+      TermArg("gt") :: VariableArg("gv") :: Nil,
       _ => ((t:Term) => ((v: Option[Variable]) => DLBySubst.discreteGhost(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
 
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
