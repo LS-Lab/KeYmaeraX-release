@@ -477,12 +477,17 @@ private object DifferentialTactics {
       cohide(pos.top) & DW(1) & G(1)
   })
 
+  //A user-friendly error message displayed when ODE can't find anything useful to do.
+  private val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
+    "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
+
   /**
     * @see [[TactixLibrary.ODE]]
     * @author Andre Platzer
     * @author Nathan Fulton
     */
-  def ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  lazy val ODE: DependentPositionTactic = ODE(introduceStuttering=true, assertT(_=>false, failureMessage))
+  def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
@@ -536,27 +541,33 @@ private object DifferentialTactics {
       }
     )
 
-    //A user-friendly error message displayed when ODE can't find anything useful to do.
-    val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
-    "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
-
     //If lateSolve is true then diffSolve will be run last, if at all.
     val insistOnProof = pos.isTopLevel //@todo come up wtih better heuristic for determining when to insist on a proof being completed. Solvability is a pretty decent heuristic.
+
+    /** Introduces stuttering assignments for each BV of the ODE */
+    val stutter = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+      case Some(Box(a: ODESystem, _)) =>
+        val primedVars = StaticSemantics.boundVars(a).toSet[Variable].filter(_.isInstanceOf[BaseVariable])
+        primedVars.map(DLBySubst.stutter(_)(pos ++ PosInExpr(1::Nil))).reduceOption[BelleExpr](_&_).getOrElse(skip)
+    })
 
     //The tactic:
     //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
     if(insistOnProof)
       proveWithoutCuts(pos)        |
-      (addInvariant & ODE(pos))    |
+      (addInvariant & ODE(introduceStuttering,finish)(pos))    |
       TactixLibrary.solve(pos) |
-      splitWeakInequality(pos)<(ODE(pos), ODE(pos)) |
-      assertT(seq=>false, failureMessage)
+      splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) |
+      //@todo default finish fails with useful error message, but undoes all intermediate steps, even if potentially useful
+      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos)
+       else finish)
     else
       (proveWithoutCuts(pos) & done)   |
-      (addInvariant & ODE(pos) & done) |
+      (addInvariant & ODE(introduceStuttering,finish)(pos) & done) |
       TactixLibrary.solve(pos)     |
-      (splitWeakInequality(pos)<(ODE(pos), ODE(pos)) & done) |
-      assertT(seq=>false, failureMessage)
+      (splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) & done) |
+      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & done
+       else finish)
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.

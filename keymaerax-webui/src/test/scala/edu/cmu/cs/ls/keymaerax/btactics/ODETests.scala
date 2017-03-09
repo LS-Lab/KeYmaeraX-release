@@ -154,6 +154,32 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "work with nested ODEs" in withMathematica { _ =>
+    proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1))*3) shouldBe 'proved
+  }
+
+  it should "work with solvable maybe bound" in withMathematica { _ =>
+    val result = proveBy("[{x'=5}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, ODE(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asFormula)
+  }
+
+  it should "work with maybe bound" in withMathematica { _ =>
+    val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula,
+      implyR(1) & DifferentialTactics.ODE(introduceStuttering=true, dW(1) & assignb(1, 1::Nil))(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("true&x>0 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula)
+  }
+
+  it should "not stutter repeatedly" in withMathematica { _ =>
+    val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1) | skip)
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs "[{x'=x^x}]x>0".asFormula::Nil
+  }
+
   it should "prove cheat sheet example" in withMathematica { qeTool => {
     val f = KeYmaeraXProblemParser(
       """

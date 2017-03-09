@@ -1264,6 +1264,27 @@ class DifferentialTests extends TacticTestBase {
     proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), solve(1) & QE) shouldBe 'proved
   }
 
+  it should "work with box property" in withMathematica { _ =>
+    val result = proveBy("[{x'=2}][y:=x;]y>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> [y:=2*(0+1*t_-0)+x;]y>0)".asFormula)
+  }
+
+  it should "work with maybe bound" in withMathematica { _ =>
+    val result = proveBy("[{x'=2}][{x:=x+3;}* ++ y:=x;]y>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x:=x+3;}* ++ y:=x;]y>0))".asFormula)
+  }
+
+  it should "work with sequence of ODEs" in withMathematica { _ =>
+    val result = proveBy("[{x'=2}][{x'=3}]x>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+  }
+
   it should "open diff ind x>b() |- [{x'=2}]x>b()" in withMathematica { tool =>
     proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe 'proved
   }
