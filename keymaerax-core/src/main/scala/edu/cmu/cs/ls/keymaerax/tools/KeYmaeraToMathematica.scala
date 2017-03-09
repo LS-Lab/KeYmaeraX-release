@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
 
+import scala.math.BigDecimal
+
 /**
   * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
   * to Mathematica Expr objects.
@@ -64,10 +66,21 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       case Plus(l, r) => new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Minus(l, r) => new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Times(l, r) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Divide(l: Number, r: Number) => new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Divide(l, r) => new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) => new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Number(n) if n.isValidLong => new MExpr(n.longValue())
-      case Number(n) => new MExpr(n.underlying())
+      case Number(n) if n.isValidLong => new MExpr(n.longValue()) //@note matches isDecimalDouble && n.scale==0 with tighter max value
+      case Number(n) if n.isDecimalDouble && n.scale > 0 =>
+        val num = BigDecimal(n.bigDecimal.unscaledValue())
+        val denom = BigDecimal(BigDecimal(1).bigDecimal.movePointRight(n.scale))
+        assert(n == num/denom, "Expected double to rational conversion to have value " + n + ", but got numerator " + num + " and denominator " + denom)
+        new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convert(Number(num)), convert(Number(denom))))
+      case Number(n) if n.isDecimalDouble && n.scale < 0 =>
+        //@note negative scale means: unscaled*10^(-scale)
+        val num = BigDecimal(n.bigDecimal.unscaledValue()).bigDecimal.movePointLeft(n.scale)
+        assert(n == BigDecimal(num), "Expected double conversion to have value " + n + ", but got " + num)
+        convert(Number(num))
+      case Number(n) => throw new ConversionException("Number is neither long nor encodable as rational of longs: " + n)
       case t: Variable => toMathematica(t)
       case Pair(l, r) =>
         //@note converts nested pairs into nested lists of length 2 each

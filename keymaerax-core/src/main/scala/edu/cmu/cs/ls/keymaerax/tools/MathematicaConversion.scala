@@ -10,7 +10,8 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 import KMComparator._
-import edu.cmu.cs.ls.keymaerax.core.{Function, Real, Tuple}
+import MKComparator._
+import edu.cmu.cs.ls.keymaerax.core.{Divide, Expression, Function, Number, Real, Tuple}
 
 /**
   * Mathematica conversion stuff.
@@ -65,7 +66,7 @@ trait M2KConverter[T] extends (MExpr => T) {
   */
 trait K2MConverter[T] extends (T => MExpr) {
   /** Convert expression `e` to Mathematica with rountrip contracts. */
-  def apply(e: T): MExpr = convert(e) ensuring(r => m2k.convert(r) == e,
+  def apply(e: T): MExpr = convert(e) ensuring(r => m2k.convert(r) === e,
     "Roundtrip conversion is identity." +
     "\nKeYmaera X expression    " + e + "\t@" + e.getClass.getSimpleName +
     "\nConverted to Mathematica " + convert(e).toString +
@@ -89,7 +90,7 @@ object KMComparator {
     * Whether e is thing or starts with head thing.
     * @return true if ``e" and ``thing" are .equals-related.
     */
-  def hasHead(e: MExpr, thing: MExpr) = e.equals(thing) || e.head().equals(thing)
+  def hasHead(e: MExpr, thing: MExpr): Boolean = e.equals(thing) || e.head().equals(thing)
 
   import scala.language.implicitConversions
   implicit def MExprToKMComparator(e: MExpr): KMComparator = new KMComparator(e)
@@ -129,9 +130,12 @@ class KMComparator(val l: MExpr) {
   }
 
   private def rationalEquals(l: MExpr, r: MExpr): Boolean = {
-    assert(hasHead(l, MathematicaSymbols.RATIONAL) || hasHead(l, MathematicaSymbols.DIV), "already checked for rational-like heads")
-    hasHead(r, MathematicaSymbols.DIV) && l.args().length == 2 && r.args().length == 2 &&
-      l.args().head === r.args().head && l.args().last === r.args().last
+    assert(hasHead(l, MathematicaSymbols.RATIONAL), "already checked for rational head")
+    (hasHead(r, MathematicaSymbols.RATIONAL) && l.args().length == 2 && r.args().length == 2 &&
+      l.args().head === r.args().head && l.args().last === r.args().last) ||
+    //@note may happen with runUnchecked, but not if KeYmaeraToMathematica conversion is used
+    (r.realQ() &&
+      BigDecimal(l.args().head.asLong) / BigDecimal(l.args().last.asLong) == BigDecimal(r.asDouble()))
   }
 
   /** equality modulo some limited form of associativity that Mathematica implicitly converts into n-ary operators */
@@ -145,5 +149,19 @@ class KMComparator(val l: MExpr) {
       (i == r.args().length-1 && l === r.args().reverse(i))
     }
     checkBinary(l, r, 0)
+  }
+}
+
+/** Implicit conversion from KeYmaera expressions to comparator. */
+object MKComparator {
+  import scala.language.implicitConversions
+  implicit def TToMKComparator[T](e: T): MKComparator[T] = new MKComparator[T](e)
+}
+
+class MKComparator[T](val l: T) {
+  def ===(r: T): Boolean = (l, r) match {
+    case (Number(lv), Divide(Number(rn), Number(rd))) => lv == rn/rd
+    case (Divide(Number(ln), Number(ld)), Number(rv)) => ln/ld == rv
+    case _ => l == r
   }
 }

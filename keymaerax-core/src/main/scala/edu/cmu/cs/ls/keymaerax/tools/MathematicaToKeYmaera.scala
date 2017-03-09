@@ -37,7 +37,9 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       else if (e.integerQ()) Number(BigDecimal(e.asBigInteger())) //@note e.asLong would lose precision since it truncates if not representable as long
       else throw new ConversionException("Cannot convert number " + e + " (neither double, long, nor big decimal)") //@note complexQ
     }
-    else if (e.rationalQ()) {assert(hasHead(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
+    //@note self-created MExpr with head RATIONAL are not rationalQ (type identifiers do not match)
+    else if (e.rationalQ() || hasHead(e,MathematicaSymbols.RATIONAL)) {
+      assert(hasHead(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
 
     // Arith expressions
     else if (hasHead(e,MathematicaSymbols.PLUS))  convertNary(e, Plus.apply)
