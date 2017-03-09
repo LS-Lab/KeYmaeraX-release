@@ -1323,6 +1323,21 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> dx*(a/2*t_^2+v*t_)+x>0)".asFormula)
   }
 
+  it should "solve more complicated constants" in withMathematica { _ =>
+    val result = proveBy("[{v'=a+c,t'=1,x'=(v+5)*dx^2,y'=v*(3-dy)*c}]x^2+y^2<=r^2".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> (dx^2*((a+c)/2*t_^2+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)/2*t_^2+v*t_))+y)^2<=r^2)".asFormula)
+  }
+
+  it should "solve more complicated constants with explicit c'=0" in withMathematica { _ =>
+    //@note dx'=0 omitted intentionally to test for mixed explicit/non-explicit constants
+    val result = proveBy("[{v'=a+c,t'=1,c'=0,x'=(v+5)*dx^2,y'=v*(3-dy)*c,dy'=0}]x^2+y^2<=r^2".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> (dx^2*(a/2*t_^2+c/2*t_^2+v*t_+5*t_)+x)^2+(c*((3-dy)*(a/2*t_^2+c/2*t_^2+v*t_))+y)^2<=r^2)".asFormula)
+  }
+
   it should "work when ODE is not sole formula in succedent" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("y=1".asFormula, "[{x'=v,v'=a}]x>0".asFormula, "z=3".asFormula)),
       solve(2))
