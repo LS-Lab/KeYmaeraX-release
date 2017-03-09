@@ -35,13 +35,13 @@ object AxiomaticODESolver {
 
   //region The main tactic
 
-  def apply() = axiomaticSolve()
+  def apply(): DependentPositionTactic = axiomaticSolve()
 
-  def axiomaticSolve(instEnd: Boolean = false) = "solve" by ((pos: Position, s: Sequent) => {
+  def axiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "solve" by ((pos: Position, s: Sequent) => {
     val (ode, q) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)
-      case Some(Diamond(ODESystem(o, qq), _)) if instEnd => throw new BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
+      case Some(Diamond(ODESystem(o, qq), _)) if instEnd => throw BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
     }
 
     val osize = odeSize(ode)
@@ -110,7 +110,7 @@ object AxiomaticODESolver {
 
    class Cycle extends Exception {}
 
-  def myFreeVars(term:Term) = {
+  private def myFreeVars(term:Term): SetLattice[Variable] = {
     term match {
       /* Hack: ODE solving actually works ok sometimes if semantically free variables are treated as free.
        * If we have something in the linear form expected by DG, then leave it around and see if it solves.
@@ -272,11 +272,11 @@ object AxiomaticODESolver {
     }
   }
 
-  val odeSolverPreconds =  TacticFactory.anon ((pos: Position, s: Sequent) => {
+  val odeSolverPreconds: DependentPositionTactic =  TacticFactory.anon ((pos: Position, s: Sequent) => {
     val (ode: DifferentialProgram, dom:Formula, post:Formula, isDiamond) = s.sub(pos) match {
       case Some(Box(ODESystem(o, q), p)) => (o, q, p, false)
       case Some(Diamond(ODESystem(o, q), p)) => (o, q, p, true)
-      case sub => throw new BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
+      case sub => throw BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
     }
     val afterCanonicalization =
       StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
@@ -304,7 +304,7 @@ object AxiomaticODESolver {
     *
     * @note If we want an initial value for time (kyxtime:=0) then this is the place to add that functionality.
     */
-  val addTimeVar = TacticFactory.anon ((pos: Position, s:Sequent) => {
+  val addTimeVar: DependentPositionTactic = TacticFactory.anon ((pos: Position, s:Sequent) => {
     s.sub(pos ++ PosInExpr(0::Nil)) match {
       case Some(x: DifferentialProgram) => //ok
       case Some(x: ODESystem) => //ok
@@ -326,7 +326,7 @@ object AxiomaticODESolver {
 
   //region Cut in solutions
 
-  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")) = "cutInSoln" by ((pos: Position, s: Sequent) => {
+  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")): DependentPositionTactic = "cutInSoln" by ((pos: Position, s: Sequent) => {
     val system: ODESystem = s.sub(pos) match {
       case Some(Box(x: ODESystem, _)) => x
       case Some(Diamond(x: ODESystem, _)) => x
@@ -492,7 +492,7 @@ object AxiomaticODESolver {
     *   [x'=v,v'=a,t'=1 & q]p
     * }}}
     */
-  val inverseDiffGhost = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
+  val inverseDiffGhost: DependentPositionTactic = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
     def checkResult(ode: DifferentialProgram, y_DE: AtomicDifferentialProgram) = DebuggingTactics.assertProvableSize(1) &
       DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
       DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
