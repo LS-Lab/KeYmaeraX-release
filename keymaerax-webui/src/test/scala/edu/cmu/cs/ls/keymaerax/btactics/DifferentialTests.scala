@@ -1288,6 +1288,41 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0)".asFormula)
   }
 
+  it should "solve ODE with const factor" in withMathematica { _ =>
+    val result = proveBy("[{x'=c*v}]x>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> c*v*t_+x>0)".asFormula)
+  }
+
+  it should "solve ODE system with const factor" in withMathematica { _ =>
+    val result = proveBy("[{x'=c*v,v'=a}]x>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> c*(a/2*t_^2+v*t_)+x>0)".asFormula)
+  }
+
+  it should "solve ODE system with number factor" in withMathematica { _ =>
+    val result = proveBy("[{x'=3*v,v'=a}]x>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> 3*(a/2*t_^2+v*t_)+x>0)".asFormula)
+  }
+
+  it should "solve straight 2D driving" in withMathematica { _ =>
+    val result = proveBy("[{v'=a,x'=v*dx,y'=v*dy}]x^2+y^2<=r^2".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> (dx*(a/2*t_^2+v*t_)+x)^2+(dy*(a/2*t_^2+v*t_)+y)^2<=r^2)".asFormula)
+  }
+
+  it should "solve straight 2D driving when only x is mentioned in p" in withMathematica { _ =>
+    val result = proveBy("[{v'=a,x'=v*dx,y'=v*dy}]x>0".asFormula, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> dx*(a/2*t_^2+v*t_)+x>0)".asFormula)
+  }
+
   it should "work when ODE is not sole formula in succedent" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("y=1".asFormula, "[{x'=v,v'=a}]x>0".asFormula, "z=3".asFormula)),
       solve(2))
