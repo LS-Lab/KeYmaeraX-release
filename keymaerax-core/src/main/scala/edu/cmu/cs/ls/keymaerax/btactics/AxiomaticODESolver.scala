@@ -326,7 +326,7 @@ object AxiomaticODESolver {
 
   //region Cut in solutions
 
-  def cutInSoln(odeSize: Int) = "cutInSoln" by ((pos: Position, s: Sequent) => {
+  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")) = "cutInSoln" by ((pos: Position, s: Sequent) => {
     val system: ODESystem = s.sub(pos) match {
       case Some(Box(x: ODESystem, _)) => x
       case Some(Diamond(x: ODESystem, _)) => x
@@ -338,7 +338,7 @@ object AxiomaticODESolver {
 
     val initialConditions: Map[Variable, Term] = extract(s(pos.top), pos.inExpr.parent, odeSize+1).toMap
 
-    val nextEqn = sortAtomicOdes(atomicOdes(system))
+    val nextEqn = sortAtomicOdes(atomicOdes(system), diffArg)
       .filter(_.xp.x != TIMEVAR)
       .filterNot(eqn => isSolved(eqn.xp.x, system))
       .head

@@ -263,6 +263,28 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "(\\forall t_ (t_>=0->(v*t_+x)^3>=1)) -> x=1&v=2".asFormula
   }
 
+  it should "work on single integrators with constant factors" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    //val f = "x=1&v=2&a=3 -> [{x'=v,v'=a}]x^3>=1".asFormula
+    val s = Sequent(IndexedSeq("x=0".asFormula, "t=0".asFormula), IndexedSeq("[{x'=2*t,t'=1}]x=t^2".asFormula))
+    val t = AxiomaticODESolver()(1)
+    val result = proveBy(s, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain ("x=0".asFormula)
+    result.subgoals.head.ante should contain ("t=0".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->2*(t_^2/2+t*t_)+x=(t_+t)^2)".asFormula
+  }
+
+  it should "work on double integrators with constant factors" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val s = Sequent(IndexedSeq("a=0".asFormula, "x=0".asFormula, "t=0".asFormula), IndexedSeq("[{x'=2*v,v'=a,t'=1}]x=a*t^2".asFormula))
+    val t = AxiomaticODESolver()(1)
+    val result = proveBy(s, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain ("a=0".asFormula)
+    result.subgoals.head.ante should contain ("x=0".asFormula)
+    result.subgoals.head.ante should contain ("t=0".asFormula)
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->2*(a/2*t_^2+v*t_)+x=a*(t_+t)^2)".asFormula
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
