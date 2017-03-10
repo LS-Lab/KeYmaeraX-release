@@ -23,62 +23,6 @@ Ensure that the following software is installed
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
   Otherwise [https://github.com/Z3Prover/z3](Z3) is automatically used for arithmetic.)
 
-Building
-========
-To compile KeYmaera X from source code, install the above software and also install
-- [Scala Build Tool sbt](http://www.scala-sbt.org)
-  (Version 0.13 or greater recommended. Other versions may work).
-  If you are using IntelliJ, this comes with the Scala plugin.
-  http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
-
-1) Compile KeYmaera X with the Scala Build Tool:
-
-    sbt compile
-
-2) Reinitialize the lemma database by deleting the KeYmaera X cache in your home directory and run the lemma initialization as follows:
-
-    rm -rf ~/.keymaerax/cache
-    sbt "test-only edu.cmu.cs.ls.keymaerax.btactics.DerivedAxiomsTests"
-
-3) The Web UI web user interface of KeYmaera X can be started as follows:
-
-    sbt assembly
-    java -jar keymaerax.jar
-    open http://localhost:8090/
-
-If the jar does not start because of an error `no manifest found`, then first run `sbt clean`.
-In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
-
-4) To find out how to use KeYmaera X from command line instead of the web user interface, run:
-
-    java -Xss20M -jar keymaerax.jar -help
-
-5) API documentation is provided at http://keymaeraX.org/scaladoc
-  while local documentation will be generated in the directory `target/scala-2.11/unidoc` with:
-
-    sbt unidoc
-
-6) To test your installation, you can run the full regression test suite:
-
-    sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
-
-##### FAQ: Build Problems
-===================
-The build file uses default paths to the Mathematica JLink JAR for MacOS and Mathematica 10 (see file `default.properties`).
-If those are not suitable for your setup, create a file `local.properties` in the same directory as `default.properties`
-(project root) and provide the location of JLink.jar with a property
-
-    mathematica.jlink.path=YOUR_LOCAL_PATH_TO_JLINKJAR
-
-If, at any time, you run into problems during the compilation process, use `sbt clean` for a fresh start to remove stale files. If the problems persist, use `sbt clean` followed by `sbt reload`. On a few computers you may have to edit your environment variables, e.g., `~/.bashrc` or  `~/.profile` to include something like
-
-    export SBT_OPTS="-Xss20M -Xms8000M"
-
-The Wiki contains extended build instructions and solutions to other
-common sbt problems:
-
-https://github.com/LS-Lab/KeYmaeraX-Release/wiki/Building-Instructions
-
 ##### FAQ: Run Problems
 =================
 
@@ -91,48 +35,6 @@ If KeYmaera X acts weird after an update, you should clean your local cache of l
 You could also try removing or renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
 
 Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10.
-
-
-IntelliJ IDEA Development Environment
-=====================================
-
-If you choose to use the IntelliJ IDEA development environment, install it:
-- Install IntelliJ IDEA
-- Install the Scala plugin for IntelliJ (the IntelliJ installer will ask you if you want to do this)
-
-Project Setup
-- Make sure you have defined the JLINK_JAR_LOCATION environment variable (see FAQ).
-- Create a new Scala project, backed by SBT
-- Select a JDK as your project SDK, add a new one if not previously added
-- Check `update automatically` (not checked by default), so that updates to build.sbt are reflected automatically in the project. You may also want to check the "Download and compile sources" options.
-- If the bundled version of sbt is not working for you, you can specify your own version here.
-
-Create a new run configuration of type Application for the KeYmaera X Web UI.
-- Main class: `edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot`
-- Set the working directory to the project path
-- Use the classpath of your project module
-- Check "Single instance only"
-- Make sure the JVM option `-Xss20M` is included in the run configuration.
-
-Test Cases:
-- Right click on project folder `keymaerax-webui/src/test` to mark this directory as Test Sources Root.
-- Make sure the JVM option `-Xss20M` is included in the run configuration.
-- Right click on the test folder to run all its ScalaTests.
-
-Tagged Test Suite:
-Run Configurations Drop-down in Toolbar
- -> Edit Configurations
- -> Add Configuration (ScalaTest)
- -> Select "All in package" for Test Kind
- -> Under "Test options" enter:
-      `-n edu.cmu.cs.ls.keymaerax.tags.CheckinTest -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest -l edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest`
-      (or any other string from `TestTags.scala`)
- -> Select "keymaerax" as SDK and classpath of module
- -> Apply/OK
-
-##### IntelliJ FAQ
-============
-If, at any time, you run into problems during the compilation process in IntelliJ, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. This is necessary for IntelliJ to find JLink.jar. IntelliJ keeps forgetting about it, so you may have to check repeatedly. If the problems persist, do `File->Invalidate Caches / Restart`.
 
 Command Line Execution and Templates
 ====================================
@@ -177,57 +79,9 @@ Windows, 64bit, Mathematica 10.4
 * `-mathkernel "C:\Program Files\Wolfram Research\Mathematica\10.4\MathKernel.exe"`
 * `-jlink "C:\Program Files\Wolfram Research\Mathematica\10.4\SystemFiles\Links\JLink\SystemFiles\Libraries\Windows-x86-64"`
 
-Source Code Layout
-==================
-
-KeYmaera X API Documentation explains the package layout: http://keymaeraX.org/scaladoc
-
-`build.sbt` - SBT configuration file.
-
-The project is split into two subprojects, `keymaerax-core` for the core functionalities of the prover and `keymaerax-webui` for everything else.
-
-    keymaerax-core/src/ - Source code directory
-    keymaerax-core/src/main/scala - source code (edu.cmu.cs.ls.keymaerax)
-    keymaerax-webui/src/ - Source code directory for Web UI etc.
-    keymaerax-webui/src/test/scala - tests run by `sbt test`
-    keymaerax-core/target/scala-2.11/api/ - Target directory for sbt doc documentation.
-    target/ - Generated files directory created by sbt on first compilation.
-    target/scala-2.11/classes/ - Target directory for sbt compilation.    
-    target/scala-2.11/unidoc/ - Target directory for sbt unidoc documentation.    
-
-Test Cases
-==========
-
-The full test suite can be run from command line, e.g., by
-
-    sbt test -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest 
-
-Selectively running individual test cases within the sbt interactive mode:
-
-    sbt
-    sbt>  test-only *USubst*
-
-Or, run on a more fine-grained level within a class use
-object MyTest extends Tag("MyTest")
-
-    object MyTest extends Tag("MyTest")
-    it should "do something useful" taggedAs(MyTest) in {....}
-    it should "do anything useful" taggedAs(MyTest) in {....}
-    it should "do more good" taggedAs(MoreTest) in {....}
-
-Then in sbt interactive mode run   
-
-    sbt>  test-only -- -n "MyTest MoreTest"
-
-To inline scala console output alongside the test suite information, first do:
-
-    sbt>  set logBuffered in Test := false
-
-IntelliJ IDEA can also run the test suite (see #IntelliJ IDEA).
-
-The Wiki contains an introduction to the testing framework:
-https://github.com/LS-Lab/KeYmaeraX-Release/wiki/How-to-Add-Tests
-http://www.scalatest.org/user_guide
+Building
+========
+To compile KeYmaera X from source code, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions)
 
 
 Specification
