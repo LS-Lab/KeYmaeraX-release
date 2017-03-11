@@ -1301,6 +1301,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> v*t_+x>0)".asFormula)
   }
 
+  it should "find solution for x'=v with evolution domain constraint" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0".asFormula), IndexedSeq("[{x'=v&x>=0}]x>0".asFormula)),
+      solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0 & v>=0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0) -> v*t_+x>0)".asFormula)
+  }
+
   it should "find solution for x'=v, v'=a" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a}]x>0".asFormula)),
       solve(1))
@@ -1415,10 +1423,17 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "retain initial evolution domain for the sake of contradictions" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x<=0".asFormula), IndexedSeq("[{x'=1&x>0}]x>0".asFormula)), solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x<=0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x>0) -> t_+x>0)".asFormula)
+  }
+
+  it should "preserve contradictions in constants as false" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("y>0".asFormula), IndexedSeq("[{x'=1&y<=0}]x>0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("y>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> y<=0) -> t_+x>0)".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> false) -> t_+x>0)".asFormula)
   }
 
   it should "retain initial evolution domain for the sake of contradictions (2)" in withMathematica { tool =>
@@ -1447,6 +1462,27 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
+  }
+
+  it should "not lose constant facts" in withMathematica { _ =>
+    val result = proveBy("r>0 -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "r>0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
+  }
+
+  it should "solve in context" in withMathematica { _ =>
+    val result = proveBy("A>0 -> [a:=A;][{v'=a}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "A>0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[a:=A;]\\forall t_ (t_>=0 -> a*t_+v>0)".asFormula::Nil
+  }
+
+  it should "preserve const facts when solving in context" ignore withMathematica { _ =>
+    val result = proveBy("A>0 -> [a:=A;][{v'=1/A}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "A>0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[a:=A;]\\forall t_ (t_>=0 -> 1/A*t_+v>0)".asFormula::Nil
   }
 
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {

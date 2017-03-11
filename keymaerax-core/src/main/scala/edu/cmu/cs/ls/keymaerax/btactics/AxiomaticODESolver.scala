@@ -53,13 +53,33 @@ object AxiomaticODESolver {
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
+    val assumptions = if (pos.isAnte) s.ante.patch(pos.index0, Nil, 1) else s.ante
+    val odeVars = StaticSemantics.boundVars(ode).toSet
+    val consts = assumptions.flatMap(FormulaTools.conjuncts).
+      filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
+      reduceOption(And).getOrElse(True)
+
     val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
     val simpEvolDom =
       if (q == True) TactixLibrary.skip //evolution domain constraint is trivial, so simplification is not necessary.
       else if (instEnd) simplifier(pos ++ PosInExpr(0 :: Nil))
-      else simplifier(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 1 :: Nil))
+      else simplifier(pos ++ PosInExpr(0::1::0::0::1::Nil))
 
-    addTimeVar(pos) &
+    //@todo preserve consts when solving in context (requires closing const as last step of DI in context - let fails otherwise)
+    val simpConsts: DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) =>
+      if (consts != True && pos.isTopLevel) ss.sub(pp) match {
+        case Some(False) => TactixLibrary.skip
+        case Some(_) =>
+          val constsPos = if (q == True) PosInExpr(0::1::0::0::1::Nil) else PosInExpr(0::1::0::0::1::1::Nil)
+          TactixLibrary.transform(Imply(consts, consts))(pp.topLevel ++ constsPos) &
+          TactixLibrary.useAt(DerivedAxioms.implySelf)(pp.topLevel ++ constsPos) &
+          (if (q == True) TactixLibrary.skip else TactixLibrary.useAt(DerivedAxioms.andTrue)(pp.topLevel ++ constsPos.parent))
+      } else TactixLibrary.skip)
+
+    DebuggingTactics.debug("SOLVE Start", ODE_DEBUGGER) &
+      (if (consts == True || !pos.isTopLevel) TactixLibrary.skip else DifferentialTactics.diffInvariant(consts)(pos)) &
+      DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER) &
+      addTimeVar(pos) &
       DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
       odeSolverPreconds(pos ++ PosInExpr(1 :: Nil)) &
       DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
@@ -92,6 +112,8 @@ object AxiomaticODESolver {
       DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER) &
       HilbertCalculus.assignb(pos) * (osize + 2) & // all initial vals + time_0=time + time=0
       DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
+      simpConsts(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
+      DebuggingTactics.debug("AFTER simplifying consts", ODE_DEBUGGER) &
       (if (q == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)) &
         TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
@@ -358,6 +380,7 @@ object AxiomaticODESolver {
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
+
     val fact = s.sub(withInitialsPos) match {
       case Some(fml: Formula) =>
         val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))
