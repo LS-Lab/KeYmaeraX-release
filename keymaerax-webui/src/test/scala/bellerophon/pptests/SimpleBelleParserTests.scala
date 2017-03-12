@@ -463,4 +463,24 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   //endregion
+
+  //region argument parser
+
+  it should "parse string arguments" in {
+    BelleParser("print({`a message`})") shouldBe DebuggingTactics.print("a message")
+  }
+
+  it should "parse formula arguments" in {
+    BelleParser("dC({`x>0`},1)") shouldBe TactixLibrary.dC("x>0".asFormula)(1)
+  }
+
+  it should "parse term arguments" in {
+    BelleParser("transform({`x+2`},1)") shouldBe TactixLibrary.transform("x+2".asTerm)(1)
+  }
+
+  it should "parse mixed arguments" in {
+    BelleParser("dG({`z`},{`-1`},{`0`},{`x*z^2=1`},1)") shouldBe TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1)
+  }
+
+  //endregion
 }

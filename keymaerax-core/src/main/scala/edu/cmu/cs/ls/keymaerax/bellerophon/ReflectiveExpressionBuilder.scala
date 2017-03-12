@@ -11,7 +11,7 @@ import scala.reflect.runtime.universe.typeTag
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Seq[Expression], PositionLocator]], generator: Option[Generator.Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Seq[Any], PositionLocator]], generator: Option[Generator.Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown.")))
     val withGenerator =
       if (info.needsGenerator) {
@@ -27,6 +27,7 @@ object ReflectiveExpressionBuilder {
     val expressionArgs = args.filter(_.isLeft).map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown.")))
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
+      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe => expr(s)
       case (expr: TypedFunc[Formula, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe => expr(fml)
       case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
       case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
@@ -63,14 +64,14 @@ object ReflectiveExpressionBuilder {
       case (expr: ((Position, Position) => BelleExpr), Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) => expr(arg1, arg2)
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
-          throw new ReflectiveExpressionBuilderExn("Expected either " + num + s" or 0 position arguments for ${expr.getClass} (${expr}), got " + pArgs.length)
+          throw new ReflectiveExpressionBuilderExn("Expected either " + num + s" or 0 position arguments for ${expr.getClass} ($expr), got " + pArgs.length)
         } else {
           throw new ReflectiveExpressionBuilderExn("Tactics with " + num + " arguments cannot have type " + expr.getClass.getSimpleName)
         }
     }
   }
 
-  def apply(name: String, arguments: List[Either[Seq[Expression], PositionLocator]] = Nil, generator: Option[Generator.Generator[Formula]]) : BelleExpr = {
+  def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil, generator: Option[Generator.Generator[Formula]]) : BelleExpr = {
     if(!DerivationInfo.hasCodeName(name)) {
       throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
     }
@@ -81,7 +82,7 @@ object ReflectiveExpressionBuilder {
       catch {
         case e: java.util.NoSuchElementException =>
           println("Error: " + e)
-          throw new Exception(s"Encountered errror when trying to find info for identifier ${name}, even though ${name} is a code-name for a tactic.")
+          throw new Exception(s"Encountered errror when trying to find info for identifier $name, even though $name is a code-name for a tactic.")
       }
     }
   }

@@ -124,11 +124,12 @@ private object DONE extends BelleTerminal("done") {
   override def regexp = "(?i)done".r // allow case-insensitive use of the word done.
 }
 
-/** A dL expression. We allow both terms and formulas as arguments; e.g. in diffGhost. */
+/** A tactic argument expression. We allow strings, terms, and formulas as arguments. */
 private case class EXPRESSION(exprString: String) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
-  val undelimitedExprString = exprString.drop(2).dropRight(2)
+  lazy val undelimitedExprString: String = exprString.drop(2).dropRight(2)
 
-  val expression: Expression = {
+  /** Parses the `exprString` as dL expression. May throw a parse exception. */
+  lazy val expression: Expression = {
     assert(exprString.startsWith("{`") && exprString.endsWith("`}"),
       s"EXPRESSION.regexp should ensure delimited expression begin and end with {` `}, but an EXPRESSION was constructed with argument: $exprString")
 
@@ -136,12 +137,12 @@ private case class EXPRESSION(exprString: String) extends BelleTerminal(exprStri
     KeYmaeraXParser(undelimitedExprString)
   }
 
-  override def regexp = EXPRESSION.regexp
-  override val startPattern = EXPRESSION.startPattern
+  override def regexp: Regex = EXPRESSION.regexp
+  override val startPattern: Regex = EXPRESSION.startPattern
 
   override def toString = s"EXPRESSION($exprString)"
 
-  override def equals(other: Any) = other match {
+  override def equals(other: Any): Boolean = other match {
     case EXPRESSION(str) => str == exprString
     case _ => false
   }

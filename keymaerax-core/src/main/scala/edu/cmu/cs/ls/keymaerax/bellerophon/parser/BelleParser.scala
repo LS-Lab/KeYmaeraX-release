@@ -467,68 +467,11 @@ object BelleParser extends (String => BelleExpr) {
     }
   }
 
-  /**
-    * Consolidates all successive expression arguments into a single list.
-    *
-    * Example: 1=1,2=2,'L becomes (1=1,2=2),'L
-    * Example: 1=1, 'L, 2=2 stays the smame.
-    *
-    * Could be used e.g. for diffInd type things to pass a list of formulas to a tactic without actually adding lists of formulas to the grammar.
-    */
-  @deprecated("This method implicitly converts a list of formula arguments to a single argument that is a list of formulas. This is necessary for ArgList tactics; i.e. tactics that take lists of formulas as arguments. These tactics that take lists of formulas as arguments are temporarily deprecated until they can be fully supported. Even then, we probably want explicit syntax for differentiating between a list of formula arguments and a list of formulas as an argument.", "4.2b1")
-  private def consolidatedExpressions(args : Option[List[TacticArg]]) = args match {
-      case None => Nil
-      case Some(argList) => argList
-        .foldLeft[List[Either[Seq[Expression], PositionLocator]]](Nil)((newArgs, arg) => {
-        if(newArgs.length == 0) arg match {
-          case Left(e) => newArgs :+ Left(Seq(e))
-          case Right(pl) => newArgs :+ Right(pl)
-        }
-        else (newArgs.last, arg) match {
-          case (_, Right(pl)) => newArgs :+ Right(pl)
-          case (Right(pl), Left(expression)) => newArgs :+ Left(Seq(expression))
-          case (Left(consolidatedExprs), Left(nextExpr)) => newArgs.dropRight(1) :+ Left(consolidatedExprs :+ nextExpr)
-        }
-      })
-  }
-
-  @deprecated("Replaced with a stack traversal.", "4.2b1")
-  /** @todo Delete this code after testing that the common tactics did not break with new approach. */
-  private def reduceExpressionList(st: ParserState) = {
-    val list = st.stack.toList.reverse.span(_ match {
-      case BelleToken(OPEN_PAREN, _) => false
-      case _ => true
-    })._2
-
-    val remainingStack = st.stack.drop(list.length)
-
-    //Remove the leading ( and trailing ) from the list.
-    assert(list.headOption match {
-      case Some(BelleToken(OPEN_PAREN, _)) => true
-      case _ => false
-    }, "First element of list should be a OPEN_PAREN")
-    assert(list.last match {
-      case BelleToken(CLOSE_PAREN, _) => true
-      case _ => false
-    }, "Last element of list should be a CLOSE_PAREN")
-    val commaSepExprs = list.tail.dropRight(1)
-
-    val onlyExprs = commaSepExprs.filter(x => x match {
-      case BelleToken(COMMA, _) => false
-      case e : ParsedBelleExpr => true
-      case _ => {assert(false, s"Comma-separated expression list should only commas expressions and ParsedBelleExprs, but found ${x}"); ???}
-     }).map(_.asInstanceOf[ParsedBelleExpr])
-
-    val newItem = ParsedBelleExprList(onlyExprs)
-
-    ParserState(remainingStack :+ newItem, st.input)
-  }
-
   //endregion
 
   //region Ad-hoc Argument List Parser
 
-  type TacticArg = Either[Expression, PositionLocator]
+  type TacticArg = Either[Any, PositionLocator]
 
   /**
     * An ad-hoc parser for argument lists.
@@ -607,26 +550,27 @@ object BelleParser extends (String => BelleExpr) {
         //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
         expectedType.get match {
-          case ty:FormulaArg if tok.expression.isInstanceOf[Formula] => Left(tok.expression)
-          case ty:FormulaArg => try {
+          case _:StringArg => Left(tok.undelimitedExprString)
+          case _:FormulaArg if tok.expression.isInstanceOf[Formula] => Left(tok.expression)
+          case _:FormulaArg => try {
             Left(tok.undelimitedExprString.asFormula)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Formula, but a formula was expected. Error: $exn", loc, exn)
           }
-          case ty:TermArg if tok.expression.isInstanceOf[Term] => Left(tok.expression)
-          case ty:TermArg => try {
+          case _:TermArg if tok.expression.isInstanceOf[Term] => Left(tok.expression)
+          case _:TermArg => try {
             Left(tok.undelimitedExprString.asTerm)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Term, but a term was expected. Error: $exn", loc, exn)
           }
-          case ty:VariableArg if tok.expression.isInstanceOf[Variable] => Left(tok.expression)
-          case ty:VariableArg => try {
+          case _:VariableArg if tok.expression.isInstanceOf[Variable] => Left(tok.expression)
+          case _:VariableArg => try {
             Left(tok.undelimitedExprString.asVariable)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a variable was expected. Error: $exn", loc, exn)
           }
-          case ty:ExpressionArg if tok.expression.isInstanceOf[Expression] => Left(tok.expression)
-          case ty:ExpressionArg => try {
+          case _:ExpressionArg if tok.expression.isInstanceOf[Expression] => Left(tok.expression)
+          case _:ExpressionArg => try {
             Left(tok.undelimitedExprString.asExpr)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as an Expression, but an expression was expected. Error: $exn", loc, exn)

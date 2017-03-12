@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.TacticInfo
-import edu.cmu.cs.ls.keymaerax.core.{Equal, Formula, Term}
+import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 /**
@@ -75,7 +75,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   }
 
   private def argPrinter(arg : BelleParser.TacticArg) = arg match {
-    case Left(expr) => "{`" + KeYmaeraXPrettyPrinter(expr) + "`}"
+    case Left(expr: Expression) => "{`" + KeYmaeraXPrettyPrinter(expr) + "`}"
+    case Left(expr: String) => "{`" + expr + "`}"
     case Right(loc) => loc.prettyString
   }
 

@@ -818,7 +818,13 @@ object DerivationInfo {
       , "Goedel", {case () => HilbertCalculus.useAt(DerivedAxioms.Goedel)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
-      , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)})
+      , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)}),
+
+    // assertions and messages
+    InputTacticInfo("print"
+      , SimpleDisplayInfo("Print","print")
+      ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.printIndexed(msg)): TypedFunc[String, BelleExpr])
+
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
@@ -919,6 +925,9 @@ case class ExpressionArg (override val name: String) extends ArgInfo {
 }
 case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
+}
+case class StringArg (override val name: String) extends ArgInfo {
+  val sort = "string"
 }
 @deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
 case class ListArg (override val name: String, elementSort: String) extends ArgInfo {
