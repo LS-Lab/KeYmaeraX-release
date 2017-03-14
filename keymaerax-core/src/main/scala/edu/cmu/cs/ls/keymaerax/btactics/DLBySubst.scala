@@ -194,10 +194,22 @@ private object DLBySubst {
    */
   def generalize(c: Formula): DependentPositionTactic =
     "MR" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
-      case (ctx, Box(a, _)) =>
-        cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
-          /* use */ /*label(BranchLabels.genUse)*/ ident,
-          /* show */(cohide(pos.top) & CMon(pos.inExpr++1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
+      case (ctx, Box(a, p)) =>
+        val (q, useCleanup, showCleanup) =
+          sequent.ante.flatMap(FormulaTools.conjuncts).
+            filter(StaticSemantics.symbols(_).intersect(StaticSemantics.boundVars(a).toSet).isEmpty).toList match {
+          case Nil => (c, skip, implyR(pos.top))
+          case consts => (And(consts.reduceRight(And), c),
+              boxAnd(pos) &
+              abstractionb(pos ++ PosInExpr(0::Nil)) &
+              (if (pos.isTopLevel) andR(pos) & Idioms.<(prop & done, skip)
+               else skip),
+              implyR(pos.top) & andL(-1)
+            )
+        }
+        cutR(ctx(Box(a, q)))(pos.checkSucc.top) <(
+          /* use */ /*label(BranchLabels.genUse)*/ useCleanup,
+          /* show */cohide(pos.top) & CMon(pos.inExpr++1) & showCleanup //& label(BranchLabels.genShow)
         )
     })
 

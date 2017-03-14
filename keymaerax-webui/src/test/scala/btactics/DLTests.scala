@@ -72,14 +72,14 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "y>0".asFormula
   }
 
-  it should "work with ODEs" in withMathematica { qeTool =>
+  it should "work with ODEs" in withMathematica { _ =>
     val result = proveBy("[{x'=2}]x>0".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x x>0".asFormula
   }
 
-  it should "work with ODEs followed by derived diff assigns" in withMathematica { qeTool =>
+  it should "work with ODEs followed by derived diff assigns" in withMathematica { _ =>
     val result = proveBy("[{x'=2}][x':=2;]x'>0".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -87,21 +87,21 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[x':=2;]x'>0".asFormula
   }
 
-  it should "work with ODEs followed by diff assigns" in withMathematica { qeTool =>
+  it should "work with ODEs followed by diff assigns" in withMathematica { _ =>
     val result = proveBy("[{x'=2}][x':=2;](x>0)'".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x [x':=2;](x>0)'".asFormula
   }
 
-  it should "work with ODEs followed by diff assigns, multi-var case" in withMathematica { qeTool =>
+  it should "work with ODEs followed by diff assigns, multi-var case" in withMathematica { _ =>
     val result = proveBy("[{x'=2,y'=3,z'=4}][x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "\\forall x \\forall y \\forall z [x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula
   }
 
-  it should "work with cyclic ODEs" in withMathematica { qeTool =>
+  it should "work with cyclic ODEs" in withMathematica { _ =>
     val result = proveBy("[{x'=y,y'=z,z'=x^2&y>=0}](y>=0->[z':=x^2;][y':=z;][x':=y;]x'>=0)".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -330,6 +330,43 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "a=2 -> [z:=3;][x:=2;]x>1".asFormula
     result.subgoals(1).ante should contain only "x>1".asFormula
     result.subgoals(1).succ should contain only "[y:=x;]y>1".asFormula
+  }
+
+  it should "preserve a const fact" in withMathematica { _ =>
+    val result = proveBy("A>1&x>5 -> [x:=A;][y:=A*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs "A>1&x>5".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=A;]x>1".asFormula::Nil
+    result.subgoals(1).ante should contain theSameElementsAs "A>1".asFormula::"x>1".asFormula::Nil
+    result.subgoals(1).succ should contain only "[y:=A*x;]y>1".asFormula
+  }
+
+  it should "preserve function facts" in withMathematica { _ =>
+    val result = proveBy("A()>1&x>5 -> [x:=A();][y:=A()*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs "A()>1&x>5".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=A();]x>1".asFormula::Nil
+    result.subgoals(1).ante should contain theSameElementsAs "A()>1".asFormula::"x>1".asFormula::Nil
+    result.subgoals(1).succ should contain only "[y:=A()*x;]y>1".asFormula
+  }
+
+  it should "preserve multiple facts" in withMathematica { _ =>
+    val result = proveBy("A>1&A>2&x>5&A>3 -> [x:=A;][y:=A*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs "A>1&A>2&x>5&A>3".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=A;]x>1".asFormula::Nil
+    result.subgoals(1).ante should contain theSameElementsAs "A>1&A>2&A>3".asFormula::"x>1".asFormula::Nil
+    result.subgoals(1).succ should contain only "[y:=A*x;]y>1".asFormula
+  }
+
+  it should "preserve const facts in context" in withMathematica { _ =>
+    val result = proveBy("A>1&x>5 -> [z:=3;][{z'=A}][x:=A;][y:=A*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1, 1::1::Nil))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs "A>1&x>5".asFormula::Nil
+    //@todo cleanup in context
+    result.subgoals.head.succ should contain theSameElementsAs "[z:=3;][{z'=A}](A>1&[x:=A;]x>1)".asFormula::Nil
+    result.subgoals(1).ante should contain theSameElementsAs "A>1".asFormula::"x>1".asFormula::Nil
+    result.subgoals(1).succ should contain only "[y:=A*x;]y>1".asFormula
   }
 
   "postCut" should "introduce implication in simple example" in {
