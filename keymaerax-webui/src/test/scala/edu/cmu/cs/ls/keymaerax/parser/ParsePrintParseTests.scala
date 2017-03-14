@@ -80,6 +80,19 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
     }
   }
 
+  it should "print and parse a formula with if then else as variable names." in {
+    val exprs = "if = then"   ::
+                "then = else" ::
+                "if = else"   ::
+                "else = then" ::
+                "then = if"   ::
+                Nil
+    for(e <- exprs) {
+      val expected = KeYmaeraXParser(e)
+      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+    }
+  }
+
   it should "print and parse if-then-else" in {
     val exprs =
       "if(x < 0) then { x := -x; x := x;} else {?true;}" ::
