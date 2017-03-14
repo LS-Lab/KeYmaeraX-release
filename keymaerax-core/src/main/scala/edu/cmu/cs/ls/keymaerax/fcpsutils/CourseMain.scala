@@ -119,7 +119,7 @@ object CourseMain {
         }
       }
     } catch {case e : Any =>
-      println(s"ERROR:Exception during " + archiveFile + " proof on grading machine")
+      println(s"ERROR:Exception during " + archiveFile + " proof on grading machine:" + e)
       System.exit(-1)
     }
   }
