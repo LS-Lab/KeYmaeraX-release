@@ -173,6 +173,11 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
 
     //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
     val fml = node.sequent.toFormula
+    def nonfoError = {
+      val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
+      val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)
+      new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
+    }
     try {
       ToolProvider.cexTool() match {
         case Some(cexTool) =>
@@ -188,13 +193,16 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
             val qeTool:QETool = ToolProvider.qeTool().get
             val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
             val search = new BoundedDFS(10)
-            search(snode) match {
-              case None =>
-                val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
-                val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)
-                new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
-              case Some(cex) =>
-                new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+            try {
+              search(snode) match {
+                case None => nonfoError
+                case Some(cex) =>
+                  new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+              }
+            } catch {
+              // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
+              // When that happens, just tell the user they need to simplify the formula more.
+              case _ : NotImplementedError => nonfoError
             }
           }
         case None => new CounterExampleResponse("cex.notool") :: Nil
