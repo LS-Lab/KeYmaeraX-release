@@ -276,6 +276,10 @@ object KeYmaeraXParser extends Parser {
   private def elaborate(st: ParseState, tok: Token, op: BinaryOpSpec[Expression], e1: Expression, e2: Expression): Expression =
     op.const(tok.tok.img, elaborate(st, tok, op, op.kind._1, e1), elaborate(st, tok, op, op.kind._2, e2))
 
+  /** Elaborate the composition op(e1, e2) that is coming from token tok by lifting defaulted types as needed. */
+  private def elaborate(st : ParseState, tok1:Token, tok2:Token, tok3:Token, op:TernaryOpSpec[Expression], e1: Expression, e2:Expression, e3:Expression): Expression =
+    op.const(tok1.tok.img, elaborate(st, tok1, op, op.kind._1, e1), elaborate(st, tok1, op, op.kind._2, e2), elaborate(st, tok1, op, op.kind._3, e3))
+
   private[parser] var annotationListener: ((Program,Formula) => Unit) =
   {(p,inv) => println("Annotation: " + p + " @invariant(" + inv + ")")}
   /**
@@ -604,7 +608,7 @@ object KeYmaeraXParser extends Parser {
       //@todo review
       //@todo should really tok!=COMMA and handle that one separately to enforce (x,y) notation but only allow p(x,y) without p((x,y)) sillyness
       case r :+ Expr(t1) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) &&
-        tok!=TEST =>
+        tok!=TEST && tok != THEN && tok != ELSE=>
         // pass t1,t2 kinds so that op/2 can disambiguate based on kinds
         val optok = op(st, tok, List(t1.kind,t2.kind))
         if (optok==OpSpec.sNoneUnfinished && la!=EOF) shift(st)
@@ -637,7 +641,7 @@ object KeYmaeraXParser extends Parser {
       // unary prefix operators with precedence
       //@todo review
       case r :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t1) if op(st, tok, List(t1.kind)).assoc==PrefixFormat =>
-        assume(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
+        assume(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "expected unary prefix operator\nin " + s)
         val optok = op(st, tok, List(t1.kind))
         if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
           || (la == RDIA || la == RDIA) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
@@ -651,7 +655,16 @@ object KeYmaeraXParser extends Parser {
           } else reduce(st, 2, result, r)
         } else if (optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
         else error(st, List(MORE))
-
+      // ternary prefix operators *without* any special attention to precedence,because as of this writing there is exactly one
+      //@todo review
+      case r :+ (optok1@Token(tok1:OPERATOR,_)) :+ Expr(t1)  :+ (optok2@Token(tok2:OPERATOR,_)) :+ Expr(t2)  :+ (optok3@Token(tok3:OPERATOR,_)) :+ Expr(t3)
+        if op(st, tok1, List(t1.kind)).assoc==TernaryPrefixFormat
+          && (followsProgram(la) || la==EOF) =>
+        assume(op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[_]], "expected ternary prefix operator\nin " + s)
+        val kinds = List(t1.kind, t2.kind, t3.kind)
+        val optok = op(st, tok1, kinds)
+        val result = elaborate(st, optok1, optok2, optok3, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3)
+        reduce(st, 6, result, r)
       case _ :+ Token(tok:OPERATOR,_) if op(st, tok, List(ExpressionKind)).assoc==PrefixFormat || tok==MINUS =>
         //@note MINUS will always have to be shifted before reduction, whether binary infix or unary prefix
         assert(op(st, tok, List(ExpressionKind)).isInstanceOf[UnaryOpSpec[_]] || tok==MINUS, "only unary operators are currently allowed to have prefix format\nin " + s)
@@ -723,6 +736,23 @@ object KeYmaeraXParser extends Parser {
         else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st, List(FOLLOWSEXPRESSION, FOLLOWSIDENT))
 
+      case _ :+ Token(IF,_) =>
+        if (firstFormula(la)) shift(st)
+        else error(st, List(FIRSTFORMULA))
+
+      case _ :+ (tok@Token(IF,_)) :+ Expr(t1) =>
+        if (followsExpression(t1, la) && la!=EOF) shift(st)
+        else if (la==EOF) throw ParseException.imbalancedError("Unmatched if-then-else", tok, st)
+        else if ((elaboratable(FormulaKind, t1)!=None) && followsFormula(la)) shift(st)
+        else error(st, List(FOLLOWSEXPRESSION))
+
+      case _ :+ (Token(IF,_)) :+ Expr(t1) :+ (Token(THEN,_)) =>
+        if (firstProgram(la)) shift(st)
+        else error(st, List(FIRSTPROGRAM))
+
+      case _ :+ (Token(IF,_)) :+ Expr(t1) :+ (tok2@Token(THEN,_)) :+ Expr(t2) if la == ELSE => shift(st)
+      case _ :+ (Token(IF,_)) :+ Expr(t1) :+ (tok2@Token(THEN,_)) :+ Expr(t2) if la == EOF =>
+        throw ParseException.imbalancedError("Unmatched if-then-else", tok2, st)
       case _ :+ Token(LPAREN,_) =>
         if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN || la==ANYTHING) shift(st)
         else error(st, List(FIRSTFORMULA, RPAREN, ANYTHING))
@@ -914,7 +944,7 @@ object KeYmaeraXParser extends Parser {
     la==NOT || la==FORALL || la==EXISTS || la==LBOX || la==LDIA || la==TRUE || la==FALSE || la==PLACE /*|| la==LPAREN */
 
   /** First(Program): Is la the beginning of a new program? */
-  private def firstProgram(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la==TEST || la==LBRACE
+  private def firstProgram(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la==TEST || la==LBRACE || la==IF
 
   // FOLLOW sets
 
@@ -922,7 +952,7 @@ object KeYmaeraXParser extends Parser {
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
     la==SEMI /* from tests */ ||
     la==RBRACE /* from predicationals */ ||
-    la==PRIME || la==EOF
+    la==PRIME || la==EOF || la==THEN
 
   /** Is la a (binary) operator that only works for formulas? */
   private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
@@ -953,7 +983,8 @@ object KeYmaeraXParser extends Parser {
     la==COMMA || la==AMP ||  // from D in differential programs
     la==EOF ||
     la==DUAL ||              // from P in hybrid games
-    la==INVARIANT            // extra: additional @annotations
+    la==INVARIANT ||         // extra: additional @annotations
+    la==ELSE
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
@@ -1146,6 +1177,7 @@ object KeYmaeraXParser extends Parser {
       case sAssign.op => sAssign //if (isDifferentialAssign(st)) sDiffAssign else sAssign
       case sAssignAny.op => sAssignAny
       case sTest.op => sTest
+      case (sIfThenElse.op | THEN | ELSE) => sIfThenElse
       //      case p: ODESystem => sODESystem
       //      case p: AtomicODE => sAtomicODE
       case sDifferentialProduct.op => sDifferentialProduct
@@ -1159,7 +1191,7 @@ object KeYmaeraXParser extends Parser {
       //case
       case sEOF.op => sEOF
     }
-  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER], "OpSpec's opcode coincides with expected token " + tok)
+  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == THEN || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
 
 
 }

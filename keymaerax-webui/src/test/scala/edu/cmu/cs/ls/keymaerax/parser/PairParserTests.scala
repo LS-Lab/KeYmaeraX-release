@@ -594,7 +594,13 @@ class PairParserTests extends FlatSpec with Matchers {
     ("[x:=*;]x^2>=0","[x := * ;] x^2>=0"),  // issue #171 space within random assignments
 
     ("001", "1"),
-    ("00", "0")
+    ("00", "0"),
+
+    // if-then-else special elaboration form(
+    ("if (x > 0) then {x := 1;} else {x := 2;}", "{?(x>0); x:=1;}++{?(!(x>0)); x:=2;}"),
+    ("if (x > 0) then x := 1; y := 2; else {x := 2;}", "{?(x>0); x:=1; y := 2;}++{?(!(x>0)); x:=2;}"),
+    // should have dangling else problem
+    ("if (x > 0) then x := 1; else x := 2; y := 2;", "{{?(x>0); x:=1;}++{?(!(x>0)); x:=2;}} y := 2;")
   )
 
 //  "Parser" should "accept or throw parse errors for primes in primes" in {

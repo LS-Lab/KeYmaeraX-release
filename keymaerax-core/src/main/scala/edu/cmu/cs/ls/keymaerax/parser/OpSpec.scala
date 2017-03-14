@@ -26,6 +26,8 @@ trait NullaryNotation extends OpNotation
 trait UnaryNotation extends OpNotation
 /** Notational specification for binary operators of arity 2 */
 trait BinaryNotation extends OpNotation
+/** Notational specification for ternary operators of arity 3 */
+trait TernaryNotation extends OpNotation
 
 /** Atomic operators of arity 0 within syntactic category */
 object AtomicFormat extends NullaryNotation
@@ -46,6 +48,9 @@ object MixedBinary extends BinaryNotation
 
 /** Atomic operators of arity 0 within syntactic category with 2 arguments from lower category */
 object AtomicBinaryFormat extends BinaryNotation
+
+/** Ternary operators with a terminal before each operand, like if P then a else b */
+object TernaryPrefixFormat extends TernaryNotation
 
 /**
  * Operator notation specification with precedence and associativity.
@@ -116,6 +121,16 @@ object BinaryOpSpec {
   def lBinaryOpSpec[T<:Expression](op: Terminal, prec: Int, assoc: BinaryNotation, kind: (Kind,Kind),
                            const: (Term, Term) => T) =
     new BinaryOpSpec(op, prec, assoc, kind, (s, e1:T, e2:T) => {assert(s == op.img); const(e1.asInstanceOf[Term],e2.asInstanceOf[Term])})
+}
+
+/** Ternary operator notation specification with one terminal per operand, with constructor and expected argument kinds. */
+case class TernaryOpSpec[T<:Expression](op: Terminal, op2:Terminal, op3:Terminal, prec: Int, assoc: TernaryNotation, kind: (Kind,Kind,Kind),
+                                       const: (String, T, T,T) => T) extends OpSpec
+
+object TernaryOpSpec {
+  def apply[T<:Expression](op: Terminal, op2:Terminal, op3:Terminal, prec: Int, assoc: TernaryNotation, kind: (Kind,Kind,Kind),
+                           const: (T, T, T) => T) =
+    new TernaryOpSpec[T](op, op2, op3, prec, assoc, kind, (s, e1, e2, e3) => {assert(s == op.img); const(e1,e2,e3)})
 }
 
 
@@ -236,6 +251,11 @@ object OpSpec {
   //val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY,200, PostfixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
   val sTest         = lUnaryOpSpecF[Program](TEST,    200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
+  val sIfThenElse   = TernaryOpSpec[Program](IF, THEN, ELSE, 260, TernaryPrefixFormat, (FormulaKind,ProgramKind,ProgramKind), (_:String, e1:Expression, e2:Expression, e3:Expression) => {
+      val p = e1.asInstanceOf[Formula]
+      Choice(Compose(Test(p), e2.asInstanceOf[Program]),
+        Compose(Test(Not(p)), e3.asInstanceOf[Program]))
+    })
   assert(sTest>sEquiv, "tests bind weaker than their constituent formulas")
   //@note same = operator so use sEqual.prec as precedence
   val sAtomicODE    = BinaryOpSpec[Program](EQ,        90, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))

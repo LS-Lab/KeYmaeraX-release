@@ -80,6 +80,22 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
     }
   }
 
+  it should "print and parse if-then-else" in {
+    val exprs =
+      "if(x < 0) then { x := -x; x := x;} else {?true;}" ::
+      "if x < 0 then x := -x; else ?true;" ::
+      "if x < 0 then x := -x; else x := x * 2;" ::
+      "if acc <= 0 then acc := 0; else if SB < A then acc := SB; else acc := A;"  ::
+      "<{if x = 0 then x := 1; y := 0; else {y := 3; a := a + 5; ?(x = x);}}>x != y" ::
+      "<if x = 0 then x := 1; y := 0; else y := 3; a := a + 5; ?(x = x);>x != y" ::
+      "x = 0 -> [if x = 0 then x := 1; y := 0; else y := 3; a := a + 5; ?(x = x);]x > y" ::
+        Nil
+    for (e <- exprs) {
+      val expected = KeYmaeraXParser(e)
+      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+    }
+  }
+
   "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
     for (i <- 1 to randomTrials) {
 		val expected = rand.nextFormula(randomComplexity)
