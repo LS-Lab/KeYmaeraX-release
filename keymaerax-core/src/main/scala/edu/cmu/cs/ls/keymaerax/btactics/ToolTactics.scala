@@ -28,7 +28,7 @@ private object ToolTactics {
       done | //@note don't fail QE if already proved
         ((alphaRule*) &
         (close |
-          ((varExhaustiveEqL2R('L)*) &
+          ((atomExhaustiveEqL2R('L)*) &
           hidePredicates &
           toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
             FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
@@ -127,7 +127,7 @@ private object ToolTactics {
       done | //@note don't fail QE if already proved
         ((alphaRule*) &
         (close |
-          ((varExhaustiveEqL2R('L)*) &
+          ((atomExhaustiveEqL2R('L)*) &
           hidePredicates &
           toSingleFormula & orderedClosure & rcf(qeTool) &
             (done | ("ANON" by ((s: Sequent) =>
@@ -263,9 +263,10 @@ private object ToolTactics {
     step & onAll(recurse)
   })
 
-  /* Rewrites equalities exhaustively with hiding, but only if left-hand side is a variable */
-  private def varExhaustiveEqL2R: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or function) */
+  private def atomExhaustiveEqL2R: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
+    case Some(fml@Equal(_: FuncOf, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
   })
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
