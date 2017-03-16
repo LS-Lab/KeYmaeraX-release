@@ -116,6 +116,8 @@ object Integrator {
       }
       case Times(c, x) if StaticSemantics.freeVars(c).intersect(getPrimedVariables(system).toSet).isEmpty => Times(c, integrator(x, t, system))
       case Times(x, c) if StaticSemantics.freeVars(c).intersect(getPrimedVariables(system).toSet).isEmpty => Times(c, integrator(x, t, system))
+      case Divide(num, denom) if StaticSemantics.freeVars(denom).intersect(getPrimedVariables(system).toSet).isEmpty => Divide(integrator(num, t, system), denom)
+      case Divide(num, denom) => integrator(Times(num, Power(denom, Number(-1))), t, system)
       case Neg(c) => Neg(integrator(c, t, system))
       case Power(base, exp) => exp match {
         case Number(n) =>
