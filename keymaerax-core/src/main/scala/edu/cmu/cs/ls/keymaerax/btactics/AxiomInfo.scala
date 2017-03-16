@@ -222,11 +222,17 @@ object DerivationInfo {
     new CoreAxiomInfo(", sort", ",", "commaSort", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
-      , AxiomDisplayInfo("DIo", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(f(x)>g(x)→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
+      , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(Q→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
       , "DIogreater", {case () => ???}),
     new DerivedAxiomInfo("DIo open differential invariance <"
-      , AxiomDisplayInfo("DIo", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<g(x)</span>↔[?Q]f(x)<g(x))←(f(x)<g(x)→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
+      , AxiomDisplayInfo("DIo <", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<g(x)</span>↔[?Q]f(x)<g(x))←(Q→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
       , "DIoless", {case () => ???}),
+    new CoreAxiomInfo("DIo open differential invariance >="
+      , AxiomDisplayInfo("DIo >=", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>=g(x)</span>↔[?Q]f(x)>=g(x))←(Q→[{x′=f(x)&Q}](f(x)>=g(x)→(f(x))'>(g(x))′))")
+      , "DIogeq", {case () => ???}),
+    new DerivedAxiomInfo("DIo open differential invariance <="
+      , AxiomDisplayInfo("DIo >=", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<=g(x)</span>↔[?Q]f(x)<=g(x))←(Q→[{x′=f(x)&Q}](f(x)<=g(x)→(f(x))'<(g(x))′))")
+      , "DIoleq", {case () => ???}),
     new CoreAxiomInfo("DV differential variant >="
       , AxiomDisplayInfo("DVgeq", "todo DVgeq")
       , "DVgeq", {case () => ???}),

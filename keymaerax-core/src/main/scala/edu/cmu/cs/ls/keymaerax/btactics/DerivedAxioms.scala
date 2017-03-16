@@ -1640,6 +1640,23 @@ object DerivedAxioms {
   )
 
   /**
+    * {{{Axiom "DIo open differential invariance <=".
+    *    ([{c&q(||)}]f(||)<=g(||) <-> [?q(||);]f(||)<=g(||)) <- (q(||) -> [{c&q(||)}](f(||)<=g(||) -> (f(||))'<(g(||))'))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val DIOpeninvariantLessEqual = derivedAxiom("DIo open differential invariance <=",
+    Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<=g(||) <-> [?q(||);]f(||)<=g(||)) <- (q(||) -> [{c&q(||)}](f(||)<=g(||) -> (f(||))'<(g(||))'))".asFormula)),
+    useAt(flipLessEqual)(1, 1::0::1::Nil) &
+      useAt(flipLessEqual)(1, 1::1::1::Nil) &
+      useAt(flipLessEqual)(1, 0::1::1::0::Nil) &
+      useAt(flipLess)(1, 0::1::1::1::Nil) &
+      byUS("DIo open differential invariance >=")
+  )
+
+  /**
     * {{{Axiom "DV differential variant <=".
     *    <{c&true}>f(||)<=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)>=g(||) -> f(||)'<=g(||)'-e_))
     * End.

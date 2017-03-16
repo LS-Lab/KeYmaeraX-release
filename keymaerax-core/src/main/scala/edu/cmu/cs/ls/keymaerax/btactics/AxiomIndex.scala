@@ -107,6 +107,7 @@ object AxiomIndex {
     case "DW differential weakening" => (PosInExpr(0::Nil), unknown)
     case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
     case "DIo open differential invariance >" | "DIo open differential invariance <" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
+    case "DIo open differential invariance >=" | "DIo open differential invariance <=" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DV differential variant >=" | "DV differential variant <=" => (PosInExpr(1::Nil), PosInExpr(0::1::1::1::0::Nil)::PosInExpr(0::1::1::1::1::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(Nil)::Nil)
     //@todo other axioms
 

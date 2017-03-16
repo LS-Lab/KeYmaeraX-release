@@ -186,20 +186,22 @@ private object DifferentialTactics {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && pos.isTopLevel, "openDiffInd only at ODE system in succedent")
-        val greater = sequent.sub(pos) match {
-          case Some(Box(_: ODESystem, _: Greater)) => true
-          case Some(Box(_: ODESystem, _: Less)) => false
-          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with postcondition f>g or f<g, but got " + sequent.sub(pos))
+        val (axUse,der) = sequent.sub(pos) match {
+          case Some(Box(_: ODESystem, _: Greater)) => ("DIo open differential invariance >",true)
+          case Some(Box(_: ODESystem, _: Less)) => ("DIo open differential invariance <",true)
+          case Some(Box(_: ODESystem, _: GreaterEqual)) => ("DIo open differential invariance >=",false)
+          case Some(Box(_: ODESystem, _: LessEqual)) => ("DIo open differential invariance <=",false)
+
+          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g,f>=g,f<=g), but got " + sequent.sub(pos))
         }
         if (pos.isTopLevel) {
-          val t = (
-            if (greater)
-              useAt("DIo open differential invariance >")
-            else
-              useAt("DIo open differential invariance <"))(pos) <(
+          val t = useAt(axUse)(pos) <(
               testb(pos) & QE & done,
               //@note derive before DE to keep positions easier
-              implyR(pos) & derive(pos ++ PosInExpr(1::1::Nil)) &
+              implyR(pos) & (
+                if(der) derive(pos ++ PosInExpr(1::1::Nil))
+                else derive(pos ++ PosInExpr(1::1::0::Nil)) & derive(pos ++ PosInExpr(1::1::1::Nil))) &
+
                 DE(pos) &
                 (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
@@ -209,16 +211,13 @@ private object DifferentialTactics {
           Dconstify(t)(pos)
         } else {
           //@todo positional tactics need to be adapted
-          val t = (
-            if (greater)
-              useAt("DIo open differential invariance >")
-            else
-              useAt("DIo open differential invariance <"))(pos) &
+          val t = useAt(axUse)(pos) &
               shift(PosInExpr(1 :: 1 :: Nil), new DependentPositionTactic("Shift") {
                 override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
                   override def computeExpr(sequent: Sequent): BelleExpr = {
                     //@note derive before DE to keep positions easier
-                    shift(PosInExpr(1 :: Nil), derive)(pos) &
+                    //todo: needs fixing
+                    (if(der) shift(PosInExpr(1 :: Nil), derive)(pos) else ident) &
                       DE(pos) &
                       shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
                       //@note DW after DE to keep positions easier
@@ -520,13 +519,14 @@ private object DifferentialTactics {
             diffWeaken(pos) & QE & done else fail
           ) |
           (if (isOpen) {
-            openDiffInd(pos) | DGauto(pos)
+              (openDiffInd(pos) | DGauto(pos)) //>
           }
           else {
-            diffInd()(pos)       |
+            diffInd()(pos)       | // >= to >=
+            openDiffInd(pos)     | // >= to >, with >= assumption
             DGauto(pos)          |
-            dgZeroMonomial(pos)  |
-            dgZeroPolynomial(pos)
+            dgZeroMonomial(pos)  | //Equalities
+            dgZeroPolynomial(pos)  //Equalities
           })
         })) (pos))
     })
