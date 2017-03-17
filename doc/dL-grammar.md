@@ -33,7 +33,7 @@ Except that `<->` is non-associative.
 
 ==Programs==
 
-    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | {P}
+    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | {P} | if (F) {P} else {P} | if (F) {P}
 
 Operators are right-associative.
 Even the invisible `;` in P P is right-associative, i.e. x:=1;x:=2;x:=3; is x:=1;{x:=2;x:=3;}
