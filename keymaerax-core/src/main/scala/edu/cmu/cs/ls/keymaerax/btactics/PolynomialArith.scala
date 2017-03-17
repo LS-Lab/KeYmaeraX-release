@@ -20,18 +20,21 @@ object PolynomialArith {
   /**
     * Normalised polynomial arithmetic
     *
-    * A normalised monomial has the following shape in KeYmaeraX's term grammar (n is a natural number > 0):
+    * A normalised monomial has the following shape in KeYmaeraX's term grammar:
     *
     * mono:= 1 | mono * (Var)^n
     *
     * Variables in the first half of * must be lexicographically > than the variable in the second by VarOrd
     * ("Variables" is meant a bit loosely in that nullary function symbols are allowed too)
+    * (n must be a Number)
     *
     * Similarly, a normalised polynomial has the following shape (const is non-zero):
     *
     * poly:= 0 | poly + const * mono
     *
     * monomials in the second half of + must be smaller than the first half by monomial ordering
+    * const must be a rational coefficient represented by Divide(Number,Number),
+    * with both numerator != 0, denominator > 0 and they must be co-prime
     *
     * The units are included for now to get a nicer definition??
     *
@@ -44,7 +47,8 @@ object PolynomialArith {
   object VarOrd extends Ordering[Term] {
     def compare(x: Term, y: Term): Int =
       (x,y) match {
-        case (vx:Variable,vy:Variable) => vx.name.compare(vy.name)
+        //todo: remove the prettyString and properly check things like wit_1 wit_0
+        case (vx:Variable,vy:Variable) => vx.prettyString.compare(vy.prettyString)
         case (FuncOf(fx,Nothing),vy:Variable) => 1
         case (vx:Variable,FuncOf(fy,Nothing)) => -1
         case (FuncOf(fx,Nothing),FuncOf(fy,Nothing)) => fx.name.compare(fy.name)
@@ -109,13 +113,25 @@ object PolynomialArith {
     }
   }
 
+  def gcd(a: BigDecimal,b: BigDecimal):  BigDecimal = {
+    if(b ==0) a else gcd(b, a%b)
+  }
+
+  def checkCoeff(t:Term) : Boolean = {
+    t match {
+      case Divide(numer:Number,denom:Number) =>
+        numer.value != 0 && denom.value > 0 && gcd(numer.value,denom.value).abs==1
+      case _ => false
+    }
+  }
+
   //Sanity check that a term representing a polynomial satisfies the normalisation requirement
   def checkPoly(t:Term,maxm:Option[Term] = None): Boolean = {
     if(DEBUG) println("Checking",t,maxm)
     t match {
       case n:Number => n.value == 0
-      case Plus(l,Times(c:Number,m)) =>
-        (c.value != 0) && checkMono(m) &&
+      case Plus(l,Times(c,m)) =>
+        checkCoeff(c) && checkMono(m) &&
           (maxm match {
           case None => checkPoly(l,Some(m))
           case Some(n) => {
@@ -138,6 +154,17 @@ object PolynomialArith {
   private def getProver(skip_proofs:Boolean) :(Formula,BelleExpr)=>ProvableSig =
     if (skip_proofs) ( (f:Formula,b:BelleExpr) => DerivedAxioms.equivReflexiveAxiom.fact ) else proveBy
 
+  def addCoeff(cl:Term,cr:Term) : (Term,Boolean) = {
+    (cl,cr) match {
+      case(Divide(lnum:Number,lden:Number),Divide(rnum:Number,rden:Number)) =>
+        val num = lnum.value*rden.value + rnum.value * lden.value
+        val den = lden.value * rden.value
+        val normalizer = gcd(num,den).abs
+        (Divide(Number(num/normalizer),Number(den/normalizer)),num==0)
+      case _ => ???
+    }
+  }
+
   //Takes and returns normalised polynomials
   //The returned provable is just reflexivity if no proof is required
   def addPoly(l:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
@@ -148,25 +175,25 @@ object PolynomialArith {
         (r,prover(Equal(lhs,r), byUS("0+")))
       case (_,n:Number) => //Right unit for addition
         (l,prover(Equal(lhs,l), byUS("+0")))
-      case (Plus(nl,Times(cl:Number,ml)),Plus(nr,Times(cr:Number,mr))) => {
+      case (Plus(nl,Times(cl,ml)),Plus(nr,Times(cr,mr))) => {
         val cmp = MonOrd.compare(ml,mr)
         if(cmp < 0) {
           val (rec,pr) = addPoly(l,nr,skip_proofs)
-          val res = Plus(rec,Times(cr:Number,mr))
+          val res = Plus(rec,Times(cr,mr))
           (res,prover(Equal(lhs,res), useAt(plusAssoc1)(SuccPosition(1,0::Nil))
             & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
         }
         else if (cmp == 0) {
           val (rec,pr) = addPoly(nl,nr,skip_proofs)
-          val cnew = cl.value + cr.value
-          if(cnew == 0) //Canceling out the 0
+          val (cnew,isZero) = addCoeff(cl,cr)
+          if (isZero) //Canceling out the 0
             (rec, prover(Equal(lhs,rec), useAt(plusAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(plusCoeff1,PosInExpr(1::Nil))(1)
               //Only for coefficient calculation
               & TactixLibrary.RCF))
           else {
-            val res = Plus(rec,Times(Number(cl.value+cr.value),ml))
+            val res = Plus(rec,Times(cnew,ml))
             (res, prover(Equal(lhs,res), useAt(plusAssoc2)(SuccPosition(1,0::Nil))
               & useAt(pr)(SuccPosition(1,0::0::Nil))
               & useAt(plusCoeff2,PosInExpr(1::Nil))(1)
@@ -246,22 +273,35 @@ object PolynomialArith {
   private lazy val timesAssoc3 = proveBy(("(P_() + C_() * M_()) * (D_() * N_()) = " +
     "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE & done)
 
-  //Multiplies a normalized polynomial by a constant and a normalized monomial
-  def mulPolyMono(l:Term,c:Number,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
+  def mulCoeff(cl:Term,cr:Term) : Term = {
+    (cl,cr) match {
+      case(Divide(lnum:Number,lden:Number),Divide(rnum:Number,rden:Number)) =>
+        val num = lnum.value * rnum.value
+        val den = lden.value * rden.value
+        val normalizer = gcd(num,den).abs
+        Divide(Number(num/normalizer),Number(den/normalizer))
+      case _ =>
+        ???
+    }
+  }
+
+  //Multiplies a normalized polynomial (l) by a constant (c) and a normalized monomial (r)
+  def mulPolyMono(l:Term,c:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
+    if(DEBUG) println("mul poly, const, mono",l,c,r)
     val lhs = Times(l,Times(c,r))
     val prover = getProver(skip_proofs)
     l match {
       case n:Number => (n,prover(Equal(lhs,n),byUS("0*"))) // Multiplication by 0 poly
-      case Plus(nl,Times(cl:Number,ml)) =>
+      case Plus(nl,Times(cl,ml)) =>
         val (rec1,pr1) = mulPolyMono(nl,c,r,skip_proofs)
         val (rec2,pr2) = mulMono(ml,r,skip_proofs)
-        val res =  Plus(rec1,Times(Number(cl.value*c.value),rec2) )
+        val res =  Plus(rec1,Times(mulCoeff(cl,c),rec2) )
 
         (res,prover(Equal(lhs,res),useAt(timesAssoc3)(SuccPosition(1,0::Nil))
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::1::Nil))
           & useAt(plusCoeff2,PosInExpr(1::Nil))(1)
-          //Should only be simple arithmetic
+          //Should only be simple arithmetic at this step
           & RCF))
 
       case _ => ???
@@ -274,7 +314,7 @@ object PolynomialArith {
     val prover = getProver(skip_proofs)
     r match {
       case n:Number => (n,prover(Equal(lhs,n),byUS("*0"))) //Multiplication by 0 poly
-      case Plus(nr,Times(cr:Number,mr)) =>
+      case Plus(nr,Times(cr,mr)) =>
         val (rec1,pr1) = mulPoly(l,nr,skip_proofs)
         val (rec2,pr2) = mulPolyMono(l,cr,mr,skip_proofs)
         val (res,pr3) = addPoly(rec1,rec2,skip_proofs)
@@ -321,7 +361,7 @@ object PolynomialArith {
     }
   }
 
-  private lazy val negNormalise = proveBy("-P_() = P_() * (-1 * 1)".asFormula,QE & done)
+  private lazy val negNormalise = proveBy("-P_() = P_() * (-1/1 * 1)".asFormula,QE & done)
   private lazy val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE & done)
   private lazy val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE & done)
 
@@ -340,7 +380,7 @@ object PolynomialArith {
   }
 
   private lazy val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE & done)
-  private lazy val varNormalise = proveBy("P_() = 0 + 1 * (1 * P_() ^ 1)".asFormula,QE & done)
+  private lazy val varNormalise = proveBy("P_() = 0 + (1/1) * (1 * P_() ^ 1)".asFormula,QE & done)
 
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
@@ -349,11 +389,11 @@ object PolynomialArith {
     val res = l match {
       case n:Number =>
         //0 + 1 * n (unless n = 0)
-        val res = if (n.value == 0) n else Plus(Number(0), Times(n,Number(1)))
+        val res = if (n.value == 0) n else Plus(Number(0), Times(Divide(n,Number(1)),Number(1)))
         (res,prover(Equal(l,res), RCF ))
       case v if isVar(v) =>
-        //0 + 1 * (1 * v^1)
-        val res = Plus(Number(0),Times(Number(1), Times(Number(1),Power(v,Number(1))) ))
+        //0 + 1/1 * (1 * v^1)
+        val res = Plus(Number(0),Times(Divide(Number(1),Number(1)), Times(Number(1),Power(v,Number(1))) ))
         (res,prover(Equal(l,res), byUS(varNormalise) ))
       case Plus(ln,rn) =>
         val (rec1,pr1) = normalise(ln,skip_proofs)
@@ -371,7 +411,7 @@ object PolynomialArith {
           & by(pr3)))
       case Power(_:Variable,_:Number) =>
         //0 + 1 * (1 * v^n)
-        val res = Plus(Number(0),Times(Number(1), Times(Number(1),l) ))
+        val res = Plus(Number(0),Times(Divide(Number(1),Number(1)), Times(Number(1),l) ))
         (res,prover(Equal(l,res),RCF))
       case Power(ln,n:Number) if n.value == 2 =>
         val (rec1,pr1) = normalise(ln,skip_proofs)
@@ -398,7 +438,7 @@ object PolynomialArith {
       case Neg(ln) =>
         //Negation ~= multiply by -1 monomial
         val (rec1,pr1) = normalise(ln,skip_proofs)
-        val (res,pr2) = mulPolyMono(rec1,Number(-1),Number(1),skip_proofs)
+        val (res,pr2) = mulPolyMono(rec1,Divide(Number(-1),Number(1)),Number(1),skip_proofs)
         (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(negNormalise)(SuccPosition(1,0::Nil)) & by(pr2) ))
       case Minus(ln,rn) =>
@@ -410,21 +450,24 @@ object PolynomialArith {
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3) ))
-//      case Divide(ln,e:Term) =>
-//        //Simple hack: Try hard to convert a division to a number
-//        val pr = groundNormalise(Divide(Number(1),e))
-//        pr match {
-//          case None => ???  // Could not normalize
-//          case Some((n,pr)) => {
-//            val (res,pr2) = normalise(Times(n,ln),skip_proofs)
-//            (res,prover(Equal(l,res), useAt(divNormalise)(SuccPosition(1,0::Nil)) &
-//              useAt(pr)(SuccPosition(1,0::0::Nil)) &
-//              by(pr2)
-//            ))
-//          }
-//        }
+      case Divide(num:Number,den:Number) =>
+        val res = if (num.value == 0) num else Plus(Number(0), Times(l,Number(1)))
+        (res,prover(Equal(l,res), RCF ))
+      case Divide(ln,e:Term) =>
+        //Simple hack: Try hard to convert a division to a number
+        val pr = groundNormalise(e)
+        pr match {
+          case None =>
+            ???  // Could not normalize
+          case Some((n,pr)) => {
+            val (res,pr2) = normalise(Times(Divide(Number(1),n),ln),skip_proofs)
+            (res,prover(Equal(l,res), useAt(divNormalise)(SuccPosition(1,0::Nil)) &
+              useAt(pr)(SuccPosition(1,0::0::1::Nil)) &
+              by(pr2)
+            ))
+          }
+        }
       case _ => {
-        println(l)
         ???
       }
     }
@@ -482,14 +525,29 @@ object PolynomialArith {
   //Polynomial division on head monomials (no proofs)
 
   //Find the first non-zero monomial in l that r divides if it exists & returns the quotient along with its coefficient
-  def divPolyMono(l:Term,r:Term) : Option[(Number,Term)] = {
+  def divPolyMono(l:Term,r:Term) : Option[(Term,Term)] = {
     l match {
       case n: Number => None //We want non-zero monomials only
-      case Plus(nl, Times(cl: Number, ml)) =>
+      case Plus(nl, Times(cl, ml)) =>
         divMono(ml, r) match {
           case None => divPolyMono(nl, r)
-          case Some(q) => Some(Number(cl.value), q)
+          case Some(q) => Some(cl, q)
         }
+    }
+  }
+
+  def negDivCoeff(cl:Term,cr:Term) : Term = {
+    (cl,cr) match {
+      case(Divide(lnum:Number,lden:Number),Divide(rnum:Number,rden:Number)) =>
+        val num = lnum.value * rden.value
+        val den = lden.value * rnum.value
+        val normalizer = gcd(num,den).abs
+        //Manually flips the sign
+        if(den < 0) Divide(Number(num/normalizer),Number(-den/normalizer))
+        else
+          Divide(Number(-num/normalizer),Number(den/normalizer))
+      case _ =>
+        ???
     }
   }
 
@@ -497,14 +555,14 @@ object PolynomialArith {
   def divPoly(l:Term,r:Term): Option[(Term,Term)] = {
     r match {
       case n:Number => None //Division by 0
-      case Plus(nr,Times(cr:Number,mr)) =>
+      case Plus(nr,Times(cr,mr)) =>
         divPolyMono(l,mr) match {
           case None => None //No monomial in l divisible by r
           case Some((c,q)) => //The monomial c*(q*mr) was in l
             //The actual coefficient we need to return for the reduction:
-            val divisor = Times(Number(-1 * c.value / (cr.value)),q)
+            val divisor = Times(negDivCoeff(c,cr),q)
             //For division, we need to use the normalized version internally
-            val quotient = addPoly(l, mulPolyMono(r, Number(-1 * c.value / (cr.value)), q,true)._1,true)._1
+            val quotient = addPoly(l, mulPolyMono(r, negDivCoeff(c,cr), q,true)._1,true)._1
             Some(divisor,quotient)
         }
     }
@@ -533,22 +591,25 @@ object PolynomialArith {
   }
 
   //This lemma should be in DerivedAxioms together with 1>0 and f_()^2 >= 0
-  private lazy val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE & done)
+  private lazy val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE)
+  private lazy val timesPos: ProvableSig = proveBy("(f_() >= 0 & g_() >= 0) -> f_() * g_() >= 0".asFormula,QE)
 
   //Doesn't use QE, but the DerivedAxioms used do
   lazy val notZeroGt: ProvableSig = proveBy("!(0>0)".asFormula,
     notR(1) & useAt(">2!=")(-1) & useAt("! =",PosInExpr(1::Nil))(-1) & notL(-1) & byUS("= reflexive"))
 
-  //Generate a proof for |- !(1 + s_1^2 + ... + s_n^2 = 0) (without QE)
-  def assertWitness(l:List[Term]) : (Term,ProvableSig) =
+  // Generate a proof for |- !(1 + a_1 * s_1^2 + ... + a_n * s_n^2 = 0)
+  // Each a_i should be a positive (rational) coefficient (proved by RCF)
+  def assertWitness(l:List[(Term,Term)]) : (Term,ProvableSig) =
   {
     l match {
       case Nil => (Number(1),DerivedAxioms.oneGreaterZero.fact)
-      case (x::xs) =>
+      case ((a,s)::xs) =>
         val (rec,pr) = assertWitness(xs) //1 + foo > 0
-        val res = Plus(rec,Power(x,Number(2)))
+        val res = Plus(rec,Times(a,Power(s,Number(2))))
         (res,proveBy(Greater(res,Number(0)), // (1+ foo) + x^2 >0
-          useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <( by(pr), byUS("nonnegative squares") ) ))
+          useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <( by(pr),
+            useAt(timesPos,PosInExpr(1::Nil))(1) & andR(1) <( RCF, byUS("nonnegative squares") ) )))
     }
   }
 
@@ -562,7 +623,7 @@ object PolynomialArith {
 
   private lazy val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE & done)
 
-  def proveWithWitness(ctx:List[Term], witness:List[Term], instopt:Option[List[(Int,Term)]] = None) : ProvableSig = {
+  def proveWithWitness(ctx:List[Term], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : ProvableSig = {
     val antes = ctx.map( t => Equal(t,Number(0)))
     val (wit,pfi) = assertWitness(witness)
     val pf = useFor(gtNotZero,PosInExpr(0::Nil))(SuccPosition(1))(pfi)
@@ -591,23 +652,65 @@ object PolynomialArith {
         ))
   }
 
+  //Goal must be of the form (G1=0, G2=0, ... Gn =0 |- )
+  def witnessTac(witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = new SingleGoalDependentTactic("ANON") {
+
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      //All =0 polynomials
+      val ante_polys = sequent.ante.map(_ match {
+        case Equal(t, n: Number) if n.value == 0 => t
+        case _ => ??? //Should we generalize here?
+      }
+      ).toList
+      //Assert the witness provided
+      val (wit, pfi) = assertWitness(witness)
+      val pf = useFor(gtNotZero, PosInExpr(0 :: Nil))(SuccPosition(1))(pfi)
+      //assert(pf.isProved)
+      //Generate our own reduction instructions if not available
+      //Proofs skipped
+      val inst = instopt.getOrElse({
+        val wit_norm = normalise(wit, true)._1
+        val ctx_norm = ante_polys.map(t => normalise(t, true)._1)
+        reduction(ctx_norm, wit_norm)
+      })
+      //1+s_i^2 > 0
+      cut(pf.conclusion.succ.head) < (
+        notL('Llast) &
+          //Run the instructions
+          inst.foldRight(ident)(
+            (h, tac) =>
+              implyRi(keep = true)(AntePos(h._1), SuccPos(0))
+                & useAt("ANON", axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
+                & tac) &
+          normaliseAt(SuccPosition(1, 0 :: Nil)) &
+          ?(cohideR(1) & byUS("= reflexive"))
+        ,
+        cohideR(1) & by(pf)
+        )
+    }
+  }
+
   //Axiomatization
 
-  // Succedent to antecedent for inequations (rewrite right to left followed by notR)
-  //private val ltSucc: ProvableSig = proveBy("!(f_()>=g_() <-> f_() < g_()".asFormula,QE)
-  //private val leSucc: ProvableSig = proveBy("!(f_()>g_() <-> f_() <= g_()".asFormula,QE)
-  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE & done)
-  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE & done)
-  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE & done) //Convenient rule for A3
-  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE & done) //Convenient rule for A3
+  // Succedent to antecedent for inequations (rewrite left to right followed by notR)
+  private lazy val ltSucc: ProvableSig = proveBy(" f_() < g_() <-> !(f_()>=g_())".asFormula,QE)
+  private lazy val leSucc: ProvableSig = proveBy(" f_() <= g_() <-> !(f_()>g_())".asFormula,QE)
+  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
+  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
+  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
+  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
 
   //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
   //note: these folds = 0 normalisation in as well
-  private lazy val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists z_ (f_()-g_())*z_^2 - 1 = 0".asFormula,QE & done)
-  private lazy val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists z_ (f_()-g_()) - z_^2 = 0".asFormula,QE & done)
+  //todo: do the existsL naming properly
+
+  private lazy val ltAnte: ProvableSig = proveBy("f_() < g_() <-> \\exists wit_ (f_()-g_())*wit_^2 + 1 = 0".asFormula,QE)
+  private lazy val leAnte: ProvableSig = proveBy("f_() <= g_() <-> \\exists wit_ (f_()-g_()) + wit_^2 = 0".asFormula,QE)
+  private lazy val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists wit_ (f_()-g_())*wit_^2 - 1 = 0".asFormula,QE)
+  private lazy val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists wit_ (f_()-g_()) - wit_^2 = 0".asFormula,QE)
 
   private lazy val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE & done)
-  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists z_ (f_()-g_())*z_ = 1".asFormula,QE & done)
+  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ = 1".asFormula,QE & done)
 
   //todo: generalise to more complete formula fragment
   //todo: Also "clear" equations in succedent after witness generation
@@ -616,15 +719,14 @@ object PolynomialArith {
     {
       seq.succ.zipWithIndex.foldLeft(ident) {(tac: BelleExpr, fi) =>
         val ind = fi._2 + 1;
-        val _ = println(ind);
         (fi._1 match {
-          case Greater(f, g) =>
-            useAt(gtSucc)(ind) & notR(ind)
-          case GreaterEqual(f, g) =>
-            useAt(geSucc)(ind) & notR(ind)
+          case Greater(f, g) => useAt(gtSucc)(ind) & notR(ind)
+          case GreaterEqual(f, g) =>  useAt(geSucc)(ind) & notR(ind)
           case Equal(_, _) => useAt(eqSucc)(ind) & notR(ind)
           case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
-          case _ => ???
+          case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
+          case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
+          case _ => hideR(ind)
         }) & tac
       }
     }
@@ -635,76 +737,19 @@ object PolynomialArith {
     override def computeExpr(seq: Sequent): BelleExpr = {
       seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
-        val _ = println(ind);
         (fi._1 match {
-          case Greater(f, g) =>
-            useAt(gtAnte)(ind) & existsL(ind)
-          case GreaterEqual(f, g) =>
-            useAt(geAnte)(ind) & existsL(ind)
+          case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
+          case GreaterEqual(f, g) => useAt(geAnte)(ind) & existsL(ind)
           case Equal(_, _) => useAt(eqAnte)(ind)
           case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
-          case _ => ???
+          case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
+          case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
+          case _ => hideL(ind)
         }) & tac
       }
     }
   }
 
   lazy val prepareArith: BelleExpr = clearSucc & normAnte
-
-
-//  def extractPolynomials(s: Sequent): Unit = {
-//
-//    val polys =
-//      s.ante.map(
-//        f => f match {
-//          case Equal(l, _) => l
-//          case _ => ???
-//        }
-//      )
-//    val vars = polys.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
-//    Mathematica.
-//    val input = new MExpr(GROEBNERBASIS,
-//      Array[MExpr](
-//        new MExpr(Expr.SYM_LIST, polys.map(KeYmaeraToMathematica.apply(_)).toArray),
-//        new MExpr(Expr.SYM_LIST, vars.map(KeYmaeraToMathematica.apply(_)).toArray),
-//        new MExpr(RULE, Array[MExpr](MONOMIALORDER, DEGREEREVERSELEXICOGRAPHIC
-//        ))
-//      ))
-//    val (_, result) = run(input)
-//    println(result)
-//  }
-
-//  class PolyArithTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter, new UncheckedM2KConverter) {
-//    def RULE = new MExpr(Expr.SYMBOL, "Rule")
-//
-//    def GROEBNERBASIS = new MExpr(Expr.SYMBOL, "GroebnerBasis")
-//
-//    def MONOMIALORDER = new MExpr(Expr.SYMBOL, "MonomialOrder")
-//
-//    def DEGREEREVERSELEXICOGRAPHIC = new MExpr(Expr.SYMBOL, "DegreeReverseLexicographic")
-//
-//    def extractPolynomials(s: Sequent): Unit = {
-//
-//      val polys =
-//        s.ante.map(
-//          f => f match {
-//            case Equal(l, _) => l
-//            case _ => ???
-//          }
-//        )
-//      val vars = polys.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
-//
-//      val input = new MExpr(GROEBNERBASIS,
-//        Array[MExpr](
-//          new MExpr(Expr.SYM_LIST, polys.map(KeYmaeraToMathematica.apply(_)).toArray),
-//          new MExpr(Expr.SYM_LIST, vars.map(KeYmaeraToMathematica.apply(_)).toArray),
-//          new MExpr(RULE, Array[MExpr](MONOMIALORDER, DEGREEREVERSELEXICOGRAPHIC
-//          ))
-//        ))
-//      val (_, result) = run(input)
-//      println(result)
-//    }
-//  }
-
 
 }
