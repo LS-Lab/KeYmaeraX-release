@@ -602,26 +602,24 @@ class PairParserTests extends FlatSpec with Matchers {
     ("00", "0"),
 
     // if-then-else special elaboration form(
-    ("if (x > 0) then {x := 1;} else {x := 2;}", "{?(x>0); x:=1;}++{?(!(x>0)); x:=2;}"),
-    ("if(x>0)then x:=1;else x:=2;", "if (x > 0) then {x := 1;} else {x := 2;}"),
-    ("if (x > 0) then {x := 1; y := 2;} else {x := 2; y:=1;}", "{?(x>0); {x:=1; y := 2;}}++{?(!(x>0)); {x:=2;y:=1;}}"),
-    //@todo this should be a parse error
-    ("if (x > 0) then x := 1; y := 2; else {x := 2;}", "{?(x>0); x:=1; y := 2;}++{?(!(x>0)); x:=2;}"),
+    ("if (x > 0) {x := 1;} else {x := 2;}", "{?(x>0); x:=1;}++{?(!(x>0)); x:=2;}"),
+    ("if(x>0) {x:=1;}else {x:=2;}", "if (x > 0) {x := 1;} else {x := 2;}"),
+    ("if (x > 0) {x := 1; y := 2;} else {x := 2; y:=1;}", "{?(x>0); {x:=1; y := 2;}}++{?(!(x>0)); {x:=2;y:=1;}}"),
 
     // should have dangling else problem as in C
-    ("if (x > 0) then x := 1; else x := 2; y := 2;", "{if (x > 0) then x := 1; else x := 2;} y := 2;"),
-    ("if (x > 0) then x := 1; else x := 2; y := 2;", "{{?(x>0); x:=1;}++{?(!(x>0)); x:=2;}} y := 2;"),
+    ("if (x > 0)  {x := 1;} else {x := 2;} y := 2;", "{if (x > 0) { x := 1; }else {x := 2;} }y := 2;"),
+    ("if (x > 0)  {x := 1;} else {x := 2;} y := 2;", "{{?(x>0); x:=1;}++{?(!(x>0)); x:=2;}} y := 2;"),
     // should choose nearest if to match the dangling else as in C
-    ("if (y^2=1) if (x > 0) then x := 1; else x := 2;", "if (y^2=1) {if (x > 0) then x := 1; else x := 2;}"),
-    ("if (y^2=1) if (x > 0) then x := 1; else x := 2; y := 2;", "{if (y^2=1) {if (x > 0) then x := 1; else x := 2;}} y := 2;"),
+    ("if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}}", "if (y^2=1) {if (x > 0)  {x := 1;} else {x := 2;}}"),
+    ("if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}} y := 2;", "{if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}}} y := 2;"),
     // should allow nested if-then-else
-    ("if (y^2=1) if (x > 0) then x := 1; else x := 2; else z:=0;", "if (y^2=1) {if (x > 0) then x := 1; else x := 2;} else {z:=0;}"),
-    ("if (y^2=1) if (x > 0) then x := 1; else x := 2; else z:=0; y := 2;", "{{if (y^2=1) {if (x > 0) then x := 1; else x := 2;} else {z:=0;}} y := 2;"),
+    ("if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}} else {z:=0;}", "if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}} else {z:=0;}"),
+    ("if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}} else {z:=0;} y := 2;", "{if (y^2=1) {if (x > 0) { x := 1;} else {x := 2;}} else {z:=0;}} y := 2;"),
     // should allow fancy if-then-else conditions
-    ("if ([x:=x+1;]x>0) x:=x+1; else x:=1;", "{?([x:=x+1;]x>0); x:=x+1;} ++ {?(![x:=x+1;]x>0)); x:=1;}"),
-    ("if (<x:=x+1;>x>0) x:=x+1; else x:=1;", "{?(<x:=x+1;>(x>0)); x:=x+1;} ++ {?(!<x:=x+1;>(x>0))); x:=1;}"),
+    ("if ([x:=x+1;]x>0) {x:=x+1;} else {x:=1;}", "{?([x:=x+1;]x>0); x:=x+1;} ++ {?(![x:=x+1;]x>0); x:=1;}"),
+    ("if (<x:=x+1;>x>0) {x:=x+1;} else {x:=1;}", "{?(<x:=x+1;>(x>0)); x:=x+1;} ++ {?(!<x:=x+1;>(x>0)); x:=1;}"),
 
-    ("if (x > 0) then x := 1; y := 2; else {x := 2;}", unparseable),
+    ("if (x > 0)  x := 1; y := 2; else {x := 2;}", unparseable),
 
       ("x", "x")
   )

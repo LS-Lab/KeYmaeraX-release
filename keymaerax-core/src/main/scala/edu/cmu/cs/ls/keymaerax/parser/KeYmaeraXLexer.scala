@@ -162,7 +162,6 @@ private object TEST    extends OPERATOR("?") {
   override def regexp = """\?""".r
 }
 private object IF extends OPERATOR("if")
-private object THEN extends OPERATOR("then")
 private object ELSE extends OPERATOR("else")
 private object SEMI    extends OPERATOR(";")
 private object CHOICE  extends OPERATOR("++") {
@@ -538,7 +537,6 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case COMMA.startPattern(_*) => consumeTerminalLength(COMMA, loc)
 
       case IF.startPattern(_*) => consumeTerminalLength(IF, loc)
-      case THEN.startPattern(_*) => consumeTerminalLength(THEN, loc)
       case ELSE.startPattern(_*) => consumeTerminalLength(ELSE, loc)
       //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
       case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)

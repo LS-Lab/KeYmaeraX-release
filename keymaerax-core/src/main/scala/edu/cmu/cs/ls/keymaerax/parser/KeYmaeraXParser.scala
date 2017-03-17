@@ -12,7 +12,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
-
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -312,194 +311,225 @@ object KeYmaeraXParser extends Parser {
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
-      case r :+ Token(ASSIGN,loc1) if la==STAR =>
-        reduce(shift(st), 2, Bottom :+ Token(ASSIGNANY, loc1--laloc), r)
+      case r :+ Token(ASSIGN, loc1) if la == STAR =>
+        reduce(shift(st), 2, Bottom :+ Token(ASSIGNANY, loc1 -- laloc), r)
 
       // nonproductive: special notation for annotations
-      case r :+ Expr(p:Program) :+ (tok@Token(INVARIANT,_)) :+ Token(LPAREN,_) :+ Expr(f1) :+ Token(RPAREN,_) if isAnnotable(p) =>
+      case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ Token(LPAREN, _) :+ Expr(f1) :+ Token(RPAREN, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
         reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program],
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1:Formula) if isAnnotable(p) =>
-        if (la==RPAREN || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, BINARYFORMULAOP))
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
+      case r :+ Expr(p: Program) :+ Token(INVARIANT, _) :+ Token(LPAREN, _) :+ Expr(f1: Formula) if isAnnotable(p) =>
+        if (la == RPAREN || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, BINARYFORMULAOP))
+      case r :+ Expr(p: Program) :+ Token(INVARIANT, _) =>
         if (isAnnotable(p)) if (la == LPAREN) shift(st) else error(st, List(LPAREN))
         else errormsg(st, "requires an operator that supports annotation")
 
 
       // special quantifier notation
-      case r :+ (tok1@Token(FORALL,_)) :+ RecognizedQuant(v1:Variable) :+ Expr(f1:Formula) =>
+      case r :+ (tok1@Token(FORALL, _)) :+ RecognizedQuant(v1: Variable) :+ Expr(f1: Formula) =>
         reduce(st, 3, OpSpec.sForall.const(tok1.tok.img, v1, f1), r)
 
-      case r :+ (tok1@Token(EXISTS,_)) :+ RecognizedQuant(v1:Variable) :+ Expr(f1:Formula) =>
+      case r :+ (tok1@Token(EXISTS, _)) :+ RecognizedQuant(v1: Variable) :+ Expr(f1: Formula) =>
         reduce(st, 3, OpSpec.sExists.const(tok1.tok.img, v1, f1), r)
 
       // special case typing to force elaboration of quantifiers at the end
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ (tok2@RecognizedQuant(_:Variable)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN || la==RBRACE || la==SEMI || formulaBinOp(la)) && e1.kind!=FormulaKind =>
+      case r :+ (tok1@Token(FORALL | EXISTS, _)) :+ (tok2@RecognizedQuant(_: Variable)) :+ Expr(e1)
+        if (la == EOF || la == RPAREN || la == RBRACE || la == SEMI || formulaBinOp(la)) && e1.kind != FormulaKind =>
         //@todo assert(!formulaBinOp(la) || quantifier binds stronger than la)
-        reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok2 )
+        reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok2)
 
       // ordinary identifiers disambiguate quantifiers versus predicate/function/predicational versus variable
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(IDENT(name,idx),_) =>
+      case r :+ (tok1@Token(FORALL | EXISTS, _)) :+ Token(IDENT(name, idx), _) =>
         //@note Recognized(Variable()) instead of IDENT to avoid item overlap IDENT LPAREN with function/predicate symbols
         //@note Recognized(Variable()) instead of Variable to avoid detecting lookup confusion with Variable PLUS ... too late
         //@note Recognized should also generalize better to block quantifiers and multi-sorted quantifiers
-        if (firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name,idx,Real)), r :+ tok1)) else error(st, List(FIRSTFORMULA))
+        if (firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real)), r :+ tok1)) else error(st, List(FIRSTFORMULA))
 
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) =>
+      case r :+ (tok1@Token(FORALL | EXISTS, _)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st, List(IDENT("IDENT")))
 
       //custom error messages for multiplication that doesn't properly use *
       //@note These must come after quantifiers because otherwise \forall x x=1 doesn't parse.
-      case r :+ Token(x:IDENT, loc1) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${x.name}*term")
-      case r :+ Token(n:NUMBER, loc2) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${n.value}*term")
+      case r :+ Token(x: IDENT, loc1) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${x.name}*term")
+      case r :+ Token(n: NUMBER, loc2) if la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] => errormsg(st, s"Multiplication in KeYmaera X requires an explicit * symbol. E.g. ${n.value}*term")
 
       // special cases for early prime conversion
-      case r :+ Token(IDENT(name,idx),_) :+ Token(PRIME,_) =>
+      case r :+ Token(IDENT(name, idx), _) :+ Token(PRIME, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, Variable(name,idx,Real)), r)
+        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, Variable(name, idx, Real)), r)
 
-//      // special cases for early prime conversion, possibly redundant
-//      case r :+ Expr(x1:Variable) :+ Token(PRIME,_) =>
-//        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
+      //      // special cases for early prime conversion, possibly redundant
+      //      case r :+ Expr(x1:Variable) :+ Token(PRIME,_) =>
+      //        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
 
       // ordinary identifiers outside quantifiers disambiguate to predicate/function/predicational versus variable
-      case r :+ Token(IDENT(name,idx),_) =>
+      case r :+ Token(IDENT(name, idx), _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN || la==LBRACE || la==PRIME || la==LBANANA || la==LBARB) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
+        if (la == LPAREN || la == LBRACE || la == PRIME || la == LBANANA || la == LBARB) shift(st) else reduce(st, 1, Variable(name, idx, Real), r)
 
       // function/predicate symbols arity 0
-      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LPAREN, _) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 3, tok, Nothing, r)
 
 
       // nullary functional/predicational symbols of argument ANYTHING
-      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LPAREN, _) :+ Token(ANYTHING, _) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceUnitFuncOrPredOf(st, 4, tok, AnyArg, r)
 
       // nullary functional/predicational symbols of argument AnyArg
-      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Token(RBANANA,_)  =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Token(RBANANA, _) =>
         reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r)
       // nullary functional/predicational symbols of argument Taboo
-      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(x:Variable) :+ Token(RBANANA,_)  =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Expr(x: Variable) :+ Token(RBANANA, _) =>
         reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
-//      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
-//        shift(st)
-      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) =>
-        if (la==RBANANA || la.isInstanceOf[IDENT]) shift(st)
+      //      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
+      //        shift(st)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) =>
+        if (la == RBANANA || la.isInstanceOf[IDENT]) shift(st)
         else error(st, List(RBANANA, ANYIDENT))
-      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_:Variable) =>
-        if (la==RBANANA) shift(st)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Expr(_: Variable) =>
+        if (la == RBANANA) shift(st)
         else error(st, List(RBANANA))
-      case r :+ Token(tok:IDENT,_) :+ Token(LBANANA,_) :+ Expr(_) =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent predicational/functional")
 
       // DifferentialProgramConst symbols of argument AnyArg
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Token(RBARB,_)  =>
-        require(tok.index==None, "no index supported for DifferentialProgramConst")
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(RBARB, _) =>
+        require(tok.index == None, "no index supported for DifferentialProgramConst")
         reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r)
       // DifferentialProgramConst symbols of argument Taboo
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(x:Variable) :+ Token(RBARB,_)  =>
-        require(tok.index==None, "no index supported for DifferentialProgramConst")
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) =>
+        require(tok.index == None, "no index supported for DifferentialProgramConst")
         reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r)
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Token(DUAL,_) :+ Token(RBARB,_) :+ Token(SEMI,_) if statementSemicolon =>
-        require(tok.index==None, "no index supported for SystemConst")
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
+        require(tok.index == None, "no index supported for SystemConst")
         reduce(st, 5, SystemConst(tok.name), r)
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Token(DUAL,_) :+ Token(RBARB,_)  =>
-        if (la==SEMI) shift(st)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) =>
+        if (la == SEMI) shift(st)
         else error(st, List(SEMI))
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) =>
-        if (la==RBARB || la.isInstanceOf[IDENT] || la==DUAL) shift(st)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) =>
+        if (la == RBARB || la.isInstanceOf[IDENT] || la == DUAL) shift(st)
         else error(st, List(RBARB, ANYIDENT))
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(_:Variable) =>
-        if (la==RBARB) shift(st)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(_: Variable) =>
+        if (la == RBARB) shift(st)
         else error(st, List(RBARB))
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Expr(_) =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent DiffProgramConst")
-      case r :+ Token(tok:IDENT,_) :+ Token(LBARB,_) :+ Token(DUAL,_) =>
-        if (la==RBARB) shift(st)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) =>
+        if (la == RBARB) shift(st)
         else error(st, List(RBARB))
 
       // function/predicate symbols arity>0
-      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LPAREN, _) :+ Expr(t1: Term) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 4, tok, t1, r)
 
       // function/predicate symbols arity>0: special elaboration case for misclassified t() as formula
-      case r :+ Token(tok:IDENT,_) :+ (optok@Token(LPAREN,_)) :+ Expr(t1:Formula) :+ Token(RPAREN,_) =>
+      case r :+ Token(tok: IDENT, _) :+ (optok@Token(LPAREN, _)) :+ Expr(t1: Formula) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 4, tok, elaborate(st, optok, OpSpec.sFuncOf, TermKind, t1).asInstanceOf[Term], r)
 
       // DOT arity=0
-      case r :+ Token(DOT,_) =>
+      case r :+ Token(DOT, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la==LPAREN) shift(st) else reduce(st, 1, DotTerm(), r)
+        if (la == LPAREN) shift(st) else reduce(st, 1, DotTerm(), r)
 
-      case r :+ Token(DOT,_) :+ (optok@Token(LPAREN,_)) :+ Token(RPAREN,_) =>
+      case r :+ Token(DOT, _) :+ (optok@Token(LPAREN, _)) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduce(st, 3, DotTerm(), r)
 
       // DOT arity>0
-      case r :+ Token(DOT,_) :+ (optok@Token(LPAREN,_)) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
+      case r :+ Token(DOT, _) :+ (optok@Token(LPAREN, _)) :+ Expr(t1: Term) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduce(st, 4, DotTerm(t1.sort), r)
 
       // predicational symbols arity>0
-      case r :+ Token(IDENT(name,idx),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
+      case r :+ Token(IDENT(name, idx), _) :+ Token(LBRACE, _) :+ Expr(f1: Formula) :+ Token(RBRACE, _) =>
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), f1), r)
         else error(st, List(FOLLOWSFORMULA))
 
       // predicational symbols arity>0: special elaboration case for misclassified c() as formula in P{c()}
-      case r :+ Token(IDENT(name,idx),_) :+ (optok@Token(LBRACE,_)) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
+      case r :+ Token(IDENT(name, idx), _) :+ (optok@Token(LBRACE, _)) :+ Expr(f1: Term) :+ Token(RBRACE, _) =>
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(func(name, idx, Bool, Bool), elaborate(st, optok, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
         else error(st, List(FOLLOWSFORMULA))
 
-      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above")
-        if (firstTerm(la) || firstFormula(la) || la==RPAREN || la==ANYTHING) shift(st) else error(st, List(FIRSTTERM,FIRSTFORMULA,RPAREN,ANYTHING))
+        if (firstTerm(la) || firstFormula(la) || la == RPAREN || la == ANYTHING) shift(st) else error(st, List(FIRSTTERM, FIRSTFORMULA, RPAREN, ANYTHING))
 
-      case r :+ Token(tok:IDENT,_) :+ Token(LBRACE,_) =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBRACE, _) =>
         //assert(isNoQuantifier(r), "Quantifier stack items handled above")
         if (firstFormula(la)) shift(st) else error(st, List(FIRSTFORMULA))
 
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
-      case r :+ Token(MINUS,loc1) :+ Token(NUMBER(n),loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
+      case r :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
         loc1.adjacentTo(loc) =>
         assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
-        if (la==LPAREN || la==LBRACE) error(st, List(FOLLOWSTERM))
+        if (la == LPAREN || la == LBRACE) error(st, List(FOLLOWSTERM))
         else reduce(st, 2, Number(BigDecimal("-" + n)), r)
 
-      case r :+ Token(NUMBER(value),_) =>
-        if (la==LPAREN || la==LBRACE) error(st, List(FOLLOWSTERM))
+      case r :+ Token(NUMBER(value), _) =>
+        if (la == LPAREN || la == LBRACE) error(st, List(FOLLOWSTERM))
         else reduce(st, 1, Number(BigDecimal(value)), r)
 
 
-      case r :+ Token(tok@(PLACE|NOTHING | TRUE|FALSE),_) =>
+      case r :+ Token(tok@(PLACE | NOTHING | TRUE | FALSE), _) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // differentials
 
-      case r :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) :+ Token(PRIME,_) =>
+      case r :+ Token(LPAREN, _) :+ Expr(t1: Term) :+ Token(RPAREN, _) :+ Token(PRIME, _) =>
         reduce(st, 4, OpSpec.sDifferential.const(PRIME.img, t1), r)
 
-      case r :+ Token(LPAREN,_) :+ Expr(f1:Formula) :+ Token(RPAREN,_) :+ Token(PRIME,_) =>
+      case r :+ Token(LPAREN, _) :+ Expr(f1: Formula) :+ Token(RPAREN, _) :+ Token(PRIME, _) =>
         reduce(st, 4, OpSpec.sDifferentialFormula.const(PRIME.img, f1), r)
 
       // special notation for loops
-      case r :+ Token(LBRACE,_) :+ Expr(t1:DifferentialProgram) :+ Token(RBRACE,_) :+ (tok@Token(STAR,_)) =>
+      case r :+ Token(LBRACE, _) :+ Expr(t1: DifferentialProgram) :+ Token(RBRACE, _) :+ (tok@Token(STAR, _)) =>
         // special elaboration for not-yet-ODESystem Programs
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
-        if (la==INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1).asInstanceOf[Program]), r))
+        if (la == INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1).asInstanceOf[Program]), r))
         else reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1).asInstanceOf[Program]), r)
-      case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) :+ (tok@Token(STAR,_)) =>
+      case r :+ Token(LBRACE, _) :+ Expr(t1: Program) :+ Token(RBRACE, _) :+ (tok@Token(STAR, _)) =>
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
-        if (la==INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r))
+        if (la == INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r))
         else reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r)
+      // Leave parentheses around for IF to find later
+      case r :+ (optok1@Token(tok1@IF, _)) :+ Token(LPAREN, _) :+ Expr(t1) :+ Token(RPAREN, _) =>
+        shift(st)
+      case r :+ (optok1@Token(tok1@IF, _)) :+ Token(LPAREN, _) :+ Expr(t1) :+ Token(RPAREN, _) :+ Token(LBRACE, _) =>
+        shift(st)
+      // Special case: if with no else
+      case r :+ (optok1@Token(tok1@IF, _)) :+ Token(LPAREN, _) :+ Expr(t1) :+ Token(RPAREN, _) :+ (optok2@Token(tok2@LBRACE, _)) :+ Expr(t2) :+ Token(RBRACE, _) =>
+        if ((followsProgram(la) || la == EOF) && la != ELSE) {
+          assume(op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[_]], "expected ternary prefix operator\nin " + s)
+          val kinds = List(t1.kind, t2.kind, t2.kind)
+          val optok = op(st, tok1, kinds)
+          val t3 = Test(True)
+          val result = elaborate(st, optok1, optok2, optok2, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3)
+          reduce(st, 7, result, r)
+        } else shift(st)
+      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_)=>
+        shift(st)
+      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_) :+ Token(LBRACE, _)=>
+        shift(st)
+      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_) :+ Token(LBRACE, _) :+ Expr(t3) =>
+        shift(st)
+      // ternary prefix operators *without* any special attention to precedence,because as of this writing there is exactly one
+      //@todo review
+      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ (optok2@Token(tok2@LBRACE,_)) :+ Expr(t2) :+ (Token(RBRACE,_)) :+ (optok3@Token(tok3@ELSE,_))  :+ (Token(LBRACE,_)) :+ Expr(t3) :+ (Token(RBRACE,_))
+        //case r :+ (optok1@Token(tok1:OPERATOR,_)) :+ Expr(t1)  :+ (optok2@Token(tok2:OPERATOR,_)) :+ Expr(t2)  :+ (optok3@Token(tok3:OPERATOR,_)) :+ Expr(t3)
+        if  followsProgram(la) || la==EOF =>
+        assume(op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[_]], "expected ternary prefix operator\nin " + s)
+        val kinds = List(t1.kind, t2.kind, t3.kind)
+        val optok = op(st, tok1, kinds)
+        val result = elaborate(st, optok1, optok2, optok3, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3)
+        reduce(st, 11, result, r)
 
       // parentheses for grouping
       case r :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
@@ -608,7 +638,7 @@ object KeYmaeraXParser extends Parser {
       //@todo review
       //@todo should really tok!=COMMA and handle that one separately to enforce (x,y) notation but only allow p(x,y) without p((x,y)) sillyness
       case r :+ Expr(t1) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) &&
-        tok!=TEST && tok != THEN && tok != ELSE=>
+        tok!=TEST && tok != ELSE=>
         // pass t1,t2 kinds so that op/2 can disambiguate based on kinds
         val optok = op(st, tok, List(t1.kind,t2.kind))
         if (optok==OpSpec.sNoneUnfinished && la!=EOF) shift(st)
@@ -655,16 +685,6 @@ object KeYmaeraXParser extends Parser {
           } else reduce(st, 2, result, r)
         } else if (optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
         else error(st, List(MORE))
-      // ternary prefix operators *without* any special attention to precedence,because as of this writing there is exactly one
-      //@todo review
-      case r :+ (optok1@Token(tok1:OPERATOR,_)) :+ Expr(t1)  :+ (optok2@Token(tok2:OPERATOR,_)) :+ Expr(t2)  :+ (optok3@Token(tok3:OPERATOR,_)) :+ Expr(t3)
-        if op(st, tok1, List(t1.kind)).assoc==TernaryPrefixFormat
-          && (followsProgram(la) || la==EOF) =>
-        assume(op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[_]], "expected ternary prefix operator\nin " + s)
-        val kinds = List(t1.kind, t2.kind, t3.kind)
-        val optok = op(st, tok1, kinds)
-        val result = elaborate(st, optok1, optok2, optok3, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3)
-        reduce(st, 6, result, r)
       case _ :+ Token(tok:OPERATOR,_) if op(st, tok, List(ExpressionKind)).assoc==PrefixFormat || tok==MINUS =>
         //@note MINUS will always have to be shifted before reduction, whether binary infix or unary prefix
         assert(op(st, tok, List(ExpressionKind)).isInstanceOf[UnaryOpSpec[_]] || tok==MINUS, "only unary operators are currently allowed to have prefix format\nin " + s)
@@ -740,18 +760,18 @@ object KeYmaeraXParser extends Parser {
         if (firstFormula(la)) shift(st)
         else error(st, List(FIRSTFORMULA))
 
-      case _ :+ (tok@Token(IF,_)) :+ Expr(t1) =>
+      case _ :+ (tok@Token(IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) =>
         if (followsExpression(t1, la) && la!=EOF) shift(st)
         else if (la==EOF) throw ParseException.imbalancedError("Unmatched if-then-else", tok, st)
         else if ((elaboratable(FormulaKind, t1)!=None) && followsFormula(la)) shift(st)
         else error(st, List(FOLLOWSEXPRESSION))
 
-      case _ :+ (Token(IF,_)) :+ Expr(t1) :+ (Token(THEN,_)) =>
+      case _ :+ (Token(IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ (Token(LBRACE,_)) =>
         if (firstProgram(la)) shift(st)
         else error(st, List(FIRSTPROGRAM))
 
-      case _ :+ (Token(IF,_)) :+ Expr(t1) :+ (tok2@Token(THEN,_)) :+ Expr(t2) if la == ELSE => shift(st)
-      case _ :+ (Token(IF,_)) :+ Expr(t1) :+ (tok2@Token(THEN,_)) :+ Expr(t2) if la == EOF =>
+      case _ :+ (Token(IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ (Token(LBRACE,_)) :+ Expr(t2) :+ (Token(RBRACE,_)) if la == ELSE => shift(st)
+      case _ :+ (Token(IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ (tok2@Token(LBRACE,_)) :+ Expr(t2) if la == EOF =>
         throw ParseException.imbalancedError("Unmatched if-then-else", tok2, st)
       case _ :+ Token(LPAREN,_) =>
         if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN || la==ANYTHING) shift(st)
@@ -952,7 +972,7 @@ object KeYmaeraXParser extends Parser {
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
     la==SEMI /* from tests */ ||
     la==RBRACE /* from predicationals */ ||
-    la==PRIME || la==EOF || la==THEN
+    la==PRIME || la==EOF
 
   /** Is la a (binary) operator that only works for formulas? */
   private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
@@ -1177,7 +1197,7 @@ object KeYmaeraXParser extends Parser {
       case sAssign.op => sAssign //if (isDifferentialAssign(st)) sDiffAssign else sAssign
       case sAssignAny.op => sAssignAny
       case sTest.op => sTest
-      case (sIfThenElse.op | THEN | ELSE) => sIfThenElse
+      case (sIfThenElse.op | ELSE) => sIfThenElse
       //      case p: ODESystem => sODESystem
       //      case p: AtomicODE => sAtomicODE
       case sDifferentialProduct.op => sDifferentialProduct
@@ -1191,7 +1211,7 @@ object KeYmaeraXParser extends Parser {
       //case
       case sEOF.op => sEOF
     }
-  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == THEN || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
+  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
 
 
 }
