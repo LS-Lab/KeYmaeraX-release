@@ -146,7 +146,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(k2m.convert(Not(fml)),
+      Array(k2m.convert(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) }),
         new MExpr(
           MathematicaSymbols.LIST,
           StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).toList.sorted.map(s => k2m.convert(s)).toArray),

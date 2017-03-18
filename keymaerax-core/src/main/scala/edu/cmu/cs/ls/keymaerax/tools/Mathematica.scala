@@ -69,7 +69,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
       case _: MathematicaComputationAbortedException =>
         mCEX.timeout = 2
         try {
-          mCEX.findCounterExample(formula) match {
+          mCEX.findCounterExample(stripUniversalClosure(formula)) match {
             case None =>
               mQE.timeout = mQE.TIMEOUT_OFF
               mQE.qeEvidence(formula)
@@ -81,6 +81,12 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
             mQE.qeEvidence(formula)
         }
     }
+  }
+
+  /** Strips the universal quantifiers from a formula. Assumes shape \forall x (p(x) -> q(x)) */
+  private def stripUniversalClosure(fml: Formula): Formula = fml match {
+    case f: Imply => f
+    case Forall(_, f) => stripUniversalClosure(f)
   }
 
   /** Returns a formula describing the symbolic solution of the specified differential equation system.
