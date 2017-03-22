@@ -196,7 +196,7 @@ private object ToolTactics {
         else if (polarity > 0) proveBy(Imply(And(filteredAssumptionsFml, src), tgt), master())
         else proveBy(Imply(filteredAssumptionsFml, Imply(src, tgt)), master())
 
-      if (pr.isProved || filters.isEmpty) (pr, filteredAssumptions)
+      if (pr.isProved || filters.tail.isEmpty) (pr, filteredAssumptions)
       else proveFact(assumptions, filters.tail)
     }
     //@note first try to prove without assumptions, than with non-bound stuff, if all that fails with whole ante

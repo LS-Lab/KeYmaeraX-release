@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -57,6 +58,13 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("c>0".asFormula, "x/c>=0".asFormula)
     result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "fail in the right way after all filters are unsuccessful" in withMathematica { _ =>
+    the [BelleThrowable] thrownBy proveBy(Sequent(IndexedSeq("z<=5".asFormula), IndexedSeq()),
+      transform("z<=4".asFormula)(-1)) shouldNot have message "[Bellerophon Runtime] head of empty list"
+    the [BelleThrowable] thrownBy proveBy(Sequent(IndexedSeq("z<=5".asFormula), IndexedSeq()),
+      transform("z<=4".asFormula)(-1)) should have message "[Bellerophon Runtime] Invalid transformation: z<=4"
   }
 
   "Transform in context" should "exploit equivalence" in withMathematica { _ =>
