@@ -4,6 +4,7 @@
   'ngSanitize',
   'ngAnimate',
   'ui.bootstrap',
+  'ui.bootstrap.carousel',
   'keymaerax.controllers',
   'keymaerax.errorHandlers',
   'keymaerax.interceptors',
