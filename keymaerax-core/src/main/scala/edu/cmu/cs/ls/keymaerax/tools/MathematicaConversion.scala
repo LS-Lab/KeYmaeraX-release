@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 import KMComparator._
 import MKComparator._
-import edu.cmu.cs.ls.keymaerax.core.{Divide, Expression, Function, Number, Real, Tuple}
+import edu.cmu.cs.ls.keymaerax.core.{BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
 
 /**
   * Mathematica conversion stuff.
@@ -160,6 +160,12 @@ object MKComparator {
 
 class MKComparator[T](val l: T) {
   def ===(r: T): Boolean = (l, r) match {
+    case (lf: UnaryCompositeFormula, rf: UnaryCompositeFormula) if lf.getClass == rf.getClass => lf.child === rf.child
+    case (lf: BinaryCompositeFormula, rf: BinaryCompositeFormula) if lf.getClass == rf.getClass => lf.left === rf.left && lf.right === rf.right
+    case (lf: ComparisonFormula, rf: ComparisonFormula) if lf.getClass == rf.getClass => lf.left === rf.left && lf.right === rf.right
+    case (lt: UnaryCompositeTerm, rt: UnaryCompositeTerm) if lt.getClass == rt.getClass => lt.child === rt.child
+    case (lt: BinaryCompositeTerm, rt: BinaryCompositeTerm) if lt.getClass == rt.getClass => lt.left === rt.left && lt.right === rt.right
+    case (lq: Quantified, rq: Quantified) if lq.getClass == rq.getClass => lq.vars == rq.vars && lq.child === rq.child
     case (Number(lv), Divide(Number(rn), Number(rd))) => lv == rn/rd
     case (Divide(Number(ln), Number(ld)), Number(rv)) => ln/ld == rv
     case _ => l == r

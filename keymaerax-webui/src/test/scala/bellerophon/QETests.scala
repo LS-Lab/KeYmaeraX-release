@@ -33,7 +33,10 @@ class QETests extends TacticTestBase {
   }
 
   it should "fail on parsed decimal representations" in withMathematica { qeTool =>
-    proveBy("0.33333333333333 = 1/3".asFormula,ToolTactics.fullQE(qeTool)) shouldBe 'proved
+    val result = proveBy("0.33333333333333 = 1/3".asFormula,ToolTactics.fullQE(qeTool))
+    result.isProved shouldBe false
+    result.subgoals should have size 1
+    result.subgoals.head.succ should contain theSameElementsAs "false".asFormula::Nil
   }
 
   it should "correct behavior (Z3)" in withZ3 { qeTool =>
@@ -41,7 +44,10 @@ class QETests extends TacticTestBase {
   }
 
   it should "fail on internal decimal representations" in withMathematica { qeTool =>
-    proveBy(Equal(Number(0.33333333333333),Divide(Number(1),Number(3))),ToolTactics.fullQE(qeTool)) shouldBe 'proved
+    val result = proveBy(Equal(Number(0.33333333333333),Divide(Number(1),Number(3))),ToolTactics.fullQE(qeTool))
+    result.isProved shouldBe false
+    result.subgoals should have size 1
+    result.subgoals.head.succ should contain theSameElementsAs "false".asFormula::Nil
   }
 
   it should "fail (?) on internal decimal representations (2)" in withMathematica { qeTool =>
@@ -67,14 +73,17 @@ class QETests extends TacticTestBase {
     proveBy("x>0 -> x>0".asFormula, prop & ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
-  it should "have soundness bug with decimal representations " in withMathematica { qeTool =>
+  it should "not have soundness bug with decimal representations " in withMathematica { _ =>
 
     val pr = proveBy("false".asFormula,
       cut("1-3 * 0.33333333333333 = 0".asFormula) <( QE,
       cut("3 * 0.33333333333333 = 1 ".asFormula)  <( eqL2R(-1)(2) & QE,
          QE)))
 
-    pr shouldBe 'proved
+    pr.isProved shouldBe false
+    pr.subgoals should have size 1
+    pr.subgoals.head.ante shouldBe empty
+    pr.subgoals.head.succ should contain theSameElementsAs "false".asFormula::Nil
   }
 
 
