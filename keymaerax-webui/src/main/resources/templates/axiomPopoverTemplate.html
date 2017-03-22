@@ -32,6 +32,9 @@
             <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}} and confirm each input with <kbd>Enter</kbd></span>
 
             <div class="pull-right">
+                <span ng-if="tactic.selectedDerivation().derivation.help"
+                      uib-popover-html="tactic.selectedDerivation().derivation.help"
+                      popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
                 <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
                 <span ng-click="tactic.isOpen = !tactic.isOpen"><i class="fa fa-bars"></i></span>
             </div>

@@ -657,11 +657,18 @@ class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[De
   def ruleJson(info: TacticInfo, conclusion: SequentDisplay, premises: List[SequentDisplay]): JsObject = {
     val conclusionJson = sequentJson(conclusion)
     val premisesJson = JsArray(premises.map(sequentJson):_*)
+    val helpJson = {
+      val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/${info.codeName}.html")
+      if (helpResource == null) JsString("")
+      else JsString(scala.io.Source.fromInputStream(helpResource).mkString)
+    }
     JsObject(
       "type" -> JsString("sequentrule"),
       "conclusion" -> conclusionJson,
       "premise" -> premisesJson,
-      "input" -> inputsJson(info.inputs))
+      "input" -> inputsJson(info.inputs),
+      "help" -> helpJson
+    )
   }
 
   private def name(i: DerivationInfo) =
