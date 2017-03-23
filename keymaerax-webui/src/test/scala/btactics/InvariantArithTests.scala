@@ -63,34 +63,37 @@ class InvariantArithTests extends TacticTestBase {
 
   "InvariantArith" should "solve Lecture 11 odd order dynamics (Example 11.4)" in withMathematica { qeTool =>
     val i = "x^2 >= 2 -> [{x'=x^5+7*x^3+2*x}] x^2 >= 2".asFormula
-    //val witness = List(("10","wit__0*x^2")).map( s => (s._1.asTerm,s._2.asTerm))
+    val witness = List(
+      ("4","7/10*wit__0*x^3 + wit__0*x"),
+      ("1/25","wit__0*x^3"),
+      ("42/5","wit__0*x^2")).map( s => (s._1.asTerm,s._2.asTerm))
     val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         DebuggingTactics.print("Before normalizing") &  prop &
         OnAll(prepareArith) &
         DebuggingTactics.print("Problem") &
-        nil //witnessTac(witness)
+        witnessTac(witness)
       )
-    //This has an SDP solution with the default heuristic, but the coeffcient appears to be an irrational sq root??
     val res = proveBy(i, tactic)
-    println(res)
-    //res shouldBe 'proved
+    res shouldBe 'proved
   }
 
   "InvariantArith" should "solve Lecture 11 even order dynamics (Example 11.5)" in withMathematica { qeTool =>
     val i = "x^3 >= 2 -> [{x'=x^4+6*x^2+5}] x^3 >= 2".asFormula
-    //val witness = List(("10","wit__0*x^2")).map( s => (s._1.asTerm,s._2.asTerm))
+    val witness = List(
+      ("9/1499","1"),
+      ("47101/1499","wit__0*x^2"),
+      ("4524/1499"," wit__0*x^3 - 19957/9048*wit__0*x"),
+      ("11049671/27125904","wit__0*x")).map( s => (s._1.asTerm,s._2.asTerm))
     val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         DebuggingTactics.print("Before normalizing") &  prop &
         OnAll(prepareArith) &
         DebuggingTactics.print("Problem") &
-        nil //witnessTac(witness)
+        witnessTac(witness)
       )
-    //This has an SDP solution with the default heuristic, but the coeffcients appear to be irrational sq roots??
     val res = proveBy(i, tactic)
-    println(res)
-    //res shouldBe 'proved
+    res shouldBe 'proved
   }
 
   "InvariantArith" should "solve Lecture 11 DI arithmetic (conjuncts)" in withMathematica { qeTool =>
