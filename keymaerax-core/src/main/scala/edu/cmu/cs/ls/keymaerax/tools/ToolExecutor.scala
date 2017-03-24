@@ -29,7 +29,7 @@ class ToolExecutor[T](poolSize: Int) {
   }
 
   /** Indicates whether or not the task is done. */
-  def isDone(id: String) = scheduledTasks.get(id) match {
+  def isDone(id: String): Boolean = scheduledTasks.get(id) match {
     case Some(future) => future.isDone
     case None         => throw new Exception("This tactic does not exist in the list.")
   }
@@ -44,16 +44,14 @@ class ToolExecutor[T](poolSize: Int) {
    * @param force If true, then the task can be removed even if it is currently running.
    *              In that case, the task execution is halted first. Defaults to false.
    */
-  def remove(id: String, force: Boolean = false) = {
+  def remove(id: String, force: Boolean = false): Unit = {
     require(scheduledTasks.contains(id), "Cannot remove a task whose ID is not known")
     if (isDone(id)) {
       scheduledTasks.remove(id)
-    }
-    else if (force) {
+    } else if (force) {
       scheduledTasks.get(id).last.cancel(true)
       scheduledTasks.remove(id)
-    }
-    else {
+    } else {
       //@note if you want to remove a tactic even if it's still running, then call remove(id, true).
       throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
     }
@@ -74,11 +72,11 @@ class ToolExecutor[T](poolSize: Int) {
       getResult(id)
     } catch {
       // If the task execution is cancelled in some other way
-      case e: Throwable => None
+      case _: Throwable => None
     }
   }
 
-  def shutdown() = pool.shutdown()
+  def shutdown(): Unit = pool.shutdown()
 
   /** Creates the future that ultimately executes the task. */
   private def makeFuture(task: Unit => T): FutureTask[Either[T, Throwable]] =
@@ -87,7 +85,7 @@ class ToolExecutor[T](poolSize: Int) {
         try {
           Left(task())
         } catch {
-          case e: Throwable     => Right(e)
+          case e: Throwable => Right(e)
         }
       }
     })
