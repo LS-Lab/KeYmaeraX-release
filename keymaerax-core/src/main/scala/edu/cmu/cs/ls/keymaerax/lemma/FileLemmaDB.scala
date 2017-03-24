@@ -45,7 +45,9 @@ class FileLemmaDB extends LemmaDBBase {
   }
 
   def writeLemma(id: LemmaID, lemma:String): Unit = {
-    val pw = new PrintWriter(file(id))
+    val f = file(id)
+    if (!f.getParentFile.exists() && !f.getParentFile.mkdirs()) throw new IllegalStateException("Unable to create lemma " + id)
+    val pw = new PrintWriter(f)
     pw.write(lemma)
     pw.close()
   }
