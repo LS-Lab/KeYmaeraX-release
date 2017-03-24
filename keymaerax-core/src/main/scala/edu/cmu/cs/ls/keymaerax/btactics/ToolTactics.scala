@@ -186,7 +186,7 @@ private object ToolTactics {
     }
 
     val boundVars = StaticSemantics.boundVars(sequent(pos.top))
-    val gaFull = if (pos.isSucc) sequent.ante else sequent.ante.patch(pos.top.getIndex, Nil, 1)
+    val gaFull = if (pos.isSucc) sequent.ante.flatMap(FormulaTools.conjuncts) else sequent.ante.patch(pos.top.getIndex, Nil, 1).flatMap(FormulaTools.conjuncts)
 
     def proveFact(assumptions: IndexedSeq[Formula], filters: List[IndexedSeq[Formula]=>IndexedSeq[Formula]]): (ProvableSig, IndexedSeq[Formula]) = {
       val filteredAssumptions = filters.head(assumptions)
@@ -205,20 +205,32 @@ private object ToolTactics {
         ((al: IndexedSeq[Formula]) => al.filter(fml => StaticSemantics.freeVars(fml).intersect(boundVars).isEmpty))::
         ((al: IndexedSeq[Formula]) => al.filter(_ => true))::Nil)
 
-    def propPushIn(op: (Formula, Formula) => Formula) = {
+    def propPushLeftIn(op: (Formula, Formula) => Formula) = {
       val p = "p_()".asFormula
       val q = "q_()".asFormula
       val r = "r_()".asFormula
-      proveBy(Imply(op(p, r), Imply(op(p, q), op(p, And(q, r)))), prop & done)
+      proveBy(Imply(op(p, Imply(q, r)), Imply(op(p, q), op(p, r))), prop & done)
     }
 
-    val implyFact = proveBy("q_() -> (p_() -> p_()&q_())".asFormula, prop & done)
+    def propPushRightIn(op: (Formula, Formula) => Formula) = {
+      val p = "p_()".asFormula
+      val q = "q_()".asFormula
+      val r = "r_()".asFormula
+      proveBy(Imply(op(Imply(q, r), p), Imply(op(q, p), op(r, p))), prop & done)
+    }
+
+    lazy val implyFact = proveBy("q_() -> (p_() -> p_()&q_())".asFormula, prop & done)
+    lazy val existsDistribute = proveBy("(\\forall x_ (p(x_)->q(x_))) -> ((\\exists x_ p(x_))->(\\exists x_ q(x_)))".asFormula,
+      implyR(1) & implyR(1) & existsL(-2) & allL(-1) & existsR(1) & prop & done)
 
     def pushIn(remainder: PosInExpr): DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) => (ss.sub(pp) match {
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.left==right.left =>
-        useAt(propPushIn(left.reapply), PosInExpr(1::Nil))(pp)
+        useAt(propPushLeftIn(left.reapply), PosInExpr(1::Nil))(pp)
+      case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.right ==right.right =>
+        useAt(propPushRightIn(left.reapply), PosInExpr(1::Nil))(pp)
       case Some(Imply(Box(a, _), Box(b, _))) if a==b => useAt("K modal modus ponens", PosInExpr(1::Nil))(pp)
-      case Some(Imply(Forall(lv, _), Forall(rv, q))) if lv==rv => useAt(DerivedAxioms.allDistributeAxiom, PosInExpr(1::Nil))(pp)
+      case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv==rv => useAt(DerivedAxioms.allDistributeAxiom, PosInExpr(1::Nil))(pp)
+      case Some(Imply(Exists(lv, _), Exists(rv, _))) if lv==rv => useAt(existsDistribute, PosInExpr(1::Nil))(pp)
       case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1::Nil))(pos)
       case Some(_) => skip
     }) & (if (remainder.pos.isEmpty) skip else pushIn(remainder.child)(pp ++ PosInExpr(remainder.head::Nil))))
@@ -246,21 +258,28 @@ private object ToolTactics {
   /** Ensures that the formula at position `pos` is available at that position from the assumptions. */
   private def ensureAt: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     lazy val ensuredFormula = seq.sub(pos) match { case Some(fml: Formula) => fml }
+    lazy val ensuredFree = StaticSemantics.freeVars(ensuredFormula).toSet
     lazy val skipAt = "ANON" by ((_: Position, _: Sequent) => skip)
 
-    val step = seq(pos.top) match {
+    lazy val step = seq(pos.top) match {
       case Box(ODESystem(_, _), _) => diffInvariant(ensuredFormula)(pos.top) & dW(pos.top) & implyR(pos.top)
       case Box(Loop(_), _) => loop(ensuredFormula)(pos.top) & Idioms.<(master(), skip, master())
       case Box(Test(_), _) => testb(pos.top) & implyR(pos.top)
       case Box(_, _) => TactixLibrary.step(pos.top)
-      case Forall(v, _) => if (pos.isSucc) allR(pos.top) else allL(v.head)(pos.top)
-      case Exists(v, _) => if (pos.isSucc) existsR(v.head)(pos.top) else existsL(pos.top)
+      case Forall(v, _) if pos.isAnte =>
+        if (ensuredFree.intersect(v.toSet).isEmpty) ??? //@todo instantiate with something useful
+        else allL(v.head)(pos.top)
+      case Forall(_, _) if pos.isSucc => allR(pos.top)
+      case Exists(v, _) if pos.isSucc =>
+        if (ensuredFree.intersect(v.toSet).isEmpty) ???
+        else existsR(v.head)(pos.top)
+      case Exists(_, _ ) if pos.isAnte => existsL(pos.top)
       //@todo resulting branches may not be provable when starting from wrong question, e.g., a>0&b>0 -> x=2 & a/b>0, even if locally a>0&b>0 -> (a/b>0 <-> a>0*b)
       case e if pos.isAnte => TacticIndex.default.tacticsFor(e)._1.headOption.getOrElse(skipAt)(pos.top)
       case e if pos.isSucc => TacticIndex.default.tacticsFor(e)._2.headOption.getOrElse(skipAt)(pos.top)
     }
     val recurse = if (pos.isTopLevel) skip else ensureAt(pos.top.getPos, pos.inExpr.child)
-    step & onAll(recurse)
+    if (seq.isFOL) QE else step & onAll(recurse)
   })
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or function) */

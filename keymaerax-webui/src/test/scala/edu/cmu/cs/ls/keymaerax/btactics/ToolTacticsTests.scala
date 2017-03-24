@@ -67,6 +67,45 @@ class ToolTacticsTests extends TacticTestBase {
       transform("z<=4".asFormula)(-1)) should have message "[Bellerophon Runtime] Invalid transformation: z<=4"
   }
 
+  it should "work on the postcondition of a simple box property" in withMathematica { _ =>
+    val result = proveBy("x>2 -> [a:=2;]x>1".asFormula, transform("x>2".asFormula)(1, 1::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs "x>2 -> [a:=2;]x>2".asFormula::Nil
+  }
+
+  it should "work on the postcondition of a box ODE" in withMathematica { _ =>
+    val result = proveBy("x>2 -> [{a'=x}]x>1".asFormula, transform("x>2".asFormula)(1, 1::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs "x>2 -> [{a'=x}]x>2".asFormula::Nil
+  }
+
+  it should "work on the postcondition of a simple diamond property" in withMathematica { _ =>
+    val result = proveBy("x>2 -> <a:=2;>x>1".asFormula, transform("x>2".asFormula)(1, 1::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs "x>2 -> <a:=2;>x>2".asFormula::Nil
+  }
+
+  it should "work on the postcondition of a diamond ODE" in withMathematica { _ =>
+    val result = proveBy("x>2 -> <{a'=x}>x>1".asFormula, transform("x>2".asFormula)(1, 1::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain theSameElementsAs "x>2 -> <{a'=x}>x>2".asFormula::Nil
+  }
+
+  it should "work inside quantified formulas as arising in diff. solve" in withMathematica { _ =>
+    val result = proveBy(
+      Sequent(
+        IndexedSeq("x=1&v=2".asFormula),
+        IndexedSeq("\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->v=2)&(v*t_+x)^3>=1)".asFormula)),
+      transform("v=2->v=2".asFormula)(1, 0::1::0::0::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "x=1&v=2".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(v=2->v=2))&(v*t_+x)^3>=1)".asFormula::Nil
+  }
+
   "Transform in context" should "exploit equivalence" in withMathematica { _ =>
     val result = proveBy("[x:=4;]x>=v*v".asFormula, transform("x>=v^2".asFormula)(1, 1::Nil))
     result.subgoals should have size 1
