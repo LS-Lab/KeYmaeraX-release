@@ -247,5 +247,7 @@ object Augmentors {
       //@note don't optimize true-> and ->false, since otherwise we'll have to deal with two special cases
       Imply(anteAnd, succOr)
     }
+    /** Returns true if all formulas in the sequent are FOL, false otherwise. */
+    def isFOL: Boolean = seq.ante.forall(_.isFOL) && seq.succ.forall(_.isFOL)
   }
 }
