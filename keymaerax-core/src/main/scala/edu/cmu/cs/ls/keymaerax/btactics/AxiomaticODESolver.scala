@@ -9,7 +9,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import TacticFactory._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
@@ -65,19 +67,54 @@ object AxiomaticODESolver {
       else if (instEnd) simplifier(pos ++ PosInExpr(0 :: Nil))
       else simplifier(pos ++ PosInExpr(0::1::0::0::1::Nil))
 
+    lazy val allExtract1 = remember("\\forall x_ (p_(x_) -> q_()) -> (\\forall x_ p_(x_) -> q_())".asFormula,
+      implyR(1)*2 & allL(-1) & allL(-2) & prop & done, "odesolver")
+    lazy val allExtract2 = remember("\\forall x_ (p_(x_) -> r_(x_)&q_()) -> \\forall x_ (p_(x_)->r_(x_)) ".asFormula,
+      implyR(1) & allR(1) & allL(-1) & prop & done, "odesolver")
+    lazy val allExtract3 = remember("p_() & \\forall x_ (r_(x_) -> q_(x_)) -> \\forall x_ (r_(x_) -> q_(x_) & p_())".asFormula,
+      implyR(1) & andL(-1) & allR(1) & allL(-2) & prop & done, "odesolver")
+
+    lazy val imply1 = remember("p_() -> (r_() -> p_())".asFormula, prop & done, "odesolver")
+    lazy val imply2 = remember("(p_()->s_()&r_()) -> (p_()->(q_()->r_())->s_())".asFormula, prop & done, "odesolver")
+
+    lazy val reorder1 = remember("q_()&p_()&r_() <-> p_()&q_()&r_()".asFormula, prop & done, "odesolver")
+    lazy val reorder2 = remember("q_()&p_()&r_()&s_() <-> p_()&(q_()&r_())&s_()".asFormula, prop & done, "odesolver")
+    lazy val existsExtract = remember("\\exists x_ (p_() & q_(x_)) <-> p_() & \\exists x_ q_(x_)".asFormula, equivR(1) <(
+      existsL(-1) & andR(1) <(prop & done, existsR(1) & prop & done),
+      andL(-1) & existsL(-2) & existsR(1) & prop & done
+    ), "odesolver")
+
     //@todo preserve consts when solving in context (requires closing const as last step of DI in context - let fails otherwise)
     val simpConsts: DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) =>
       if (consts != True && pos.isTopLevel) ss.sub(pp) match {
         case Some(False) => TactixLibrary.skip
         case Some(_) =>
           val constsPos = if (q == True) PosInExpr(0::1::0::0::1::Nil) else PosInExpr(0::1::0::0::1::1::Nil)
-          TactixLibrary.transform(Imply(consts, consts))(pp.topLevel ++ constsPos) &
-          TactixLibrary.useAt(DerivedAxioms.implySelf)(pp.topLevel ++ constsPos) &
-          (if (q == True) TactixLibrary.skip else TactixLibrary.useAt(DerivedAxioms.andTrue)(pp.topLevel ++ constsPos.parent))
+          s.sub(pos) match {
+            case Some(Box(ODESystem(_, qq), _)) if polarity > 0 =>
+              if (qq == True) useAt(allExtract1)(pos ++ PosInExpr(0::1::0::Nil)) &
+                useAt(imply2, PosInExpr(1::Nil))(pos ++ PosInExpr(0::Nil)) &
+                useAt(allExtract3, PosInExpr(1::Nil))(pos) &
+                //@todo pos is top level, prove that consts are true in context
+                andR(pos) <(prop & done, skip)
+              else useAt(allExtract2)(pos ++ PosInExpr(0::1::0::Nil))
+            case Some(Box(ODESystem(_, qq), _)) if polarity < 0 => skip //@todo
+            case Some(Diamond(ODESystem(_, qq), _)) if polarity > 0 =>
+              (if (qq == True) useAt(imply1, PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::0::0::Nil)) &
+                useAt("vacuous all quantifier")(pos ++ PosInExpr(0::1::0::Nil)) &
+                useAt(reorder1)(pos ++ PosInExpr(0::Nil))
+              else useAt(allExtract3, PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::0::Nil)) &
+                useAt(reorder2, PosInExpr(1::Nil))(pos ++ PosInExpr(0::Nil))) &
+              useAt(existsExtract)(pos) &
+              //@todo pos is top level, prove that consts are true in context
+              andR(pos) <(prop & done, skip)
+            case Some(Diamond(ODESystem(_, qq), _)) if polarity < 0 => skip //@todo
+          }
       } else TactixLibrary.skip)
 
     DebuggingTactics.debug("SOLVE Start", ODE_DEBUGGER) &
-      (if (consts == True || !pos.isTopLevel) TactixLibrary.skip else DifferentialTactics.diffInvariant(consts)(pos)) &
+      //@todo support the cases we now skip
+      (if (consts == True || !pos.isTopLevel || polarity < 0) TactixLibrary.skip else DifferentialTactics.diffInvariant(consts)(pos)) &
       DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER) &
       addTimeVar(pos) &
       DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
@@ -114,7 +151,7 @@ object AxiomaticODESolver {
       DebuggingTactics.debug("AFTER inserting initial values", ODE_DEBUGGER) &
       simpConsts(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
       DebuggingTactics.debug("AFTER simplifying consts", ODE_DEBUGGER) &
-      (if (q == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)) &
+      (if (q == True && consts == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)) &
         TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
           | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0 :: 1 :: Nil)))

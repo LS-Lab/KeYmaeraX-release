@@ -78,6 +78,13 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "x=1&v=2 -> \\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
   }
 
+  it should "work on the single integrator x'=v with evolution domain" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val result = proveBy("x=1&v=2 -> [{x'=v&x>=0}]x^3>=1".asFormula, implyR(1) & AxiomaticODESolver()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "x=1&v=2".asFormula::Nil
+    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0)->(v*t_+x)^3>=1)".asFormula
+  }
+
   it should "work on the single integrator x'=v in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("[{x'=v}]x^3>=1".asFormula), IndexedSeq()), AxiomaticODESolver()(-1))
     result.subgoals should have size 1
@@ -292,6 +299,15 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=1&v=2".asFormula
     result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
+  }
+
+  it should "work on the single integrator x'=v with evolution domain constraint" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x=1&v=2 -> <{x'=v & x>=0}>x^3>=1".asFormula
+    val t = implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=1&v=2".asFormula
+    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0) & (v*t_+x)^3>=1)".asFormula
   }
 
   it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
