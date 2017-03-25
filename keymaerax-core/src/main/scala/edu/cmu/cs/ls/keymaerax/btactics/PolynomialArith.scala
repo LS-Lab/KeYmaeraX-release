@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
   */
 object PolynomialArith {
 
-  private val DEBUG = true
+  private val DEBUG = false
 
   /**
     * Normalised polynomial arithmetic
@@ -365,19 +365,50 @@ object PolynomialArith {
   private lazy val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE & done)
   private lazy val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE & done)
 
-  //Try hard to turn a term into ground arithmetic
-  def groundNormalise(l:Term) : Option[(Number,ProvableSig)] = {
-    SimplifierV3.arithGroundIndex(l).headOption match { //Only uses RCF
-      case None => None
-      case Some(pr) => {
-        pr.conclusion.sub(SuccPosition(1,1::Nil)) match {
-          case Some(n:Number) =>
-            Some((n,pr))
-          case _ => None
-        }
-      }
+  def divCoeff(cl:Term,cr:Term) : Term = {
+    (cl,cr) match {
+      case(Divide(lnum:Number,lden:Number),Divide(rnum:Number,rden:Number)) =>
+        val num = lnum.value * rden.value
+        val den = lden.value * rnum.value
+        val normalizer = gcd(num,den).abs
+        Divide(Number(num/normalizer),Number(den/normalizer))
+      case _ =>
+        ???
     }
   }
+
+  // Try to turn a ground term into an equivalent normalized rational (A/B)
+  // Proves the equivalence using RCF
+  // The proof gets generated afterwards using RCF
+  def groundNormalise(t:Term,toNum:Boolean = false) : Option[Term] = {
+    t match{
+      case (n:Number) => Some(Divide(n,Number(1)))
+      case bop:BinaryCompositeTerm =>
+        (groundNormalise(bop.left),groundNormalise(bop.right)) match {
+          case (Some(l),Some(r)) =>
+            bop match{
+              case Plus(_,_) => Some(addCoeff(l,r)._1)
+              case Minus(_,_) => Some(addCoeff(l,mulCoeff(Divide(Number(-1),Number(1)),r))._1)
+              case Times(_,_) => Some(mulCoeff(l,r))
+              case Divide(_,_) => Some(divCoeff(l,r))
+              case _ => None
+            }
+          case _=> None
+        }
+      case Neg(u) =>
+        groundNormalise(u).map( t => mulCoeff(Divide(Number(-1),Number(1)),t))
+      case _ => None
+    }
+  }
+
+  def groundNormaliseProof(t:Term,toNum:Boolean=false) : Option[(Term,ProvableSig)] = {
+    groundNormalise(t) match{
+      case Some(Divide(num:Number,den:Number)) if den.value != 0 && (!toNum || den.value == 1) =>
+        Some (Divide(num,den),proveBy(Equal(t,Divide(num,den)),RCF))
+      case _ => None
+    }
+  }
+
 
   private lazy val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE & done)
   private lazy val varNormalise = proveBy("P_() = 0 + (1/1) * (1 * P_() ^ 1)".asFormula,QE & done)
@@ -425,12 +456,12 @@ object PolynomialArith {
         val(res,pr2) = normalise(rec1,skip_proofs)
         (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
           & by(pr2)))
-      //If the power is not itself a power, try harder to make it a Number
+      //If the power is not itself a number, try harder to make it a Number
       case Power(ln,e:Term) =>
-        val pr = groundNormalise(e)
+        val pr = groundNormaliseProof(e,true)
         pr match {
-          case None => ???  // Could not normalize
-          case Some((n,pr)) => {
+          case None => ???  // Could not normalize the power
+          case Some((n:Number,pr)) => {
             val (res,pr2) = normalise(Power(ln,n),skip_proofs)
             (res,prover(Equal(l,res), useAt(pr)(SuccPosition(1,0::1::Nil)) & by(pr2)))
           }
@@ -455,14 +486,14 @@ object PolynomialArith {
         (res,prover(Equal(l,res), RCF ))
       case Divide(ln,e:Term) =>
         //Simple hack: Try hard to convert a division to a number
-        val pr = groundNormalise(e)
-        pr match {
+        val propt = groundNormaliseProof(Divide(Number(1),e))
+        propt match {
           case None =>
             ???  // Could not normalize
           case Some((n,pr)) => {
-            val (res,pr2) = normalise(Times(Divide(Number(1),n),ln),skip_proofs)
+            val (res,pr2) = normalise(Times(n,ln),skip_proofs)
             (res,prover(Equal(l,res), useAt(divNormalise)(SuccPosition(1,0::Nil)) &
-              useAt(pr)(SuccPosition(1,0::0::1::Nil)) &
+              useAt(pr)(SuccPosition(1,0::0::Nil)) &
               by(pr2)
             ))
           }
@@ -751,5 +782,62 @@ object PolynomialArith {
   }
 
   lazy val prepareArith: BelleExpr = clearSucc & normAnte
+
+  //Linear variable elimination
+
+  // Guided elimination at a top-level position (of shape A=B)
+  // Rewrites that position to lhs = rhs using polynomial arithmetic to prove its correctness
+  // Using polynomial arithmetic to prove the equality allows complicated lhs=rhs rewrites
+
+  // Proves A = B <-> lhs = rhs via A - B = lhs -rhs
+  // Doesn't really work in general, but for linear elimination but it could work for linear elimination
+
+  private lazy val signFlip: ProvableSig = proveBy("f_() = 0 <-> -f_() = 0".asFormula,QE & done)
+  private def rewriteEquality(l:Term,r:Term,lhs:Term,rhs:Term,flip:Boolean) : ProvableSig =
+  {
+    println("REWRITING",l,r,lhs,rhs,flip)
+    proveBy(Equiv(Equal(l,r),Equal(lhs,rhs)),
+      useAt(eqAnte)(1,PosInExpr(0::Nil)) &
+      useAt(eqAnte)(1,PosInExpr(1::Nil)) &
+      (if (flip) useAt(signFlip)(1,PosInExpr(1::Nil)) else ident) &
+      normaliseAt(1,PosInExpr(0::0::Nil)) &
+      normaliseAt(1,PosInExpr(1::0::Nil)) &  byUS("<-> reflexive")
+    )
+  }
+
+  //Linear variable elimination following an oracle
+  //The list of instructions contains:
+  // 1) position to rewrite, 2) term to leave on LHS, 3) term on RHS
+  // 4) whether LHS term appears negatively when the initial equation is normalized to the shape t = 0
+  // 4) determines whether a sign flip is needed
+  def linearElim(pos:Int, lhs:Term, rhs:Term, norm:Boolean): DependentTactic = new SingleGoalDependentTactic("linear elim") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      seq.sub(SeqPos(pos)) match {
+        case Some(Equal(clhs,crhs)) =>
+          useAt(rewriteEquality(clhs,crhs,lhs,rhs,norm))(pos) & exhaustiveEqL2R(true)(pos)
+        case _ => ident
+      }
+    }
+  }
+
+  val printGoal: DependentTactic = new DependentTactic("linear elim") {
+    override def computeExpr(pr:ProvableSig): BelleExpr = {
+      pr.subgoals.zipWithIndex.foreach(
+        seqind =>
+        {
+          //println("Goal",seqind._2)
+          print("\"")
+          seqind._1.ante.foreach(
+            _ match {
+              case Equal(l,_) => print(l+",")
+              case _ => ???
+            }
+          )
+          print("\"\n")
+        }
+      )
+      ident
+    }
+  }
 
 }
