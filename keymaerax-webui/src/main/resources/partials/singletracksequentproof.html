@@ -43,13 +43,13 @@
                 <!-- TODO vertical line between down/up angle -->
                 </span>
                 <!-- proof rule -->
-                <span class="k4-proofrule"
+                <span class="k4-withcontextmenu k4-proofrule"
                       tooltip-placement="right"
                       ng-mouseover="highlightStepPosition(step, true)"
                       ng-mouseleave="highlightStepPosition(step, false)"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
-                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
+                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
                     {{step | childRuleName:this}}
                 </span>
             </li>
@@ -89,13 +89,13 @@
                 <span ng-if="!(!section.isCollapsed && $first && (deductionPath.sections[outerIdx].path.length > 2 || outerIdx < deductionPath.sections.length-1 && deductionPath.sections[outerIdx].path.length > 1))">&nbsp;</span>
                 </span>
                 <!-- proof rule -->
-                <span class="k4-proofrule"
+                <span class="k4-withcontextmenu k4-proofrule"
                       ng-mouseover="highlightStepPosition(step, true)"
                       ng-mouseleave="highlightStepPosition(step, false)"
                       tooltip-placement="right"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
-                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
+                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
                     {{step | childRuleName:this}}
                 </span>
             </li>
@@ -143,14 +143,14 @@
             <ul>
                 <li>
                     <!-- load parent -->
-                    <a class="k4-withcontextmenu"
+                    <span class="k4-withcontextmenu fa fa-plus-square-o"
                        ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
                        uib-tooltip="Fetch parent step"
                        tooltip-popup-delay="1000"
                        ng-right-click="fetchParentRightClick($event)" tabindex="-1"
                        uib-popover-template="'navigateTowardsRootPopover.html'"
-                       popover-title="Proof history" popover-placement="auto bottom" popover-trigger="contextmenu"
-                       ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
+                       popover-title="Proof history" popover-placement="auto bottom" popover-trigger="'rightClick'"
+                       ng-if="!section.isComplete && !section.isCollapsed"></span>
                 </li>
             </ul>
         </div>
@@ -174,14 +174,14 @@
             </span>
             <span class="k4-prooficon">&nbsp;</span>
             <!-- proof rule -->
-            <span class="k4-proofrule"
+            <span class="k4-withcontextmenu k4-proofrule"
                   ng-if="step !== undefined"
                   tooltip-placement="right"
                   ng-mouseover="highlightStepPosition(step.id, true)"
                   ng-mouseleave="highlightStepPosition(step.id, false)"
                   ng-right-click="proofStepRightClick($event)" tabindex="-1"
                   uib-popover-template="'proofStepPopoverPrev.html'"
-                  popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
+                  popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
                     {{step.id | childRuleName:this}}
                 </span>
             <span class="k4-proofrule" ng-if="step === undefined"></span>
@@ -198,14 +198,14 @@
         <ul>
             <li>
                 <!-- load parent -->
-                <a class="k4-withcontextmenu"
+                <span class="k4-withcontextmenu fa fa-plus-square-o"
                    ng-click="fetchSectionParent(deductionPath.sections[0])"
                    uib-tooltip="Fetch parent step"
                    tooltip-popup-delay="1000"
                    ng-right-click="fetchParentRightClick($event)" tabindex="-1"
                    uib-popover-template="'navigateTowardsRootPopover.html'"
-                   popover-title="Proof history" popover-placement="auto bottom" popover-trigger="contextmenu"
-                   ng-if="!deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed"><span class="fa fa-plus-square-o"></span></a>
+                   popover-title="Proof history" popover-placement="auto bottom" popover-trigger="'rightClick'"
+                   ng-if="!deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed"></span>
             </li>
         </ul>
     </div>

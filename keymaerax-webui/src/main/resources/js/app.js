@@ -114,9 +114,9 @@ keymaeraProofApp.config(['$routeProvider',
   }]);
 
 // triggers for tooltip and popover
-keymaeraProofApp.config(['$uibTooltipProvider', function($tooltipProvider) {
-  $tooltipProvider.setTriggers({
-    'contextmenu': 'blur'
+keymaeraProofApp.config(['$uibTooltipProvider', function($uibTooltipProvider) {
+  $uibTooltipProvider.setTriggers({
+    'rightClick': 'blur'
   });
 }]);
 

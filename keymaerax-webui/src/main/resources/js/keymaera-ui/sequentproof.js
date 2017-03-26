@@ -108,14 +108,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
 
       scope.fetchParentRightClick = function(event) {
-        event.stopPropagation();
-        // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
-        event.target.focus();
+        //@note dispatch popover-trigger (see singletracksequentproof.html)
+        event.target.dispatchEvent(new Event("rightClick"));
       }
 
       scope.proofStepRightClick = function(event) {
-        event.stopPropagation();
-        event.target.focus();
+        //@note dispatch popover-trigger (see singletracksequentproof.html)
+        event.target.dispatchEvent(new Event("rightClick"));
       }
 
       scope.proofStepParent = function(childId) {
