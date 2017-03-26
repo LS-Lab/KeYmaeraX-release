@@ -43,10 +43,13 @@ object KeYmaeraXProblemParser {
 
   /** Tries parsing as a formula first. If that fails, tries parsing as a problem file. */
   def parseAsProblemOrFormula(input : String): Formula = {
-    val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case e: Throwable => None }
+    val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case _: Throwable => None }
     result match {
       case Some(formula) => formula
-      case None => KeYmaeraXProblemParser(input)
+      case None =>
+        val (decls, fml) = KeYmaeraXProblemParser.parseProblem(input)
+        val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+        USubst(substs)(fml)
     }
   }
 
