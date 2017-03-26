@@ -20,21 +20,23 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  type Declaration = Map[(String, Option[Int]), (Option[Sort], Sort)]
+  type Declaration = KeYmaeraXDeclarationsParser.Declaration
 
-  def apply(inputWithPossibleBOM : String): Formula = {
+  /** Convenience wrapper to get formula only. */
+  def apply(inputWithPossibleBOM : String): Formula = parseProblem(inputWithPossibleBOM)._2
+
+  /** Parse a problem file to its declarations and problem formula. */
+  def parseProblem(inputWithPossibleBOM : String): (Declaration, Formula) = {
     val input = ParserHelper.removeBOM(inputWithPossibleBOM)
     try {
       firstNonASCIICharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
-        case None => {
+        case None =>
           val lexResult = KeYmaeraXLexer.inMode(input, ProblemFileMode)
           if(KeYmaeraXParser.PARSER_DEBUGGING) println(lexResult) //@note Useful to change this to true if you're modifying the parser or chasing down a bug.
-          parseProblem(lexResult)._2
-        }
+          parseProblem(lexResult)
       }
-    }
-    catch {
+    } catch {
       case e: ParseException => throw e.inInput(input)
     }
   }
@@ -115,12 +117,10 @@ object KeYmaeraXProblemParser {
       "Expected Problem block to be last in file, but found " + eof,
       if (eof.nonEmpty) eof.last.loc else theProblem.last.loc, "kyx problem end block parser")
 
-    val declsWithoutStartToks = decls.mapValues(v => (v._1, v._2))
-
     //@note redirect annotation listener to elaborate products
     val annotationListener = parser.annotationListener
     parser.setAnnotationListener((prg, fml) => {
-      annotationListener(elaborateToFunctions(prg, declsWithoutStartToks), elaborateToFunctions(fml, declsWithoutStartToks))
+      annotationListener(elaborateToFunctions(prg, decls), elaborateToFunctions(fml, decls))
     })
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
@@ -133,11 +133,11 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    val elaborated = elaborateToFunctions(problem, declsWithoutStartToks)
+    val elaborated = elaborateToFunctions(problem, decls)
 
     KeYmaeraXDeclarationsParser.typeAnalysis(decls, elaborated) //throws ParseExceptions.
 
-    (declsWithoutStartToks, elaborated)
+    (decls, elaborated)
   }
 
   /** Elaborate ()-less functions, which get parsed as variables, to functions with domain Unit. */
@@ -155,6 +155,13 @@ object KeYmaeraXProblemParser {
  * Parses the declarations in .kyx and .alp files.
  */
 object KeYmaeraXDeclarationsParser {
+  /** Name is alphanumeric name and index. */
+  type Name = (String, Option[Int])
+  /** Signature is domain sort, codomain sort, "interpretation", token that starts the declaration. */
+  type Signature = (Option[Sort], Sort, Option[Expression], Token)
+  /** A declaration */
+  type Declaration = Map[Name, Signature]
+
   /**
    *
    * @param tokens The tokens to parse
@@ -165,10 +172,10 @@ object KeYmaeraXDeclarationsParser {
     *             _3: The token that starts the declaration.
    *          _2: The list of remaining tokens.
    */
-  def apply(tokens : List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) =
+  def apply(tokens : List[Token]) : (Declaration, List[Token]) =
     parseDeclarations(tokens)
 
-  def parseDeclarations(tokens: List[Token]): (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
+  def parseDeclarations(tokens: List[Token]): (Declaration, List[Token]) = {
     if(tokens.head.tok.equals(PROGRAM_VARIABLES_BLOCK)) {
       val (programVariables, remainder) = processProgramVariables(tokens)
       val (functions, finalRemainder) = processFunctionSymbols(remainder)
@@ -185,6 +192,13 @@ object KeYmaeraXDeclarationsParser {
     else {
       (Map(), tokens)
     }
+  }
+
+  /** Turns a function declaration (with defined body) into a substitution pair. */
+  def declAsSubstitutionPair(name: KeYmaeraXDeclarationsParser.Name, signature: KeYmaeraXDeclarationsParser.Signature): SubstitutionPair = {
+    assert(signature._3.isDefined, "Substitution only for defined functions")
+    val arg = if (signature._1.isDefined) DotTerm(signature._1.get) else Nothing
+    SubstitutionPair(FuncOf(Function(name._1, name._2, signature._1.get, signature._2), arg), signature._3.get)
   }
 
   /** Returns all the quantified variables in an expression. Used in [[typeAnalysis()]] */
@@ -212,10 +226,10 @@ object KeYmaeraXDeclarationsParser {
    * @param expr the expression parsed
    * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
    */
-  def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort, Token)], expr: Expression): Boolean = {
+  def typeAnalysis(decls: Declaration, expr: Expression): Boolean = {
     StaticSemantics.symbols(expr).forall({
       case f:Function =>
-        val (declaredDomain,declaredSort, declarationToken) = decls.get((f.name,f.index)) match {
+        val (declaredDomain,declaredSort, interpretation, declarationToken) = decls.get((f.name,f.index)) match {
           case Some(d) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
@@ -231,8 +245,8 @@ object KeYmaeraXDeclarationsParser {
       case x : Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
         val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
-          case Some((None,sort,token)) => (sort, token)
-          case Some((Some(domain), sort, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
+          case Some((None,sort, _, token)) => (sort, token)
+          case Some((Some(domain), sort, _, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
         if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declarationToken.loc)
@@ -253,7 +267,7 @@ object KeYmaeraXDeclarationsParser {
    *          _1: The list of Named Symbols.
    *          _2: The remainder of the file.
    */
-  def processProgramVariables(tokens : List[Token]): (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
+  def processProgramVariables(tokens : List[Token]): (Declaration, List[Token]) = {
     if(tokens.head.tok.equals(PROGRAM_VARIABLES_BLOCK)) {
       val(progVarsSection, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
         val progVarsTokens = progVarsSection.tail
@@ -263,19 +277,19 @@ object KeYmaeraXDeclarationsParser {
 
   }
 
-  def processFunctionSymbols(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
+  def processFunctionSymbols(tokens: List[Token]) : (Declaration, List[Token]) = {
     if(tokens.head.tok.equals(FUNCTIONS_BLOCK)) {
       val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
       val funSymbolsSection = funSymbolsTokens.tail
-      (processDeclarations(funSymbolsSection, Map()).map({case d@(i, (domain, sort, token)) => domain match {
-        case None => (i, (Some(Unit), sort, token)) //@note allow A() declared without parentheses
+      (processDeclarations(funSymbolsSection, Map()).map({case d@(i, (domain, sort, interpretation, token)) => domain match {
+        case None => (i, (Some(Unit), sort, interpretation, token)) //@note allow A() declared without parentheses
         case Some(_) => d
       }}), remainder.tail)
     }
-    else (Map[(String, Option[Int]), (Option[Sort], Sort, Token)](), tokens)
+    else (Map(), tokens)
   }
 
-  def processVariables(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort, Token)], List[Token]) = {
+  def processVariables(tokens: List[Token]) : (Declaration, List[Token]) = {
     if(tokens.head.tok.equals(VARIABLES_BLOCK)) {
       val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
       val funSymbolsSection = funSymbolsTokens.tail
@@ -300,27 +314,29 @@ object KeYmaeraXDeclarationsParser {
    *
    * And if the machine halts in a non-PeriodS state then it errors.
    */
-  private def parseDeclaration(ts : List[Token]) : (((String, Option[Int]), (Option[Sort], Sort, Token)), List[Token]) = {
+  private def parseDeclaration(ts : List[Token]) : ((Name, Signature), List[Token]) = {
     val sortToken = ts.head
     val sort = parseSort(sortToken, sortToken)
 
     val nameToken = ts.tail.head
     val nameTerminal : IDENT = ts.tail.head.tok match {
       case i : IDENT => i
-      case x => throw new Exception("Expected an identifier but found " + x.getClass().getCanonicalName())
+      case x => throw new Exception("Expected an identifier but found " + x.getClass.getCanonicalName)
     }
 
     val afterName = ts.tail.tail //skip over IDENT and REAL/BOOL tokens.
     if(afterName.head.tok.equals(LPAREN)) {
-      val (domainSort, remainder) = parseFunctionDomainSort(afterName, nameToken)
+      val (domainSort, domainSortRemainder) = parseFunctionDomainSort(afterName, nameToken)
+
+      val (interpretation, remainder) = parseInterpretation(domainSortRemainder, nameToken)
 
       checkInput(remainder.last.tok.equals(PERIOD),
         "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
 
-      (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, nameToken)), remainder.tail)
+      (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder.tail)
     }
     else if(afterName.head.tok.equals(PERIOD)) {
-      (( (nameTerminal.name, nameTerminal.index) , (None, sort, nameToken) ), afterName.tail)
+      (( (nameTerminal.name, nameTerminal.index) , (None, sort, None, nameToken) ), afterName.tail)
     }
     else {
       throw new ParseException("Variable declarations should end with a period.", afterName.head.loc, afterName.head.tok.img, ".", "", "declaration parse")
@@ -361,6 +377,24 @@ object KeYmaeraXDeclarationsParser {
     }
   }
 
+  /**
+    *
+    * @param tokens A list of tokens that begins like: (R|B, ...).
+    * @param of A meaningful token representing the thing whose type is being parsed.
+    * @return A pair:
+    *          _1: The interpretation,
+    *          _2: The reamining tokens.
+    */
+  private def parseInterpretation(tokens : List[Token], of: Token) : (Option[Expression], List[Token]) = {
+    if (tokens.head.tok.equals(EQ)) {
+      val decl = tokens.tail.sliding(2).toList.span({case Token(RPAREN, _)::Token(PERIOD, _)::Nil => false case _ => true})
+      val splitAtPeriod = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
+      checkInput(splitAtPeriod._2.head.tok.equals(PERIOD),
+        "Non-delimited function declaration. Found: " + splitAtPeriod._2.head, splitAtPeriod._2.head.loc, "parsing function interpretation")
+      (Some(KeYmaeraXParser.parse(splitAtPeriod._1 :+ Token(EOF))), splitAtPeriod._2)
+    } else (None, tokens)
+  }
+
   private def parseSort(sortToken : Token, of: Token) : Sort = sortToken.tok match {
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("R", _) => edu.cmu.cs.ls.keymaerax.core.Real
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("P", _) => edu.cmu.cs.ls.keymaerax.core.Trafo
@@ -398,13 +432,11 @@ object KeYmaeraXDeclarationsParser {
    *          _2: The sort of the variable, or the codomain sort of a function.
    */
   @tailrec
-  private def processDeclarations(ts: List[Token],
-                                  sortDeclarations: Map[(String, Option[Int]), (Option[Sort], Sort, Token)]) : Map[(String, Option[Int]), (Option[Sort], Sort, Token)] =
+  private def processDeclarations(ts: List[Token], sortDeclarations: Declaration) : Declaration =
     if(ts.nonEmpty) {
       val (nextDecl, remainders) = parseDeclaration(ts)
       processDeclarations(remainders, sortDeclarations.updated(nextDecl._1, nextDecl._2))
-    }
-    else {
+    } else {
       sortDeclarations
     }
 

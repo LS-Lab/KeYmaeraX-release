@@ -4,8 +4,8 @@
 */
 package testHelper
 
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXDeclarationsParser, KeYmaeraXProblemParser}
 
 /**
  * Created by ran on 2/4/15.
@@ -15,15 +15,21 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 object ParserFactory {
 
   /**
-   * Returns the sequent from an input stream.
+   * Returns the sequent from an input stream. Substitutes function declarations.
    * @param in The input stream.
    * @return The sequent.
    */
-  def parseToSequent(in: java.io.InputStream) = {
-    val content = io.Source.fromInputStream(in).mkString
-    KeYmaeraXProblemParser(content) match {
-      case f: Formula => Sequent(collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f))
-      case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
+  def parseToSequent(in: java.io.InputStream): Sequent = parseToSequent(io.Source.fromInputStream(in).mkString)
+
+  /** Parses from a string, substitutes function declarations. */
+  def parseToSequent(in: String): Sequent = {
+    KeYmaeraXProblemParser.parseProblem(in) match {
+      case (decls, f: Formula) =>
+        val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+        Sequent(
+          collection.immutable.IndexedSeq[Formula](),
+          collection.immutable.IndexedSeq[Formula](USubst(substs)(f)))
+      case (_, a) => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
   }
 }

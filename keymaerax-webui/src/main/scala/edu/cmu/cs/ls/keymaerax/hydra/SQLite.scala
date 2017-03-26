@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, Sequential
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXDeclarationsParser, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -375,7 +375,9 @@ object SQLite {
       synchronizedTransaction({
         nInserts = nInserts + 2
         val model = getModel(modelId)
-        val provable = ProvableSig.startProof(KeYmaeraXProblemParser(model.keyFile))
+        val (decls, problem) = KeYmaeraXProblemParser.parseProblem(model.keyFile)
+        val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+        val provable = ProvableSig.startProof(USubst(substs)(problem))
         val provableId = createProvable(provable)
         val proofId =
           (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get, p.lemmaid.get,
