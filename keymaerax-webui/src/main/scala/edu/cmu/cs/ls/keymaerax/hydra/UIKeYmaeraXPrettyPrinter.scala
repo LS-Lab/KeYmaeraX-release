@@ -87,7 +87,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
          |  ng-click="editClick('$id', $$event)"
          |  uib-popover-template="'templates/editFormulaPopoverTemplate.html'"
          |  popover-is-open="editFormulaPopover.isOpen('$id')"
-         |  popover-trigger="none"
+         |  popover-trigger="'none'"
          |  popover-append-to-body="true"
          |  popover-placement="auto bottom"
          |$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE""".stripMargin
@@ -100,7 +100,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
         |  ng-right-click="formulaRightClick('$id', $$event)"
         |  uib-popover-template="'templates/axiomPopoverTemplate.html'"
         |  popover-is-open="tacticPopover.isOpen('$id')"
-        |  popover-trigger="none"
+        |  popover-trigger="'none'"
         |  popover-append-to-body="true"
         |  popover-placement="auto bottom"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE""".stripMargin
 
