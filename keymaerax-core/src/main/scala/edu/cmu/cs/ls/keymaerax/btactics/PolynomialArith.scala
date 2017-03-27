@@ -377,12 +377,28 @@ object PolynomialArith {
     }
   }
 
+  def ratToNum(t:Term) : Option[Number] = {
+    t match{
+      case Divide(n:Number,d:Number) if d.value == 1 => Some(n)
+      case _ => None
+    }
+  }
+
   // Try to turn a ground term into an equivalent normalized rational (A/B)
   // Proves the equivalence using RCF
   // The proof gets generated afterwards using RCF
-  def groundNormalise(t:Term,toNum:Boolean = false) : Option[Term] = {
+  def groundNormalise(t:Term) : Option[Term] = {
     t match{
       case (n:Number) => Some(Divide(n,Number(1)))
+      case Power(l,r) => {
+        val ln = groundNormalise(l)
+        val rn = groundNormalise(r).flatMap(ratToNum)
+        (ln, rn) match {
+          case (Some(Divide(n: Number, d: Number)), Some(p: Number)) =>
+            Some(Divide(Number(n.value.pow(p.value.intValue())), Number(d.value.pow(p.value.intValue()))))
+          case _ => None
+        }
+      }
       case bop:BinaryCompositeTerm =>
         (groundNormalise(bop.left),groundNormalise(bop.right)) match {
           case (Some(l),Some(r)) =>
@@ -402,9 +418,11 @@ object PolynomialArith {
   }
 
   def groundNormaliseProof(t:Term,toNum:Boolean=false) : Option[(Term,ProvableSig)] = {
-    groundNormalise(t) match{
-      case Some(Divide(num:Number,den:Number)) if den.value != 0 && (!toNum || den.value == 1) =>
-        Some (Divide(num,den),proveBy(Equal(t,Divide(num,den)),RCF))
+    val gt = groundNormalise(t)
+    (if(toNum) gt.flatMap(ratToNum) else gt) match{
+      case Some(tt) =>
+        val pr = proveBy(Equal(t,tt),?(RCF))
+        if (pr.isProved) Some(tt,pr) else None
       case _ => None
     }
   }
@@ -741,7 +759,7 @@ object PolynomialArith {
   private lazy val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists wit_ (f_()-g_()) - wit_^2 = 0".asFormula,QE)
 
   private lazy val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE & done)
-  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ = 1".asFormula,QE & done)
+  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ - 1 = 0".asFormula,QE & done)
 
   //todo: generalise to more complete formula fragment
   //todo: Also "clear" equations in succedent after witness generation
@@ -783,42 +801,41 @@ object PolynomialArith {
 
   lazy val prepareArith: BelleExpr = clearSucc & normAnte
 
-  //Linear variable elimination
-
-  // Guided elimination at a top-level position (of shape A=B)
+  // Guided linear variable elimination at a top-level position (of shape A=B)
   // Rewrites that position to lhs = rhs using polynomial arithmetic to prove its correctness
-  // Using polynomial arithmetic to prove the equality allows complicated lhs=rhs rewrites
-
-  // Proves A = B <-> lhs = rhs via A - B = lhs -rhs
-  // Doesn't really work in general, but for linear elimination but it could work for linear elimination
-
-  private lazy val signFlip: ProvableSig = proveBy("f_() = 0 <-> -f_() = 0".asFormula,QE & done)
-  private def rewriteEquality(l:Term,r:Term,lhs:Term,rhs:Term,flip:Boolean) : ProvableSig =
-  {
-    println("REWRITING",l,r,lhs,rhs,flip)
-    proveBy(Equiv(Equal(l,r),Equal(lhs,rhs)),
-      useAt(eqAnte)(1,PosInExpr(0::Nil)) &
-      useAt(eqAnte)(1,PosInExpr(1::Nil)) &
-      (if (flip) useAt(signFlip)(1,PosInExpr(1::Nil)) else ident) &
-      normaliseAt(1,PosInExpr(0::0::Nil)) &
-      normaliseAt(1,PosInExpr(1::0::Nil)) &  byUS("<-> reflexive")
-    )
-  }
-
-  //Linear variable elimination following an oracle
+  private lazy val mulZero: ProvableSig = proveBy("g_() != 0 -> (f_() = 0 <-> g_() * f_() = 0)".asFormula,QE & done)
   //The list of instructions contains:
   // 1) position to rewrite, 2) term to leave on LHS, 3) term on RHS
-  // 4) whether LHS term appears negatively when the initial equation is normalized to the shape t = 0
-  // 4) determines whether a sign flip is needed
-  def linearElim(pos:Int, lhs:Term, rhs:Term, norm:Boolean): DependentTactic = new SingleGoalDependentTactic("linear elim") {
+  // 4) determines the cofactor on the variable (expected to be provable to be non-zero by RCF)
+  // The proof works by the following sequence of steps :
+  // (clhs = crhs <-> lhs = rhs)
+  // <= (clhs - crhs = 0) <-> (lhs - rhs =0)
+  // <= (clhs-chrs=0) <-> (K*(lhs-rhs)=0)
+  // <= clhs-chrs = K*(lhs-rhs) (by polynomial arithmetic)
+
+  def rewriteEquality(pos:Position, lhs:Term, rhs:Term, cofactor:Term): DependentTactic = new SingleGoalDependentTactic("rewrite equality") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.sub(SeqPos(pos)) match {
+      seq.sub(pos) match {
         case Some(Equal(clhs,crhs)) =>
-          useAt(rewriteEquality(clhs,crhs,lhs,rhs,norm))(pos) & exhaustiveEqL2R(true)(pos)
+          val cofact = proveBy(NotEqual(cofactor,Number(0)),RCF)
+          val instMulZero = useFor(mulZero,PosInExpr(0::Nil))(Position(1))(cofact)
+          val pr =
+            proveBy(Equiv(Equal(clhs,crhs),Equal(lhs,rhs)),
+              useAt(eqAnte)(1,PosInExpr(0::Nil)) &
+                useAt(eqAnte)(1,PosInExpr(1::Nil)) &
+                useAt(instMulZero)(1,PosInExpr(1::Nil)) &
+                normaliseAt(1,PosInExpr(0::0::Nil)) &
+                normaliseAt(1,PosInExpr(1::0::Nil)) &  byUS("<-> reflexive")
+            )
+          useAt(pr)(pos)
         case _ => ident
       }
     }
   }
+
+  //The actual linear elimination tactic takes a list of AN
+//  def linearElim(ls:List[(Int,Term,Term,Term)]) : BelleExpr =
+//  ls.foldLeft(ident)( (tac,p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R)
 
   val printGoal: DependentTactic = new DependentTactic("linear elim") {
     override def computeExpr(pr:ProvableSig): BelleExpr = {

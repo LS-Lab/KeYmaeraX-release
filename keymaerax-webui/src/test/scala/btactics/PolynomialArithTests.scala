@@ -1,5 +1,7 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -267,7 +269,10 @@ class PolynomialArithTests extends TacticTestBase {
 
   "PolynomialArith" should "generate non-zero squares witness" in withMathematica { qeTool =>
     val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm).map( t => (Number(5),t))
-    println(assertWitness(witness))
+    val pr = assertWitness(witness)
+    pr._1 shouldBe "1+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2".asTerm
+    pr._2 shouldBe 'proved
+    pr._2.conclusion.succ(0) shouldBe "1+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2>0".asFormula
   }
 
   "PolynomialArith" should "normalize pure arithmetic sequent" in withMathematica { qeTool =>
@@ -287,7 +292,35 @@ class PolynomialArithTests extends TacticTestBase {
       "K() = A+B+C".asFormula
     )
     val pr = proveBy(Sequent(antes,succs),prepareArith)
-    println(pr)
+
+    pr.subgoals should contain only
+      Sequent(IndexedSeq("d*f-12=0","(z-k)*wit__0^2-1=0","(z+y+a-(k+b))*wit__1-1=0","d-c-wit__2^2=0","(f()-g())*wit__3^2-1=0","(A+B+C-K())*wit__4-1=0","(c-d-z)*wit__5^2-1=0","(k*z-(a+b))*wit__6^2-1=0","x+y+z-(F()+G())-wit_^2=0").map(_.asFormula),
+        IndexedSeq())
+  }
+
+
+  "PolynomialArith" should "rewrite equality to desired shape in arbitrary positions" in withMathematica { qeTool =>
+    val antes = IndexedSeq(
+      "a + b = c".asFormula,
+      "x + 2/5*y + z = F() + G()".asFormula,
+      "d * f = 12 & 2 * a -5 + 2 * c= b".asFormula
+    )
+    val succs = IndexedSeq(
+      "k = z".asFormula,
+      "g() = f()".asFormula,
+      "K() = A+2*B+C".asFormula
+    )
+
+    val rewrites = List(
+      (SuccPosition(1),"z".asTerm,"k".asTerm,"-1".asTerm),
+      (AntePosition(2),"y".asTerm,"5/2*(F()+G()-x-z)".asTerm,"2/5".asTerm),
+      (AntePosition(3,1::Nil),"a".asTerm,"b/2+5/2-c".asTerm,"2".asTerm)
+    )
+    val elim = (rewriteEquality _).tupled
+    val pr = proveBy(Sequent(antes,succs), rewrites.foldLeft(nil)(_ & elim(_)))
+    pr.subgoals should contain only
+      Sequent(IndexedSeq("a+b=c","y=5/2*(F()+G()-x-z)","d*f=12&a=b/2+5/2-c").map(_.asFormula),
+              IndexedSeq("z=k","g()=f()","K()=A+2*B+C").map(_.asFormula))
   }
 
 }
