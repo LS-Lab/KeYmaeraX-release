@@ -1407,6 +1407,22 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
+  it should "solve outer nested ODEs even when innermost cannot be solved" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}][{x'=x}]x>0".asFormula)),
+      solve(1) & solve(1, 0::1::0::1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "x_1>0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0->\\forall x_2 (x_2=2*t_+x_1->\\forall t_ (t_>=0->\\forall x (x=3*t_+x_2->[{x'=x}]x>0))))".asFormula::Nil
+  }
+
+  it should "not try to preserve t_>=0 in evolution domain constraint when solving nested ODEs" in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}][{x'=x}]x>0".asFormula)),
+      solve(1) & (allR(1) & implyR(1))*2 & solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "x_1>0".asFormula::"t_>=0".asFormula::"x_3=2*t_+x_1".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0->\\forall x (x=3*t_+x_3->[{x'=x}]x>0))".asFormula::Nil
+  }
+
   it should "solve complicated nested ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("v=0 & x<s & 0<T".asFormula, "t=0".asFormula, "a_0=(s-x)/T^2".asFormula), IndexedSeq("[{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asFormula)),
       solve(1))

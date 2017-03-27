@@ -32,6 +32,12 @@ object AxiomaticODESolver {
   /** The name of the explicit time variables. */
   private lazy val TIMEVAR: Variable = "kyxtime".asVariable
 
+  /** The name of the ODE duration variable. */
+  private lazy val DURATION: Variable = "t_".asVariable
+
+  /** The name of the evolution domain time variable 0<=s_<=t_ */
+  private lazy val EVOL_DOM_TIME: Variable = "s_".asVariable
+
   /** Temporary messages that aren't even necessarily useful to have in verbose ODE debugger mode. */
   private def tmpmsg(s: String) = if (ODE_DEBUGGER) println(s)
 
@@ -56,7 +62,7 @@ object AxiomaticODESolver {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
     val assumptions = if (pos.isAnte) s.ante.patch(pos.index0, Nil, 1) else s.ante
-    val odeVars = StaticSemantics.boundVars(ode).toSet
+    val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
     val consts = assumptions.flatMap(FormulaTools.conjuncts).
       filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
       reduceOption(And).getOrElse(True)
