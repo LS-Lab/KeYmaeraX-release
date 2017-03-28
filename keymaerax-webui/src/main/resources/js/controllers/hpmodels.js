@@ -45,17 +45,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           })
       };
 
-     $scope.numFilesAvailable = function() {
-       return keyFile == undefined || keyFile.files == undefined ? 0 : keyFile.files.length
-     }
-
-     $scope.isKyxFile = function() {
-       return $scope.numFilesAvailable() > 0 && keyFile.files[0].name.endsWith('.kyx');
-     }
-
-     $scope.isKyaFile = function() {
-       return $scope.numFilesAvailable() > 0 && keyFile.files[0].name.endsWith('.kya');
-     }
+     $(".fileinput").on("change.bs.fileinput", function(e) {
+       e.stopPropagation();
+       $scope.fileExt = keyFile == undefined || keyFile.files == undefined ? '' : keyFile.files[0].name.substr(keyFile.files[0].name.lastIndexOf('.'), 4);
+       $scope.$apply(); //notify angular, otherwise it won't recognize that fileExt changed
+     });
 
      $scope.addModel = function(modelName) {
           var file = keyFile.files[0];
