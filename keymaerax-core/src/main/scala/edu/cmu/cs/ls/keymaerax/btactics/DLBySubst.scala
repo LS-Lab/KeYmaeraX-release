@@ -191,6 +191,7 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
+   * @todo: Does not work for games due to boxAnd, but gets used by loop induction rule for games
    */
   def generalize(c: Formula): DependentPositionTactic =
     "MR" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
@@ -261,6 +262,7 @@ private object DLBySubst {
     * }}}
  *
     * @param invariant The invariant.
+    * @todo: Does not work for games due to boxAnd inside generalize
     */
   def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
     //@todo maybe augment with constant conditions?
