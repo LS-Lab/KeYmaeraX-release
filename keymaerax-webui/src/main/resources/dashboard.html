@@ -23,12 +23,11 @@
     <link href="css/presentation_small.css" title="KeYmaera X Presentation Mode Small" rel="alternate stylesheet" type="text/css">
     <link href="css/presentation.css" title="KeYmaera X Presentation Mode Medium" rel="alternate stylesheet" type="text/css">
     <link href="css/presentation_large.css" title="KeYmaera X Presentation Mode Large" rel="alternate stylesheet" type="text/css">
-    <link href="css/sticky-footer-navbar.css" rel="stylesheet" type="text/css">
-
 
     <!-- plugins -->
     <link href="/css/intro/introjs.css" rel="stylesheet" type="text/css">
     <link href="/css/chardin/chardinjs.css" rel="stylesheet" type="text/css">
+    <link href="css/sticky-footer-navbar.css" rel="stylesheet" type="text/css">
 
 </head>
 
@@ -110,7 +109,9 @@
     </div>
 </div>
 
-<div class="container" ng-if="toolConfig.tool !== undefined && (toolConfig.tool !== 'Mathematica' || !toolConfig.configured)" ng-cloak>
+<div class="container">
+
+<div ng-if="toolConfig.tool !== undefined && (toolConfig.tool !== 'Mathematica' || !toolConfig.configured)" ng-cloak>
     <div class="alert alert-warning" role="alert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
         <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Limited functionality: Mathematica is not configured.
@@ -118,8 +119,17 @@
     </div>
 </div>
 
-<div class="container" ng-intro-options="intro.introOptions" ng-intro-method="startIntro" ng-intro-autostart="false">
+<div ng-controller="ServerInfoCtrl">
+    <div class="alert alert-warning" role="alert" ng-if="!upToDate && versionInfoAvailable" ng-cloak>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <span class="text-warning"><b>Update:</b> version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a>.</span>
+    </div>
+</div>
+
+<div ng-intro-options="intro.introOptions" ng-intro-method="startIntro" ng-intro-autostart="false">
 <div class="container" ng-view></div>
+</div>
+
 </div>
 
 <div class="footer" ng-controller="ServerInfoCtrl">
