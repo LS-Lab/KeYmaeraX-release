@@ -8,7 +8,7 @@ import java.lang.Number
 
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal, FormulaTools}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
@@ -81,8 +81,8 @@ object UIIndex {
             case _ => alwaysApplicable
           }
         "derive" :: tactics
-      case Box(a, True) if isTop && !isAnte =>
-        "dualFree" :: Nil
+      case Box(a, True) if isTop && !isAnte && FormulaTools.dualFree(a) =>
+        "[]T system" :: Nil
 
       case Box(a, post) =>
         val maybeSplit = post match {
@@ -112,7 +112,7 @@ object UIIndex {
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => "[d] dual" :: Nil
+          case _: Dual => "[d] dual direct" :: Nil
           case _: Loop => "loop" :: "[*] iterate" :: rules
           case ODESystem(ode, _) if containsPrime => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
@@ -133,7 +133,7 @@ object UIIndex {
         case _: Test => "<?> test" :: rules
         case _: Compose => "<;> compose" :: rules
         case _: Choice => "<++> choice" :: rules
-        case _: Dual => "<d> dual" :: rules
+        case _: Dual => "<d> dual direct" :: rules
         case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
         case _ => rules
       }
