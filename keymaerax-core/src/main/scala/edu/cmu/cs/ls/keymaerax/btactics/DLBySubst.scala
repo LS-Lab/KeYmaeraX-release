@@ -191,29 +191,32 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
-   * @todo: Does not work for games due to boxAnd, but gets used by loop induction rule for games
    */
-  def generalize(c: Formula): DependentPositionTactic =
-    "MR" byWithInput (c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  def generalize(c: Formula, isGame:Boolean = false): DependentPositionTactic = {
+    "MR" byWithInput(c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
       case (ctx, Box(a, p)) =>
-        val (q, useCleanup, showCleanup) =
-          sequent.ante.flatMap(FormulaTools.conjuncts).
-            filter(StaticSemantics.symbols(_).intersect(StaticSemantics.boundVars(a).toSet).isEmpty).toList match {
-          case Nil => (c, skip, implyR(pos.top))
-          case consts => (And(consts.reduceRight(And), c),
-              boxAnd(pos) &
-              abstractionb(pos ++ PosInExpr(0::Nil)) &
-              (if (pos.isTopLevel) andR(pos) & Idioms.<(prop & done, skip)
-               else skip),
-              implyR(pos.top) & andL(-1)
+        val (q, useCleanup, showCleanup) = {
+          val constConjuncts =
+            sequent.ante.flatMap(FormulaTools.conjuncts).
+              filter(StaticSemantics.symbols(_).intersect(StaticSemantics.boundVars(a).toSet).isEmpty).toList
+          (constConjuncts, isGame) match {
+            case ((Nil, _) | (_, true)) => (c, skip, implyR(pos.top))
+            case (consts, false) => (And(consts.reduceRight(And), c),
+                boxAnd(pos) &
+                abstractionb(pos ++ PosInExpr(0 :: Nil)) &
+                (if (pos.isTopLevel) andR(pos) & Idioms.<(prop & done, skip)
+                else skip),
+                implyR(pos.top) & andL(-1)
             )
+          }
         }
-        cutR(ctx(Box(a, q)))(pos.checkSucc.top) <(
-          /* use */ /*label(BranchLabels.genUse)*/ useCleanup,
-          /* show */cohide(pos.top) & CMon(pos.inExpr++1) & showCleanup //& label(BranchLabels.genShow)
+        cutR(ctx(Box(a, q)))(pos.checkSucc.top) < (
+          /* use */
+          /*label(BranchLabels.genUse)*/ useCleanup,
+          /* show */ cohide(pos.top) & CMon(pos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
         )
     })
-
+  }
   /** @see [[TactixLibrary.postCut()]]
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
@@ -262,39 +265,21 @@ private object DLBySubst {
     * }}}
  *
     * @param invariant The invariant.
-    * @todo: Does not work for games due to boxAnd inside generalize
     */
+
   def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
     val alast = AntePosition(sequent.ante.length)
     cutR(invariant)(pos.checkSucc.top) <(
-      ident partial(BelleLabels.initCase)
-      ,
-      cohide(pos) & implyR(1) & generalize(invariant)(1) <(
-        byUS("ind induction") partial(BelleLabels.indStep)
-        ,
-        ident partial(BelleLabels.useCase)
+        ident partial(BelleLabels.initCase),
+        cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
+          byUS("ind induction") partial(BelleLabels.indStep)
+          ,
+          ident partial(BelleLabels.useCase)
         )
       )
-    /*
-    * {{{
-    *   step:           use:      init:
-    *   I |- [a]I       I |- p    G |- I, D
-    *   ------------------------------------
-    *   G |- [{a}*]p, D
-    * }}}
-    */
-//    cut(invariant) <(
-//      cohide2(alast, pos) & generalize(invariant)(1) <(
-//        byUS("ind induction") partial(BelleLabels.indStep)
-//        ,
-//        ident partial(BelleLabels.useCase)
-//        )
-//      ,
-//      ident partial(BelleLabels.initCase)
-//      )
   })
 
   /** @see [[TactixLibrary.discreteGhost()]] */
