@@ -506,6 +506,44 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula
   }
 
+  "Convergence" should "work in easy case" in {
+    val fml = "<{x:=x-1;}*>x < 0".asFormula
+    val arg = Variable("v")
+    val defn = Equal(Variable("v"), Variable("x"))
+    val result = proveBy(fml,DLBySubst.conRule(arg,defn)(1))
+    result.subgoals(0).succ should contain only "\\exists v v=x".asFormula
+    result.subgoals(1).ante should contain only ("v>0".asFormula, "v=x".asFormula)
+    result.subgoals(1).succ should contain only "<x:=x-1;>v-1=x".asFormula
+    result.subgoals(2).ante should contain only ("v<0".asFormula, "v=x".asFormula)
+    result.subgoals(2).succ should contain only "x < 0".asFormula
+  }
+
+  it should "work with preconditions" in {
+    val fml = "x = 0 & 0 >= 0 -> <{x:=x-1;}*>x < 0".asFormula
+    val arg = Variable("v")
+    val defn = Equal(Variable("v"), Variable("x"))
+    val result = proveBy(fml,implyR(1) & andL(-1) & DLBySubst.conRule(arg,defn)(1))
+    result.subgoals(0).ante should contain only ("x=0".asFormula, "0>=0".asFormula)
+    result.subgoals(0).succ should contain only "\\exists v v=x".asFormula
+    result.subgoals(1).ante should contain only ("v>0".asFormula, "v=x".asFormula)
+    result.subgoals(1).succ should contain only "<x:=x-1;>v-1=x".asFormula
+    result.subgoals(2).ante should contain only ("v<0".asFormula, "v=x".asFormula)
+    result.subgoals(2).succ should contain only "x < 0".asFormula
+  }
+
+  it should "work in second position" in {
+    val fml = "x = 0 & 0 >= 0 -> (0 = 1 | <{x:=x-1;}*>x < 0)".asFormula
+    val arg = Variable("v")
+    val defn = Equal(Variable("v"), Variable("x"))
+    val result = proveBy(fml, implyR(1) & andL(-1) & orR(1) & DLBySubst.conRule(arg, defn)(2))
+    result.subgoals(0).ante should contain only ("x=0".asFormula, "0>=0".asFormula)
+    result.subgoals(0).succ should contain only ("0=1".asFormula, "\\exists v v=x".asFormula)
+    result.subgoals(1).ante should contain only ("v>0".asFormula, "v=x".asFormula)
+    result.subgoals(1).succ should contain only "<x:=x-1;>v-1=x".asFormula
+    result.subgoals(2).ante should contain only ("v<0".asFormula, "v=x".asFormula)
+    result.subgoals(2).succ should contain only "x < 0".asFormula
+  }
+
   "Loop" should "work with abstract invariant" in {
     val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
     val tactic = implyR('R) & loop("J(x)".asFormula)('R) <(skip, skip, assignb('R) partial)

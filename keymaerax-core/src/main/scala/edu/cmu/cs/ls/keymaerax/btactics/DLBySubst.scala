@@ -8,9 +8,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
-
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics
 
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
@@ -271,7 +271,7 @@ private object DLBySubst {
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
-    val alast = AntePosition(sequent.ante.length)
+    //val alast = AntePosition(sequent.ante.length)
     cutR(invariant)(pos.checkSucc.top) <(
         ident partial(BelleLabels.initCase),
         cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
@@ -280,6 +280,33 @@ private object DLBySubst {
           ident partial(BelleLabels.useCase)
         )
       )
+  })
+
+  /**
+    * Loop convergence wiping all context.
+    * {{{
+    *   init:                     step:                      use:
+    *   G |- exists v. J(v), D    v>= 0,J(v) -> <a>J(v-1)    v<0, J(v) |- p
+    *   ------------------------------------------------------------------
+    *   G |- <{a}*>p, D
+    * }}}
+    * @param variantArg Which variable is treated as the argument of the variant property
+    * @param variantDef The variant property or convergence property in terms of variantDef
+    * @example The variant J(v) |-> (v = x) has variantArg == v  and variantDef == (v = x)
+    */
+  def conRule(variantArg:Variable, variantDef:Formula) = "con" byWithInput(variantDef, (pos, sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
+    require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
+    require(variantArg == Variable("v"))
+    val pre = Exists(IndexedSeq(variantArg), variantDef)
+    cutR(pre)(pos.checkSucc.top) < (
+      ident partial (BelleLabels.initCase),
+      cohide(pos) & implyR(1)
+      & existsL(-1)
+      & byUS("con convergence") < (
+        assignd(1, 1 :: Nil) partial
+      , Idioms.nil) partial
+    ) partial(BelleLabels.indStep)
   })
 
   /** @see [[TactixLibrary.discreteGhost()]] */
