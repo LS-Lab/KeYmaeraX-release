@@ -53,7 +53,8 @@ private[core] object AxiomBase {
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
     val sys = SystemConst("a_")
-
+    val v = Variable("v", None, Real)
+    val Jany = UnitPredicational("J", AnyArg)
     Map(
       /**
         * Rule "CQ equation congruence".
@@ -106,7 +107,23 @@ private[core] object AxiomBase {
         */
       ("ind induction",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
-          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany)))))
+          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
+      /**
+        * Rule "con convergence".
+        * Premisses: v >= 0, J(||) |- < a>< v:=v-1> J(||)
+        *            v < 0, J(||) |- P
+        * Conclusion  J(||) |- < a*>J(||)
+        * {{{
+        *     v >= 0, J(v) |- <a>J(v-1)  v < 0, J(v) |- P
+        *    -------------------------------------- con
+        *     J(v) |- <a*>P
+        * }}}
+        */
+      ("con convergence",
+        (immutable.IndexedSeq(
+            Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(a, Diamond(Assign(v,Minus(v,Number(1))),Jany)))),
+            Sequent(immutable.IndexedSeq(Less(v, Number(0)), Jany), immutable.IndexedSeq(pany))),
+          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(a), pany)))))
     )
   }
 
