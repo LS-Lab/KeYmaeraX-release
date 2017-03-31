@@ -110,19 +110,20 @@ private[core] object AxiomBase {
           Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /**
         * Rule "con convergence".
-        * Premisses: v >= 0, J(||) |- < a>< v:=v-1> J(||)
-        *            v < 0, J(||) |- P
-        * Conclusion  J(||) |- < a*>J(||)
+        * Premisses: v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
+        *            v <= 0, J(||) |- P
+        * Conclusion  J(||) |- <a{|v|}*>J(||)
         * {{{
-        *     v >= 0, J(v) |- <a>J(v-1)  v < 0, J(v) |- P
+        *     v > 0, J(v) |- <a{|v|}>J(v-1)  v <= 0, J(v) |- P
         *    -------------------------------------- con
-        *     J(v) |- <a*>P
+        *     J(v) |- <a{|v|}*>P
         * }}}
+        * @todo Bugfix soundness by telling a to be SpaceDependent Except(v)
         */
       ("con convergence",
         (immutable.IndexedSeq(
             Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(a, Diamond(Assign(v,Minus(v,Number(1))),Jany)))),
-            Sequent(immutable.IndexedSeq(Less(v, Number(0)), Jany), immutable.IndexedSeq(pany))),
+            Sequent(immutable.IndexedSeq(LessEqual(v, Number(0)), Jany), immutable.IndexedSeq(pany))),
           Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(a), pany)))))
     )
   }
