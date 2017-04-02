@@ -225,48 +225,6 @@ class PolynomialArithTests extends TacticTestBase {
     println(reduction(List(p1,p2,p3),p))
   }
 
-  "PolynomialArith" should "prove RWV example with oracle witness" in withMathematica { qeTool =>
-    val p1 = "x - y -1*a^2".asTerm
-    val p2 = "z-b^2".asTerm
-    val p3 = "z*(y-x)*c^2-1".asTerm
-
-    //The witness is 1+ 1*(a*b*c)^2
-    val w = ("1".asTerm,"(a*b*c)".asTerm)
-
-    val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
-
-    //Guided reduction
-    val pr1 = proveWithWitness(List(p1,p2,p3),List(w),Some(insts))
-
-    //Since the input is already a groebner basis, we can use confluent automated reduction
-    val pr2 = proveWithWitness(List(p1,p2,p3),List(w))
-    val pr3 = proveWithWitness(List(p2,p1,p3),List(w))
-    val pr4 = proveWithWitness(List(p3,p2,p1),List(w))
-
-    pr1 shouldBe 'proved
-    pr2 shouldBe 'proved
-    pr3 shouldBe 'proved
-    pr4 shouldBe 'proved
-  }
-
-  "PolynomialArith" should "prove JH's example with real nullstellensatz" in withMathematica { qeTool =>
-
-    //One direction of the quadratic formula (non-zeroness of determinants)
-    val antes = IndexedSeq("a*x^2 + b*x + c=0").map(_.asFormula)
-    val succ = IndexedSeq("b^2-4*a*c >= 0").map(_.asFormula)
-
-    val witness = List(("1".asTerm,"2*a*x*wit_+b*wit_".asTerm))
-    val insts = List((0,"-4*a*wit_^2".asTerm),(1,"1".asTerm))
-
-    //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
-    val res = proveBy(Sequent(antes,succ),prepareArith & DebuggingTactics.print("after norm") & witnessTac(witness))
-    //Alternatively, we can compute the cofactors
-    val res2 = proveBy(Sequent(antes,succ),prepareArith & witnessTac(witness,Some(insts)))
-
-    res shouldBe 'proved
-    res2 shouldBe 'proved
-  }
-
   "PolynomialArith" should "generate non-zero squares witness" in withMathematica { qeTool =>
     val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm).map( t => (Number(5),t))
     val pr = assertWitness(witness)
@@ -298,7 +256,6 @@ class PolynomialArithTests extends TacticTestBase {
         IndexedSeq())
   }
 
-
   "PolynomialArith" should "rewrite equality to desired shape in arbitrary positions" in withMathematica { qeTool =>
     val antes = IndexedSeq(
       "a + b = c".asFormula,
@@ -321,6 +278,79 @@ class PolynomialArithTests extends TacticTestBase {
     pr.subgoals should contain only
       Sequent(IndexedSeq("a+b=c","y=5/2*(F()+G()-x-z)","d*f=12&a=b/2+5/2-c").map(_.asFormula),
               IndexedSeq("z=k","g()=f()","K()=A+2*B+C").map(_.asFormula))
+  }
+
+  "PolynomialArith" should "generate generalised non-zero squares witness" in withMathematica { qeTool =>
+    val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm).map( t => (Number(5),t))
+    val gtz = "a+b*c*d".asTerm
+    val pr = genWitness(gtz,witness)
+    pr._1 shouldBe "a+b*c*d+(0+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2)".asTerm
+    pr._2 shouldBe 'proved
+    pr._2.conclusion.succ(0) shouldBe "a+b*c*d>0->a+b*c*d+(0+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2)>0".asFormula
+  }
+
+  "PolynomialArith" should "prove RWV example with oracle witness" in withMathematica { qeTool =>
+    val antes = IndexedSeq("x - y -1*a^2","z-b^2","z*(y-x)*c^2-1").map(t => Equal(t.asTerm,Number(0)))
+
+    val seq = Sequent(antes,IndexedSeq())
+    //The witness is 1+ 1*(a*b*c)^2
+    val w = ("1".asTerm,"(a*b*c)".asTerm)
+
+    val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
+
+    //Guided reduction
+    val pr1 = proveBy(seq,witnessTac(List(w),Some(insts)))
+
+    //Since the input happens to be a groebner basis, we can use confluent automated reduction
+    val pr2 = proveBy(seq,witnessTac(List(w)))
+    val pr3 = proveBy(seq,witnessTac(List(w)))
+    val pr4 = proveBy(seq,witnessTac(List(w)))
+
+    pr1 shouldBe 'proved
+    pr2 shouldBe 'proved
+    pr3 shouldBe 'proved
+    pr4 shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove JH's example with real nullstellensatz" in withMathematica { qeTool =>
+
+    //One direction of the quadratic formula (non-zeroness of determinants)
+    val antes = IndexedSeq("a*x^2 + b*x + c=0").map(_.asFormula)
+    val succ = IndexedSeq("b^2-4*a*c >= 0").map(_.asFormula)
+
+    val witness = List(("1".asTerm,"2*a*x*wit_+b*wit_".asTerm))
+    val insts = List((0,"-4*a*wit_^2".asTerm),(1,"1".asTerm))
+
+    //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
+    val res = proveBy(Sequent(antes,succ),prepareArith & DebuggingTactics.print("after norm") & witnessTac(witness))
+    //Alternatively, we can compute the cofactors
+    val res2 = proveBy(Sequent(antes,succ),prepareArith & witnessTac(witness,Some(insts)))
+
+    res shouldBe 'proved
+    res2 shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove RWV example with general oracle witness" in withMathematica { qeTool =>
+    val antes = IndexedSeq("x - y -1*a^2","z-b^2","z*(y-x)*c^2-1").map(t => Equal(t.asTerm,Number(0)))
+
+    val seq = Sequent(antes,IndexedSeq())
+    //The witness is 1+ 1*(a*b*c)^2
+    val w = ("1".asTerm,"(a*b*c)".asTerm)
+
+    val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
+
+    //Guided reduction
+    val pr1 = proveBy(seq,genWitnessTac(List(),List(w),Some(insts)))
+
+    //Since the input happens to be a groebner basis, we can use confluent automated reduction
+    val pr2 = proveBy(seq,genWitnessTac(List(),List(w)))
+    val pr3 = proveBy(seq,genWitnessTac(List(),List(w)))
+    val pr4 = proveBy(seq,genWitnessTac(List(),List(w)))
+
+    pr1 shouldBe 'proved
+    pr2 shouldBe 'proved
+    pr3 shouldBe 'proved
+    pr4 shouldBe 'proved
   }
 
 }
