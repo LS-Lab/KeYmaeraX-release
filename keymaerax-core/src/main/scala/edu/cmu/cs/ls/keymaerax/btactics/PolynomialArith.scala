@@ -705,6 +705,8 @@ object PolynomialArith {
 
   //todo: more convenient to cut in, can be derived without QE from something else
   private lazy val gtNotZero: ProvableSig = proveBy("f_() > 0 -> !(f_() = 0)".asFormula,QE & done)
+  private lazy val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE & done)
+
   //Goal must be of the form (Fi=0, Gj!=0 |- )
   def genWitnessTac(mon:List[Int], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = new SingleGoalDependentTactic("ANON") {
 
@@ -749,73 +751,10 @@ object PolynomialArith {
     * End updated procedure
     */
 
-  /**
-    * TODO: deprecate?
-    */
-
-  //Doesn't use QE, but the DerivedAxioms used do
-  //  lazy val notZeroGt: ProvableSig = proveBy("!(0>0)".asFormula,
-  //    notR(1) & useAt(">2!=")(-1) & useAt("! =",PosInExpr(1::Nil))(-1) & notL(-1) & byUS("= reflexive"))
-
-  // Generate a proof for |- !(1 + a_1 * s_1^2 + ... + a_n * s_n^2 = 0)
-  // Each a_i should be a positive (rational) coefficient (proved by RCF)
-  def assertWitness(l:List[(Term,Term)]) : (Term,ProvableSig) =
-  {
-    l match {
-      case Nil => (Number(1),DerivedAxioms.oneGreaterZero.fact)
-      case ((a,s)::xs) =>
-        val (rec,pr) = assertWitness(xs) //1 + foo > 0
-        val res = Plus(rec,Times(a,Power(s,Number(2))))
-        (res,proveBy(Greater(res,Number(0)), // (1+ foo) + x^2 >0
-          useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <( by(pr),
-            useAt(timesPos,PosInExpr(1::Nil))(1) & andR(1) <( RCF, byUS("nonnegative squares") ) )))
-    }
-  }
-
   // Given a list representing a (hopefully Groebner) basis g_1, ... g_k, a witness, and
   // an optional list of instructions (detailing the coefficients) and a list of witnesses s_i ^2
   // Proves the contradiction g_1 = 0 ; ... g_k = 0 |-
   // Nothing needs to be normalized?
-
-  private lazy val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE & done)
-
-  //Goal must be of the form (G1=0, G2=0, ... Gn =0 |- )
-  def witnessTac(witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = new SingleGoalDependentTactic("ANON") {
-
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      //All =0 polynomials
-      val ante_polys = sequent.ante.map(_ match {
-        case Equal(t, n: Number) if n.value == 0 => t
-        case _ => ??? //Should we generalize here?
-      }
-      ).toList
-      //Assert the witness provided
-      val (wit, pfi) = assertWitness(witness)
-      val pf = useFor(gtNotZero, PosInExpr(0 :: Nil))(SuccPosition(1))(pfi)
-      //assert(pf.isProved)
-      //Generate our own reduction instructions if not available
-      //Proofs skipped
-      val inst = instopt.getOrElse({
-        val wit_norm = normalise(wit, true)._1
-        val ctx_norm = ante_polys.map(t => normalise(t, true)._1)
-        reduction(ctx_norm, wit_norm)
-      })
-      //1+s_i^2 > 0
-      cut(pf.conclusion.succ.head) < (
-        notL('Llast) &
-          //Run the instructions
-          inst.foldRight(ident)(
-            (h, tac) =>
-              implyRi(keep = true)(AntePos(h._1), SuccPos(0))
-                & useAt("ANON", axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
-                & tac) &
-          normaliseAt(SuccPosition(1, 0 :: Nil)) &
-          ?(cohideR(1) & byUS("= reflexive"))
-        ,
-        cohideR(1) & by(pf)
-        )
-    }
-  }
 
   /**
     * The rest of the axiomatization

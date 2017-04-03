@@ -225,14 +225,6 @@ class PolynomialArithTests extends TacticTestBase {
     println(reduction(List(p1,p2,p3),p))
   }
 
-  "PolynomialArith" should "generate non-zero squares witness" in withMathematica { qeTool =>
-    val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm).map( t => (Number(5),t))
-    val pr = assertWitness(witness)
-    pr._1 shouldBe "1+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2".asTerm
-    pr._2 shouldBe 'proved
-    pr._2.conclusion.succ(0) shouldBe "1+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2>0".asFormula
-  }
-
   "PolynomialArith" should "normalize pure arithmetic sequent" in withMathematica { qeTool =>
     // A sequent of pure arithmetic only has (in)equational formulas (operators >,>=,=  TODO: !=)
     // i.e. no dL, no &, |, <, <= negations, etc.
@@ -289,42 +281,21 @@ class PolynomialArithTests extends TacticTestBase {
     pr._2.conclusion.succ(0) shouldBe "a+b*c*d>0->a+b*c*d+(0+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2)>0".asFormula
   }
 
-  "PolynomialArith" should "prove RWV example with oracle witness" in withMathematica { qeTool =>
-    val antes = IndexedSeq("x - y -1*a^2","z-b^2","z*(y-x)*c^2-1").map(t => Equal(t.asTerm,Number(0)))
-
-    val seq = Sequent(antes,IndexedSeq())
-    //The witness is 1+ 1*(a*b*c)^2
-    val w = ("1".asTerm,"(a*b*c)".asTerm)
-
-    val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
-
-    //Guided reduction
-    val pr1 = proveBy(seq,witnessTac(List(w),Some(insts)))
-
-    //Since the input happens to be a groebner basis, we can use confluent automated reduction
-    val pr2 = proveBy(seq,witnessTac(List(w)))
-    val pr3 = proveBy(seq,witnessTac(List(w)))
-    val pr4 = proveBy(seq,witnessTac(List(w)))
-
-    pr1 shouldBe 'proved
-    pr2 shouldBe 'proved
-    pr3 shouldBe 'proved
-    pr4 shouldBe 'proved
-  }
-
-  "PolynomialArith" should "prove JH's example with real nullstellensatz" in withMathematica { qeTool =>
+  "PolynomialArith" should "prove JH's example using special case witness (g=1)" in withMathematica { qeTool =>
 
     //One direction of the quadratic formula (non-zeroness of determinants)
     val antes = IndexedSeq("a*x^2 + b*x + c=0").map(_.asFormula)
     val succ = IndexedSeq("b^2-4*a*c >= 0").map(_.asFormula)
 
-    val witness = List(("1".asTerm,"2*a*x*wit_+b*wit_".asTerm))
-    val insts = List((0,"-4*a*wit_^2".asTerm),(1,"1".asTerm))
+    val ineq = List()
+    val linear = List((0,"c","-a*x^2 - b*x","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("4","a*wit_*x + 1/2*b*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = List((0,"1")).map (s => (s._1,s._2.asTerm))
 
     //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
-    val res = proveBy(Sequent(antes,succ),prepareArith & DebuggingTactics.print("after norm") & witnessTac(witness))
+    val res = proveBy(Sequent(antes,succ),prepareArith & printGoal & linearElim(linear) & genWitnessTac(ineq,witness))
     //Alternatively, we can compute the cofactors
-    val res2 = proveBy(Sequent(antes,succ),prepareArith & witnessTac(witness,Some(insts)))
+    val res2 = proveBy(Sequent(antes,succ),prepareArith & linearElim(linear) & genWitnessTac(ineq,witness,Some(insts)))
 
     res shouldBe 'proved
     res2 shouldBe 'proved
