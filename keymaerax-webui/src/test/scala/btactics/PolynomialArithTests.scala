@@ -311,6 +311,8 @@ class PolynomialArithTests extends TacticTestBase {
 
     //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
     val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+
+    res shouldBe 'proved
   }
 
   "PolynomialArith" should "prove more JH examples (2)" in withMathematica { qeTool =>
@@ -319,9 +321,11 @@ class PolynomialArithTests extends TacticTestBase {
     val succ = IndexedSeq("0<=1+r^2-2*r*t").map(_.asFormula)
     val ineq = List(0)
     val linear = List((1,"t","-wit__1^2 + 1","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
-    val witness = List(("1","r*wit__0 - wit__0"),("1/2","-r*wit_ + wit__0^2*wit_"),("1/2","r*wit__1 + wit__0^2*wit__1")).map( s => (s._1.asTerm,s._2.asTerm))
+    val witness = List(("1","1/4*r*wit__0*wit_^2 + r*wit__0 - 1/4*wit__0*wit_^2 - wit__0"),("1/12","r*wit__0^2*wit_ - r*wit_ + wit__0^2*wit_ - wit_"),("1/48","r*wit__0*wit_^2 - wit__0*wit_^2"),("1/6","r*wit__0*wit__1 + wit__0*wit__1"),("1/12","r*wit__0^2*wit__1 + r*wit__1 + wit__0^2*wit__1 + wit__1"),("1/12","r*wit__0*wit__1*wit_ - wit__0*wit__1*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = Some(List((0,"-2*r*wit_^2 + r^2 - 2*r + 1"),(1,"-1/12*(r^2 + 2*r + 1)*wit__0^4 - 4*r^2*wit__1^2 - 2*r^3 - 1/12*((r^2 - 2*r + 1)*wit_^2 + 4*r^2 + 8*r + 4)*wit__0^2 + 47/12*r^2 - 13/6*r - 1/12")).map (s => (s._1,s._2.asTerm)))
 
-    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
+    res shouldBe 'proved
   }
 
   "PolynomialArith" should "prove more JH examples (3)" in withMathematica { qeTool =>
@@ -331,19 +335,21 @@ class PolynomialArithTests extends TacticTestBase {
     val ineq = List(0)
     val linear = List((3,"a","1/2*wit__3^2 - 1/2*b","2"),(1,"d","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
     val witness = List(("1","wit__0*wit__1*wit__3"),("1/5","wit__3^2*wit__2"),("1/5","2*c*wit_ + wit__1^2*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
-
-    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+    val insts = Some(List((0,"wit__1^2*wit__3^2"),(1,"-1/5*wit__3^4"),(2,"1/5*wit__1^4 + 4/5*c*wit__1^2 + 4/5*c^2")).map (s => (s._1,s._2.asTerm)))
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
+    res shouldBe 'proved
   }
 
   "PolynomialArith" should "prove more JH examples (4)" in withMathematica { qeTool =>
-    //Same as (3), but >= changed to >, Harrison reports that this is much harder for his implementation
+    //Same as (3), but >= changed to >, Harrison reports that this is harder for his implementation
     val antes = IndexedSeq("a*a+a*b-b*b>0","2*a+b>0","c*c+c*d-d*d<=0","d>0").map(_.asFormula)
     val succ = IndexedSeq("a*d+c*b+b*d>=0").map(_.asFormula)
     val ineq = List(0)
     val linear = List((2,"a","1/2*wit__2^2 - 1/2*b","2"),(1,"d","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
     val witness = List(("1","wit__0*wit__1*wit__2"),("1/5","wit__2^2*wit_"),("1/5","2*c*wit__3 + wit__1^2*wit__3")).map( s => (s._1.asTerm,s._2.asTerm))
-
-    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+    val insts = Some(List((0,"wit__1^2*wit__2^2"),(1,"1/5*wit__1^4 + 4/5*c*wit__1^2 + 4/5*c^2"),(2,"-1/5*wit__2^4")).map (s => (s._1,s._2.asTerm)))
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
+    res shouldBe 'proved
   }
 
   "PolynomialArith" should "prove RWV example with general oracle witness" in withMathematica { qeTool =>
@@ -367,6 +373,17 @@ class PolynomialArithTests extends TacticTestBase {
     pr2 shouldBe 'proved
     pr3 shouldBe 'proved
     pr4 shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove non-negativity of the Motzkin polynomial" in withMathematica { qeTool =>
+    //Standard example used in many SOS papers
+    val antes = IndexedSeq()
+    val succ = IndexedSeq("x1^6+x2^4*x3^2+x2^2*x3^4-3*x1^2*x2^2*x3^2>=0").map(_.asFormula)
+    val ineq = List(0)
+    val witness = List(("1","wit_*x1^3"),("1","-9/14*wit_*x1^2*x3 + wit_*x2^2*x3"),("1","-9/14*wit_*x1^2*x2 + wit_*x2*x3^2"),("3/7","x1^4*x2*x3 - 1/2*x1^2*x2^3*x3 - 1/2*x1^2*x2*x3^3"),("3/7","-x1^5*x2 + x1*x2^3*x3^2"),("3/7","-x1^5*x3 + x1*x2^2*x3^3"),("9/28","-x1^2*x2^3*x3 + x1^2*x2*x3^3"),("3/196","wit_*x1^2*x3"),("3/196","wit_*x1^2*x2")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& genWitnessTac(ineq,witness))
+    res shouldBe 'proved
   }
 
 }
