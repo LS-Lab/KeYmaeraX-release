@@ -5,7 +5,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExtractTacticFromTrace, ProofTree}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ProofTree}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -20,7 +20,7 @@ import scala.collection.immutable._
  * Base class for tactic tests.
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
-  val theInterpreter = SequentialInterpreter()
+  protected var theInterpreter: Interpreter = _
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
@@ -49,8 +49,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val proofId = createProof(modelContent, modelName)
       val trace = db.getExecutionTrace(proofId)
       val globalProvable = trace.lastProvable
-      val listener = new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-        globalProvable, trace.alternativeOrder, 0 /* start from single provable */, recursive = false, "custom")
+      val listener = new TraceRecordingListener(db, proofId, trace.lastStepId,
+        globalProvable, 0 /* start from single provable */, recursive = false, "custom")
       SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
           provable.conclusion shouldBe s
@@ -65,7 +65,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
               end.output.get.subgoals should have length end.input.subgoals.length - 1
               for (i <- end.input.subgoals.indices) {
                 if (i < end.branch) end.output.get.subgoals(i) shouldBe end.input.subgoals(i)
-                if (i > end.branch) end.output.get.subgoals(i-1) shouldBe end.input.subgoals(i)
+                if (i > end.branch) end.output.get.subgoals(i - 1) shouldBe end.input.subgoals(i)
               }
             })
           }
@@ -75,7 +75,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
 
     /** Returns the tactic recorded for the proof `proofId`. */
-    def extractTactic(proofId: Int): BelleExpr = new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(proofId))
+    def extractTactic(proofId: Int): BelleExpr = DbProofTree(db, proofId.toString).tactic
   }
 
   /** For tests that want to record proofs in the database. */
@@ -130,16 +130,20 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Test setup */
   override def beforeEach(): Unit = {
+    theInterpreter = SequentialInterpreter()
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
     TactixLibrary.invGenerator = generator
+    ToolProvider.setProvider(new NoneToolProvider())
   }
 
   /* Test teardown */
   override def afterEach(): Unit = {
+    theInterpreter = null
     PrettyPrinter.setPrinter(e => e.getClass.getName)
     ToolProvider.shutdown()
+    ToolProvider.setProvider(new NoneToolProvider())
     TactixLibrary.invGenerator = FixedGenerator(Nil)
   }
 
@@ -181,8 +185,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
     val trace = db.getExecutionTrace(proofId)
     val globalProvable = trace.lastProvable
-    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
+    new TraceRecordingListener(db, proofId, trace.lastStepId,
+      globalProvable, branch, recursive = false, tacticName) :: Nil
   }
 
   /** Removes all whitespace for string comparisons in tests.

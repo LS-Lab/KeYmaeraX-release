@@ -12,14 +12,14 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Fixed, PosInExpr, PositionLocator, TacticDiff}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Location}
 import spray.json._
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -376,7 +376,7 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
 }
 
 class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: Option[ExecutionStepPOJO]) extends Response {
-  def getJson =
+  def getJson: JsValue =
     if (lastStep.isDefined) JsObject(
       "proofId" -> JsString(proofId),
       "parentId" -> JsString(nodeId),
@@ -395,14 +395,14 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
       "type" -> JsString("taskstatus"))
 }
 
-class TaskResultResponse(proofId: String, parent: TreeNode, children: List[TreeNode], pos: Option[PositionLocator], progress: Boolean = true) extends Response {
+class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: Boolean = true) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
-      "id" -> nodeIdJson(parent.id),
-      "children" -> childrenJson(children)
+      "id" -> JsString(parent.id.toString),
+      "children" -> JsArray(parent.children.map(c => JsString(c.id.toString)):_*)
     ),
-    "newNodes" -> JsArray(children.map(singleNodeJson(pos)):_*),
+    "newNodes" -> JsArray(parent.children.map(nodeJson(_)._2):_*),
     "progress" -> JsBoolean(progress),
     "type" -> JsString("taskresult")
   )
@@ -436,11 +436,11 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
   )
 }
 
-class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Response {
+class ProofAgendaResponse(tasks : List[(ProofPOJO, List[Int], String)]) extends Response {
   override val schema = Some("proofagenda.js")
   val objects = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
     "proofId" -> JsString(proofPojo.proofId.toString),
-    "nodeId" -> JsString(nodeId),
+    "nodeId" -> Helpers.nodeIdJson(nodeId),
     "proofNode" -> JsonParser(nodeJson)
   )})
 
@@ -476,7 +476,7 @@ object Helpers {
 
   def nodeJson(node: TreeNode, pos: Option[PositionLocator]): JsValue = {
     val id = nodeIdJson(node.id)
-    val sequent = sequentJson(node.sequent)
+    val sequent = sequentJson(node.provable.conclusion)
     val children = childrenJson(node.children)
     val parentOpt = node.parent.map(n => nodeIdJson(n.id))
     val parent = parentOpt.getOrElse(JsNull)
@@ -488,6 +488,28 @@ object Helpers {
       "parent" -> parent)
   }
 
+  def nodeJson(node: ProofTreeNode): (String, JsValue) = {
+    val id = JsString(node.id.toString)
+    val sequent = node.goal match { case None => JsNull case Some(goal) => sequentJson(goal) }
+    val childrenIds = JsArray(node.children.map(s => JsString(s.id.toString)):_*)
+    val parent = node.parent.map(n => JsString(n.id.toString)).getOrElse(JsNull)
+
+    val posLocator =
+      if (node.maker.isEmpty) None
+      else BelleParser(node.maker) match { //@todo probably performance bottleneck
+        case pt: AppliedPositionTactic => Some(pt.locator)
+        case pt: AppliedDependentPositionTactic => Some(pt.locator)
+        case _ => None
+      }
+
+    (node.id.toString, JsObject(
+      "id" -> id,
+      "sequent" -> sequent,
+      "children" -> childrenIds,
+      "rule" -> ruleJson(node.makerShortName, posLocator),
+      "parent" -> parent))
+  }
+
   def sectionJson(section: List[String]): JsValue = {
     JsObject("path" -> JsArray(section.map(JsString(_)):_*))
   }
@@ -497,14 +519,14 @@ object Helpers {
 
   def itemJson(item: AgendaItem): (String, JsValue) = {
     val value = JsObject(
-      "id" -> JsString(item.id),
+      "id" -> JsString(item.id.toString),
       "name" -> JsString(item.name),
       "proofId" -> JsString(item.proofId),
       "deduction" -> deductionJson(List(item.path)))
-    (item.id, value)
+    (item.id.toString, value)
   }
 
-  def nodeIdJson(n: Int):JsValue = JsString(n.toString)
+  def nodeIdJson(n: List[Int]):JsValue = ??? //JsString(NodeId.toString(n))
   def proofIdJson(n: String):JsValue = JsString(n)
 
   def ruleJson(ruleName: String, pos: Option[PositionLocator]):JsValue = {
@@ -521,7 +543,7 @@ object Helpers {
   def singleNodeJson(pos: Option[PositionLocator] = None)(node: TreeNode): JsValue = {
     JsObject (
       "id" -> nodeIdJson(node.id),
-      "sequent" -> sequentJson(node.sequent),
+      "sequent" -> sequentJson(node.provable.conclusion),
       "children" -> childrenJson(node.children),
       "rule" -> ruleJson(node.rule, pos),
       "parent" -> node.parent.map(parent => nodeIdJson(parent.id)).getOrElse(JsNull)
@@ -537,20 +559,19 @@ object Helpers {
   }
 }
 
-class AgendaAwesomeResponse(proofId: String, root: TreeNode, leaves: List[(TreeNode, Option[PositionLocator])],
+class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
                             agenda: List[AgendaItem], closed: Boolean) extends Response {
   override val schema = Some("agendaawesome.js")
 
-  val proofTree = {
-    //@todo position locator
-    val theNodes: List[(String, JsValue)] = ((root, None) +: leaves).map(n => (n._1.id.toString, nodeJson(n._1, n._2)))
+  private lazy val proofTree = {
+    val theNodes: List[(String, JsValue)] = (root +: leaves).map(nodeJson)
     JsObject(
       "id" -> proofIdJson(proofId),
       "nodes" -> JsObject(theNodes.toMap),
-      "root" -> nodeIdJson(root.id))
+      "root" -> JsString(root.id.toString))
   }
 
-  val agendaItems = JsObject(agenda.map(itemJson):_*)
+  private lazy val agendaItems = JsObject(agenda.map(itemJson):_*)
 
   def getJson =
     JsObject (
@@ -568,29 +589,28 @@ class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
   def getJson = agendaItemJson(item)
 }
 
-class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
+class ProofNodeInfoResponse(proofId: String, nodeId: List[Int], nodeJson: String) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
-    "nodeId" -> JsString(nodeId match { case Some(nId) => nId case None => "" }),
+    "nodeId" -> nodeIdJson(nodeId),
     "proofNode" -> JsonParser(nodeJson)
   )
 }
 
-class ProofTaskParentResponse (parent: TreeNode, pos: Option[PositionLocator]) extends Response {
-  def getJson = singleNodeJson(pos)(parent)
+class ProofTaskParentResponse (parent: ProofTreeNode) extends Response {
+  def getJson: JsValue = nodeJson(parent)._2
 }
 
-class GetPathAllResponse(path: List[(TreeNode, Option[PositionLocator])], parentsRemaining: Int) extends Response {
-  import Helpers._
-  def getJson =
+class GetPathAllResponse(path: List[ProofTreeNode], parentsRemaining: Int) extends Response {
+  def getJson: JsValue =
     JsObject (
       "numParentsUntilComplete" -> JsNumber(parentsRemaining),
-      "path" -> JsArray(path.map(pe => nodeJson(pe._1, pe._2)):_*)
+      "path" -> JsArray(path.map(nodeJson(_)._2):_*)
     )
 }
 
-class GetBranchRootResponse(node: TreeNode, pos: Option[PositionLocator]) extends Response {
-  def getJson = singleNodeJson(pos)(node)
+class GetBranchRootResponse(node: ProofTreeNode) extends Response {
+  def getJson: JsValue = nodeJson(node)._2
 }
 
 class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
@@ -944,12 +964,12 @@ class ExtractTacticResponse(tacticText: String) extends Response {
   )
 }
 
-class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String, tree: List[(TreeNode, Option[PositionLocator])], openGoals: List[AgendaItem]) extends Response {
+class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String, tree: List[ProofTreeNode], openGoals: List[AgendaItem]) extends Response {
   private lazy val proofTree = {
-    val theNodes: List[(String, JsValue)] = tree.map(n => (n._1.id.toString, nodeJson(n._1, n._2)))
+    val theNodes: List[(String, JsValue)] = tree.map(nodeJson)
     JsObject(
       "nodes" -> JsObject(theNodes.toMap),
-      "root" -> nodeIdJson(tree.head._1.id))
+      "root" -> JsString(tree.head.id.toString))
   }
 
   def getJson = JsObject(

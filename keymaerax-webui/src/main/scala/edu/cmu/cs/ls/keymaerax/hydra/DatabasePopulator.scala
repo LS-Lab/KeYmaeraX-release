@@ -96,8 +96,8 @@ object DatabasePopulator {
     def listener(proofId: Int)(tacticName: String, branch: Int) = {
       val trace = db.getExecutionTrace(proofId)
       val globalProvable = trace.lastProvable
-      new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-        globalProvable, trace.alternativeOrder, branch, recursive = false, tacticName) :: Nil
+      new TraceRecordingListener(db, proofId, trace.lastStepId,
+        globalProvable, branch, recursive = false, tacticName) :: Nil
     }
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener, SequentialInterpreter)
     val parsedTactic = BelleParser(tactic)

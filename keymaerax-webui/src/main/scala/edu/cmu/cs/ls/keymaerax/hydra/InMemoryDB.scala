@@ -145,9 +145,6 @@ class InMemoryDB extends DBAbstraction {
     dbFile.close()
   }
 
-  /** Creates a new execution and returns the new ID in tacticExecutions */
-  override def createExecution(proofId: Int): Int = 0
-
   /** Deletes a provable and all associated sequents / formulas */
   override def deleteProvable(provableId: Int): Boolean = ???
 
@@ -196,18 +193,21 @@ class InMemoryDB extends DBAbstraction {
   def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = provables.filterKeys(lemmaIds.contains).
     map({ case (k, v) => ProvablePOJO(k, v)}).toList.sortBy(_.provableId)
 
-  override def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int = ???
+  override def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName:String): Int = ???
 
   override def updateAgendaItem(item:AgendaItemPOJO) = ???
 
   override def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = ???
 
-  override def getAgendaItem(proofId: Int, initialProofNode: Int): Option[AgendaItemPOJO] = ???
+  override def getAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId): Option[AgendaItemPOJO] = ???
 
   /** Updates an executable step */
   override def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = synchronized {
     executionSteps(executionStepId) = step
   }
+
+  /** Deletes execution steps. */
+  override def deleteExecutionSteps(ids: List[Int]): Unit = ids.foreach(executionSteps.remove)
 
   def printStats(): Unit = ???
 
@@ -216,7 +216,7 @@ class InMemoryDB extends DBAbstraction {
      * the current state of the world, we must pick the most recent alternative at every opportunity.*/
     var steps = executionSteps.filter({case (k, v) =>
       v.executionId == executionId && v.status == ExecutionStepStatus.Finished}).values.toList.
-      sortBy(_.alternativeOrder).reverse
+      sortBy(_.stepId).reverse
     var prevId: Option[Int] = None
     var revResult: List[ExecutionStepPOJO] = Nil
     while(steps != Nil) {
@@ -233,13 +233,12 @@ class InMemoryDB extends DBAbstraction {
 
   private def getProofConclusion(proofId: Int): Sequent = proofs(proofId)._1.conclusion
 
-  private def getTacticExecution(proofId: Int): Option[Int] = synchronized { Some(proofId) }
-
   private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], inputProvable:ProvableSig, localProvables: List[ProvableSig]): List[ExecutionStep] = {
     (executionSteps, executables, localProvables) match {
       case (step::steps, exe:: exes, localProvable::moreProvables) =>
-        val output = inputProvable(localProvable, step.branchOrder.get)
-        ExecutionStep(step.stepId.get, step.executionId, inputProvable, Some(localProvable), step.branchOrder.get, step.alternativeOrder, step.ruleName, step.executableId, step.userExecuted)  ::
+        val output = inputProvable(localProvable, step.branchOrder)
+        ExecutionStep(step.stepId.get, step.previousStep, step.executionId, inputProvable, Some(localProvable),
+          step.branchOrder, ???, step.ruleName, step.executableId, step.userExecuted)  ::
           zipTrace(steps, exes, output, moreProvables)
       case (Nil, Nil, Nil) => Nil
       case _ => throw new ProverException("Bug in zipTrace")
@@ -248,29 +247,50 @@ class InMemoryDB extends DBAbstraction {
 
   override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
 
+
+  /** Returns a list of steps that do not have successors for each of their subgoals. */
+  override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] = {
+    val trace = proofSteps(proofId)
+    trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
+    ???
+  }
+
+  override def getPlainExecutionStep(executionId: Int, stepId: Int): Option[ExecutionStepPOJO] =
+    getExecutionSteps(executionId).find(_.stepId == stepId)
+
+  override def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO] = ???
+
+  override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = ???
+
+  override def getStepProvable(executionId: Int, stepId: Option[Int], subgoal: Option[Int]): Option[ProvableSig] =
+    (stepId, subgoal) match {
+      case (None, None) => Some(proofs(executionId)._1)
+      case (Some(stId), None) => getPlainExecutionStep(executionId, stId) match {
+        case Some(step) => step.localProvableId match {case None => None case Some(lpId) => Some(getProvable(lpId).provable)}
+        case None => throw new IllegalArgumentException("Unknown step ID " + stId)
+      }
+      case (stId, Some(sgIdx)) => getStepProvable(executionId, stId, None) match {
+        case None => None
+        case Some(p) => Some(p.sub(sgIdx))
+      }
+    }
+
   override def getExecutionTrace(proofId: Int): ExecutionTrace = {
     /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
        DB calls. */
-    getTacticExecution(proofId) match {
-      case Some(executionId) =>
-        val steps = proofSteps(executionId)
-        if (steps.isEmpty) {
-          val conclusion = getProofConclusion(proofId)
-          ExecutionTrace(proofId.toString, executionId.toString, conclusion, Nil)
-        } else {
-          val provableIds = steps.map(_.localProvableId.get)
-          val executableIds = steps.map(_.executableId)
-          val provables = loadProvables(provableIds).map(_.provable)
-          val conclusion = provables.head.conclusion
-          val initProvable = ProvableSig.startProof(conclusion)
-          val executables = getExecutables(executableIds)
-          val traceSteps = zipTrace(steps, executables, initProvable, provables)
-          ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
-        }
-      case None =>
-        val conclusion = getProofConclusion(proofId)
-        //@todo is execution ID really unused so far?
-        ExecutionTrace(proofId.toString, null, conclusion, Nil)
+    val steps = proofSteps(proofId)
+    if (steps.isEmpty) {
+      val conclusion = getProofConclusion(proofId)
+      ExecutionTrace(proofId.toString, proofId.toString, conclusion, Nil)
+    } else {
+      val provableIds = steps.map(_.localProvableId.get)
+      val executableIds = steps.map(_.executableId)
+      val provables = loadProvables(provableIds).map(_.provable)
+      val conclusion = provables.head.conclusion
+      val initProvable = ProvableSig.startProof(conclusion)
+      val executables = getExecutables(executableIds)
+      val traceSteps = zipTrace(steps, executables, initProvable, provables)
+      ExecutionTrace(proofId.toString, proofId.toString, conclusion, traceSteps)
     }
   }
 
