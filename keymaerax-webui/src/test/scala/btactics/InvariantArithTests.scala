@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable._
 
@@ -166,7 +167,7 @@ class InvariantArithTests extends TacticTestBase {
     res shouldBe 'proved
   }
 
-  "ACASX Arith" should "prove ACAS X 175 fml (division rewritten by hand)" in withMathematica { qeTool =>
+  "ACASX Arith" should "prove ACAS X 175 fml (division rewritten by hand)" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val i = "(w_0*dhf_0>=0&r_0 < -rp_0&(0>=w_0*(dhf_0-dhd_0)&max_1=0|0 < w_0*(dhf_0-dhd_0)&max_1=w_0*(dhf_0-dhd_0))&(0<=w_0*dhd_0&min_1=0|0>w_0*dhd_0&min_1=w_0*dhd_0)&(r_0-ro_0>=0&abs_1=r_0-ro_0|r_0-ro_0 < 0&abs_1=-(r_0-ro_0))&(w_0=-1|w_0=1)&hp_0>0&rp_0>=0&rv_0>=0&a_0>0&(0<=t_0&a_0 * t_0 < max_1&ro_0=rv_0*t_0&ho_0=w_0*a_0/2*t_0^2+dhd_0*t_0|a_0*t_0>=max_1&ro_0=rv_0*t_0&ho_0*2*a_0=dhf_0*t_0*2*a_0-w_0*max_1^2)->abs_1>rp_0|w_0*h_0 < w_0*ho_0-hp_0)".asFormula
     val lwits = List(Some((List(0),List((0,"w_0","-1","1"),(0,"ro_0","rv_0*t_0","1"),(14,"rv_0","wit__10^2","1"),(13,"t_0","wit__9^2","-1"),(5,"a_0","wit__1^2","1"),(9,"dhd_0","-wit__6^2 + dhf_0","-1"),(0,"ho_0","-1/2*wit__1^2*wit__9^4 - (wit__6^2 - dhf_0)*wit__9^2","1"),(0,"abs_1","-wit__10^2*wit__9^2 + r_0","1"),(4,"r_0","-wit__3^2 - rp_0","1"),(0,"min_1","0","1"),(0,"max_1","0","1"),(1,"hp_0","wit__2^2","1"),(1,"rp_0","-1/2*wit__10^2*wit__9^2 - 1/2*wit__3^2 + 1/2*wit__4^2","2"),(1,"h_0","-1/2*wit__1^2*wit__9^4 - (wit__6^2 - dhf_0)*wit__9^2 + wit__2^2 - wit__5^2","-1"),(1,"dhf_0","wit__6^2 - wit__7^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm)),List(("1","wit__0*wit__1*wit__9")).map( s => (s._1.asTerm,s._2.asTerm)),Some(List((0,"-wit__1^2*wit__9^2"),(1,"0"),(2,"0"),(3,"0")).map (s => (s._1,s._2.asTerm))))),
       Some((List(0,2),List((0,"w_0","-1","1"),(0,"ro_0","rv_0*t_0","1"),(13,"rv_0","wit__9^2","1"),(4,"a_0","wit__0^2","1"),(8,"dhf_0","wit__5^2 + dhd_0","1"),(7,"ho_0","wit__4^2 + h_0 - hp_0","1"),(3,"max_1","0","1"),(1,"abs_1","-t_0*wit__9^2 + r_0","1"),(3,"r_0","-wit__2^2 - rp_0","1"),(1,"min_1","0","1"),(1,"hp_0","wit__1^2","1"),(1,"rp_0","-1/2*t_0*wit__9^2 - 1/2*wit__2^2 + 1/2*wit__3^2","2"),(1,"dhd_0","-wit__6^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm)),List(("1","wit__0^2*wit__2*wit__7"),("1","wit__0*wit__2*wit__9*wit__8"),("1","wit__0^2*wit__2*wit__10")).map( s => (s._1.asTerm,s._2.asTerm)),Some(List((0,"0"),(1,"wit__0^4*wit__2^2"),(2,"wit__0^2*wit__2^2*wit__9^2"),(3,"wit__0^4*wit__2^2"),(4,"0")).map (s => (s._1,s._2.asTerm))))),
@@ -223,7 +224,7 @@ class InvariantArithTests extends TacticTestBase {
     print(result)
   }
 
-  "ACASX Arith" should "prove ACAS X 5614 fml (division rewritten by hand)" in withMathematica { qeTool =>
+  "ACASX Arith" should "prove ACAS X 5614 fml (division rewritten by hand)" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val i = "(w_0*dhf_0>=0&(0>=w_0*(dhf_0-dhd_0)&max_1=0|0 < w_0*(dhf_0-dhd_0)&max_1=w_0*(dhf_0-dhd_0))&(0<=w_0*dhd_0&min_1=0|0>w_0*dhd_0&min_1=w_0*dhd_0)&(r_0-rv_0*t_0>=0&abs_1=r_0-rv_0*t_0|r_0-rv_0*t_0 < 0&abs_1=-(r_0-rv_0*t_0))&w_0*rv_0^2*h_0 < a_0/2*(r_0-rp_0)^2+w_0*rv_0*dhd_0*(r_0-rp_0)-rv_0^2*hp_0&rv_0*t_0<=(r_0-rp_0)&(w_0=-1|w_0=1)&a_0*rp_0-rv_0*min_1 < a_0*r_0&a_0*r_0<=a_0*rp_0+rv_0*max_1&a_0*t_0>=max_1&hp_0>0&rp_0>=0&rv_0>=0&a_0>0->abs_1>rp_0|w_0*h_0*(2*a_0) < w_0*(dhf_0*t_0*(2*a_0)-w_0*max_1^2)-(2*a_0)*hp_0)".asFormula
     val lwits = List[Option[(List[Int], List[(Int, Term, Term, Term)], List[(Term, Term)], Option[List[(Int, Term)]])]](Some((List(2),List((0,"w_0","-1","1"),(0,"abs_1","-rv_0*t_0 + r_0","1"),(6,"r_0","rv_0*t_0 - wit__4^2 + rp_0","-1"),(10,"rv_0","wit__9^2","1"),(0,"min_1","0","1"),(0,"max_1","0","1"),(0,"a_0","wit__0^2","1"),(0,"hp_0","wit__1^2","1"),(5,"rp_0","wit__4^2 + wit__8^2","1"),(3,"dhd_0","-wit__6^2 + dhf_0","-1"),(3,"dhf_0","wit__6^2 - wit__7^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm)),List(("1","wit__2*wit__12")).map( s => (s._1.asTerm,s._2.asTerm)),Some(List((0,"-wit__12^2"),(1,"0"),(2,"0"),(3,"0"),(4,"-t_0*wit__0^2*wit__9^4 - (wit__0^2*wit__13^2 + wit__12^2)*wit__9^2"),(5,"-wit__0^2*wit__13^2 - wit__11^2*wit__9^2"),(6,"-wit__0^4*wit__4^2 + wit__0^2*wit__12^2 + (2*t_0*wit__0^4 - wit__0^2*wit__11^2)*wit__9^2"),(7,"0")).map (s => (s._1,s._2.asTerm))))),
       Some((List(2),List((0,"w_0","1","1"),(0,"abs_1","-rv_0*t_0 + r_0","1"),(6,"r_0","rv_0*t_0 - wit__4^2 + rp_0","-1"),(10,"rv_0","wit__9^2","1"),(0,"min_1","0","1"),(0,"max_1","0","1"),(0,"a_0","wit__0^2","1"),(0,"hp_0","wit__1^2","1"),(5,"rp_0","wit__4^2 + wit__8^2","1"),(3,"dhd_0","wit__6^2 + dhf_0","1"),(3,"dhf_0","-wit__6^2 + wit__7^2","-1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm)),List(("1","wit__2*wit__12")).map( s => (s._1.asTerm,s._2.asTerm)),Some(List((0,"-wit__12^2"),(1,"0"),(2,"0"),(3,"0"),(4,"-t_0*wit__0^2*wit__9^4 - (wit__0^2*wit__13^2 + wit__12^2)*wit__9^2"),(5,"-wit__0^2*wit__13^2 - wit__11^2*wit__9^2"),(6,"-wit__0^4*wit__4^2 + wit__0^2*wit__12^2 + (2*t_0*wit__0^4 - wit__0^2*wit__11^2)*wit__9^2"),(7,"0")).map (s => (s._1,s._2.asTerm))))),
@@ -265,4 +266,5 @@ class InvariantArithTests extends TacticTestBase {
 
     print(result)
   }
+
 }

@@ -301,6 +301,51 @@ class PolynomialArithTests extends TacticTestBase {
     res2 shouldBe 'proved
   }
 
+  "PolynomialArith" should "prove more JH examples (1)" in withMathematica { qeTool =>
+
+    val antes = IndexedSeq("0<=a","0<=b","0<=c","c*(2*a+b)^3/27 <= x").map(_.asFormula)
+    val succ = IndexedSeq("c*a^2*b <=x").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((4,"a","wit_^2","-1"),(3,"b","wit__3^2","-1"),(2,"c","wit__2^2","-1"),(0,"x","wit_^4*wit__2^2*wit__3^2 - wit__0^2","-1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("8/27","wit_^3*wit__0*wit__2 - wit_*wit__0*wit__2*wit__3^2"),("1/27","-wit_^2*wit__0*wit__2*wit__3 + wit__0*wit__2*wit__3^3"),("1","wit__0*wit__1")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+  }
+
+  "PolynomialArith" should "prove more JH examples (2)" in withMathematica { qeTool =>
+
+    val antes = IndexedSeq("1<=t","t<=1").map(_.asFormula)
+    val succ = IndexedSeq("0<=1+r^2-2*r*t").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((1,"t","-wit__1^2 + 1","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("1","r*wit__0 - wit__0"),("1/2","-r*wit_ + wit__0^2*wit_"),("1/2","r*wit__1 + wit__0^2*wit__1")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+  }
+
+  "PolynomialArith" should "prove more JH examples (3)" in withMathematica { qeTool =>
+
+    val antes = IndexedSeq("a*a+a*b-b*b>=0","2*a+b>=0","c*c+c*d-d*d<=0","d>=0").map(_.asFormula)
+    val succ = IndexedSeq("a*d+c*b+b*d>=0").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((3,"a","1/2*wit__3^2 - 1/2*b","2"),(1,"d","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("1","wit__0*wit__1*wit__3"),("1/5","wit__3^2*wit__2"),("1/5","2*c*wit_ + wit__1^2*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+  }
+
+  "PolynomialArith" should "prove more JH examples (4)" in withMathematica { qeTool =>
+    //Same as (3), but >= changed to >, Harrison reports that this is much harder for his implementation
+    val antes = IndexedSeq("a*a+a*b-b*b>0","2*a+b>0","c*c+c*d-d*d<=0","d>0").map(_.asFormula)
+    val succ = IndexedSeq("a*d+c*b+b*d>=0").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((2,"a","1/2*wit__2^2 - 1/2*b","2"),(1,"d","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("1","wit__0*wit__1*wit__2"),("1/5","wit__2^2*wit_"),("1/5","2*c*wit__3 + wit__1^2*wit__3")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+  }
+
   "PolynomialArith" should "prove RWV example with general oracle witness" in withMathematica { qeTool =>
     val antes = IndexedSeq("x - y -1*a^2","z-b^2","z*(y-x)*c^2-1").map(t => Equal(t.asTerm,Number(0)))
 
