@@ -1010,10 +1010,13 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
     if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
       new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
     } else {
-      val sequent = RequestHelper.stepSequent(proofId, nodeId, db)
-      val provable = ProvableSig.startProof(sequent)
-      val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
-      new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
+      DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
+        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case Some(goal) =>
+          val provable = ProvableSig.startProof(goal)
+          val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
+          new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
+      }
     }
   }
 }
@@ -1023,9 +1026,12 @@ class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: 
     if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
       new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
     } else {
-      val sequent = RequestHelper.stepSequent(proofId, nodeId, db)
-      val formula = sequent(SeqPos(formulaId.toInt))
-      new KvpResponse("formula", formula.prettyString) :: Nil
+      DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
+        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case Some(goal) =>
+          val formula = goal(SeqPos(formulaId.toInt))
+          new KvpResponse("formula", formula.prettyString) :: Nil
+      }
     }
   }
 }
@@ -1052,8 +1058,8 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
 
 class GetFormulaPrettyStringRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val sequent = RequestHelper.stepSequent(proofId, nodeId, db)
-    sequent.sub(pos) match {
+    DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal.flatMap(_.sub(pos))) match {
+      case None => new ErrorResponse("Unknown position " + pos + " at node " + nodeId)::Nil
       case Some(e: Expression) => new PlainResponse("prettyString" -> JsString(e.prettyString))::Nil
     }
   }
@@ -1515,19 +1521,6 @@ object RequestHelper {
       case None => None
     }
   }
-
-  /** Returns the source sequent of the specified step (i.e., the sequent where the step was applied) */
-  def stepSequent(proofId: String, nodeId: String, db: DBAbstraction): Sequent = {
-    ???
-//    val nId = NodeId.fromStringTupled(nodeId)
-//    db.getStepProvable(proofId.toInt, nId._1, nId._2) match {
-//      case None => throw new IllegalArgumentException("Unknown node " + nodeId + " in proof " + proofId)
-//      case Some(p) =>
-//        assert(p.subgoals.size == 1, "Expected local provable with sole subgoal, but got " + p)
-//        p.subgoals.head
-//    }
-  }
-
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
