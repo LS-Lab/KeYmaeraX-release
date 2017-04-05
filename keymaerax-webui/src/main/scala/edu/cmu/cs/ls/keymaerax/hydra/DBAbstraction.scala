@@ -129,7 +129,8 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
                              localProvableId: Option[Int],
                              userExecuted: Boolean,
                              ruleName: String,
-                             numSubgoals: Int)
+                             numSubgoals: Int,
+                             numOpenSubgoals: Int)
 {
 
 }
@@ -315,8 +316,8 @@ trait DBAbstraction {
   /** Update existing execution step. */
   def updateExecutionStep(executionStepId: Int, step:ExecutionStepPOJO): Unit
 
-  /** Deletes execution steps. */
-  def deleteExecutionSteps(ids: List[Int]): Unit
+  /** Delete an execution step. */
+  def deleteExecutionStep(proofId: Int, stepId: Int): Unit
 
   /////////////////////
   /** Adds a bellerophon expression as an executable and returns the new executableId */

@@ -207,7 +207,7 @@ class InMemoryDB extends DBAbstraction {
   }
 
   /** Deletes execution steps. */
-  override def deleteExecutionSteps(ids: List[Int]): Unit = ids.foreach(executionSteps.remove)
+  override def deleteExecutionStep(proofId: Int, stepId: Int): Unit = executionSteps.remove(stepId)
 
   def printStats(): Unit = ???
 

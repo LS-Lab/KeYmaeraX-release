@@ -56,7 +56,9 @@ class TraceRecordingListener(db: DBAbstraction,
       //val parentStep = if (parent == null) None else parent.stepId
       ExecutionStepPOJO (stepId, proofId, sibling, branchOrder,
         status, getExecutableId, None, None,
-        getLocalProvableId, userExe, ruleName, if (local != null) local.subgoals.size else -1)
+        getLocalProvableId, userExe, ruleName,
+        if (local != null) local.subgoals.size else -1,
+        if (local != null) local.subgoals.size else -1)
     }
   }
 

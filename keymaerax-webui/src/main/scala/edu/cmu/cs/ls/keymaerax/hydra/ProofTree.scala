@@ -212,7 +212,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
     case Nil => // nothing to do
     case (c: DbProofTreeNode)::tail =>
       assert(tail.forall(_.asInstanceOf[DbProofTreeNode].stepId == c.stepId), "Expected same step in all children")
-      db.deleteExecutionSteps(c.stepId.get::Nil) //@note database does cascade delete of all substeps
+      db.deleteExecutionStep(proofId.toInt, c.stepId.get) //@note database does cascade delete of all substeps
   }
 
   /** Execution step recording: predecessor step ID. */

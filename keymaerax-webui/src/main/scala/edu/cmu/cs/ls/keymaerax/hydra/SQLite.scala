@@ -333,6 +333,7 @@ object SQLite {
 
     def deleteExecution(proofId: Int): Boolean = synchronizedTransaction({
       val deletedExecutionSteps = Executionsteps.filter(_.proofid === proofId).delete == 1
+      //@note deleting all steps, no need to update subgoal count
       deletedExecutionSteps
     })
 
@@ -475,6 +476,9 @@ object SQLite {
             .insert((step.executionId, step.previousStep, step.branchOrder,
               status, step.executableId, step.inputProvableId, step.resultProvableId,
               step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName))
+
+        updateOpenSubgoalsCount(step.executionId, step.previousStep)
+
         nInserts = nInserts + 1
         stepId
       })
@@ -634,20 +638,52 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
+        // update step
         Executionsteps.filter(_._Id === executionStepId)
         .map(dbstep => (dbstep.proofid.get, dbstep.previousstep,
           dbstep.branchorder, dbstep.status.get, dbstep.executableid.get,
           dbstep.inputprovableid, dbstep.resultprovableid, dbstep.localprovableid, dbstep.userexecuted.get, dbstep.childrenrecorded.get,
-          dbstep.rulename.get, dbstep.numsubgoals)
-        )
-        .update((step.executionId, step.previousStep, step.branchOrder,
+          dbstep.rulename.get, dbstep.numsubgoals, dbstep.numopensubgoals)
+        ).update((step.executionId, step.previousStep, step.branchOrder,
           ExecutionStepStatus.toString(step.status), step.executableId, step.inputProvableId, step.resultProvableId,
-          step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName, step.numSubgoals))
+          step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName, step.numSubgoals, step.numOpenSubgoals))
+
+        // update parent's open subgoals
+        updateOpenSubgoalsCount(step.executionId, step.previousStep)
       })
     }
 
+    private val stepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+      Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId).map(_.numsubgoals))
+
+    private val succStepCountQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+      Executionsteps.filter(row =>
+        row.proofid === proofId &&
+        row.previousstep === stepId &&
+        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).countDistinct)
+
+    /** Recompute the open subgoals count of a step. */
+    private def updateOpenSubgoalsCount(proofId: Int, stepId: Option[Int]): Unit = {
+      stepId match {
+        case None => // nothing to do
+        case Some(sId) =>
+          val succStepsCount = succStepCountQuery(proofId, sId).run
+          val totalSubgoals = stepQuery(proofId, sId).list.head
+          //@note select+update is faster than increment/decrement numSubGoals column
+          Executionsteps.filter(_._Id === sId).map(_.numopensubgoals).update(totalSubgoals - succStepsCount)
+      }
+    }
+
+    private val stepParentQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+      Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId).map(_.previousstep))
+
     /** Deletes execution steps. */
-    override def deleteExecutionSteps(ids: List[Int]): Unit = Executionsteps.filter(_._Id inSet ids).delete
+    override def deleteExecutionStep(proofId: Int, stepId: Int): Unit = {
+      //val succStepsQuery = Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId)
+      val parent = stepParentQuery(proofId, stepId).list.head
+      Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId).delete
+      updateOpenSubgoalsCount(proofId, parent)
+    }
 
     def printStats(): Unit = {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
@@ -675,7 +711,7 @@ object SQLite {
               ExecutionStepPOJO(head._Id, head.proofid.get, head.previousstep,
                 head.branchorder, ExecutionStepStatus.fromString(head.status.get),
                 head.executableid.get, head.inputprovableid, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean,
-                head.rulename.get, head.numsubgoals) :: revResult
+                head.rulename.get, head.numsubgoals, head.numopensubgoals) :: revResult
             if (headSteps.tail.isEmpty) prevIds.pop
             prevIds.push(head._Id)
             steps = headSteps.tail ++ tailSteps
@@ -686,6 +722,21 @@ object SQLite {
         }
         revResult.reverse
       })
+    }
+
+    private val executionStepsUnorderedQuery = (proofId: Int, stepIds: Set[Int]) =>
+      Executionsteps.filter(row =>
+        row.proofid === proofId &&
+        (row._Id inSet stepIds) &&
+        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished))
+
+    private def proofStepsUnorderd(proofId: Int, stepIds: Set[Int]): List[ExecutionStepPOJO] = {
+      executionStepsUnorderedQuery(proofId, stepIds).list.map(step =>
+        ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
+          step.branchorder, ExecutionStepStatus.fromString(step.status.get),
+          step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean,
+          step.rulename.get, step.numsubgoals, step.numopensubgoals)
+      )
     }
 
     private def getProofConclusion(proofId: Int): Sequent = {
@@ -746,57 +797,58 @@ object SQLite {
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals)
+          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals)
       )
 
     //@todo need better index to not degrade performance
-    private def openBranchingStepsSql(proofId: Int) =
-      sql"""SELECT exA._id
-            FROM executionSteps exA
-            LEFT OUTER JOIN executionSteps exB ON exA._id=exB.previousStep
-            GROUP BY exA._id
-            HAVING exA.proofId=$proofId AND COUNT(exB._id)<exA.numSubGoals""".as[Int]
-
-    private def closedBranchesSql(openSteps: List[Int]) =
-      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
-
-    override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
-      //trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
-      def parseClosedBranches(closed: Option[String]): List[Int] = closed match {
-        case None => Nil
-        case Some(s) => s.split(",").map(_.toInt).toList
-      }
-
-      //@todo: something is wrong over JDBC/with our driver setup: query takes 15ms from SQLite browser (on same database!), minutes over JDBC
-      val openSteps = openBranchingStepsSql(proofId).list
-      val closedBranches = closedBranchesSql(openSteps).list.toMap
-      openSteps.map(s => getPlainExecutionStep(proofId, s).get ->
-        parseClosedBranches(closedBranches.get(s)))
-    })
-
-
-    //@todo check if split queries perform better
-//    private val branchingStepsQuery = Compiled((proofId: Column[Int]) =>
-//      Executionsteps.filter(row =>
-//        row.proofid === proofId &&
-//        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished) &&
-//        row.numsubgoals > 1)
-//    )
-//
-//    private val uniqueSuccStepsQuery = Compiled((proofId: Column[Int]) =>
-//      Executionsteps.filter(row =>
-//        row.proofid === proofId &&
-//        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished) &&
-//        row.numsubgoals === 1)
-//    )
+//    private def openBranchingStepsSql(proofId: Int) =
+//      sql"""SELECT exA._id
+//            FROM executionSteps exA
+//            LEFT OUTER JOIN executionSteps exB ON exA._id=exB.previousStep
+//            GROUP BY exA._id
+//            HAVING exA.proofId=$proofId AND COUNT(exB._id)<exA.numSubGoals""".as[Int]
 //
 //    private def closedBranchesSql(openSteps: List[Int]) =
 //      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
 //
 //    override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
-//      val branchingSteps = branchingStepsQuery(proofId).list
-//      ???
+//      //trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
+//      def parseClosedBranches(closed: Option[String]): List[Int] = closed match {
+//        case None => Nil
+//        case Some(s) => s.split(",").map(_.toInt).toList
+//      }
+//
+//      val openSteps = openBranchingStepsSql(proofId).list
+//      val closedBranches = closedBranchesSql(openSteps).list.toMap
+//      openSteps.map(s => getPlainExecutionStep(proofId, s).get ->
+//        parseClosedBranches(closedBranches.get(s)))
 //    })
+
+
+    private val openStepsQuery = Compiled((proofId: Column[Int]) =>
+      Executionsteps.filter(row =>
+        row.proofid === proofId &&
+        row.numopensubgoals > 0 &&
+        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)))
+
+    private def closedBranchesSql(proofId: Int, openSteps: Set[Int]) =
+      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
+
+    override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
+      val openSteps = openStepsQuery(proofId).list.map(step =>
+        ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
+          step.branchorder, ExecutionStepStatus.fromString(step.status.get),
+          step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
+          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals))
+      val closedBranches = closedBranchesSql(proofId, openSteps.flatMap(_.stepId).toSet).list.toMap
+
+      def parseClosedBranches(closed: Option[String]): List[Int] = closed match {
+        case None => Nil
+        case Some(s) => s.split(",").map(_.toInt).toList
+      }
+
+      openSteps.map(s => (s, parseClosedBranches(closedBranches.get(s.stepId.get))))
+    })
 
     val executionStepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId &&
@@ -808,7 +860,7 @@ object SQLite {
         case Some(step) => Some(ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals))
+          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals))
       }
     }
 
@@ -824,7 +876,7 @@ object SQLite {
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals)).toList
+          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals)).toList
     }
 
     override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = getPlainExecutionStep(proofId, stepId) match {

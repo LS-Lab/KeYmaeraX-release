@@ -112,18 +112,19 @@ trait Tables {
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN)
    *  @param childrenrecorded Database column childrenRecorded DBType(BOOLEAN)
    *  @param rulename Database column ruleName DBType(STRING)
-   *  @param numsubgoals Database column numSubGoals DBType(INTEGER) */
-  case class ExecutionstepsRow(_Id: Option[Int], proofid: Option[Int], previousstep: Option[Int], branchorder: Int, status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String], rulename: Option[String], numsubgoals: Int)
+   *  @param numsubgoals Database column numSubGoals DBType(INTEGER)
+   *  @param numopensubgoals Database column numOpenSubGoals DBType(INTEGER) */
+  case class ExecutionstepsRow(_Id: Option[Int], proofid: Option[Int], previousstep: Option[Int], branchorder: Int, status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String], rulename: Option[String], numsubgoals: Int, numopensubgoals: Int)
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[Int]], e1: GR[Int], e2: GR[Option[String]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
-    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<[Int]))
+    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<[Int], <<[Int]))
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (_Id, proofid, previousstep, branchorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (_Id, proofid, previousstep, branchorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals, numopensubgoals) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (_Id, proofid, previousstep, branchorder.?, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals.?).shaped.<>({r=>import r._; _4.map(_=> ExecutionstepsRow.tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = (_Id, proofid, previousstep, branchorder.?, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals.?, numopensubgoals.?).shaped.<>({r=>import r._; _4.map(_=> ExecutionstepsRow.tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -151,6 +152,8 @@ trait Tables {
     val rulename: Column[Option[String]] = column[Option[String]]("ruleName")
     /** Database column numSubGoals DBType(INTEGER) */
     val numsubgoals: Column[Int] = column[Int]("numSubGoals")
+    /** Database column numOpenSubGoals DBType(INTEGER) */
+    val numopensubgoals: Column[Int] = column[Int]("numOpenSubGoals")
     
     /** Foreign key referencing Executables (database name executables_FK_1) */
     lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)

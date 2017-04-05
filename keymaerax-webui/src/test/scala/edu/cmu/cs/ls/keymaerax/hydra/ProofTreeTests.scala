@@ -287,40 +287,91 @@ class ProofTreeTests extends TacticTestBase {
     tree.tactic shouldBe cut("y=37".asFormula) <(nil, nil)
   }
 
-  "Performance" should "not degrade when doing the usual interaction in a loop" in withDatabase { db =>
+  "Performance" should "not degrade when doing the usual interaction (without tactic extraction) in a loop" in withDatabase { db =>
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
 
-    var avg = 0.0
-    var max = 0.0
+    val numStepsPerProof = 500
+    var durations = Array.fill(numStepsPerProof)(0.0)
 
-    for (i <- 1 to 200) {
+    for (i <- 0 until numStepsPerProof) {
       val start = System.currentTimeMillis()
       val tree = DbProofTree(db.db, proofId.toString)
 
-      val goals = tree.openGoals //@todo openGoals still slows down with number of steps
+      val goals = tree.openGoals
       goals should have size 1
-      if (i%2==0) goals.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
+      if (i%2==1) goals.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
       else goals.head.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
 
       val tactics = goals.head.applicableTacticsAt(SuccPosition(1))
       goals.head.tacticInputSuggestions(SuccPosition(1)) shouldBe empty
 
-      if (i%2==0) tactics shouldBe empty
+      if (i%2==1) tactics shouldBe empty
       else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
 
-      if (i%2==0) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
+      if (i%2==1) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
       else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
 
       val end = System.currentTimeMillis()
-      avg = (avg*(i-1) + (end-start))/i
-      max = Math.max(max, end-start)
+      durations(i) = end-start
     }
 
     DbProofTree(db.db, proofId.toString).tacticString
 
-    println("Average duration " + avg)
-    println("Maximum duration " + max)
+    val medianDuration = median(durations.toList)
+    val averageDuration = durations.sum/numStepsPerProof
+    println("Median duration " + medianDuration)
+    println("Average duration " + averageDuration)
+    println("Minimum duration " + durations.min)
+    println("Maximum duration " + durations.max)
   }
 
+  it should "not degrade over multiple proofs" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
+
+    val numProofs = 10
+    val numStepsPerProof = 100
+
+    val avg = Array.fill(numProofs)(0.0)
+    val max = Array.fill(numProofs)(0.0)
+
+    for (proof <- 0 until numProofs) {
+      val proofId = db.createProof(modelContent, "Proof"+proof)
+      for (i <- 1 to numStepsPerProof) {
+        val start = System.currentTimeMillis()
+        val tree = DbProofTree(db.db, proofId.toString)
+
+        val goals = tree.openGoals
+        goals should have size 1
+        if (i%2==0) goals.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
+        else goals.head.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
+
+        val tactics = goals.head.applicableTacticsAt(SuccPosition(1))
+        goals.head.tacticInputSuggestions(SuccPosition(1)) shouldBe empty
+
+        if (i%2==0) tactics shouldBe empty
+        else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
+
+        if (i%2==0) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
+        else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+
+        val end = System.currentTimeMillis()
+        avg(proof) = (avg(proof)*(i-1) + (end-start))/i
+        max(proof) = Math.max(max(proof), end-start)
+      }
+    }
+
+    println("Average durations " + avg.map(_.toInt).mkString(","))
+    println("Maximum durations " + max.map(_.toInt).mkString(","))
+
+    val medianAverages = median(avg.toList)
+    val avgAverages = avg.sum/avg.length
+    println("Average averages " + avgAverages)
+    println("Median averages " + medianAverages)
+  }
+
+  private def median(s: List[Double]): Double = {
+    val (lower, upper) = s.sortWith(_<_).splitAt(s.size/2)
+    if (s.size%2 == 0) (lower.last + upper.head)/2.0 else upper.head
+  }
 }
