@@ -247,6 +247,7 @@ class InMemoryDB extends DBAbstraction {
 
   override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
 
+  override def getFirstExecutionStep(proofId: Int): Option[ExecutionStepPOJO] = proofSteps(proofId).headOption
 
   /** Returns a list of steps that do not have successors for each of their subgoals. */
   override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] = {

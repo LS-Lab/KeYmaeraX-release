@@ -293,6 +293,9 @@ trait DBAbstraction {
     * @note For most purposes, getExecutionTrace is more convenient, but slower. */
   def getExecutionSteps(executionId: Int) : List[ExecutionStepPOJO]
 
+  /** Returns the first step of the proof */
+  def getFirstExecutionStep(proofId: Int) : Option[ExecutionStepPOJO]
+
   /** Returns a list of steps that do not have successors for each of their subgoals.
     * Along with each step, it lists the step's subgoals that are actually closed. */
   def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])]

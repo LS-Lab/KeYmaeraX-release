@@ -734,18 +734,23 @@ object SQLite {
 
     override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
 
-
-    val openExecutionStepsQuery = Compiled((proofId: Column[Int]) =>
+    private val firstExecutionStepQuery = Compiled((proofId: Column[Int]) =>
       Executionsteps.filter(
         row => row.proofid === proofId &&
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished) &&
-        row.numsubgoals > Executionsteps.filter(child =>
-          child.previousstep === row._Id
-        ).countDistinct
+        row.previousstep.isEmpty
       ))
 
-    //@todo slickify and compile
-    private def openStepsSql(proofId: Int) =
+    override def getFirstExecutionStep(proofId: Int): Option[ExecutionStepPOJO] =
+      firstExecutionStepQuery(proofId).list.headOption.map(step =>
+        ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
+          step.branchorder, ExecutionStepStatus.fromString(step.status.get),
+          step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
+          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals)
+      )
+
+    //@todo need better index to not degrade performance
+    private def openBranchingStepsSql(proofId: Int) =
       sql"""SELECT exA._id
             FROM executionSteps exA
             LEFT OUTER JOIN executionSteps exB ON exA._id=exB.previousStep
@@ -753,7 +758,7 @@ object SQLite {
             HAVING exA.proofId=$proofId AND COUNT(exB._id)<exA.numSubGoals""".as[Int]
 
     private def closedBranchesSql(openSteps: List[Int]) =
-      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE previousStep IN (${openSteps.mkString}) GROUP BY previousStep""".as[(Int,String)]
+      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
 
     override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
       //trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
@@ -763,11 +768,35 @@ object SQLite {
       }
 
       //@todo: something is wrong over JDBC/with our driver setup: query takes 15ms from SQLite browser (on same database!), minutes over JDBC
-      val openSteps = openStepsSql(proofId).list
-      val closedBranches = closedBranchesSql(openSteps).list.toMap //@todo alternate histories
+      val openSteps = openBranchingStepsSql(proofId).list
+      val closedBranches = closedBranchesSql(openSteps).list.toMap
       openSteps.map(s => getPlainExecutionStep(proofId, s).get ->
         parseClosedBranches(closedBranches.get(s)))
     })
+
+
+    //@todo check if split queries perform better
+//    private val branchingStepsQuery = Compiled((proofId: Column[Int]) =>
+//      Executionsteps.filter(row =>
+//        row.proofid === proofId &&
+//        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished) &&
+//        row.numsubgoals > 1)
+//    )
+//
+//    private val uniqueSuccStepsQuery = Compiled((proofId: Column[Int]) =>
+//      Executionsteps.filter(row =>
+//        row.proofid === proofId &&
+//        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished) &&
+//        row.numsubgoals === 1)
+//    )
+//
+//    private def closedBranchesSql(openSteps: List[Int]) =
+//      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
+//
+//    override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
+//      val branchingSteps = branchingStepsQuery(proofId).list
+//      ???
+//    })
 
     val executionStepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId &&

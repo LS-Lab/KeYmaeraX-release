@@ -54,26 +54,27 @@ trait ProofTreeNode {
   def done: Boolean = provable.isProved
 
   /** Runs a tactic on this node. */
-  def runTactic(userId: String, interpreter: List[IOListener]=>Interpreter, tactic: BelleExpr, shortName: String): String
+  def runTactic(userId: String, interpreter: List[IOListener]=>Interpreter, tactic: BelleExpr, shortName: String,
+                wait: Boolean = false): String
 
   /** Deletes this node with the entire subtree underneath. */
   def pruneBelow(): Unit
 
   // cached computations
   private lazy val theProvable = {
-    if (children.isEmpty) localProvable
+    if (localProvable.isProved) localProvable
+    else if (children.isEmpty) localProvable.sub(goalIdx)
     else {
       assert(children.forall(_.localProvable == children.head.localProvable), "All children share the same local provable")
-      val successorStepProvable = children.head.localProvable
-      if (successorStepProvable.isProved) {
-        localProvable.sub(goalIdx)(successorStepProvable, 0)
-      } else {
-        val cps = children.map(_.provable)
-        val zipped = cps.zipWithIndex.foldRight(successorStepProvable)({ case ((sub, i), global) =>
-          global(sub, i)
-        })
-        localProvable.sub(goalIdx)(zipped, 0)
-      }
+      val nextStepProvable = children.head.localProvable
+      val myGoal = localProvable.sub(goalIdx)
+      assert(myGoal.subgoals.head == nextStepProvable.conclusion, "Expected next step to prove my goal")
+
+      val myProvable = myGoal(nextStepProvable, 0)
+      if (myProvable.isProved) myProvable
+      else children.map(_.provable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
+        global(sub, i)
+      })
     }
   }
 
@@ -141,12 +142,16 @@ case class DbStepPathNodeId(step: Option[Int], branch: Option[Int]) extends Proo
 
 abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends ProofTreeNode {
   /** Runs a tactic on this node. */
-  override def runTactic(userId: String, interpreter: (List[IOListener]) => Interpreter, tactic: BelleExpr, shortName: String): String = {
+  override def runTactic(userId: String, interpreter: (List[IOListener]) => Interpreter, tactic: BelleExpr,
+                         shortName: String, wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val listener = new TraceRecordingListener(db, proofId.toInt, stepId, localProvable,
       goalIdx, recursive = false, shortName)
     val executor = BellerophonTacticExecutor.defaultExecutor
-    executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx)), SequentialInterpreter, List(listener))
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx)), SequentialInterpreter,
+      listener::Nil)
+    if (wait) executor.wait(taskId)
+    taskId
   }
 
   /** The node's goal */
@@ -303,12 +308,13 @@ case class DbRootProofTreeNode(db: DBAbstraction)(override val id: ProofTreeNode
 
   // cached database query results
   private lazy val theSubgoals: List[ProofTreeNode] = {
-    db.getExecutionSteps(proofId.toInt).headOption match {
+    db.getFirstExecutionStep(proofId.toInt) match {
       case None => Nil
       case Some(step) =>
         val s = db.getPlainExecutionStep(proofId.toInt, step.stepId.get).get
-        (0 until s.numSubgoals).map(sg =>
-          DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(sg))).toList
+        if (s.numSubgoals > 0) (0 until s.numSubgoals).map(sgi =>
+          DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(sgi))).toList
+        else DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(-1))::Nil
     }
   }
 
