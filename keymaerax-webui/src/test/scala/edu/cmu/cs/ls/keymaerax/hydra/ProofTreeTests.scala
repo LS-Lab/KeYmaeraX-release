@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, SequentialInterpreter, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.{FormulaArg, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -177,6 +177,40 @@ class ProofTreeTests extends TacticTestBase {
     tree.tactic shouldBe cut("y=37".asFormula) <(implyR(1), nil)
   }
 
+  "Tactic suggestion" should "return single-pos tactics" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals should have size 1
+    val tactics = tree.openGoals.head.applicableTacticsAt(SuccPosition(1))
+    tactics should have size 1
+    tactics.head._1.codeName shouldBe "implyR"
+  }
+
+  it should "return single-pos tactics with input suggestions" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. [{x:=x+1;}*@invariant(x>7)]x>5 End."
+    val proofId = db.createProof(modelContent)
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals should have size 1
+    val tactics = tree.openGoals.head.applicableTacticsAt(SuccPosition(1))
+    tactics should have size 4
+    tactics.map(_._1.codeName) should contain theSameElementsAs "loop"::"iterateb"::"GV"::"MR"::Nil
+    val inputSuggestions = tree.openGoals.head.tacticInputSuggestions(SuccPosition(1))
+    inputSuggestions should have size 1
+    inputSuggestions.head shouldBe (FormulaArg("j(x)") -> "x>7".asFormula)
+  }
+
+  it should "return two-pos tactics" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0->x>0 End."
+    val proofId = db.createProof(modelContent)
+    var tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree = DbProofTree(db.db, proofId.toString)
+    val tactics = tree.openGoals.head.applicableTacticsAt(AntePosition(1), Some(SuccPosition(1)))
+    tactics should have size 1
+    tactics.head._1.codeName shouldBe "closeId"
+  }
+
   "Pruning" should "work at the root" in withDatabase { db =>
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
@@ -268,6 +302,12 @@ class ProofTreeTests extends TacticTestBase {
       goals should have size 1
       if (i%2==0) goals.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
       else goals.head.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
+
+      val tactics = goals.head.applicableTacticsAt(SuccPosition(1))
+      goals.head.tacticInputSuggestions(SuccPosition(1)) shouldBe empty
+
+      if (i%2==0) tactics shouldBe empty
+      else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
 
       if (i%2==0) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
       else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)

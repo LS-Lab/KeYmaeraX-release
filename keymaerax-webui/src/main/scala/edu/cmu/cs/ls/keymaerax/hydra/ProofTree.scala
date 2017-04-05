@@ -2,11 +2,13 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.btactics.{ArgInfo, ConfigurableGenerator, DerivationInfo, FormulaArg}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, Map}
 
 trait ProofTreeNodeId {}
 
@@ -46,6 +48,26 @@ trait ProofTreeNode {
 
   /** The index of the goal (subgoal in local provable) that this node targets. */
   def goalIdx: Int
+
+  /** Returns a list of tactics that are applicable at the specified position in this node's goal. Each entry is
+    * the typical form of the tactic and an optional more convenient variant of the tactic. */
+  def applicableTacticsAt(pos: Position, pos2: Option[Position] = None): List[(DerivationInfo, Option[DerivationInfo])] = pos2 match {
+    case None =>
+      // single-position tactics
+      goal.map(g => (g, g.sub(pos))) match {
+        case Some((goal, Some(subFormula))) =>
+          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal)).map(axiom =>
+            (DerivationInfo(axiom), UIIndex.comfortOf(axiom).map(DerivationInfo(_))))
+        case _ => Nil
+      }
+    case Some(p2) =>
+      // two-pos tactics
+      UIIndex.allTwoPosSteps(pos, p2, goal.get).map(step =>
+        (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
+  }
+
+  /** Returns suggestions for tactic argument inputs, argument info according to UIIndex and DerivationInfo. */
+  def tacticInputSuggestions(pos: Position): Map[ArgInfo, Expression]
 
   /** The overall provable with the sub-proofs filled in for the local subgoals (potentially expensive). */
   def provable: ProvableSig = theProvable
@@ -167,6 +189,22 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
   override def goalIdx: Int = id match {
     case DbStepPathNodeId(_, None) => 0 //@note root node
     case DbStepPathNodeId(_, Some(i)) => i
+  }
+
+
+  override def tacticInputSuggestions(pos: Position): Map[ArgInfo, Expression] = goal.map(g => (g, g.sub(pos))) match {
+    case Some((goal, Some(subFormula))) =>
+      val generator = new ConfigurableGenerator(db.getInvariants(db.getProofInfo(proofId).modelId.get))
+      //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
+      //@HACK for loop and dG
+      subFormula match {
+        case Box(Loop(_), _) =>
+          val invariant = generator(goal, pos)
+          if (invariant.hasNext) Map(FormulaArg("j(x)") -> invariant.next)
+          else Map.empty
+        case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
+        case _ => Map.empty
+      }
   }
 
   /** Deletes this node with the entire subtree underneath. */

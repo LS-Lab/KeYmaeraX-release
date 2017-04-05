@@ -980,25 +980,8 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     val tree = DbProofTree(db, proofId)
     if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
 
-    val sequent = tree.locate(nodeId).get.goal.get
-    sequent.sub(pos) match {
-      case Some(subFormula) =>
-        val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
-          map{axiom => (
-            DerivationInfo(axiom),
-            UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-        val generator = new ConfigurableGenerator(db.getInvariants(tree.info.modelId.get))
-        //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
-        //@HACK for loop and dG
-        val suggestedInput: Map[ArgInfo,Expression] = subFormula match {
-          case Box(Loop(_), _) =>
-            val invariant = generator(sequent, pos)
-            if (invariant.hasNext) Map(FormulaArg("j(x)") -> invariant.next)
-            else Map.empty
-          case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
-          case _ => Map.empty
-        }
-        new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+    tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
+      case Some((tactics, inputs)) => new ApplicableAxiomsResponse(tactics, inputs) :: Nil
       case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
@@ -1006,12 +989,12 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
 
 class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos1: Position, pos2: Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    if (closed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-    val sequent = RequestHelper.stepSequent(proofId, nodeId, db)
-    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map(step =>
-      (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
-    new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+    val tree = DbProofTree(db, proofId)
+    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    tree.locate(nodeId).map(n => n.applicableTacticsAt(pos1, Some(pos2))) match {
+      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some(tactics) => new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+    }
   }
 }
 
