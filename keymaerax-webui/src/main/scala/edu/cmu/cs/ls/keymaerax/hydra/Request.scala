@@ -1095,14 +1095,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     if (closed) {
       return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
     }
-    val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId.get))
-
     val tree: ProofTree = DbProofTree(db, proofId)
     val node: ProofTreeNode = tree.locate(tree.nodeIdFromString(nodeId)).get
     val sequent = node.goal.get
 
     try {
-      val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(generator))
+      //@note no invariant generator (parsing from model) for performance reasons, since included in tactic suggestions anyway ->
+      //      if we ever execute tactics that require a generator, include a heuristic to determine from the tactic string here
+      val expr = BelleParser.parseWithInvGen(fullExpr(sequent), None)
 
       val appliedExpr:BelleExpr = (pos, pos2, expr) match {
         case (None, None, _:AtPosition[BelleExpr]) =>
@@ -1368,8 +1368,6 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
 }
 
 class TacticDiffRequest(db: DBAbstraction, proofIdStr: String, oldTactic: String, newTactic: String) extends Request {
-  private val proofId = Integer.parseInt(proofIdStr)
-
   override def resultingResponses(): List[Response] = {
     val oldT = BelleParser(oldTactic)
     try {
