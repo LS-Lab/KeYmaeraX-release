@@ -5,16 +5,52 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
+trait ExecutionContext {
+  def store(e: BelleExpr): ExecutionContext
+  def branch(count: Int): List[ExecutionContext]
+  def glue(ctx: ExecutionContext): ExecutionContext
+  def closeBranch(): ExecutionContext
+  def onBranch: Int
+  def parentId: Int
+}
+
+/** Computes IDs for atomic steps stored in the database. Anticipates how the DB issues IDs. */
+case class DbAtomPointer(id: Int) extends ExecutionContext {
+  override def store(e: BelleExpr): ExecutionContext = DbAtomPointer(id+1)
+  override def branch(count: Int): List[ExecutionContext] = (0 until count).map(DbBranchPointer(id, _, id)).toList
+  override def glue(ctx: ExecutionContext): ExecutionContext = ctx
+  override def closeBranch(): ExecutionContext = this
+  override def onBranch: Int = 0
+  override def parentId: Int = id
+}
+
+/** Computes IDs for branching steps stored in the database. Anticipates how the DB issues IDs. */
+case class DbBranchPointer(parent: Int, branch: Int, predStep: Int) extends ExecutionContext {
+  override def store(e: BelleExpr): ExecutionContext = DbAtomPointer(predStep+1)
+  override def branch(count: Int): List[ExecutionContext] =
+    if (count == 1) DbAtomPointer(predStep)::Nil
+    else (0 until count).map(DbBranchPointer(predStep, _, predStep)).toList
+  override def glue(ctx: ExecutionContext): ExecutionContext = ctx match {
+    case DbAtomPointer(id) => DbBranchPointer(parent, branch, id)
+    case DbBranchPointer(_, _, pc2) => DbBranchPointer(parent, branch, pc2) // continue after pc2 (final step of the other branch)
+  }
+  // branch=-1 indicates the merging point after branch tactics (often points to a closed provable when the branches all close,
+  // but may point to a provable of arbitrary size)
+  override def closeBranch(): ExecutionContext = DbBranchPointer(parent, -1, predStep)
+  override def onBranch: Int = branch
+  override def parentId: Int = parent
+}
 
 /**
   * Sequential interpreter for Bellerophon tactic expressions: breaks apart combinators and spoon-feeds "atomic" tactics
   * to another interpreter.
   * @param rootProofId The ID of the proof this interpreter is working on.
   * @param idProvider Provides IDs for child provables created in this interpreter.
-  * @param listeners Creates listeners tactic names.
+  * @param listeners Creates listener that are notified from the inner interpreter, takes (tactic name, parent step index in trace, branch).
   * @param inner Processes atomic tactics.
   * @param descend How far to descend into depending tactics (default: do not descend)
   * @param strict If true, follow tactic strictly; otherwise perform some optimizations (e.g., do not execute nil).
@@ -22,105 +58,103 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @author Andre Platzer
   * @author Stefan Mitsch
   */
-case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => Int, listeners: Int => ((String, Int) => Seq[IOListener]), inner: Seq[IOListener] => Interpreter, descend: Int = 0, strict: Boolean = true) extends Interpreter {
+case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => Int,
+                                   listeners: Int => ((String, Int, Int) => Seq[IOListener]),
+                                   inner: Seq[IOListener] => Interpreter, descend: Int = 0,
+                                   strict: Boolean = true) extends Interpreter {
   var innerProofId: Option[Int] = None
 
-  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic((expr, v)::Nil, 0, descend)
+  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic(expr, v, descend, DbAtomPointer(-1))._1
 
-  private def runTactic(branches: Seq[(BelleExpr, BelleValue)], branch: Int, level: Int): BelleValue = {
-    branches(branch)._1 match {
+  //@todo remove branch
+  private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext): (BelleValue, ExecutionContext) = {
+    tactic match {
       // combinators
       case SeqTactic(left, right) =>
-        val leftResult = try {
-          runTactic(branches.updated(branch, (left, branches(branch)._2)), branch, level)
+        val (leftResult, leftCtx) = try {
+          runTactic(left, goal, level, ctx)
         } catch {
           case e: BelleThrowable => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
         }
         try {
-          runTactic(branches.updated(branch, (right, leftResult)), branch, level)
+          runTactic(right, leftResult, level, leftCtx)
         } catch {
           case e: BelleThrowable => throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
         }
       case EitherTactic(left, right) => try {
-          runTactic(branches.updated(branch, (left, branches(branch)._2)), branch, level)
+          runTactic(left, goal, level, ctx)
         } catch {
           case eleft: BelleThrowable => try {
-            runTactic(branches.updated(branch, (right, branches(branch)._2)), branch, level)
+            runTactic(right, goal, level, ctx)
           } catch {
             case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
-              "Failed: both left-hand side and right-hand side " + branches(branch)._1)
+              "Failed: both left-hand side and right-hand side " + goal)
           }
         }
 
+      case SaturateTactic(child) if child==Idioms.nil => throw new BelleThrowable("SaturateTactic done")
       case SaturateTactic(child) =>
-        var prev: BelleValue = null
-        var result: BelleValue = branches(branch)._2
-        do {
-          prev = result
-          try {
-            result = runTactic(branches.updated(branch, (child, result)), branch, level)
-          } catch {
-            case e: BelleThrowable => /*@note child no longer applicable */ result = prev
-          }
-        } while (result != prev)
-        result
-      case RepeatTactic(child, times) =>
-        var result = branches(branch)._2
-        for (i <- 1 to times) try {
-          result = runTactic(branches.updated(branch, (child, result)), branch, level)
+        var result: (BelleValue, ExecutionContext) = (goal, ctx)
+        try {
+          result = runTactic(if (child==Idioms.nil) child else SeqTactic(child, tactic), result._1, level, result._2)
         } catch {
-          case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),
-            "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
+          case _: BelleThrowable =>
         }
         result
-      case BranchTactic(children) if children.isEmpty => branches(branch)._2
-      case BranchTactic(children) => branches(branch)._2 match {
+      case RepeatTactic(child, times) if times < 1 => throw new BelleThrowable("RepeatTactic done")
+      case RepeatTactic(child, times) if times >= 1 =>
+        //assert(times >= 1, "Invalid number of repetitions " + times + ", expected >= 1")
+        var result: (BelleValue, ExecutionContext) = (goal, ctx)
+        try {
+          result = runTactic(if (times == 1) child else SeqTactic(child, RepeatTactic(child, times-1)), result._1, level, result._2)
+        } catch {
+            case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),
+              "Failed while repeating tactic with " + times + " repetitions remaining: " + child)
+        }
+        result
+      case BranchTactic(children) if children.isEmpty => throw new BelleThrowable("Branching with empty children")
+      case BranchTactic(children) if children.nonEmpty => goal match {
         case BelleProvable(p, labels) =>
           if (children.length != p.subgoals.length)
-            throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(branches(branch)._1, "")
+            throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(tactic, "")
 
-          // patch branches b consistent with number of p's subgoals
-          def patchBranches(p: ProvableSig, b: Seq[(BelleExpr, BelleValue)], pos: Int): Seq[(BelleExpr, BelleValue)] =
-            if (p.subgoals.isEmpty) b.patch(pos, Nil, 1)
-            else if (p.subgoals.size == 1) b
-            else b ++ p.subgoals.tail.map(sg => (b(pos)._1, BelleProvable(ProvableSig.startProof(sg))))
+          val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
+          val branchCtxs = ctx.branch(children.size)
 
           //@note execute in reverse for stable global subgoal indexing
-          val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
-          val allBranches = branches.updated(branch, branchTactics.head) ++ branchTactics.tail
-
-          val reverseBranches = allBranches.zipWithIndex.reverse.filter(nt => branchTactics.contains(nt._1))
-          val BelleProvable(last, _) = runTactic(allBranches, reverseBranches.head._2, level)
-          val remainingBranches = patchBranches(last, allBranches, reverseBranches.head._2)
-
-          val result = reverseBranches.tail.foldLeft((p(last, p.subgoals.size-1), remainingBranches))({ case ((r, nb), (_, i)) =>
-            val BelleProvable(current, _) = runTactic(nb, i, level)
-            val localBranchIdx = r.subgoals.indexOf(current.conclusion)
-            (r(current, localBranchIdx), patchBranches(current, nb, i))
+          val (provables, resultCtx) = branchTactics.zipWithIndex.foldRight((List[BelleValue](), branchCtxs.last))({ case (((ct, cp), i), (accProvables, accCtx)) =>
+            val localCtx = branchCtxs(i).glue(accCtx)
+            assert(i == localCtx.onBranch, "Expected context branch and branch tactic index to agree, but got context=" + localCtx.onBranch + " vs. index=" + i)
+            val branchResult = runTactic(ct, cp, level, localCtx)
+            (accProvables :+ branchResult._1, accCtx.glue(branchResult._2))
           })
 
-          BelleProvable(result._1)
-        case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(branches(branch)._1, "")
+          val result = provables.reverse.zipWithIndex.foldRight(p)({case ((BelleProvable(cp, _), i), provable) => provable(cp, i) })
+
+          //@note close branching in a graph t0; <(t1, ..., tn); tx with BranchPointer(parent, -1, _)
+          (BelleProvable(result), resultCtx.closeBranch())
+        case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(tactic, "")
       }
       case OnAll(e) =>
-        val provable = branches(branch)._2 match {
+        val provable = goal match {
           case BelleProvable(p, _) => p
-          case _ => throw new BelleThrowable("Cannot attempt OnAll with a non-Provable value.").inContext(branches(branch)._1, "")
+          case _ => throw new BelleThrowable("Cannot attempt OnAll with a non-Provable value.").inContext(tactic, "")
         }
         //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
         try {
-          runTactic(branches.updated(branch, (BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), branches(branch)._2)), branch, level)
+          if (provable.subgoals.size <= 1) runTactic(e, goal, level, ctx)
+          else runTactic(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), goal, level, ctx)
         } catch {
           case e: BelleThrowable => throw e.inContext(OnAll(e.context), "")
         }
 
       case Let(abbr, value, innerTactic) =>
-        val (provable,lbl) = branches(branch)._2 match {
+        val (provable,lbl) = goal match {
           case BelleProvable(p, l) => (p,l)
-          case _ => throw new BelleThrowable("Cannot attempt Let with a non-Provable value.").inContext(branches(branch)._1, "")
+          case _ => throw new BelleThrowable("Cannot attempt Let with a non-Provable value.").inContext(tactic, "")
         }
         if (provable.subgoals.length != 1)
-          throw new BelleThrowable("Let of multiple goals is not currently supported.").inContext(branches(branch)._1, "")
+          throw new BelleThrowable("Let of multiple goals is not currently supported.").inContext(tactic, "")
 
         // flatten nested Lets into a single inner proof
         def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
@@ -134,31 +168,32 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
         }
 
         val (in: ProvableSig, us: USubst, innerMost) = flattenLets(innerTactic, SubstitutionPair(abbr, value)::Nil, value->abbr::Nil)
-        println("INFO: " + branches(branch)._1 + " considers\n" + in + "\nfor outer\n" + provable)
+        println("INFO: " + tactic + " considers\n" + in + "\nfor outer\n" + provable)
         val innerId = idProvider(in)
         innerProofId = Some(innerId)
         val innerFeeder = SpoonFeedingInterpreter(innerId, idProvider, listeners, inner, descend, strict = strict)
-        innerFeeder.runTactic((innerMost, BelleProvable(in)) :: Nil, 0, level) match {
-          case BelleProvable(derivation, _) =>
+        innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
+          case (BelleProvable(derivation, _), _) =>
             val backsubst: ProvableSig = derivation(us)
-            BelleProvable(provable(backsubst, 0), lbl)
+            //@todo store inner steps as part of this proof
+            (BelleProvable(provable(backsubst, 0), lbl), ctx.store(Idioms.nil))
           case _ => throw new BelleThrowable("Let expected sub-derivation")
         }
 
       case ChooseSome(options, e) =>
         val opts = options()
         var errors = ""
-        var result: Option[BelleValue] = None
+        var result: Option[(BelleValue, ExecutionContext)] = None
         while (opts.hasNext && result.isEmpty) {
           val o = opts.next()
           if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
-          val someResult: Option[BelleValue] = try {
-            Some(runTactic(branches.updated(branch, (e(o), branches(branch)._2)), branch, level))
+          val someResult: Option[(BelleValue, ExecutionContext)] = try {
+            Some(runTactic(e(o), goal, level, ctx))
           } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
           if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
           (someResult, e) match {
-            case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
-            case (Some(p), _: PartialTactic) => result = Some(p)
+            case (Some((p@BelleProvable(_, _), pctx)), _) => result = Some((p, pctx))
+            case (Some((p, pctx)), _: PartialTactic) => result = Some((p, pctx))
             case (Some(_), _) => errors += "option " + o + " " + new BelleThrowable("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o) + "\n" // throw new BelleThrowable("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o)
             case (None, _) => // option o had an error, so consider next option
           }
@@ -170,28 +205,40 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
 
       // look into tactics
       case d: DependentTactic if level > 0 || d.name == "ANON" => try {
-        val v = branches(branch)._2
+        val v = goal
         val valueDependentTactic = d.computeExpr(v)
         val levelDecrement = if (d.name == "ANON") 0 else 1
-        runTactic(branches.updated(branch, (valueDependentTactic, branches(branch)._2)), branch, level-levelDecrement)
+        runTactic(valueDependentTactic, goal, level-levelDecrement, ctx)
       } catch {
-        case e: BelleThrowable => throw e.inContext(d, branches(branch)._2.prettyString)
+        case e: BelleThrowable => throw e.inContext(d, goal.prettyString)
         //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
         case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic", e).inContext(d, "")
       }
 
       case n@NamedTactic(name, t) if level > 0 || name == "ANON" =>
         val levelDecrement = if (name == "ANON") 0 else 1
-        runTactic(branches.updated(branch, (t, branches(branch)._2)), branch, level-levelDecrement)
+        runTactic(t, goal, level-levelDecrement, ctx)
 
       // forward to inner interpreter
       case _ =>
-        if (!strict && branches(branch)._1 == Idioms.nil) branches(branch)._2
-        else branches(branch)._2 match {
-          case BelleProvable(provable, _) if provable.subgoals.isEmpty => inner(Seq())(branches(branch)._1, branches(branch)._2)
+        if (!strict && tactic == Idioms.nil) (goal, ctx)
+        else goal match {
+          case BelleProvable(provable, _) if provable.subgoals.isEmpty =>
+            (inner(Seq())(tactic, goal), ctx)
           case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
-            inner(listeners(rootProofId)(branches(branch)._1.prettyString, branch))(branches(branch)._1, BelleProvable(provable.sub(0), labels)) match {
-              case BelleProvable(innerProvable, _) => BelleProvable(provable(innerProvable, 0), labels)
+            if (ctx.onBranch >= 0) {
+              inner(listeners(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))(tactic, BelleProvable(provable.sub(0), labels)) match {
+                case BelleProvable(innerProvable, _) => (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
+              }
+            } else {
+              //@todo store and reload a trace with branch -1 (=merging point of a branching tactic)
+              // possible solution: store a nil/applyUsubst step with prevStepId=StartOfBranching and branchOrder=-1, without a local provable;
+              // when referenced to with prevStepId/branchOrder, look up the appropriate last step of branchOrder
+              // for example:
+              // 2=(1,0) ; <(5=(2,0);6=(5,0) ; <nil,nil> , 3=(2,1);4=(3,0))> ; 7=(2,-1) ; <(10=(7,0)=(6,0), 9=(7,1)=(6,1), 8=(7,2)=(4,0))>
+              // where stepId=(prevStepId,branch)
+              assert(tactic == Idioms.nil, "Encountered non-trivial tactic after branch merge")
+              (goal, ctx)
             }
         }
     }

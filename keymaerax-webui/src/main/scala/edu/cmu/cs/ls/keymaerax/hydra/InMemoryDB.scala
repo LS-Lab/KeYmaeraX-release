@@ -4,23 +4,13 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.FileOutputStream
-import java.nio.channels.Channels
-
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
-import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
-import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, _}
-import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.Nil
-
-//import Tables.TacticonproofRow
-import scala.slick.driver.SQLiteDriver.simple._
-import scala.slick.jdbc.StaticQuery.interpolation
 
 /**
   * In-memory database, e.g., for stepping into tactics.
@@ -135,15 +125,8 @@ class InMemoryDB extends DBAbstraction {
   /**
     * Initializes a new database.
     */
-  override def cleanup (): Unit = { cleanup(DBAbstractionObj.dblocation)}
-  def cleanup(which: String): Unit = {
-    val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
-    val target = new java.io.File(which)
-    val targetStream = new FileOutputStream(target)
-    targetStream.getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
-    targetStream.close()
-    dbFile.close()
-  }
+  override def cleanup (): Unit = {}
+  def cleanup(which: String): Unit = {}
 
   /** Deletes a provable and all associated sequents / formulas */
   override def deleteProvable(provableId: Int): Boolean = ???
@@ -164,7 +147,7 @@ class InMemoryDB extends DBAbstraction {
   /** Adds a Bellerophon expression as an executable and returns the new executableId */
   override def addBelleExpr(expr: BelleExpr): Int = synchronized {
     val executableId = executables.keys.size
-    executables(executableId) = new ExecutablePOJO(executableId, BellePrettyPrinter(expr))
+    executables(executableId) = ExecutablePOJO(executableId, BellePrettyPrinter(expr))
     executableId
   }
 
@@ -212,34 +195,18 @@ class InMemoryDB extends DBAbstraction {
   def printStats(): Unit = ???
 
   def proofSteps(executionId: Int): List[ExecutionStepPOJO] = synchronized {
-    /* The Executionsteps table may contain many alternate histories for the same execution. In order to reconstruct
-     * the current state of the world, we must pick the most recent alternative at every opportunity.*/
-    var steps = executionSteps.filter({case (k, v) =>
-      v.executionId == executionId && v.status == ExecutionStepStatus.Finished}).values.toList.
-      sortBy(_.stepId).reverse
-    var prevId: Option[Int] = None
-    var revResult: List[ExecutionStepPOJO] = Nil
-    while(steps != Nil) {
-      val (headSteps, tailSteps) = steps.partition(_.previousStep == prevId)
-      if (headSteps == Nil)
-        return revResult.reverse
-      val head = headSteps.head
-      revResult = head :: revResult
-      prevId = head.stepId
-      steps = tailSteps
-    }
-    revResult.reverse
+    executionSteps.values.filter(v =>
+      v.executionId == executionId && v.status == ExecutionStepStatus.Finished).toList.
+      sortBy(_.stepId)
   }
 
-  private def getProofConclusion(proofId: Int): Sequent = proofs(proofId)._1.conclusion
-
-  private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], inputProvable:ProvableSig, localProvables: List[ProvableSig]): List[ExecutionStep] = {
+  private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], localProvables: List[ProvableSig]): List[ExecutionStep] = {
     (executionSteps, executables, localProvables) match {
-      case (step::steps, exe:: exes, localProvable::moreProvables) =>
-        val output = inputProvable(localProvable, step.branchOrder)
-        ExecutionStep(step.stepId.get, step.previousStep, step.executionId, inputProvable, Some(localProvable),
-          step.branchOrder, ???, step.ruleName, step.executableId, step.userExecuted)  ::
-          zipTrace(steps, exes, output, moreProvables)
+      case (step::steps, exe::exes, localProvable::moreProvables) =>
+        val successorIds = steps.filter(_.previousStep == step.stepId).flatMap(_.stepId)
+        ExecutionStep(step.stepId.get, step.previousStep, step.executionId, () => localProvable,
+          step.branchOrder, step.numSubgoals, step.numOpenSubgoals, successorIds, step.ruleName, step.executableId,
+          step.userExecuted)  :: zipTrace(steps, exes, moreProvables)
       case (Nil, Nil, Nil) => Nil
       case _ => throw new ProverException("Bug in zipTrace")
     }
@@ -252,16 +219,27 @@ class InMemoryDB extends DBAbstraction {
   /** Returns a list of steps that do not have successors for each of their subgoals. */
   override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] = {
     val trace = proofSteps(proofId)
-    trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
-    ???
+    trace.map(parent => (parent, trace.filter(s => parent.stepId == s.previousStep).map(_.branchOrder))).
+      filter(e => e._2.length < e._1.numSubgoals)
   }
 
   override def getPlainExecutionStep(executionId: Int, stepId: Int): Option[ExecutionStepPOJO] =
-    getExecutionSteps(executionId).find(_.stepId == stepId)
+    getExecutionSteps(executionId).find(_.stepId == Some(stepId))
 
   override def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO] = ???
 
-  override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = ???
+  override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = {
+    val steps = proofSteps(proofId)
+    steps.find(_.stepId == Some(stepId)) match {
+      case None => None
+      case Some(step) =>
+        val successorIds = steps.filter(_.previousStep == step.stepId).flatMap(_.stepId)
+        Some(ExecutionStep(step.stepId.get, step.previousStep, step.executionId, () => getProvable(step.localProvableId.get).provable,
+          step.branchOrder, step.numSubgoals, step.numOpenSubgoals, successorIds, step.ruleName, step.executableId,
+          step.userExecuted))
+    }
+  }
+
 
   override def getStepProvable(executionId: Int, stepId: Option[Int], subgoal: Option[Int]): Option[ProvableSig] =
     (stepId, subgoal) match {
@@ -276,22 +254,20 @@ class InMemoryDB extends DBAbstraction {
       }
     }
 
-  override def getExecutionTrace(proofId: Int): ExecutionTrace = {
+  override def getExecutionTrace(proofId: Int, withProvables: Boolean=true): ExecutionTrace = {
     /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
        DB calls. */
     val steps = proofSteps(proofId)
     if (steps.isEmpty) {
-      val conclusion = getProofConclusion(proofId)
-      ExecutionTrace(proofId.toString, proofId.toString, conclusion, Nil)
+      ExecutionTrace(proofId.toString, proofId.toString, Nil)
     } else {
       val provableIds = steps.map(_.localProvableId.get)
       val executableIds = steps.map(_.executableId)
       val provables = loadProvables(provableIds).map(_.provable)
       val conclusion = provables.head.conclusion
-      val initProvable = ProvableSig.startProof(conclusion)
       val executables = getExecutables(executableIds)
-      val traceSteps = zipTrace(steps, executables, initProvable, provables)
-      ExecutionTrace(proofId.toString, proofId.toString, conclusion, traceSteps)
+      val traceSteps = zipTrace(steps, executables, provables)
+      ExecutionTrace(proofId.toString, proofId.toString, traceSteps)
     }
   }
 

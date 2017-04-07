@@ -496,7 +496,7 @@ object Helpers {
 
     val posLocator =
       if (node.maker.isEmpty) None
-      else BelleParser(node.maker) match { //@todo probably performance bottleneck
+      else BelleParser(node.maker.get) match { //@todo probably performance bottleneck
         case pt: AppliedPositionTactic => Some(pt.locator)
         case pt: AppliedDependentPositionTactic => Some(pt.locator)
         case _ => None
@@ -504,9 +504,10 @@ object Helpers {
 
     (node.id.toString, JsObject(
       "id" -> id,
+      "isClosed" -> JsBoolean(node.goal match {case None => true case _ => false}),
       "sequent" -> sequent,
       "children" -> childrenIds,
-      "rule" -> ruleJson(node.makerShortName, posLocator),
+      "rule" -> ruleJson(node.makerShortName.get, posLocator),
       "parent" -> parent))
   }
 

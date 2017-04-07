@@ -573,28 +573,6 @@ object SQLite {
       }
     }
 
-    /** Rerun all execution steps to generate a provable for the current state of the proof
-      * Assumes the execution starts with a trivial provable (one subgoal, which is the same
-      * as the conclusion)
-      *
-      * This is only for testing purposes. If you need the last provable of an execution,trace,
-      * you should use getExecutionTrace(id).lastProvable
-      * */
-    private def regenerate(proofId: Int): ProvableSig = {
-      val trace = getExecutionTrace(proofId)
-      val inputProvable = ProvableSig.startProof(trace.conclusion)
-      val initialProvable = ProvableSig.startProof(inputProvable.conclusion)
-      def run(p: ProvableSig, t:BelleExpr): ProvableSig =
-        SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
-          case BelleProvable(pr, _) => pr
-        }
-      def loadTactic(id: Int): BelleExpr = BelleParser(getExecutable(id).belleExpr)
-      trace.steps.foldLeft(initialProvable)({case (provable, currStep) =>
-          run(provable, loadTactic(currStep.executableId))
-        })
-      initialProvable
-    }
-
     private def nSteps(proofId: Int): Int = proofSteps(proofId).size
 
     private def tupleId(id: ProofTreeNodeId): (Option[Int], Option[Int]) = id match {
@@ -764,20 +742,30 @@ object SQLite {
       }
     }
 
-    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], rootProvable:ProvableSig, localProvables: Map[Option[Int], ProvableSig]): List[ExecutionStep] = {
+    /** Zips execution steps with auxiliary information (executable tactics, provables). */
+    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO],
+                         provables: Option[(ProvableSig, Map[Option[Int], ProvableSig])]): List[ExecutionStep] = {
       executionSteps match {
         case step::steps =>
-          //val output = inputProvable(localProvable, step.branchOrder.get)
-          val localProvable = localProvables(step.stepId)
-          val inputProvable = step.previousStep match {
-            case prevId@Some(_) => localProvables(prevId)
-            case None => rootProvable
+          val localProvable: () => ProvableSig = provables match {
+            case None => () => getProvable(step.localProvableId.get).provable
+            case Some((rootProvable, localProvables)) =>
+              val localProvable = localProvables(step.stepId)
+              val inputProvable = step.previousStep match {
+                case prevId@Some(_) => localProvables(prevId)
+                case None => rootProvable
+              }
+              assert(inputProvable.subgoals(step.branchOrder) == localProvable.conclusion,
+                "Conclusion of subderivation " + localProvable.conclusion +
+                  " should match open goal " + inputProvable.subgoals(step.branchOrder) +
+                  " (subgoal " + step.branchOrder + ")")
+              () => localProvable
           }
           val successorIds = steps.filter(_.previousStep == step.stepId).map(_.stepId.get)
-          assert(inputProvable.subgoals(step.branchOrder) == localProvable.conclusion, "Conclusion of subderivation " + localProvable.conclusion + " should match open goal " + inputProvable.subgoals(step.branchOrder) + " (subgoal " + step.branchOrder + ")")
-          ExecutionStep(step.stepId.get, step.previousStep, step.executionId, inputProvable, Some(localProvable),
-            step.branchOrder, successorIds, step.ruleName, step.executableId, step.userExecuted)  ::
-            zipTrace(steps, executables, rootProvable, localProvables)
+          ExecutionStep(step.stepId.get, step.previousStep, step.executionId, localProvable,
+            step.branchOrder, step.numSubgoals, step.numOpenSubgoals, successorIds, step.ruleName, step.executableId,
+            step.userExecuted)  ::
+            zipTrace(steps, executables, provables)
         case Nil => Nil
         case _ => throw new ProverException("Bug in zipTrace")
       }
@@ -890,8 +878,9 @@ object SQLite {
         }
         //@todo extend getPlainExecutionStep to query for successor IDs right away
         val successorIds = getExecutionSteps(proofId).filter(_.previousStep == step.stepId).map(_.stepId.get)
-        Some(ExecutionStep(step.stepId.get, step.previousStep, step.executionId, inputProvable, Some(localProvable),
-          step.branchOrder, successorIds, step.ruleName, step.executableId, step.userExecuted))
+        Some(ExecutionStep(step.stepId.get, step.previousStep, step.executionId, () => localProvable,
+          step.branchOrder, step.numSubgoals, step.numOpenSubgoals, successorIds, step.ruleName, step.executableId,
+          step.userExecuted))
     }
 
 //    //@todo select last step of most recent history
@@ -928,22 +917,24 @@ object SQLite {
         }
       }
 
-    override def getExecutionTrace(proofId: Int): ExecutionTrace = {
+    override def getExecutionTrace(proofId: Int, withProvables: Boolean=true): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
          DB calls. */
       val steps = proofSteps(proofId)
       if (steps.isEmpty) {
-        val conclusion = getProofConclusion(proofId)
-        ExecutionTrace(proofId.toString, proofId.toString, conclusion, Nil)
+        ExecutionTrace(proofId.toString, proofId.toString, Nil)
       } else {
-        val provableIds = steps.map(_.localProvableId.get)
+        val provables = if (withProvables) {
+          val provableIds = steps.map(_.localProvableId.get)
+          val provables = steps.map(_.stepId).zip(loadProvables(provableIds).map(_.provable)).toMap
+          val conclusion = provables(steps.head.stepId).conclusion
+          val initProvable = ProvableSig.startProof(conclusion)
+          Some((initProvable, provables))
+        } else None
         val executableIds = steps.map(_.executableId)
-        val provables = steps.map(_.stepId).zip(loadProvables(provableIds).map(_.provable)).toMap
-        val conclusion = provables(steps.head.stepId).conclusion
-        val initProvable = ProvableSig.startProof(conclusion)
         val executables = getExecutables(executableIds)
-        val traceSteps = zipTrace(steps, executables, initProvable, provables)
-        ExecutionTrace(proofId.toString, proofId.toString, conclusion, traceSteps)
+        val traceSteps = zipTrace(steps, executables, provables)
+        ExecutionTrace(proofId.toString, proofId.toString, traceSteps)
       }
     }
 

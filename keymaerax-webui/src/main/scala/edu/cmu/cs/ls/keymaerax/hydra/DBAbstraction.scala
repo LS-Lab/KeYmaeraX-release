@@ -136,19 +136,17 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /** A proof step in a proof execution trace, can be represented as a node in a proof tree. */
-case class ExecutionStep(stepId: Int, prevStepId: Option[Int], executionId: Int, input: ProvableSig,
-                         local: Option[ProvableSig], branch: Int, successorIds: List[Int],
+case class ExecutionStep(stepId: Int, prevStepId: Option[Int], executionId: Int,
+                         localProvableLoader: () => ProvableSig, branch: Int, subgoalsCount: Int, openSubgoalsCount: Int,
+                         successorIds: List[Int],
                          rule: String, executableId: Int, isUserExecuted: Boolean = true) {
-  def output: Option[ProvableSig] = local.map(_.sub(branch)) //local.map(input(_, branch))
 
-  /** The step's node ID in a proof tree. */
-  lazy val nodeId: List[Int] = prevStepId match {
-    case None => Nil
-    case Some(stId) => stId::branch::Nil
-  }
+  /** Triggers a database call if step was loaded without provables. */
+  def local: ProvableSig = localProvableLoader()
+
 }
 
-case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps: List[ExecutionStep]) {
+case class ExecutionTrace(proofId: String, executionId: String, steps: List[ExecutionStep]) {
   //@note expensive assert
   assert(isTraceExecutable(steps), "Trace steps not ordered in descending branches")
 
@@ -160,11 +158,6 @@ case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequ
   def branch: Option[Int] = steps.lastOption.map(_.branch)
 
   def lastStepId:Option[Int] = steps.lastOption.map(_.stepId)
-
-  /** The combined provable when applying the trace steps to the trace conclusion */
-  def lastProvable: ProvableSig =
-    steps.foldLeft(ProvableSig.startProof(conclusion))({case (p, s) => p(s.local.get, s.branch)})
-    //steps.lastOption.flatMap(_.output).getOrElse(ProvableSig.startProof(conclusion))
 }
 
 case class ExecutablePOJO(executableId: Int, belleExpr:String)
@@ -286,8 +279,8 @@ trait DBAbstraction {
   /** Truncate the execution trace at the beginning of alternativeTo and replace it with trace. */
   def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace)
 
-  /** Return the sequence of steps that led to the current state of the proof. */
-  def getExecutionTrace(proofID: Int): ExecutionTrace
+  /** Return the sequence of steps that led to the current state of the proof. Loading a trace with provables is slow. */
+  def getExecutionTrace(proofID: Int, withProvables: Boolean=true): ExecutionTrace
 
   /** Return a list of all finished execution steps in the current history of the execution, in the order in which they
     * occurred.

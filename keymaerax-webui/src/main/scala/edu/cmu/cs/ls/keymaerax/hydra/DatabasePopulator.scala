@@ -93,10 +93,15 @@ object DatabasePopulator {
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
-    def listener(proofId: Int)(tacticName: String, branch: Int) = {
-      val trace = db.getExecutionTrace(proofId)
-      val globalProvable = trace.lastProvable
-      new TraceRecordingListener(db, proofId, trace.lastStepId,
+    def listener(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int) = {
+      val trace = db.getExecutionTrace(proofId, withProvables=false)
+      assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+      val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
+      val globalProvable = parentStep match {
+        case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+        case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
+      }
+      new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
     val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener, SequentialInterpreter)

@@ -936,7 +936,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
       case Some(node) =>
-        val (localProvable, parentStep, parentRule) = (node.localProvable, node.maker, node.makerShortName)
+        val (localProvable, parentStep, parentRule) = (node.localProvable, node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db, Some(localProvable)),
           SequentialInterpreter, 1, strict=false)
@@ -1548,18 +1548,22 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId)
+  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId, withProvables=false)
+    assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+    val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
     val globalProvable = initGlobal match {
       case Some(gp) if trace.steps.isEmpty => gp
-      case _ => trace.lastProvable
+      case _ => parentStep match {
+        case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+      }
     }
     val ruleName = try {
       RequestHelper.getSpecificName(tacticName.split("\\(").head, null, None, None, _.display.name)
     } catch {
       case _: Throwable => tacticName
     }
-    new TraceRecordingListener(db, proofId, trace.lastStepId,
+    new TraceRecordingListener(db, proofId, parentStep,
       globalProvable, branch, recursive = false, ruleName) :: Nil
   }
 

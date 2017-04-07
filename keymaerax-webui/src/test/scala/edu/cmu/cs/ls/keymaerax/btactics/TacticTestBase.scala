@@ -5,7 +5,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ProofTree}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -47,26 +47,21 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => fail("Model content " + modelContent + " cannot be parsed")
       }
       val proofId = createProof(modelContent, modelName)
-      val trace = db.getExecutionTrace(proofId)
-      val globalProvable = trace.lastProvable
-      val listener = new TraceRecordingListener(db, proofId, trace.lastStepId,
+      val globalProvable = ProvableSig.startProof(s)
+      val listener = new TraceRecordingListener(db, proofId, None,
         globalProvable, 0 /* start from single provable */, recursive = false, "custom")
       SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
           provable.conclusion shouldBe s
-          extractTactic(proofId) shouldBe t
+          //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
           if (provable.isProved) {
             // check that database thinks so too
-            val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId))
-            finalTree.theLeaves shouldBe empty
-            finalTree.nodes.foreach(n => {
-              n.endStep shouldBe 'defined
-              val end = n.endStep.get
-              end.output.get.subgoals should have length end.input.subgoals.length - 1
-              for (i <- end.input.subgoals.indices) {
-                if (i < end.branch) end.output.get.subgoals(i) shouldBe end.input.subgoals(i)
-                if (i > end.branch) end.output.get.subgoals(i - 1) shouldBe end.input.subgoals(i)
-              }
+            val finalTree = DbProofTree(db, proofId.toString)
+            finalTree.load()
+            //finalTree.leaves shouldBe empty
+            finalTree.nodes.foreach(n => n.parent match {
+              case None => n.conclusion shouldBe s
+              case Some(parent) => n.conclusion shouldBe parent.localProvable.subgoals(n.goalIdx)
             })
           }
           provable
@@ -182,10 +177,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId)
-    val globalProvable = trace.lastProvable
-    new TraceRecordingListener(db, proofId, trace.lastStepId,
+  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId, withProvables=false)
+    assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+    val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
+    val globalProvable = parentStep match {
+      case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+      case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
+    }
+    new TraceRecordingListener(db, proofId, parentStep,
       globalProvable, branch, recursive = false, tacticName) :: Nil
   }
 
