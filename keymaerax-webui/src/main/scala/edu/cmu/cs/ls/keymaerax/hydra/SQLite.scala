@@ -261,10 +261,15 @@ object SQLite {
       proofClosedQuery(proofId).run
     })
 
+    private val stepCountQuery = Compiled((proofId: Column[Int]) =>
+      Executionsteps.filter(row =>
+        row.proofid === proofId &&
+        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).countDistinct)
+
     //Proofs and Proof Nodes
     override def getProofInfo(proofId: Int): ProofPOJO =
       synchronizedTransaction({
-        val stepCount = nSteps(proofId)
+        val stepCount = stepCountQuery(proofId).run
         nSelects = nSelects + 1
         val list = Proofs.filter(_._Id === proofId)
           .list
@@ -323,7 +328,7 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
-          val stepCount = nSteps(p._Id.get)
+          val stepCount = stepCountQuery(p._Id.get).run //@todo avoid ripple loading
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           val temporary: Boolean = sqliteBoolToBoolean(p.istemporary.getOrElse(0))
           new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount,
@@ -573,7 +578,7 @@ object SQLite {
       }
     }
 
-    private def nSteps(proofId: Int): Int = proofSteps(proofId).size
+
 
     private def tupleId(id: ProofTreeNodeId): (Option[Int], Option[Int]) = id match {
       case DbStepPathNodeId(step, branch) => (step, branch)
@@ -743,7 +748,7 @@ object SQLite {
     }
 
     /** Zips execution steps with auxiliary information (executable tactics, provables). */
-    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO],
+    private def zipTrace(executionSteps: List[ExecutionStepPOJO],
                          provables: Option[(ProvableSig, Map[Option[Int], ProvableSig])]): List[ExecutionStep] = {
       executionSteps match {
         case step::steps =>
@@ -765,7 +770,7 @@ object SQLite {
           ExecutionStep(step.stepId.get, step.previousStep, step.executionId, localProvable,
             step.branchOrder, step.numSubgoals, step.numOpenSubgoals, successorIds, step.ruleName, step.executableId,
             step.userExecuted)  ::
-            zipTrace(steps, executables, provables)
+            zipTrace(steps, provables)
         case Nil => Nil
         case _ => throw new ProverException("Bug in zipTrace")
       }
@@ -819,8 +824,17 @@ object SQLite {
         row.numopensubgoals > 0 &&
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)))
 
+    // performance degrades a little with increasing database volume
     private def closedBranchesSql(proofId: Int, openSteps: Set[Int]) =
       sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
+
+    // slightly slower than query above
+//    private def closedBranchesSlick(proofId: Int, openSteps: Set[Int]) =
+//      Executionsteps.filter(row =>
+//        row.proofid === proofId &&
+//        (row.previousstep inSet openSteps) &&
+//        row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)
+//      ).map(step => step.previousstep -> step.branchorder)
 
     override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
       val openSteps = openStepsQuery(proofId).list.map(step =>
@@ -920,10 +934,13 @@ object SQLite {
     override def getExecutionTrace(proofId: Int, withProvables: Boolean=true): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
          DB calls. */
-      val steps = proofSteps(proofId)
-      if (steps.isEmpty) {
+      val stepsCount = stepCountQuery(proofId).run
+      if (stepsCount <= 0) {
         ExecutionTrace(proofId.toString, proofId.toString, Nil)
       } else {
+        //@todo sqlite has a maximum of 999 variables in a query (could be changed, but any number might be too small)
+        // -> may need to query steps and provables joined, but how to benefit from cached lemma DB then?
+        val steps = proofSteps(proofId)
         val provables = if (withProvables) {
           val provableIds = steps.map(_.localProvableId.get)
           val provables = steps.map(_.stepId).zip(loadProvables(provableIds).map(_.provable)).toMap
@@ -931,9 +948,7 @@ object SQLite {
           val initProvable = ProvableSig.startProof(conclusion)
           Some((initProvable, provables))
         } else None
-        val executableIds = steps.map(_.executableId)
-        val executables = getExecutables(executableIds)
-        val traceSteps = zipTrace(steps, executables, provables)
+        val traceSteps = zipTrace(steps, provables)
         ExecutionTrace(proofId.toString, proofId.toString, traceSteps)
       }
     }

@@ -356,17 +356,18 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   "Performance" should "not degrade when doing the usual interaction (without tactic extraction) in a loop" in withDatabase { db =>
-    val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "Variables. R x. End.\nProblem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
 
-    val numStepsPerProof = 500
+    val numStepsPerProof = 1000
     var durations = Array.fill(numStepsPerProof)(0.0)
 
     for (i <- 0 until numStepsPerProof) {
       val start = System.currentTimeMillis()
       val tree = DbProofTree(db.db, proofId.toString)
-
+      val treeConstructed = System.currentTimeMillis()
       val goals = tree.openGoals
+      val openGoalsFetched = System.currentTimeMillis()
       goals should have size 1
       if (i%2==1) goals.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
       else goals.head.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
@@ -377,10 +378,16 @@ class ProofTreeTests extends TacticTestBase {
       if (i%2==1) tactics shouldBe empty
       else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
 
+      val tacticSuggestionFetch = System.currentTimeMillis()
+
       if (i%2==1) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
       else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+      val tacticExecuted = System.currentTimeMillis()
 
       val end = System.currentTimeMillis()
+
+      println(s"Run $i, duration ${end-start}: construction=${treeConstructed-start}, goals=${openGoalsFetched-treeConstructed}, suggestion=${tacticSuggestionFetch-openGoalsFetched}, execution=${tacticExecuted-tacticSuggestionFetch}")
+
       durations(i) = end-start
     }
 
@@ -390,8 +397,8 @@ class ProofTreeTests extends TacticTestBase {
     val averageDuration = durations.sum/numStepsPerProof
     println("Median duration " + medianDuration)
     println("Average duration " + averageDuration)
-    println("Minimum duration " + durations.min)
-    println("Maximum duration " + durations.max)
+    println("Minimum duration " + durations.min + " (iteration " + durations.indexOf(durations.min) + ")")
+    println("Maximum duration " + durations.max + " (iteration " + durations.indexOf(durations.max) + ")")
   }
 
   it should "not degrade too much when doing the usual interaction with tactic extraction in a loop" in withDatabase { db =>

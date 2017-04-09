@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{ArgInfo, ConfigurableGenerator, DerivationInfo, FormulaArg}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -194,7 +194,9 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
 
   override def tacticInputSuggestions(pos: Position): Map[ArgInfo, Expression] = goal.map(g => (g, g.sub(pos))) match {
     case Some((goal, Some(subFormula))) =>
-      val generator = new ConfigurableGenerator(db.getInvariants(db.getProofInfo(proofId).modelId.get))
+      //@HACK assumes that the currently loaded proof and this tree's proof are the same
+      //      to avoid reparsing the model on every call to tacticInputSuggestions.
+      val generator = TactixLibrary.invGenerator
       //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
       //@HACK for loop and dG
       subFormula match {
@@ -226,7 +228,7 @@ object DbPlainExecStepProofTreeNode {
     case None => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.previousStep, Some(step.branchOrder)), proofId,
       () => {println("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proofId.toInt, step.previousStep.get).get})
     case Some(b) => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, Some(b)), proofId,
-      () => {println("Accessing plain step " + step.stepId.get); step})
+      () => step)
   }
 }
 
@@ -262,11 +264,15 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
     case DbStepPathNodeId(stId, _) => stId
   }
 
-  private lazy val dbMaker = db.getExecutable(step.executableId).belleExpr
+  private lazy val dbMaker = {
+    println(s"Node $id: querying maker")
+    db.getExecutable(step.executableId).belleExpr
+  }
 
   private lazy val dbParent = step.previousStep match {
     case None => Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), proofId))
     case Some(pId) =>
+      println(s"Node $id: querying parent")
       // this step knows on which branch it was executed
       val parentBranch = db.getPlainExecutionStep(proofId.toInt, stepId.get).map(_.branchOrder)
       Some(DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(Some(pId), parentBranch), proofId,
@@ -274,6 +280,7 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
   }
 
   private lazy val dbSubgoals = {
+    println(s"Node $id: querying subgoals")
     // subgoals are the steps that have this.stepId as previousStep and this.goalIdx as branchOrder
     val successors = db.getPlainStepSuccessors(proofId.toInt, stepId.get, goalIdx)
     assert(successors.size <= 1, "Expected unique successor step for node " + id + ", but got " + successors)
@@ -395,7 +402,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 //    val finalOpenBranches = finalSteps.map(f => f ->
 //      ((0 until f.numSubgoals).toSet -- trace.filter(s => f.stepId == s.previousStep).map(_.branchOrder)).toList)
 
-    val openSteps = db.getPlainOpenSteps(proofId.toInt)
+    val openSteps = dbOpenGoals
     val finalOpenBranches = openSteps.map({ case (f, closed) => f ->
       ((0 until f.numSubgoals).toSet -- closed).toList})
 
@@ -465,10 +472,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 
   private lazy val dbTrace = db.getExecutionSteps(proofId.toInt)
 
-  /** Map[step ID -> Node] */
-  private lazy val dbNodes = dbTrace.foldLeft(Map[Int, ProofTreeNode]())({ case (nodes, s) =>
-    nodes + (s.stepId.get -> DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(s.branchOrder)))
-  })
+  private lazy val dbOpenGoals = db.getPlainOpenSteps(proofId.toInt)
 
   private var loadedRoot: Option[ProofTreeNode] = None
 
