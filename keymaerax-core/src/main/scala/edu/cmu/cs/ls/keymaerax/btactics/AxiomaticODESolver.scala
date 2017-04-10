@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
+import scala.collection.immutable._
+
 /**
   * An Axiomatic ODE solver.
   * Current Limitations:
@@ -65,6 +67,8 @@ object AxiomaticODESolver {
     val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
     val consts = assumptions.flatMap(FormulaTools.conjuncts).
       filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
+      filterNot(f => f==True || f==False). //@todo improve DI
+      map(SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), _, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).
       reduceOption(And).getOrElse(True)
 
     val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
