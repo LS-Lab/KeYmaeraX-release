@@ -167,6 +167,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   });
 
   $scope.examples = [];
+  $scope.activeTutorialSlide = 0;
   $http.get("examples/user/" + $scope.userId + "/all").then(function(response) {
       $scope.examples = response.data;
   });
