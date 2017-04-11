@@ -52,8 +52,11 @@ sealed trait Request {
   def permission(t: SessionToken): Boolean = true
 
   final def getResultingResponses(t: SessionToken): List[Response] = {
-    assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
-    resultingResponses()
+    if (!permission(t)) new PossibleAttackResponse("Permission denied")::Nil
+    else {
+      assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
+      resultingResponses()
+    }
   }
 
   def resultingResponses(): List[Response] //see Response.scala.
@@ -71,11 +74,11 @@ sealed trait Request {
   * @param username The username of the current user.
   */
 abstract class UserRequest(username: String) extends Request {
-  override def permission(t: SessionToken) = t belongsTo username
+  override def permission(t: SessionToken): Boolean = t belongsTo username
 }
 
 abstract class LocalhostOnlyRequest() extends Request {
-  override def permission(t: SessionToken) = !HyDRAServerConfig.isHosted //@todo change this to a literal false prior to deployment.
+  override def permission(t: SessionToken): Boolean = !HyDRAServerConfig.isHosted //@todo change this to a literal false prior to deployment.
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +86,7 @@ abstract class LocalhostOnlyRequest() extends Request {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CreateUserRequest(db: DBAbstraction, username: String, password: String, mode: String) extends Request {
-  override def resultingResponses() = {
+  override def resultingResponses(): List[Response] = {
     val userExists = db.userExists(username)
     val sessionToken =
       if (!userExists) {
@@ -105,7 +108,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 }
 
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).map(proof =>
       (proof._1, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
@@ -113,7 +116,7 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserReque
 }
 
 class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : String, newName : String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val proof = db.getProofInfo(proofId)
     db.updateProofName(proofId, newName)
     new UpdateProofNameResponse(proofId, newName) :: Nil
@@ -121,7 +124,7 @@ class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : Strin
 }
 
 class FailedRequest(userId: String, msg: String, cause: Throwable = null) extends UserRequest(userId) {
-  def resultingResponses() = { new ErrorResponse(msg, cause) :: Nil }
+  def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
 /**
@@ -467,10 +470,13 @@ class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
 class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
-    val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
-    db.updateConfiguration(toolConfig)
-    new KvpResponse("tool", tool) :: Nil
+    if (tool != "mathematica" && tool != "z3") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3'")::Nil
+    else {
+      assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
+      val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
+      db.updateConfiguration(toolConfig)
+      new KvpResponse("tool", tool) :: Nil
+    }
   }
 }
 
@@ -561,15 +567,18 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
   private var createdId : Option[String] = None
 
   def resultingResponses(): List[Response] = try {
-    val f = KeYmaeraXParser(formula).asInstanceOf[Formula]
-    if(db.getModelList(userId).map(_.name).contains(nameOfModel))
-      new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
-    else {
-      createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(x => x.toString)
-      new BooleanResponse(createdId.isDefined) :: Nil
+    KeYmaeraXParser(formula) match {
+      case _: Formula =>
+        if(db.getModelList(userId).map(_.name).contains(nameOfModel))
+          new BooleanResponse(false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+        else {
+          createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(_.toString)
+          new BooleanResponse(createdId.isDefined) :: Nil
+        }
+      case t => new ErrorResponse("Expected a formula, but got the " + t.kind + " " + formula) :: Nil
     }
   } catch {
-    case e : ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
   }
 
   def getModelId: String = createdId match {
@@ -579,28 +588,21 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
 }
 
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends UserRequest(userId) {
-  private var createdId : Option[String] = None
-
   def resultingResponses(): List[Response] = {
     try {
       KeYmaeraXProblemParser.parseAsProblemOrFormula(keyFileContents) match {
         case _: Formula =>
-          if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-            //Nope. Give a good error message.
-            new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
+          if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
+            new BooleanResponse(false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
           } else {
-            createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
+            val createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
             new BooleanResponse(createdId.isDefined) :: Nil
           }
+        case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
       }
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
-  }
-
-  def getModelId: String = createdId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
   }
 }
 
@@ -706,7 +708,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
       case ("controller", Some(tool)) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
+          TactixLibrary.proveBy(foResult.subgoals.head,
+            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
         } catch {
           case _: Throwable => foResult
         }
@@ -735,7 +738,8 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
       case ("controller", Some(tool)) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
+          TactixLibrary.proveBy(foResult.subgoals.head,
+            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
         } catch {
           case _: Throwable => foResult
         }
@@ -793,20 +797,9 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
   extends UserRequest(userId) {
-  private var proofId : Option[String] = None
-
-  private def getProofId: String = proofId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("The ID of the created proof was requested before resultingResponses was called.")
-  }
   def resultingResponses(): List[Response] = {
-    proofId = Some(db.createProofForModel(modelId, name, description, currentDate()))
-
-    // Create a "task" for the model associated with this proof.
-    val keyFile = db.getModel(modelId).keyFile
-    //KeYmaeraInterface.addTask(proofId.get, keyFile)
-
-    new CreatedIdResponse(proofId.get) :: Nil
+    val proofId = db.createProofForModel(modelId, name, description, currentDate())
+    new CreatedIdResponse(proofId) :: Nil
   }
 }
 
@@ -832,21 +825,26 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends UserRequest(userId) {
-  insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
   def resultingResponses(): List[Response] = {
-    //@HACK cache the invariants in TactixLibrary -> later requests fetch it from there without reparsing the model
-    // over and over again
-    val proofInfo = db.getProofInfo(proofId)
-    proofInfo.modelId match {
-      case None =>
-      case Some(mId) =>
-        val generator = new ConfigurableGenerator[Formula]()
-        KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
-        KeYmaeraXProblemParser(db.getModel(mId).keyFile)
-        TactixLibrary.invGenerator = generator
-    }
+    val modelId = db.getProofInfo(proofId).modelId
+    if (modelId.isEmpty) new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil
+    else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied")::Nil
+    else {
+      insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
 
-    new OpenProofResponse(proofInfo, "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+      //@HACK cache the invariants in TactixLibrary -> later requests fetch it from there without reparsing the model
+      // over and over again
+      val proofInfo = db.getProofInfo(proofId)
+      proofInfo.modelId match {
+        case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
+        case Some(mId) =>
+          val generator = new ConfigurableGenerator[Formula]()
+          KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p -> inv))
+          KeYmaeraXProblemParser(db.getModel(mId).keyFile)
+          TactixLibrary.invGenerator = generator
+          new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+      }
+    }
   }
 }
 
@@ -947,12 +945,14 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) =>
+      case Some(node) if node.maker.isEmpty || node.makerShortName.isEmpty =>
+        new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
+      case Some(node) if node.maker.isDefined && node.makerShortName.isDefined =>
         assert(node.maker.isDefined && node.makerShortName.isDefined, "Unable to expand node without tactics")
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db, Some(localProvable)),
-          SequentialInterpreter, 1, strict=false)
+        val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof,
+          RequestHelper.listenerFactory(db, Some(localProvable)), SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
 
@@ -1021,7 +1021,7 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
 class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
     if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
-      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+      new PossibleAttackResponse("Permission denied") :: Nil
     } else {
       DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
         case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
@@ -1037,7 +1037,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
 class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
     if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
-      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
+      new PossibleAttackResponse("Permission denied") :: Nil
     } else {
       DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
         case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
@@ -1104,65 +1104,69 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
   def resultingResponses(): List[Response] = {
     val proof = db.getProofInfo(proofId)
-    val closed = proof.closed
-    if (closed) {
-      return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
-    }
-    val tree: ProofTree = DbProofTree(db, proofId)
-    val node: ProofTreeNode = tree.locate(tree.nodeIdFromString(nodeId)).get
-    val sequent = node.goal.get
+    if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
+    else {
+      val tree: ProofTree = DbProofTree(db, proofId)
+      tree.locate(tree.nodeIdFromString(nodeId)) match {
+        case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId)::Nil
+        case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal")::Nil
+        case Some(node) if node.goal.isDefined =>
+          val sequent = node.goal.get
 
-    try {
-      //@note no invariant generator (parsing from model) for performance reasons, since included in tactic suggestions anyway ->
-      //      if we ever execute tactics that require a generator, include a heuristic to determine from the tactic string here
-      val expr = BelleParser.parseWithInvGen(fullExpr(sequent), None)
+          try {
+            //@note no invariant generator (parsing from model) for performance reasons, since included in tactic suggestions anyway ->
+            //      if we ever execute tactics that require a generator, include a heuristic to determine from the tactic string here
+            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), None)
 
-      val appliedExpr:BelleExpr = (pos, pos2, expr) match {
-        case (None, None, _:AtPosition[BelleExpr]) =>
-          throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
-        case (None, None, _) => expr
-        case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-        case (Some(position), None, expr: BelleExpr) => expr
-        case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
-        case (Some(_), Some(_), expr: BelleExpr) => expr
-        case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
-      }
+            val appliedExpr: BelleExpr = (pos, pos2, expr) match {
+              case (None, None, _: AtPosition[BelleExpr]) =>
+                throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
+              case (None, None, _) => expr
+              case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
+              case (Some(position), None, expr: BelleExpr) => expr
+              case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
+              case (Some(_), Some(_), expr: BelleExpr) => expr
+              case _ => println("pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
+            }
 
-      val ruleName =
-        if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.display.name)
-        else "custom"
+            val ruleName =
+              if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.display.name)
+              else "custom"
 
-      if (stepwise) {
-        val localProvable = ProvableSig.startProof(sequent)
-        val localProofId = db.createProof(localProvable)
-        //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
-        val interpreter = (_: List[IOListener]) => new Interpreter {
-          val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
-          override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
-            inner(expr, v)
+            if (stepwise) {
+              val localProvable = ProvableSig.startProof(sequent)
+              val localProofId = db.createProof(localProvable)
+              //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
+              val interpreter = (_: List[IOListener]) => new Interpreter {
+                val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
+
+                override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
+                  inner(expr, v)
+                } catch {
+                  //@note stop and display whatever progress was made
+                  case ex: Throwable =>
+                    val innerId = inner.innerProofId.getOrElse(localProofId)
+                    val innerTrace = db.getExecutionTrace(innerId)
+                    if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
+                    else throw BelleTacticFailure("No progress", ex)
+                }
+              }
+              //@todo
+              val innerTrace = db.getExecutionTrace(localProofId)
+              val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
+              val executor = BellerophonTacticExecutor.defaultExecutor
+              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter, Nil)
+              new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
+            } else {
+              val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
+              new RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+            }
           } catch {
-            //@note stop and display whatever progress was made
-            case ex: Throwable =>
-              val innerId = inner.innerProofId.getOrElse(localProofId)
-              val innerTrace = db.getExecutionTrace(innerId)
-              if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
-              else throw BelleTacticFailure("No progress", ex)
+            case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
+            case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
+            case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
           }
-        }
-        //@todo
-        val innerTrace = db.getExecutionTrace(localProofId)
-        val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
-        val executor = BellerophonTacticExecutor.defaultExecutor
-        val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter, Nil)
-        new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
-      } else {
-        val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
-        new RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
       }
-    } catch {
-      case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
-      case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
-      case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
     }
   }
 }
@@ -1246,23 +1250,22 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
 /** Prunes a node and everything below */
 class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    if (closed) {
-      return new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
-    }
-    val tree = DbProofTree(db, proofId)
-    tree.locate(nodeId) match {
-      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-      case Some(node) =>
-        node.pruneBelow()
-        val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, null)
-        new PruneBelowResponse(item) :: Nil
+    if (db.getProofInfo(proofId).closed) new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+    else {
+      val tree = DbProofTree(db, proofId)
+      tree.locate(nodeId) match {
+        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case Some(node) =>
+          node.pruneBelow()
+          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, null)
+          new PruneBelowResponse(item) :: Nil
+      }
     }
   }
 }
 
 class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     // @todo return Loading/NotLoaded when appropriate
     val proof = db.getProofInfo(proofId)
     new ProofProgressResponse(proofId, isClosed = proof.closed) :: Nil
@@ -1277,22 +1280,27 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val conclusionFormula = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val provable = tree.root.provable
-    assert(provable.isProved, "Provable " + provable + " must be proved")
-    assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
-    new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
+    if (!provable.isProved) new ErrorResponse("Proof verification failed: proof " + proofId + " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString)::Nil
+    else if (provable.conclusion != conclusion) new ErrorResponse("Proof verification failed: proof " + proofId + " does not conclude the associated model.\n Expected " + conclusion.prettyString + "\nBut got\n" + provable.conclusion.prettyString)::Nil
+    else {
+      assert(provable.isProved, "Provable " + provable + " must be proved")
+      assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
+      new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
+    }
   }
 }
 
 class IsLicenseAcceptedRequest(db : DBAbstraction) extends Request {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     new BooleanResponse(
-      db.getConfiguration("license").config.contains("accepted") && db.getConfiguration("license").config.get("accepted").get.equals("true")
+      db.getConfiguration("license").config.contains("accepted") &&
+      db.getConfiguration("license").config("accepted") == "true"
     ) :: Nil
   }
 }
 
 class AcceptLicenseRequest(db : DBAbstraction) extends Request {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val newConfiguration = new ConfigurationPOJO("license", Map("accepted" -> "true"))
     db.updateConfiguration(newConfiguration)
     new BooleanResponse(true) :: Nil
@@ -1313,38 +1321,38 @@ class IsLocalInstanceRequest() extends Request {
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
-    if(HyDRAServerConfig.isHosted)
-      throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
+    if (HyDRAServerConfig.isHosted) new ErrorResponse("Cannot extract the database on a hosted instance of KeYmaera X") :: Nil
+    else {
+      val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
+      productionDatabase.syncDatabase()
 
-    val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
-    productionDatabase.syncDatabase()
+      val today = Calendar.getInstance().getTime
+      val fmt = new SimpleDateFormat("MDY")
 
-    val today = Calendar.getInstance().getTime()
-    val fmt = new SimpleDateFormat("MDY")
+      val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
+      val dbPath = productionDatabase.dblocation
 
-    val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
-    val dbPath         = productionDatabase.dblocation
-
-    val src = new File(dbPath)
-    val dest = new File(extractionPath)
-    new FileOutputStream(dest) getChannel() transferFrom(
-      new FileInputStream(src) getChannel, 0, Long.MaxValue )
+      val src = new File(dbPath)
+      val dest = new File(extractionPath)
+      new FileOutputStream(dest).getChannel.transferFrom(
+        new FileInputStream(src).getChannel, 0, Long.MaxValue)
 
 
-    //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
-    //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
-    val extractedDatabase = new SQLiteDB(extractionPath)
-    extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
-    extractedDatabase.syncDatabase()
+      //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
+      //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
+      val extractedDatabase = new SQLiteDB(extractionPath)
+      extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
+      extractedDatabase.syncDatabase()
 
-    new ExtractDatabaseResponse(extractionPath) :: Nil
+      new ExtractDatabaseResponse(extractionPath) :: Nil
+    }
   }
 }
 
 class ShutdownReqeuest() extends LocalhostOnlyRequest {
   override def resultingResponses() : List[Response] = {
     new Thread() {
-      override def run() = {
+      override def run(): Unit = {
         try {
           //Tell all scheduled tactics to stop.
           //@todo figure out which of these are actually necessary.
@@ -1368,7 +1376,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
         }
 
       }
-    }.start
+    }.start()
 
     new BooleanResponse(true) :: Nil
   }
@@ -1464,7 +1472,7 @@ class MockRequest(resourceName: String) extends Request {
 object ProofValidationRunner {
   private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
 
-  case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId ${taskId} does not exist.")
+  case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId $taskId does not exist.")
 
   /** Returns Option[Proved] which is None iff the task is still running, and True if formula didn't prove. */
   def status(taskId: String) : Option[Boolean] = results.get(taskId) match {
@@ -1478,8 +1486,8 @@ object ProofValidationRunner {
     results update (taskId, (model, proof, None))
 
     new Thread(new Runnable() {
-      override def run() = {
-        println(s"Received request to validate ${taskId}. Running in separate thread.")
+      override def run(): Unit = {
+        println(s"Received request to validate $taskId. Running in separate thread.")
         val provable = NoProofTermProvable( Provable.startProof(model) )
 
         try {
@@ -1492,7 +1500,7 @@ object ProofValidationRunner {
           case e : Throwable => results update (taskId, (model, proof, Some(false)))
         }
 
-        println(s"Done executing validation check for ${taskId}")
+        println(s"Done executing validation check for $taskId")
       }
     }).start()
 
