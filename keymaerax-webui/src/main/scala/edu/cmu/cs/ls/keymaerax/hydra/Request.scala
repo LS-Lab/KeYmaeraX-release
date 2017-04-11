@@ -936,6 +936,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
       case Some(node) =>
+        assert(node.maker.isDefined && node.makerShortName.isDefined, "Unable to expand node without tactics")
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db, Some(localProvable)),

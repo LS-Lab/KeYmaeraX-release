@@ -507,7 +507,7 @@ object Helpers {
       "isClosed" -> JsBoolean(node.goal match {case None => true case _ => false}),
       "sequent" -> sequent,
       "children" -> childrenIds,
-      "rule" -> ruleJson(node.makerShortName.get, posLocator),
+      "rule" -> ruleJson(node.makerShortName.getOrElse(""), posLocator),
       "parent" -> parent))
   }
 
