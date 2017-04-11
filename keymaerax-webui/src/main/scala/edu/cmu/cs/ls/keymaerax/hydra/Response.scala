@@ -396,13 +396,15 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
 }
 
 class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: Boolean = true) extends Response {
+  private lazy val openChildren = parent.children.filter(_.numSubgoals > 0)
+
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> JsString(parent.id.toString),
-      "children" -> JsArray(parent.children.map(c => JsString(c.id.toString)):_*)
+      "children" -> JsArray(openChildren.map(c => JsString(c.id.toString)):_*)
     ),
-    "newNodes" -> JsArray(parent.children.map(nodeJson(_)._2):_*),
+    "newNodes" -> JsArray(openChildren.map(nodeJson(_)._2):_*),
     "progress" -> JsBoolean(progress),
     "type" -> JsString("taskresult")
   )
