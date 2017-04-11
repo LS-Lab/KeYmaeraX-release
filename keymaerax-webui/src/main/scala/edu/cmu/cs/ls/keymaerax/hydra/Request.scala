@@ -834,7 +834,19 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends UserRequest(userId) {
   insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
   def resultingResponses(): List[Response] = {
-    new OpenProofResponse(db.getProofInfo(proofId), "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+    //@HACK cache the invariants in TactixLibrary -> later requests fetch it from there without reparsing the model
+    // over and over again
+    val proofInfo = db.getProofInfo(proofId)
+    proofInfo.modelId match {
+      case None =>
+      case Some(mId) =>
+        val generator = new ConfigurableGenerator[Formula]()
+        KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+        KeYmaeraXProblemParser(db.getModel(mId).keyFile)
+        TactixLibrary.invGenerator = generator
+    }
+
+    new OpenProofResponse(proofInfo, "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
   }
 }
 
