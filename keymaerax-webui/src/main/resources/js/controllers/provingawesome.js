@@ -479,7 +479,8 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     // empty open proof until fetched from server
     $scope.proof = {
       proofId: '',
-      isProved: false,
+      checking: true,
+      //isProved: true/false is reported from server
       tactic: '',
       provable: ''
     }
