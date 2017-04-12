@@ -633,9 +633,10 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
       //@todo checks: fresh names, model created etc.
       archiveEntries.foreach({ case (name, modelFileContent, tactic) =>
-        val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(_.toString)
+        val modelId = db.createModel(userId, name, modelFileContent, currentDate(), None, None, None,
+          tactic.headOption.map(_._2)).map(_.toString)
         tactic.foreach({ case (tname, ttext) =>
-          val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive",
+          db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive",
             currentDate(), Some(ttext))
         })
       })
